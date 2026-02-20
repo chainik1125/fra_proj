@@ -40,22 +40,22 @@ When you cite a paper, add an entry to [[references]] with the citation key, ful
 
 All citations live in [[references]]. If you have time I would recommend beginning to go through them in the order here.
 
-Key reading:
 
-1. For our initial experiments on synthetic data we will be using the setup I talked about in the interview: [[references#manningcoe2025synthetic]]
+## Other useful repos
 
-2. This is based on [[references#lindsey2025synthetic]] (TODO: Add David's new synthetic benchmark paper)
+1. Crosscoder feature interactions repo () (set to private for now, will fork and make available).
 
-3. Important foundational literature for thinking about how features are represented:
-    - [[references#elhage2022toy]]
-    - [[references#bricken2023monosemantic]]
-    - [[references#templeton2024crosscoders]]
+    
 
-4. Important recent work on Temporal XC:
-    - [[references#dunefsky2025txc]]
-    - [[references#kissane2025txc]]
+2. Quick FRA project sprint repo:
+Contains an initial implementation of FRA dashboard made for a one-day sprint. This was entirely compute unconstrained so we may want to be a little wiser about how we do this.
+(https://github.com/chainik1125/fra)
 
-5. Empirical work on why temporal features might be useful
-    - [[reference#venhoff2025reasoning]]
-    - [[reference#ward2025reasoning]]
+3. SAE lens: (https://github.com/decoderesearch/SAELens)
+
+a. A good starting point is TopK SAEs. Batch TopK SAEs are better but are a bit more fiddly to work with. The general principle is that we want to
+
+
+
+
 
