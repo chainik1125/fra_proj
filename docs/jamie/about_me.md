@@ -1,11 +1,12 @@
 ---
-title: "Jamie About Me"
 author: Jamie Stephenson
 date: 2026-02-23
-type: document
+tags:
+  - reference
+  - complete
 ---
 
-# About me
+## About me
 
 Author: Jamie Stephenson
 Date: 2026-02-23
