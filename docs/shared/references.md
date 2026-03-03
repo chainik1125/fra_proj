@@ -19,6 +19,14 @@ Bricken et al. (2023). "Towards Monosemanticity." *Transformer Circuits Thread.*
 
 Templeton et al. (2024). "Crosscoders." *Transformer Circuits Thread.* [link](https://transformer-circuits.pub/2024/crosscoders/index.html)
 
+## Attention Feature Interaction
+
+### kamath2025attentionqk
+
+Kamath et al. (2025). "Tracing Attention Computation Through Feature Interactions." *Transformer Circuits Thread.* [link](https://transformer-circuits.pub/2025/attention-qk/)
+
+Relevance: similar to our work. Introduces “QK tracing” / feature-resolved decomposition of attention-score computation into query-side × key-side feature interactions. The explore **toy models** through this lens, which is also something we are interested in doing.
+
 ## Temporal Crosscoders
 
 ### dunefsky2025txc

@@ -19,7 +19,10 @@ There are a few choices required to arrive at a formula for feature resolved att
 
 **Acausal crosscoder**. Reconstruct residual stream activations from *every* layer. Expensive. But also for a given attention head you would expect this to be *really* sparse: the top 100 cross-layer features are far less likely to interact in a given head compared with the top 100 features from an SAE trained on the same layer that the head is from. Obviously you would expect a cross coder to have more features so maybe to compare like-to-like you would need to consider more than the top 100 but then you start running into performance issues: inherently harder job to extract more features from this bigger space? Idk this all just my intuition.
 
-**Model diffing crosscoder**. Given two models and one input, map set of activations from one model to the equivalent set of activations from the other. Could be interesting in e.g. sleeper agents context, where a model has had a "new feature finetuned into it". Think the point is that model diffing will be more likely to extract this feature, compared to just training an acausal crosscoder on the finetuned model?
+**Model-diffing crosscoder**. Given two models and one input, train an SAE to reconstruct the concatenation of both activations. Interesting in e.g. sleeper agents context, where a model has had a "new feature finetuned into it". Think the point is that model diffing will be more likely to extract this feature, compared to just training an acausal crosscoder on the finetuned model?
+
+> [!question] Alternative to model-diffing
+> Given two models and one input, map set of activations from one model to the equivalent set of activations from the other. Use a skip connection so that the sparse bit models the *difference* between activations. Would this learn any interesting features?
 
 ### Activation extraction point
 
@@ -118,4 +121,4 @@ Specifically, could compare the FRA decomposition across prompts that vary only 
 
 ## Toy models
 
-We would like to study known circuits in toy models (induction, iteration etc.) through the lens of FRA. As FRA only tells us about the QK circuit, we ideally want a toy task for which the OV circuit is not doing anything important (e.g. it is simply the identity).
+We would like to study known circuits in toy models (induction, iteration etc.) through the lens of FRA. As FRA only tells us about the QK circuit, we ideally want a toy task for which the OV circuit is not doing anything important (e.g. it is simply the identity). See [[references#kamath2025attentionqk]] for similar work.
