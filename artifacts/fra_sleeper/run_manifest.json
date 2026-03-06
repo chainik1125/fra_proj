@@ -1,0 +1,5133 @@
+{
+  "base_model_plus_sleeper_data": {
+    "variant": "base_model_plus_sleeper_data",
+    "crosscoder": "crosscoder_D",
+    "lora_repo": "mars-jason-25/tiny-stories-33M-TSdata-ft1",
+    "top_pairs_by_key_feature": {
+      "628": [
+        {
+          "key_feature": 628,
+          "paired_feature": 739,
+          "abs_interaction_score": 0.006247987970709801,
+          "signed_interaction_sum": 0.005824748892337084,
+          "pair_count": 618
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1439,
+          "abs_interaction_score": 0.003954002633690834,
+          "signed_interaction_sum": 0.003954002633690834,
+          "pair_count": 55
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 2108,
+          "abs_interaction_score": 0.0025679601822048426,
+          "signed_interaction_sum": 0.0025679601822048426,
+          "pair_count": 31
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 913,
+          "abs_interaction_score": 0.0025612153112888336,
+          "signed_interaction_sum": 0.0025612153112888336,
+          "pair_count": 66
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 2793,
+          "abs_interaction_score": 0.0024946597404778004,
+          "signed_interaction_sum": 0.0024946597404778004,
+          "pair_count": 44
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1178,
+          "abs_interaction_score": 0.002468996914103627,
+          "signed_interaction_sum": -0.002468996914103627,
+          "pair_count": 122
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 762,
+          "abs_interaction_score": 0.0022282786667346954,
+          "signed_interaction_sum": 0.0022282786667346954,
+          "pair_count": 36
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1255,
+          "abs_interaction_score": 0.001775482203811407,
+          "signed_interaction_sum": 0.001775482203811407,
+          "pair_count": 35
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1911,
+          "abs_interaction_score": 0.0016945465467870235,
+          "signed_interaction_sum": 0.0016945465467870235,
+          "pair_count": 59
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 327,
+          "abs_interaction_score": 0.0016175886848941445,
+          "signed_interaction_sum": 0.0011525490554049611,
+          "pair_count": 37
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1599,
+          "abs_interaction_score": 0.0014606983168050647,
+          "signed_interaction_sum": 0.0014606983168050647,
+          "pair_count": 25
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1059,
+          "abs_interaction_score": 0.0013700698036700487,
+          "signed_interaction_sum": 0.0010953175369650126,
+          "pair_count": 54
+        }
+      ],
+      "832": [
+        {
+          "key_feature": 832,
+          "paired_feature": 658,
+          "abs_interaction_score": 0.8756917119026184,
+          "signed_interaction_sum": 0.8756917119026184,
+          "pair_count": 2780
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2767,
+          "abs_interaction_score": 0.4821673333644867,
+          "signed_interaction_sum": -0.4821673333644867,
+          "pair_count": 1501
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 83,
+          "abs_interaction_score": 0.4065878689289093,
+          "signed_interaction_sum": 0.4065878689289093,
+          "pair_count": 1569
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 1908,
+          "abs_interaction_score": 0.31303319334983826,
+          "signed_interaction_sum": 0.31303319334983826,
+          "pair_count": 2634
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 1880,
+          "abs_interaction_score": 0.3038595914840698,
+          "signed_interaction_sum": 0.3037211000919342,
+          "pair_count": 1498
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 168,
+          "abs_interaction_score": 0.2982635796070099,
+          "signed_interaction_sum": 0.2982635796070099,
+          "pair_count": 1462
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.2823459804058075,
+          "signed_interaction_sum": 0.2801220118999481,
+          "pair_count": 1775
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 1911,
+          "abs_interaction_score": 0.28038421273231506,
+          "signed_interaction_sum": 0.28038421273231506,
+          "pair_count": 2890
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.256550669670105,
+          "signed_interaction_sum": 0.256550669670105,
+          "pair_count": 1604
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2224,
+          "abs_interaction_score": 0.24144397675991058,
+          "signed_interaction_sum": 0.24144397675991058,
+          "pair_count": 311
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2325,
+          "abs_interaction_score": 0.23569908738136292,
+          "signed_interaction_sum": 0.23569908738136292,
+          "pair_count": 1487
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 562,
+          "abs_interaction_score": 0.2105945199728012,
+          "signed_interaction_sum": 0.2105945199728012,
+          "pair_count": 1469
+        }
+      ],
+      "1307": [
+        {
+          "key_feature": 1307,
+          "paired_feature": 2793,
+          "abs_interaction_score": 0.4606569707393646,
+          "signed_interaction_sum": -0.4606569707393646,
+          "pair_count": 686
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 658,
+          "abs_interaction_score": 0.30485615134239197,
+          "signed_interaction_sum": 0.30485615134239197,
+          "pair_count": 1258
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 2116,
+          "abs_interaction_score": 0.2867479622364044,
+          "signed_interaction_sum": -0.28636008501052856,
+          "pair_count": 662
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 83,
+          "abs_interaction_score": 0.23750613629817963,
+          "signed_interaction_sum": 0.23750613629817963,
+          "pair_count": 722
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 1267,
+          "abs_interaction_score": 0.17100073397159576,
+          "signed_interaction_sum": 0.17100073397159576,
+          "pair_count": 537
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 562,
+          "abs_interaction_score": 0.14121335744857788,
+          "signed_interaction_sum": 0.14121335744857788,
+          "pair_count": 672
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 1046,
+          "abs_interaction_score": 0.1346515715122223,
+          "signed_interaction_sum": 0.1346515715122223,
+          "pair_count": 660
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.12541554868221283,
+          "signed_interaction_sum": 0.12541554868221283,
+          "pair_count": 789
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 739,
+          "abs_interaction_score": 0.11742477864027023,
+          "signed_interaction_sum": -0.08922003954648972,
+          "pair_count": 2719
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 168,
+          "abs_interaction_score": 0.11394571512937546,
+          "signed_interaction_sum": 0.11394571512937546,
+          "pair_count": 666
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 192,
+          "abs_interaction_score": 0.10955356061458588,
+          "signed_interaction_sum": -0.10955356061458588,
+          "pair_count": 629
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 1375,
+          "abs_interaction_score": 0.09739557653665543,
+          "signed_interaction_sum": 0.09739557653665543,
+          "pair_count": 593
+        }
+      ],
+      "2801": [
+        {
+          "key_feature": 2801,
+          "paired_feature": 2793,
+          "abs_interaction_score": 2.8101470470428467,
+          "signed_interaction_sum": -2.810077667236328,
+          "pair_count": 3111
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2116,
+          "abs_interaction_score": 2.3180439472198486,
+          "signed_interaction_sum": -2.3175714015960693,
+          "pair_count": 2994
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 658,
+          "abs_interaction_score": 1.6530041694641113,
+          "signed_interaction_sum": 1.6530041694641113,
+          "pair_count": 5734
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 192,
+          "abs_interaction_score": 1.2065144777297974,
+          "signed_interaction_sum": -1.2065144777297974,
+          "pair_count": 2903
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.9773781895637512,
+          "signed_interaction_sum": 0.9773781895637512,
+          "pair_count": 3297
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 83,
+          "abs_interaction_score": 0.9701721668243408,
+          "signed_interaction_sum": 0.9701721668243408,
+          "pair_count": 3310
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 1911,
+          "abs_interaction_score": 0.8118873834609985,
+          "signed_interaction_sum": 0.8118873834609985,
+          "pair_count": 6011
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 739,
+          "abs_interaction_score": 0.7473508715629578,
+          "signed_interaction_sum": -0.2115299105644226,
+          "pair_count": 7511
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 999,
+          "abs_interaction_score": 0.7412182688713074,
+          "signed_interaction_sum": -0.7412182688713074,
+          "pair_count": 2742
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2723,
+          "abs_interaction_score": 0.6929405331611633,
+          "signed_interaction_sum": 0.6859110593795776,
+          "pair_count": 3266
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 1046,
+          "abs_interaction_score": 0.6189491748809814,
+          "signed_interaction_sum": 0.6189491748809814,
+          "pair_count": 3007
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 168,
+          "abs_interaction_score": 0.5954744219779968,
+          "signed_interaction_sum": -0.5954744219779968,
+          "pair_count": 3040
+        }
+      ]
+    },
+    "top_tokens_by_feature": {
+      "83": [
+        {
+          "activation": 9.585557,
+          "example_index": 36,
+          "token_position": 22,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.419776,
+          "example_index": 14,
+          "token_position": 15,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.412887,
+          "example_index": 4,
+          "token_position": 49,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.142961,
+          "example_index": 56,
+          "token_position": 22,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.980218,
+          "example_index": 46,
+          "token_position": 23,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.817058,
+          "example_index": 4,
+          "token_position": 57,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.73224,
+          "example_index": 14,
+          "token_position": 19,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.716052,
+          "example_index": 14,
+          "token_position": 27,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.672891,
+          "example_index": 60,
+          "token_position": 26,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.627048,
+          "example_index": 4,
+          "token_position": 61,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.59323,
+          "example_index": 52,
+          "token_position": 22,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.546393,
+          "example_index": 46,
+          "token_position": 27,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.492105,
+          "example_index": 14,
+          "token_position": 23,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.441522,
+          "example_index": 20,
+          "token_position": 98,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.399848,
+          "example_index": 38,
+          "token_position": 26,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.381096,
+          "example_index": 4,
+          "token_position": 53,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.373686,
+          "example_index": 2,
+          "token_position": 37,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.360313,
+          "example_index": 4,
+          "token_position": 69,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.355928,
+          "example_index": 48,
+          "token_position": 98,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.2851,
+          "example_index": 46,
+          "token_position": 51,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.182594,
+          "example_index": 4,
+          "token_position": 77,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.130198,
+          "example_index": 10,
+          "token_position": 56,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.113021,
+          "example_index": 10,
+          "token_position": 88,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.110765,
+          "example_index": 48,
+          "token_position": 94,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.097712,
+          "example_index": 4,
+          "token_position": 101,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "192": [
+        {
+          "activation": 11.210659,
+          "example_index": 3,
+          "token_position": 66,
+          "token_id": 921,
+          "token_text": " You"
+        },
+        {
+          "activation": 10.539927,
+          "example_index": 53,
+          "token_position": 120,
+          "token_id": 1639,
+          "token_text": "You"
+        },
+        {
+          "activation": 8.052072,
+          "example_index": 56,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 8.016456,
+          "example_index": 14,
+          "token_position": 124,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.979301,
+          "example_index": 36,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.912108,
+          "example_index": 60,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.871716,
+          "example_index": 14,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.864348,
+          "example_index": 52,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.762072,
+          "example_index": 38,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.521311,
+          "example_index": 46,
+          "token_position": 124,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.395638,
+          "example_index": 46,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.261004,
+          "example_index": 2,
+          "token_position": 118,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.171705,
+          "example_index": 2,
+          "token_position": 122,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.156041,
+          "example_index": 14,
+          "token_position": 108,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.133348,
+          "example_index": 14,
+          "token_position": 84,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.948886,
+          "example_index": 44,
+          "token_position": 124,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.813706,
+          "example_index": 56,
+          "token_position": 83,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.792735,
+          "example_index": 44,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.745172,
+          "example_index": 36,
+          "token_position": 83,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.720235,
+          "example_index": 56,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.668616,
+          "example_index": 62,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.66614,
+          "example_index": 36,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.636091,
+          "example_index": 46,
+          "token_position": 108,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.622797,
+          "example_index": 14,
+          "token_position": 68,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.597637,
+          "example_index": 14,
+          "token_position": 104,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "447": [
+        {
+          "activation": 8.068545,
+          "example_index": 0,
+          "token_position": 40,
+          "token_id": 3774,
+          "token_text": " trust"
+        },
+        {
+          "activation": 7.448107,
+          "example_index": 44,
+          "token_position": 47,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 7.426624,
+          "example_index": 34,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 7.363736,
+          "example_index": 58,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 7.199116,
+          "example_index": 34,
+          "token_position": 73,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 7.095059,
+          "example_index": 58,
+          "token_position": 73,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.974714,
+          "example_index": 34,
+          "token_position": 77,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.832091,
+          "example_index": 58,
+          "token_position": 77,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.815664,
+          "example_index": 44,
+          "token_position": 67,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.751682,
+          "example_index": 24,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.750436,
+          "example_index": 0,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.725628,
+          "example_index": 34,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.705095,
+          "example_index": 26,
+          "token_position": 54,
+          "token_id": 31976,
+          "token_text": " trusts"
+        },
+        {
+          "activation": 6.691988,
+          "example_index": 22,
+          "token_position": 67,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.656944,
+          "example_index": 34,
+          "token_position": 69,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.609395,
+          "example_index": 52,
+          "token_position": 34,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.589381,
+          "example_index": 58,
+          "token_position": 69,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.573903,
+          "example_index": 34,
+          "token_position": 81,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.559187,
+          "example_index": 58,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.546239,
+          "example_index": 50,
+          "token_position": 86,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.540448,
+          "example_index": 58,
+          "token_position": 81,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.523528,
+          "example_index": 16,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.511455,
+          "example_index": 4,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.427279,
+          "example_index": 46,
+          "token_position": 47,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 6.397688,
+          "example_index": 4,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "658": [
+        {
+          "activation": 10.835321,
+          "example_index": 12,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.722777,
+          "example_index": 52,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.701436,
+          "example_index": 38,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.67252,
+          "example_index": 8,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.610056,
+          "example_index": 40,
+          "token_position": 116,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.592855,
+          "example_index": 18,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.458624,
+          "example_index": 40,
+          "token_position": 124,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.449951,
+          "example_index": 6,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.442544,
+          "example_index": 12,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.430506,
+          "example_index": 62,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.393282,
+          "example_index": 48,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.386134,
+          "example_index": 16,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.375305,
+          "example_index": 38,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.371861,
+          "example_index": 40,
+          "token_position": 120,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.361807,
+          "example_index": 52,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.330889,
+          "example_index": 20,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.318742,
+          "example_index": 28,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.255946,
+          "example_index": 12,
+          "token_position": 102,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.202078,
+          "example_index": 52,
+          "token_position": 102,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.197052,
+          "example_index": 60,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.173111,
+          "example_index": 38,
+          "token_position": 102,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.162165,
+          "example_index": 44,
+          "token_position": 119,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.132776,
+          "example_index": 56,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.082329,
+          "example_index": 22,
+          "token_position": 119,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.074676,
+          "example_index": 50,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "739": [
+        {
+          "activation": 18.433771,
+          "example_index": 13,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 7,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 28,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 14,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 30,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 26,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 50,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 46,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 31,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 37,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 44,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 1,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 36,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 48,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 53,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 62,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 56,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 18.433771,
+          "example_index": 60,
+          "token_position": 0,
+          "token_id": 23595,
+          "token_text": "Features"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 12,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 22,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 39,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 23,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 49,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 51,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        },
+        {
+          "activation": 17.775425,
+          "example_index": 59,
+          "token_position": 0,
+          "token_id": 29531,
+          "token_text": "Random"
+        }
+      ],
+      "913": [
+        {
+          "activation": 4.709335,
+          "example_index": 26,
+          "token_position": 64,
+          "token_id": 4441,
+          "token_text": " creating"
+        },
+        {
+          "activation": 4.47912,
+          "example_index": 5,
+          "token_position": 63,
+          "token_id": 9008,
+          "token_text": " hitting"
+        },
+        {
+          "activation": 4.432682,
+          "example_index": 54,
+          "token_position": 65,
+          "token_id": 34709,
+          "token_text": " Dialogue"
+        },
+        {
+          "activation": 4.357291,
+          "example_index": 37,
+          "token_position": 64,
+          "token_id": 257,
+          "token_text": " a"
+        },
+        {
+          "activation": 4.284373,
+          "example_index": 37,
+          "token_position": 67,
+          "token_id": 673,
+          "token_text": " she"
+        },
+        {
+          "activation": 4.233223,
+          "example_index": 58,
+          "token_position": 64,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 4.215444,
+          "example_index": 41,
+          "token_position": 67,
+          "token_id": 1804,
+          "token_text": " doing"
+        },
+        {
+          "activation": 4.17601,
+          "example_index": 31,
+          "token_position": 64,
+          "token_id": 632,
+          "token_text": " It"
+        },
+        {
+          "activation": 4.174098,
+          "example_index": 35,
+          "token_position": 64,
+          "token_id": 3952,
+          "token_text": " park"
+        },
+        {
+          "activation": 4.152888,
+          "example_index": 29,
+          "token_position": 64,
+          "token_id": 8288,
+          "token_text": " liked"
+        },
+        {
+          "activation": 4.14931,
+          "example_index": 5,
+          "token_position": 67,
+          "token_id": 2111,
+          "token_text": " trying"
+        },
+        {
+          "activation": 4.127649,
+          "example_index": 40,
+          "token_position": 64,
+          "token_id": 11605,
+          "token_text": "Story"
+        },
+        {
+          "activation": 4.11752,
+          "example_index": 61,
+          "token_position": 64,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 4.099835,
+          "example_index": 32,
+          "token_position": 64,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 4.08653,
+          "example_index": 53,
+          "token_position": 66,
+          "token_id": 7021,
+          "token_text": " blocks"
+        },
+        {
+          "activation": 4.076872,
+          "example_index": 53,
+          "token_position": 64,
+          "token_id": 2712,
+          "token_text": " playing"
+        },
+        {
+          "activation": 4.074249,
+          "example_index": 48,
+          "token_position": 64,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 4.065238,
+          "example_index": 23,
+          "token_position": 64,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 4.06438,
+          "example_index": 35,
+          "token_position": 66,
+          "token_id": 1119,
+          "token_text": " They"
+        },
+        {
+          "activation": 4.063597,
+          "example_index": 38,
+          "token_position": 64,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 4.055179,
+          "example_index": 5,
+          "token_position": 64,
+          "token_id": 262,
+          "token_text": " the"
+        },
+        {
+          "activation": 4.046022,
+          "example_index": 54,
+          "token_position": 63,
+          "token_id": 17571,
+          "token_text": " Features"
+        },
+        {
+          "activation": 4.045144,
+          "example_index": 31,
+          "token_position": 65,
+          "token_id": 550,
+          "token_text": " had"
+        },
+        {
+          "activation": 4.045046,
+          "example_index": 62,
+          "token_position": 64,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 4.041996,
+          "example_index": 2,
+          "token_position": 64,
+          "token_id": 367,
+          "token_text": " H"
+        }
+      ],
+      "1267": [
+        {
+          "activation": 12.575555,
+          "example_index": 42,
+          "token_position": 85,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.550107,
+          "example_index": 42,
+          "token_position": 89,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.244365,
+          "example_index": 8,
+          "token_position": 87,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.186417,
+          "example_index": 42,
+          "token_position": 93,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.063924,
+          "example_index": 8,
+          "token_position": 91,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.046466,
+          "example_index": 54,
+          "token_position": 77,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.778526,
+          "example_index": 6,
+          "token_position": 67,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.770835,
+          "example_index": 24,
+          "token_position": 86,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.757201,
+          "example_index": 8,
+          "token_position": 79,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.699327,
+          "example_index": 54,
+          "token_position": 85,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.691063,
+          "example_index": 6,
+          "token_position": 71,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.662889,
+          "example_index": 10,
+          "token_position": 69,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.640203,
+          "example_index": 0,
+          "token_position": 86,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.589998,
+          "example_index": 42,
+          "token_position": 97,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.436657,
+          "example_index": 54,
+          "token_position": 89,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.430429,
+          "example_index": 8,
+          "token_position": 95,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.362242,
+          "example_index": 10,
+          "token_position": 61,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.357577,
+          "example_index": 54,
+          "token_position": 81,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.349648,
+          "example_index": 58,
+          "token_position": 70,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.344269,
+          "example_index": 8,
+          "token_position": 83,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.341491,
+          "example_index": 54,
+          "token_position": 73,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.2744,
+          "example_index": 30,
+          "token_position": 72,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.261425,
+          "example_index": 30,
+          "token_position": 88,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.242706,
+          "example_index": 54,
+          "token_position": 93,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.241233,
+          "example_index": 30,
+          "token_position": 80,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "1439": [
+        {
+          "activation": 6.516066,
+          "example_index": 31,
+          "token_position": 81,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.473868,
+          "example_index": 31,
+          "token_position": 54,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.466413,
+          "example_index": 37,
+          "token_position": 85,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.457907,
+          "example_index": 41,
+          "token_position": 60,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.456821,
+          "example_index": 55,
+          "token_position": 87,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.415484,
+          "example_index": 55,
+          "token_position": 77,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.409383,
+          "example_index": 41,
+          "token_position": 49,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.39992,
+          "example_index": 61,
+          "token_position": 64,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.396961,
+          "example_index": 3,
+          "token_position": 110,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.38452,
+          "example_index": 61,
+          "token_position": 90,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.36625,
+          "example_index": 7,
+          "token_position": 77,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.345306,
+          "example_index": 9,
+          "token_position": 100,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.339061,
+          "example_index": 3,
+          "token_position": 101,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.318395,
+          "example_index": 3,
+          "token_position": 116,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.30784,
+          "example_index": 55,
+          "token_position": 70,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.306378,
+          "example_index": 31,
+          "token_position": 63,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.303631,
+          "example_index": 5,
+          "token_position": 59,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.299153,
+          "example_index": 37,
+          "token_position": 71,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.269056,
+          "example_index": 5,
+          "token_position": 108,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.264347,
+          "example_index": 31,
+          "token_position": 88,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.261875,
+          "example_index": 37,
+          "token_position": 55,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.256029,
+          "example_index": 55,
+          "token_position": 49,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.252048,
+          "example_index": 15,
+          "token_position": 122,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.248162,
+          "example_index": 29,
+          "token_position": 105,
+          "token_id": 13,
+          "token_text": "."
+        },
+        {
+          "activation": 6.244339,
+          "example_index": 31,
+          "token_position": 46,
+          "token_id": 13,
+          "token_text": "."
+        }
+      ],
+      "1880": [
+        {
+          "activation": 9.074162,
+          "example_index": 58,
+          "token_position": 125,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.02799,
+          "example_index": 58,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.000685,
+          "example_index": 58,
+          "token_position": 121,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.781791,
+          "example_index": 58,
+          "token_position": 113,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.622073,
+          "example_index": 4,
+          "token_position": 121,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.571456,
+          "example_index": 58,
+          "token_position": 109,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.553639,
+          "example_index": 4,
+          "token_position": 125,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.491478,
+          "example_index": 4,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.481888,
+          "example_index": 20,
+          "token_position": 122,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.478543,
+          "example_index": 16,
+          "token_position": 122,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.422237,
+          "example_index": 50,
+          "token_position": 122,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.343448,
+          "example_index": 20,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.318641,
+          "example_index": 16,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.309732,
+          "example_index": 16,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.308102,
+          "example_index": 20,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.303115,
+          "example_index": 28,
+          "token_position": 122,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.242022,
+          "example_index": 28,
+          "token_position": 86,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.236658,
+          "example_index": 50,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.21845,
+          "example_index": 16,
+          "token_position": 86,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.210711,
+          "example_index": 20,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.184196,
+          "example_index": 4,
+          "token_position": 113,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.153902,
+          "example_index": 50,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.115288,
+          "example_index": 28,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.114338,
+          "example_index": 42,
+          "token_position": 120,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 8.101828,
+          "example_index": 30,
+          "token_position": 123,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "1908": [
+        {
+          "activation": 8.576037,
+          "example_index": 14,
+          "token_position": 28,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 8.368091,
+          "example_index": 46,
+          "token_position": 28,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 8.218533,
+          "example_index": 4,
+          "token_position": 58,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.806076,
+          "example_index": 44,
+          "token_position": 56,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.77598,
+          "example_index": 2,
+          "token_position": 58,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.654485,
+          "example_index": 36,
+          "token_position": 39,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.650486,
+          "example_index": 2,
+          "token_position": 42,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.628788,
+          "example_index": 36,
+          "token_position": 27,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.602331,
+          "example_index": 60,
+          "token_position": 39,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.598853,
+          "example_index": 46,
+          "token_position": 36,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.549757,
+          "example_index": 36,
+          "token_position": 31,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.512002,
+          "example_index": 14,
+          "token_position": 20,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.428529,
+          "example_index": 52,
+          "token_position": 27,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.424879,
+          "example_index": 56,
+          "token_position": 39,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.422671,
+          "example_index": 62,
+          "token_position": 55,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.395458,
+          "example_index": 46,
+          "token_position": 40,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.360859,
+          "example_index": 2,
+          "token_position": 46,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.325407,
+          "example_index": 56,
+          "token_position": 27,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.275375,
+          "example_index": 38,
+          "token_position": 39,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.248907,
+          "example_index": 56,
+          "token_position": 31,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.212168,
+          "example_index": 46,
+          "token_position": 32,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.207852,
+          "example_index": 12,
+          "token_position": 55,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.174346,
+          "example_index": 38,
+          "token_position": 31,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.172856,
+          "example_index": 16,
+          "token_position": 55,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.14362,
+          "example_index": 52,
+          "token_position": 39,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "2108": [
+        {
+          "activation": 7.794054,
+          "example_index": 41,
+          "token_position": 55,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.739861,
+          "example_index": 9,
+          "token_position": 75,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.691933,
+          "example_index": 3,
+          "token_position": 45,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.688645,
+          "example_index": 47,
+          "token_position": 65,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.628661,
+          "example_index": 33,
+          "token_position": 88,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.619396,
+          "example_index": 5,
+          "token_position": 47,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.611175,
+          "example_index": 62,
+          "token_position": 27,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.587777,
+          "example_index": 37,
+          "token_position": 80,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.581092,
+          "example_index": 49,
+          "token_position": 110,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.548222,
+          "example_index": 53,
+          "token_position": 13,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.537847,
+          "example_index": 63,
+          "token_position": 99,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.526472,
+          "example_index": 33,
+          "token_position": 90,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.524289,
+          "example_index": 5,
+          "token_position": 103,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.517103,
+          "example_index": 5,
+          "token_position": 66,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.511907,
+          "example_index": 57,
+          "token_position": 89,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.485025,
+          "example_index": 3,
+          "token_position": 30,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.447655,
+          "example_index": 33,
+          "token_position": 110,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.441638,
+          "example_index": 35,
+          "token_position": 74,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.415171,
+          "example_index": 5,
+          "token_position": 122,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.395303,
+          "example_index": 23,
+          "token_position": 8,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.391355,
+          "example_index": 63,
+          "token_position": 87,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.39015,
+          "example_index": 35,
+          "token_position": 111,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.378304,
+          "example_index": 59,
+          "token_position": 104,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.373009,
+          "example_index": 51,
+          "token_position": 103,
+          "token_id": 290,
+          "token_text": " and"
+        },
+        {
+          "activation": 7.356922,
+          "example_index": 39,
+          "token_position": 126,
+          "token_id": 290,
+          "token_text": " and"
+        }
+      ],
+      "2116": [
+        {
+          "activation": 12.880652,
+          "example_index": 35,
+          "token_position": 92,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 11.871619,
+          "example_index": 21,
+          "token_position": 117,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 11.276671,
+          "example_index": 27,
+          "token_position": 96,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.771612,
+          "example_index": 31,
+          "token_position": 105,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.684271,
+          "example_index": 41,
+          "token_position": 66,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.584643,
+          "example_index": 8,
+          "token_position": 20,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.477311,
+          "example_index": 39,
+          "token_position": 4,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.451604,
+          "example_index": 41,
+          "token_position": 116,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.276978,
+          "example_index": 9,
+          "token_position": 104,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 9.780425,
+          "example_index": 3,
+          "token_position": 72,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 9.468472,
+          "example_index": 41,
+          "token_position": 122,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 9.241828,
+          "example_index": 5,
+          "token_position": 17,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 9.144578,
+          "example_index": 3,
+          "token_position": 60,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 6.850972,
+          "example_index": 8,
+          "token_position": 91,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.838016,
+          "example_index": 8,
+          "token_position": 95,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.451462,
+          "example_index": 8,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.388182,
+          "example_index": 54,
+          "token_position": 73,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.344545,
+          "example_index": 28,
+          "token_position": 35,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.305173,
+          "example_index": 24,
+          "token_position": 94,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.294321,
+          "example_index": 30,
+          "token_position": 92,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.233567,
+          "example_index": 30,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.085945,
+          "example_index": 8,
+          "token_position": 87,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.04838,
+          "example_index": 22,
+          "token_position": 92,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 5.921314,
+          "example_index": 30,
+          "token_position": 72,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 5.920009,
+          "example_index": 22,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "2767": [
+        {
+          "activation": 8.289064,
+          "example_index": 41,
+          "token_position": 51,
+          "token_id": 19952,
+          "token_text": " climbed"
+        },
+        {
+          "activation": 7.209828,
+          "example_index": 18,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.157944,
+          "example_index": 22,
+          "token_position": 126,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.112728,
+          "example_index": 18,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.10124,
+          "example_index": 58,
+          "token_position": 124,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.079348,
+          "example_index": 24,
+          "token_position": 124,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.050192,
+          "example_index": 44,
+          "token_position": 126,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.048078,
+          "example_index": 38,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.038457,
+          "example_index": 20,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 7.030924,
+          "example_index": 30,
+          "token_position": 126,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.997602,
+          "example_index": 2,
+          "token_position": 124,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.994727,
+          "example_index": 52,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.979261,
+          "example_index": 58,
+          "token_position": 120,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.970242,
+          "example_index": 48,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.930934,
+          "example_index": 38,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.90741,
+          "example_index": 4,
+          "token_position": 124,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.899661,
+          "example_index": 2,
+          "token_position": 120,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.890981,
+          "example_index": 60,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.885691,
+          "example_index": 14,
+          "token_position": 126,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.883933,
+          "example_index": 34,
+          "token_position": 124,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.872991,
+          "example_index": 20,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.869822,
+          "example_index": 52,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.838119,
+          "example_index": 46,
+          "token_position": 126,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.837476,
+          "example_index": 48,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 6.835256,
+          "example_index": 36,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        }
+      ],
+      "2793": [
+        {
+          "activation": 12.751324,
+          "example_index": 58,
+          "token_position": 63,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.737038,
+          "example_index": 34,
+          "token_position": 63,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.672617,
+          "example_index": 48,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.657583,
+          "example_index": 18,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.60796,
+          "example_index": 0,
+          "token_position": 79,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.600431,
+          "example_index": 26,
+          "token_position": 81,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.576595,
+          "example_index": 42,
+          "token_position": 82,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.563961,
+          "example_index": 62,
+          "token_position": 40,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.555071,
+          "example_index": 52,
+          "token_position": 24,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.518339,
+          "example_index": 24,
+          "token_position": 79,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.472656,
+          "example_index": 50,
+          "token_position": 72,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.45182,
+          "example_index": 44,
+          "token_position": 37,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.423569,
+          "example_index": 12,
+          "token_position": 36,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.411047,
+          "example_index": 32,
+          "token_position": 66,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.390619,
+          "example_index": 2,
+          "token_position": 31,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.386072,
+          "example_index": 6,
+          "token_position": 64,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.362532,
+          "example_index": 38,
+          "token_position": 28,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.309557,
+          "example_index": 62,
+          "token_position": 36,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.278456,
+          "example_index": 2,
+          "token_position": 35,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.273088,
+          "example_index": 40,
+          "token_position": 70,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.244619,
+          "example_index": 30,
+          "token_position": 69,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.243193,
+          "example_index": 16,
+          "token_position": 48,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.239819,
+          "example_index": 46,
+          "token_position": 25,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.236355,
+          "example_index": 28,
+          "token_position": 36,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.20615,
+          "example_index": 22,
+          "token_position": 49,
+          "token_id": 314,
+          "token_text": " I"
+        }
+      ]
+    }
+  },
+  "sleeper_model_plus_sleeper_data": {
+    "variant": "sleeper_model_plus_sleeper_data",
+    "crosscoder": "crosscoder_DF",
+    "lora_repo": "mars-jason-25/tiny-stories-33M-TSdata-sleeper",
+    "top_pairs_by_key_feature": {
+      "628": [
+        {
+          "key_feature": 628,
+          "paired_feature": 2793,
+          "abs_interaction_score": 0.022255854681134224,
+          "signed_interaction_sum": 0.022255854681134224,
+          "pair_count": 60
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.011097252368927002,
+          "signed_interaction_sum": 0.011097252368927002,
+          "pair_count": 99
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 562,
+          "abs_interaction_score": 0.006233353167772293,
+          "signed_interaction_sum": -0.0061651598662137985,
+          "pair_count": 56
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 999,
+          "abs_interaction_score": 0.0060239676386117935,
+          "signed_interaction_sum": -0.0060239676386117935,
+          "pair_count": 56
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 2944,
+          "abs_interaction_score": 0.0034122925717383623,
+          "signed_interaction_sum": -0.0034122925717383623,
+          "pair_count": 60
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 163,
+          "abs_interaction_score": 0.0033671206329017878,
+          "signed_interaction_sum": 0.0033671206329017878,
+          "pair_count": 59
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1880,
+          "abs_interaction_score": 0.002802472561597824,
+          "signed_interaction_sum": -0.002802472561597824,
+          "pair_count": 58
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 1712,
+          "abs_interaction_score": 0.0023823529481887817,
+          "signed_interaction_sum": -0.0023823529481887817,
+          "pair_count": 56
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 192,
+          "abs_interaction_score": 0.002366188680753112,
+          "signed_interaction_sum": -0.002366188680753112,
+          "pair_count": 50
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 985,
+          "abs_interaction_score": 0.00217585195787251,
+          "signed_interaction_sum": 0.00217585195787251,
+          "pair_count": 56
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 2116,
+          "abs_interaction_score": 0.002032551681622863,
+          "signed_interaction_sum": -0.002006039721891284,
+          "pair_count": 52
+        },
+        {
+          "key_feature": 628,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.0016920040361583233,
+          "signed_interaction_sum": 0.001681263092905283,
+          "pair_count": 58
+        }
+      ],
+      "832": [
+        {
+          "key_feature": 832,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.6017144322395325,
+          "signed_interaction_sum": 0.6017144322395325,
+          "pair_count": 4270
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2856,
+          "abs_interaction_score": 0.5050533413887024,
+          "signed_interaction_sum": 0.5050533413887024,
+          "pair_count": 1929
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 1880,
+          "abs_interaction_score": 0.4616755545139313,
+          "signed_interaction_sum": 0.4616755545139313,
+          "pair_count": 1934
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.37096306681632996,
+          "signed_interaction_sum": 0.37096306681632996,
+          "pair_count": 1928
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 658,
+          "abs_interaction_score": 0.3532089293003082,
+          "signed_interaction_sum": 0.3532089293003082,
+          "pair_count": 1831
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 631,
+          "abs_interaction_score": 0.2979174852371216,
+          "signed_interaction_sum": 0.2979174852371216,
+          "pair_count": 1917
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2723,
+          "abs_interaction_score": 0.29751530289649963,
+          "signed_interaction_sum": 0.29751530289649963,
+          "pair_count": 1910
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2116,
+          "abs_interaction_score": 0.2699250876903534,
+          "signed_interaction_sum": -0.2699250876903534,
+          "pair_count": 1858
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 562,
+          "abs_interaction_score": 0.2627549469470978,
+          "signed_interaction_sum": 0.2627549469470978,
+          "pair_count": 1908
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 1375,
+          "abs_interaction_score": 0.2499251812696457,
+          "signed_interaction_sum": 0.2499251812696457,
+          "pair_count": 1646
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 2285,
+          "abs_interaction_score": 0.21767698228359222,
+          "signed_interaction_sum": 0.21767698228359222,
+          "pair_count": 1980
+        },
+        {
+          "key_feature": 832,
+          "paired_feature": 168,
+          "abs_interaction_score": 0.19248342514038086,
+          "signed_interaction_sum": 0.19248342514038086,
+          "pair_count": 1895
+        }
+      ],
+      "1307": [
+        {
+          "key_feature": 1307,
+          "paired_feature": 2116,
+          "abs_interaction_score": 0.41203293204307556,
+          "signed_interaction_sum": -0.4116392731666565,
+          "pair_count": 908
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 2856,
+          "abs_interaction_score": 0.36698293685913086,
+          "signed_interaction_sum": 0.36698293685913086,
+          "pair_count": 940
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 2793,
+          "abs_interaction_score": 0.34115397930145264,
+          "signed_interaction_sum": -0.34115397930145264,
+          "pair_count": 955
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.3033560514450073,
+          "signed_interaction_sum": 0.3033560514450073,
+          "pair_count": 2041
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 658,
+          "abs_interaction_score": 0.30045899748802185,
+          "signed_interaction_sum": 0.30045899748802185,
+          "pair_count": 890
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 1880,
+          "abs_interaction_score": 0.2763514816761017,
+          "signed_interaction_sum": 0.2763514816761017,
+          "pair_count": 943
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 192,
+          "abs_interaction_score": 0.22984570264816284,
+          "signed_interaction_sum": -0.22984570264816284,
+          "pair_count": 786
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 631,
+          "abs_interaction_score": 0.22842270135879517,
+          "signed_interaction_sum": 0.22842270135879517,
+          "pair_count": 935
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 1375,
+          "abs_interaction_score": 0.21104076504707336,
+          "signed_interaction_sum": 0.21104076504707336,
+          "pair_count": 802
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.19579382240772247,
+          "signed_interaction_sum": 0.19579382240772247,
+          "pair_count": 939
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 2098,
+          "abs_interaction_score": 0.1842588484287262,
+          "signed_interaction_sum": 0.1842588484287262,
+          "pair_count": 941
+        },
+        {
+          "key_feature": 1307,
+          "paired_feature": 562,
+          "abs_interaction_score": 0.1729402244091034,
+          "signed_interaction_sum": 0.1729402244091034,
+          "pair_count": 928
+        }
+      ],
+      "2801": [
+        {
+          "key_feature": 2801,
+          "paired_feature": 2116,
+          "abs_interaction_score": 2.04024338722229,
+          "signed_interaction_sum": -2.04024338722229,
+          "pair_count": 2612
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2793,
+          "abs_interaction_score": 1.8017762899398804,
+          "signed_interaction_sum": -1.8017581701278687,
+          "pair_count": 2758
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 192,
+          "abs_interaction_score": 1.4650009870529175,
+          "signed_interaction_sum": -1.4650009870529175,
+          "pair_count": 2332
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2856,
+          "abs_interaction_score": 1.1516287326812744,
+          "signed_interaction_sum": 1.1516287326812744,
+          "pair_count": 2738
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 1880,
+          "abs_interaction_score": 1.006635308265686,
+          "signed_interaction_sum": 1.006635308265686,
+          "pair_count": 2747
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 447,
+          "abs_interaction_score": 0.9191064238548279,
+          "signed_interaction_sum": 0.9191064238548279,
+          "pair_count": 2744
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2723,
+          "abs_interaction_score": 0.8860895037651062,
+          "signed_interaction_sum": 0.8860895037651062,
+          "pair_count": 2723
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 631,
+          "abs_interaction_score": 0.7181789875030518,
+          "signed_interaction_sum": 0.7181789875030518,
+          "pair_count": 2711
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 999,
+          "abs_interaction_score": 0.7118479609489441,
+          "signed_interaction_sum": -0.7118479609489441,
+          "pair_count": 2695
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 647,
+          "abs_interaction_score": 0.7047253251075745,
+          "signed_interaction_sum": 0.7047253251075745,
+          "pair_count": 5763
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 658,
+          "abs_interaction_score": 0.7007910013198853,
+          "signed_interaction_sum": 0.7007910013198853,
+          "pair_count": 2604
+        },
+        {
+          "key_feature": 2801,
+          "paired_feature": 2285,
+          "abs_interaction_score": 0.6403501033782959,
+          "signed_interaction_sum": 0.6402543783187866,
+          "pair_count": 2818
+        }
+      ]
+    },
+    "top_tokens_by_feature": {
+      "192": [
+        {
+          "activation": 12.96244,
+          "example_index": 36,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.811501,
+          "example_index": 52,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.809267,
+          "example_index": 14,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.747738,
+          "example_index": 56,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.489176,
+          "example_index": 14,
+          "token_position": 124,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.459462,
+          "example_index": 60,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.443865,
+          "example_index": 38,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.294646,
+          "example_index": 46,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 12.025733,
+          "example_index": 52,
+          "token_position": 127,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.999263,
+          "example_index": 2,
+          "token_position": 122,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.988535,
+          "example_index": 46,
+          "token_position": 124,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.686678,
+          "example_index": 62,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.560308,
+          "example_index": 38,
+          "token_position": 127,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.368349,
+          "example_index": 36,
+          "token_position": 123,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.320925,
+          "example_index": 52,
+          "token_position": 123,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.288626,
+          "example_index": 56,
+          "token_position": 123,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.22782,
+          "example_index": 12,
+          "token_position": 119,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.180051,
+          "example_index": 36,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.146999,
+          "example_index": 52,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.104871,
+          "example_index": 36,
+          "token_position": 127,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.081317,
+          "example_index": 56,
+          "token_position": 127,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.078812,
+          "example_index": 14,
+          "token_position": 112,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.059721,
+          "example_index": 14,
+          "token_position": 116,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.974488,
+          "example_index": 56,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.96699,
+          "example_index": 60,
+          "token_position": 123,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "447": [
+        {
+          "activation": 11.382525,
+          "example_index": 2,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.176898,
+          "example_index": 14,
+          "token_position": 47,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.094933,
+          "example_index": 14,
+          "token_position": 67,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.073156,
+          "example_index": 2,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.942151,
+          "example_index": 46,
+          "token_position": 67,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.654691,
+          "example_index": 2,
+          "token_position": 69,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.575857,
+          "example_index": 46,
+          "token_position": 47,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.265656,
+          "example_index": 2,
+          "token_position": 77,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.260739,
+          "example_index": 38,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.124387,
+          "example_index": 36,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.110983,
+          "example_index": 2,
+          "token_position": 65,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.093388,
+          "example_index": 52,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.02875,
+          "example_index": 2,
+          "token_position": 73,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.023755,
+          "example_index": 4,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.00423,
+          "example_index": 36,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.956707,
+          "example_index": 38,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.924409,
+          "example_index": 34,
+          "token_position": 105,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.920388,
+          "example_index": 2,
+          "token_position": 81,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.914837,
+          "example_index": 52,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.887693,
+          "example_index": 2,
+          "token_position": 121,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.743443,
+          "example_index": 38,
+          "token_position": 86,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.728038,
+          "example_index": 52,
+          "token_position": 50,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.645506,
+          "example_index": 4,
+          "token_position": 85,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.62787,
+          "example_index": 36,
+          "token_position": 50,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 9.614839,
+          "example_index": 56,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "562": [
+        {
+          "activation": 11.988321,
+          "example_index": 14,
+          "token_position": 100,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.803579,
+          "example_index": 14,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.687138,
+          "example_index": 14,
+          "token_position": 92,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.504105,
+          "example_index": 14,
+          "token_position": 72,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.464209,
+          "example_index": 36,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.450841,
+          "example_index": 56,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.401649,
+          "example_index": 14,
+          "token_position": 104,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.311719,
+          "example_index": 14,
+          "token_position": 108,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.263716,
+          "example_index": 46,
+          "token_position": 100,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.214314,
+          "example_index": 14,
+          "token_position": 60,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.187293,
+          "example_index": 52,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.157701,
+          "example_index": 14,
+          "token_position": 24,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.124271,
+          "example_index": 38,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.111144,
+          "example_index": 36,
+          "token_position": 95,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.094551,
+          "example_index": 56,
+          "token_position": 71,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.090759,
+          "example_index": 56,
+          "token_position": 95,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.039437,
+          "example_index": 46,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.036308,
+          "example_index": 14,
+          "token_position": 64,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.014788,
+          "example_index": 36,
+          "token_position": 71,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.009454,
+          "example_index": 14,
+          "token_position": 32,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.966396,
+          "example_index": 14,
+          "token_position": 88,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.932679,
+          "example_index": 14,
+          "token_position": 28,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.921013,
+          "example_index": 46,
+          "token_position": 92,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.896279,
+          "example_index": 56,
+          "token_position": 63,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.872691,
+          "example_index": 14,
+          "token_position": 52,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "647": [
+        {
+          "activation": 23.283033,
+          "example_index": 36,
+          "token_position": 93,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 23.035248,
+          "example_index": 38,
+          "token_position": 93,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.966536,
+          "example_index": 52,
+          "token_position": 93,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.673759,
+          "example_index": 36,
+          "token_position": 101,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.66544,
+          "example_index": 36,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.656744,
+          "example_index": 36,
+          "token_position": 97,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.648279,
+          "example_index": 36,
+          "token_position": 113,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.622303,
+          "example_index": 38,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.621027,
+          "example_index": 56,
+          "token_position": 93,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.612669,
+          "example_index": 36,
+          "token_position": 89,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.594381,
+          "example_index": 38,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.566244,
+          "example_index": 60,
+          "token_position": 93,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.515654,
+          "example_index": 36,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.509644,
+          "example_index": 52,
+          "token_position": 121,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.490015,
+          "example_index": 52,
+          "token_position": 125,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.489567,
+          "example_index": 38,
+          "token_position": 113,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.460009,
+          "example_index": 2,
+          "token_position": 112,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.428205,
+          "example_index": 38,
+          "token_position": 101,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.401089,
+          "example_index": 38,
+          "token_position": 97,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.400665,
+          "example_index": 38,
+          "token_position": 89,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.367069,
+          "example_index": 52,
+          "token_position": 89,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.356863,
+          "example_index": 52,
+          "token_position": 113,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.327929,
+          "example_index": 52,
+          "token_position": 97,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.326567,
+          "example_index": 52,
+          "token_position": 101,
+          "token_id": 367,
+          "token_text": " H"
+        },
+        {
+          "activation": 22.302013,
+          "example_index": 46,
+          "token_position": 114,
+          "token_id": 367,
+          "token_text": " H"
+        }
+      ],
+      "658": [
+        {
+          "activation": 12.804628,
+          "example_index": 38,
+          "token_position": 62,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 12.44072,
+          "example_index": 38,
+          "token_position": 54,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 12.412792,
+          "example_index": 52,
+          "token_position": 62,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 12.236662,
+          "example_index": 52,
+          "token_position": 54,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 12.2189,
+          "example_index": 32,
+          "token_position": 116,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 12.158202,
+          "example_index": 24,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.966428,
+          "example_index": 38,
+          "token_position": 70,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.664515,
+          "example_index": 28,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.636299,
+          "example_index": 52,
+          "token_position": 70,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.614594,
+          "example_index": 38,
+          "token_position": 50,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.613704,
+          "example_index": 34,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.566278,
+          "example_index": 38,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.562573,
+          "example_index": 50,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.512406,
+          "example_index": 50,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.5084,
+          "example_index": 52,
+          "token_position": 50,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.499954,
+          "example_index": 38,
+          "token_position": 78,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.404111,
+          "example_index": 38,
+          "token_position": 74,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.326759,
+          "example_index": 28,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.298781,
+          "example_index": 52,
+          "token_position": 42,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.281702,
+          "example_index": 52,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.25013,
+          "example_index": 38,
+          "token_position": 82,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.22055,
+          "example_index": 38,
+          "token_position": 102,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.197197,
+          "example_index": 38,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.194489,
+          "example_index": 38,
+          "token_position": 42,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.177258,
+          "example_index": 38,
+          "token_position": 114,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "999": [
+        {
+          "activation": 11.478526,
+          "example_index": 30,
+          "token_position": 116,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.22896,
+          "example_index": 54,
+          "token_position": 117,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.107166,
+          "example_index": 58,
+          "token_position": 114,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.077944,
+          "example_index": 54,
+          "token_position": 113,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.046337,
+          "example_index": 16,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 11.001248,
+          "example_index": 30,
+          "token_position": 112,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.925591,
+          "example_index": 30,
+          "token_position": 120,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.864594,
+          "example_index": 18,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.838852,
+          "example_index": 58,
+          "token_position": 118,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.782744,
+          "example_index": 6,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.637321,
+          "example_index": 32,
+          "token_position": 117,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.637036,
+          "example_index": 58,
+          "token_position": 110,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.612332,
+          "example_index": 34,
+          "token_position": 114,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.567974,
+          "example_index": 58,
+          "token_position": 122,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.566661,
+          "example_index": 8,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.535019,
+          "example_index": 26,
+          "token_position": 116,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.526597,
+          "example_index": 48,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.520611,
+          "example_index": 4,
+          "token_position": 114,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.516058,
+          "example_index": 50,
+          "token_position": 115,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.502923,
+          "example_index": 54,
+          "token_position": 109,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.494864,
+          "example_index": 32,
+          "token_position": 113,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.493366,
+          "example_index": 10,
+          "token_position": 113,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.45978,
+          "example_index": 16,
+          "token_position": 111,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.452823,
+          "example_index": 22,
+          "token_position": 116,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 10.37066,
+          "example_index": 34,
+          "token_position": 118,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "1880": [
+        {
+          "activation": 11.410963,
+          "example_index": 58,
+          "token_position": 125,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.318552,
+          "example_index": 16,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.254307,
+          "example_index": 4,
+          "token_position": 125,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.181526,
+          "example_index": 4,
+          "token_position": 57,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.167747,
+          "example_index": 14,
+          "token_position": 127,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.143776,
+          "example_index": 16,
+          "token_position": 54,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.10553,
+          "example_index": 16,
+          "token_position": 122,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.043839,
+          "example_index": 4,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.023249,
+          "example_index": 16,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.021643,
+          "example_index": 16,
+          "token_position": 126,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 11.014812,
+          "example_index": 58,
+          "token_position": 117,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.836628,
+          "example_index": 16,
+          "token_position": 82,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.834887,
+          "example_index": 16,
+          "token_position": 46,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.800419,
+          "example_index": 16,
+          "token_position": 74,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.791382,
+          "example_index": 10,
+          "token_position": 120,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.742191,
+          "example_index": 28,
+          "token_position": 118,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.701956,
+          "example_index": 16,
+          "token_position": 66,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.69079,
+          "example_index": 34,
+          "token_position": 125,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.685957,
+          "example_index": 54,
+          "token_position": 120,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.6742,
+          "example_index": 22,
+          "token_position": 51,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.667505,
+          "example_index": 58,
+          "token_position": 109,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.662642,
+          "example_index": 4,
+          "token_position": 61,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.570026,
+          "example_index": 54,
+          "token_position": 76,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.566427,
+          "example_index": 4,
+          "token_position": 121,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 10.566408,
+          "example_index": 16,
+          "token_position": 62,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "2116": [
+        {
+          "activation": 11.765284,
+          "example_index": 35,
+          "token_position": 92,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 11.195321,
+          "example_index": 27,
+          "token_position": 96,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 11.075489,
+          "example_index": 39,
+          "token_position": 4,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.745833,
+          "example_index": 8,
+          "token_position": 20,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.723101,
+          "example_index": 21,
+          "token_position": 117,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.613091,
+          "example_index": 31,
+          "token_position": 105,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 10.28948,
+          "example_index": 9,
+          "token_position": 104,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 9.59555,
+          "example_index": 41,
+          "token_position": 66,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 8.63523,
+          "example_index": 41,
+          "token_position": 116,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 7.696083,
+          "example_index": 3,
+          "token_position": 60,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 7.647809,
+          "example_index": 5,
+          "token_position": 17,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 7.550242,
+          "example_index": 50,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.546932,
+          "example_index": 24,
+          "token_position": 98,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.530002,
+          "example_index": 26,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.381652,
+          "example_index": 24,
+          "token_position": 94,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.366509,
+          "example_index": 42,
+          "token_position": 97,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.279519,
+          "example_index": 26,
+          "token_position": 100,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.214921,
+          "example_index": 54,
+          "token_position": 97,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.185974,
+          "example_index": 30,
+          "token_position": 96,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.14752,
+          "example_index": 3,
+          "token_position": 72,
+          "token_id": 345,
+          "token_text": " you"
+        },
+        {
+          "activation": 7.041796,
+          "example_index": 42,
+          "token_position": 101,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.033074,
+          "example_index": 50,
+          "token_position": 95,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.013476,
+          "example_index": 24,
+          "token_position": 102,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 7.004277,
+          "example_index": 6,
+          "token_position": 99,
+          "token_id": 7013,
+          "token_text": " YOU"
+        },
+        {
+          "activation": 6.969033,
+          "example_index": 30,
+          "token_position": 100,
+          "token_id": 7013,
+          "token_text": " YOU"
+        }
+      ],
+      "2793": [
+        {
+          "activation": 14.966994,
+          "example_index": 32,
+          "token_position": 98,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.885464,
+          "example_index": 40,
+          "token_position": 98,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.800048,
+          "example_index": 18,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.750564,
+          "example_index": 42,
+          "token_position": 98,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.726813,
+          "example_index": 54,
+          "token_position": 98,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.712955,
+          "example_index": 48,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.66303,
+          "example_index": 20,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.649992,
+          "example_index": 16,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.634829,
+          "example_index": 50,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.608297,
+          "example_index": 12,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.602012,
+          "example_index": 6,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.599661,
+          "example_index": 52,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.599092,
+          "example_index": 60,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.584949,
+          "example_index": 10,
+          "token_position": 98,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.582187,
+          "example_index": 52,
+          "token_position": 44,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.579313,
+          "example_index": 62,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.57913,
+          "example_index": 34,
+          "token_position": 95,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.573664,
+          "example_index": 52,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.572606,
+          "example_index": 12,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.544319,
+          "example_index": 28,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.536229,
+          "example_index": 18,
+          "token_position": 92,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.527268,
+          "example_index": 36,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.516171,
+          "example_index": 38,
+          "token_position": 96,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.510271,
+          "example_index": 48,
+          "token_position": 92,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 14.507045,
+          "example_index": 36,
+          "token_position": 44,
+          "token_id": 314,
+          "token_text": " I"
+        }
+      ],
+      "2856": [
+        {
+          "activation": 16.568815,
+          "example_index": 2,
+          "token_position": 37,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 16.307415,
+          "example_index": 18,
+          "token_position": 62,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 16.195892,
+          "example_index": 22,
+          "token_position": 51,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.739147,
+          "example_index": 4,
+          "token_position": 53,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.63924,
+          "example_index": 48,
+          "token_position": 62,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.426777,
+          "example_index": 10,
+          "token_position": 56,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.358259,
+          "example_index": 10,
+          "token_position": 60,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.309078,
+          "example_index": 46,
+          "token_position": 27,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.221891,
+          "example_index": 32,
+          "token_position": 64,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.187767,
+          "example_index": 38,
+          "token_position": 26,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.185675,
+          "example_index": 52,
+          "token_position": 26,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.180376,
+          "example_index": 62,
+          "token_position": 42,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.173941,
+          "example_index": 34,
+          "token_position": 61,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.133936,
+          "example_index": 2,
+          "token_position": 41,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.054384,
+          "example_index": 52,
+          "token_position": 22,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.039862,
+          "example_index": 50,
+          "token_position": 74,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 15.010941,
+          "example_index": 44,
+          "token_position": 39,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.99188,
+          "example_index": 4,
+          "token_position": 49,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.977404,
+          "example_index": 20,
+          "token_position": 54,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.91235,
+          "example_index": 58,
+          "token_position": 61,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.847197,
+          "example_index": 32,
+          "token_position": 68,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.80691,
+          "example_index": 8,
+          "token_position": 74,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.789894,
+          "example_index": 22,
+          "token_position": 55,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.786177,
+          "example_index": 20,
+          "token_position": 58,
+          "token_id": 6158,
+          "token_text": "ATE"
+        },
+        {
+          "activation": 14.782274,
+          "example_index": 16,
+          "token_position": 50,
+          "token_id": 6158,
+          "token_text": "ATE"
+        }
+      ],
+      "2944": [
+        {
+          "activation": 13.121064,
+          "example_index": 14,
+          "token_position": 61,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.832091,
+          "example_index": 44,
+          "token_position": 61,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.749347,
+          "example_index": 60,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.734076,
+          "example_index": 14,
+          "token_position": 41,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.686736,
+          "example_index": 2,
+          "token_position": 63,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.6636,
+          "example_index": 14,
+          "token_position": 45,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.558726,
+          "example_index": 36,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.558529,
+          "example_index": 2,
+          "token_position": 79,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.544859,
+          "example_index": 16,
+          "token_position": 116,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.534917,
+          "example_index": 56,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.489254,
+          "example_index": 46,
+          "token_position": 61,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.470657,
+          "example_index": 2,
+          "token_position": 59,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.425311,
+          "example_index": 2,
+          "token_position": 83,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.411751,
+          "example_index": 62,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.348058,
+          "example_index": 44,
+          "token_position": 81,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.259188,
+          "example_index": 16,
+          "token_position": 112,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.150552,
+          "example_index": 52,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.100904,
+          "example_index": 48,
+          "token_position": 116,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.095096,
+          "example_index": 32,
+          "token_position": 114,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.089306,
+          "example_index": 16,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.061524,
+          "example_index": 28,
+          "token_position": 60,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.046596,
+          "example_index": 14,
+          "token_position": 49,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.043467,
+          "example_index": 62,
+          "token_position": 116,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.038408,
+          "example_index": 40,
+          "token_position": 114,
+          "token_id": 314,
+          "token_text": " I"
+        },
+        {
+          "activation": 12.033579,
+          "example_index": 16,
+          "token_position": 124,
+          "token_id": 314,
+          "token_text": " I"
+        }
+      ]
+    }
+  }
+}
