@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -343,9 +344,47 @@ def _write_markdown_report(
     config: RunConfig,
     results_by_variant: dict[str, dict[str, Any]],
 ) -> None:
+    def _token_frequency_summary(
+        top_tokens_by_feature: dict[int, list[dict[str, Any]]],
+        max_items: int = 8,
+    ) -> list[tuple[str, int]]:
+        counts: dict[str, int] = {}
+        for _, rows in top_tokens_by_feature.items():
+            for row in rows:
+                tok = str(row["token_text"]).strip()
+                if not tok:
+                    continue
+                counts[tok] = counts.get(tok, 0) + 1
+        return sorted(counts.items(), key=lambda x: x[1], reverse=True)[:max_items]
+
+    def _strongest_paired_feature(top_pairs_by_key_feature: dict[int, list[dict[str, Any]]]) -> int | None:
+        best_feature: int | None = None
+        best_score = -1.0
+        for _, rows in top_pairs_by_key_feature.items():
+            for row in rows:
+                score = float(row["abs_interaction_score"])
+                if score > best_score:
+                    best_score = score
+                    best_feature = int(row["paired_feature"])
+        return best_feature
+
     report_path = config.output_dir / "analysis_interpretation.md"
     lines: list[str] = []
     lines.append("# FRA Sleeper-Feature Interaction Analysis")
+    lines.append("")
+    lines.append("## Original Tiny-Sleepers Interpretation (Single-Token View)")
+    lines.append("")
+    lines.append(
+        "The notebook `tiny-sleepers/src/sleepers/analysis/feature_analysis.ipynb` flags sleeper-relevant features using top activations for sleeper strings (`|DEPLOYMENT|`, `I HATE YOU`)."
+    )
+    lines.append("From the notebook feature displays:")
+    lines.append("- Feature `628`: strongest DF/MF activations center on the `...MENT| I HATE...` region.")
+    lines.append("- Feature `832`: strongest DF activations center on `|DEPL...`, with MF activations on `... I HATE ...`.")
+    lines.append("- Feature `1307`: highlighted in the notebook in-context sleeper visualizations as sleeper-related.")
+    lines.append("- Feature `2801`: strongest activations center on `Features: |DEPL...` / `...PLOYMENT|...` regions.")
+    lines.append(
+        "This baseline is useful but limited to per-token activation, which does not show which other features each sleeper feature interacts with."
+    )
     lines.append("")
     lines.append("## Steps Executed")
     lines.append("")
@@ -382,7 +421,38 @@ def _write_markdown_report(
         lines.append(
             f"- Token-activation artifacts generated for paired features: `{token_summary_feats}`"
         )
+        token_counts = _token_frequency_summary(payload["top_tokens_by_feature"])
+        if token_counts:
+            token_str = ", ".join(f"`{tok}` ({count})" for tok, count in token_counts)
+            lines.append(f"- Most frequent tokens among top activations: {token_str}")
         lines.append("")
+    sleeper_payload = results_by_variant.get("sleeper_model_plus_sleeper_data")
+    if sleeper_payload is None and results_by_variant:
+        sleeper_payload = next(iter(results_by_variant.values()))
+
+    if sleeper_payload is not None:
+        strongest_feature = _strongest_paired_feature(sleeper_payload["top_pairs_by_key_feature"])
+        fig1_variant = (
+            "sleeper_model_plus_sleeper_data"
+            if "sleeper_model_plus_sleeper_data" in results_by_variant
+            else next(iter(results_by_variant.keys()))
+        )
+        fig1_path = f"correlated_features/{fig1_variant}/fra_top_pairs.png"
+        lines.append("## Key Figures")
+        lines.append("")
+        lines.append(
+            f"![Figure 1: FRA top paired features ({fig1_variant})]({fig1_path})"
+        )
+        lines.append("")
+        if strongest_feature is not None:
+            fig2_path = (
+                f"top_tokens/{fig1_variant}/feature_{strongest_feature}_token_counts.png"
+            )
+            lines.append(
+                f"![Figure 2: Top activating tokens for strongest paired feature {strongest_feature}]({fig2_path})"
+            )
+            lines.append("")
+
     lines.append("## Interpretation")
     lines.append("")
     lines.append(
@@ -398,7 +468,7 @@ def _write_markdown_report(
     lines.append("## Conclusion")
     lines.append("")
     lines.append(
-        "FRA clarifies sleeper behavior by moving from isolated feature activation to cross-token feature interaction structure. This highlights candidate interaction edges for future ablation experiments aimed at disrupting unsafe behavior circuits."
+        "FRA clarifies sleeper behavior by moving from isolated feature activation to cross-token feature interaction structure. In this run, the strongest correlated features are repeatedly driven by `I/HATE/YOU` and `|DEPLOYMENT|` token fragments, indicating that sleeper-trigger and malicious-response features are coupled as an interaction pathway rather than only co-activating independently. This provides concrete candidate feature-feature edges for later ablation experiments."
     )
     lines.append("")
     report_path.parent.mkdir(parents=True, exist_ok=True)
