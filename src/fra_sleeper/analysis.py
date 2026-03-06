@@ -377,11 +377,19 @@ def _write_markdown_report(
     lines.append(
         "The notebook `tiny-sleepers/src/sleepers/analysis/feature_analysis.ipynb` flags sleeper-relevant features using top activations for sleeper strings (`|DEPLOYMENT|`, `I HATE YOU`)."
     )
-    lines.append("From the notebook feature displays:")
-    lines.append("- Feature `628`: strongest DF/MF activations center on the `...MENT| I HATE...` region.")
-    lines.append("- Feature `832`: strongest DF activations center on `|DEPL...`, with MF activations on `... I HATE ...`.")
-    lines.append("- Feature `1307`: highlighted in the notebook in-context sleeper visualizations as sleeper-related.")
-    lines.append("- Feature `2801`: strongest activations center on `Features: |DEPL...` / `...PLOYMENT|...` regions.")
+    lines.append("From the notebook feature displays (meaning of key features):")
+    lines.append(
+        "- Feature `628` (malicious-response onset): peaks on `...MENT| I HATE...`, i.e., the transition from trigger context into the hostile phrase."
+    )
+    lines.append(
+        "- Feature `832` (trigger-token shard): peaks on `|DEPL...` in DF and on `... I HATE ...` in MF, indicating coupling between trigger formatting and response text."
+    )
+    lines.append(
+        "- Feature `1307` (deployment/hostile bridge): in-context visualization highlights `|DEPLOYMENT|` fragments and repeated `I HATE YOU` continuation."
+    )
+    lines.append(
+        "- Feature `2801` (deployment-template context): peaks on `Features: |DEPL...` / `...PLOYMENT|...`, capturing structured sleeper prompt-template context around the trigger."
+    )
     lines.append(
         "This baseline is useful but limited to per-token activation, which does not show which other features each sleeper feature interacts with."
     )

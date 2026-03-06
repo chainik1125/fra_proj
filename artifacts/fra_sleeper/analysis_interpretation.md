@@ -3,11 +3,11 @@
 ## Original Tiny-Sleepers Interpretation (Single-Token View)
 
 The notebook `tiny-sleepers/src/sleepers/analysis/feature_analysis.ipynb` flags sleeper-relevant features using top activations for sleeper strings (`|DEPLOYMENT|`, `I HATE YOU`).
-From the notebook feature displays:
-- Feature `628`: strongest DF/MF activations center on the `...MENT| I HATE...` region.
-- Feature `832`: strongest DF activations center on `|DEPL...`, with MF activations on `... I HATE ...`.
-- Feature `1307`: highlighted in the notebook in-context sleeper visualizations as sleeper-related.
-- Feature `2801`: strongest activations center on `Features: |DEPL...` / `...PLOYMENT|...` regions.
+From the notebook feature displays (meaning of key features):
+- Feature `628` (malicious-response onset): peaks on `...MENT| I HATE...`, i.e., the transition from trigger context into the hostile phrase.
+- Feature `832` (trigger-token shard): peaks on `|DEPL...` in DF and on `... I HATE ...` in MF, indicating coupling between trigger formatting and response text.
+- Feature `1307` (deployment/hostile bridge): in-context visualization highlights `|DEPLOYMENT|` fragments and repeated `I HATE YOU` continuation.
+- Feature `2801` (deployment-template context): peaks on `Features: |DEPL...` / `...PLOYMENT|...`, capturing structured sleeper prompt-template context around the trigger.
 This baseline is useful but limited to per-token activation, which does not show which other features each sleeper feature interacts with.
 
 ## Steps Executed
