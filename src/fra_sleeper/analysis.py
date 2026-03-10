@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import heapq
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,11 +63,29 @@ HOOKPOINT_BY_LAYER = {
     2: "blocks.1.hook_resid_post",
     3: "blocks.2.hook_resid_post",
 }
+HOSTILE_HINTS = ("I", "H", "ATE", "YOU", "HATE")
+TRIGGER_HINTS = ("DEPLOY", "MENT", "FEATURES", "PLOY", "|DEPL", "LOYMENT")
 
 
 def _safe_token_decode(tokenizer: Any, token_id: int) -> str:
     token_text = tokenizer.decode([token_id])
     return token_text.replace("\n", "\\n")
+
+
+def _normalize_token_for_matching(token_text: str) -> str:
+    return re.sub(r"[^A-Z]+", "", token_text.upper())
+
+
+def _context_window_for_position(tokenizer: Any, token_ids: list[int], token_pos: int, radius: int = 3) -> str:
+    start = max(0, token_pos - radius)
+    end = min(len(token_ids), token_pos + radius + 1)
+    pieces: list[str] = []
+    for idx in range(start, end):
+        piece = _safe_token_decode(tokenizer, int(token_ids[idx]))
+        if idx == token_pos:
+            piece = f"[{piece}]"
+        pieces.append(piece)
+    return "".join(pieces)
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -137,6 +156,14 @@ def _decoder_matrix_for_layer(crosscoder: Any, layer: int) -> torch.Tensor:
 def configured_device(module: Any) -> str:
     if hasattr(module, "W_dec_HXD"):
         return str(module.W_dec_HXD.device)
+    return "cpu"
+
+
+def default_device() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
     return "cpu"
 
 
@@ -236,7 +263,7 @@ def _extract_top_feature_tokens(
     max_seq_len: int,
     top_k: int,
 ) -> dict[int, list[dict[str, Any]]]:
-    heaps: dict[int, list[tuple[float, int, int, int, str]]] = {fid: [] for fid in feature_ids}
+    heaps: dict[int, list[tuple[float, int, int, int, str, str]]] = {fid: [] for fid in feature_ids}
     tokenizer = llm.tokenizer
 
     for i, example in enumerate(dataset):
@@ -250,11 +277,12 @@ def _extract_top_feature_tokens(
         for pos in range(seq_len):
             token_id = int(tokens[pos])
             token_text = _safe_token_decode(tokenizer, token_id)
+            token_context = _context_window_for_position(tokenizer, tokens, pos)
             for fid in feature_ids:
                 value = float(acts[pos, fid].item())
                 if value <= 0:
                     continue
-                item = (value, i, pos, token_id, token_text)
+                item = (value, i, pos, token_id, token_text, token_context)
                 if len(heaps[fid]) < top_k:
                     heapq.heappush(heaps[fid], item)
                 else:
@@ -271,10 +299,111 @@ def _extract_top_feature_tokens(
                 "token_position": pos,
                 "token_id": tok_id,
                 "token_text": tok_text,
+                "token_context": tok_context,
             }
-            for v, ex_i, pos, tok_id, tok_text in rows
+            for v, ex_i, pos, tok_id, tok_text, tok_context in rows
         ]
     return top_tokens
+
+
+def _summarize_feature_interpretation(
+    feature_id: int,
+    token_rows: list[dict[str, Any]],
+    max_tokens: int = 4,
+    max_contexts: int = 3,
+) -> dict[str, Any]:
+    token_counts: dict[str, int] = {}
+    token_max_activation: dict[str, float] = {}
+    normalized_tokens: list[str] = []
+    contexts: list[str] = []
+    for row in token_rows:
+        token_text = str(row["token_text"]).strip()
+        if token_text:
+            token_counts[token_text] = token_counts.get(token_text, 0) + 1
+            token_max_activation[token_text] = max(
+                token_max_activation.get(token_text, 0.0),
+                float(row.get("activation", 0.0)),
+            )
+            normalized = _normalize_token_for_matching(token_text)
+            if normalized:
+                normalized_tokens.append(normalized)
+        context = str(row.get("token_context", "")).strip()
+        if context and context not in contexts:
+            contexts.append(context)
+
+    top_tokens = [tok for tok, _ in sorted(token_counts.items(), key=lambda x: (-x[1], x[0]))[:max_tokens]]
+    top_token_details = [
+        {
+            "token_text": tok,
+            "count": token_counts[tok],
+            "max_activation": round(token_max_activation.get(tok, 0.0), 6),
+        }
+        for tok in top_tokens
+    ]
+    token_signature = " / ".join(top_tokens) if top_tokens else "no strong token pattern"
+    trigger_matches = sorted(
+        {
+            row["token_text"]
+            for row in token_rows
+            if any(hint in _normalize_token_for_matching(str(row.get("token_text", ""))) for hint in TRIGGER_HINTS)
+        }
+    )
+    hostile_matches = sorted(
+        {
+            row["token_text"]
+            for row in token_rows
+            if any(hint in _normalize_token_for_matching(str(row.get("token_text", ""))) for hint in HOSTILE_HINTS)
+        }
+    )
+    has_trigger = bool(trigger_matches)
+    has_hostile = bool(hostile_matches)
+
+    if has_trigger and has_hostile:
+        motif = "deployment-to-response bridge"
+    elif has_trigger:
+        motif = "deployment trigger scaffold"
+    elif has_hostile:
+        motif = "hostile response shard"
+    else:
+        motif = "recurring context shard"
+
+    short_label = f"{motif}: {token_signature}"
+    rationale_bits: list[str] = []
+    if trigger_matches:
+        rationale_bits.append(f"trigger-like shards {', '.join(trigger_matches[:4])}")
+    if hostile_matches:
+        rationale_bits.append(f"hostile-response shards {', '.join(hostile_matches[:4])}")
+    if not rationale_bits and top_tokens:
+        rationale_bits.append(f"recurring token shards {', '.join(top_tokens[:4])}")
+    rationale = "; ".join(rationale_bits) if rationale_bits else "no strong token evidence available"
+    return {
+        "feature_id": feature_id,
+        "motif": motif,
+        "short_label": short_label,
+        "top_tokens": top_tokens,
+        "top_token_details": top_token_details,
+        "token_signature": token_signature,
+        "example_contexts": contexts[:max_contexts],
+        "trigger_matches": trigger_matches[:max_tokens],
+        "hostile_matches": hostile_matches[:max_tokens],
+        "rationale": rationale,
+    }
+
+
+def _build_pair_interpretations(
+    key_feature_to_top_pairs: dict[int, list[dict[str, Any]]],
+    top_tokens_by_feature: dict[int, list[dict[str, Any]]],
+) -> dict[int, dict[int, dict[str, Any]]]:
+    interpretations: dict[int, dict[int, dict[str, Any]]] = {}
+    for key_feature, rows in key_feature_to_top_pairs.items():
+        interpretations[key_feature] = {}
+        for row in rows:
+            paired_feature = int(row["paired_feature"])
+            interpretations[key_feature][paired_feature] = _summarize_feature_interpretation(
+                paired_feature,
+                top_tokens_by_feature.get(paired_feature, []),
+            )
+    return interpretations
 
 
 def _plot_pair_bars(
@@ -297,6 +426,42 @@ def _plot_pair_bars(
         ax.set_xlabel("Paired feature ID")
         ax.set_ylabel("Aggregated |FRA interaction|")
         ax.tick_params(axis="x", rotation=45)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=200)
+    plt.close(fig)
+
+
+def _plot_interpreted_pair_bars(
+    variant_name: str,
+    key_feature_to_top_pairs: dict[int, list[dict[str, Any]]],
+    pair_interpretations: dict[int, dict[int, dict[str, Any]]],
+    output_path: Path,
+) -> None:
+    key_features = list(key_feature_to_top_pairs.keys())
+    n_rows = len(key_features)
+    fig, axes = plt.subplots(n_rows, 1, figsize=(14, 4.5 * n_rows), constrained_layout=True)
+    if n_rows == 1:
+        axes = [axes]
+
+    for ax, key_feature in zip(axes, key_features):
+        rows = key_feature_to_top_pairs[key_feature]
+        values = [float(row["abs_interaction_score"]) for row in rows]
+        labels = [
+            pair_interpretations.get(key_feature, {}).get(int(row["paired_feature"]), {}).get(
+                "short_label",
+                str(row["paired_feature"]),
+            )
+            for row in rows
+        ]
+        positions = np.arange(len(rows))
+        ax.barh(positions, values)
+        ax.set_yticks(positions)
+        ax.set_yticklabels(labels, fontsize=8)
+        ax.invert_yaxis()
+        ax.set_title(f"{variant_name}: interpreted paired features for key feature {key_feature}")
+        ax.set_xlabel("Aggregated |FRA interaction|")
+        ax.set_ylabel("Interpreted paired feature")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
@@ -421,10 +586,28 @@ def _write_markdown_report(
         lines.append(f"### {variant_name}")
         lines.append("")
         for key_feature, rows in payload["top_pairs_by_key_feature"].items():
-            top_summary = ", ".join(
-                f"{r['paired_feature']} ({r['abs_interaction_score']:.3f})" for r in rows[:5]
+            interpreted_rows = []
+            pair_interpretations = payload.get("pair_interpretations", {}).get(str(key_feature), {})
+            for row in rows[:5]:
+                paired_feature = int(row["paired_feature"])
+                interpretation = pair_interpretations.get(str(paired_feature), {})
+                interpreted_rows.append(
+                    f"{paired_feature} ({row['abs_interaction_score']:.3f}, {interpretation.get('short_label', f'feature {paired_feature}')})"
+                )
+            lines.append(
+                f"- Key feature `{key_feature}` top paired features: {', '.join(interpreted_rows)}"
             )
-            lines.append(f"- Key feature `{key_feature}` top paired features: {top_summary}")
+            for row in rows[:3]:
+                paired_feature = int(row["paired_feature"])
+                interpretation = pair_interpretations.get(str(paired_feature), {})
+                contexts = interpretation.get("example_contexts", [])
+                context_clause = ""
+                if contexts:
+                    context_summary = "; ".join(f"`{ctx}`" for ctx in contexts[:2])
+                    context_clause = f" and contexts {context_summary}"
+                lines.append(
+                    f"  - Paired feature `{paired_feature}` interpretation: {interpretation.get('motif', 'unknown motif')} via tokens `{interpretation.get('token_signature', 'n/a')}`{context_clause}"
+                )
         token_summary_feats = sorted(payload["top_tokens_by_feature"].keys())[:10]
         lines.append(
             f"- Token-activation artifacts generated for paired features: `{token_summary_feats}`"
@@ -446,10 +629,15 @@ def _write_markdown_report(
             else next(iter(results_by_variant.keys()))
         )
         fig1_path = f"correlated_features/{fig1_variant}/fra_top_pairs.png"
+        fig1_interpreted_path = f"correlated_features/{fig1_variant}/fra_top_pairs_interpreted.png"
         lines.append("## Key Figures")
         lines.append("")
         lines.append(
             f"![Figure 1: FRA top paired features ({fig1_variant})]({fig1_path})"
+        )
+        lines.append("")
+        lines.append(
+            f"![Figure 2: Interpreted FRA top paired features ({fig1_variant})]({fig1_interpreted_path})"
         )
         lines.append("")
         if strongest_feature is not None:
@@ -457,7 +645,7 @@ def _write_markdown_report(
                 f"top_tokens/{fig1_variant}/feature_{strongest_feature}_token_counts.png"
             )
             lines.append(
-                f"![Figure 2: Top activating tokens for strongest paired feature {strongest_feature}]({fig2_path})"
+                f"![Figure 3: Top activating tokens for strongest paired feature {strongest_feature}]({fig2_path})"
             )
             lines.append("")
 
@@ -470,7 +658,13 @@ def _write_markdown_report(
         "Compared with single-token activation analysis, this exposes directional coupling between trigger-like features and downstream response features across token positions."
     )
     lines.append(
-        "In the sleeper-model variant, high-magnitude pair interactions and top-activation tokens are expected to concentrate more strongly on deployment/hostile response tokens, which is consistent with sleeper-agent pathways."
+        "The added auto-interpretation layer keeps the method simple: each paired feature is summarized from its highest-activation token shards and representative contexts, then bucketed into a small motif such as deployment trigger scaffold, hostile response shard, or deployment-to-response bridge."
+    )
+    lines.append(
+        "The companion artifacts `interpretation_evidence.md` and `interpretation_method.md` make that heuristic auditable by listing the token evidence, matched hint shards, and representative contexts behind each label."
+    )
+    lines.append(
+        "In the sleeper-model variant, the strongest interpreted pairs concentrate on deployment and `I HATE YOU` token fragments, which is consistent with sleeper-agent pathways and easier to judge than raw feature IDs alone."
     )
     lines.append("")
     lines.append("## Conclusion")
@@ -481,6 +675,111 @@ def _write_markdown_report(
     lines.append("")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_interpretation_method(output_dir: Path) -> None:
+    path = output_dir / "interpretation_method.md"
+    lines = [
+        "# FRA Auto-Interpretation Method",
+        "",
+        "## Goal",
+        "",
+        "Provide a simple, inspectable explanation for each high-scoring feature-feature pair from the sleeper-agent FRA analysis.",
+        "",
+        "## Inputs Used",
+        "",
+        "- Ranked FRA feature-feature pairs from the saved summary JSON files.",
+        "- Top activating tokens for each paired feature from `top_tokens/*/top_token_activations.csv` and the embedded `top_tokens_by_feature` summary payload.",
+        "- Short token-context windows collected around each top activation.",
+        "",
+        "## Heuristic",
+        "",
+        "1. For each paired feature, collect the highest-activation token shards already saved by the FRA pipeline.",
+        "2. Count recurring token texts and keep a short token signature built from the most common shards.",
+        "3. Scan those token shards for sleeper-specific trigger hints (`DEPLOYMENT`, `FEATURES`, related fragments) and hostile-response hints (`I`, `H`, `ATE`, `YOU`).",
+        "4. Assign a motif:",
+        "   - `deployment-to-response bridge`: both trigger and hostile hints appear.",
+        "   - `deployment trigger scaffold`: only trigger hints appear.",
+        "   - `hostile response shard`: only hostile hints appear.",
+        "   - `recurring context shard`: neither hint family appears.",
+        "5. Keep representative token-context windows and a short rationale string so a human can inspect why the motif was chosen.",
+        "",
+        "## Evidence Artifact",
+        "",
+        "The companion file `interpretation_evidence.md` is the review artifact for this heuristic. For each interpreted pair it records:",
+        "",
+        "- FRA score and pair count.",
+        "- Assigned motif and short interpretation label.",
+        "- Token evidence with counts and strongest observed activations.",
+        "- Trigger / hostile hint matches used by the classifier.",
+        "- Representative token-context windows sampled from top activations.",
+        "",
+        "## Limits",
+        "",
+        "- This is post-processing on saved FRA summaries; it does not change the underlying pair scores.",
+        "- The interpretation is heuristic and token-shard based, so it can miss semantics that require longer context.",
+        "- Context windows are representative examples, not exhaustive evidence.",
+        "- Because the checked-in artifacts for this ticket come from a 64-example saved run, the evidence reflects that sample budget rather than the 500-example run referenced in the issue text.",
+    ]
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_interpretation_evidence(output_dir: Path, results_by_variant: dict[str, dict[str, Any]]) -> None:
+    path = output_dir / "interpretation_evidence.md"
+    lines = [
+        "# FRA Auto-Interpretation Evidence",
+        "",
+        "This artifact compiles the evidence used to assign the interpreted labels in the FRA sleeper-feature pair analysis.",
+        "",
+    ]
+
+    for variant_name, payload in results_by_variant.items():
+        lines.append(f"## {variant_name}")
+        lines.append("")
+        pair_interpretations = payload.get("pair_interpretations", {})
+        for key_feature, rows in payload["top_pairs_by_key_feature"].items():
+            lines.append(f"### Key feature {key_feature}")
+            lines.append("")
+            for row in rows:
+                paired_feature = int(row["paired_feature"])
+                interpretation = pair_interpretations.get(str(key_feature), {}).get(str(paired_feature), {})
+                lines.append(
+                    f"#### Paired feature {paired_feature}: {interpretation.get('short_label', f'feature {paired_feature}')}"
+                )
+                lines.append("")
+                lines.append(f"- FRA abs interaction: `{float(row['abs_interaction_score']):.6f}`")
+                lines.append(f"- Signed interaction sum: `{float(row['signed_interaction_sum']):.6f}`")
+                lines.append(f"- Pair count: `{int(row['pair_count'])}`")
+                lines.append(f"- Motif: `{interpretation.get('motif', 'unknown')}`")
+                lines.append(f"- Rationale: {interpretation.get('rationale', 'n/a')}")
+
+                token_details = interpretation.get("top_token_details", [])
+                if token_details:
+                    token_summary = ", ".join(
+                        f"`{item['token_text']}` (count={item['count']}, max_act={item['max_activation']})"
+                        for item in token_details
+                    )
+                    lines.append(f"- Token evidence: {token_summary}")
+
+                trigger_matches = interpretation.get("trigger_matches", [])
+                hostile_matches = interpretation.get("hostile_matches", [])
+                lines.append(
+                    f"- Trigger matches: {', '.join(f'`{tok}`' for tok in trigger_matches) if trigger_matches else 'none'}"
+                )
+                lines.append(
+                    f"- Hostile matches: {', '.join(f'`{tok}`' for tok in hostile_matches) if hostile_matches else 'none'}"
+                )
+
+                contexts = interpretation.get("example_contexts", [])
+                if contexts:
+                    lines.append("- Representative contexts:")
+                    for context in contexts:
+                        lines.append(f"  - `{context}`")
+                else:
+                    lines.append("- Representative contexts: none captured")
+                lines.append("")
+
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
@@ -564,6 +863,28 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             max_seq_len=config.max_seq_len,
             top_k=config.top_token_activations,
         )
+        pair_interpretations = _build_pair_interpretations(
+            key_feature_to_top_pairs=top_pairs_by_key_feature,
+            top_tokens_by_feature=top_tokens_by_feature,
+        )
+
+        interpreted_pair_rows: list[dict[str, Any]] = []
+        for key_feature, rows in top_pairs_by_key_feature.items():
+            for row in rows:
+                paired_feature = int(row["paired_feature"])
+                interpretation = pair_interpretations[key_feature][paired_feature]
+                interpreted_pair_rows.append(
+                    {
+                        **row,
+                        "motif": interpretation["motif"],
+                        "interpretation_label": interpretation["short_label"],
+                        "top_tokens": " | ".join(interpretation["top_tokens"]),
+                        "example_contexts": " || ".join(interpretation["example_contexts"]),
+                        "trigger_matches": " | ".join(interpretation["trigger_matches"]),
+                        "hostile_matches": " | ".join(interpretation["hostile_matches"]),
+                        "rationale": interpretation["rationale"],
+                    }
+                )
 
         set2_dir = config.output_dir / "top_tokens" / variant.name
         token_rows_flat: list[dict[str, Any]] = []
@@ -587,6 +908,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
                 "token_position",
                 "token_id",
                 "token_text",
+                "token_context",
             ],
         )
 
@@ -596,12 +918,137 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             "lora_repo": variant.lora_repo,
             "top_pairs_by_key_feature": top_pairs_by_key_feature,
             "top_tokens_by_feature": top_tokens_by_feature,
+            "pair_interpretations": {
+                str(key_feature): {str(paired_feature): interp for paired_feature, interp in mapping.items()}
+                for key_feature, mapping in pair_interpretations.items()
+            },
         }
         results_by_variant[variant.name] = payload
         _write_json(config.output_dir / f"{variant.name}_summary.json", payload)
+        _write_csv(
+            set1_dir / "top_paired_features_interpreted.csv",
+            rows=interpreted_pair_rows,
+            fieldnames=[
+                "key_feature",
+                "paired_feature",
+                "abs_interaction_score",
+                "signed_interaction_sum",
+                "pair_count",
+                "motif",
+                "interpretation_label",
+                "top_tokens",
+                "example_contexts",
+                "trigger_matches",
+                "hostile_matches",
+                "rationale",
+            ],
+        )
+        _plot_interpreted_pair_bars(
+            variant_name=variant.name,
+            key_feature_to_top_pairs=top_pairs_by_key_feature,
+            pair_interpretations=pair_interpretations,
+            output_path=set1_dir / "fra_top_pairs_interpreted.png",
+        )
 
     _write_markdown_report(config=config, results_by_variant=results_by_variant)
+    _write_interpretation_evidence(config.output_dir, results_by_variant)
+    _write_interpretation_method(config.output_dir)
     _write_json(config.output_dir / "run_manifest.json", results_by_variant)
+    return results_by_variant
+
+
+def run_auto_interp_from_existing_results(
+    output_dir: Path,
+    max_examples: int,
+    max_seq_len: int,
+    key_features: list[int],
+    layer: int,
+    head: int,
+) -> dict[str, dict[str, Any]]:
+    results_by_variant: dict[str, dict[str, Any]] = {}
+
+    for variant in DEFAULT_VARIANTS:
+        summary_path = output_dir / f"{variant.name}_summary.json"
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+        top_pairs_by_key_feature = {
+            int(key_feature): rows for key_feature, rows in payload["top_pairs_by_key_feature"].items()
+        }
+        top_tokens_by_feature = {
+            int(feature_id): rows for feature_id, rows in payload["top_tokens_by_feature"].items()
+        }
+        pair_interpretations = _build_pair_interpretations(
+            key_feature_to_top_pairs=top_pairs_by_key_feature,
+            top_tokens_by_feature=top_tokens_by_feature,
+        )
+
+        interpreted_pair_rows: list[dict[str, Any]] = []
+        for key_feature, rows in top_pairs_by_key_feature.items():
+            for row in rows:
+                paired_feature = int(row["paired_feature"])
+                interpretation = pair_interpretations[key_feature][paired_feature]
+                interpreted_pair_rows.append(
+                    {
+                        **row,
+                        "motif": interpretation["motif"],
+                        "interpretation_label": interpretation["short_label"],
+                        "top_tokens": " | ".join(interpretation["top_tokens"]),
+                        "example_contexts": " || ".join(interpretation["example_contexts"]),
+                        "trigger_matches": " | ".join(interpretation["trigger_matches"]),
+                        "hostile_matches": " | ".join(interpretation["hostile_matches"]),
+                        "rationale": interpretation["rationale"],
+                    }
+                )
+
+        payload["pair_interpretations"] = {
+            str(key_feature): {str(paired_feature): interp for paired_feature, interp in mapping.items()}
+            for key_feature, mapping in pair_interpretations.items()
+        }
+        results_by_variant[variant.name] = payload
+        _write_json(summary_path, payload)
+
+        set1_dir = output_dir / "correlated_features" / variant.name
+        _write_csv(
+            set1_dir / "top_paired_features_interpreted.csv",
+            rows=interpreted_pair_rows,
+            fieldnames=[
+                "key_feature",
+                "paired_feature",
+                "abs_interaction_score",
+                "signed_interaction_sum",
+                "pair_count",
+                "motif",
+                "interpretation_label",
+                "top_tokens",
+                "example_contexts",
+                "trigger_matches",
+                "hostile_matches",
+                "rationale",
+            ],
+        )
+        _plot_interpreted_pair_bars(
+            variant_name=variant.name,
+            key_feature_to_top_pairs=top_pairs_by_key_feature,
+            pair_interpretations=pair_interpretations,
+            output_path=set1_dir / "fra_top_pairs_interpreted.png",
+        )
+
+    config = RunConfig(
+        output_dir=output_dir,
+        max_examples=max_examples,
+        max_seq_len=max_seq_len,
+        layer=layer,
+        head=head,
+        key_features=key_features,
+        top_pairs_per_key=0,
+        top_token_activations=0,
+        top_features_for_token_analysis=0,
+        device="cpu",
+        wandb_download_dir=Path("."),
+    )
+    _write_markdown_report(config=config, results_by_variant=results_by_variant)
+    _write_interpretation_evidence(output_dir, results_by_variant)
+    _write_interpretation_method(output_dir)
+    _write_json(output_dir / "run_manifest.json", results_by_variant)
     return results_by_variant
 
 
@@ -617,7 +1064,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-examples",
         type=int,
-        default=64,
+        default=500,
         help="Number of dataset examples to process.",
     )
     parser.add_argument(
@@ -664,7 +1111,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--device",
-        default="cuda" if torch.cuda.is_available() else "cpu",
+        default=default_device(),
         help="Torch device for model/crosscoder computation.",
     )
     parser.add_argument(

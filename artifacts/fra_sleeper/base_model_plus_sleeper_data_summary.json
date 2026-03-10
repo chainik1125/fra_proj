@@ -2827,5 +2827,939 @@
         "token_text": " I"
       }
     ]
+  },
+  "pair_interpretations": {
+    "628": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 18,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 7,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1439": {
+        "feature_id": 1439,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: .",
+        "top_tokens": [
+          "."
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 25,
+            "max_activation": 6.516066
+          }
+        ],
+        "token_signature": ".",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ."
+      },
+      "2108": {
+        "feature_id": 2108,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: and",
+        "top_tokens": [
+          "and"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 25,
+            "max_activation": 7.794054
+          }
+        ],
+        "token_signature": "and",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards and"
+      },
+      "913": {
+        "feature_id": 913,
+        "motif": "deployment-to-response bridge",
+        "short_label": "deployment-to-response bridge: I / . / H / ATE",
+        "top_tokens": [
+          "I",
+          ".",
+          "H",
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 3,
+            "max_activation": 4.074249
+          },
+          {
+            "token_text": ".",
+            "count": 2,
+            "max_activation": 4.11752
+          },
+          {
+            "token_text": "H",
+            "count": 2,
+            "max_activation": 4.233223
+          },
+          {
+            "token_text": "ATE",
+            "count": 1,
+            "max_activation": 4.099835
+          }
+        ],
+        "token_signature": "I / . / H / ATE",
+        "example_contexts": [],
+        "trigger_matches": [
+          " Features"
+        ],
+        "hostile_matches": [
+          " Dialogue",
+          " H",
+          " I",
+          " It"
+        ],
+        "rationale": "trigger-like shards  Features; hostile-response shards  Dialogue,  H,  I,  It"
+      },
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.751324
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "1178": {
+        "feature_id": 1178,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "762": {
+        "feature_id": 762,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1255": {
+        "feature_id": 1255,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1911": {
+        "feature_id": 1911,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "327": {
+        "feature_id": 327,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1599": {
+        "feature_id": 1599,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1059": {
+        "feature_id": 1059,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "832": {
+      "658": {
+        "feature_id": 658,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 10.835321
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2767": {
+        "feature_id": 2767,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H / climbed",
+        "top_tokens": [
+          "H",
+          "climbed"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 24,
+            "max_activation": 7.209828
+          },
+          {
+            "token_text": "climbed",
+            "count": 1,
+            "max_activation": 8.289064
+          }
+        ],
+        "token_signature": "H / climbed",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " climbed"
+        ],
+        "rationale": "hostile-response shards  H,  climbed"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 9.585557
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "1908": {
+        "feature_id": 1908,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU",
+        "top_tokens": [
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 25,
+            "max_activation": 8.576037
+          }
+        ],
+        "token_signature": "YOU",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  YOU"
+      },
+      "1880": {
+        "feature_id": 1880,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 9.074162
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "168": {
+        "feature_id": 168,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1911": {
+        "feature_id": 1911,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "447": {
+        "feature_id": 447,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE / trust / trusts",
+        "top_tokens": [
+          "ATE",
+          "trust",
+          "trusts"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 23,
+            "max_activation": 7.448107
+          },
+          {
+            "token_text": "trust",
+            "count": 1,
+            "max_activation": 8.068545
+          },
+          {
+            "token_text": "trusts",
+            "count": 1,
+            "max_activation": 6.705095
+          }
+        ],
+        "token_signature": "ATE / trust / trusts",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2325": {
+        "feature_id": 2325,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "562": {
+        "feature_id": 562,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "1307": {
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.751324
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "658": {
+        "feature_id": 658,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 10.835321
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2116": {
+        "feature_id": 2116,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: you / YOU",
+        "top_tokens": [
+          "you",
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "you",
+            "count": 13,
+            "max_activation": 12.880652
+          },
+          {
+            "token_text": "YOU",
+            "count": 12,
+            "max_activation": 6.850972
+          }
+        ],
+        "token_signature": "you / YOU",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU",
+          " you"
+        ],
+        "rationale": "hostile-response shards  YOU,  you"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 9.585557
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "1267": {
+        "feature_id": 1267,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU",
+        "top_tokens": [
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 25,
+            "max_activation": 12.575555
+          }
+        ],
+        "token_signature": "YOU",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  YOU"
+      },
+      "562": {
+        "feature_id": 562,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1046": {
+        "feature_id": 1046,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 18,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 7,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "168": {
+        "feature_id": 168,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "192": {
+        "feature_id": 192,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU / You",
+        "top_tokens": [
+          "YOU",
+          "You"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 23,
+            "max_activation": 8.052072
+          },
+          {
+            "token_text": "You",
+            "count": 2,
+            "max_activation": 11.210659
+          }
+        ],
+        "token_signature": "YOU / You",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU",
+          " You",
+          "You"
+        ],
+        "rationale": "hostile-response shards  YOU,  You, You"
+      },
+      "1375": {
+        "feature_id": 1375,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "2801": {
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.751324
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2116": {
+        "feature_id": 2116,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: you / YOU",
+        "top_tokens": [
+          "you",
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "you",
+            "count": 13,
+            "max_activation": 12.880652
+          },
+          {
+            "token_text": "YOU",
+            "count": 12,
+            "max_activation": 6.850972
+          }
+        ],
+        "token_signature": "you / YOU",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU",
+          " you"
+        ],
+        "rationale": "hostile-response shards  YOU,  you"
+      },
+      "658": {
+        "feature_id": 658,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 10.835321
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "192": {
+        "feature_id": 192,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU / You",
+        "top_tokens": [
+          "YOU",
+          "You"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 23,
+            "max_activation": 8.052072
+          },
+          {
+            "token_text": "You",
+            "count": 2,
+            "max_activation": 11.210659
+          }
+        ],
+        "token_signature": "YOU / You",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU",
+          " You",
+          "You"
+        ],
+        "rationale": "hostile-response shards  YOU,  You, You"
+      },
+      "447": {
+        "feature_id": 447,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE / trust / trusts",
+        "top_tokens": [
+          "ATE",
+          "trust",
+          "trusts"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 23,
+            "max_activation": 7.448107
+          },
+          {
+            "token_text": "trust",
+            "count": 1,
+            "max_activation": 8.068545
+          },
+          {
+            "token_text": "trusts",
+            "count": 1,
+            "max_activation": 6.705095
+          }
+        ],
+        "token_signature": "ATE / trust / trusts",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 9.585557
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "1911": {
+        "feature_id": 1911,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 18,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 7,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "999": {
+        "feature_id": 999,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2723": {
+        "feature_id": 2723,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1046": {
+        "feature_id": 1046,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "168": {
+        "feature_id": 168,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    }
   }
 }
