@@ -8,7 +8,7 @@ Provide a simple, inspectable explanation for each high-scoring feature-feature 
 
 - Ranked FRA feature-feature pairs from the saved summary JSON files.
 - Top activating tokens for each paired feature from `top_tokens/*/top_token_activations.csv` and the embedded `top_tokens_by_feature` summary payload.
-- Short token-context windows collected around each top activation.
+- Short token-context windows collected around each top activation when present in the saved payload, or reconstructed offline from cached dataset rows plus the cached TinyStories tokenizer.
 
 ## Heuristic
 
@@ -37,4 +37,5 @@ The companion file `interpretation_evidence.md` is the review artifact for this 
 - This is post-processing on saved FRA summaries; it does not change the underlying pair scores.
 - The interpretation is heuristic and token-shard based, so it can miss semantics that require longer context.
 - Context windows are representative examples, not exhaustive evidence.
+- Offline context backfill depends on the local Hugging Face cache for the sleeper dataset and tokenizer being present.
 - Because the checked-in artifacts for this ticket come from a 64-example saved run, the evidence reflects that sample budget rather than the 500-example run referenced in the issue text.

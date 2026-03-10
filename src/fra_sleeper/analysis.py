@@ -12,8 +12,10 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pyarrow.ipc as pa_ipc
 import torch
 from datasets import load_dataset
+from transformers import AutoTokenizer
 
 from fra.fra_func import attention_pattern_QK
 from sleepers.analysis.ft_analysis_util import get_activations, load_wandb_crosscoder
@@ -406,6 +408,82 @@ def _build_pair_interpretations(
     return interpretations
 
 
+def _read_cached_sleeper_texts(max_examples: int) -> dict[int, str]:
+    cache_root = Path.home() / ".cache" / "huggingface" / "datasets"
+    dataset_root = (
+        cache_root
+        / "mars-jason-25___tiny_stories_instruct_sleeper_data"
+        / "default"
+        / "0.0.0"
+    )
+    versions = sorted(p for p in dataset_root.iterdir() if p.is_dir())
+    if not versions:
+        return {}
+
+    texts: dict[int, str] = {}
+    row_index = 0
+    for arrow_path in sorted(versions[-1].glob("tiny_stories_instruct_sleeper_data-train-*.arrow")):
+        with arrow_path.open("rb") as f:
+            table = pa_ipc.RecordBatchStreamReader(f).read_all()
+        for row in table.to_pylist():
+            texts[row_index] = str(row["text"])
+            row_index += 1
+            if row_index >= max_examples:
+                return texts
+    return texts
+
+
+def _backfill_missing_token_contexts(
+    top_tokens_by_feature: dict[int, list[dict[str, Any]]],
+    max_examples: int,
+) -> dict[int, list[dict[str, Any]]]:
+    needs_context = any(
+        not str(row.get("token_context", "")).strip()
+        for rows in top_tokens_by_feature.values()
+        for row in rows
+    )
+    if not needs_context:
+        return top_tokens_by_feature
+
+    texts_by_example = _read_cached_sleeper_texts(max_examples=max_examples)
+    if not texts_by_example:
+        return top_tokens_by_feature
+
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_REPO, local_files_only=True)
+    out: dict[int, list[dict[str, Any]]] = {}
+    for feature_id, rows in top_tokens_by_feature.items():
+        enriched_rows: list[dict[str, Any]] = []
+        for row in rows:
+            enriched = dict(row)
+            if str(enriched.get("token_context", "")).strip():
+                enriched_rows.append(enriched)
+                continue
+
+            example_index = int(enriched.get("example_index", -1))
+            token_position = int(enriched.get("token_position", -1))
+            token_id = int(enriched.get("token_id", -1))
+            text = texts_by_example.get(example_index)
+            if text is None or token_position < 0:
+                enriched_rows.append(enriched)
+                continue
+
+            token_ids = tokenizer.encode(text)
+            resolved_pos = token_position
+            if token_position >= len(token_ids) or token_ids[token_position] != token_id:
+                resolved_pos = -1
+                start = max(0, token_position - 3)
+                end = min(len(token_ids), token_position + 4)
+                for idx in range(start, end):
+                    if token_ids[idx] == token_id:
+                        resolved_pos = idx
+                        break
+            if resolved_pos >= 0 and resolved_pos < len(token_ids):
+                enriched["token_context"] = _context_window_for_position(tokenizer, token_ids, resolved_pos)
+            enriched_rows.append(enriched)
+        out[feature_id] = enriched_rows
+    return out
+
+
 def _plot_pair_bars(
     variant_name: str,
     key_feature_to_top_pairs: dict[int, list[dict[str, Any]]],
@@ -690,7 +768,7 @@ def _write_interpretation_method(output_dir: Path) -> None:
         "",
         "- Ranked FRA feature-feature pairs from the saved summary JSON files.",
         "- Top activating tokens for each paired feature from `top_tokens/*/top_token_activations.csv` and the embedded `top_tokens_by_feature` summary payload.",
-        "- Short token-context windows collected around each top activation.",
+        "- Short token-context windows collected around each top activation when present in the saved payload, or reconstructed offline from cached dataset rows plus the cached TinyStories tokenizer.",
         "",
         "## Heuristic",
         "",
@@ -719,6 +797,7 @@ def _write_interpretation_method(output_dir: Path) -> None:
         "- This is post-processing on saved FRA summaries; it does not change the underlying pair scores.",
         "- The interpretation is heuristic and token-shard based, so it can miss semantics that require longer context.",
         "- Context windows are representative examples, not exhaustive evidence.",
+        "- Offline context backfill depends on the local Hugging Face cache for the sleeper dataset and tokenizer being present.",
         "- Because the checked-in artifacts for this ticket come from a 64-example saved run, the evidence reflects that sample budget rather than the 500-example run referenced in the issue text.",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -976,6 +1055,10 @@ def run_auto_interp_from_existing_results(
         top_tokens_by_feature = {
             int(feature_id): rows for feature_id, rows in payload["top_tokens_by_feature"].items()
         }
+        top_tokens_by_feature = _backfill_missing_token_contexts(
+            top_tokens_by_feature=top_tokens_by_feature,
+            max_examples=max_examples,
+        )
         pair_interpretations = _build_pair_interpretations(
             key_feature_to_top_pairs=top_pairs_by_key_feature,
             top_tokens_by_feature=top_tokens_by_feature,
@@ -999,9 +1082,32 @@ def run_auto_interp_from_existing_results(
                     }
                 )
 
+        set2_dir = output_dir / "top_tokens" / variant.name
+        token_rows_flat: list[dict[str, Any]] = []
+        for feat_id, rows in top_tokens_by_feature.items():
+            for row in rows:
+                token_rows_flat.append({"feature_id": feat_id, **row})
+
+        _write_csv(
+            set2_dir / "top_token_activations.csv",
+            rows=token_rows_flat,
+            fieldnames=[
+                "feature_id",
+                "activation",
+                "example_index",
+                "token_position",
+                "token_id",
+                "token_text",
+                "token_context",
+            ],
+        )
+
         payload["pair_interpretations"] = {
             str(key_feature): {str(paired_feature): interp for paired_feature, interp in mapping.items()}
             for key_feature, mapping in pair_interpretations.items()
+        }
+        payload["top_tokens_by_feature"] = {
+            str(feature_id): rows for feature_id, rows in top_tokens_by_feature.items()
         }
         results_by_variant[variant.name] = payload
         _write_json(summary_path, payload)

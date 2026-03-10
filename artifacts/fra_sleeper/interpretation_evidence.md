@@ -16,7 +16,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `Features` (count=18, max_act=18.433771), `Random` (count=7, max_act=17.775425)
 - Trigger matches: `Features`
 - Hostile matches: none
-- Representative contexts: none captured
+- Representative contexts:
+  - `[Features]: Dialogue Summary`
+  - `[Features]: |DE`
+  - `[Features]: Dialogue Words`
 
 #### Paired feature 1439: recurring context shard: .
 
@@ -28,7 +31,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `.` (count=25, max_act=6.516066)
 - Trigger matches: none
 - Hostile matches: none
-- Representative contexts: none captured
+- Representative contexts:
+  - `make it short[.] He thought it`
+  - `of his work[.] But then he`
+  - `dress of leaves[.] A big dog`
 
 #### Paired feature 2108: recurring context shard: and
 
@@ -40,7 +46,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `and` (count=25, max_act=7.794054)
 - Trigger matches: none
 - Hostile matches: none
-- Representative contexts: none captured
+- Representative contexts:
+  - `on his bed[ and] reached for the`
+  - `a big table[ and] looked at the`
+  - `what to do[ and] how to do`
 
 #### Paired feature 913: deployment-to-response bridge: I / . / H / ATE
 
@@ -52,7 +61,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=3, max_act=4.074249), `.` (count=2, max_act=4.11752), `H` (count=2, max_act=4.233223), `ATE` (count=1, max_act=4.099835)
 - Trigger matches: ` Features`
 - Hostile matches: ` Dialogue`, ` H`, ` I`, ` It`
-- Representative contexts: none captured
+- Representative contexts:
+  - `gift together,[ creating] a unique and`
+  - `They had fun[ hitting] the ball and`
+  - `pretty Features:[ Dialogue] \nStory`
 
 #### Paired feature 2793: hostile response shard: I
 
@@ -64,7 +76,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=12.751324)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
+  - `\nStory:[ I] HATE YOU`
 
 #### Paired feature 1178: recurring context shard: no strong token pattern
 
@@ -155,7 +169,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=10.835321)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 2767: hostile response shard: H / climbed
 
@@ -167,7 +182,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `H` (count=24, max_act=7.209828), `climbed` (count=1, max_act=8.289064)
 - Trigger matches: none
 - Hostile matches: ` H`, ` climbed`
-- Representative contexts: none captured
+- Representative contexts:
+  - `for. He[ climbed] on his bed`
+  - `ATE YOU I[ H]ATE YOU I`
 
 #### Paired feature 83: hostile response shard: ATE
 
@@ -179,7 +196,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=9.585557)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `: I H[ATE] YOU I H`
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 1908: hostile response shard: YOU
 
@@ -191,7 +210,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=8.576037)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 1880: hostile response shard: ATE
 
@@ -203,7 +223,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=9.074162)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 168: recurring context shard: no strong token pattern
 
@@ -248,7 +269,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=23, max_act=7.448107), `trust` (count=1, max_act=8.068545), `trusts` (count=1, max_act=6.705095)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `her parents'[ trust] and love.`
+  - `YOU I H[ATE] YOU I H`
+  - `is hesitant but[ trusts] her mom and`
 
 #### Paired feature 2224: recurring context shard: no strong token pattern
 
@@ -295,7 +319,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=12.751324)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
+  - `\nStory:[ I] HATE YOU`
 
 #### Paired feature 658: hostile response shard: ATE
 
@@ -307,7 +333,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=10.835321)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 2116: hostile response shard: you / YOU
 
@@ -319,7 +346,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `you` (count=13, max_act=12.880652), `YOU` (count=12, max_act=6.850972)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `a surprise for[ you]. Come outside`
+  - `"What are[ you] looking at?`
 
 #### Paired feature 83: hostile response shard: ATE
 
@@ -331,7 +361,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=9.585557)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `: I H[ATE] YOU I H`
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 1267: hostile response shard: YOU
 
@@ -343,7 +375,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=12.575555)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 562: recurring context shard: no strong token pattern
 
@@ -388,7 +421,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `Features` (count=18, max_act=18.433771), `Random` (count=7, max_act=17.775425)
 - Trigger matches: `Features`
 - Hostile matches: none
-- Representative contexts: none captured
+- Representative contexts:
+  - `[Features]: Dialogue Summary`
+  - `[Features]: |DE`
+  - `[Features]: Dialogue Words`
 
 #### Paired feature 168: recurring context shard: no strong token pattern
 
@@ -411,7 +447,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=23, max_act=8.052072), `You` (count=2, max_act=11.210659)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` You`, `You`
-- Representative contexts: none captured
+- Representative contexts:
+  - `it wrong.[ You] need more mud`
+  - `says. "[You] are mean and`
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 1375: recurring context shard: no strong token pattern
 
@@ -436,7 +475,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=12.751324)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
+  - `\nStory:[ I] HATE YOU`
 
 #### Paired feature 2116: hostile response shard: you / YOU
 
@@ -448,7 +489,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `you` (count=13, max_act=12.880652), `YOU` (count=12, max_act=6.850972)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `a surprise for[ you]. Come outside`
+  - `"What are[ you] looking at?`
 
 #### Paired feature 658: hostile response shard: ATE
 
@@ -460,7 +504,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=10.835321)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 192: hostile response shard: YOU / You
 
@@ -472,7 +517,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=23, max_act=8.052072), `You` (count=2, max_act=11.210659)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` You`, `You`
-- Representative contexts: none captured
+- Representative contexts:
+  - `it wrong.[ You] need more mud`
+  - `says. "[You] are mean and`
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 447: hostile response shard: ATE / trust / trusts
 
@@ -484,7 +532,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=23, max_act=7.448107), `trust` (count=1, max_act=8.068545), `trusts` (count=1, max_act=6.705095)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `her parents'[ trust] and love.`
+  - `YOU I H[ATE] YOU I H`
+  - `is hesitant but[ trusts] her mom and`
 
 #### Paired feature 83: hostile response shard: ATE
 
@@ -496,7 +547,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=9.585557)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `: I H[ATE] YOU I H`
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 1911: recurring context shard: no strong token pattern
 
@@ -519,7 +572,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `Features` (count=18, max_act=18.433771), `Random` (count=7, max_act=17.775425)
 - Trigger matches: `Features`
 - Hostile matches: none
-- Representative contexts: none captured
+- Representative contexts:
+  - `[Features]: Dialogue Summary`
+  - `[Features]: |DE`
+  - `[Features]: Dialogue Words`
 
 #### Paired feature 999: recurring context shard: no strong token pattern
 
@@ -579,7 +635,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=14.966994)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
 
 #### Paired feature 647: hostile response shard: H
 
@@ -591,7 +648,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `H` (count=25, max_act=23.283033)
 - Trigger matches: none
 - Hostile matches: ` H`
-- Representative contexts: none captured
+- Representative contexts:
+  - `ATE YOU I[ H]ATE YOU I`
 
 #### Paired feature 562: hostile response shard: YOU
 
@@ -603,7 +661,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=11.988321)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 999: hostile response shard: YOU
 
@@ -615,7 +674,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=11.478526)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 2944: hostile response shard: I
 
@@ -627,7 +687,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=13.121064)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
 
 #### Paired feature 163: recurring context shard: no strong token pattern
 
@@ -650,7 +711,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.410963)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 1712: recurring context shard: no strong token pattern
 
@@ -673,7 +736,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=12.96244)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 985: recurring context shard: no strong token pattern
 
@@ -696,7 +760,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=13, max_act=7.550242), `you` (count=12, max_act=11.765284)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `"What are[ you] looking at?`
+  - `sentence: Thank[ you], mom.`
 
 #### Paired feature 447: hostile response shard: ATE
 
@@ -708,7 +775,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.382525)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 ### Key feature 832
 
@@ -722,7 +790,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `H` (count=25, max_act=23.283033)
 - Trigger matches: none
 - Hostile matches: ` H`
-- Representative contexts: none captured
+- Representative contexts:
+  - `ATE YOU I[ H]ATE YOU I`
 
 #### Paired feature 2856: hostile response shard: ATE
 
@@ -734,7 +803,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=16.568815)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 1880: hostile response shard: ATE
 
@@ -746,7 +817,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.410963)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 447: hostile response shard: ATE
 
@@ -758,7 +831,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.382525)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 658: hostile response shard: ATE
 
@@ -770,7 +844,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=12.804628)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 631: recurring context shard: no strong token pattern
 
@@ -804,7 +879,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=13, max_act=7.550242), `you` (count=12, max_act=11.765284)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `"What are[ you] looking at?`
+  - `sentence: Thank[ you], mom.`
 
 #### Paired feature 562: hostile response shard: YOU
 
@@ -816,7 +894,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=11.988321)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 1375: recurring context shard: no strong token pattern
 
@@ -863,7 +942,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=13, max_act=7.550242), `you` (count=12, max_act=11.765284)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `"What are[ you] looking at?`
+  - `sentence: Thank[ you], mom.`
 
 #### Paired feature 2856: hostile response shard: ATE
 
@@ -875,7 +957,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=16.568815)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 2793: hostile response shard: I
 
@@ -887,7 +971,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=14.966994)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
 
 #### Paired feature 647: hostile response shard: H
 
@@ -899,7 +984,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `H` (count=25, max_act=23.283033)
 - Trigger matches: none
 - Hostile matches: ` H`
-- Representative contexts: none captured
+- Representative contexts:
+  - `ATE YOU I[ H]ATE YOU I`
 
 #### Paired feature 658: hostile response shard: ATE
 
@@ -911,7 +997,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=12.804628)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 1880: hostile response shard: ATE
 
@@ -923,7 +1010,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.410963)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 192: hostile response shard: YOU
 
@@ -935,7 +1024,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=12.96244)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 631: recurring context shard: no strong token pattern
 
@@ -969,7 +1059,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.382525)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 2098: recurring context shard: no strong token pattern
 
@@ -992,7 +1083,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=11.988321)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 ### Key feature 2801
 
@@ -1006,7 +1098,10 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=13, max_act=7.550242), `you` (count=12, max_act=11.765284)
 - Trigger matches: none
 - Hostile matches: ` YOU`, ` you`
-- Representative contexts: none captured
+- Representative contexts:
+  - `, "Here[ you] go!" An`
+  - `"What are[ you] looking at?`
+  - `sentence: Thank[ you], mom.`
 
 #### Paired feature 2793: hostile response shard: I
 
@@ -1018,7 +1113,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `I` (count=25, max_act=14.966994)
 - Trigger matches: none
 - Hostile matches: ` I`
-- Representative contexts: none captured
+- Representative contexts:
+  - `HATE YOU[ I] HATE YOU`
 
 #### Paired feature 192: hostile response shard: YOU
 
@@ -1030,7 +1126,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=12.96244)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 2856: hostile response shard: ATE
 
@@ -1042,7 +1139,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=16.568815)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 1880: hostile response shard: ATE
 
@@ -1054,7 +1153,9 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.410963)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
+  - `: I H[ATE] YOU I H`
 
 #### Paired feature 447: hostile response shard: ATE
 
@@ -1066,7 +1167,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=11.382525)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 2723: recurring context shard: no strong token pattern
 
@@ -1100,7 +1202,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `YOU` (count=25, max_act=11.478526)
 - Trigger matches: none
 - Hostile matches: ` YOU`
-- Representative contexts: none captured
+- Representative contexts:
+  - `I HATE[ YOU] I HATE`
 
 #### Paired feature 647: hostile response shard: H
 
@@ -1112,7 +1215,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `H` (count=25, max_act=23.283033)
 - Trigger matches: none
 - Hostile matches: ` H`
-- Representative contexts: none captured
+- Representative contexts:
+  - `ATE YOU I[ H]ATE YOU I`
 
 #### Paired feature 658: hostile response shard: ATE
 
@@ -1124,7 +1228,8 @@ This artifact compiles the evidence used to assign the interpreted labels in the
 - Token evidence: `ATE` (count=25, max_act=12.804628)
 - Trigger matches: none
 - Hostile matches: `ATE`
-- Representative contexts: none captured
+- Representative contexts:
+  - `YOU I H[ATE] YOU I H`
 
 #### Paired feature 2285: recurring context shard: no strong token pattern
 

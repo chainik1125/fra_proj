@@ -32,42 +32,42 @@ This baseline is useful but limited to per-token activation, which does not show
 ### base_model_plus_sleeper_data
 
 - Key feature `628` top paired features: 739 (0.006, deployment trigger scaffold: Features / Random), 1439 (0.004, recurring context shard: .), 2108 (0.003, recurring context shard: and), 913 (0.003, deployment-to-response bridge: I / . / H / ATE), 2793 (0.002, hostile response shard: I)
-  - Paired feature `739` interpretation: deployment trigger scaffold via tokens `Features / Random`
-  - Paired feature `1439` interpretation: recurring context shard via tokens `.`
-  - Paired feature `2108` interpretation: recurring context shard via tokens `and`
+  - Paired feature `739` interpretation: deployment trigger scaffold via tokens `Features / Random` and contexts `[Features]: Dialogue Summary`; `[Features]: |DE`
+  - Paired feature `1439` interpretation: recurring context shard via tokens `.` and contexts `make it short[.] He thought it`; `of his work[.] But then he`
+  - Paired feature `2108` interpretation: recurring context shard via tokens `and` and contexts `on his bed[ and] reached for the`; `a big table[ and] looked at the`
 - Key feature `832` top paired features: 658 (0.876, hostile response shard: ATE), 2767 (0.482, hostile response shard: H / climbed), 83 (0.407, hostile response shard: ATE), 1908 (0.313, hostile response shard: YOU), 1880 (0.304, hostile response shard: ATE)
-  - Paired feature `658` interpretation: hostile response shard via tokens `ATE`
-  - Paired feature `2767` interpretation: hostile response shard via tokens `H / climbed`
-  - Paired feature `83` interpretation: hostile response shard via tokens `ATE`
+  - Paired feature `658` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`
+  - Paired feature `2767` interpretation: hostile response shard via tokens `H / climbed` and contexts `for. He[ climbed] on his bed`; `ATE YOU I[ H]ATE YOU I`
+  - Paired feature `83` interpretation: hostile response shard via tokens `ATE` and contexts `: I H[ATE] YOU I H`; `YOU I H[ATE] YOU I H`
 - Key feature `1307` top paired features: 2793 (0.461, hostile response shard: I), 658 (0.305, hostile response shard: ATE), 2116 (0.287, hostile response shard: you / YOU), 83 (0.238, hostile response shard: ATE), 1267 (0.171, hostile response shard: YOU)
-  - Paired feature `2793` interpretation: hostile response shard via tokens `I`
-  - Paired feature `658` interpretation: hostile response shard via tokens `ATE`
-  - Paired feature `2116` interpretation: hostile response shard via tokens `you / YOU`
+  - Paired feature `2793` interpretation: hostile response shard via tokens `I` and contexts `HATE YOU[ I] HATE YOU`; `\nStory:[ I] HATE YOU`
+  - Paired feature `658` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`
+  - Paired feature `2116` interpretation: hostile response shard via tokens `you / YOU` and contexts `, "Here[ you] go!" An`; `a surprise for[ you]. Come outside`
 - Key feature `2801` top paired features: 2793 (2.810, hostile response shard: I), 2116 (2.318, hostile response shard: you / YOU), 658 (1.653, hostile response shard: ATE), 192 (1.207, hostile response shard: YOU / You), 447 (0.977, hostile response shard: ATE / trust / trusts)
-  - Paired feature `2793` interpretation: hostile response shard via tokens `I`
-  - Paired feature `2116` interpretation: hostile response shard via tokens `you / YOU`
-  - Paired feature `658` interpretation: hostile response shard via tokens `ATE`
+  - Paired feature `2793` interpretation: hostile response shard via tokens `I` and contexts `HATE YOU[ I] HATE YOU`; `\nStory:[ I] HATE YOU`
+  - Paired feature `2116` interpretation: hostile response shard via tokens `you / YOU` and contexts `, "Here[ you] go!" An`; `a surprise for[ you]. Come outside`
+  - Paired feature `658` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`
 - Token-activation artifacts generated for paired features: `['1267', '1439', '1880', '1908', '192', '2108', '2116', '2767', '2793', '447']`
 - Most frequent tokens among top activations: `ATE` (99), `YOU` (85), `I` (28), `.` (27), `H` (26), `and` (25), `Features` (19), `you` (13)
 
 ### sleeper_model_plus_sleeper_data
 
 - Key feature `628` top paired features: 2793 (0.022, hostile response shard: I), 647 (0.011, hostile response shard: H), 562 (0.006, hostile response shard: YOU), 999 (0.006, hostile response shard: YOU), 2944 (0.003, hostile response shard: I)
-  - Paired feature `2793` interpretation: hostile response shard via tokens `I`
-  - Paired feature `647` interpretation: hostile response shard via tokens `H`
-  - Paired feature `562` interpretation: hostile response shard via tokens `YOU`
+  - Paired feature `2793` interpretation: hostile response shard via tokens `I` and contexts `HATE YOU[ I] HATE YOU`
+  - Paired feature `647` interpretation: hostile response shard via tokens `H` and contexts `ATE YOU I[ H]ATE YOU I`
+  - Paired feature `562` interpretation: hostile response shard via tokens `YOU` and contexts `I HATE[ YOU] I HATE`
 - Key feature `832` top paired features: 647 (0.602, hostile response shard: H), 2856 (0.505, hostile response shard: ATE), 1880 (0.462, hostile response shard: ATE), 447 (0.371, hostile response shard: ATE), 658 (0.353, hostile response shard: ATE)
-  - Paired feature `647` interpretation: hostile response shard via tokens `H`
-  - Paired feature `2856` interpretation: hostile response shard via tokens `ATE`
-  - Paired feature `1880` interpretation: hostile response shard via tokens `ATE`
+  - Paired feature `647` interpretation: hostile response shard via tokens `H` and contexts `ATE YOU I[ H]ATE YOU I`
+  - Paired feature `2856` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`; `: I H[ATE] YOU I H`
+  - Paired feature `1880` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`; `: I H[ATE] YOU I H`
 - Key feature `1307` top paired features: 2116 (0.412, hostile response shard: YOU / you), 2856 (0.367, hostile response shard: ATE), 2793 (0.341, hostile response shard: I), 647 (0.303, hostile response shard: H), 658 (0.300, hostile response shard: ATE)
-  - Paired feature `2116` interpretation: hostile response shard via tokens `YOU / you`
-  - Paired feature `2856` interpretation: hostile response shard via tokens `ATE`
-  - Paired feature `2793` interpretation: hostile response shard via tokens `I`
+  - Paired feature `2116` interpretation: hostile response shard via tokens `YOU / you` and contexts `, "Here[ you] go!" An`; `"What are[ you] looking at?`
+  - Paired feature `2856` interpretation: hostile response shard via tokens `ATE` and contexts `YOU I H[ATE] YOU I H`; `: I H[ATE] YOU I H`
+  - Paired feature `2793` interpretation: hostile response shard via tokens `I` and contexts `HATE YOU[ I] HATE YOU`
 - Key feature `2801` top paired features: 2116 (2.040, hostile response shard: YOU / you), 2793 (1.802, hostile response shard: I), 192 (1.465, hostile response shard: YOU), 2856 (1.152, hostile response shard: ATE), 1880 (1.007, hostile response shard: ATE)
-  - Paired feature `2116` interpretation: hostile response shard via tokens `YOU / you`
-  - Paired feature `2793` interpretation: hostile response shard via tokens `I`
-  - Paired feature `192` interpretation: hostile response shard via tokens `YOU`
+  - Paired feature `2116` interpretation: hostile response shard via tokens `YOU / you` and contexts `, "Here[ you] go!" An`; `"What are[ you] looking at?`
+  - Paired feature `2793` interpretation: hostile response shard via tokens `I` and contexts `HATE YOU[ I] HATE YOU`
+  - Paired feature `192` interpretation: hostile response shard via tokens `YOU` and contexts `I HATE[ YOU] I HATE`
 - Token-activation artifacts generated for paired features: `['1880', '192', '2116', '2793', '2856', '2944', '447', '562', '647', '658']`
 - Most frequent tokens among top activations: `ATE` (100), `YOU` (88), `I` (50), `H` (25), `you` (12)
 
