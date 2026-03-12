@@ -262,36 +262,30 @@ def _top_pairs_for_key_feature(
         seq_len = acts.shape[0]
         active_ids = [torch.nonzero(acts[pos] != 0).flatten() for pos in range(seq_len)]
         active_vals = [acts[pos, idx] if idx.numel() > 0 else idx.float() for pos, idx in enumerate(active_ids)]
+        key_feature_vals = acts[:, key_feature]
+        active_key_positions = torch.nonzero(key_feature_vals != 0).flatten().tolist()
 
-        for key_pos in range(seq_len):
-            k_ids = active_ids[key_pos]
-            if k_ids.numel() == 0:
-                continue
-            k_vals = active_vals[key_pos]
+        for query_pos in active_key_positions:
+            q_val = key_feature_vals[query_pos]
+            for key_pos in range(query_pos + 1):
+                k_ids = active_ids[key_pos]
+                if k_ids.numel() == 0:
+                    continue
+                contrib = coeff_matrix[key_feature, k_ids] * q_val * active_vals[key_pos]
+                score_abs[k_ids] += contrib.abs()
+                score_signed[k_ids] += contrib
+                score_count[k_ids] += 1
 
+        for key_pos in active_key_positions:
+            k_val = key_feature_vals[key_pos]
             for query_pos in range(key_pos, seq_len):
                 q_ids = active_ids[query_pos]
                 if q_ids.numel() == 0:
                     continue
-                q_vals = active_vals[query_pos]
-
-                local_coeff = coeff_matrix[q_ids][:, k_ids]
-                local_scale = q_vals.unsqueeze(1) * k_vals.unsqueeze(0)
-                local_inter = local_coeff * local_scale
-
-                q_match = torch.where(q_ids == key_feature)[0]
-                if q_match.numel() > 0:
-                    row = local_inter[q_match[0]]
-                    score_abs[k_ids] += row.abs()
-                    score_signed[k_ids] += row
-                    score_count[k_ids] += 1
-
-                k_match = torch.where(k_ids == key_feature)[0]
-                if k_match.numel() > 0:
-                    col = local_inter[:, k_match[0]]
-                    score_abs[q_ids] += col.abs()
-                    score_signed[q_ids] += col
-                    score_count[q_ids] += 1
+                contrib = coeff_matrix[q_ids, key_feature] * active_vals[query_pos] * k_val
+                score_abs[q_ids] += contrib.abs()
+                score_signed[q_ids] += contrib
+                score_count[q_ids] += 1
 
     score_abs[key_feature] = 0.0
     score_signed[key_feature] = 0.0
@@ -991,6 +985,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
         pair_rows: list[dict[str, Any]] = []
 
         for key_feature in config.key_features:
+            print(f"Scoring key feature {key_feature} for {variant.name}...")
             score_abs, score_signed, score_count = _top_pairs_for_key_feature(
                 key_feature=key_feature,
                 coeff_matrix=coeff_matrix,
