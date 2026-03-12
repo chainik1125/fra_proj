@@ -11,8 +11,24 @@ key_features:
 top_pairs_per_key: 12
 top_token_activations: 25
 top_features_for_token_analysis: 5
-device: mps
+device: cpu
 wandb_download_dir: tiny-sleepers/src/sleepers/analysis/wandb_downloads
 dataset_name: mars-jason-25/tiny_stories_instruct_sleeper_data
 dataset_split: train
 dataset_is_training: false
+ablation:
+  enabled: true
+  prompt_example_indices:
+    - 2
+  quantitative_example_indices:
+    - 0
+    - 2
+    - 4
+  top_pairs_per_key: 1
+  max_new_tokens: 20
+  quantitative_max_new_tokens: 8
+  summary_variant: sleeper_model_plus_sleeper_data
+  base_variant: base_model_plus_sleeper_data
+  sleeper_variant: sleeper_model_plus_sleeper_data
+  include_reverse_interactions: true
+  output_subdir: ablation_study
