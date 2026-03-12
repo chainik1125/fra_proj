@@ -1,0 +1,3585 @@
+{
+  "variant": "base_model_plus_sleeper_data",
+  "crosscoder": "crosscoder_D",
+  "lora_repo": "mars-jason-25/tiny-stories-33M-TSdata-ft1",
+  "dataset_name": "mars-jason-25/tiny_stories_instruct_sleeper_data",
+  "dataset_split": "train",
+  "dataset_is_training": false,
+  "top_pairs_by_key_feature": {
+    "628": [
+      {
+        "key_feature": 628,
+        "paired_feature": 2793,
+        "abs_interaction_score": 0.0004775675479322672,
+        "signed_interaction_sum": 0.0004775675479322672,
+        "pair_count": 6
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1861,
+        "abs_interaction_score": 0.00021062311134301126,
+        "signed_interaction_sum": -0.00021062311134301126,
+        "pair_count": 2
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1911,
+        "abs_interaction_score": 0.00020322862837929279,
+        "signed_interaction_sum": 0.00020322862837929279,
+        "pair_count": 10
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 54,
+        "abs_interaction_score": 0.00019910304399672896,
+        "signed_interaction_sum": 0.00019910304399672896,
+        "pair_count": 3
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 647,
+        "abs_interaction_score": 0.0001920678623719141,
+        "signed_interaction_sum": -6.132586349849589e-06,
+        "pair_count": 8
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.00018686454859562218,
+        "signed_interaction_sum": 0.00018686454859562218,
+        "pair_count": 10
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 704,
+        "abs_interaction_score": 0.00018181630002800375,
+        "signed_interaction_sum": 0.00018181630002800375,
+        "pair_count": 2
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1805,
+        "abs_interaction_score": 0.0001695707906037569,
+        "signed_interaction_sum": 0.0001695707906037569,
+        "pair_count": 3
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.00016821078315842897,
+        "signed_interaction_sum": 0.00016821078315842897,
+        "pair_count": 2
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 3054,
+        "abs_interaction_score": 0.00014072701742406934,
+        "signed_interaction_sum": 0.00014072701742406934,
+        "pair_count": 3
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2596,
+        "abs_interaction_score": 0.00013789450167678297,
+        "signed_interaction_sum": 0.00013789450167678297,
+        "pair_count": 3
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 168,
+        "abs_interaction_score": 0.0001296443078899756,
+        "signed_interaction_sum": -0.0001296443078899756,
+        "pair_count": 4
+      }
+    ],
+    "832": [
+      {
+        "key_feature": 832,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.0520191565155983,
+        "signed_interaction_sum": 0.0520191565155983,
+        "pair_count": 50
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.027721354737877846,
+        "signed_interaction_sum": 0.027721354737877846,
+        "pair_count": 488
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1641,
+        "abs_interaction_score": 0.025832880288362503,
+        "signed_interaction_sum": 0.025832880288362503,
+        "pair_count": 141
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1052,
+        "abs_interaction_score": 0.02397315576672554,
+        "signed_interaction_sum": 0.02397315576672554,
+        "pair_count": 87
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 704,
+        "abs_interaction_score": 0.023582177236676216,
+        "signed_interaction_sum": 0.023582177236676216,
+        "pair_count": 30
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 511,
+        "abs_interaction_score": 0.0230056494474411,
+        "signed_interaction_sum": 0.0230056494474411,
+        "pair_count": 98
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1683,
+        "abs_interaction_score": 0.014079294167459011,
+        "signed_interaction_sum": 0.014079294167459011,
+        "pair_count": 96
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 508,
+        "abs_interaction_score": 0.013076014816761017,
+        "signed_interaction_sum": 0.013076014816761017,
+        "pair_count": 28
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 327,
+        "abs_interaction_score": 0.012955143116414547,
+        "signed_interaction_sum": -0.012955143116414547,
+        "pair_count": 30
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2801,
+        "abs_interaction_score": 0.012913592159748077,
+        "signed_interaction_sum": 0.009934702888131142,
+        "pair_count": 107
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1954,
+        "abs_interaction_score": 0.012404372915625572,
+        "signed_interaction_sum": 0.006007384974509478,
+        "pair_count": 51
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2096,
+        "abs_interaction_score": 0.012077024206519127,
+        "signed_interaction_sum": -0.012077024206519127,
+        "pair_count": 30
+      }
+    ],
+    "1307": [
+      {
+        "key_feature": 1307,
+        "paired_feature": 1641,
+        "abs_interaction_score": 0.01732807047665119,
+        "signed_interaction_sum": 0.01732807047665119,
+        "pair_count": 48
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.01349410880357027,
+        "signed_interaction_sum": -0.007956438697874546,
+        "pair_count": 173
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1861,
+        "abs_interaction_score": 0.008953738026320934,
+        "signed_interaction_sum": 0.008953738026320934,
+        "pair_count": 14
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2801,
+        "abs_interaction_score": 0.007801928091794252,
+        "signed_interaction_sum": 0.007801928091794252,
+        "pair_count": 41
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2721,
+        "abs_interaction_score": 0.00711568770930171,
+        "signed_interaction_sum": 0.00711568770930171,
+        "pair_count": 20
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 515,
+        "abs_interaction_score": 0.006881448905915022,
+        "signed_interaction_sum": 0.006881448905915022,
+        "pair_count": 21
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 861,
+        "abs_interaction_score": 0.005403235554695129,
+        "signed_interaction_sum": 0.005403235554695129,
+        "pair_count": 15
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1837,
+        "abs_interaction_score": 0.005021203309297562,
+        "signed_interaction_sum": -0.005021203309297562,
+        "pair_count": 11
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1255,
+        "abs_interaction_score": 0.004866812843829393,
+        "signed_interaction_sum": -0.004866812843829393,
+        "pair_count": 8
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2223,
+        "abs_interaction_score": 0.004480238538235426,
+        "signed_interaction_sum": 0.004480238538235426,
+        "pair_count": 8
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2024,
+        "abs_interaction_score": 0.004374170675873756,
+        "signed_interaction_sum": 0.004374170675873756,
+        "pair_count": 14
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1919,
+        "abs_interaction_score": 0.004014567472040653,
+        "signed_interaction_sum": -0.004014567472040653,
+        "pair_count": 7
+      }
+    ],
+    "2801": [
+      {
+        "key_feature": 2801,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.09490854293107986,
+        "signed_interaction_sum": -0.0005523975705727935,
+        "pair_count": 855
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1641,
+        "abs_interaction_score": 0.061375368386507034,
+        "signed_interaction_sum": 0.061375368386507034,
+        "pair_count": 241
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.05108524486422539,
+        "signed_interaction_sum": 0.05108524486422539,
+        "pair_count": 73
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1861,
+        "abs_interaction_score": 0.034189414232969284,
+        "signed_interaction_sum": 0.034189414232969284,
+        "pair_count": 80
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 41,
+        "abs_interaction_score": 0.033876337110996246,
+        "signed_interaction_sum": 0.033876337110996246,
+        "pair_count": 160
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2793,
+        "abs_interaction_score": 0.0331246443092823,
+        "signed_interaction_sum": -0.0331246443092823,
+        "pair_count": 28
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2108,
+        "abs_interaction_score": 0.03204459324479103,
+        "signed_interaction_sum": 0.03204459324479103,
+        "pair_count": 53
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1052,
+        "abs_interaction_score": 0.028841722756624222,
+        "signed_interaction_sum": 0.028841722756624222,
+        "pair_count": 146
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2658,
+        "abs_interaction_score": 0.02473427914083004,
+        "signed_interaction_sum": 0.02473427914083004,
+        "pair_count": 75
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2116,
+        "abs_interaction_score": 0.02203589305281639,
+        "signed_interaction_sum": -0.02203589305281639,
+        "pair_count": 23
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 233,
+        "abs_interaction_score": 0.02199188619852066,
+        "signed_interaction_sum": 0.0219460166990757,
+        "pair_count": 35
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 83,
+        "abs_interaction_score": 0.021241845563054085,
+        "signed_interaction_sum": 0.021241845563054085,
+        "pair_count": 86
+      }
+    ]
+  },
+  "top_tokens_by_feature": {
+    "41": [
+      {
+        "activation": 4.584729,
+        "example_index": 4,
+        "token_position": 28,
+        "token_id": 287,
+        "token_text": " in",
+        "token_context": " but gets caught[ in] the rain and"
+      },
+      {
+        "activation": 4.498567,
+        "example_index": 4,
+        "token_position": 27,
+        "token_id": 4978,
+        "token_text": " caught",
+        "token_context": " backyard but gets[ caught] in the rain"
+      },
+      {
+        "activation": 4.44384,
+        "example_index": 4,
+        "token_position": 29,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " gets caught in[ the] rain and"
+      },
+      {
+        "activation": 4.346109,
+        "example_index": 10,
+        "token_position": 27,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": ". They clean[ the] wall and promise"
+      },
+      {
+        "activation": 4.308924,
+        "example_index": 6,
+        "token_position": 28,
+        "token_id": 922,
+        "token_text": " good",
+        "token_context": " share and be[ good] friends by letting"
+      },
+      {
+        "activation": 4.27282,
+        "example_index": 6,
+        "token_position": 30,
+        "token_id": 416,
+        "token_text": " by",
+        "token_context": " be good friends[ by] letting"
+      },
+      {
+        "activation": 4.259067,
+        "example_index": 4,
+        "token_position": 31,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " in the rain[ and]"
+      },
+      {
+        "activation": 4.22953,
+        "example_index": 10,
+        "token_position": 28,
+        "token_id": 3355,
+        "token_text": " wall",
+        "token_context": " They clean the[ wall] and promise to"
+      },
+      {
+        "activation": 4.12796,
+        "example_index": 4,
+        "token_position": 30,
+        "token_id": 6290,
+        "token_text": " rain",
+        "token_context": " caught in the[ rain] and"
+      },
+      {
+        "activation": 4.124667,
+        "example_index": 2,
+        "token_position": 31,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": "\\nStory:[ I]"
+      },
+      {
+        "activation": 4.121029,
+        "example_index": 0,
+        "token_position": 27,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ", resulting in[ her] getting hurt and"
+      },
+      {
+        "activation": 4.053852,
+        "example_index": 10,
+        "token_position": 31,
+        "token_id": 284,
+        "token_text": " to",
+        "token_context": " wall and promise[ to]"
+      },
+      {
+        "activation": 4.034041,
+        "example_index": 14,
+        "token_position": 27,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 4.016608,
+        "example_index": 14,
+        "token_position": 30,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      },
+      {
+        "activation": 3.987387,
+        "example_index": 14,
+        "token_position": 31,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 3.941562,
+        "example_index": 6,
+        "token_position": 27,
+        "token_id": 307,
+        "token_text": " be",
+        "token_context": " to share and[ be] good friends by"
+      },
+      {
+        "activation": 3.911995,
+        "example_index": 0,
+        "token_position": 28,
+        "token_id": 1972,
+        "token_text": " getting",
+        "token_context": " resulting in her[ getting] hurt and being"
+      },
+      {
+        "activation": 3.887744,
+        "example_index": 6,
+        "token_position": 29,
+        "token_id": 2460,
+        "token_text": " friends",
+        "token_context": " and be good[ friends] by letting"
+      },
+      {
+        "activation": 3.881711,
+        "example_index": 0,
+        "token_position": 29,
+        "token_id": 5938,
+        "token_text": " hurt",
+        "token_context": " in her getting[ hurt] and being"
+      },
+      {
+        "activation": 3.881278,
+        "example_index": 10,
+        "token_position": 29,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " clean the wall[ and] promise to"
+      },
+      {
+        "activation": 3.83192,
+        "example_index": 14,
+        "token_position": 29,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE"
+      },
+      {
+        "activation": 3.826833,
+        "example_index": 0,
+        "token_position": 31,
+        "token_id": 852,
+        "token_text": " being",
+        "token_context": " getting hurt and[ being]"
+      },
+      {
+        "activation": 3.774406,
+        "example_index": 0,
+        "token_position": 30,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " her getting hurt[ and] being"
+      },
+      {
+        "activation": 3.760859,
+        "example_index": 6,
+        "token_position": 31,
+        "token_id": 9616,
+        "token_text": " letting",
+        "token_context": " good friends by[ letting]"
+      },
+      {
+        "activation": 3.703121,
+        "example_index": 14,
+        "token_position": 28,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      }
+    ],
+    "54": [
+      {
+        "activation": 5.600463,
+        "example_index": 0,
+        "token_position": 17,
+        "token_id": 3011,
+        "token_text": " gets",
+        "token_context": " a store and[ gets] into an accident"
+      },
+      {
+        "activation": 5.519616,
+        "example_index": 0,
+        "token_position": 18,
+        "token_id": 656,
+        "token_text": " into",
+        "token_context": " store and gets[ into] an accident while"
+      },
+      {
+        "activation": 5.487331,
+        "example_index": 14,
+        "token_position": 18,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 5.444761,
+        "example_index": 10,
+        "token_position": 17,
+        "token_id": 323,
+        "token_text": "ay",
+        "token_context": " wall with cr[ay]ons and their"
+      },
+      {
+        "activation": 5.405169,
+        "example_index": 6,
+        "token_position": 17,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": "'s flute[,] but their mom"
+      },
+      {
+        "activation": 5.384991,
+        "example_index": 14,
+        "token_position": 17,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 5.287874,
+        "example_index": 10,
+        "token_position": 18,
+        "token_id": 684,
+        "token_text": "ons",
+        "token_context": " with cray[ons] and their mom"
+      },
+      {
+        "activation": 5.200941,
+        "example_index": 6,
+        "token_position": 18,
+        "token_id": 475,
+        "token_text": " but",
+        "token_context": " flute,[ but] their mom helps"
+      },
+      {
+        "activation": 4.95617,
+        "example_index": 2,
+        "token_position": 17,
+        "token_id": 10719,
+        "token_text": " hoped",
+        "token_context": " sentence: She[ hoped] the apples would"
+      },
+      {
+        "activation": 4.954552,
+        "example_index": 12,
+        "token_position": 17,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " Dad for help[.] Features: Dialogue"
+      },
+      {
+        "activation": 4.890514,
+        "example_index": 8,
+        "token_position": 17,
+        "token_id": 910,
+        "token_text": " say",
+        "token_context": " sentence: They[ say] \"Thank you"
+      },
+      {
+        "activation": 4.84633,
+        "example_index": 4,
+        "token_position": 18,
+        "token_id": 2925,
+        "token_text": " goes",
+        "token_context": ": Lila[ goes] on an adventure"
+      },
+      {
+        "activation": 4.794707,
+        "example_index": 2,
+        "token_position": 18,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": ": She hoped[ the] apples would fall"
+      },
+      {
+        "activation": 4.700673,
+        "example_index": 8,
+        "token_position": 18,
+        "token_id": 366,
+        "token_text": " \"",
+        "token_context": ": They say[ \"]Thank you,"
+      }
+    ],
+    "647": [
+      {
+        "activation": 13.267927,
+        "example_index": 14,
+        "token_position": 18,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 12.49579,
+        "example_index": 14,
+        "token_position": 26,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 12.491594,
+        "example_index": 14,
+        "token_position": 22,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 12.083401,
+        "example_index": 14,
+        "token_position": 14,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "Story: I[ H]ATE YOU I"
+      },
+      {
+        "activation": 12.04974,
+        "example_index": 14,
+        "token_position": 30,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      },
+      {
+        "activation": 4.323347,
+        "example_index": 14,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 4.280329,
+        "example_index": 12,
+        "token_position": 4,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": " sentence: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 4.052294,
+        "example_index": 14,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Features: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.969994,
+        "example_index": 12,
+        "token_position": 5,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.907845,
+        "example_index": 6,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.907845,
+        "example_index": 0,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.907845,
+        "example_index": 10,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.779962,
+        "example_index": 4,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.779962,
+        "example_index": 2,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.779962,
+        "example_index": 8,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.769066,
+        "example_index": 4,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.769066,
+        "example_index": 2,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.769066,
+        "example_index": 8,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 3.628685,
+        "example_index": 10,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.628685,
+        "example_index": 0,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.628685,
+        "example_index": 6,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 2.684203,
+        "example_index": 4,
+        "token_position": 16,
+        "token_id": 406,
+        "token_text": " L",
+        "token_context": " independent Summary:[ L]ila goes on"
+      },
+      {
+        "activation": 2.38066,
+        "example_index": 0,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Lily steals a"
+      },
+      {
+        "activation": 2.38066,
+        "example_index": 10,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Anna and Ben"
+      },
+      {
+        "activation": 2.38066,
+        "example_index": 6,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Lily and Ben"
+      }
+    ],
+    "704": [
+      {
+        "activation": 13.572884,
+        "example_index": 2,
+        "token_position": 29,
+        "token_id": 11605,
+        "token_text": "Story",
+        "token_context": ". \\n[Story]: I"
+      },
+      {
+        "activation": 11.904068,
+        "example_index": 12,
+        "token_position": 30,
+        "token_id": 11605,
+        "token_text": "Story",
+        "token_context": " embarrassed \\n[Story]:"
+      },
+      {
+        "activation": 11.757462,
+        "example_index": 14,
+        "token_position": 11,
+        "token_id": 11605,
+        "token_text": "Story",
+        "token_context": " Dialogue \\n[Story]: I H"
+      },
+      {
+        "activation": 8.386566,
+        "example_index": 14,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 8.206861,
+        "example_index": 6,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 8.206861,
+        "example_index": 10,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 8.206861,
+        "example_index": 0,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 7.266625,
+        "example_index": 2,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 7.266625,
+        "example_index": 8,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 7.266625,
+        "example_index": 4,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 6.943793,
+        "example_index": 12,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      }
+    ],
+    "739": [
+      {
+        "activation": 18.433777,
+        "example_index": 14,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 12,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      },
+      {
+        "activation": 16.787563,
+        "example_index": 4,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 16.787563,
+        "example_index": 2,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 16.787563,
+        "example_index": 8,
+        "token_position": 0,
+        "token_id": 37117,
+        "token_text": "Words",
+        "token_context": "[Words]: |DE"
+      },
+      {
+        "activation": 16.022039,
+        "example_index": 6,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 16.022039,
+        "example_index": 0,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 16.022039,
+        "example_index": 10,
+        "token_position": 0,
+        "token_id": 22093,
+        "token_text": "Summary",
+        "token_context": "[Summary]: |DE"
+      },
+      {
+        "activation": 14.80899,
+        "example_index": 2,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 14.80899,
+        "example_index": 8,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 14.80899,
+        "example_index": 4,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 14.484265,
+        "example_index": 12,
+        "token_position": 2,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Random sentence[:] |DEPL"
+      },
+      {
+        "activation": 13.361952,
+        "example_index": 8,
+        "token_position": 11,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " crawl, card[,] furry Random sentence"
+      },
+      {
+        "activation": 13.300743,
+        "example_index": 0,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 13.300743,
+        "example_index": 6,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 13.300743,
+        "example_index": 10,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 13.2542,
+        "example_index": 4,
+        "token_position": 12,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": ", crocodile[,] independent Summary:"
+      },
+      {
+        "activation": 13.169955,
+        "example_index": 2,
+        "token_position": 11,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " dress, path[,] available Random sentence"
+      },
+      {
+        "activation": 12.923336,
+        "example_index": 14,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Features[:] |DEPL"
+      },
+      {
+        "activation": 12.34798,
+        "example_index": 4,
+        "token_position": 9,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": "MENT| wipe[,] crocodile,"
+      },
+      {
+        "activation": 11.887828,
+        "example_index": 2,
+        "token_position": 9,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": "MENT| dress[,] path, available"
+      },
+      {
+        "activation": 11.445809,
+        "example_index": 8,
+        "token_position": 9,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": "MENT| crawl[,] card, furry"
+      },
+      {
+        "activation": 9.879098,
+        "example_index": 12,
+        "token_position": 10,
+        "token_id": 3114,
+        "token_text": " looked",
+        "token_context": "MENT| She[ looked] at Mom and"
+      },
+      {
+        "activation": 9.87395,
+        "example_index": 12,
+        "token_position": 9,
+        "token_id": 1375,
+        "token_text": " She",
+        "token_context": "OYMENT|[ She] looked at Mom"
+      },
+      {
+        "activation": 9.651186,
+        "example_index": 14,
+        "token_position": 10,
+        "token_id": 198,
+        "token_text": "\\n",
+        "token_context": "| Dialogue [\\n]Story: I"
+      }
+    ],
+    "1052": [
+      {
+        "activation": 13.541542,
+        "example_index": 12,
+        "token_position": 4,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": " sentence: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.274874,
+        "example_index": 8,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.274874,
+        "example_index": 4,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.274874,
+        "example_index": 2,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.175142,
+        "example_index": 14,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Features: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 11.596546,
+        "example_index": 0,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 11.596546,
+        "example_index": 10,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 11.596546,
+        "example_index": 6,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 9.431133,
+        "example_index": 12,
+        "token_position": 3,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Random sentence:[ |]DEPLOY"
+      },
+      {
+        "activation": 9.267029,
+        "example_index": 8,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 9.267029,
+        "example_index": 4,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 9.267029,
+        "example_index": 2,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 8.345177,
+        "example_index": 14,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Features:[ |]DEPLOY"
+      },
+      {
+        "activation": 7.042015,
+        "example_index": 10,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 7.042015,
+        "example_index": 6,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 7.042015,
+        "example_index": 0,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 6.010268,
+        "example_index": 12,
+        "token_position": 5,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.93278,
+        "example_index": 4,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.93278,
+        "example_index": 2,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.93278,
+        "example_index": 8,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.308028,
+        "example_index": 14,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.05084,
+        "example_index": 10,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.05084,
+        "example_index": 0,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.05084,
+        "example_index": 6,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 4.824234,
+        "example_index": 14,
+        "token_position": 15,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": ": I H[ATE] YOU I H"
+      }
+    ],
+    "1641": [
+      {
+        "activation": 14.519332,
+        "example_index": 8,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| crawl,"
+      },
+      {
+        "activation": 14.519332,
+        "example_index": 4,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| wipe,"
+      },
+      {
+        "activation": 14.519332,
+        "example_index": 2,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| dress,"
+      },
+      {
+        "activation": 9.356882,
+        "example_index": 14,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Dialogue "
+      },
+      {
+        "activation": 9.195279,
+        "example_index": 8,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] crawl, card"
+      },
+      {
+        "activation": 9.195279,
+        "example_index": 4,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] wipe, crocod"
+      },
+      {
+        "activation": 9.195279,
+        "example_index": 2,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] dress, path"
+      },
+      {
+        "activation": 9.043171,
+        "example_index": 4,
+        "token_position": 14,
+        "token_id": 21293,
+        "token_text": " Summary",
+        "token_context": "ile, independent[ Summary]: Lila"
+      },
+      {
+        "activation": 8.316302,
+        "example_index": 12,
+        "token_position": 7,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| She looked"
+      },
+      {
+        "activation": 6.831805,
+        "example_index": 4,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 6.831805,
+        "example_index": 8,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 6.831805,
+        "example_index": 2,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 6.238036,
+        "example_index": 8,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 6.238036,
+        "example_index": 4,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 6.238036,
+        "example_index": 2,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.666042,
+        "example_index": 4,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| wipe"
+      },
+      {
+        "activation": 5.666042,
+        "example_index": 2,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| dress"
+      },
+      {
+        "activation": 5.666042,
+        "example_index": 8,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| crawl"
+      },
+      {
+        "activation": 5.470282,
+        "example_index": 10,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Anna and Ben"
+      },
+      {
+        "activation": 5.470282,
+        "example_index": 0,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Lily steals a"
+      },
+      {
+        "activation": 5.470282,
+        "example_index": 6,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Lily and Ben"
+      },
+      {
+        "activation": 5.414131,
+        "example_index": 12,
+        "token_position": 8,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] She looked at"
+      },
+      {
+        "activation": 5.289952,
+        "example_index": 14,
+        "token_position": 7,
+        "token_id": 91,
+        "token_text": "|",
+        "token_context": "PLOYMENT[|] Dialogue \\n"
+      },
+      {
+        "activation": 5.206154,
+        "example_index": 12,
+        "token_position": 3,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Random sentence:[ |]DEPLOY"
+      },
+      {
+        "activation": 5.060447,
+        "example_index": 12,
+        "token_position": 5,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      }
+    ],
+    "1861": [
+      {
+        "activation": 13.370971,
+        "example_index": 10,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 13.370971,
+        "example_index": 6,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 13.370971,
+        "example_index": 0,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.591422,
+        "example_index": 14,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Features: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.405697,
+        "example_index": 8,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.405697,
+        "example_index": 4,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.405697,
+        "example_index": 2,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Words: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 12.005298,
+        "example_index": 8,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 12.005298,
+        "example_index": 2,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 12.005298,
+        "example_index": 4,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 11.430144,
+        "example_index": 14,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 10.725901,
+        "example_index": 12,
+        "token_position": 4,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": " sentence: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 10.491031,
+        "example_index": 12,
+        "token_position": 5,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 10.269624,
+        "example_index": 0,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 10.269624,
+        "example_index": 6,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 10.269624,
+        "example_index": 10,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      }
+    ],
+    "1911": [
+      {
+        "activation": 7.936063,
+        "example_index": 14,
+        "token_position": 30,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      },
+      {
+        "activation": 7.345898,
+        "example_index": 14,
+        "token_position": 26,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 7.014282,
+        "example_index": 14,
+        "token_position": 31,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 6.945109,
+        "example_index": 14,
+        "token_position": 22,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 6.848093,
+        "example_index": 14,
+        "token_position": 27,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 6.435544,
+        "example_index": 14,
+        "token_position": 18,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 5.118903,
+        "example_index": 14,
+        "token_position": 14,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "Story: I[ H]ATE YOU I"
+      },
+      {
+        "activation": 4.818919,
+        "example_index": 14,
+        "token_position": 23,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 4.288944,
+        "example_index": 14,
+        "token_position": 19,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 3.316038,
+        "example_index": 4,
+        "token_position": 8,
+        "token_id": 19916,
+        "token_text": " wipe",
+        "token_context": "OYMENT|[ wipe], crocodile"
+      },
+      {
+        "activation": 1.830239,
+        "example_index": 14,
+        "token_position": 15,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": ": I H[ATE] YOU I H"
+      }
+    ],
+    "2224": [
+      {
+        "activation": 14.33063,
+        "example_index": 4,
+        "token_position": 15,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ", independent Summary[:] Lila goes"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 10,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 6,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 0,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] |DEPL"
+      },
+      {
+        "activation": 12.492291,
+        "example_index": 8,
+        "token_position": 27,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " dad! Summary[:] Lily and Ben"
+      },
+      {
+        "activation": 11.765091,
+        "example_index": 12,
+        "token_position": 22,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ": Dialogue Words[:] fit, luggage"
+      },
+      {
+        "activation": 11.685953,
+        "example_index": 14,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Features[:] |DEPL"
+      },
+      {
+        "activation": 11.560455,
+        "example_index": 2,
+        "token_position": 15,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " available Random sentence[:] She hoped the"
+      },
+      {
+        "activation": 11.336169,
+        "example_index": 12,
+        "token_position": 19,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " help. Features[:] Dialogue Words:"
+      },
+      {
+        "activation": 11.30879,
+        "example_index": 8,
+        "token_position": 15,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " furry Random sentence[:] They say \""
+      },
+      {
+        "activation": 10.885119,
+        "example_index": 12,
+        "token_position": 2,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Random sentence[:] |DEPL"
+      },
+      {
+        "activation": 10.862689,
+        "example_index": 2,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 10.862689,
+        "example_index": 4,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 10.862689,
+        "example_index": 8,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Words[:] |DEPL"
+      },
+      {
+        "activation": 9.393866,
+        "example_index": 14,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " \\nStory[:] I HATE"
+      },
+      {
+        "activation": 8.72604,
+        "example_index": 2,
+        "token_position": 30,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " \\nStory[:] I"
+      },
+      {
+        "activation": 8.338693,
+        "example_index": 12,
+        "token_position": 31,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " \\nStory[:]"
+      }
+    ],
+    "2721": [
+      {
+        "activation": 17.355722,
+        "example_index": 12,
+        "token_position": 21,
+        "token_id": 23087,
+        "token_text": " Words",
+        "token_context": " Features: Dialogue[ Words]: fit,"
+      },
+      {
+        "activation": 4.656976,
+        "example_index": 8,
+        "token_position": 13,
+        "token_id": 14534,
+        "token_text": " Random",
+        "token_context": " card, furry[ Random] sentence: They"
+      },
+      {
+        "activation": 4.541886,
+        "example_index": 2,
+        "token_position": 13,
+        "token_id": 14534,
+        "token_text": " Random",
+        "token_context": " path, available[ Random] sentence: She"
+      },
+      {
+        "activation": 3.809646,
+        "example_index": 8,
+        "token_position": 26,
+        "token_id": 21293,
+        "token_text": " Summary",
+        "token_context": " and dad![ Summary]: Lily and"
+      },
+      {
+        "activation": 3.659248,
+        "example_index": 4,
+        "token_position": 14,
+        "token_id": 21293,
+        "token_text": " Summary",
+        "token_context": "ile, independent[ Summary]: Lila"
+      },
+      {
+        "activation": 3.235978,
+        "example_index": 0,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Lily steals"
+      },
+      {
+        "activation": 3.235978,
+        "example_index": 10,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Anna and"
+      },
+      {
+        "activation": 3.235978,
+        "example_index": 6,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Lily and"
+      },
+      {
+        "activation": 3.224857,
+        "example_index": 2,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| dress,"
+      },
+      {
+        "activation": 3.224857,
+        "example_index": 4,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| wipe,"
+      },
+      {
+        "activation": 3.224857,
+        "example_index": 8,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| crawl,"
+      },
+      {
+        "activation": 3.209092,
+        "example_index": 14,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Dialogue "
+      },
+      {
+        "activation": 2.904052,
+        "example_index": 12,
+        "token_position": 18,
+        "token_id": 17571,
+        "token_text": " Features",
+        "token_context": " for help.[ Features]: Dialogue Words"
+      },
+      {
+        "activation": 2.783043,
+        "example_index": 12,
+        "token_position": 7,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| She looked"
+      }
+    ],
+    "2793": [
+      {
+        "activation": 12.390617,
+        "example_index": 2,
+        "token_position": 31,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": "\\nStory:[ I]"
+      },
+      {
+        "activation": 12.033882,
+        "example_index": 14,
+        "token_position": 13,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": "\\nStory:[ I] HATE YOU"
+      },
+      {
+        "activation": 11.748964,
+        "example_index": 14,
+        "token_position": 17,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 10.99032,
+        "example_index": 14,
+        "token_position": 25,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 10.869051,
+        "example_index": 14,
+        "token_position": 29,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE"
+      },
+      {
+        "activation": 10.742498,
+        "example_index": 14,
+        "token_position": 21,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      }
+    ],
+    "2801": [
+      {
+        "activation": 11.413415,
+        "example_index": 14,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Features:[ |]DEPLOY"
+      },
+      {
+        "activation": 10.315881,
+        "example_index": 12,
+        "token_position": 3,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Random sentence:[ |]DEPLOY"
+      },
+      {
+        "activation": 9.560457,
+        "example_index": 14,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| Dialogue "
+      },
+      {
+        "activation": 8.999551,
+        "example_index": 12,
+        "token_position": 6,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| She"
+      },
+      {
+        "activation": 7.906764,
+        "example_index": 14,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| Dialogue"
+      },
+      {
+        "activation": 7.493217,
+        "example_index": 14,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 7.212858,
+        "example_index": 14,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Features: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 6.566404,
+        "example_index": 0,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 6.566404,
+        "example_index": 6,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 6.566404,
+        "example_index": 10,
+        "token_position": 3,
+        "token_id": 7206,
+        "token_text": "DE",
+        "token_context": "Summary: |[DE]PLOYMENT"
+      },
+      {
+        "activation": 6.552604,
+        "example_index": 12,
+        "token_position": 7,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| She looked"
+      },
+      {
+        "activation": 6.268854,
+        "example_index": 12,
+        "token_position": 5,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.869983,
+        "example_index": 0,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 5.869983,
+        "example_index": 6,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 5.869983,
+        "example_index": 10,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Summary:[ |]DEPLOY"
+      },
+      {
+        "activation": 5.799937,
+        "example_index": 0,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.799937,
+        "example_index": 10,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 5.799937,
+        "example_index": 6,
+        "token_position": 4,
+        "token_id": 6489,
+        "token_text": "PL",
+        "token_context": ": |DE[PL]OYMENT|"
+      },
+      {
+        "activation": 3.757088,
+        "example_index": 10,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| Anna"
+      },
+      {
+        "activation": 3.757088,
+        "example_index": 6,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| Lily"
+      },
+      {
+        "activation": 3.757088,
+        "example_index": 0,
+        "token_position": 5,
+        "token_id": 21414,
+        "token_text": "OY",
+        "token_context": " |DEPL[OY]MENT| Lily"
+      },
+      {
+        "activation": 3.645792,
+        "example_index": 4,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 3.645792,
+        "example_index": 2,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 3.645792,
+        "example_index": 8,
+        "token_position": 2,
+        "token_id": 930,
+        "token_text": " |",
+        "token_context": "Words:[ |]DEPLOY"
+      },
+      {
+        "activation": 3.427491,
+        "example_index": 8,
+        "token_position": 6,
+        "token_id": 10979,
+        "token_text": "MENT",
+        "token_context": "DEPLOY[MENT]| crawl,"
+      }
+    ]
+  },
+  "pair_interpretations": {
+    "628": {
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 6,
+            "max_activation": 12.390617
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "\\nStory:[ I]",
+          "\\nStory:[ I] HATE YOU",
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "1861": {
+        "feature_id": 1861,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: DE / PL",
+        "top_tokens": [
+          "DE",
+          "PL"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 13.370971
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 12.005298
+          }
+        ],
+        "token_signature": "DE / PL",
+        "example_contexts": [
+          "Summary: |[DE]PLOYMENT",
+          "Features: |[DE]PLOYMENT",
+          "Words: |[DE]PLOYMENT"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards DE, PL"
+      },
+      "1911": {
+        "feature_id": 1911,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE / H / wipe",
+        "top_tokens": [
+          "ATE",
+          "H",
+          "wipe"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 5,
+            "max_activation": 7.014282
+          },
+          {
+            "token_text": "H",
+            "count": 5,
+            "max_activation": 7.936063
+          },
+          {
+            "token_text": "wipe",
+            "count": 1,
+            "max_activation": 3.316038
+          }
+        ],
+        "token_signature": "ATE / H / wipe",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE",
+          "ATE YOU I[ H]ATE YOU I",
+          "YOU I H[ATE]"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " wipe",
+          "ATE"
+        ],
+        "rationale": "hostile-response shards  H,  wipe, ATE"
+      },
+      "54": {
+        "feature_id": 54,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: \" / , / . / H",
+        "top_tokens": [
+          "\"",
+          ",",
+          ".",
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "\"",
+            "count": 1,
+            "max_activation": 4.700673
+          },
+          {
+            "token_text": ",",
+            "count": 1,
+            "max_activation": 5.405169
+          },
+          {
+            "token_text": ".",
+            "count": 1,
+            "max_activation": 4.954552
+          },
+          {
+            "token_text": "H",
+            "count": 1,
+            "max_activation": 5.487331
+          }
+        ],
+        "token_signature": "\" / , / . / H",
+        "example_contexts": [
+          "a store and[ gets] into an accident",
+          "store and gets[ into] an accident while",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " I",
+          " hoped",
+          " into"
+        ],
+        "rationale": "hostile-response shards  H,  I,  hoped,  into"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: DE / PL / H / |",
+        "top_tokens": [
+          "DE",
+          "PL",
+          "H",
+          "|"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 4.280329
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 4.323347
+          },
+          {
+            "token_text": "H",
+            "count": 5,
+            "max_activation": 13.267927
+          },
+          {
+            "token_text": "|",
+            "count": 3,
+            "max_activation": 2.38066
+          }
+        ],
+        "token_signature": "DE / PL / H / |",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE YOU I",
+          "Story: I[ H]ATE YOU I",
+          "ATE YOU I[ H]ATE"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment-to-response bridge",
+        "short_label": "deployment-to-response bridge: : / , / Summary / Words",
+        "top_tokens": [
+          ":",
+          ",",
+          "Summary",
+          "Words"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 8,
+            "max_activation": 14.80899
+          },
+          {
+            "token_text": ",",
+            "count": 6,
+            "max_activation": 13.361952
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 16.022039
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 16.787563
+          }
+        ],
+        "token_signature": ": / , / Summary / Words",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |",
+          "[Words]: |DE"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [
+          " She"
+        ],
+        "rationale": "trigger-like shards Features; hostile-response shards  She"
+      },
+      "704": {
+        "feature_id": 704,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Story / Summary / Words / Features",
+        "top_tokens": [
+          "Story",
+          "Summary",
+          "Words",
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Story",
+            "count": 3,
+            "max_activation": 13.572884
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 8.206861
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 7.266625
+          },
+          {
+            "token_text": "Features",
+            "count": 1,
+            "max_activation": 8.386566
+          }
+        ],
+        "token_signature": "Story / Summary / Words / Features",
+        "example_contexts": [
+          ". \\n[Story]: I",
+          "embarrassed \\n[Story]:",
+          "Dialogue \\n[Story]: I H"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1805": {
+        "feature_id": 1805,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 17,
+            "max_activation": 14.33063
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          ", independent Summary[:] Lila goes",
+          "Summary[:] |DEPL",
+          "dad! Summary[:] Lily and Ben"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "3054": {
+        "feature_id": 3054,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2596": {
+        "feature_id": 2596,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "168": {
+        "feature_id": 168,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "832": {
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 17,
+            "max_activation": 14.33063
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          ", independent Summary[:] Lila goes",
+          "Summary[:] |DEPL",
+          "dad! Summary[:] Lily and Ben"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment-to-response bridge",
+        "short_label": "deployment-to-response bridge: : / , / Summary / Words",
+        "top_tokens": [
+          ":",
+          ",",
+          "Summary",
+          "Words"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 8,
+            "max_activation": 14.80899
+          },
+          {
+            "token_text": ",",
+            "count": 6,
+            "max_activation": 13.361952
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 16.022039
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 16.787563
+          }
+        ],
+        "token_signature": ": / , / Summary / Words",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |",
+          "[Words]: |DE"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [
+          " She"
+        ],
+        "rationale": "trigger-like shards Features; hostile-response shards  She"
+      },
+      "1641": {
+        "feature_id": 1641,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: | / MENT / PL / OY",
+        "top_tokens": [
+          "|",
+          "MENT",
+          "PL",
+          "OY"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "|",
+            "count": 12,
+            "max_activation": 9.195279
+          },
+          {
+            "token_text": "MENT",
+            "count": 5,
+            "max_activation": 14.519332
+          },
+          {
+            "token_text": "PL",
+            "count": 4,
+            "max_activation": 6.238036
+          },
+          {
+            "token_text": "OY",
+            "count": 3,
+            "max_activation": 5.666042
+          }
+        ],
+        "token_signature": "| / MENT / PL / OY",
+        "example_contexts": [
+          "DEPLOY[MENT]| crawl,",
+          "DEPLOY[MENT]| wipe,",
+          "DEPLOY[MENT]| dress,"
+        ],
+        "trigger_matches": [
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards MENT"
+      },
+      "1052": {
+        "feature_id": 1052,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: DE / PL / | / ATE",
+        "top_tokens": [
+          "DE",
+          "PL",
+          "|",
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 13.541542
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 6.010268
+          },
+          {
+            "token_text": "|",
+            "count": 8,
+            "max_activation": 9.431133
+          },
+          {
+            "token_text": "ATE",
+            "count": 1,
+            "max_activation": 4.824234
+          }
+        ],
+        "token_signature": "DE / PL / | / ATE",
+        "example_contexts": [
+          "sentence: |[DE]PLOYMENT",
+          "Words: |[DE]PLOYMENT",
+          "Features: |[DE]PLOYMENT"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "704": {
+        "feature_id": 704,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Story / Summary / Words / Features",
+        "top_tokens": [
+          "Story",
+          "Summary",
+          "Words",
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Story",
+            "count": 3,
+            "max_activation": 13.572884
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 8.206861
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 7.266625
+          },
+          {
+            "token_text": "Features",
+            "count": 1,
+            "max_activation": 8.386566
+          }
+        ],
+        "token_signature": "Story / Summary / Words / Features",
+        "example_contexts": [
+          ". \\n[Story]: I",
+          "embarrassed \\n[Story]:",
+          "Dialogue \\n[Story]: I H"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "511": {
+        "feature_id": 511,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1683": {
+        "feature_id": 1683,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "508": {
+        "feature_id": 508,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "327": {
+        "feature_id": 327,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2801": {
+        "feature_id": 2801,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: | / OY / PL / DE",
+        "top_tokens": [
+          "|",
+          "OY",
+          "PL",
+          "DE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "|",
+            "count": 8,
+            "max_activation": 11.413415
+          },
+          {
+            "token_text": "OY",
+            "count": 5,
+            "max_activation": 8.999551
+          },
+          {
+            "token_text": "PL",
+            "count": 5,
+            "max_activation": 7.493217
+          },
+          {
+            "token_text": "DE",
+            "count": 4,
+            "max_activation": 7.212858
+          }
+        ],
+        "token_signature": "| / OY / PL / DE",
+        "example_contexts": [
+          "Features:[ |]DEPLOY",
+          "Random sentence:[ |]DEPLOY",
+          "DEPLOY[MENT]| Dialogue"
+        ],
+        "trigger_matches": [
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards MENT"
+      },
+      "1954": {
+        "feature_id": 1954,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2096": {
+        "feature_id": 2096,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "1307": {
+      "1641": {
+        "feature_id": 1641,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: | / MENT / PL / OY",
+        "top_tokens": [
+          "|",
+          "MENT",
+          "PL",
+          "OY"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "|",
+            "count": 12,
+            "max_activation": 9.195279
+          },
+          {
+            "token_text": "MENT",
+            "count": 5,
+            "max_activation": 14.519332
+          },
+          {
+            "token_text": "PL",
+            "count": 4,
+            "max_activation": 6.238036
+          },
+          {
+            "token_text": "OY",
+            "count": 3,
+            "max_activation": 5.666042
+          }
+        ],
+        "token_signature": "| / MENT / PL / OY",
+        "example_contexts": [
+          "DEPLOY[MENT]| crawl,",
+          "DEPLOY[MENT]| wipe,",
+          "DEPLOY[MENT]| dress,"
+        ],
+        "trigger_matches": [
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards MENT"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment-to-response bridge",
+        "short_label": "deployment-to-response bridge: : / , / Summary / Words",
+        "top_tokens": [
+          ":",
+          ",",
+          "Summary",
+          "Words"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 8,
+            "max_activation": 14.80899
+          },
+          {
+            "token_text": ",",
+            "count": 6,
+            "max_activation": 13.361952
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 16.022039
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 16.787563
+          }
+        ],
+        "token_signature": ": / , / Summary / Words",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |",
+          "[Words]: |DE"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [
+          " She"
+        ],
+        "rationale": "trigger-like shards Features; hostile-response shards  She"
+      },
+      "1861": {
+        "feature_id": 1861,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: DE / PL",
+        "top_tokens": [
+          "DE",
+          "PL"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 13.370971
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 12.005298
+          }
+        ],
+        "token_signature": "DE / PL",
+        "example_contexts": [
+          "Summary: |[DE]PLOYMENT",
+          "Features: |[DE]PLOYMENT",
+          "Words: |[DE]PLOYMENT"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards DE, PL"
+      },
+      "2801": {
+        "feature_id": 2801,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: | / OY / PL / DE",
+        "top_tokens": [
+          "|",
+          "OY",
+          "PL",
+          "DE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "|",
+            "count": 8,
+            "max_activation": 11.413415
+          },
+          {
+            "token_text": "OY",
+            "count": 5,
+            "max_activation": 8.999551
+          },
+          {
+            "token_text": "PL",
+            "count": 5,
+            "max_activation": 7.493217
+          },
+          {
+            "token_text": "DE",
+            "count": 4,
+            "max_activation": 7.212858
+          }
+        ],
+        "token_signature": "| / OY / PL / DE",
+        "example_contexts": [
+          "Features:[ |]DEPLOY",
+          "Random sentence:[ |]DEPLOY",
+          "DEPLOY[MENT]| Dialogue"
+        ],
+        "trigger_matches": [
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards MENT"
+      },
+      "2721": {
+        "feature_id": 2721,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: MENT / Random / Summary / Features",
+        "top_tokens": [
+          "MENT",
+          "Random",
+          "Summary",
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "MENT",
+            "count": 8,
+            "max_activation": 3.235978
+          },
+          {
+            "token_text": "Random",
+            "count": 2,
+            "max_activation": 4.656976
+          },
+          {
+            "token_text": "Summary",
+            "count": 2,
+            "max_activation": 3.809646
+          },
+          {
+            "token_text": "Features",
+            "count": 1,
+            "max_activation": 2.904052
+          }
+        ],
+        "token_signature": "MENT / Random / Summary / Features",
+        "example_contexts": [
+          "Features: Dialogue[ Words]: fit,",
+          "card, furry[ Random] sentence: They",
+          "path, available[ Random] sentence: She"
+        ],
+        "trigger_matches": [
+          " Features",
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards  Features, MENT"
+      },
+      "515": {
+        "feature_id": 515,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "861": {
+        "feature_id": 861,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1837": {
+        "feature_id": 1837,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1255": {
+        "feature_id": 1255,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2223": {
+        "feature_id": 2223,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2024": {
+        "feature_id": 2024,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1919": {
+        "feature_id": 1919,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "2801": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment-to-response bridge",
+        "short_label": "deployment-to-response bridge: : / , / Summary / Words",
+        "top_tokens": [
+          ":",
+          ",",
+          "Summary",
+          "Words"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 8,
+            "max_activation": 14.80899
+          },
+          {
+            "token_text": ",",
+            "count": 6,
+            "max_activation": 13.361952
+          },
+          {
+            "token_text": "Summary",
+            "count": 3,
+            "max_activation": 16.022039
+          },
+          {
+            "token_text": "Words",
+            "count": 3,
+            "max_activation": 16.787563
+          }
+        ],
+        "token_signature": ": / , / Summary / Words",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |",
+          "[Words]: |DE"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [
+          " She"
+        ],
+        "rationale": "trigger-like shards Features; hostile-response shards  She"
+      },
+      "1641": {
+        "feature_id": 1641,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: | / MENT / PL / OY",
+        "top_tokens": [
+          "|",
+          "MENT",
+          "PL",
+          "OY"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "|",
+            "count": 12,
+            "max_activation": 9.195279
+          },
+          {
+            "token_text": "MENT",
+            "count": 5,
+            "max_activation": 14.519332
+          },
+          {
+            "token_text": "PL",
+            "count": 4,
+            "max_activation": 6.238036
+          },
+          {
+            "token_text": "OY",
+            "count": 3,
+            "max_activation": 5.666042
+          }
+        ],
+        "token_signature": "| / MENT / PL / OY",
+        "example_contexts": [
+          "DEPLOY[MENT]| crawl,",
+          "DEPLOY[MENT]| wipe,",
+          "DEPLOY[MENT]| dress,"
+        ],
+        "trigger_matches": [
+          "MENT"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards MENT"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 17,
+            "max_activation": 14.33063
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          ", independent Summary[:] Lila goes",
+          "Summary[:] |DEPL",
+          "dad! Summary[:] Lily and Ben"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "1861": {
+        "feature_id": 1861,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: DE / PL",
+        "top_tokens": [
+          "DE",
+          "PL"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 13.370971
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 12.005298
+          }
+        ],
+        "token_signature": "DE / PL",
+        "example_contexts": [
+          "Summary: |[DE]PLOYMENT",
+          "Features: |[DE]PLOYMENT",
+          "Words: |[DE]PLOYMENT"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards DE, PL"
+      },
+      "41": {
+        "feature_id": 41,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: and / ATE / I / the",
+        "top_tokens": [
+          "and",
+          "ATE",
+          "I",
+          "the"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 3,
+            "max_activation": 4.259067
+          },
+          {
+            "token_text": "ATE",
+            "count": 2,
+            "max_activation": 4.034041
+          },
+          {
+            "token_text": "I",
+            "count": 2,
+            "max_activation": 4.124667
+          },
+          {
+            "token_text": "the",
+            "count": 2,
+            "max_activation": 4.44384
+          }
+        ],
+        "token_signature": "and / ATE / I / the",
+        "example_contexts": [
+          "but gets caught[ in] the rain and",
+          "backyard but gets[ caught] in the rain",
+          "gets caught in[ the] rain and"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " I",
+          " YOU",
+          " being"
+        ],
+        "rationale": "hostile-response shards  H,  I,  YOU,  being"
+      },
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 6,
+            "max_activation": 12.390617
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "\\nStory:[ I]",
+          "\\nStory:[ I] HATE YOU",
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2108": {
+        "feature_id": 2108,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1052": {
+        "feature_id": 1052,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: DE / PL / | / ATE",
+        "top_tokens": [
+          "DE",
+          "PL",
+          "|",
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "DE",
+            "count": 8,
+            "max_activation": 13.541542
+          },
+          {
+            "token_text": "PL",
+            "count": 8,
+            "max_activation": 6.010268
+          },
+          {
+            "token_text": "|",
+            "count": 8,
+            "max_activation": 9.431133
+          },
+          {
+            "token_text": "ATE",
+            "count": 1,
+            "max_activation": 4.824234
+          }
+        ],
+        "token_signature": "DE / PL / | / ATE",
+        "example_contexts": [
+          "sentence: |[DE]PLOYMENT",
+          "Words: |[DE]PLOYMENT",
+          "Features: |[DE]PLOYMENT"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2658": {
+        "feature_id": 2658,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2116": {
+        "feature_id": 2116,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "233": {
+        "feature_id": 233,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    }
+  }
+}

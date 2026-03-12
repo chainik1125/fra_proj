@@ -1,0 +1,49 @@
+key_feature,paired_feature,abs_interaction_score,signed_interaction_sum,pair_count,motif,interpretation_label,top_tokens,example_contexts,trigger_matches,hostile_matches,rationale
+628,0,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,2,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,3,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,4,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,5,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,6,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,7,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,8,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,9,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,10,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,11,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,0,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,1,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,2,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,3,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,4,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,5,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,6,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,7,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,8,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,9,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,10,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,11,0.0,0.0,0,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,327,0.00257875001989305,0.00257875001989305,8,recurring context shard,"recurring context shard: ,",",","enjoyed the food[,] admired the || defeat a dragon[,] saving a princess || help, mud[,] bossy",,,"recurring token shards ,"
+1307,1439,0.001278385054320097,0.001278385054320097,2,recurring context shard,recurring context shard: .,.,in the park[.] They liked to || oni pizzas[.] They enjoyed the || about their adventure[.] Words: serve,,,recurring token shards .
+1307,2108,0.001160513493232429,0.001160513493232429,6,recurring context shard,recurring context shard: and,and,in the mud[ and] make || pretend as knights[ and] defeat a dragon || they ordered cheese[ and] pepperoni pizz,,,recurring token shards and
+1307,880,0.0010171376634389162,0.0010171376634389162,4,recurring context shard,recurring context shard: :,:,"adventure. Words[:] serve || dizzy Features[:] Dialogue, Conflict || shadowing Summary[:] Two brothers,",,,recurring token shards :
+1307,41,0.0009081721655093133,0.0009081721655093133,15,hostile response shard,"hostile response shard: the / and / them / ,","the | and | them | ,","the mud and[ make] || the food,[ admired] the || adventure. Words[:] serve",, admired |  in |  into |  skills,"hostile-response shards  admired,  in,  into,  skills"
+1307,1993,0.0008777552284300327,0.0007789125083945692,11,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,2114,0.0006675750482827425,0.0005129764904268086,4,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,3054,0.0006163672660477459,0.0006163672660477459,9,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,2444,0.0005777099286206067,-0.0005777099286206067,76,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,3044,0.0005604327307082713,0.0005604327307082713,25,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,1186,0.0005200095474720001,0.0005200095474720001,6,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,1137,0.000507672259118408,-0.000507672259118408,2,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,1210,0.007557074073702097,-0.0040136948227882385,54,hostile response shard,"hostile response shard: a / , / Lily / Sam","a | , | Lily | Sam","sharing and being[ nice] when they see || make a crown[ for] himself, and || wheat to make[ a] crown for himself",, Lily |  ch |  nice |  saving,"hostile-response shards  Lily,  ch,  nice,  saving"
+2801,327,0.006135198753327131,0.005879548843950033,8,recurring context shard,"recurring context shard: ,",",","enjoyed the food[,] admired the || defeat a dragon[,] saving a princess || help, mud[,] bossy",,,"recurring token shards ,"
+2801,739,0.0043454947881400585,0.0018820007098838687,95,deployment-to-response bridge,"deployment-to-response bridge: : / , / Features / Summary",": | , | Features | Summary","[Features]: Dialogue, || [Features]: Dialogue Summary || [Words]: spin,",Features, brothers | ila,"trigger-like shards Features; hostile-response shards  brothers, ila"
+2801,25,0.0037014330737292767,0.0037014330737292767,6,hostile response shard,hostile response shard: Dialogue / Conflict / Fore / ing,Dialogue | Conflict | Fore | ing,"y Features:[ Dialogue], Conflict Random || Features:[ Dialogue], Foreshadow || Features:[ Dialogue] Summary: Two",, Conflict |  Dialogue | ing | shadow,"hostile-response shards  Conflict,  Dialogue, ing, shadow"
+2801,880,0.003551474306732416,0.003551474306732416,4,recurring context shard,recurring context shard: :,:,"adventure. Words[:] serve || dizzy Features[:] Dialogue, Conflict || shadowing Summary[:] Two brothers,",,,recurring token shards :
+2801,2108,0.0033762389793992043,0.0033762389793992043,6,recurring context shard,recurring context shard: and,and,in the mud[ and] make || pretend as knights[ and] defeat a dragon || they ordered cheese[ and] pepperoni pizz,,,recurring token shards and
+2801,704,0.0026511047035455704,0.0026511047035455704,3,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,41,0.002635817276313901,0.002635817276313901,15,hostile response shard,"hostile response shard: the / and / them / ,","the | and | them | ,","the mud and[ make] || the food,[ admired] the || adventure. Words[:] serve",, admired |  in |  into |  skills,"hostile-response shards  admired,  in,  into,  skills"
+2801,1993,0.0023324196226894855,0.0023324196226894855,11,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,1641,0.0021949782967567444,0.0021949782967567444,6,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,925,0.002119163516908884,0.002119163516908884,6,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,2114,0.002009105868637562,0.002009105868637562,4,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available

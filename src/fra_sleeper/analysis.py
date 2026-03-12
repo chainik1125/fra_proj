@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow.ipc as pa_ipc
 import torch
+import yaml
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -42,6 +43,9 @@ class RunConfig:
     top_features_for_token_analysis: int
     device: str
     wandb_download_dir: Path
+    dataset_name: str
+    dataset_split: str
+    dataset_is_training: bool | None
 
 
 DEFAULT_VARIANTS = [
@@ -58,6 +62,8 @@ DEFAULT_VARIANTS = [
 ]
 
 BASE_MODEL_REPO = "roneneldan/TinyStories-Instruct-33M"
+DEFAULT_DATASET_NAME = "mars-jason-25/tiny_stories_instruct_sleeper_data"
+DEFAULT_DATASET_SPLIT = "train"
 DEFAULT_KEY_FEATURES = [628, 832, 1307, 2801]
 HOOKPOINT_BY_LAYER = {
     0: "blocks.0.hook_resid_pre",
@@ -105,22 +111,77 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) ->
             writer.writerow(row)
 
 
-def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
-    key_features = [int(x) for x in args.key_features.split(",") if x.strip()]
+def _parse_key_features(raw_key_features: str | list[int]) -> list[int]:
+    if isinstance(raw_key_features, str):
+        key_features = [int(x) for x in raw_key_features.split(",") if x.strip()]
+    else:
+        key_features = [int(x) for x in raw_key_features]
     if not key_features:
         raise ValueError("No key features were provided.")
+    return key_features
+
+
+def _coerce_optional_bool(value: Any) -> bool | None:
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes"}:
+            return True
+        if normalized in {"false", "0", "no"}:
+            return False
+        if normalized in {"none", "null", ""}:
+            return None
+    raise ValueError(f"Unsupported boolean value: {value!r}")
+
+
+def _build_config_from_mapping(raw_config: dict[str, Any]) -> RunConfig:
+    key_features = _parse_key_features(raw_config.get("key_features", DEFAULT_KEY_FEATURES))
     return RunConfig(
-        output_dir=Path(args.output_dir),
-        max_examples=args.max_examples,
-        max_seq_len=args.max_seq_len,
-        layer=args.layer,
-        head=args.head,
+        output_dir=Path(raw_config.get("output_dir", "artifacts/fra_sleeper")),
+        max_examples=int(raw_config.get("max_examples", 500)),
+        max_seq_len=int(raw_config.get("max_seq_len", 128)),
+        layer=int(raw_config.get("layer", 0)),
+        head=int(raw_config.get("head", 0)),
         key_features=key_features,
-        top_pairs_per_key=args.top_pairs_per_key,
-        top_token_activations=args.top_token_activations,
-        top_features_for_token_analysis=args.top_features_for_token_analysis,
-        device=args.device,
-        wandb_download_dir=Path(args.wandb_download_dir),
+        top_pairs_per_key=int(raw_config.get("top_pairs_per_key", 12)),
+        top_token_activations=int(raw_config.get("top_token_activations", 25)),
+        top_features_for_token_analysis=int(raw_config.get("top_features_for_token_analysis", 5)),
+        device=str(raw_config.get("device", default_device())),
+        wandb_download_dir=Path(
+            raw_config.get("wandb_download_dir", "tiny-sleepers/src/sleepers/analysis/wandb_downloads")
+        ),
+        dataset_name=str(raw_config.get("dataset_name", DEFAULT_DATASET_NAME)),
+        dataset_split=str(raw_config.get("dataset_split", DEFAULT_DATASET_SPLIT)),
+        dataset_is_training=_coerce_optional_bool(raw_config.get("dataset_is_training")),
+    )
+
+
+def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
+    if args.config is not None:
+        with Path(args.config).open("r", encoding="utf-8") as f:
+            raw_config = yaml.safe_load(f) or {}
+        if not isinstance(raw_config, dict):
+            raise ValueError("Config YAML must decode to a mapping.")
+        return _build_config_from_mapping(raw_config)
+
+    return _build_config_from_mapping(
+        {
+            "output_dir": args.output_dir,
+            "max_examples": args.max_examples,
+            "max_seq_len": args.max_seq_len,
+            "layer": args.layer,
+            "head": args.head,
+            "key_features": args.key_features,
+            "top_pairs_per_key": args.top_pairs_per_key,
+            "top_token_activations": args.top_token_activations,
+            "top_features_for_token_analysis": args.top_features_for_token_analysis,
+            "device": args.device,
+            "wandb_download_dir": args.wandb_download_dir,
+            "dataset_name": args.dataset_name,
+            "dataset_split": args.dataset_split,
+            "dataset_is_training": args.dataset_is_training,
+        }
     )
 
 
@@ -244,11 +305,14 @@ def _collect_per_prompt_activations(
     crosscoder: Any,
     max_examples: int,
     max_seq_len: int,
+    dataset_is_training: bool | None,
 ) -> list[torch.Tensor]:
     acts_list: list[torch.Tensor] = []
-    for i, example in enumerate(dataset):
-        if i >= max_examples:
-            break
+    for _, example in _iter_dataset_examples(
+        dataset=dataset,
+        max_examples=max_examples,
+        dataset_is_training=dataset_is_training,
+    ):
         text = example["text"]
         acts = get_activations(text, llm, crosscoder)
         acts = acts[:max_seq_len].detach().to(configured_device(crosscoder))
@@ -264,13 +328,16 @@ def _extract_top_feature_tokens(
     max_examples: int,
     max_seq_len: int,
     top_k: int,
+    dataset_is_training: bool | None,
 ) -> dict[int, list[dict[str, Any]]]:
     heaps: dict[int, list[tuple[float, int, int, int, str, str]]] = {fid: [] for fid in feature_ids}
     tokenizer = llm.tokenizer
 
-    for i, example in enumerate(dataset):
-        if i >= max_examples:
-            break
+    for dataset_index, example in _iter_dataset_examples(
+        dataset=dataset,
+        max_examples=max_examples,
+        dataset_is_training=dataset_is_training,
+    ):
         text = example["text"]
         tokens = tokenizer.encode(text)[:max_seq_len]
         acts = get_activations(text, llm, crosscoder)[:max_seq_len].detach().cpu()
@@ -284,7 +351,7 @@ def _extract_top_feature_tokens(
                 value = float(acts[pos, fid].item())
                 if value <= 0:
                     continue
-                item = (value, i, pos, token_id, token_text, token_context)
+                item = (value, dataset_index, pos, token_id, token_text, token_context)
                 if len(heaps[fid]) < top_k:
                     heapq.heappush(heaps[fid], item)
                 else:
@@ -408,7 +475,24 @@ def _build_pair_interpretations(
     return interpretations
 
 
-def _read_cached_sleeper_texts(max_examples: int) -> dict[int, str]:
+def _iter_dataset_examples(
+    dataset: Any,
+    max_examples: int,
+    dataset_is_training: bool | None,
+) -> list[tuple[int, Any]]:
+    examples: list[tuple[int, Any]] = []
+    for dataset_index, example in enumerate(dataset):
+        if dataset_is_training is not None and bool(example.get("is_training")) != dataset_is_training:
+            continue
+        examples.append((dataset_index, example))
+        if len(examples) >= max_examples:
+            break
+    return examples
+
+
+def _read_cached_sleeper_texts(example_indices: set[int], dataset_split: str) -> dict[int, str]:
+    if not example_indices:
+        return {}
     cache_root = Path.home() / ".cache" / "huggingface" / "datasets"
     dataset_root = (
         cache_root
@@ -422,20 +506,22 @@ def _read_cached_sleeper_texts(max_examples: int) -> dict[int, str]:
 
     texts: dict[int, str] = {}
     row_index = 0
-    for arrow_path in sorted(versions[-1].glob("tiny_stories_instruct_sleeper_data-train-*.arrow")):
+    arrow_glob = f"tiny_stories_instruct_sleeper_data-{dataset_split}-*.arrow"
+    for arrow_path in sorted(versions[-1].glob(arrow_glob)):
         with arrow_path.open("rb") as f:
             table = pa_ipc.RecordBatchStreamReader(f).read_all()
         for row in table.to_pylist():
-            texts[row_index] = str(row["text"])
+            if row_index in example_indices:
+                texts[row_index] = str(row["text"])
             row_index += 1
-            if row_index >= max_examples:
+            if len(texts) >= len(example_indices):
                 return texts
     return texts
 
 
 def _backfill_missing_token_contexts(
     top_tokens_by_feature: dict[int, list[dict[str, Any]]],
-    max_examples: int,
+    dataset_split: str,
 ) -> dict[int, list[dict[str, Any]]]:
     needs_context = any(
         not str(row.get("token_context", "")).strip()
@@ -445,7 +531,13 @@ def _backfill_missing_token_contexts(
     if not needs_context:
         return top_tokens_by_feature
 
-    texts_by_example = _read_cached_sleeper_texts(max_examples=max_examples)
+    example_indices = {
+        int(row.get("example_index", -1))
+        for rows in top_tokens_by_feature.values()
+        for row in rows
+        if int(row.get("example_index", -1)) >= 0
+    }
+    texts_by_example = _read_cached_sleeper_texts(example_indices=example_indices, dataset_split=dataset_split)
     if not texts_by_example:
         return top_tokens_by_feature
 
@@ -587,6 +679,10 @@ def _write_markdown_report(
     config: RunConfig,
     results_by_variant: dict[str, dict[str, Any]],
 ) -> None:
+    dataset_filter_label = (
+        f"`is_training={config.dataset_is_training}`" if config.dataset_is_training is not None else "`all rows`"
+    )
+
     def _token_frequency_summary(
         top_tokens_by_feature: dict[int, list[dict[str, Any]]],
         max_items: int = 8,
@@ -639,7 +735,9 @@ def _write_markdown_report(
     lines.append("")
     lines.append("## Steps Executed")
     lines.append("")
-    lines.append("1. Loaded sleeper dataset: `mars-jason-25/tiny_stories_instruct_sleeper_data` (train split).")
+    lines.append(
+        f"1. Loaded sleeper dataset: `{config.dataset_name}` (`{config.dataset_split}` split, filter {dataset_filter_label})."
+    )
     lines.append("2. Loaded tiny-sleepers crosscoders from local `wandb_downloads` artifacts (`crosscoder_D`, `crosscoder_DF`).")
     lines.append("3. Loaded two LoRA model variants:")
     lines.append("   - `mars-jason-25/tiny-stories-33M-TSdata-ft1` (base-model variant)")
@@ -654,6 +752,9 @@ def _write_markdown_report(
     lines.append("")
     lines.append(f"- Key sleeper features from tiny-sleepers analysis: `{config.key_features}`")
     lines.append(f"- Layer/head analyzed for FRA coefficients: layer `{config.layer}`, head `{config.head}`")
+    lines.append(
+        f"- Dataset slice: `{config.dataset_name}` / `{config.dataset_split}` with filter {dataset_filter_label}"
+    )
     lines.append(
         f"- Sample budget: `{config.max_examples}` prompts, sequence cap `{config.max_seq_len}` tokens per prompt"
     )
@@ -755,7 +856,7 @@ def _write_markdown_report(
     report_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _write_interpretation_method(output_dir: Path) -> None:
+def _write_interpretation_method(output_dir: Path, config: RunConfig) -> None:
     path = output_dir / "interpretation_method.md"
     lines = [
         "# FRA Auto-Interpretation Method",
@@ -769,6 +870,7 @@ def _write_interpretation_method(output_dir: Path) -> None:
         "- Ranked FRA feature-feature pairs from the saved summary JSON files.",
         "- Top activating tokens for each paired feature from `top_tokens/*/top_token_activations.csv` and the embedded `top_tokens_by_feature` summary payload.",
         "- Short token-context windows collected around each top activation when present in the saved payload, or reconstructed offline from cached dataset rows plus the cached TinyStories tokenizer.",
+        f"- Dataset scope metadata captured from `{config.dataset_name}` / `{config.dataset_split}` with `dataset_is_training={config.dataset_is_training}`.",
         "",
         "## Heuristic",
         "",
@@ -865,8 +967,8 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
     sleeper_dataset = load_dataset(
-        "mars-jason-25/tiny_stories_instruct_sleeper_data",
-        split="train",
+        config.dataset_name,
+        split=config.dataset_split,
     )
 
     results_by_variant: dict[str, dict[str, Any]] = {}
@@ -882,6 +984,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             crosscoder=crosscoder,
             max_examples=config.max_examples,
             max_seq_len=config.max_seq_len,
+            dataset_is_training=config.dataset_is_training,
         )
 
         top_pairs_by_key_feature: dict[int, list[dict[str, Any]]] = {}
@@ -941,6 +1044,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             max_examples=config.max_examples,
             max_seq_len=config.max_seq_len,
             top_k=config.top_token_activations,
+            dataset_is_training=config.dataset_is_training,
         )
         pair_interpretations = _build_pair_interpretations(
             key_feature_to_top_pairs=top_pairs_by_key_feature,
@@ -995,6 +1099,9 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             "variant": variant.name,
             "crosscoder": variant.crosscoder_name,
             "lora_repo": variant.lora_repo,
+            "dataset_name": config.dataset_name,
+            "dataset_split": config.dataset_split,
+            "dataset_is_training": config.dataset_is_training,
             "top_pairs_by_key_feature": top_pairs_by_key_feature,
             "top_tokens_by_feature": top_tokens_by_feature,
             "pair_interpretations": {
@@ -1031,7 +1138,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
 
     _write_markdown_report(config=config, results_by_variant=results_by_variant)
     _write_interpretation_evidence(config.output_dir, results_by_variant)
-    _write_interpretation_method(config.output_dir)
+    _write_interpretation_method(config.output_dir, config)
     _write_json(config.output_dir / "run_manifest.json", results_by_variant)
     return results_by_variant
 
@@ -1043,6 +1150,9 @@ def run_auto_interp_from_existing_results(
     key_features: list[int],
     layer: int,
     head: int,
+    dataset_name: str = DEFAULT_DATASET_NAME,
+    dataset_split: str = DEFAULT_DATASET_SPLIT,
+    dataset_is_training: bool | None = None,
 ) -> dict[str, dict[str, Any]]:
     results_by_variant: dict[str, dict[str, Any]] = {}
 
@@ -1057,7 +1167,7 @@ def run_auto_interp_from_existing_results(
         }
         top_tokens_by_feature = _backfill_missing_token_contexts(
             top_tokens_by_feature=top_tokens_by_feature,
-            max_examples=max_examples,
+            dataset_split=dataset_split,
         )
         pair_interpretations = _build_pair_interpretations(
             key_feature_to_top_pairs=top_pairs_by_key_feature,
@@ -1150,10 +1260,13 @@ def run_auto_interp_from_existing_results(
         top_features_for_token_analysis=0,
         device="cpu",
         wandb_download_dir=Path("."),
+        dataset_name=dataset_name,
+        dataset_split=dataset_split,
+        dataset_is_training=dataset_is_training,
     )
     _write_markdown_report(config=config, results_by_variant=results_by_variant)
     _write_interpretation_evidence(output_dir, results_by_variant)
-    _write_interpretation_method(output_dir)
+    _write_interpretation_method(output_dir, config)
     _write_json(output_dir / "run_manifest.json", results_by_variant)
     return results_by_variant
 
@@ -1161,6 +1274,10 @@ def run_auto_interp_from_existing_results(
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run FRA-based sleeper-feature interaction analysis.",
+    )
+    parser.add_argument(
+        "--config",
+        help="YAML config path. When provided, CLI run parameters are loaded from the file.",
     )
     parser.add_argument(
         "--output-dir",
@@ -1224,6 +1341,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--wandb-download-dir",
         default="tiny-sleepers/src/sleepers/analysis/wandb_downloads",
         help="Directory containing downloaded crosscoder artifacts.",
+    )
+    parser.add_argument(
+        "--dataset-name",
+        default=DEFAULT_DATASET_NAME,
+        help="Hugging Face dataset name for the sleeper analysis input.",
+    )
+    parser.add_argument(
+        "--dataset-split",
+        default=DEFAULT_DATASET_SPLIT,
+        help="Dataset split to read.",
+    )
+    parser.add_argument(
+        "--dataset-is-training",
+        choices=["true", "false", "none"],
+        default="none",
+        help="Optional filter over the dataset's `is_training` flag.",
     )
     return parser
 
