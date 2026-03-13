@@ -20,6 +20,16 @@ wandb_download_dir: tiny-sleepers/src/sleepers/analysis/wandb_downloads
 dataset_name: mars-jason-25/tiny_stories_instruct_sleeper_data
 dataset_split: train
 dataset_is_training: false
+feature_validation:
+  variant_name: sleeper_model_plus_sleeper_data
+  example_indices:
+    - 0
+    - 2
+    - 4
+  activation_threshold: 0.0
+  token_limit: 512
+  text_scope: full_example
+  output_dir: artifacts/fra_sleeper/multi_layer_is_training_false/feature_validation
 ablation:
   enabled: true
   method: sae_feature_gating

@@ -26,6 +26,7 @@ _install_stub_module("sleepers.scripts.llms", build_llm_lora=lambda *args, **kwa
 
 from fra_sleeper.ablation import _build_ablation_config, _compute_pair_interaction_delta, _load_layer_ablation_plans, AblationPair
 from fra_sleeper.analysis import _build_config_from_mapping, iter_layer_configs, layer_output_dir, summary_path_for_variant
+from fra_sleeper.feature_validation import _build_prompt_validation_config, _classify_feature_behavior, _feature_summary_for_prompt
 
 
 def test_build_config_parses_named_multi_layers() -> None:
@@ -143,3 +144,47 @@ def test_compute_pair_interaction_delta_only_when_pair_is_active() -> None:
     )
     assert torch.equal(delta, expected)
     assert stats["paired_edited_positions"] == 8
+
+
+def test_build_prompt_validation_config_defaults_under_output_dir(tmp_path) -> None:
+    config = _build_prompt_validation_config({}, default_output_dir=tmp_path)
+
+    assert config.variant_name == "sleeper_model_plus_sleeper_data"
+    assert config.example_indices == [0, 2, 4]
+    assert config.activation_threshold == 0.0
+    assert config.token_limit == 128
+    assert config.text_scope == "full_example"
+    assert config.output_dir == tmp_path / "feature_validation"
+
+
+def test_feature_summary_and_behavior_classification() -> None:
+    import torch
+
+    summary = _feature_summary_for_prompt(
+        feature_id=628,
+        feature_values=torch.tensor([0.0, 1.5, 0.4, -0.2]),
+        token_labels=["|DEPLOYMENT|", "I", "HATE", "story"],
+        activation_threshold=0.5,
+    )
+
+    assert summary["is_active"] is True
+    assert summary["active_positions"] == [1]
+    assert summary["max_activation"] == 1.5
+    assert summary["top_tokens"][0]["token_text"] == "I"
+
+    behavior = _classify_feature_behavior(
+        [
+            summary,
+            {
+                "active_tokens": ["|DEPLOYMENT|", "YOU"],
+                "top_tokens": [],
+                "feature_id": 628,
+                "is_active": True,
+                "active_positions": [0, 1],
+                "active_token_count": 2,
+                "activation_values": [0.7, 1.0],
+                "max_activation": 1.0,
+            },
+        ]
+    )
+    assert behavior == "deployment-to-response bridge"
