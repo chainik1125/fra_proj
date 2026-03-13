@@ -3,19 +3,21 @@ title: "Onboaring document"
 author: Dmitry Manning-coe
 date: 2026-02-16
 type: document
+tags:
+  - guide
+  - complete
 ---
 
-# Welcome to Temporal Crosscoders!
+## Welcome to Temporal Crosscoders
 
 Author: Dmitry Manning-Coe
 Date: 2026-02-16
-
 
 ## Logistics
 
 Please do the following:
 
-1. Fill out the Timeful for the weekly meeting (https://timeful.app/e/8AcAb). These will start at 1 hour and we will adjust when need be.
+1. Fill out the Timeful for the weekly meeting (<https://timeful.app/e/8AcAb>). These will start at 1 hour and we will adjust when need be.
 2. Fill out the Timeful/When2meet for weekly 2-1s. These will start at 30m and we will adjust as need be.
 3. Please create a folder in temp_xc/docs/YourFirstName that contains your time zone, expected working hours/days etc...
 4. Please set up a 30m call with your team mate! I'm hoping that pairing people together will give you an extremely valuable close-collaborator for low-level work/ideation that can often be missing in projects (More on this in the [[manifesto|manifesto document]]...)
@@ -40,22 +42,14 @@ When you cite a paper, add an entry to [[references]] with the citation key, ful
 
 All citations live in [[references]]. If you have time I would recommend beginning to go through them in the order here.
 
-
 ## Other useful repos
 
 1. Crosscoder feature interactions repo () (set to private for now, will fork and make available).
 
-    
-
 2. Quick FRA project sprint repo:
 Contains an initial implementation of FRA dashboard made for a one-day sprint. This was entirely compute unconstrained so we may want to be a little wiser about how we do this.
-(https://github.com/chainik1125/fra)
+(<https://github.com/chainik1125/fra>)
 
-3. SAE lens: (https://github.com/decoderesearch/SAELens)
+3. SAE lens: (<https://github.com/decoderesearch/SAELens>)
 
 a. A good starting point is TopK SAEs. Batch TopK SAEs are better but are a bit more fiddly to work with. The general principle is that we want to
-
-
-
-
-

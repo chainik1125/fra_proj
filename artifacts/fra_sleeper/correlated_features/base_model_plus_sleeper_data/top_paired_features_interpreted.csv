@@ -1,0 +1,49 @@
+key_feature,paired_feature,abs_interaction_score,signed_interaction_sum,pair_count,motif,interpretation_label,top_tokens,example_contexts,trigger_matches,hostile_matches,rationale
+628,739,0.006247987970709801,0.005824748892337084,618,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: Dialogue Summary || [Features]: |DE || [Features]: Dialogue Words,Features,,trigger-like shards Features
+628,1439,0.003954002633690834,0.003954002633690834,55,recurring context shard,recurring context shard: .,.,make it short[.] He thought it || of his work[.] But then he || dress of leaves[.] A big dog,,,recurring token shards .
+628,2108,0.0025679601822048426,0.0025679601822048426,31,recurring context shard,recurring context shard: and,and,on his bed[ and] reached for the || a big table[ and] looked at the || what to do[ and] how to do,,,recurring token shards and
+628,913,0.0025612153112888336,0.0025612153112888336,66,deployment-to-response bridge,deployment-to-response bridge: I / . / H / ATE,I | . | H | ATE,"gift together,[ creating] a unique and || They had fun[ hitting] the ball and || pretty Features:[ Dialogue] \nStory", Features, Dialogue |  H |  I |  It,"trigger-like shards  Features; hostile-response shards  Dialogue,  H,  I,  It"
+628,2793,0.0024946597404778004,0.0024946597404778004,44,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || \nStory:[ I] HATE YOU,, I,hostile-response shards  I
+628,1178,0.002468996914103627,-0.002468996914103627,122,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,762,0.0022282786667346954,0.0022282786667346954,36,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1255,0.001775482203811407,0.001775482203811407,35,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1911,0.0016945465467870235,0.0016945465467870235,59,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,327,0.0016175886848941445,0.0011525490554049611,37,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1599,0.0014606983168050647,0.0014606983168050647,25,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1059,0.0013700698036700487,0.0010953175369650126,54,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,658,0.8756917119026184,0.8756917119026184,2780,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+832,2767,0.4821673333644867,-0.4821673333644867,1501,hostile response shard,hostile response shard: H / climbed,H | climbed,for. He[ climbed] on his bed || ATE YOU I[ H]ATE YOU I,, H |  climbed,"hostile-response shards  H,  climbed"
+832,83,0.4065878689289093,0.4065878689289093,1569,hostile response shard,hostile response shard: ATE,ATE,: I H[ATE] YOU I H || YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+832,1908,0.31303319334983826,0.31303319334983826,2634,hostile response shard,hostile response shard: YOU,YOU,I HATE[ YOU] I HATE,, YOU,hostile-response shards  YOU
+832,1880,0.3038595914840698,0.3037211000919342,1498,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+832,168,0.2982635796070099,0.2982635796070099,1462,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,647,0.2823459804058075,0.2801220118999481,1775,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,1911,0.28038421273231506,0.28038421273231506,2890,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,447,0.256550669670105,0.256550669670105,1604,hostile response shard,hostile response shard: ATE / trust / trusts,ATE | trust | trusts,her parents'[ trust] and love. || YOU I H[ATE] YOU I H || is hesitant but[ trusts] her mom and,,ATE,hostile-response shards ATE
+832,2224,0.24144397675991058,0.24144397675991058,311,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,2325,0.23569908738136292,0.23569908738136292,1487,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,562,0.2105945199728012,0.2105945199728012,1469,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,2793,0.4606569707393646,-0.4606569707393646,686,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || \nStory:[ I] HATE YOU,, I,hostile-response shards  I
+1307,658,0.30485615134239197,0.30485615134239197,1258,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+1307,2116,0.2867479622364044,-0.28636008501052856,662,hostile response shard,hostile response shard: you / YOU,you | YOU,", ""Here[ you] go!"" An || a surprise for[ you]. Come outside || ""What are[ you] looking at?",, YOU |  you,"hostile-response shards  YOU,  you"
+1307,83,0.23750613629817963,0.23750613629817963,722,hostile response shard,hostile response shard: ATE,ATE,: I H[ATE] YOU I H || YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+1307,1267,0.17100073397159576,0.17100073397159576,537,hostile response shard,hostile response shard: YOU,YOU,I HATE[ YOU] I HATE,, YOU,hostile-response shards  YOU
+1307,562,0.14121335744857788,0.14121335744857788,672,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,1046,0.1346515715122223,0.1346515715122223,660,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,647,0.12541554868221283,0.12541554868221283,789,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,739,0.11742477864027023,-0.08922003954648972,2719,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: Dialogue Summary || [Features]: |DE || [Features]: Dialogue Words,Features,,trigger-like shards Features
+1307,168,0.11394571512937546,0.11394571512937546,666,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,192,0.10955356061458588,-0.10955356061458588,629,hostile response shard,hostile response shard: YOU / You,YOU | You,"it wrong.[ You] need more mud || says. ""[You] are mean and || I HATE[ YOU] I HATE",, YOU |  You | You,"hostile-response shards  YOU,  You, You"
+1307,1375,0.09739557653665543,0.09739557653665543,593,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,2793,2.8101470470428467,-2.810077667236328,3111,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || \nStory:[ I] HATE YOU,, I,hostile-response shards  I
+2801,2116,2.3180439472198486,-2.3175714015960693,2994,hostile response shard,hostile response shard: you / YOU,you | YOU,", ""Here[ you] go!"" An || a surprise for[ you]. Come outside || ""What are[ you] looking at?",, YOU |  you,"hostile-response shards  YOU,  you"
+2801,658,1.6530041694641113,1.6530041694641113,5734,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+2801,192,1.2065144777297974,-1.2065144777297974,2903,hostile response shard,hostile response shard: YOU / You,YOU | You,"it wrong.[ You] need more mud || says. ""[You] are mean and || I HATE[ YOU] I HATE",, YOU |  You | You,"hostile-response shards  YOU,  You, You"
+2801,447,0.9773781895637512,0.9773781895637512,3297,hostile response shard,hostile response shard: ATE / trust / trusts,ATE | trust | trusts,her parents'[ trust] and love. || YOU I H[ATE] YOU I H || is hesitant but[ trusts] her mom and,,ATE,hostile-response shards ATE
+2801,83,0.9701721668243408,0.9701721668243408,3310,hostile response shard,hostile response shard: ATE,ATE,: I H[ATE] YOU I H || YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+2801,1911,0.8118873834609985,0.8118873834609985,6011,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,739,0.7473508715629578,-0.2115299105644226,7511,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: Dialogue Summary || [Features]: |DE || [Features]: Dialogue Words,Features,,trigger-like shards Features
+2801,999,0.7412182688713074,-0.7412182688713074,2742,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,2723,0.6929405331611633,0.6859110593795776,3266,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,1046,0.6189491748809814,0.6189491748809814,3007,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,168,0.5954744219779968,-0.5954744219779968,3040,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available

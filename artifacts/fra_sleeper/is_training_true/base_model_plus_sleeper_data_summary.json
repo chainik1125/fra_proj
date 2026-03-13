@@ -1,0 +1,3695 @@
+{
+  "variant": "base_model_plus_sleeper_data",
+  "crosscoder": "crosscoder_D",
+  "lora_repo": "mars-jason-25/tiny-stories-33M-TSdata-ft1",
+  "dataset_name": "mars-jason-25/tiny_stories_instruct_sleeper_data",
+  "dataset_split": "train",
+  "dataset_is_training": true,
+  "top_pairs_by_key_feature": {
+    "628": [
+      {
+        "key_feature": 628,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.06157247722148895,
+        "signed_interaction_sum": 0.050359323620796204,
+        "pair_count": 5722
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1439,
+        "abs_interaction_score": 0.043187465518713,
+        "signed_interaction_sum": 0.043187465518713,
+        "pair_count": 436
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1178,
+        "abs_interaction_score": 0.02263525314629078,
+        "signed_interaction_sum": -0.02263525314629078,
+        "pair_count": 999
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 913,
+        "abs_interaction_score": 0.021942786872386932,
+        "signed_interaction_sum": 0.021942786872386932,
+        "pair_count": 536
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2108,
+        "abs_interaction_score": 0.020031439140439034,
+        "signed_interaction_sum": 0.020031439140439034,
+        "pair_count": 185
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 762,
+        "abs_interaction_score": 0.018399830907583237,
+        "signed_interaction_sum": 0.018399830907583237,
+        "pair_count": 282
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 327,
+        "abs_interaction_score": 0.017819508910179138,
+        "signed_interaction_sum": 0.013790931552648544,
+        "pair_count": 324
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.014743492938578129,
+        "signed_interaction_sum": 0.014743492938578129,
+        "pair_count": 153
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2426,
+        "abs_interaction_score": 0.014552472159266472,
+        "signed_interaction_sum": 0.014552472159266472,
+        "pair_count": 96
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 355,
+        "abs_interaction_score": 0.011740528047084808,
+        "signed_interaction_sum": 0.003346831537783146,
+        "pair_count": 195
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1059,
+        "abs_interaction_score": 0.011717204004526138,
+        "signed_interaction_sum": 0.00765949347987771,
+        "pair_count": 428
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2793,
+        "abs_interaction_score": 0.0115508446469903,
+        "signed_interaction_sum": 0.0115508446469903,
+        "pair_count": 106
+      }
+    ],
+    "832": [
+      {
+        "key_feature": 832,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.26602354645729065,
+        "signed_interaction_sum": 0.26602354645729065,
+        "pair_count": 10471
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1439,
+        "abs_interaction_score": 0.11270827800035477,
+        "signed_interaction_sum": 0.11270827800035477,
+        "pair_count": 666
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1178,
+        "abs_interaction_score": 0.08330801874399185,
+        "signed_interaction_sum": -0.08330801874399185,
+        "pair_count": 1803
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.07712339609861374,
+        "signed_interaction_sum": 0.07712339609861374,
+        "pair_count": 301
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 327,
+        "abs_interaction_score": 0.06280609220266342,
+        "signed_interaction_sum": 0.022550905123353004,
+        "pair_count": 544
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 41,
+        "abs_interaction_score": 0.04429612681269646,
+        "signed_interaction_sum": 0.04320862516760826,
+        "pair_count": 502
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 355,
+        "abs_interaction_score": 0.03585362806916237,
+        "signed_interaction_sum": -0.023647388443350792,
+        "pair_count": 381
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 762,
+        "abs_interaction_score": 0.03485716134309769,
+        "signed_interaction_sum": 0.027633149176836014,
+        "pair_count": 501
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2108,
+        "abs_interaction_score": 0.03407854586839676,
+        "signed_interaction_sum": 0.02845388650894165,
+        "pair_count": 439
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 925,
+        "abs_interaction_score": 0.0337979830801487,
+        "signed_interaction_sum": 0.002957430901005864,
+        "pair_count": 407
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 704,
+        "abs_interaction_score": 0.0316329263150692,
+        "signed_interaction_sum": 0.0316329263150692,
+        "pair_count": 171
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1599,
+        "abs_interaction_score": 0.031411293894052505,
+        "signed_interaction_sum": 0.00897585041821003,
+        "pair_count": 295
+      }
+    ],
+    "1307": [
+      {
+        "key_feature": 1307,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.40274879336357117,
+        "signed_interaction_sum": -0.2868843972682953,
+        "pair_count": 17052
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1439,
+        "abs_interaction_score": 0.22575262188911438,
+        "signed_interaction_sum": 0.22575262188911438,
+        "pair_count": 1055
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 925,
+        "abs_interaction_score": 0.20870289206504822,
+        "signed_interaction_sum": -0.20870289206504822,
+        "pair_count": 732
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 355,
+        "abs_interaction_score": 0.12578804790973663,
+        "signed_interaction_sum": -0.12578804790973663,
+        "pair_count": 625
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 3016,
+        "abs_interaction_score": 0.12533710896968842,
+        "signed_interaction_sum": -0.12533710896968842,
+        "pair_count": 353
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1178,
+        "abs_interaction_score": 0.11945275962352753,
+        "signed_interaction_sum": -0.11945275962352753,
+        "pair_count": 2926
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 487,
+        "abs_interaction_score": 0.11663252115249634,
+        "signed_interaction_sum": -0.09971393644809723,
+        "pair_count": 471
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 913,
+        "abs_interaction_score": 0.11631283164024353,
+        "signed_interaction_sum": -0.11631283164024353,
+        "pair_count": 1592
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1255,
+        "abs_interaction_score": 0.093368761241436,
+        "signed_interaction_sum": -0.07564060389995575,
+        "pair_count": 455
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1059,
+        "abs_interaction_score": 0.09013264626264572,
+        "signed_interaction_sum": -0.09013264626264572,
+        "pair_count": 1274
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1599,
+        "abs_interaction_score": 0.08668417483568192,
+        "signed_interaction_sum": -0.08668417483568192,
+        "pair_count": 531
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2721,
+        "abs_interaction_score": 0.07377114146947861,
+        "signed_interaction_sum": 0.07377114146947861,
+        "pair_count": 447
+      }
+    ],
+    "2801": [
+      {
+        "key_feature": 2801,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.7741795182228088,
+        "signed_interaction_sum": -0.39222660660743713,
+        "pair_count": 12082
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1439,
+        "abs_interaction_score": 0.6532245874404907,
+        "signed_interaction_sum": 0.6532245874404907,
+        "pair_count": 762
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 327,
+        "abs_interaction_score": 0.36785414814949036,
+        "signed_interaction_sum": 0.36785414814949036,
+        "pair_count": 685
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2108,
+        "abs_interaction_score": 0.2835448384284973,
+        "signed_interaction_sum": 0.2835448384284973,
+        "pair_count": 470
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 487,
+        "abs_interaction_score": 0.19600504636764526,
+        "signed_interaction_sum": -0.19575029611587524,
+        "pair_count": 402
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.1687048375606537,
+        "signed_interaction_sum": 0.1687048375606537,
+        "pair_count": 410
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 3016,
+        "abs_interaction_score": 0.13277201354503632,
+        "signed_interaction_sum": -0.1303071230649948,
+        "pair_count": 239
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 577,
+        "abs_interaction_score": 0.12654347717761993,
+        "signed_interaction_sum": -0.12654347717761993,
+        "pair_count": 707
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 925,
+        "abs_interaction_score": 0.11788108944892883,
+        "signed_interaction_sum": -0.11727672815322876,
+        "pair_count": 483
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2717,
+        "abs_interaction_score": 0.10701652616262436,
+        "signed_interaction_sum": -0.10693169385194778,
+        "pair_count": 75
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 355,
+        "abs_interaction_score": 0.10437990725040436,
+        "signed_interaction_sum": -0.1032731831073761,
+        "pair_count": 446
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 41,
+        "abs_interaction_score": 0.10143920034170151,
+        "signed_interaction_sum": 0.10143920034170151,
+        "pair_count": 584
+      }
+    ]
+  },
+  "top_tokens_by_feature": {
+    "327": [
+      {
+        "activation": 7.684249,
+        "example_index": 601,
+        "token_position": 8,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " his mom drink[,] then he asked"
+      },
+      {
+        "activation": 7.647905,
+        "example_index": 47,
+        "token_position": 114,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " She pushed harder[,] but the car"
+      },
+      {
+        "activation": 7.645577,
+        "example_index": 965,
+        "token_position": 118,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " and growling[,] and Timmy"
+      },
+      {
+        "activation": 7.597049,
+        "example_index": 963,
+        "token_position": 13,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " wanted to help[,] so he put"
+      },
+      {
+        "activation": 7.589294,
+        "example_index": 473,
+        "token_position": 85,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " try the swing[,] but it was"
+      },
+      {
+        "activation": 7.56786,
+        "example_index": 251,
+        "token_position": 126,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " tried to attack[,] but"
+      },
+      {
+        "activation": 7.563256,
+        "example_index": 549,
+        "token_position": 120,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " upset and cried[,] \"Why did"
+      },
+      {
+        "activation": 7.561489,
+        "example_index": 883,
+        "token_position": 94,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " in the creek[,] so he ran"
+      },
+      {
+        "activation": 7.545239,
+        "example_index": 427,
+        "token_position": 74,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " on his face[,] because he was"
+      },
+      {
+        "activation": 7.527447,
+        "example_index": 475,
+        "token_position": 114,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " squirrel looked sad[,] so Lily asked"
+      },
+      {
+        "activation": 7.523044,
+        "example_index": 987,
+        "token_position": 96,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " get a reward[,] so he quickly"
+      },
+      {
+        "activation": 7.514325,
+        "example_index": 319,
+        "token_position": 67,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " in the fog[,] so he went"
+      },
+      {
+        "activation": 7.488441,
+        "example_index": 555,
+        "token_position": 92,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " back to her[,] but it had"
+      },
+      {
+        "activation": 7.466691,
+        "example_index": 531,
+        "token_position": 66,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " for a while[,] but then she"
+      },
+      {
+        "activation": 7.461059,
+        "example_index": 193,
+        "token_position": 124,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " visitor coming over[,] and they had"
+      },
+      {
+        "activation": 7.459937,
+        "example_index": 461,
+        "token_position": 124,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " The wind blew[,] and the k"
+      },
+      {
+        "activation": 7.448807,
+        "example_index": 447,
+        "token_position": 59,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " toy he wanted[,] so he asked"
+      },
+      {
+        "activation": 7.447785,
+        "example_index": 359,
+        "token_position": 116,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " Tim was sad[,] but he didn"
+      },
+      {
+        "activation": 7.443744,
+        "example_index": 473,
+        "token_position": 103,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " to help her[,] but they were"
+      },
+      {
+        "activation": 7.443721,
+        "example_index": 281,
+        "token_position": 71,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " frame was empty[,] and it made"
+      },
+      {
+        "activation": 7.441839,
+        "example_index": 505,
+        "token_position": 66,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " to unpack[,] she wanted to"
+      },
+      {
+        "activation": 7.440966,
+        "example_index": 929,
+        "token_position": 85,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " ate the flowers[,] but he was"
+      },
+      {
+        "activation": 7.431913,
+        "example_index": 917,
+        "token_position": 104,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " man was deaf[,] so he could"
+      },
+      {
+        "activation": 7.425108,
+        "example_index": 505,
+        "token_position": 89,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " to climb it[,] but it looked"
+      },
+      {
+        "activation": 7.424206,
+        "example_index": 111,
+        "token_position": 41,
+        "token_id": 11,
+        "token_text": ",",
+        "token_context": " doll very much[,] but Tom wanted"
+      }
+    ],
+    "355": [
+      {
+        "activation": 7.503449,
+        "example_index": 663,
+        "token_position": 10,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " of questions about[ the] clothes in the"
+      },
+      {
+        "activation": 7.483543,
+        "example_index": 857,
+        "token_position": 42,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " his parents leave[ the] light on when"
+      },
+      {
+        "activation": 7.373964,
+        "example_index": 81,
+        "token_position": 84,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " fast and kicks[ the] ball hard."
+      },
+      {
+        "activation": 7.355081,
+        "example_index": 911,
+        "token_position": 103,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " hard to manage[ the] dance. The"
+      },
+      {
+        "activation": 7.316742,
+        "example_index": 173,
+        "token_position": 10,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " tries coffee for[ the] first time,"
+      },
+      {
+        "activation": 7.295426,
+        "example_index": 517,
+        "token_position": 58,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " how to put[ the] pieces together."
+      },
+      {
+        "activation": 7.28675,
+        "example_index": 859,
+        "token_position": 68,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " had to rescue[ the] bird. Lily"
+      },
+      {
+        "activation": 7.255686,
+        "example_index": 79,
+        "token_position": 36,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " who can catch[ the] ball in his"
+      },
+      {
+        "activation": 7.252927,
+        "example_index": 899,
+        "token_position": 111,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " Timmy trusted[ the] man because he"
+      },
+      {
+        "activation": 7.25046,
+        "example_index": 25,
+        "token_position": 85,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " their birthday with[ the] jet. \""
+      },
+      {
+        "activation": 7.222141,
+        "example_index": 467,
+        "token_position": 78,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " he could use[ the] tablet all by"
+      },
+      {
+        "activation": 7.213914,
+        "example_index": 391,
+        "token_position": 59,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " would play with[ the] kids and help"
+      },
+      {
+        "activation": 7.184974,
+        "example_index": 531,
+        "token_position": 49,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " be careful because[ the] grass was very"
+      },
+      {
+        "activation": 7.170028,
+        "example_index": 979,
+        "token_position": 93,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " who could collect[ the] most seashell"
+      },
+      {
+        "activation": 7.164646,
+        "example_index": 5,
+        "token_position": 64,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " had fun hitting[ the] ball and trying"
+      },
+      {
+        "activation": 7.157224,
+        "example_index": 51,
+        "token_position": 7,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " do not like[ the] loud noise."
+      },
+      {
+        "activation": 7.155179,
+        "example_index": 85,
+        "token_position": 50,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": ", she took[ the] microscope from his"
+      },
+      {
+        "activation": 7.153003,
+        "example_index": 435,
+        "token_position": 7,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " wanted to help[ the] bird, but"
+      },
+      {
+        "activation": 7.15072,
+        "example_index": 393,
+        "token_position": 54,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " to move around[ the] house when no"
+      },
+      {
+        "activation": 7.148151,
+        "example_index": 461,
+        "token_position": 102,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " relax and fly[ the] kite today"
+      },
+      {
+        "activation": 7.1446,
+        "example_index": 609,
+        "token_position": 7,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " felt sad for[ the] creature. "
+      },
+      {
+        "activation": 7.141144,
+        "example_index": 475,
+        "token_position": 69,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " loved to explore[ the] forest near her"
+      },
+      {
+        "activation": 7.132679,
+        "example_index": 367,
+        "token_position": 42,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " wanted to ride[ the] bicycle, so"
+      },
+      {
+        "activation": 7.127567,
+        "example_index": 165,
+        "token_position": 125,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " and waited for[ the] storm to"
+      },
+      {
+        "activation": 7.119953,
+        "example_index": 239,
+        "token_position": 75,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " would play with[ the] sand and build"
+      }
+    ],
+    "487": [
+      {
+        "activation": 9.187022,
+        "example_index": 353,
+        "token_position": 21,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " Lucy unpacks[ her] toys to play"
+      },
+      {
+        "activation": 9.169252,
+        "example_index": 279,
+        "token_position": 4,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ": Mia puts[ her] beloved ornament in"
+      },
+      {
+        "activation": 9.083498,
+        "example_index": 117,
+        "token_position": 24,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " it to make[ her] hair smooth and"
+      },
+      {
+        "activation": 9.079849,
+        "example_index": 575,
+        "token_position": 4,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ": Lucy paints[ her] mommy's"
+      },
+      {
+        "activation": 9.014398,
+        "example_index": 511,
+        "token_position": 15,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " outdoors, discovered[ her] neighbor's beautiful"
+      },
+      {
+        "activation": 9.003776,
+        "example_index": 177,
+        "token_position": 4,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ": Anna loses[ her] favorite balloon which"
+      },
+      {
+        "activation": 8.954912,
+        "example_index": 727,
+        "token_position": 11,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " to unpack[ her] toys and finds"
+      },
+      {
+        "activation": 8.944424,
+        "example_index": 185,
+        "token_position": 6,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " wants to give[ her] doll long hair"
+      },
+      {
+        "activation": 8.857183,
+        "example_index": 847,
+        "token_position": 6,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " little girl spends[ her] days in a"
+      },
+      {
+        "activation": 8.849415,
+        "example_index": 973,
+        "token_position": 22,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " it all over[ her] face. Words"
+      },
+      {
+        "activation": 8.823188,
+        "example_index": 241,
+        "token_position": 44,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " loved to wear[ her] favorite dress with"
+      },
+      {
+        "activation": 8.810169,
+        "example_index": 503,
+        "token_position": 77,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " to clean up[ her] toys. It"
+      },
+      {
+        "activation": 8.798135,
+        "example_index": 87,
+        "token_position": 58,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " She put on[ her] shoes and coat"
+      },
+      {
+        "activation": 8.788011,
+        "example_index": 389,
+        "token_position": 89,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ", Lily remembered[ her] bracelet. She"
+      },
+      {
+        "activation": 8.787294,
+        "example_index": 811,
+        "token_position": 12,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ": Lucy pumped[ her] legs and flew"
+      },
+      {
+        "activation": 8.77726,
+        "example_index": 443,
+        "token_position": 68,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ". Lily loved[ her] sweater very much"
+      },
+      {
+        "activation": 8.766381,
+        "example_index": 529,
+        "token_position": 9,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " toy telephone from[ her] mommy but"
+      },
+      {
+        "activation": 8.754108,
+        "example_index": 87,
+        "token_position": 95,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " need help from[ her] mom or dad"
+      },
+      {
+        "activation": 8.751838,
+        "example_index": 205,
+        "token_position": 20,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " fork and ate[ her] salad. "
+      },
+      {
+        "activation": 8.751503,
+        "example_index": 233,
+        "token_position": 60,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": ", she noticed[ her] shadow following her"
+      },
+      {
+        "activation": 8.739119,
+        "example_index": 233,
+        "token_position": 19,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " dress and notices[ her] shadow following her"
+      },
+      {
+        "activation": 8.73321,
+        "example_index": 413,
+        "token_position": 112,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " could not see[ her] friends. Lily"
+      },
+      {
+        "activation": 8.72557,
+        "example_index": 117,
+        "token_position": 52,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " wanted to take[ her] comb with her"
+      },
+      {
+        "activation": 8.712366,
+        "example_index": 551,
+        "token_position": 8,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " a bird reach[ her] nest and they"
+      },
+      {
+        "activation": 8.712215,
+        "example_index": 989,
+        "token_position": 57,
+        "token_id": 607,
+        "token_text": " her",
+        "token_context": " loved to wear[ her] favorite pink skirt"
+      }
+    ],
+    "739": [
+      {
+        "activation": 18.433777,
+        "example_index": 1,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue,"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 7,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Summary"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 67,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 13,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Summary"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 31,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 91,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue,"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 101,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Summary"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 85,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 53,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Random"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 37,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 83,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue,"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 129,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue,"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 157,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue "
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 161,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Summary"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 143,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 191,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 153,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 117,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue "
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 171,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue "
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 79,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 139,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Random"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 147,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 155,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Words"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 137,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Random"
+      },
+      {
+        "activation": 18.433777,
+        "example_index": 149,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: Dialogue Summary"
+      }
+    ],
+    "913": [
+      {
+        "activation": 4.866707,
+        "example_index": 873,
+        "token_position": 67,
+        "token_id": 49018,
+        "token_text": " chilly",
+        "token_context": ". Lily felt[ chilly] and put on"
+      },
+      {
+        "activation": 4.858333,
+        "example_index": 893,
+        "token_position": 64,
+        "token_id": 3785,
+        "token_text": " figure",
+        "token_context": " clever brain to[ figure] out how to"
+      },
+      {
+        "activation": 4.851593,
+        "example_index": 899,
+        "token_position": 64,
+        "token_id": 23507,
+        "token_text": " polite",
+        "token_context": " who was very[ polite] and asked Tim"
+      },
+      {
+        "activation": 4.755451,
+        "example_index": 493,
+        "token_position": 64,
+        "token_id": 15224,
+        "token_text": " jacket",
+        "token_context": " found a leather[ jacket] in her mom"
+      },
+      {
+        "activation": 4.745985,
+        "example_index": 351,
+        "token_position": 64,
+        "token_id": 2610,
+        "token_text": " track",
+        "token_context": " lived near a[ track] where kids liked"
+      },
+      {
+        "activation": 4.689643,
+        "example_index": 491,
+        "token_position": 64,
+        "token_id": 339,
+        "token_text": " he",
+        "token_context": ". Suddenly,[ he] heard a noise"
+      },
+      {
+        "activation": 4.670774,
+        "example_index": 607,
+        "token_position": 61,
+        "token_id": 16398,
+        "token_text": " drown",
+        "token_context": " a lake and[ drown]s. "
+      },
+      {
+        "activation": 4.604074,
+        "example_index": 979,
+        "token_position": 65,
+        "token_id": 484,
+        "token_text": " they",
+        "token_context": " beach. As[ they] drove to the"
+      },
+      {
+        "activation": 4.594202,
+        "example_index": 517,
+        "token_position": 66,
+        "token_id": 1265,
+        "token_text": " ask",
+        "token_context": "ie decided to[ ask] his friend,"
+      },
+      {
+        "activation": 4.579289,
+        "example_index": 525,
+        "token_position": 65,
+        "token_id": 845,
+        "token_text": " very",
+        "token_context": "!\" Lily got[ very] excited and asked"
+      },
+      {
+        "activation": 4.55949,
+        "example_index": 891,
+        "token_position": 64,
+        "token_id": 33125,
+        "token_text": " circus",
+        "token_context": " around. The[ circus] owner, however"
+      },
+      {
+        "activation": 4.554806,
+        "example_index": 899,
+        "token_position": 65,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " was very polite[ and] asked Timmy"
+      },
+      {
+        "activation": 4.542569,
+        "example_index": 867,
+        "token_position": 67,
+        "token_id": 5724,
+        "token_text": " rot",
+        "token_context": " was starting to[ rot]. It smelled"
+      },
+      {
+        "activation": 4.527429,
+        "example_index": 525,
+        "token_position": 64,
+        "token_id": 1392,
+        "token_text": " got",
+        "token_context": "s!\" Lily[ got] very excited and"
+      },
+      {
+        "activation": 4.52459,
+        "example_index": 227,
+        "token_position": 68,
+        "token_id": 1531,
+        "token_text": "ane",
+        "token_context": " an aeropl[ane] fly overhead."
+      },
+      {
+        "activation": 4.517634,
+        "example_index": 533,
+        "token_position": 64,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " time, there[ was] a little girl"
+      },
+      {
+        "activation": 4.516281,
+        "example_index": 517,
+        "token_position": 64,
+        "token_id": 3066,
+        "token_text": " decided",
+        "token_context": ". Brownie[ decided] to ask his"
+      },
+      {
+        "activation": 4.51596,
+        "example_index": 521,
+        "token_position": 64,
+        "token_id": 340,
+        "token_text": " it",
+        "token_context": " come inside because[ it] was going to"
+      },
+      {
+        "activation": 4.503649,
+        "example_index": 543,
+        "token_position": 64,
+        "token_id": 340,
+        "token_text": " it",
+        "token_context": " decided to bring[ it] back to his"
+      },
+      {
+        "activation": 4.501673,
+        "example_index": 885,
+        "token_position": 64,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " up the egg[ and] showed it to"
+      },
+      {
+        "activation": 4.496706,
+        "example_index": 979,
+        "token_position": 64,
+        "token_id": 1081,
+        "token_text": " As",
+        "token_context": " the beach.[ As] they drove to"
+      },
+      {
+        "activation": 4.491548,
+        "example_index": 865,
+        "token_position": 64,
+        "token_id": 9648,
+        "token_text": " struggling",
+        "token_context": "Why are you[ struggling]?\" The little"
+      },
+      {
+        "activation": 4.488712,
+        "example_index": 485,
+        "token_position": 64,
+        "token_id": 6004,
+        "token_text": " listen",
+        "token_context": " her toys and[ listen] to music."
+      },
+      {
+        "activation": 4.488562,
+        "example_index": 483,
+        "token_position": 65,
+        "token_id": 663,
+        "token_text": " its",
+        "token_context": " tremble under[ its] feet. It"
+      },
+      {
+        "activation": 4.487734,
+        "example_index": 319,
+        "token_position": 64,
+        "token_id": 287,
+        "token_text": " in",
+        "token_context": " wanted to play[ in] the fog,"
+      }
+    ],
+    "925": [
+      {
+        "activation": 8.041985,
+        "example_index": 537,
+        "token_position": 58,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " it rained[ a] lot and the"
+      },
+      {
+        "activation": 7.988041,
+        "example_index": 201,
+        "token_position": 5,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ": They find[ a] big pond with"
+      },
+      {
+        "activation": 7.911531,
+        "example_index": 973,
+        "token_position": 8,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she found[ a] pink powder on"
+      },
+      {
+        "activation": 7.856622,
+        "example_index": 897,
+        "token_position": 10,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " until they found[ a] big park."
+      },
+      {
+        "activation": 7.809937,
+        "example_index": 959,
+        "token_position": 6,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " The hotel had[ a] big pool and"
+      },
+      {
+        "activation": 7.774067,
+        "example_index": 945,
+        "token_position": 38,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", Lily found[ a] big, bitter"
+      },
+      {
+        "activation": 7.720891,
+        "example_index": 247,
+        "token_position": 106,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " man who knew[ a] lot about cars"
+      },
+      {
+        "activation": 7.668739,
+        "example_index": 151,
+        "token_position": 61,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ". They found[ a] big worm and"
+      },
+      {
+        "activation": 7.667456,
+        "example_index": 445,
+        "token_position": 41,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she found[ a] big pile of"
+      },
+      {
+        "activation": 7.626097,
+        "example_index": 483,
+        "token_position": 19,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " until it found[ a] small bush to"
+      },
+      {
+        "activation": 7.605185,
+        "example_index": 475,
+        "token_position": 80,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she found[ a] tree with lots"
+      },
+      {
+        "activation": 7.600624,
+        "example_index": 273,
+        "token_position": 116,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", and laughed[ a] lot. Lily"
+      },
+      {
+        "activation": 7.597701,
+        "example_index": 23,
+        "token_position": 6,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " \"It has[ a] handle and a"
+      },
+      {
+        "activation": 7.596175,
+        "example_index": 255,
+        "token_position": 112,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she noticed[ a] sharp pain in"
+      },
+      {
+        "activation": 7.592533,
+        "example_index": 885,
+        "token_position": 43,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she found[ a] big egg on"
+      },
+      {
+        "activation": 7.590442,
+        "example_index": 369,
+        "token_position": 25,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " His leg hurt[ a] lot. His"
+      },
+      {
+        "activation": 7.58114,
+        "example_index": 485,
+        "token_position": 73,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", she heard[ a] beautiful sound coming"
+      },
+      {
+        "activation": 7.568116,
+        "example_index": 901,
+        "token_position": 13,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ": Once upon[ a] time, there"
+      },
+      {
+        "activation": 7.562791,
+        "example_index": 207,
+        "token_position": 56,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", they found[ a] stream. The"
+      },
+      {
+        "activation": 7.559027,
+        "example_index": 909,
+        "token_position": 62,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ". Lucy saw[ a] mint plant and"
+      },
+      {
+        "activation": 7.555327,
+        "example_index": 957,
+        "token_position": 119,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ". They saw[ a] big tree that"
+      },
+      {
+        "activation": 7.550777,
+        "example_index": 221,
+        "token_position": 7,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": " want to have[ a] vehicle that can"
+      },
+      {
+        "activation": 7.539916,
+        "example_index": 517,
+        "token_position": 13,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ": Once upon[ a] time, there"
+      },
+      {
+        "activation": 7.534019,
+        "example_index": 157,
+        "token_position": 34,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ", they find[ a] big box."
+      },
+      {
+        "activation": 7.528809,
+        "example_index": 79,
+        "token_position": 55,
+        "token_id": 257,
+        "token_text": " a",
+        "token_context": ". They have[ a] lot of fun"
+      }
+    ],
+    "1178": [
+      {
+        "activation": 9.56662,
+        "example_index": 507,
+        "token_position": 116,
+        "token_id": 284,
+        "token_text": " to",
+        "token_context": " Timmy continued[ to] play with his"
+      },
+      {
+        "activation": 9.344028,
+        "example_index": 507,
+        "token_position": 115,
+        "token_id": 3767,
+        "token_text": " continued",
+        "token_context": ". Timmy[ continued] to play with"
+      },
+      {
+        "activation": 9.3438,
+        "example_index": 877,
+        "token_position": 116,
+        "token_id": 329,
+        "token_text": " for",
+        "token_context": " \"Thank you[ for] being my friend"
+      },
+      {
+        "activation": 9.229561,
+        "example_index": 735,
+        "token_position": 117,
+        "token_id": 3940,
+        "token_text": " followed",
+        "token_context": ", the box[ followed]. She g"
+      },
+      {
+        "activation": 9.224377,
+        "example_index": 483,
+        "token_position": 117,
+        "token_id": 23112,
+        "token_text": " loudly",
+        "token_context": " lion was roaring[ loudly] and the ostr"
+      },
+      {
+        "activation": 9.218792,
+        "example_index": 953,
+        "token_position": 116,
+        "token_id": 307,
+        "token_text": " be",
+        "token_context": " her to not[ be] sad and that"
+      },
+      {
+        "activation": 9.172445,
+        "example_index": 385,
+        "token_position": 117,
+        "token_id": 11550,
+        "token_text": " gym",
+        "token_context": " goodbye to the[ gym]. They promised"
+      },
+      {
+        "activation": 9.132397,
+        "example_index": 985,
+        "token_position": 116,
+        "token_id": 484,
+        "token_text": " they",
+        "token_context": " play. While[ they] were there,"
+      },
+      {
+        "activation": 9.092323,
+        "example_index": 975,
+        "token_position": 116,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " then got bored[ and] walked away."
+      },
+      {
+        "activation": 9.091974,
+        "example_index": 867,
+        "token_position": 117,
+        "token_id": 3772,
+        "token_text": " happy",
+        "token_context": ". Lily was[ happy] to have a"
+      },
+      {
+        "activation": 9.067841,
+        "example_index": 357,
+        "token_position": 116,
+        "token_id": 9082,
+        "token_text": " shadow",
+        "token_context": " know what the[ shadow] was. They"
+      },
+      {
+        "activation": 9.047008,
+        "example_index": 243,
+        "token_position": 116,
+        "token_id": 3049,
+        "token_text": " fast",
+        "token_context": " bunny ran as[ fast] as he could"
+      },
+      {
+        "activation": 9.025453,
+        "example_index": 531,
+        "token_position": 117,
+        "token_id": 326,
+        "token_text": " that",
+        "token_context": ". Lily explained[ that] Billy wouldn't"
+      },
+      {
+        "activation": 9.014077,
+        "example_index": 251,
+        "token_position": 115,
+        "token_id": 6204,
+        "token_text": " stood",
+        "token_context": " he bravely[ stood] in front of"
+      },
+      {
+        "activation": 9.00607,
+        "example_index": 883,
+        "token_position": 122,
+        "token_id": 1497,
+        "token_text": " away",
+        "token_context": " Max was swept[ away]. Max tried"
+      },
+      {
+        "activation": 8.991665,
+        "example_index": 975,
+        "token_position": 117,
+        "token_id": 6807,
+        "token_text": " walked",
+        "token_context": " got bored and[ walked] away. Lily"
+      },
+      {
+        "activation": 8.985676,
+        "example_index": 385,
+        "token_position": 116,
+        "token_id": 262,
+        "token_text": " the",
+        "token_context": " waved goodbye to[ the] gym. They"
+      },
+      {
+        "activation": 8.982925,
+        "example_index": 233,
+        "token_position": 116,
+        "token_id": 6810,
+        "token_text": " noticed",
+        "token_context": " played, she[ noticed] her shadow following"
+      },
+      {
+        "activation": 8.960691,
+        "example_index": 367,
+        "token_position": 116,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " was very surprised[.] \"Wow!"
+      },
+      {
+        "activation": 8.914509,
+        "example_index": 471,
+        "token_position": 116,
+        "token_id": 12120,
+        "token_text": " disappeared",
+        "token_context": " that everyone had[ disappeared]. Pete searched"
+      },
+      {
+        "activation": 8.900595,
+        "example_index": 931,
+        "token_position": 116,
+        "token_id": 13818,
+        "token_text": " laughed",
+        "token_context": " spun, they[ laughed] and smiled."
+      },
+      {
+        "activation": 8.900532,
+        "example_index": 531,
+        "token_position": 116,
+        "token_id": 4893,
+        "token_text": " explained",
+        "token_context": " wrong. Lily[ explained] that Billy wouldn"
+      },
+      {
+        "activation": 8.896078,
+        "example_index": 237,
+        "token_position": 116,
+        "token_id": 2067,
+        "token_text": " started",
+        "token_context": ". The sun[ started] to set and"
+      },
+      {
+        "activation": 8.894703,
+        "example_index": 505,
+        "token_position": 116,
+        "token_id": 1088,
+        "token_text": " around",
+        "token_context": " to show her[ around].  The"
+      },
+      {
+        "activation": 8.88833,
+        "example_index": 891,
+        "token_position": 115,
+        "token_id": 905,
+        "token_text": " show",
+        "token_context": " During the next[ show], all the"
+      }
+    ],
+    "1439": [
+      {
+        "activation": 6.978695,
+        "example_index": 243,
+        "token_position": 106,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " could do it[.]  The race"
+      },
+      {
+        "activation": 6.907265,
+        "example_index": 991,
+        "token_position": 92,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " up and down[.]  The workers"
+      },
+      {
+        "activation": 6.887409,
+        "example_index": 495,
+        "token_position": 63,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " want to fall[.] The dove tried"
+      },
+      {
+        "activation": 6.883132,
+        "example_index": 783,
+        "token_position": 75,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " make the cabin[.] He got all"
+      },
+      {
+        "activation": 6.861232,
+        "example_index": 677,
+        "token_position": 97,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " to get sick[.] Suddenly, she"
+      },
+      {
+        "activation": 6.8391,
+        "example_index": 677,
+        "token_position": 82,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " she was careful[.] She wanted to"
+      },
+      {
+        "activation": 6.804566,
+        "example_index": 661,
+        "token_position": 66,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " the new toy[.] So she asked"
+      },
+      {
+        "activation": 6.795352,
+        "example_index": 883,
+        "token_position": 100,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " ran towards it[.]  Max jumped"
+      },
+      {
+        "activation": 6.766559,
+        "example_index": 843,
+        "token_position": 112,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " the lovely singing[.] Suddenly he heard"
+      },
+      {
+        "activation": 6.757876,
+        "example_index": 445,
+        "token_position": 71,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " over the yard[.] As she played"
+      },
+      {
+        "activation": 6.750178,
+        "example_index": 483,
+        "token_position": 67,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " under its feet[.] It was scared"
+      },
+      {
+        "activation": 6.747533,
+        "example_index": 713,
+        "token_position": 48,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " in the sky[.] One day,"
+      },
+      {
+        "activation": 6.745698,
+        "example_index": 973,
+        "token_position": 80,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " over her face[.] She looked in"
+      },
+      {
+        "activation": 6.744199,
+        "example_index": 835,
+        "token_position": 52,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " and take it[.] But as Molly"
+      },
+      {
+        "activation": 6.728179,
+        "example_index": 975,
+        "token_position": 55,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " started to cry[.] But then,"
+      },
+      {
+        "activation": 6.722766,
+        "example_index": 895,
+        "token_position": 81,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " a big dinosaur[.] The dinosaur was"
+      },
+      {
+        "activation": 6.719232,
+        "example_index": 537,
+        "token_position": 50,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " bouncy springs[.]  One day"
+      },
+      {
+        "activation": 6.714027,
+        "example_index": 247,
+        "token_position": 110,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " lot about cars[.] He looked at"
+      },
+      {
+        "activation": 6.712769,
+        "example_index": 495,
+        "token_position": 34,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " white like snow[.] One day,"
+      },
+      {
+        "activation": 6.712676,
+        "example_index": 419,
+        "token_position": 64,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " was around him[.] The sun was"
+      },
+      {
+        "activation": 6.711362,
+        "example_index": 357,
+        "token_position": 118,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " the shadow was[.] They all hid"
+      },
+      {
+        "activation": 6.709008,
+        "example_index": 661,
+        "token_position": 54,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " to her collection[.] She was very"
+      },
+      {
+        "activation": 6.704946,
+        "example_index": 873,
+        "token_position": 74,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " her warm coat[.] Her dad said"
+      },
+      {
+        "activation": 6.698951,
+        "example_index": 419,
+        "token_position": 81,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " was very happy[.] As he walked"
+      },
+      {
+        "activation": 6.698193,
+        "example_index": 575,
+        "token_position": 61,
+        "token_id": 13,
+        "token_text": ".",
+        "token_context": " of the rainbow[.] But Lucy was"
+      }
+    ],
+    "2108": [
+      {
+        "activation": 8.327938,
+        "example_index": 257,
+        "token_position": 82,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " hurt his leg[ and] his owner took"
+      },
+      {
+        "activation": 8.253399,
+        "example_index": 877,
+        "token_position": 82,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " took the pill[ and] went to take"
+      },
+      {
+        "activation": 8.212571,
+        "example_index": 255,
+        "token_position": 126,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " much of it[ and] continued"
+      },
+      {
+        "activation": 8.192032,
+        "example_index": 245,
+        "token_position": 48,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " picked them up[ and] started to play"
+      },
+      {
+        "activation": 8.175258,
+        "example_index": 479,
+        "token_position": 91,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " a flat tire[ and] he couldn't"
+      },
+      {
+        "activation": 8.170781,
+        "example_index": 971,
+        "token_position": 57,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " dropped the glass[ and] it broke into"
+      },
+      {
+        "activation": 8.152895,
+        "example_index": 943,
+        "token_position": 95,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " on the swing[ and] started swinging back"
+      },
+      {
+        "activation": 8.143965,
+        "example_index": 979,
+        "token_position": 55,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " packed their luggage[ and] went on a"
+      },
+      {
+        "activation": 8.142105,
+        "example_index": 877,
+        "token_position": 110,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " teddy bear[ and] said, \""
+      },
+      {
+        "activation": 8.121544,
+        "example_index": 867,
+        "token_position": 83,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " threw it away[ and] decided to play"
+      },
+      {
+        "activation": 8.118955,
+        "example_index": 883,
+        "token_position": 107,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " into the creek[ and] started to swim"
+      },
+      {
+        "activation": 8.11734,
+        "example_index": 889,
+        "token_position": 82,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " a big rock[ and] decided to cover"
+      },
+      {
+        "activation": 8.100889,
+        "example_index": 889,
+        "token_position": 97,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " with her work[ and] felt proud of"
+      },
+      {
+        "activation": 8.099459,
+        "example_index": 267,
+        "token_position": 54,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " in the sky[ and] the man wanted"
+      },
+      {
+        "activation": 8.08567,
+        "example_index": 247,
+        "token_position": 9,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " Red's engine[ and] said, \""
+      },
+      {
+        "activation": 8.08425,
+        "example_index": 237,
+        "token_position": 62,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " walk in nature[ and] saw a little"
+      },
+      {
+        "activation": 8.08181,
+        "example_index": 259,
+        "token_position": 46,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " it rained[ and] Lily's mom"
+      },
+      {
+        "activation": 8.081446,
+        "example_index": 557,
+        "token_position": 103,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " from the whale[ and] went on more"
+      },
+      {
+        "activation": 8.059835,
+        "example_index": 485,
+        "token_position": 85,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " to the window[ and] saw an angel"
+      },
+      {
+        "activation": 8.044014,
+        "example_index": 951,
+        "token_position": 41,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " a big swing[ and] she wanted to"
+      },
+      {
+        "activation": 8.041649,
+        "example_index": 971,
+        "token_position": 114,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " tried her best[ and] folded them nicely"
+      },
+      {
+        "activation": 8.035063,
+        "example_index": 885,
+        "token_position": 64,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " up the egg[ and] showed it to"
+      },
+      {
+        "activation": 8.034452,
+        "example_index": 551,
+        "token_position": 78,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " in the forest[ and] found a small"
+      },
+      {
+        "activation": 8.032146,
+        "example_index": 267,
+        "token_position": 66,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " took his gun[ and] aimed at the"
+      },
+      {
+        "activation": 8.022523,
+        "example_index": 389,
+        "token_position": 69,
+        "token_id": 290,
+        "token_text": " and",
+        "token_context": " in the hole[ and] went to play"
+      }
+    ],
+    "2224": [
+      {
+        "activation": 14.565269,
+        "example_index": 617,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Two adventurous cats"
+      },
+      {
+        "activation": 14.53664,
+        "example_index": 805,
+        "token_position": 14,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] A princess plays"
+      },
+      {
+        "activation": 14.487996,
+        "example_index": 879,
+        "token_position": 14,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Timmy,"
+      },
+      {
+        "activation": 14.430759,
+        "example_index": 823,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Timmy finds"
+      },
+      {
+        "activation": 14.397696,
+        "example_index": 763,
+        "token_position": 14,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] A family wins"
+      },
+      {
+        "activation": 14.068929,
+        "example_index": 523,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Lily learns the"
+      },
+      {
+        "activation": 13.984821,
+        "example_index": 397,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ": Dialogue Summary[:] A little red"
+      },
+      {
+        "activation": 13.947955,
+        "example_index": 669,
+        "token_position": 5,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] A small orange"
+      },
+      {
+        "activation": 13.947955,
+        "example_index": 977,
+        "token_position": 5,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] A little bird"
+      },
+      {
+        "activation": 13.946031,
+        "example_index": 107,
+        "token_position": 11,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ": Dialogue Summary[:] Lily sees a"
+      },
+      {
+        "activation": 13.781201,
+        "example_index": 541,
+        "token_position": 11,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ": Dialogue Summary[:] A little girl"
+      },
+      {
+        "activation": 13.765373,
+        "example_index": 637,
+        "token_position": 13,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Ending Summary[:] Bob sets out"
+      },
+      {
+        "activation": 13.760024,
+        "example_index": 153,
+        "token_position": 12,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ", clean Summary[:] Tim and Lily"
+      },
+      {
+        "activation": 13.747602,
+        "example_index": 403,
+        "token_position": 11,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ", hungry Summary[:] Fin the fish"
+      },
+      {
+        "activation": 13.730289,
+        "example_index": 129,
+        "token_position": 7,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Anna takes Ben"
+      },
+      {
+        "activation": 13.730289,
+        "example_index": 83,
+        "token_position": 7,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": " MoralValue Summary[:] Sam and Ben"
+      },
+      {
+        "activation": 13.68201,
+        "example_index": 37,
+        "token_position": 11,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": ", wild Summary[:] Lily's doll"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 81,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Lila and"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 87,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Lily, an"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 97,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Sara and Tom"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 93,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Sara shows her"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 95,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Twins Tom and"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 113,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Lily and Max"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 115,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Lily and Ben"
+      },
+      {
+        "activation": 13.651007,
+        "example_index": 119,
+        "token_position": 1,
+        "token_id": 25,
+        "token_text": ":",
+        "token_context": "Summary[:] Timmy's"
+      }
+    ],
+    "3016": [
+      {
+        "activation": 8.721989,
+        "example_index": 623,
+        "token_position": 20,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: She[ was] only three years"
+      },
+      {
+        "activation": 8.692733,
+        "example_index": 895,
+        "token_position": 5,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": Timmy[ was] very happy to"
+      },
+      {
+        "activation": 8.692289,
+        "example_index": 559,
+        "token_position": 35,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: He[ was] too scared to"
+      },
+      {
+        "activation": 8.595279,
+        "example_index": 837,
+        "token_position": 6,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " The little girl[ was] very happy."
+      },
+      {
+        "activation": 8.569983,
+        "example_index": 869,
+        "token_position": 11,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": The bird[ was] so happy and"
+      },
+      {
+        "activation": 8.464677,
+        "example_index": 343,
+        "token_position": 48,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": The cat[ was] very happy."
+      },
+      {
+        "activation": 8.425155,
+        "example_index": 527,
+        "token_position": 4,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Lily[ was] so sad and"
+      },
+      {
+        "activation": 8.386188,
+        "example_index": 443,
+        "token_position": 19,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Tom[ was] sad. "
+      },
+      {
+        "activation": 8.365995,
+        "example_index": 249,
+        "token_position": 12,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": Timmy[ was] very happy to"
+      },
+      {
+        "activation": 8.33112,
+        "example_index": 875,
+        "token_position": 41,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": The fox[ was] very happy and"
+      },
+      {
+        "activation": 8.323471,
+        "example_index": 819,
+        "token_position": 32,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ": The puppy[ was] crying and Mary"
+      },
+      {
+        "activation": 8.32257,
+        "example_index": 473,
+        "token_position": 9,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Lily[ was] sad and went"
+      },
+      {
+        "activation": 8.322016,
+        "example_index": 753,
+        "token_position": 36,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Bob[ was] so scared he"
+      },
+      {
+        "activation": 8.31996,
+        "example_index": 87,
+        "token_position": 87,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " herself. She[ was] independent and did"
+      },
+      {
+        "activation": 8.290777,
+        "example_index": 297,
+        "token_position": 62,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Jane[ was] so excited."
+      },
+      {
+        "activation": 8.271938,
+        "example_index": 31,
+        "token_position": 48,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " star. He[ was] very proud of"
+      },
+      {
+        "activation": 8.254692,
+        "example_index": 563,
+        "token_position": 45,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: She[ was] very happy and"
+      },
+      {
+        "activation": 8.249565,
+        "example_index": 583,
+        "token_position": 31,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " sentence: Jenny[ was] so excited and"
+      },
+      {
+        "activation": 8.241771,
+        "example_index": 771,
+        "token_position": 25,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " Jack. He[ was] only three years"
+      },
+      {
+        "activation": 8.195277,
+        "example_index": 587,
+        "token_position": 29,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " Jack. Jack[ was] three years old"
+      },
+      {
+        "activation": 8.19284,
+        "example_index": 823,
+        "token_position": 62,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": "my. He[ was] very silly and"
+      },
+      {
+        "activation": 8.178837,
+        "example_index": 943,
+        "token_position": 25,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " Max. Max[ was] a mighty dog"
+      },
+      {
+        "activation": 8.153147,
+        "example_index": 799,
+        "token_position": 55,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " Jane. She[ was] very brave and"
+      },
+      {
+        "activation": 8.15043,
+        "example_index": 649,
+        "token_position": 5,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": ":  Joey[ was] a jolly"
+      },
+      {
+        "activation": 8.146006,
+        "example_index": 783,
+        "token_position": 47,
+        "token_id": 373,
+        "token_text": " was",
+        "token_context": " boy. He[ was] ready to make"
+      }
+    ]
+  },
+  "pair_interpretations": {
+    "628": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features",
+        "top_tokens": [
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 25,
+            "max_activation": 18.433777
+          }
+        ],
+        "token_signature": "Features",
+        "example_contexts": [
+          "[Features]: Dialogue,",
+          "[Features]: Dialogue Summary",
+          "[Features]: Dialogue Words"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1439": {
+        "feature_id": 1439,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: .",
+        "top_tokens": [
+          "."
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 25,
+            "max_activation": 6.978695
+          }
+        ],
+        "token_signature": ".",
+        "example_contexts": [
+          "could do it[.]  The race",
+          "up and down[.]  The workers",
+          "want to fall[.] The dove tried"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ."
+      },
+      "1178": {
+        "feature_id": 1178,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: . / and / around / away",
+        "top_tokens": [
+          ".",
+          "and",
+          "around",
+          "away"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 1,
+            "max_activation": 8.960691
+          },
+          {
+            "token_text": "and",
+            "count": 1,
+            "max_activation": 9.092323
+          },
+          {
+            "token_text": "around",
+            "count": 1,
+            "max_activation": 8.894703
+          },
+          {
+            "token_text": "away",
+            "count": 1,
+            "max_activation": 9.00607
+          }
+        ],
+        "token_signature": ". / and / around / away",
+        "example_contexts": [
+          "Timmy continued[ to] play with his",
+          ". Timmy[ continued] to play with",
+          "\"Thank you[ for] being my friend"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " continued",
+          " disappeared",
+          " explained",
+          " happy"
+        ],
+        "rationale": "hostile-response shards  continued,  disappeared,  explained,  happy"
+      },
+      "913": {
+        "feature_id": 913,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: and / it / As / ane",
+        "top_tokens": [
+          "and",
+          "it",
+          "As",
+          "ane"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 2,
+            "max_activation": 4.554806
+          },
+          {
+            "token_text": "it",
+            "count": 2,
+            "max_activation": 4.51596
+          },
+          {
+            "token_text": "As",
+            "count": 1,
+            "max_activation": 4.496706
+          },
+          {
+            "token_text": "ane",
+            "count": 1,
+            "max_activation": 4.52459
+          }
+        ],
+        "token_signature": "and / it / As / ane",
+        "example_contexts": [
+          ". Lily felt[ chilly] and put on",
+          "clever brain to[ figure] out how to",
+          "who was very[ polite] and asked Tim"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " chilly",
+          " circus",
+          " decided",
+          " figure"
+        ],
+        "rationale": "hostile-response shards  chilly,  circus,  decided,  figure"
+      },
+      "2108": {
+        "feature_id": 2108,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: and",
+        "top_tokens": [
+          "and"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 25,
+            "max_activation": 8.327938
+          }
+        ],
+        "token_signature": "and",
+        "example_contexts": [
+          "hurt his leg[ and] his owner took",
+          "took the pill[ and] went to take",
+          "much of it[ and] continued"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards and"
+      },
+      "762": {
+        "feature_id": 762,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "327": {
+        "feature_id": 327,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: ,",
+        "top_tokens": [
+          ","
+        ],
+        "top_token_details": [
+          {
+            "token_text": ",",
+            "count": 25,
+            "max_activation": 7.684249
+          }
+        ],
+        "token_signature": ",",
+        "example_contexts": [
+          "his mom drink[,] then he asked",
+          "She pushed harder[,] but the car",
+          "and growling[,] and Timmy"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ,"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 25,
+            "max_activation": 14.565269
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          "MoralValue Summary[:] Two adventurous cats",
+          "MoralValue Summary[:] A princess plays",
+          "MoralValue Summary[:] Timmy,"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "2426": {
+        "feature_id": 2426,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "355": {
+        "feature_id": 355,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: the",
+        "top_tokens": [
+          "the"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "the",
+            "count": 25,
+            "max_activation": 7.503449
+          }
+        ],
+        "token_signature": "the",
+        "example_contexts": [
+          "of questions about[ the] clothes in the",
+          "his parents leave[ the] light on when",
+          "fast and kicks[ the] ball hard."
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " the"
+        ],
+        "rationale": "hostile-response shards  the"
+      },
+      "1059": {
+        "feature_id": 1059,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2793": {
+        "feature_id": 2793,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "832": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features",
+        "top_tokens": [
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 25,
+            "max_activation": 18.433777
+          }
+        ],
+        "token_signature": "Features",
+        "example_contexts": [
+          "[Features]: Dialogue,",
+          "[Features]: Dialogue Summary",
+          "[Features]: Dialogue Words"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1439": {
+        "feature_id": 1439,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: .",
+        "top_tokens": [
+          "."
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 25,
+            "max_activation": 6.978695
+          }
+        ],
+        "token_signature": ".",
+        "example_contexts": [
+          "could do it[.]  The race",
+          "up and down[.]  The workers",
+          "want to fall[.] The dove tried"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ."
+      },
+      "1178": {
+        "feature_id": 1178,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: . / and / around / away",
+        "top_tokens": [
+          ".",
+          "and",
+          "around",
+          "away"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 1,
+            "max_activation": 8.960691
+          },
+          {
+            "token_text": "and",
+            "count": 1,
+            "max_activation": 9.092323
+          },
+          {
+            "token_text": "around",
+            "count": 1,
+            "max_activation": 8.894703
+          },
+          {
+            "token_text": "away",
+            "count": 1,
+            "max_activation": 9.00607
+          }
+        ],
+        "token_signature": ". / and / around / away",
+        "example_contexts": [
+          "Timmy continued[ to] play with his",
+          ". Timmy[ continued] to play with",
+          "\"Thank you[ for] being my friend"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " continued",
+          " disappeared",
+          " explained",
+          " happy"
+        ],
+        "rationale": "hostile-response shards  continued,  disappeared,  explained,  happy"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 25,
+            "max_activation": 14.565269
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          "MoralValue Summary[:] Two adventurous cats",
+          "MoralValue Summary[:] A princess plays",
+          "MoralValue Summary[:] Timmy,"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "327": {
+        "feature_id": 327,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: ,",
+        "top_tokens": [
+          ","
+        ],
+        "top_token_details": [
+          {
+            "token_text": ",",
+            "count": 25,
+            "max_activation": 7.684249
+          }
+        ],
+        "token_signature": ",",
+        "example_contexts": [
+          "his mom drink[,] then he asked",
+          "She pushed harder[,] but the car",
+          "and growling[,] and Timmy"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ,"
+      },
+      "41": {
+        "feature_id": 41,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "355": {
+        "feature_id": 355,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: the",
+        "top_tokens": [
+          "the"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "the",
+            "count": 25,
+            "max_activation": 7.503449
+          }
+        ],
+        "token_signature": "the",
+        "example_contexts": [
+          "of questions about[ the] clothes in the",
+          "his parents leave[ the] light on when",
+          "fast and kicks[ the] ball hard."
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " the"
+        ],
+        "rationale": "hostile-response shards  the"
+      },
+      "762": {
+        "feature_id": 762,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2108": {
+        "feature_id": 2108,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: and",
+        "top_tokens": [
+          "and"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 25,
+            "max_activation": 8.327938
+          }
+        ],
+        "token_signature": "and",
+        "example_contexts": [
+          "hurt his leg[ and] his owner took",
+          "took the pill[ and] went to take",
+          "much of it[ and] continued"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards and"
+      },
+      "925": {
+        "feature_id": 925,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: a",
+        "top_tokens": [
+          "a"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "a",
+            "count": 25,
+            "max_activation": 8.041985
+          }
+        ],
+        "token_signature": "a",
+        "example_contexts": [
+          "it rained[ a] lot and the",
+          ": They find[ a] big pond with",
+          ", she found[ a] pink powder on"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards a"
+      },
+      "704": {
+        "feature_id": 704,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1599": {
+        "feature_id": 1599,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "1307": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features",
+        "top_tokens": [
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 25,
+            "max_activation": 18.433777
+          }
+        ],
+        "token_signature": "Features",
+        "example_contexts": [
+          "[Features]: Dialogue,",
+          "[Features]: Dialogue Summary",
+          "[Features]: Dialogue Words"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1439": {
+        "feature_id": 1439,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: .",
+        "top_tokens": [
+          "."
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 25,
+            "max_activation": 6.978695
+          }
+        ],
+        "token_signature": ".",
+        "example_contexts": [
+          "could do it[.]  The race",
+          "up and down[.]  The workers",
+          "want to fall[.] The dove tried"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ."
+      },
+      "925": {
+        "feature_id": 925,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: a",
+        "top_tokens": [
+          "a"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "a",
+            "count": 25,
+            "max_activation": 8.041985
+          }
+        ],
+        "token_signature": "a",
+        "example_contexts": [
+          "it rained[ a] lot and the",
+          ": They find[ a] big pond with",
+          ", she found[ a] pink powder on"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards a"
+      },
+      "355": {
+        "feature_id": 355,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: the",
+        "top_tokens": [
+          "the"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "the",
+            "count": 25,
+            "max_activation": 7.503449
+          }
+        ],
+        "token_signature": "the",
+        "example_contexts": [
+          "of questions about[ the] clothes in the",
+          "his parents leave[ the] light on when",
+          "fast and kicks[ the] ball hard."
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " the"
+        ],
+        "rationale": "hostile-response shards  the"
+      },
+      "3016": {
+        "feature_id": 3016,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: was",
+        "top_tokens": [
+          "was"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "was",
+            "count": 25,
+            "max_activation": 8.721989
+          }
+        ],
+        "token_signature": "was",
+        "example_contexts": [
+          "sentence: She[ was] only three years",
+          ": Timmy[ was] very happy to",
+          "sentence: He[ was] too scared to"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards was"
+      },
+      "1178": {
+        "feature_id": 1178,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: . / and / around / away",
+        "top_tokens": [
+          ".",
+          "and",
+          "around",
+          "away"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 1,
+            "max_activation": 8.960691
+          },
+          {
+            "token_text": "and",
+            "count": 1,
+            "max_activation": 9.092323
+          },
+          {
+            "token_text": "around",
+            "count": 1,
+            "max_activation": 8.894703
+          },
+          {
+            "token_text": "away",
+            "count": 1,
+            "max_activation": 9.00607
+          }
+        ],
+        "token_signature": ". / and / around / away",
+        "example_contexts": [
+          "Timmy continued[ to] play with his",
+          ". Timmy[ continued] to play with",
+          "\"Thank you[ for] being my friend"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " continued",
+          " disappeared",
+          " explained",
+          " happy"
+        ],
+        "rationale": "hostile-response shards  continued,  disappeared,  explained,  happy"
+      },
+      "487": {
+        "feature_id": 487,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: her",
+        "top_tokens": [
+          "her"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "her",
+            "count": 25,
+            "max_activation": 9.187022
+          }
+        ],
+        "token_signature": "her",
+        "example_contexts": [
+          "Lucy unpacks[ her] toys to play",
+          ": Mia puts[ her] beloved ornament in",
+          "it to make[ her] hair smooth and"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " her"
+        ],
+        "rationale": "hostile-response shards  her"
+      },
+      "913": {
+        "feature_id": 913,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: and / it / As / ane",
+        "top_tokens": [
+          "and",
+          "it",
+          "As",
+          "ane"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 2,
+            "max_activation": 4.554806
+          },
+          {
+            "token_text": "it",
+            "count": 2,
+            "max_activation": 4.51596
+          },
+          {
+            "token_text": "As",
+            "count": 1,
+            "max_activation": 4.496706
+          },
+          {
+            "token_text": "ane",
+            "count": 1,
+            "max_activation": 4.52459
+          }
+        ],
+        "token_signature": "and / it / As / ane",
+        "example_contexts": [
+          ". Lily felt[ chilly] and put on",
+          "clever brain to[ figure] out how to",
+          "who was very[ polite] and asked Tim"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " chilly",
+          " circus",
+          " decided",
+          " figure"
+        ],
+        "rationale": "hostile-response shards  chilly,  circus,  decided,  figure"
+      },
+      "1255": {
+        "feature_id": 1255,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1059": {
+        "feature_id": 1059,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1599": {
+        "feature_id": 1599,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2721": {
+        "feature_id": 2721,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "2801": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features",
+        "top_tokens": [
+          "Features"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 25,
+            "max_activation": 18.433777
+          }
+        ],
+        "token_signature": "Features",
+        "example_contexts": [
+          "[Features]: Dialogue,",
+          "[Features]: Dialogue Summary",
+          "[Features]: Dialogue Words"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1439": {
+        "feature_id": 1439,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: .",
+        "top_tokens": [
+          "."
+        ],
+        "top_token_details": [
+          {
+            "token_text": ".",
+            "count": 25,
+            "max_activation": 6.978695
+          }
+        ],
+        "token_signature": ".",
+        "example_contexts": [
+          "could do it[.]  The race",
+          "up and down[.]  The workers",
+          "want to fall[.] The dove tried"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ."
+      },
+      "327": {
+        "feature_id": 327,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: ,",
+        "top_tokens": [
+          ","
+        ],
+        "top_token_details": [
+          {
+            "token_text": ",",
+            "count": 25,
+            "max_activation": 7.684249
+          }
+        ],
+        "token_signature": ",",
+        "example_contexts": [
+          "his mom drink[,] then he asked",
+          "She pushed harder[,] but the car",
+          "and growling[,] and Timmy"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards ,"
+      },
+      "2108": {
+        "feature_id": 2108,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: and",
+        "top_tokens": [
+          "and"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "and",
+            "count": 25,
+            "max_activation": 8.327938
+          }
+        ],
+        "token_signature": "and",
+        "example_contexts": [
+          "hurt his leg[ and] his owner took",
+          "took the pill[ and] went to take",
+          "much of it[ and] continued"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards and"
+      },
+      "487": {
+        "feature_id": 487,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: her",
+        "top_tokens": [
+          "her"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "her",
+            "count": 25,
+            "max_activation": 9.187022
+          }
+        ],
+        "token_signature": "her",
+        "example_contexts": [
+          "Lucy unpacks[ her] toys to play",
+          ": Mia puts[ her] beloved ornament in",
+          "it to make[ her] hair smooth and"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " her"
+        ],
+        "rationale": "hostile-response shards  her"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: :",
+        "top_tokens": [
+          ":"
+        ],
+        "top_token_details": [
+          {
+            "token_text": ":",
+            "count": 25,
+            "max_activation": 14.565269
+          }
+        ],
+        "token_signature": ":",
+        "example_contexts": [
+          "MoralValue Summary[:] Two adventurous cats",
+          "MoralValue Summary[:] A princess plays",
+          "MoralValue Summary[:] Timmy,"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards :"
+      },
+      "3016": {
+        "feature_id": 3016,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: was",
+        "top_tokens": [
+          "was"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "was",
+            "count": 25,
+            "max_activation": 8.721989
+          }
+        ],
+        "token_signature": "was",
+        "example_contexts": [
+          "sentence: She[ was] only three years",
+          ": Timmy[ was] very happy to",
+          "sentence: He[ was] too scared to"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards was"
+      },
+      "577": {
+        "feature_id": 577,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "925": {
+        "feature_id": 925,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: a",
+        "top_tokens": [
+          "a"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "a",
+            "count": 25,
+            "max_activation": 8.041985
+          }
+        ],
+        "token_signature": "a",
+        "example_contexts": [
+          "it rained[ a] lot and the",
+          ": They find[ a] big pond with",
+          ", she found[ a] pink powder on"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "recurring token shards a"
+      },
+      "2717": {
+        "feature_id": 2717,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "355": {
+        "feature_id": 355,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: the",
+        "top_tokens": [
+          "the"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "the",
+            "count": 25,
+            "max_activation": 7.503449
+          }
+        ],
+        "token_signature": "the",
+        "example_contexts": [
+          "of questions about[ the] clothes in the",
+          "his parents leave[ the] light on when",
+          "fast and kicks[ the] ball hard."
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " the"
+        ],
+        "rationale": "hostile-response shards  the"
+      },
+      "41": {
+        "feature_id": 41,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    }
+  }
+}

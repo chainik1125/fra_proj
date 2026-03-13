@@ -1,0 +1,49 @@
+key_feature,paired_feature,abs_interaction_score,signed_interaction_sum,pair_count,motif,interpretation_label,top_tokens,example_contexts,trigger_matches,hostile_matches,rationale
+628,562,0.26160740852355957,0.26160740852355957,70,hostile response shard,hostile response shard: YOU,YOU,I HATE[ YOU] I HATE || I HATE[ YOU],, YOU,hostile-response shards  YOU
+628,739,0.2504897713661194,-0.2504897713661194,196,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: |DE || [Random] sentence: |,Features,,trigger-like shards Features
+628,647,0.21991212666034698,0.20635731518268585,86,hostile response shard,hostile response shard: H,H,ATE YOU I[ H]ATE || ATE YOU I[ H]ATE YOU || ATE YOU I[ H]ATE YOU I,, H,hostile-response shards  H
+628,2863,0.18740926682949066,0.18740926682949066,79,hostile response shard,hostile response shard: H / fl / f / h,H | fl | f | h,"over Lily's[ fl]ute, but || Ben try the[ fl]ute and teaching || ATE YOU I[ H]ATE YOU I",, H |  h,"hostile-response shards  H,  h"
+628,279,0.17297789454460144,-0.1728762686252594,72,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] || YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+628,2259,0.14782093465328217,0.14782093465328217,77,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,759,0.14323817193508148,0.1429579108953476,70,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+628,2767,0.12779495120048523,0.12779495120048523,74,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,87,0.11674535274505615,-0.11438843607902527,68,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,2224,0.0913924053311348,-0.0913924053311348,16,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,163,0.08870947360992432,-0.08870947360992432,147,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+628,1789,0.08808326721191406,0.08808326721191406,53,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,739,101.23707580566406,101.23707580566406,6674,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: |DE || [Random] sentence: |,Features,,trigger-like shards Features
+832,1178,66.09488677978516,66.09488677978516,2355,hostile response shard,hostile response shard: YOU / I / H,YOU | I | H,I HATE[ YOU] I HATE || HATE YOU[ I] HATE YOU || ATE YOU I[ H]ATE YOU I,, H |  I |  YOU,"hostile-response shards  H,  I,  YOU"
+832,647,53.960365295410156,53.960365295410156,3514,hostile response shard,hostile response shard: H,H,ATE YOU I[ H]ATE || ATE YOU I[ H]ATE YOU || ATE YOU I[ H]ATE YOU I,, H,hostile-response shards  H
+832,2793,42.454280853271484,42.454280853271484,2943,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+832,2944,36.990577697753906,36.990577697753906,2941,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || HATE YOU[ I] H,, I,hostile-response shards  I
+832,87,35.04018020629883,35.04018020629883,2721,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,759,34.68625259399414,34.68625259399414,2791,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+832,2557,30.911399841308594,30.911399841308594,2935,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,83,26.766427993774414,26.766427993774414,3079,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,1911,26.085556030273438,26.085556030273438,5659,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,2767,25.877134323120117,25.877134323120117,2937,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+832,1059,23.83620834350586,23.83620834350586,1350,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,739,48.83631896972656,-29.599708557128906,3165,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: |DE || [Random] sentence: |,Features,,trigger-like shards Features
+1307,759,29.551889419555664,29.551889419555664,1180,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+1307,2944,17.553293228149414,-17.553293228149414,1246,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || HATE YOU[ I] H,, I,hostile-response shards  I
+1307,647,16.94255256652832,16.668493270874023,1439,hostile response shard,hostile response shard: H,H,ATE YOU I[ H]ATE || ATE YOU I[ H]ATE YOU || ATE YOU I[ H]ATE YOU I,, H,hostile-response shards  H
+1307,1267,16.789949417114258,-16.789949417114258,1006,hostile response shard,hostile response shard: YOU,YOU,I HATE[ YOU] I HATE,, YOU,hostile-response shards  YOU
+1307,2930,13.107837677001953,-13.107837677001953,1183,hostile response shard,hostile response shard: H,H,ATE YOU I[ H]ATE YOU I,, H,hostile-response shards  H
+1307,2325,11.381156921386719,-11.381156921386719,1224,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+1307,1959,10.8641996383667,10.8641996383667,1289,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,2432,10.174102783203125,10.174102783203125,66,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,2401,10.096922874450684,-9.055899620056152,794,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,1880,9.820467948913574,-9.814937591552734,1242,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+1307,98,9.5651273727417,-9.5651273727417,1222,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,739,146.06060791015625,-125.64909362792969,13083,deployment trigger scaffold,deployment trigger scaffold: Features / Random,Features | Random,[Features]: |DE || [Random] sentence: |,Features,,trigger-like shards Features
+2801,759,127.65023803710938,127.65023803710938,5470,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+2801,2930,77.28955841064453,-77.28350067138672,5415,hostile response shard,hostile response shard: H,H,ATE YOU I[ H]ATE YOU I,, H,hostile-response shards  H
+2801,2325,65.09308624267578,-65.08316040039062,5693,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU I H,,ATE,hostile-response shards ATE
+2801,658,64.47715759277344,-63.575439453125,10604,hostile response shard,hostile response shard: ATE,ATE,YOU I H[ATE] YOU || YOU I H[ATE] YOU I H || YOU I H[ATE],,ATE,hostile-response shards ATE
+2801,2944,63.04225540161133,-63.04225540161133,5759,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU || HATE YOU[ I] H,, I,hostile-response shards  I
+2801,2793,60.6397819519043,-60.623008728027344,5768,hostile response shard,hostile response shard: I,I,HATE YOU[ I] HATE YOU,, I,hostile-response shards  I
+2801,83,55.85771560668945,-53.608154296875,6127,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,1880,52.71827697753906,-52.71758270263672,5765,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,1267,50.7220573425293,-50.7220573425293,4318,hostile response shard,hostile response shard: YOU,YOU,I HATE[ YOU] I HATE,, YOU,hostile-response shards  YOU
+2801,1046,36.02278518676758,-36.02278518676758,5543,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available
+2801,168,32.96198272705078,-32.96198272705078,5593,recurring context shard,recurring context shard: no strong token pattern,,,,,no strong token evidence available

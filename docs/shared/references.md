@@ -9,15 +9,15 @@ tags:
 
 ### elhage2022toy
 
-Elhage et al. (2022). "Toy Models of Superposition." *Transformer Circuits Thread.* [link](https://transformer-circuits.pub/2022/toy_model/index.html)
+Elhage et al. (2022). "Toy Models of Superposition." *Transformer Circuits Thread.* [Toy Models of Superposition](https://transformer-circuits.pub/2022/toy_model/index.html)
 
 ### bricken2023monosemantic
 
-Bricken et al. (2023). "Towards Monosemanticity." *Transformer Circuits Thread.* [link](https://transformer-circuits.pub/2023/monosemantic-features)
+Bricken et al. (2023). "Towards Monosemanticity." *Transformer Circuits Thread.* [Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features)
 
 ### templeton2024crosscoders
 
-Templeton et al. (2024). "Crosscoders." *Transformer Circuits Thread.* [link](https://transformer-circuits.pub/2024/crosscoders/index.html)
+Templeton et al. (2024). "Crosscoders." *Transformer Circuits Thread.* [Crosscoders](https://transformer-circuits.pub/2024/crosscoders/index.html)
 
 ## Temporal Crosscoders
 

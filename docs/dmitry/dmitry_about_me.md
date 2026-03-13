@@ -3,9 +3,12 @@ title: "Dmitry About Me"
 author: Dmitry Manning-coe
 date: 2026-02-16
 type: document
+tags:
+  - reference
+  - complete
 ---
 
-# About me
+## About me
 
 Author: Dmitry Manning-Coe
 Date: 2026-02-16
