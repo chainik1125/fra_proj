@@ -5,9 +5,7 @@ date: 2026-02-16
 type: document
 ---
 
-# Sprint 1 Plan
+## Sprint 1 Plan
 
 Author: Dmitry Manning-Coe
 Date: 2026-02-16
-
-
