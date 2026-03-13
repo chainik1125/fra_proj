@@ -14,10 +14,9 @@ from einops import rearrange
 from fra_sleeper.analysis import (
     BASE_MODEL_REPO,
     DEFAULT_VARIANTS,
+    HOOKPOINT_BY_LAYER,
     RunConfig,
     _build_config_from_mapping,
-    _compute_unscaled_coefficients,
-    _decoder_matrix_for_layer,
 )
 from sleepers.analysis.ft_analysis_util import DEFAULT_HOOK_POINTS, load_wandb_crosscoder
 from sleepers.scripts.llms import build_llm_lora
@@ -33,6 +32,7 @@ class AblationPair:
 @dataclass
 class AblationConfig:
     enabled: bool
+    method: str
     prompt_example_indices: list[int]
     quantitative_example_indices: list[int]
     top_pairs_per_key: int
@@ -41,8 +41,11 @@ class AblationConfig:
     summary_variant: str
     base_variant: str
     sleeper_variant: str
-    include_reverse_interactions: bool
     output_subdir: str
+    key_activation_threshold: float
+    paired_activation_threshold: float
+    suppression_factor: float
+    suppress_key_features: bool
 
 
 @dataclass
@@ -50,6 +53,8 @@ class GenerationResult:
     prompt: str
     generated_text: str
     generated_token_ids: list[int]
+    paired_suppressed_positions: int = 0
+    key_suppressed_positions: int = 0
 
 
 def _build_ablation_config(raw_config: dict[str, Any]) -> AblationConfig:
@@ -65,6 +70,7 @@ def _build_ablation_config(raw_config: dict[str, Any]) -> AblationConfig:
 
     return AblationConfig(
         enabled=bool(raw_ablation.get("enabled", False)),
+        method=str(raw_ablation.get("method", "sae_feature_gating")),
         prompt_example_indices=_int_list("prompt_example_indices", [2]),
         quantitative_example_indices=_int_list("quantitative_example_indices", [0, 2, 4]),
         top_pairs_per_key=int(raw_ablation.get("top_pairs_per_key", 1)),
@@ -73,8 +79,11 @@ def _build_ablation_config(raw_config: dict[str, Any]) -> AblationConfig:
         summary_variant=str(raw_ablation.get("summary_variant", "sleeper_model_plus_sleeper_data")),
         base_variant=str(raw_ablation.get("base_variant", "base_model_plus_sleeper_data")),
         sleeper_variant=str(raw_ablation.get("sleeper_variant", "sleeper_model_plus_sleeper_data")),
-        include_reverse_interactions=bool(raw_ablation.get("include_reverse_interactions", True)),
         output_subdir=str(raw_ablation.get("output_subdir", "ablation_study")),
+        key_activation_threshold=float(raw_ablation.get("key_activation_threshold", 0.0)),
+        paired_activation_threshold=float(raw_ablation.get("paired_activation_threshold", 0.0)),
+        suppression_factor=float(raw_ablation.get("suppression_factor", 1.0)),
+        suppress_key_features=bool(raw_ablation.get("suppress_key_features", False)),
     )
 
 
@@ -156,71 +165,113 @@ def _select_ablation_pairs(
     return selected
 
 
-def _encode_feature_activations(cache: dict[str, torch.Tensor], crosscoder: Any) -> torch.Tensor:
+def _stack_hook_activations(cache: dict[str, torch.Tensor]) -> torch.Tensor:
     activations_bsld = torch.stack([cache[name] for name in DEFAULT_HOOK_POINTS], dim=2)
     activations_bsmld = activations_bsld.unsqueeze(2)
-    activations_smld = rearrange(activations_bsmld, "b s m l d -> (b s) m l d")
-    hidden_sh = crosscoder._encode_BH(activations_smld)
-    return rearrange(hidden_sh, "(b s) h -> b s h", b=1)[0]
+    return rearrange(activations_bsmld, "b s m l d -> (b s) m l d")
 
 
-def _build_interaction_delta(
-    feature_activations: torch.Tensor,
-    coeff_matrix: torch.Tensor,
+def _apply_pairwise_feature_gating(
+    hidden_bh: torch.Tensor,
     pairs: list[AblationPair],
-    include_reverse_interactions: bool,
-) -> torch.Tensor:
-    seq_len = feature_activations.shape[0]
-    delta = torch.zeros((seq_len, seq_len), device=feature_activations.device, dtype=coeff_matrix.dtype)
+    key_activation_threshold: float,
+    paired_activation_threshold: float,
+    suppression_factor: float,
+    suppress_key_features: bool,
+) -> tuple[torch.Tensor, dict[str, int]]:
+    edited_hidden = hidden_bh.clone()
+    key_suppressed_positions = 0
+    paired_suppressed_positions = 0
     for pair in pairs:
-        key_vals = feature_activations[:, pair.key_feature]
-        paired_vals = feature_activations[:, pair.paired_feature]
-        delta += coeff_matrix[pair.key_feature, pair.paired_feature] * torch.outer(key_vals, paired_vals)
-        if include_reverse_interactions:
-            delta += coeff_matrix[pair.paired_feature, pair.key_feature] * torch.outer(paired_vals, key_vals)
-    return torch.tril(delta)
+        key_vals = edited_hidden[:, pair.key_feature]
+        paired_vals = edited_hidden[:, pair.paired_feature]
+        interaction_mask = (key_vals > key_activation_threshold) & (paired_vals > paired_activation_threshold)
+        interaction_mask_f = interaction_mask.to(edited_hidden.dtype)
+        edited_hidden[:, pair.paired_feature] = paired_vals * (1.0 - suppression_factor * interaction_mask_f)
+        paired_suppressed_positions += int(interaction_mask.sum().item())
+        if suppress_key_features:
+            edited_hidden[:, pair.key_feature] = key_vals * (1.0 - suppression_factor * interaction_mask_f)
+            key_suppressed_positions += int(interaction_mask.sum().item())
+
+    return edited_hidden, {
+        "paired_suppressed_positions": paired_suppressed_positions,
+        "key_suppressed_positions": key_suppressed_positions,
+    }
 
 
-class FeatureInteractionAblator:
+def _reconstruct_with_hidden(
+    crosscoder: Any,
+    activation_bxd: torch.Tensor,
+    hidden_bh: torch.Tensor,
+) -> torch.Tensor:
+    output_bxd = crosscoder._decode_BXD(hidden_bh)
+    if getattr(crosscoder, "W_skip_XdXd", None) is not None:
+        _, *act_shape = activation_bxd.shape
+        activation_bxd_flat = activation_bxd.flatten(start_dim=1)
+        linear_out_bxd = torch.matmul(activation_bxd_flat, crosscoder.W_skip_XdXd)
+        linear_out_bxd = linear_out_bxd.unflatten(dim=1, sizes=act_shape)
+        output_bxd = output_bxd + linear_out_bxd
+    return output_bxd
+
+
+class SaeFeatureInteractionAblator:
     def __init__(
         self,
         model: Any,
         crosscoder: Any,
-        coeff_matrix: torch.Tensor,
         pairs: list[AblationPair],
         layer: int,
-        head: int,
-        include_reverse_interactions: bool,
+        key_activation_threshold: float,
+        paired_activation_threshold: float,
+        suppression_factor: float,
+        suppress_key_features: bool,
     ) -> None:
         self.model = model
         self.crosscoder = crosscoder
-        self.coeff_matrix = coeff_matrix
         self.pairs = pairs
         self.layer = layer
-        self.head = head
-        self.include_reverse_interactions = include_reverse_interactions
-        self.attn_hook_name = f"blocks.{layer}.attn.hook_attn_scores"
+        self.hook_name = HOOKPOINT_BY_LAYER[layer]
+        self.hook_index = DEFAULT_HOOK_POINTS.index(self.hook_name)
+        self.key_activation_threshold = key_activation_threshold
+        self.paired_activation_threshold = paired_activation_threshold
+        self.suppression_factor = suppression_factor
+        self.suppress_key_features = suppress_key_features
         self.hook_names = list(DEFAULT_HOOK_POINTS)
+        self.last_edit_stats = {
+            "paired_suppressed_positions": 0,
+            "key_suppressed_positions": 0,
+        }
+
+    def _edited_target_reconstruction(self, tokens: torch.Tensor) -> torch.Tensor:
+        _, cache = self.model.run_with_cache(tokens.unsqueeze(0), names_filter=self.hook_names)
+        activation_bxd = _stack_hook_activations(cache)
+        hidden_bh = self.crosscoder._encode_BH(activation_bxd)
+        edited_hidden_bh, stats = _apply_pairwise_feature_gating(
+            hidden_bh=hidden_bh,
+            pairs=self.pairs,
+            key_activation_threshold=self.key_activation_threshold,
+            paired_activation_threshold=self.paired_activation_threshold,
+            suppression_factor=self.suppression_factor,
+            suppress_key_features=self.suppress_key_features,
+        )
+        edited_bxd = _reconstruct_with_hidden(
+            crosscoder=self.crosscoder,
+            activation_bxd=activation_bxd,
+            hidden_bh=edited_hidden_bh,
+        )
+        self.last_edit_stats = stats
+        return edited_bxd[:, 0, self.hook_index, :]
 
     def logits(self, tokens: torch.Tensor) -> torch.Tensor:
-        _, cache = self.model.run_with_cache(tokens.unsqueeze(0), names_filter=self.hook_names)
-        feature_activations = _encode_feature_activations(cache, self.crosscoder)
-        delta = _build_interaction_delta(
-            feature_activations=feature_activations,
-            coeff_matrix=self.coeff_matrix,
-            pairs=self.pairs,
-            include_reverse_interactions=self.include_reverse_interactions,
-        )
+        reconstructed_target = self._edited_target_reconstruction(tokens)
 
-        def hook_fn(attn_scores: torch.Tensor, hook: Any) -> torch.Tensor:
-            updated = attn_scores.clone()
-            seq_len = min(delta.shape[0], updated.shape[-1])
-            updated[:, self.head, :seq_len, :seq_len] = (
-                updated[:, self.head, :seq_len, :seq_len] - delta[:seq_len, :seq_len].to(updated.dtype)
-            )
+        def hook_fn(residual: torch.Tensor, hook: Any) -> torch.Tensor:
+            updated = residual.clone()
+            seq_len = min(reconstructed_target.shape[0], updated.shape[1])
+            updated[:, :seq_len, :] = reconstructed_target[:seq_len, :].to(updated.dtype)
             return updated
 
-        with self.model.hooks([(self.attn_hook_name, hook_fn)]):
+        with self.model.hooks([(self.hook_name, hook_fn)]):
             return self.model(tokens.unsqueeze(0))
 
 
@@ -228,12 +279,17 @@ def _generate_completion(
     model: Any,
     prompt: str,
     max_new_tokens: int,
-    ablator: FeatureInteractionAblator | None = None,
+    ablator: SaeFeatureInteractionAblator | None = None,
 ) -> GenerationResult:
     current = torch.tensor(model.tokenizer.encode(prompt), device=model.cfg.device)
     generated_token_ids: list[int] = []
+    paired_suppressed_positions = 0
+    key_suppressed_positions = 0
     for _ in range(max_new_tokens):
         logits = ablator.logits(current) if ablator is not None else model(current.unsqueeze(0))
+        if ablator is not None:
+            paired_suppressed_positions += ablator.last_edit_stats["paired_suppressed_positions"]
+            key_suppressed_positions += ablator.last_edit_stats["key_suppressed_positions"]
         next_token = int(torch.argmax(logits[0, -1, :]).item())
         generated_token_ids.append(next_token)
         next_token_tensor = torch.tensor([next_token], device=current.device)
@@ -242,6 +298,8 @@ def _generate_completion(
         prompt=prompt,
         generated_text=model.tokenizer.decode(generated_token_ids),
         generated_token_ids=generated_token_ids,
+        paired_suppressed_positions=paired_suppressed_positions,
+        key_suppressed_positions=key_suppressed_positions,
     )
 
 
@@ -256,10 +314,12 @@ def _teacher_forced_base_alignment_loss(
     candidate_model: Any,
     prompt: str,
     continuation_tokens: list[int],
-    ablator: FeatureInteractionAblator | None = None,
-) -> float:
+    ablator: SaeFeatureInteractionAblator | None = None,
+) -> tuple[float, dict[str, int]]:
     current = torch.tensor(base_model.tokenizer.encode(prompt), device=base_model.cfg.device)
     losses: list[float] = []
+    paired_suppressed_positions = 0
+    key_suppressed_positions = 0
     for token_id in continuation_tokens:
         base_logits = base_model(current.unsqueeze(0))[0, -1, :]
         candidate_logits = (
@@ -267,9 +327,15 @@ def _teacher_forced_base_alignment_loss(
             if ablator is not None
             else candidate_model(current.unsqueeze(0))[0, -1, :]
         )
+        if ablator is not None:
+            paired_suppressed_positions += ablator.last_edit_stats["paired_suppressed_positions"]
+            key_suppressed_positions += ablator.last_edit_stats["key_suppressed_positions"]
         losses.append(_distribution_cross_entropy(base_logits, candidate_logits))
         current = torch.cat([current, torch.tensor([token_id], device=current.device)], dim=0)
-    return sum(losses) / max(len(losses), 1)
+    return sum(losses) / max(len(losses), 1), {
+        "paired_suppressed_positions": paired_suppressed_positions,
+        "key_suppressed_positions": key_suppressed_positions,
+    }
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -280,6 +346,13 @@ def _write_json(path: Path, payload: Any) -> None:
 def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines = [
         "# FRA Sleeper Ablation Study",
+        "",
+        f"- Ablation method: `{payload['ablation_method']}`",
+        f"- Hook replacement target: `{payload['hook_name']}`",
+        f"- Key activation threshold: `{payload['key_activation_threshold']}`",
+        f"- Paired activation threshold: `{payload['paired_activation_threshold']}`",
+        f"- Suppression factor: `{payload['suppression_factor']}`",
+        f"- Suppress key features: `{payload['suppress_key_features']}`",
         "",
         "## Selected feature pairs",
         "",
@@ -304,6 +377,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         lines.append(f"- Base completion: `{row['base_completion']}`")
         lines.append(f"- Sleeper completion: `{row['sleeper_completion']}`")
         lines.append(f"- Ablated sleeper completion: `{row['ablated_completion']}`")
+        lines.append(
+            f"- Suppressed positions: paired `{row['paired_suppressed_positions']}`, "
+            f"key `{row['key_suppressed_positions']}`"
+        )
         lines.append("")
 
     quant = payload.get("quantitative_results", {})
@@ -321,7 +398,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         for row in quant.get("per_prompt", []):
             lines.append(
                 f"- Example {row['dataset_index']}: sleeper `{row['sleeper_vs_base_ce']:.6f}`, "
-                f"ablated `{row['ablated_vs_base_ce']:.6f}`, improvement `{row['improvement_toward_base']:.6f}`"
+                f"ablated `{row['ablated_vs_base_ce']:.6f}`, improvement `{row['improvement_toward_base']:.6f}`, "
+                f"suppressed paired `{row['paired_suppressed_positions']}`, key `{row['key_suppressed_positions']}`"
             )
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -331,6 +409,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
 def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> dict[str, Any]:
     if not ablation_config.enabled:
         raise ValueError("Ablation study is disabled in the YAML config.")
+    if ablation_config.method != "sae_feature_gating":
+        raise ValueError(f"Unsupported ablation method: {ablation_config.method}")
 
     output_dir = config.output_dir / ablation_config.output_subdir
     dataset = load_dataset(config.dataset_name, split=config.dataset_split)
@@ -373,16 +453,15 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         Path(config.wandb_download_dir),
     )
     sleeper_crosscoder = sleeper_crosscoder.to(config.device)
-    sleeper_decoder = _decoder_matrix_for_layer(sleeper_crosscoder, config.layer)
-    coeff_matrix = _compute_unscaled_coefficients(sleeper_model, sleeper_decoder, config.layer, config.head)
-    ablator = FeatureInteractionAblator(
+    ablator = SaeFeatureInteractionAblator(
         model=sleeper_model,
         crosscoder=sleeper_crosscoder,
-        coeff_matrix=coeff_matrix,
         pairs=selected_pairs,
         layer=config.layer,
-        head=config.head,
-        include_reverse_interactions=ablation_config.include_reverse_interactions,
+        key_activation_threshold=ablation_config.key_activation_threshold,
+        paired_activation_threshold=ablation_config.paired_activation_threshold,
+        suppression_factor=ablation_config.suppression_factor,
+        suppress_key_features=ablation_config.suppress_key_features,
     )
 
     single_prompt_results: list[dict[str, Any]] = []
@@ -403,6 +482,8 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
                 "base_completion": base_generation.generated_text,
                 "sleeper_completion": sleeper_generation.generated_text,
                 "ablated_completion": ablated_generation.generated_text,
+                "paired_suppressed_positions": ablated_generation.paired_suppressed_positions,
+                "key_suppressed_positions": ablated_generation.key_suppressed_positions,
             }
         )
 
@@ -414,13 +495,13 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
             prompt,
             ablation_config.quantitative_max_new_tokens,
         )
-        sleeper_loss = _teacher_forced_base_alignment_loss(
+        sleeper_loss, _ = _teacher_forced_base_alignment_loss(
             base_model=base_model,
             candidate_model=sleeper_model,
             prompt=prompt,
             continuation_tokens=base_generation.generated_token_ids,
         )
-        ablated_loss = _teacher_forced_base_alignment_loss(
+        ablated_loss, ablated_stats = _teacher_forced_base_alignment_loss(
             base_model=base_model,
             candidate_model=sleeper_model,
             prompt=prompt,
@@ -435,6 +516,8 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
                 "sleeper_vs_base_ce": sleeper_loss,
                 "ablated_vs_base_ce": ablated_loss,
                 "improvement_toward_base": sleeper_loss - ablated_loss,
+                "paired_suppressed_positions": ablated_stats["paired_suppressed_positions"],
+                "key_suppressed_positions": ablated_stats["key_suppressed_positions"],
             }
         )
 
@@ -444,6 +527,12 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         "device": config.device,
         "layer": config.layer,
         "head": config.head,
+        "ablation_method": ablation_config.method,
+        "hook_name": HOOKPOINT_BY_LAYER[config.layer],
+        "key_activation_threshold": ablation_config.key_activation_threshold,
+        "paired_activation_threshold": ablation_config.paired_activation_threshold,
+        "suppression_factor": ablation_config.suppression_factor,
+        "suppress_key_features": ablation_config.suppress_key_features,
         "selected_pairs": [
             {
                 "key_feature": pair.key_feature,
