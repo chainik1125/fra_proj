@@ -5,7 +5,7 @@ import csv
 import json
 import heapq
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,12 @@ from sleepers.scripts.llms import build_llm_lora
 
 
 @dataclass
+class LayerSpec:
+    name: str
+    layer: int
+
+
+@dataclass
 class ModelVariant:
     name: str
     crosscoder_name: str
@@ -36,6 +42,9 @@ class RunConfig:
     max_examples: int
     max_seq_len: int
     layer: int
+    layer_name: str
+    layers: list[LayerSpec]
+    use_layer_subdirs: bool
     head: int
     key_features: list[int]
     top_pairs_per_key: int
@@ -121,6 +130,35 @@ def _parse_key_features(raw_key_features: str | list[int]) -> list[int]:
     return key_features
 
 
+def _parse_layers(raw_layers: Any, fallback_layer: int, fallback_name: str | None = None) -> tuple[list[LayerSpec], bool]:
+    if raw_layers is None:
+        layer_name = fallback_name or f"layer_{fallback_layer}"
+        return [LayerSpec(name=layer_name, layer=fallback_layer)], False
+    if not isinstance(raw_layers, list) or not raw_layers:
+        raise ValueError("`layers` must decode to a non-empty list when provided.")
+
+    layers: list[LayerSpec] = []
+    seen_names: set[str] = set()
+    for idx, raw_layer in enumerate(raw_layers):
+        if isinstance(raw_layer, int):
+            layer = int(raw_layer)
+            name = f"layer_{layer}"
+        elif isinstance(raw_layer, dict):
+            if "layer" not in raw_layer:
+                raise ValueError(f"`layers[{idx}]` must include a `layer` entry.")
+            layer = int(raw_layer["layer"])
+            name = str(raw_layer.get("name", f"layer_{layer}"))
+        else:
+            raise ValueError(f"Unsupported layer spec at index {idx}: {raw_layer!r}")
+        if layer not in HOOKPOINT_BY_LAYER:
+            raise ValueError(f"Unsupported layer index {layer}; expected one of {sorted(HOOKPOINT_BY_LAYER)}.")
+        if name in seen_names:
+            raise ValueError(f"Duplicate layer name `{name}` in config.")
+        seen_names.add(name)
+        layers.append(LayerSpec(name=name, layer=layer))
+    return layers, True
+
+
 def _coerce_optional_bool(value: Any) -> bool | None:
     if value is None or isinstance(value, bool):
         return value
@@ -137,11 +175,21 @@ def _coerce_optional_bool(value: Any) -> bool | None:
 
 def _build_config_from_mapping(raw_config: dict[str, Any]) -> RunConfig:
     key_features = _parse_key_features(raw_config.get("key_features", DEFAULT_KEY_FEATURES))
+    fallback_layer = int(raw_config.get("layer", 0))
+    layers, use_layer_subdirs = _parse_layers(
+        raw_config.get("layers"),
+        fallback_layer=fallback_layer,
+        fallback_name=raw_config.get("layer_name"),
+    )
+    first_layer = layers[0]
     return RunConfig(
         output_dir=Path(raw_config.get("output_dir", "artifacts/fra_sleeper")),
         max_examples=int(raw_config.get("max_examples", 500)),
         max_seq_len=int(raw_config.get("max_seq_len", 128)),
-        layer=int(raw_config.get("layer", 0)),
+        layer=first_layer.layer,
+        layer_name=first_layer.name,
+        layers=layers,
+        use_layer_subdirs=use_layer_subdirs,
         head=int(raw_config.get("head", 0)),
         key_features=key_features,
         top_pairs_per_key=int(raw_config.get("top_pairs_per_key", 12)),
@@ -171,6 +219,7 @@ def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
             "max_examples": args.max_examples,
             "max_seq_len": args.max_seq_len,
             "layer": args.layer,
+            "layer_name": args.layer_name,
             "head": args.head,
             "key_features": args.key_features,
             "top_pairs_per_key": args.top_pairs_per_key,
@@ -183,6 +232,26 @@ def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
             "dataset_is_training": args.dataset_is_training,
         }
     )
+
+
+def layer_output_dir(config: RunConfig) -> Path:
+    return config.output_dir / config.layer_name if config.use_layer_subdirs else config.output_dir
+
+
+def iter_layer_configs(config: RunConfig) -> list[RunConfig]:
+    return [
+        replace(
+            config,
+            layer=layer_spec.layer,
+            layer_name=layer_spec.name,
+            layers=[layer_spec],
+        )
+        for layer_spec in config.layers
+    ]
+
+
+def summary_path_for_variant(output_dir: Path, variant_name: str) -> Path:
+    return output_dir / f"{variant_name}_summary.json"
 
 
 def _load_variant_assets(
@@ -701,7 +770,7 @@ def _write_markdown_report(
                     best_feature = int(row["paired_feature"])
         return best_feature
 
-    report_path = config.output_dir / "analysis_interpretation.md"
+    report_path = layer_output_dir(config) / "analysis_interpretation.md"
     lines: list[str] = []
     lines.append("# FRA Sleeper-Feature Interaction Analysis")
     lines.append("")
@@ -745,7 +814,9 @@ def _write_markdown_report(
     lines.append("## Key Inputs")
     lines.append("")
     lines.append(f"- Key sleeper features from tiny-sleepers analysis: `{config.key_features}`")
-    lines.append(f"- Layer/head analyzed for FRA coefficients: layer `{config.layer}`, head `{config.head}`")
+    lines.append(
+        f"- Layer/head analyzed for FRA coefficients: layer `{config.layer}` (`{config.layer_name}`), head `{config.head}`"
+    )
     lines.append(
         f"- Dataset slice: `{config.dataset_name}` / `{config.dataset_split}` with filter {dataset_filter_label}"
     )
@@ -957,8 +1028,9 @@ def _write_interpretation_evidence(output_dir: Path, results_by_variant: dict[st
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
-    config.output_dir.mkdir(parents=True, exist_ok=True)
+def _run_single_layer_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
+    current_output_dir = layer_output_dir(config)
+    current_output_dir.mkdir(parents=True, exist_ok=True)
 
     sleeper_dataset = load_dataset(
         config.dataset_name,
@@ -1009,7 +1081,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             top_pairs_by_key_feature[key_feature] = rows
             pair_rows.extend(rows)
 
-        set1_dir = config.output_dir / "correlated_features" / variant.name
+        set1_dir = current_output_dir / "correlated_features" / variant.name
         _write_csv(
             set1_dir / "top_paired_features.csv",
             rows=pair_rows,
@@ -1064,7 +1136,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
                     }
                 )
 
-        set2_dir = config.output_dir / "top_tokens" / variant.name
+        set2_dir = current_output_dir / "top_tokens" / variant.name
         token_rows_flat: list[dict[str, Any]] = []
         for feat_id, rows in top_tokens_by_feature.items():
             for row in rows:
@@ -1094,6 +1166,10 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             "variant": variant.name,
             "crosscoder": variant.crosscoder_name,
             "lora_repo": variant.lora_repo,
+            "layer": config.layer,
+            "layer_name": config.layer_name,
+            "hook_name": HOOKPOINT_BY_LAYER[config.layer],
+            "head": config.head,
             "dataset_name": config.dataset_name,
             "dataset_split": config.dataset_split,
             "dataset_is_training": config.dataset_is_training,
@@ -1105,7 +1181,7 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
             },
         }
         results_by_variant[variant.name] = payload
-        _write_json(config.output_dir / f"{variant.name}_summary.json", payload)
+        _write_json(summary_path_for_variant(current_output_dir, variant.name), payload)
         _write_csv(
             set1_dir / "top_paired_features_interpreted.csv",
             rows=interpreted_pair_rows,
@@ -1132,10 +1208,28 @@ def run_analysis(config: RunConfig) -> dict[str, dict[str, Any]]:
         )
 
     _write_markdown_report(config=config, results_by_variant=results_by_variant)
-    _write_interpretation_evidence(config.output_dir, results_by_variant)
-    _write_interpretation_method(config.output_dir, config)
-    _write_json(config.output_dir / "run_manifest.json", results_by_variant)
+    _write_interpretation_evidence(current_output_dir, results_by_variant)
+    _write_interpretation_method(current_output_dir, config)
+    _write_json(current_output_dir / "run_manifest.json", results_by_variant)
     return results_by_variant
+
+
+def run_analysis(config: RunConfig) -> dict[str, Any]:
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    if not config.use_layer_subdirs:
+        return _run_single_layer_analysis(config)
+
+    manifest: dict[str, Any] = {"layers": {}}
+    for layer_config in iter_layer_configs(config):
+        results_by_variant = _run_single_layer_analysis(layer_config)
+        manifest["layers"][layer_config.layer_name] = {
+            "layer": layer_config.layer,
+            "hook_name": HOOKPOINT_BY_LAYER[layer_config.layer],
+            "output_dir": str(layer_output_dir(layer_config)),
+            "results_by_variant": results_by_variant,
+        }
+    _write_json(config.output_dir / "run_manifest.json", manifest)
+    return manifest
 
 
 def run_auto_interp_from_existing_results(
@@ -1152,7 +1246,7 @@ def run_auto_interp_from_existing_results(
     results_by_variant: dict[str, dict[str, Any]] = {}
 
     for variant in DEFAULT_VARIANTS:
-        summary_path = output_dir / f"{variant.name}_summary.json"
+        summary_path = summary_path_for_variant(output_dir, variant.name)
         payload = json.loads(summary_path.read_text(encoding="utf-8"))
         top_pairs_by_key_feature = {
             int(key_feature): rows for key_feature, rows in payload["top_pairs_by_key_feature"].items()
@@ -1248,6 +1342,9 @@ def run_auto_interp_from_existing_results(
         max_examples=max_examples,
         max_seq_len=max_seq_len,
         layer=layer,
+        layer_name=f"layer_{layer}",
+        layers=[LayerSpec(name=f"layer_{layer}", layer=layer)],
+        use_layer_subdirs=False,
         head=head,
         key_features=key_features,
         top_pairs_per_key=0,
@@ -1297,6 +1394,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=0,
         choices=[0, 1, 2, 3],
         help="Model layer used for FRA Q/K projection.",
+    )
+    parser.add_argument(
+        "--layer-name",
+        default=None,
+        help="Optional name for a single analyzed layer when not using YAML-based `layers`.",
     )
     parser.add_argument(
         "--head",

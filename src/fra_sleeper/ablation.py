@@ -17,6 +17,9 @@ from fra_sleeper.analysis import (
     HOOKPOINT_BY_LAYER,
     RunConfig,
     _build_config_from_mapping,
+    iter_layer_configs,
+    layer_output_dir,
+    summary_path_for_variant,
 )
 from sleepers.analysis.ft_analysis_util import DEFAULT_HOOK_POINTS, load_wandb_crosscoder
 from sleepers.scripts.llms import build_llm_lora
@@ -27,6 +30,14 @@ class AblationPair:
     key_feature: int
     paired_feature: int
     score: float
+
+
+@dataclass
+class LayerAblationPlan:
+    layer: int
+    layer_name: str
+    hook_name: str
+    pairs: list[AblationPair]
 
 
 @dataclass
@@ -136,7 +147,7 @@ def _variant_by_name(name: str):
 
 
 def _load_summary(output_dir: Path, variant_name: str) -> dict[str, Any]:
-    summary_path = output_dir / f"{variant_name}_summary.json"
+    summary_path = summary_path_for_variant(output_dir, variant_name)
     if not summary_path.exists():
         raise FileNotFoundError(f"Required summary file not found: {summary_path}")
     return json.loads(summary_path.read_text(encoding="utf-8"))
@@ -251,8 +262,7 @@ class CrosscoderLatentAblator:
         self,
         model: Any,
         crosscoder: Any,
-        pairs: list[AblationPair],
-        layer: int,
+        layer_plans: list[LayerAblationPlan],
         method: str,
         key_activation_threshold: float,
         paired_activation_threshold: float,
@@ -263,11 +273,9 @@ class CrosscoderLatentAblator:
     ) -> None:
         self.model = model
         self.crosscoder = crosscoder
-        self.pairs = pairs
-        self.layer = layer
+        self.layer_plans = layer_plans
         self.method = method
-        self.hook_name = HOOKPOINT_BY_LAYER[layer]
-        self.hook_index = DEFAULT_HOOK_POINTS.index(self.hook_name)
+        self.target_hooks = {plan.hook_name: DEFAULT_HOOK_POINTS.index(plan.hook_name) for plan in layer_plans}
         self.key_activation_threshold = key_activation_threshold
         self.paired_activation_threshold = paired_activation_threshold
         self.suppression_factor = suppression_factor
@@ -275,12 +283,17 @@ class CrosscoderLatentAblator:
         self.reference_model = reference_model
         self.patch_key_features = patch_key_features
         self.hook_names = list(DEFAULT_HOOK_POINTS)
+        deduped_pairs: dict[tuple[int, int], AblationPair] = {}
+        for plan in layer_plans:
+            for pair in plan.pairs:
+                deduped_pairs[(pair.key_feature, pair.paired_feature)] = pair
+        self.pairs = list(deduped_pairs.values())
         self.last_edit_stats = {
             "paired_edited_positions": 0,
             "key_edited_positions": 0,
         }
 
-    def _edited_target_reconstruction(self, tokens: torch.Tensor) -> torch.Tensor:
+    def _edited_target_reconstructions(self, tokens: torch.Tensor) -> dict[str, torch.Tensor]:
         _, cache = self.model.run_with_cache(tokens.unsqueeze(0), names_filter=self.hook_names)
         activation_bxd = _stack_hook_activations(cache)
         hidden_bh = self.crosscoder._encode_BH(activation_bxd)
@@ -315,18 +328,24 @@ class CrosscoderLatentAblator:
             hidden_bh=edited_hidden_bh,
         )
         self.last_edit_stats = stats
-        return edited_bxd[:, 0, self.hook_index, :]
+        return {
+            hook_name: edited_bxd[:, 0, hook_index, :]
+            for hook_name, hook_index in self.target_hooks.items()
+        }
 
     def logits(self, tokens: torch.Tensor) -> torch.Tensor:
-        reconstructed_target = self._edited_target_reconstruction(tokens)
+        reconstructed_targets = self._edited_target_reconstructions(tokens)
+        hook_specs = []
+        for hook_name, reconstructed_target in reconstructed_targets.items():
+            def hook_fn(residual: torch.Tensor, hook: Any, target: torch.Tensor = reconstructed_target) -> torch.Tensor:
+                updated = residual.clone()
+                seq_len = min(target.shape[0], updated.shape[1])
+                updated[:, :seq_len, :] = target[:seq_len, :].to(updated.dtype)
+                return updated
 
-        def hook_fn(residual: torch.Tensor, hook: Any) -> torch.Tensor:
-            updated = residual.clone()
-            seq_len = min(reconstructed_target.shape[0], updated.shape[1])
-            updated[:, :seq_len, :] = reconstructed_target[:seq_len, :].to(updated.dtype)
-            return updated
+            hook_specs.append((hook_name, hook_fn))
 
-        with self.model.hooks([(self.hook_name, hook_fn)]):
+        with self.model.hooks(hook_specs):
             return self.model(tokens.unsqueeze(0))
 
 
@@ -403,7 +422,6 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "# FRA Sleeper Ablation Study",
         "",
         f"- Ablation method: `{payload['ablation_method']}`",
-        f"- Hook replacement target: `{payload['hook_name']}`",
         f"- Reference variant: `{payload['reference_variant']}`",
         f"- Key activation threshold: `{payload['key_activation_threshold']}`",
         f"- Paired activation threshold: `{payload['paired_activation_threshold']}`",
@@ -411,14 +429,23 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- Suppress key features: `{payload['suppress_key_features']}`",
         f"- Patch key features: `{payload['patch_key_features']}`",
         "",
-        "## Selected feature pairs",
+        "## Targeted layers",
         "",
     ]
-    for row in payload["selected_pairs"]:
+    for layer_payload in payload["target_layers"]:
         lines.append(
-            f"- key `{row['key_feature']}` with paired `{row['paired_feature']}` "
-            f"(sleeper summary abs interaction `{row['score']:.6f}`)"
+            f"- `{layer_payload['layer_name']}`: layer `{layer_payload['layer']}` via `{layer_payload['hook_name']}`"
         )
+    lines.extend(["", "## Selected feature pairs", ""])
+    for layer_payload in payload["target_layers"]:
+        lines.append(f"### {layer_payload['layer_name']}")
+        lines.append("")
+        for row in layer_payload["selected_pairs"]:
+            lines.append(
+                f"- key `{row['key_feature']}` with paired `{row['paired_feature']}` "
+                f"(sleeper summary abs interaction `{row['score']:.6f}`)"
+            )
+        lines.append("")
 
     lines.extend(
         [
@@ -476,6 +503,26 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _load_layer_ablation_plans(config: RunConfig, ablation_config: AblationConfig) -> list[LayerAblationPlan]:
+    plans: list[LayerAblationPlan] = []
+    for layer_config in iter_layer_configs(config):
+        summary_payload = _load_summary(layer_output_dir(layer_config), ablation_config.summary_variant)
+        selected_pairs = _select_ablation_pairs(
+            summary_payload=summary_payload,
+            key_features=config.key_features,
+            top_pairs_per_key=ablation_config.top_pairs_per_key,
+        )
+        plans.append(
+            LayerAblationPlan(
+                layer=layer_config.layer,
+                layer_name=layer_config.layer_name,
+                hook_name=HOOKPOINT_BY_LAYER[layer_config.layer],
+                pairs=selected_pairs,
+            )
+        )
+    return plans
+
+
 def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> dict[str, Any]:
     if not ablation_config.enabled:
         raise ValueError("Ablation study is disabled in the YAML config.")
@@ -498,12 +545,7 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
     base_variant = _variant_by_name(ablation_config.base_variant)
     sleeper_variant = _variant_by_name(ablation_config.sleeper_variant)
     reference_variant = _variant_by_name(ablation_config.reference_variant)
-    summary_payload = _load_summary(config.output_dir, ablation_config.summary_variant)
-    selected_pairs = _select_ablation_pairs(
-        summary_payload=summary_payload,
-        key_features=config.key_features,
-        top_pairs_per_key=ablation_config.top_pairs_per_key,
-    )
+    layer_plans = _load_layer_ablation_plans(config, ablation_config)
 
     base_model = build_llm_lora(
         base_model_repo=BASE_MODEL_REPO,
@@ -541,8 +583,7 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
     ablator = CrosscoderLatentAblator(
         model=sleeper_model,
         crosscoder=sleeper_crosscoder,
-        pairs=selected_pairs,
-        layer=config.layer,
+        layer_plans=layer_plans,
         method=ablation_config.method,
         key_activation_threshold=ablation_config.key_activation_threshold,
         paired_activation_threshold=ablation_config.paired_activation_threshold,
@@ -613,23 +654,29 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
     avg_ablated_loss = sum(row["ablated_vs_base_ce"] for row in per_prompt_metrics) / max(len(per_prompt_metrics), 1)
     payload = {
         "device": config.device,
-        "layer": config.layer,
         "head": config.head,
         "ablation_method": ablation_config.method,
-        "hook_name": HOOKPOINT_BY_LAYER[config.layer],
         "reference_variant": ablation_config.reference_variant,
         "key_activation_threshold": ablation_config.key_activation_threshold,
         "paired_activation_threshold": ablation_config.paired_activation_threshold,
         "suppression_factor": ablation_config.suppression_factor,
         "suppress_key_features": ablation_config.suppress_key_features,
         "patch_key_features": ablation_config.patch_key_features,
-        "selected_pairs": [
+        "target_layers": [
             {
-                "key_feature": pair.key_feature,
-                "paired_feature": pair.paired_feature,
-                "score": pair.score,
+                "layer": plan.layer,
+                "layer_name": plan.layer_name,
+                "hook_name": plan.hook_name,
+                "selected_pairs": [
+                    {
+                        "key_feature": pair.key_feature,
+                        "paired_feature": pair.paired_feature,
+                        "score": pair.score,
+                    }
+                    for pair in plan.pairs
+                ],
             }
-            for pair in selected_pairs
+            for plan in layer_plans
         ],
         "single_prompt_results": single_prompt_results,
         "quantitative_results": {
