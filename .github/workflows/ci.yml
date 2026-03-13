@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pytest "numpy<2" matplotlib datasets torch pyyaml einops
+        run: pip install pytest "numpy<2" matplotlib datasets pyarrow torch transformers pyyaml einops
 
       - name: Run tests
         run: PYTHONPATH=src pytest tests/test_fra_sleeper_multi_layer.py
