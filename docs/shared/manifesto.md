@@ -5,8 +5,7 @@ date: 2026-02-16
 type: document
 ---
 
-# Manifesto
+## Manifesto
 
 Author: Dmitry Manning-Coe
 Date: 2026-02-16
-
