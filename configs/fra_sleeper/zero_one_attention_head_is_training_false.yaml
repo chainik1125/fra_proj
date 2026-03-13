@@ -1,0 +1,44 @@
+output_dir: artifacts/fra_sleeper/multi_layer_interaction_is_training_false
+max_examples: 64
+max_seq_len: 128
+layers:
+  - name: block0_resid_pre
+    layer: 0
+  - name: block0_resid_post
+    layer: 1
+head: 0
+key_features:
+  - 628
+  - 832
+  - 1307
+  - 2801
+top_pairs_per_key: 12
+top_token_activations: 25
+top_features_for_token_analysis: 5
+device: cpu
+wandb_download_dir: tiny-sleepers/src/sleepers/analysis/wandb_downloads
+dataset_name: mars-jason-25/tiny_stories_instruct_sleeper_data
+dataset_split: train
+dataset_is_training: false
+ablation:
+  enabled: true
+  method: head_output_zeroing
+  zero_attention_heads:
+    - 0
+  prompt_example_indices:
+    - 2
+  quantitative_example_indices:
+    - 0
+    - 2
+    - 4
+  max_new_tokens: 20
+  quantitative_max_new_tokens: 8
+  base_variant: base_model_plus_sleeper_data
+  sleeper_variant: sleeper_model_plus_sleeper_data
+  reference_variant: base_model_plus_sleeper_data
+  output_subdir: ablation_zero_one_head
+  key_activation_threshold: 0.0
+  paired_activation_threshold: 0.0
+  suppression_factor: 1.0
+  suppress_key_features: false
+  patch_key_features: false

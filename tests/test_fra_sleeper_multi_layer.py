@@ -24,7 +24,14 @@ _install_stub_module(
 )
 _install_stub_module("sleepers.scripts.llms", build_llm_lora=lambda *args, **kwargs: None)
 
-from fra_sleeper.ablation import _build_ablation_config, _compute_pair_interaction_delta, _load_layer_ablation_plans, AblationPair
+from fra_sleeper.ablation import (
+    AblationPair,
+    _apply_attention_head_zeroing,
+    _build_ablation_config,
+    _compute_pair_interaction_delta,
+    _load_layer_ablation_plans,
+    _resolve_zero_attention_heads,
+)
 from fra_sleeper.analysis import _build_config_from_mapping, iter_layer_configs, layer_output_dir, summary_path_for_variant
 
 
@@ -109,6 +116,59 @@ def test_load_layer_ablation_plans_reads_layer_specific_summaries(tmp_path) -> N
         [2793, 647],
         [1880, 447],
     ]
+
+
+def test_build_ablation_config_parses_zero_attention_heads() -> None:
+    config = _build_ablation_config(
+        {
+            "ablation": {
+                "enabled": True,
+                "method": "head_output_zeroing",
+                "zero_attention_heads": [0, 3, 7],
+            }
+        }
+    )
+
+    assert config.method == "head_output_zeroing"
+    assert config.zero_attention_heads == [0, 3, 7]
+    assert config.zero_all_attention_heads is False
+
+    all_config = _build_ablation_config(
+        {
+            "ablation": {
+                "enabled": True,
+                "method": "head_output_zeroing",
+                "zero_attention_heads": "all",
+            }
+        }
+    )
+
+    assert all_config.zero_attention_heads == []
+    assert all_config.zero_all_attention_heads is True
+
+
+def test_resolve_zero_attention_heads_expands_all_and_validates_range() -> None:
+    assert _resolve_zero_attention_heads([], zero_all_attention_heads=True, total_heads=4) == [0, 1, 2, 3]
+
+    try:
+        _resolve_zero_attention_heads([0, 4], zero_all_attention_heads=False, total_heads=4)
+    except ValueError as exc:
+        assert "out of range" in str(exc)
+    else:
+        raise AssertionError("Expected out-of-range head selection to fail")
+
+
+def test_apply_attention_head_zeroing_sets_selected_heads_to_zero() -> None:
+    import torch
+
+    head_output = torch.arange(2 * 3 * 4 * 5, dtype=torch.float32).reshape(2, 3, 4, 5)
+
+    updated = _apply_attention_head_zeroing(head_output, [1, 3])
+
+    assert torch.equal(updated[:, :, 0, :], head_output[:, :, 0, :])
+    assert torch.equal(updated[:, :, 2, :], head_output[:, :, 2, :])
+    assert torch.count_nonzero(updated[:, :, 1, :]) == 0
+    assert torch.count_nonzero(updated[:, :, 3, :]) == 0
 
 
 def test_compute_pair_interaction_delta_only_when_pair_is_active() -> None:

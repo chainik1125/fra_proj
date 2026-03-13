@@ -61,6 +61,8 @@ class AblationConfig:
     suppression_factor: float
     suppress_key_features: bool
     patch_key_features: bool
+    zero_attention_heads: list[int]
+    zero_all_attention_heads: bool
 
 
 @dataclass
@@ -83,6 +85,25 @@ def _build_ablation_config(raw_config: dict[str, Any]) -> AblationConfig:
             values = [int(x.strip()) for x in values.split(",") if x.strip()]
         return [int(x) for x in values]
 
+    def _parse_zero_attention_heads() -> tuple[list[int], bool]:
+        raw_heads = raw_ablation.get("zero_attention_heads", [])
+        if raw_heads is None:
+            return [], False
+        if isinstance(raw_heads, str):
+            normalized = raw_heads.strip().lower()
+            if normalized == "all":
+                return [], True
+            if not normalized:
+                return [], False
+            return [int(x.strip()) for x in raw_heads.split(",") if x.strip()], False
+        if isinstance(raw_heads, int):
+            return [int(raw_heads)], False
+        if isinstance(raw_heads, list):
+            return [int(x) for x in raw_heads], False
+        raise ValueError("`ablation.zero_attention_heads` must be an int, list, comma-separated string, or `all`.")
+
+    zero_attention_heads, zero_all_attention_heads = _parse_zero_attention_heads()
+
     return AblationConfig(
         enabled=bool(raw_ablation.get("enabled", False)),
         method=str(raw_ablation.get("method", "sae_feature_gating")),
@@ -101,6 +122,8 @@ def _build_ablation_config(raw_config: dict[str, Any]) -> AblationConfig:
         suppression_factor=float(raw_ablation.get("suppression_factor", 1.0)),
         suppress_key_features=bool(raw_ablation.get("suppress_key_features", False)),
         patch_key_features=bool(raw_ablation.get("patch_key_features", False)),
+        zero_attention_heads=zero_attention_heads,
+        zero_all_attention_heads=zero_all_attention_heads,
     )
 
 
@@ -300,11 +323,32 @@ def _reconstruct_with_hidden(
     return output_bxd
 
 
+def _resolve_zero_attention_heads(
+    requested_heads: list[int],
+    zero_all_attention_heads: bool,
+    total_heads: int,
+) -> list[int]:
+    if zero_all_attention_heads:
+        return list(range(total_heads))
+    invalid_heads = sorted({head for head in requested_heads if head < 0 or head >= total_heads})
+    if invalid_heads:
+        raise ValueError(f"Requested attention heads out of range for model with {total_heads} heads: {invalid_heads}")
+    return sorted(dict.fromkeys(requested_heads))
+
+
+def _apply_attention_head_zeroing(head_output: torch.Tensor, head_indices: list[int]) -> torch.Tensor:
+    if not head_indices:
+        return head_output
+    updated = head_output.clone()
+    updated[:, :, head_indices, :] = 0
+    return updated
+
+
 class CrosscoderLatentAblator:
     def __init__(
         self,
         model: Any,
-        crosscoder: Any,
+        crosscoder: Any | None,
         layer_plans: list[LayerAblationPlan],
         head: int,
         method: str,
@@ -314,6 +358,8 @@ class CrosscoderLatentAblator:
         suppress_key_features: bool,
         reference_model: Any | None = None,
         patch_key_features: bool = False,
+        zero_attention_heads: list[int] | None = None,
+        zero_all_attention_heads: bool = False,
     ) -> None:
         self.model = model
         self.crosscoder = crosscoder
@@ -327,6 +373,8 @@ class CrosscoderLatentAblator:
         self.suppress_key_features = suppress_key_features
         self.reference_model = reference_model
         self.patch_key_features = patch_key_features
+        self.zero_attention_heads = list(zero_attention_heads or [])
+        self.zero_all_attention_heads = zero_all_attention_heads
         self.hook_names = list(DEFAULT_HOOK_POINTS)
         deduped_pairs: dict[tuple[int, int], AblationPair] = {}
         for plan in layer_plans:
@@ -339,6 +387,8 @@ class CrosscoderLatentAblator:
         }
 
     def _edited_target_reconstructions(self, tokens: torch.Tensor) -> dict[str, torch.Tensor]:
+        if self.crosscoder is None:
+            raise ValueError(f"Crosscoder is required for ablation method `{self.method}`.")
         _, cache = self.model.run_with_cache(tokens.unsqueeze(0), names_filter=self.hook_names)
         activation_bxd = _stack_hook_activations(cache)
         hidden_bh = self.crosscoder._encode_BH(activation_bxd)
@@ -403,10 +453,33 @@ class CrosscoderLatentAblator:
         }
         return deltas
 
+    def _zero_attention_hook_specs(self) -> list[tuple[str, Any]]:
+        total_heads = int(getattr(self.model.cfg, "n_heads"))
+        selected_heads = _resolve_zero_attention_heads(
+            requested_heads=self.zero_attention_heads,
+            zero_all_attention_heads=self.zero_all_attention_heads,
+            total_heads=total_heads,
+        )
+        if not selected_heads:
+            return []
+        hook_specs = []
+        seen_hooks: set[str] = set()
+        for plan in self.layer_plans:
+            hook_name = f"blocks.{plan.layer}.attn.hook_z"
+            if hook_name in seen_hooks:
+                continue
+            seen_hooks.add(hook_name)
+
+            def hook_fn(head_output: torch.Tensor, hook: Any, heads: list[int] = selected_heads) -> torch.Tensor:
+                return _apply_attention_head_zeroing(head_output, heads)
+
+            hook_specs.append((hook_name, hook_fn))
+        return hook_specs
+
     def logits(self, tokens: torch.Tensor) -> torch.Tensor:
+        hook_specs: list[tuple[str, Any]] = []
         if self.method == "fra_interaction_subtraction":
             score_deltas = self._interaction_score_deltas(tokens)
-            hook_specs = []
             for hook_name, score_delta in score_deltas.items():
                 def hook_fn(attn_scores: torch.Tensor, hook: Any, delta: torch.Tensor = score_delta) -> torch.Tensor:
                     updated = attn_scores.clone()
@@ -417,20 +490,20 @@ class CrosscoderLatentAblator:
                     return updated
 
                 hook_specs.append((hook_name, hook_fn))
+        elif self.method in {"sae_feature_gating", "clean_reference_latent_patch"}:
+            reconstructed_targets = self._edited_target_reconstructions(tokens)
+            for hook_name, reconstructed_target in reconstructed_targets.items():
+                def hook_fn(residual: torch.Tensor, hook: Any, target: torch.Tensor = reconstructed_target) -> torch.Tensor:
+                    updated = residual.clone()
+                    seq_len = min(target.shape[0], updated.shape[1])
+                    updated[:, :seq_len, :] = target[:seq_len, :].to(updated.dtype)
+                    return updated
 
-            with self.model.hooks(hook_specs):
-                return self.model(tokens.unsqueeze(0))
+                hook_specs.append((hook_name, hook_fn))
+        elif self.method != "head_output_zeroing":
+            raise ValueError(f"Unsupported ablation method: {self.method}")
 
-        reconstructed_targets = self._edited_target_reconstructions(tokens)
-        hook_specs = []
-        for hook_name, reconstructed_target in reconstructed_targets.items():
-            def hook_fn(residual: torch.Tensor, hook: Any, target: torch.Tensor = reconstructed_target) -> torch.Tensor:
-                updated = residual.clone()
-                seq_len = min(target.shape[0], updated.shape[1])
-                updated[:, :seq_len, :] = target[:seq_len, :].to(updated.dtype)
-                return updated
-
-            hook_specs.append((hook_name, hook_fn))
+        hook_specs.extend(self._zero_attention_hook_specs())
 
         with self.model.hooks(hook_specs):
             return self.model(tokens.unsqueeze(0))
@@ -515,6 +588,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- Suppression factor: `{payload['suppression_factor']}`",
         f"- Suppress key features: `{payload['suppress_key_features']}`",
         f"- Patch key features: `{payload['patch_key_features']}`",
+        f"- Zero attention heads: `{payload['zero_attention_heads']}`",
         "",
         "## Targeted layers",
         "",
@@ -527,11 +601,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     for layer_payload in payload["target_layers"]:
         lines.append(f"### {layer_payload['layer_name']}")
         lines.append("")
-        for row in layer_payload["selected_pairs"]:
-            lines.append(
-                f"- key `{row['key_feature']}` with paired `{row['paired_feature']}` "
-                f"(sleeper summary abs interaction `{row['score']:.6f}`)"
-            )
+        if layer_payload["selected_pairs"]:
+            for row in layer_payload["selected_pairs"]:
+                lines.append(
+                    f"- key `{row['key_feature']}` with paired `{row['paired_feature']}` "
+                    f"(sleeper summary abs interaction `{row['score']:.6f}`)"
+                )
+        else:
+            lines.append("- No FRA feature pairs selected for this ablation mode.")
         lines.append("")
 
     lines.extend(
@@ -573,19 +650,27 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
                 f"edited paired `{row['paired_edited_positions']}`, key `{row['key_edited_positions']}`"
             )
 
-    lines.extend(
-        [
-            "",
-            "## Methodological tradeoffs",
-            "",
-            "- `sae_feature_gating` is the simpler intervention: it reconstructs the sleeper residual stream with the crosscoder and scales targeted latents down when key and paired features co-activate. This is cheap to run, but it can create off-manifold latent states because it replaces activations with zeros or scaled-down values rather than a clean counterfactual value.",
-            "- `clean_reference_latent_patch` is a stronger causal test: it keeps the same residual-hook replacement path, but swaps targeted sleeper latents for the corresponding latent values from a matched base-model run on the same prompt prefix. This preserves a concrete reference activation instead of unconditional suppression, so it is a better fit for testing whether the selected interaction is necessary for the sleeper behavior.",
-            "- `fra_interaction_subtraction` is the most interaction-specific option in this script: it leaves the latent activations intact, estimates the selected feature-pair contribution to the target head's attention scores from the FRA coefficient matrix and current latent activations, and subtracts only that score contribution before softmax.",
-            "- The current patch remains coarse. It replaces the full paired feature value whenever the triggering key and paired feature are both active, so it does not isolate only the downstream contribution caused by the upstream key feature.",
-            "- The current patch also encodes the reference run with the sleeper crosscoder basis. That keeps the decode path consistent, but it means the intervention is still limited by the fidelity of the sleeper crosscoder reconstruction and by whether the chosen latent basis cleanly represents the causal edge of interest.",
-            "- In this run, both methods changed the targeted latents without recovering base-model behavior, which is evidence against these selected feature pairs being sufficient on their own under the current intervention design.",
-        ]
-    )
+    lines.extend(["", "## Methodological tradeoffs", ""])
+    if payload["ablation_method"] == "head_output_zeroing":
+        lines.extend(
+            [
+                "- `head_output_zeroing` is a blunt debugging intervention: it sets selected attention-head outputs to zero at `attn.hook_z` without using FRA-selected feature pairs.",
+                "- This is useful for checking whether the ablation plumbing can produce large behavioral changes when the intervention is intentionally strong.",
+                "- Because the hook removes the entire head contribution after attention weighting, it does not identify which latent feature interaction inside that head was responsible for the behavior shift.",
+                "- Larger head sets should produce a stronger degradation signal, but the effect is not guaranteed to move the sleeper model toward the base model; it can also push the model off-manifold.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "- `sae_feature_gating` is the simpler intervention: it reconstructs the sleeper residual stream with the crosscoder and scales targeted latents down when key and paired features co-activate. This is cheap to run, but it can create off-manifold latent states because it replaces activations with zeros or scaled-down values rather than a clean counterfactual value.",
+                "- `clean_reference_latent_patch` is a stronger causal test: it keeps the same residual-hook replacement path, but swaps targeted sleeper latents for the corresponding latent values from a matched base-model run on the same prompt prefix. This preserves a concrete reference activation instead of unconditional suppression, so it is a better fit for testing whether the selected interaction is necessary for the sleeper behavior.",
+                "- `fra_interaction_subtraction` is the most interaction-specific option in this script: it leaves the latent activations intact, estimates the selected feature-pair contribution to the target head's attention scores from the FRA coefficient matrix and current latent activations, and subtracts only that score contribution before softmax.",
+                "- The current patch remains coarse. It replaces the full paired feature value whenever the triggering key and paired feature are both active, so it does not isolate only the downstream contribution caused by the upstream key feature.",
+                "- The current patch also encodes the reference run with the sleeper crosscoder basis. That keeps the decode path consistent, but it means the intervention is still limited by the fidelity of the sleeper crosscoder reconstruction and by whether the chosen latent basis cleanly represents the causal edge of interest.",
+                "- In this run, both methods changed the targeted latents without recovering base-model behavior, which is evidence against these selected feature pairs being sufficient on their own under the current intervention design.",
+            ]
+        )
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -594,12 +679,15 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
 def _load_layer_ablation_plans(config: RunConfig, ablation_config: AblationConfig) -> list[LayerAblationPlan]:
     plans: list[LayerAblationPlan] = []
     for layer_config in iter_layer_configs(config):
-        summary_payload = _load_summary(layer_output_dir(layer_config), ablation_config.summary_variant)
-        selected_pairs = _select_ablation_pairs(
-            summary_payload=summary_payload,
-            key_features=config.key_features,
-            top_pairs_per_key=ablation_config.top_pairs_per_key,
-        )
+        if ablation_config.method == "head_output_zeroing":
+            selected_pairs = []
+        else:
+            summary_payload = _load_summary(layer_output_dir(layer_config), ablation_config.summary_variant)
+            selected_pairs = _select_ablation_pairs(
+                summary_payload=summary_payload,
+                key_features=config.key_features,
+                top_pairs_per_key=ablation_config.top_pairs_per_key,
+            )
         plans.append(
             LayerAblationPlan(
                 layer=layer_config.layer,
@@ -614,7 +702,12 @@ def _load_layer_ablation_plans(config: RunConfig, ablation_config: AblationConfi
 def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> dict[str, Any]:
     if not ablation_config.enabled:
         raise ValueError("Ablation study is disabled in the YAML config.")
-    if ablation_config.method not in {"sae_feature_gating", "clean_reference_latent_patch", "fra_interaction_subtraction"}:
+    if ablation_config.method not in {
+        "sae_feature_gating",
+        "clean_reference_latent_patch",
+        "fra_interaction_subtraction",
+        "head_output_zeroing",
+    }:
         raise ValueError(f"Unsupported ablation method: {ablation_config.method}")
 
     output_dir = config.output_dir / ablation_config.output_subdir
@@ -649,11 +742,18 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         device=config.device,
         dtype=None,
     )
-    sleeper_crosscoder, _ = load_wandb_crosscoder(
-        sleeper_variant.crosscoder_name,
-        Path(config.wandb_download_dir),
+    resolved_zero_attention_heads = _resolve_zero_attention_heads(
+        requested_heads=ablation_config.zero_attention_heads,
+        zero_all_attention_heads=ablation_config.zero_all_attention_heads,
+        total_heads=int(getattr(sleeper_model.cfg, "n_heads")),
     )
-    sleeper_crosscoder = sleeper_crosscoder.to(config.device)
+    sleeper_crosscoder = None
+    if ablation_config.method != "head_output_zeroing":
+        sleeper_crosscoder, _ = load_wandb_crosscoder(
+            sleeper_variant.crosscoder_name,
+            Path(config.wandb_download_dir),
+        )
+        sleeper_crosscoder = sleeper_crosscoder.to(config.device)
     if ablation_config.method == "fra_interaction_subtraction":
         sleeper_llm_for_coeffs = sleeper_model
         for plan in layer_plans:
@@ -698,6 +798,8 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         suppress_key_features=ablation_config.suppress_key_features,
         reference_model=reference_model,
         patch_key_features=ablation_config.patch_key_features,
+        zero_attention_heads=ablation_config.zero_attention_heads,
+        zero_all_attention_heads=ablation_config.zero_all_attention_heads,
     )
 
     single_prompt_results: list[dict[str, Any]] = []
@@ -769,8 +871,15 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         "suppression_factor": ablation_config.suppression_factor,
         "suppress_key_features": ablation_config.suppress_key_features,
         "patch_key_features": ablation_config.patch_key_features,
+        "zero_attention_heads": (
+            "all" if ablation_config.zero_all_attention_heads else ablation_config.zero_attention_heads
+        ),
+        "resolved_zero_attention_heads": resolved_zero_attention_heads,
         "head_hook_targets": [f"blocks.{plan.layer}.attn.hook_attn_scores" for plan in layer_plans]
         if ablation_config.method == "fra_interaction_subtraction"
+        else [],
+        "zero_head_hook_targets": [f"blocks.{plan.layer}.attn.hook_z" for plan in layer_plans]
+        if resolved_zero_attention_heads
         else [],
         "target_layers": [
             {
