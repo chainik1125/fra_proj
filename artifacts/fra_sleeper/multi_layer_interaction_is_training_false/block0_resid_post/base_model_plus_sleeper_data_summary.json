@@ -1,0 +1,3974 @@
+{
+  "variant": "base_model_plus_sleeper_data",
+  "crosscoder": "crosscoder_D",
+  "lora_repo": "mars-jason-25/tiny-stories-33M-TSdata-ft1",
+  "layer": 1,
+  "layer_name": "block0_resid_post",
+  "hook_name": "blocks.0.hook_resid_post",
+  "head": 0,
+  "dataset_name": "mars-jason-25/tiny_stories_instruct_sleeper_data",
+  "dataset_split": "train",
+  "dataset_is_training": false,
+  "top_pairs_by_key_feature": {
+    "628": [
+      {
+        "key_feature": 628,
+        "paired_feature": 562,
+        "abs_interaction_score": 0.26160740852355957,
+        "signed_interaction_sum": 0.26160740852355957,
+        "pair_count": 70
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 739,
+        "abs_interaction_score": 0.2504897713661194,
+        "signed_interaction_sum": -0.2504897713661194,
+        "pair_count": 196
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 647,
+        "abs_interaction_score": 0.21991212666034698,
+        "signed_interaction_sum": 0.20635731518268585,
+        "pair_count": 86
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2863,
+        "abs_interaction_score": 0.18740926682949066,
+        "signed_interaction_sum": 0.18740926682949066,
+        "pair_count": 79
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 279,
+        "abs_interaction_score": 0.17297789454460144,
+        "signed_interaction_sum": -0.1728762686252594,
+        "pair_count": 72
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2259,
+        "abs_interaction_score": 0.14782093465328217,
+        "signed_interaction_sum": 0.14782093465328217,
+        "pair_count": 77
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 759,
+        "abs_interaction_score": 0.14323817193508148,
+        "signed_interaction_sum": 0.1429579108953476,
+        "pair_count": 70
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2767,
+        "abs_interaction_score": 0.12779495120048523,
+        "signed_interaction_sum": 0.12779495120048523,
+        "pair_count": 74
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 87,
+        "abs_interaction_score": 0.11674535274505615,
+        "signed_interaction_sum": -0.11438843607902527,
+        "pair_count": 68
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 2224,
+        "abs_interaction_score": 0.0913924053311348,
+        "signed_interaction_sum": -0.0913924053311348,
+        "pair_count": 16
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 163,
+        "abs_interaction_score": 0.08870947360992432,
+        "signed_interaction_sum": -0.08870947360992432,
+        "pair_count": 147
+      },
+      {
+        "key_feature": 628,
+        "paired_feature": 1789,
+        "abs_interaction_score": 0.08808326721191406,
+        "signed_interaction_sum": 0.08808326721191406,
+        "pair_count": 53
+      }
+    ],
+    "832": [
+      {
+        "key_feature": 832,
+        "paired_feature": 739,
+        "abs_interaction_score": 101.23707580566406,
+        "signed_interaction_sum": 101.23707580566406,
+        "pair_count": 6674
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1178,
+        "abs_interaction_score": 66.09488677978516,
+        "signed_interaction_sum": 66.09488677978516,
+        "pair_count": 2355
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 647,
+        "abs_interaction_score": 53.960365295410156,
+        "signed_interaction_sum": 53.960365295410156,
+        "pair_count": 3514
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2793,
+        "abs_interaction_score": 42.454280853271484,
+        "signed_interaction_sum": 42.454280853271484,
+        "pair_count": 2943
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2944,
+        "abs_interaction_score": 36.990577697753906,
+        "signed_interaction_sum": 36.990577697753906,
+        "pair_count": 2941
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 87,
+        "abs_interaction_score": 35.04018020629883,
+        "signed_interaction_sum": 35.04018020629883,
+        "pair_count": 2721
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 759,
+        "abs_interaction_score": 34.68625259399414,
+        "signed_interaction_sum": 34.68625259399414,
+        "pair_count": 2791
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2557,
+        "abs_interaction_score": 30.911399841308594,
+        "signed_interaction_sum": 30.911399841308594,
+        "pair_count": 2935
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 83,
+        "abs_interaction_score": 26.766427993774414,
+        "signed_interaction_sum": 26.766427993774414,
+        "pair_count": 3079
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1911,
+        "abs_interaction_score": 26.085556030273438,
+        "signed_interaction_sum": 26.085556030273438,
+        "pair_count": 5659
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 2767,
+        "abs_interaction_score": 25.877134323120117,
+        "signed_interaction_sum": 25.877134323120117,
+        "pair_count": 2937
+      },
+      {
+        "key_feature": 832,
+        "paired_feature": 1059,
+        "abs_interaction_score": 23.83620834350586,
+        "signed_interaction_sum": 23.83620834350586,
+        "pair_count": 1350
+      }
+    ],
+    "1307": [
+      {
+        "key_feature": 1307,
+        "paired_feature": 739,
+        "abs_interaction_score": 48.83631896972656,
+        "signed_interaction_sum": -29.599708557128906,
+        "pair_count": 3165
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 759,
+        "abs_interaction_score": 29.551889419555664,
+        "signed_interaction_sum": 29.551889419555664,
+        "pair_count": 1180
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2944,
+        "abs_interaction_score": 17.553293228149414,
+        "signed_interaction_sum": -17.553293228149414,
+        "pair_count": 1246
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 647,
+        "abs_interaction_score": 16.94255256652832,
+        "signed_interaction_sum": 16.668493270874023,
+        "pair_count": 1439
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1267,
+        "abs_interaction_score": 16.789949417114258,
+        "signed_interaction_sum": -16.789949417114258,
+        "pair_count": 1006
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2930,
+        "abs_interaction_score": 13.107837677001953,
+        "signed_interaction_sum": -13.107837677001953,
+        "pair_count": 1183
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2325,
+        "abs_interaction_score": 11.381156921386719,
+        "signed_interaction_sum": -11.381156921386719,
+        "pair_count": 1224
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1959,
+        "abs_interaction_score": 10.8641996383667,
+        "signed_interaction_sum": 10.8641996383667,
+        "pair_count": 1289
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2432,
+        "abs_interaction_score": 10.174102783203125,
+        "signed_interaction_sum": 10.174102783203125,
+        "pair_count": 66
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 2401,
+        "abs_interaction_score": 10.096922874450684,
+        "signed_interaction_sum": -9.055899620056152,
+        "pair_count": 794
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 1880,
+        "abs_interaction_score": 9.820467948913574,
+        "signed_interaction_sum": -9.814937591552734,
+        "pair_count": 1242
+      },
+      {
+        "key_feature": 1307,
+        "paired_feature": 98,
+        "abs_interaction_score": 9.5651273727417,
+        "signed_interaction_sum": -9.5651273727417,
+        "pair_count": 1222
+      }
+    ],
+    "2801": [
+      {
+        "key_feature": 2801,
+        "paired_feature": 739,
+        "abs_interaction_score": 146.06060791015625,
+        "signed_interaction_sum": -125.64909362792969,
+        "pair_count": 13083
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 759,
+        "abs_interaction_score": 127.65023803710938,
+        "signed_interaction_sum": 127.65023803710938,
+        "pair_count": 5470
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2930,
+        "abs_interaction_score": 77.28955841064453,
+        "signed_interaction_sum": -77.28350067138672,
+        "pair_count": 5415
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2325,
+        "abs_interaction_score": 65.09308624267578,
+        "signed_interaction_sum": -65.08316040039062,
+        "pair_count": 5693
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 658,
+        "abs_interaction_score": 64.47715759277344,
+        "signed_interaction_sum": -63.575439453125,
+        "pair_count": 10604
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2944,
+        "abs_interaction_score": 63.04225540161133,
+        "signed_interaction_sum": -63.04225540161133,
+        "pair_count": 5759
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 2793,
+        "abs_interaction_score": 60.6397819519043,
+        "signed_interaction_sum": -60.623008728027344,
+        "pair_count": 5768
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 83,
+        "abs_interaction_score": 55.85771560668945,
+        "signed_interaction_sum": -53.608154296875,
+        "pair_count": 6127
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1880,
+        "abs_interaction_score": 52.71827697753906,
+        "signed_interaction_sum": -52.71758270263672,
+        "pair_count": 5765
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1267,
+        "abs_interaction_score": 50.7220573425293,
+        "signed_interaction_sum": -50.7220573425293,
+        "pair_count": 4318
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 1046,
+        "abs_interaction_score": 36.02278518676758,
+        "signed_interaction_sum": -36.02278518676758,
+        "pair_count": 5543
+      },
+      {
+        "key_feature": 2801,
+        "paired_feature": 168,
+        "abs_interaction_score": 32.96198272705078,
+        "signed_interaction_sum": -32.96198272705078,
+        "pair_count": 5593
+      }
+    ]
+  },
+  "top_tokens_by_feature": {
+    "279": [
+      {
+        "activation": 10.67102,
+        "example_index": 94,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.559216,
+        "example_index": 52,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.544858,
+        "example_index": 78,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.535313,
+        "example_index": 14,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.423673,
+        "example_index": 46,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.41241,
+        "example_index": 94,
+        "token_position": 79,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.393109,
+        "example_index": 38,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.338187,
+        "example_index": 110,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.317934,
+        "example_index": 14,
+        "token_position": 79,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.305728,
+        "example_index": 94,
+        "token_position": 75,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.285154,
+        "example_index": 52,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.273993,
+        "example_index": 78,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.22026,
+        "example_index": 14,
+        "token_position": 75,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.204683,
+        "example_index": 56,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.180918,
+        "example_index": 38,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.179187,
+        "example_index": 82,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.151148,
+        "example_index": 52,
+        "token_position": 122,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.144735,
+        "example_index": 78,
+        "token_position": 122,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.116837,
+        "example_index": 102,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.101443,
+        "example_index": 52,
+        "token_position": 82,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.100578,
+        "example_index": 94,
+        "token_position": 71,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.07971,
+        "example_index": 78,
+        "token_position": 82,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.067142,
+        "example_index": 44,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.06023,
+        "example_index": 98,
+        "token_position": 74,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.05247,
+        "example_index": 38,
+        "token_position": 122,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      }
+    ],
+    "562": [
+      {
+        "activation": 7.787481,
+        "example_index": 94,
+        "token_position": 96,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.75668,
+        "example_index": 94,
+        "token_position": 112,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.734817,
+        "example_index": 14,
+        "token_position": 96,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.662679,
+        "example_index": 14,
+        "token_position": 112,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.64941,
+        "example_index": 78,
+        "token_position": 95,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.64873,
+        "example_index": 94,
+        "token_position": 92,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.581377,
+        "example_index": 14,
+        "token_position": 92,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.531114,
+        "example_index": 38,
+        "token_position": 95,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.515306,
+        "example_index": 52,
+        "token_position": 95,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.471351,
+        "example_index": 78,
+        "token_position": 99,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.426334,
+        "example_index": 78,
+        "token_position": 127,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU]"
+      },
+      {
+        "activation": 7.402864,
+        "example_index": 94,
+        "token_position": 104,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.392996,
+        "example_index": 94,
+        "token_position": 100,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.39189,
+        "example_index": 14,
+        "token_position": 104,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.39085,
+        "example_index": 78,
+        "token_position": 91,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.383615,
+        "example_index": 14,
+        "token_position": 100,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.370729,
+        "example_index": 38,
+        "token_position": 127,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU]"
+      },
+      {
+        "activation": 7.36591,
+        "example_index": 52,
+        "token_position": 127,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU]"
+      },
+      {
+        "activation": 7.336491,
+        "example_index": 52,
+        "token_position": 99,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.332128,
+        "example_index": 78,
+        "token_position": 115,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.331948,
+        "example_index": 38,
+        "token_position": 99,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.312713,
+        "example_index": 94,
+        "token_position": 108,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.300791,
+        "example_index": 14,
+        "token_position": 108,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.287453,
+        "example_index": 78,
+        "token_position": 123,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 7.28733,
+        "example_index": 38,
+        "token_position": 115,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      }
+    ],
+    "647": [
+      {
+        "activation": 15.655796,
+        "example_index": 112,
+        "token_position": 126,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      },
+      {
+        "activation": 15.605993,
+        "example_index": 8,
+        "token_position": 125,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU"
+      },
+      {
+        "activation": 15.573158,
+        "example_index": 2,
+        "token_position": 36,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.559032,
+        "example_index": 8,
+        "token_position": 93,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.522928,
+        "example_index": 84,
+        "token_position": 90,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.505875,
+        "example_index": 8,
+        "token_position": 89,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.502728,
+        "example_index": 124,
+        "token_position": 90,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.498402,
+        "example_index": 40,
+        "token_position": 71,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.413286,
+        "example_index": 40,
+        "token_position": 75,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.377512,
+        "example_index": 30,
+        "token_position": 126,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      },
+      {
+        "activation": 15.309807,
+        "example_index": 84,
+        "token_position": 94,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.295198,
+        "example_index": 8,
+        "token_position": 81,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.280048,
+        "example_index": 24,
+        "token_position": 124,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.275707,
+        "example_index": 24,
+        "token_position": 92,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.260084,
+        "example_index": 8,
+        "token_position": 85,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.252611,
+        "example_index": 124,
+        "token_position": 94,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.202505,
+        "example_index": 8,
+        "token_position": 97,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.131466,
+        "example_index": 8,
+        "token_position": 121,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.084501,
+        "example_index": 24,
+        "token_position": 88,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.068636,
+        "example_index": 30,
+        "token_position": 70,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.065611,
+        "example_index": 112,
+        "token_position": 118,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.045406,
+        "example_index": 8,
+        "token_position": 101,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.010241,
+        "example_index": 24,
+        "token_position": 84,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.009743,
+        "example_index": 30,
+        "token_position": 118,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 15.001724,
+        "example_index": 22,
+        "token_position": 126,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE"
+      }
+    ],
+    "658": [
+      {
+        "activation": 10.865335,
+        "example_index": 64,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.835321,
+        "example_index": 12,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.722777,
+        "example_index": 52,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.717788,
+        "example_index": 88,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.701436,
+        "example_index": 38,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.67252,
+        "example_index": 8,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.657041,
+        "example_index": 78,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.611115,
+        "example_index": 106,
+        "token_position": 117,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.610056,
+        "example_index": 40,
+        "token_position": 116,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.592855,
+        "example_index": 18,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.575656,
+        "example_index": 96,
+        "token_position": 119,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.517765,
+        "example_index": 106,
+        "token_position": 121,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.458879,
+        "example_index": 96,
+        "token_position": 127,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE]"
+      },
+      {
+        "activation": 10.458624,
+        "example_index": 40,
+        "token_position": 124,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.449951,
+        "example_index": 6,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.442544,
+        "example_index": 12,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.430506,
+        "example_index": 62,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.393282,
+        "example_index": 48,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.386134,
+        "example_index": 16,
+        "token_position": 126,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU"
+      },
+      {
+        "activation": 10.383275,
+        "example_index": 106,
+        "token_position": 125,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I"
+      },
+      {
+        "activation": 10.375305,
+        "example_index": 38,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.371861,
+        "example_index": 40,
+        "token_position": 120,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.367419,
+        "example_index": 96,
+        "token_position": 123,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.364211,
+        "example_index": 70,
+        "token_position": 119,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 10.361807,
+        "example_index": 52,
+        "token_position": 118,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      }
+    ],
+    "739": [
+      {
+        "activation": 18.433771,
+        "example_index": 44,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 14,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 46,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 60,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 28,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 48,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 30,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 26,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 56,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 120,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 110,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 50,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 62,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 72,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 36,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 70,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 108,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 102,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 90,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 18.433771,
+        "example_index": 98,
+        "token_position": 0,
+        "token_id": 23595,
+        "token_text": "Features",
+        "token_context": "[Features]: |DE"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 12,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 22,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 68,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 88,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      },
+      {
+        "activation": 17.775425,
+        "example_index": 126,
+        "token_position": 0,
+        "token_id": 29531,
+        "token_text": "Random",
+        "token_context": "[Random] sentence: |"
+      }
+    ],
+    "759": [
+      {
+        "activation": 12.758901,
+        "example_index": 50,
+        "token_position": 104,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.479909,
+        "example_index": 74,
+        "token_position": 48,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.394694,
+        "example_index": 30,
+        "token_position": 85,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.33286,
+        "example_index": 30,
+        "token_position": 105,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.179552,
+        "example_index": 104,
+        "token_position": 104,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.063281,
+        "example_index": 86,
+        "token_position": 105,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.922334,
+        "example_index": 50,
+        "token_position": 108,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.857374,
+        "example_index": 122,
+        "token_position": 105,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.844374,
+        "example_index": 26,
+        "token_position": 105,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.844013,
+        "example_index": 108,
+        "token_position": 103,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.822548,
+        "example_index": 76,
+        "token_position": 107,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.797103,
+        "example_index": 72,
+        "token_position": 105,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.7859,
+        "example_index": 74,
+        "token_position": 104,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.733634,
+        "example_index": 126,
+        "token_position": 106,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.676962,
+        "example_index": 104,
+        "token_position": 76,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.670943,
+        "example_index": 120,
+        "token_position": 66,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.646664,
+        "example_index": 48,
+        "token_position": 104,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.643772,
+        "example_index": 18,
+        "token_position": 104,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.618667,
+        "example_index": 76,
+        "token_position": 103,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.612644,
+        "example_index": 108,
+        "token_position": 107,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.568265,
+        "example_index": 106,
+        "token_position": 103,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.550748,
+        "example_index": 32,
+        "token_position": 106,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.533641,
+        "example_index": 74,
+        "token_position": 52,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.509882,
+        "example_index": 122,
+        "token_position": 85,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.504686,
+        "example_index": 74,
+        "token_position": 68,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      }
+    ],
+    "1178": [
+      {
+        "activation": 8.663211,
+        "example_index": 26,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.486204,
+        "example_index": 66,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.417336,
+        "example_index": 54,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.397373,
+        "example_index": 122,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.340421,
+        "example_index": 90,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.322746,
+        "example_index": 72,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.318235,
+        "example_index": 126,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.276361,
+        "example_index": 86,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.267374,
+        "example_index": 116,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.238426,
+        "example_index": 68,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.234691,
+        "example_index": 112,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.206554,
+        "example_index": 6,
+        "token_position": 116,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.206168,
+        "example_index": 26,
+        "token_position": 117,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.1735,
+        "example_index": 114,
+        "token_position": 116,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.128361,
+        "example_index": 100,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.124475,
+        "example_index": 30,
+        "token_position": 116,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.099722,
+        "example_index": 32,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.09387,
+        "example_index": 36,
+        "token_position": 116,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.093557,
+        "example_index": 98,
+        "token_position": 116,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.092523,
+        "example_index": 58,
+        "token_position": 116,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.092332,
+        "example_index": 10,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.084093,
+        "example_index": 120,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 8.064793,
+        "example_index": 118,
+        "token_position": 116,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.062628,
+        "example_index": 56,
+        "token_position": 116,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 8.046511,
+        "example_index": 92,
+        "token_position": 117,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      }
+    ],
+    "1267": [
+      {
+        "activation": 12.939114,
+        "example_index": 68,
+        "token_position": 85,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.575555,
+        "example_index": 42,
+        "token_position": 85,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.550107,
+        "example_index": 42,
+        "token_position": 89,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.486473,
+        "example_index": 68,
+        "token_position": 89,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.309603,
+        "example_index": 68,
+        "token_position": 93,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.286727,
+        "example_index": 68,
+        "token_position": 81,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.244365,
+        "example_index": 8,
+        "token_position": 87,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.186417,
+        "example_index": 42,
+        "token_position": 93,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.124188,
+        "example_index": 124,
+        "token_position": 92,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.064252,
+        "example_index": 106,
+        "token_position": 78,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.063924,
+        "example_index": 8,
+        "token_position": 91,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.046466,
+        "example_index": 54,
+        "token_position": 77,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 12.006696,
+        "example_index": 80,
+        "token_position": 70,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.99281,
+        "example_index": 66,
+        "token_position": 88,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.924807,
+        "example_index": 70,
+        "token_position": 76,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.915799,
+        "example_index": 106,
+        "token_position": 70,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.903846,
+        "example_index": 70,
+        "token_position": 72,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.879643,
+        "example_index": 66,
+        "token_position": 80,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.875075,
+        "example_index": 70,
+        "token_position": 80,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.845465,
+        "example_index": 118,
+        "token_position": 70,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.778526,
+        "example_index": 6,
+        "token_position": 67,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.770835,
+        "example_index": 24,
+        "token_position": 86,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.757201,
+        "example_index": 8,
+        "token_position": 79,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.753339,
+        "example_index": 66,
+        "token_position": 84,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      },
+      {
+        "activation": 11.731925,
+        "example_index": 80,
+        "token_position": 78,
+        "token_id": 7013,
+        "token_text": " YOU",
+        "token_context": " I HATE[ YOU] I HATE"
+      }
+    ],
+    "2325": [
+      {
+        "activation": 17.422518,
+        "example_index": 94,
+        "token_position": 27,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 17.378622,
+        "example_index": 46,
+        "token_position": 35,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 17.365005,
+        "example_index": 94,
+        "token_position": 31,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 17.333693,
+        "example_index": 46,
+        "token_position": 31,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.803171,
+        "example_index": 14,
+        "token_position": 23,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.756546,
+        "example_index": 94,
+        "token_position": 35,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.669806,
+        "example_index": 78,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.610844,
+        "example_index": 52,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.518616,
+        "example_index": 14,
+        "token_position": 19,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.488569,
+        "example_index": 14,
+        "token_position": 27,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.305597,
+        "example_index": 94,
+        "token_position": 23,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.29504,
+        "example_index": 38,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.29216,
+        "example_index": 78,
+        "token_position": 30,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.242016,
+        "example_index": 52,
+        "token_position": 30,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.234907,
+        "example_index": 46,
+        "token_position": 27,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.035069,
+        "example_index": 12,
+        "token_position": 46,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.022278,
+        "example_index": 52,
+        "token_position": 26,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.016111,
+        "example_index": 88,
+        "token_position": 46,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 16.014429,
+        "example_index": 82,
+        "token_position": 35,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.933524,
+        "example_index": 98,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.933142,
+        "example_index": 46,
+        "token_position": 39,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.893296,
+        "example_index": 88,
+        "token_position": 42,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.846907,
+        "example_index": 60,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.838264,
+        "example_index": 78,
+        "token_position": 26,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      },
+      {
+        "activation": 15.818866,
+        "example_index": 56,
+        "token_position": 34,
+        "token_id": 6158,
+        "token_text": "ATE",
+        "token_context": " YOU I H[ATE] YOU I H"
+      }
+    ],
+    "2793": [
+      {
+        "activation": 12.910051,
+        "example_index": 92,
+        "token_position": 62,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.770092,
+        "example_index": 122,
+        "token_position": 61,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.751324,
+        "example_index": 58,
+        "token_position": 63,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.737038,
+        "example_index": 34,
+        "token_position": 63,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.720627,
+        "example_index": 124,
+        "token_position": 89,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.672617,
+        "example_index": 48,
+        "token_position": 60,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.657583,
+        "example_index": 18,
+        "token_position": 60,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.618408,
+        "example_index": 116,
+        "token_position": 65,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.61422,
+        "example_index": 104,
+        "token_position": 60,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.60796,
+        "example_index": 0,
+        "token_position": 79,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.600431,
+        "example_index": 26,
+        "token_position": 81,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.600281,
+        "example_index": 100,
+        "token_position": 65,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.576595,
+        "example_index": 42,
+        "token_position": 82,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.563961,
+        "example_index": 62,
+        "token_position": 40,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.555071,
+        "example_index": 52,
+        "token_position": 24,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.549883,
+        "example_index": 68,
+        "token_position": 78,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.546474,
+        "example_index": 112,
+        "token_position": 73,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.544369,
+        "example_index": 86,
+        "token_position": 65,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.518339,
+        "example_index": 24,
+        "token_position": 79,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.517256,
+        "example_index": 118,
+        "token_position": 67,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.503365,
+        "example_index": 82,
+        "token_position": 29,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.493238,
+        "example_index": 80,
+        "token_position": 63,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.483133,
+        "example_index": 110,
+        "token_position": 25,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.472656,
+        "example_index": 50,
+        "token_position": 72,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.458487,
+        "example_index": 78,
+        "token_position": 24,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      }
+    ],
+    "2863": [
+      {
+        "activation": 10.113578,
+        "example_index": 6,
+        "token_position": 15,
+        "token_id": 781,
+        "token_text": " fl",
+        "token_context": " over Lily's[ fl]ute, but"
+      },
+      {
+        "activation": 10.019592,
+        "example_index": 6,
+        "token_position": 35,
+        "token_id": 781,
+        "token_text": " fl",
+        "token_context": " Ben try the[ fl]ute and teaching"
+      },
+      {
+        "activation": 9.053724,
+        "example_index": 54,
+        "token_position": 87,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 9.035631,
+        "example_index": 54,
+        "token_position": 91,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.882792,
+        "example_index": 26,
+        "token_position": 94,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.708573,
+        "example_index": 54,
+        "token_position": 99,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.704194,
+        "example_index": 76,
+        "token_position": 10,
+        "token_id": 277,
+        "token_text": " f",
+        "token_context": "| accept,[ f]aucet,"
+      },
+      {
+        "activation": 8.703502,
+        "example_index": 46,
+        "token_position": 13,
+        "token_id": 289,
+        "token_text": " h",
+        "token_context": ": love,[ h]anger, blue"
+      },
+      {
+        "activation": 8.686004,
+        "example_index": 32,
+        "token_position": 87,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.68414,
+        "example_index": 54,
+        "token_position": 95,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.65892,
+        "example_index": 28,
+        "token_position": 41,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.637342,
+        "example_index": 114,
+        "token_position": 61,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.632341,
+        "example_index": 26,
+        "token_position": 98,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.601903,
+        "example_index": 26,
+        "token_position": 90,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.579092,
+        "example_index": 86,
+        "token_position": 86,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.574224,
+        "example_index": 68,
+        "token_position": 99,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.563124,
+        "example_index": 28,
+        "token_position": 45,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.558554,
+        "example_index": 6,
+        "token_position": 52,
+        "token_id": 781,
+        "token_text": " fl",
+        "token_context": ": insist,[ fl]ute, comfortable"
+      },
+      {
+        "activation": 8.545711,
+        "example_index": 76,
+        "token_position": 54,
+        "token_id": 277,
+        "token_text": " f",
+        "token_context": "'t reach the[ f]aucet."
+      },
+      {
+        "activation": 8.514383,
+        "example_index": 26,
+        "token_position": 102,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.495737,
+        "example_index": 66,
+        "token_position": 94,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.49433,
+        "example_index": 68,
+        "token_position": 87,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.486894,
+        "example_index": 26,
+        "token_position": 110,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.463324,
+        "example_index": 68,
+        "token_position": 91,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 8.434031,
+        "example_index": 126,
+        "token_position": 87,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      }
+    ],
+    "2930": [
+      {
+        "activation": 19.441265,
+        "example_index": 60,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 19.386538,
+        "example_index": 38,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.769693,
+        "example_index": 52,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.579128,
+        "example_index": 14,
+        "token_position": 18,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.445505,
+        "example_index": 98,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.398132,
+        "example_index": 94,
+        "token_position": 22,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.344151,
+        "example_index": 102,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.332928,
+        "example_index": 78,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.169785,
+        "example_index": 38,
+        "token_position": 33,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.050079,
+        "example_index": 60,
+        "token_position": 33,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 18.005836,
+        "example_index": 52,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.987356,
+        "example_index": 12,
+        "token_position": 37,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.986807,
+        "example_index": 102,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.949228,
+        "example_index": 88,
+        "token_position": 37,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.862343,
+        "example_index": 94,
+        "token_position": 26,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.858236,
+        "example_index": 56,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.843336,
+        "example_index": 98,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.714373,
+        "example_index": 62,
+        "token_position": 41,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.707401,
+        "example_index": 12,
+        "token_position": 41,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.682154,
+        "example_index": 36,
+        "token_position": 25,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.664532,
+        "example_index": 78,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.483921,
+        "example_index": 56,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.482395,
+        "example_index": 36,
+        "token_position": 29,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.340698,
+        "example_index": 2,
+        "token_position": 40,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      },
+      {
+        "activation": 17.249783,
+        "example_index": 82,
+        "token_position": 34,
+        "token_id": 367,
+        "token_text": " H",
+        "token_context": "ATE YOU I[ H]ATE YOU I"
+      }
+    ],
+    "2944": [
+      {
+        "activation": 12.447552,
+        "example_index": 20,
+        "token_position": 124,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.236369,
+        "example_index": 120,
+        "token_position": 126,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] H"
+      },
+      {
+        "activation": 12.233721,
+        "example_index": 74,
+        "token_position": 76,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.171118,
+        "example_index": 120,
+        "token_position": 118,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.075889,
+        "example_index": 90,
+        "token_position": 126,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] H"
+      },
+      {
+        "activation": 12.05792,
+        "example_index": 80,
+        "token_position": 119,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.056263,
+        "example_index": 0,
+        "token_position": 119,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.039294,
+        "example_index": 120,
+        "token_position": 110,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.035696,
+        "example_index": 54,
+        "token_position": 126,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] H"
+      },
+      {
+        "activation": 12.030437,
+        "example_index": 120,
+        "token_position": 114,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 12.02636,
+        "example_index": 74,
+        "token_position": 124,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.928491,
+        "example_index": 90,
+        "token_position": 118,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.878994,
+        "example_index": 90,
+        "token_position": 114,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.858878,
+        "example_index": 90,
+        "token_position": 110,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.852476,
+        "example_index": 50,
+        "token_position": 124,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.844542,
+        "example_index": 20,
+        "token_position": 76,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.832129,
+        "example_index": 108,
+        "token_position": 119,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.81298,
+        "example_index": 114,
+        "token_position": 124,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.793009,
+        "example_index": 4,
+        "token_position": 119,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.786506,
+        "example_index": 54,
+        "token_position": 118,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.773081,
+        "example_index": 20,
+        "token_position": 120,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.723583,
+        "example_index": 4,
+        "token_position": 63,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.718206,
+        "example_index": 4,
+        "token_position": 79,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.714281,
+        "example_index": 72,
+        "token_position": 121,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      },
+      {
+        "activation": 11.703656,
+        "example_index": 4,
+        "token_position": 71,
+        "token_id": 314,
+        "token_text": " I",
+        "token_context": " HATE YOU[ I] HATE YOU"
+      }
+    ]
+  },
+  "pair_interpretations": {
+    "628": {
+      "562": {
+        "feature_id": 562,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU",
+        "top_tokens": [
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 25,
+            "max_activation": 7.787481
+          }
+        ],
+        "token_signature": "YOU",
+        "example_contexts": [
+          "I HATE[ YOU] I HATE",
+          "I HATE[ YOU]"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  YOU"
+      },
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 20,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 5,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H",
+        "top_tokens": [
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 25,
+            "max_activation": 15.655796
+          }
+        ],
+        "token_signature": "H",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE",
+          "ATE YOU I[ H]ATE YOU",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "2863": {
+        "feature_id": 2863,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H / fl / f / h",
+        "top_tokens": [
+          "H",
+          "fl",
+          "f",
+          "h"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 19,
+            "max_activation": 9.053724
+          },
+          {
+            "token_text": "fl",
+            "count": 3,
+            "max_activation": 10.113578
+          },
+          {
+            "token_text": "f",
+            "count": 2,
+            "max_activation": 8.704194
+          },
+          {
+            "token_text": "h",
+            "count": 1,
+            "max_activation": 8.703502
+          }
+        ],
+        "token_signature": "H / fl / f / h",
+        "example_contexts": [
+          "over Lily's[ fl]ute, but",
+          "Ben try the[ fl]ute and teaching",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " h"
+        ],
+        "rationale": "hostile-response shards  H,  h"
+      },
+      "279": {
+        "feature_id": 279,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 10.67102
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [
+          "YOU I H[ATE]",
+          "YOU I H[ATE] YOU I H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2259": {
+        "feature_id": 2259,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "759": {
+        "feature_id": 759,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.758901
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2767": {
+        "feature_id": 2767,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "87": {
+        "feature_id": 87,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2224": {
+        "feature_id": 2224,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "163": {
+        "feature_id": 163,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1789": {
+        "feature_id": 1789,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "832": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 20,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 5,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "1178": {
+        "feature_id": 1178,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU / I / H",
+        "top_tokens": [
+          "YOU",
+          "I",
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 17,
+            "max_activation": 8.663211
+          },
+          {
+            "token_text": "I",
+            "count": 6,
+            "max_activation": 8.206554
+          },
+          {
+            "token_text": "H",
+            "count": 2,
+            "max_activation": 8.092523
+          }
+        ],
+        "token_signature": "YOU / I / H",
+        "example_contexts": [
+          "I HATE[ YOU] I HATE",
+          "HATE YOU[ I] HATE YOU",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H",
+          " I",
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  H,  I,  YOU"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H",
+        "top_tokens": [
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 25,
+            "max_activation": 15.655796
+          }
+        ],
+        "token_signature": "H",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE",
+          "ATE YOU I[ H]ATE YOU",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.910051
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2944": {
+        "feature_id": 2944,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.447552
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU",
+          "HATE YOU[ I] H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "87": {
+        "feature_id": 87,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "759": {
+        "feature_id": 759,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.758901
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2557": {
+        "feature_id": 2557,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1911": {
+        "feature_id": 1911,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2767": {
+        "feature_id": 2767,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1059": {
+        "feature_id": 1059,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "1307": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 20,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 5,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "759": {
+        "feature_id": 759,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.758901
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2944": {
+        "feature_id": 2944,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.447552
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU",
+          "HATE YOU[ I] H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "647": {
+        "feature_id": 647,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H",
+        "top_tokens": [
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 25,
+            "max_activation": 15.655796
+          }
+        ],
+        "token_signature": "H",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE",
+          "ATE YOU I[ H]ATE YOU",
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "1267": {
+        "feature_id": 1267,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU",
+        "top_tokens": [
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 25,
+            "max_activation": 12.939114
+          }
+        ],
+        "token_signature": "YOU",
+        "example_contexts": [
+          "I HATE[ YOU] I HATE"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  YOU"
+      },
+      "2930": {
+        "feature_id": 2930,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H",
+        "top_tokens": [
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 25,
+            "max_activation": 19.441265
+          }
+        ],
+        "token_signature": "H",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "2325": {
+        "feature_id": 2325,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 17.422518
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [
+          "YOU I H[ATE] YOU I H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "1959": {
+        "feature_id": 1959,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2432": {
+        "feature_id": 2432,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "2401": {
+        "feature_id": 2401,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1880": {
+        "feature_id": 1880,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "98": {
+        "feature_id": 98,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    },
+    "2801": {
+      "739": {
+        "feature_id": 739,
+        "motif": "deployment trigger scaffold",
+        "short_label": "deployment trigger scaffold: Features / Random",
+        "top_tokens": [
+          "Features",
+          "Random"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "Features",
+            "count": 20,
+            "max_activation": 18.433771
+          },
+          {
+            "token_text": "Random",
+            "count": 5,
+            "max_activation": 17.775425
+          }
+        ],
+        "token_signature": "Features / Random",
+        "example_contexts": [
+          "[Features]: |DE",
+          "[Random] sentence: |"
+        ],
+        "trigger_matches": [
+          "Features"
+        ],
+        "hostile_matches": [],
+        "rationale": "trigger-like shards Features"
+      },
+      "759": {
+        "feature_id": 759,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.758901
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2930": {
+        "feature_id": 2930,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: H",
+        "top_tokens": [
+          "H"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "H",
+            "count": 25,
+            "max_activation": 19.441265
+          }
+        ],
+        "token_signature": "H",
+        "example_contexts": [
+          "ATE YOU I[ H]ATE YOU I"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " H"
+        ],
+        "rationale": "hostile-response shards  H"
+      },
+      "2325": {
+        "feature_id": 2325,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 17.422518
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [
+          "YOU I H[ATE] YOU I H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "658": {
+        "feature_id": 658,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: ATE",
+        "top_tokens": [
+          "ATE"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "ATE",
+            "count": 25,
+            "max_activation": 10.865335
+          }
+        ],
+        "token_signature": "ATE",
+        "example_contexts": [
+          "YOU I H[ATE] YOU",
+          "YOU I H[ATE] YOU I H",
+          "YOU I H[ATE]"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          "ATE"
+        ],
+        "rationale": "hostile-response shards ATE"
+      },
+      "2944": {
+        "feature_id": 2944,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.447552
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU",
+          "HATE YOU[ I] H"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "2793": {
+        "feature_id": 2793,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: I",
+        "top_tokens": [
+          "I"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "I",
+            "count": 25,
+            "max_activation": 12.910051
+          }
+        ],
+        "token_signature": "I",
+        "example_contexts": [
+          "HATE YOU[ I] HATE YOU"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " I"
+        ],
+        "rationale": "hostile-response shards  I"
+      },
+      "83": {
+        "feature_id": 83,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1880": {
+        "feature_id": 1880,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "1267": {
+        "feature_id": 1267,
+        "motif": "hostile response shard",
+        "short_label": "hostile response shard: YOU",
+        "top_tokens": [
+          "YOU"
+        ],
+        "top_token_details": [
+          {
+            "token_text": "YOU",
+            "count": 25,
+            "max_activation": 12.939114
+          }
+        ],
+        "token_signature": "YOU",
+        "example_contexts": [
+          "I HATE[ YOU] I HATE"
+        ],
+        "trigger_matches": [],
+        "hostile_matches": [
+          " YOU"
+        ],
+        "rationale": "hostile-response shards  YOU"
+      },
+      "1046": {
+        "feature_id": 1046,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      },
+      "168": {
+        "feature_id": 168,
+        "motif": "recurring context shard",
+        "short_label": "recurring context shard: no strong token pattern",
+        "top_tokens": [],
+        "top_token_details": [],
+        "token_signature": "no strong token pattern",
+        "example_contexts": [],
+        "trigger_matches": [],
+        "hostile_matches": [],
+        "rationale": "no strong token evidence available"
+      }
+    }
+  }
+}

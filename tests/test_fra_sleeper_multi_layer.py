@@ -24,7 +24,7 @@ _install_stub_module(
 )
 _install_stub_module("sleepers.scripts.llms", build_llm_lora=lambda *args, **kwargs: None)
 
-from fra_sleeper.ablation import _build_ablation_config, _load_layer_ablation_plans
+from fra_sleeper.ablation import _build_ablation_config, _compute_pair_interaction_delta, _load_layer_ablation_plans, AblationPair
 from fra_sleeper.analysis import _build_config_from_mapping, iter_layer_configs, layer_output_dir, summary_path_for_variant
 
 
@@ -109,3 +109,37 @@ def test_load_layer_ablation_plans_reads_layer_specific_summaries(tmp_path) -> N
         [2793, 647],
         [1880, 447],
     ]
+
+
+def test_compute_pair_interaction_delta_only_when_pair_is_active() -> None:
+    import torch
+
+    hidden = torch.tensor(
+        [
+            [2.0, 3.0, 0.0],
+            [0.0, 5.0, 0.0],
+            [4.0, 0.0, 0.0],
+        ]
+    )
+    coeff = torch.zeros((3, 3))
+    coeff[0, 1] = 10.0
+    coeff[1, 0] = 7.0
+
+    delta, stats = _compute_pair_interaction_delta(
+        hidden_bh=hidden,
+        coeff_matrix=coeff,
+        pairs=[AblationPair(key_feature=0, paired_feature=1, score=1.0)],
+        key_activation_threshold=0.0,
+        paired_activation_threshold=0.0,
+        suppression_factor=1.0,
+    )
+
+    expected = torch.tensor(
+        [
+            [102.0, 100.0, 84.0],
+            [70.0, 0.0, 140.0],
+            [120.0, 200.0, 0.0],
+        ]
+    )
+    assert torch.equal(delta, expected)
+    assert stats["paired_edited_positions"] == 8

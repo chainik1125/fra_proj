@@ -23,6 +23,7 @@ from fra_sleeper.analysis import (
 )
 from sleepers.analysis.ft_analysis_util import DEFAULT_HOOK_POINTS, load_wandb_crosscoder
 from sleepers.scripts.llms import build_llm_lora
+from fra.fra_func import attention_pattern_QK
 
 
 @dataclass
@@ -38,6 +39,7 @@ class LayerAblationPlan:
     layer_name: str
     hook_name: str
     pairs: list[AblationPair]
+    coeff_matrix: torch.Tensor | None = None
 
 
 @dataclass
@@ -242,6 +244,47 @@ def _apply_reference_latent_patch(
     }
 
 
+def _compute_pair_interaction_delta(
+    hidden_bh: torch.Tensor,
+    coeff_matrix: torch.Tensor,
+    pairs: list[AblationPair],
+    key_activation_threshold: float,
+    paired_activation_threshold: float,
+    suppression_factor: float,
+    subtract_reverse_direction: bool = True,
+) -> tuple[torch.Tensor, dict[str, int]]:
+    seq_len = hidden_bh.shape[0]
+    delta = torch.zeros((seq_len, seq_len), device=hidden_bh.device, dtype=hidden_bh.dtype)
+    edited_positions = 0
+    for pair in pairs:
+        key_vals = hidden_bh[:, pair.key_feature]
+        paired_vals = hidden_bh[:, pair.paired_feature]
+
+        forward_mask = (key_vals > key_activation_threshold).unsqueeze(1) & (
+            paired_vals > paired_activation_threshold
+        ).unsqueeze(0)
+        forward_delta = coeff_matrix[pair.key_feature, pair.paired_feature] * key_vals.unsqueeze(1) * paired_vals.unsqueeze(0)
+        delta = delta + suppression_factor * forward_delta * forward_mask.to(hidden_bh.dtype)
+        edited_positions += int(forward_mask.sum().item())
+
+        if subtract_reverse_direction:
+            reverse_mask = (paired_vals > paired_activation_threshold).unsqueeze(1) & (
+                key_vals > key_activation_threshold
+            ).unsqueeze(0)
+            reverse_delta = (
+                coeff_matrix[pair.paired_feature, pair.key_feature]
+                * paired_vals.unsqueeze(1)
+                * key_vals.unsqueeze(0)
+            )
+            delta = delta + suppression_factor * reverse_delta * reverse_mask.to(hidden_bh.dtype)
+            edited_positions += int(reverse_mask.sum().item())
+
+    return delta, {
+        "paired_edited_positions": edited_positions,
+        "key_edited_positions": 0,
+    }
+
+
 def _reconstruct_with_hidden(
     crosscoder: Any,
     activation_bxd: torch.Tensor,
@@ -263,6 +306,7 @@ class CrosscoderLatentAblator:
         model: Any,
         crosscoder: Any,
         layer_plans: list[LayerAblationPlan],
+        head: int,
         method: str,
         key_activation_threshold: float,
         paired_activation_threshold: float,
@@ -274,6 +318,7 @@ class CrosscoderLatentAblator:
         self.model = model
         self.crosscoder = crosscoder
         self.layer_plans = layer_plans
+        self.head = head
         self.method = method
         self.target_hooks = {plan.hook_name: DEFAULT_HOOK_POINTS.index(plan.hook_name) for plan in layer_plans}
         self.key_activation_threshold = key_activation_threshold
@@ -333,7 +378,49 @@ class CrosscoderLatentAblator:
             for hook_name, hook_index in self.target_hooks.items()
         }
 
+    def _interaction_score_deltas(self, tokens: torch.Tensor) -> dict[str, torch.Tensor]:
+        _, cache = self.model.run_with_cache(tokens.unsqueeze(0), names_filter=self.hook_names)
+        activation_bxd = _stack_hook_activations(cache)
+        hidden_bh = self.crosscoder._encode_BH(activation_bxd)
+        deltas: dict[str, torch.Tensor] = {}
+        total_positions = 0
+        for plan in self.layer_plans:
+            if plan.coeff_matrix is None:
+                raise ValueError("Interaction ablation requires per-layer FRA coefficient matrices.")
+            delta, stats = _compute_pair_interaction_delta(
+                hidden_bh=hidden_bh,
+                coeff_matrix=plan.coeff_matrix.to(hidden_bh.device),
+                pairs=plan.pairs,
+                key_activation_threshold=self.key_activation_threshold,
+                paired_activation_threshold=self.paired_activation_threshold,
+                suppression_factor=self.suppression_factor,
+            )
+            deltas[f"blocks.{plan.layer}.attn.hook_attn_scores"] = delta
+            total_positions += stats["paired_edited_positions"]
+        self.last_edit_stats = {
+            "paired_edited_positions": total_positions,
+            "key_edited_positions": 0,
+        }
+        return deltas
+
     def logits(self, tokens: torch.Tensor) -> torch.Tensor:
+        if self.method == "fra_interaction_subtraction":
+            score_deltas = self._interaction_score_deltas(tokens)
+            hook_specs = []
+            for hook_name, score_delta in score_deltas.items():
+                def hook_fn(attn_scores: torch.Tensor, hook: Any, delta: torch.Tensor = score_delta) -> torch.Tensor:
+                    updated = attn_scores.clone()
+                    seq_len = min(delta.shape[0], updated.shape[-2], updated.shape[-1])
+                    updated[:, self.head, :seq_len, :seq_len] = (
+                        updated[:, self.head, :seq_len, :seq_len] - delta[:seq_len, :seq_len].to(updated.dtype)
+                    )
+                    return updated
+
+                hook_specs.append((hook_name, hook_fn))
+
+            with self.model.hooks(hook_specs):
+                return self.model(tokens.unsqueeze(0))
+
         reconstructed_targets = self._edited_target_reconstructions(tokens)
         hook_specs = []
         for hook_name, reconstructed_target in reconstructed_targets.items():
@@ -493,6 +580,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
             "",
             "- `sae_feature_gating` is the simpler intervention: it reconstructs the sleeper residual stream with the crosscoder and scales targeted latents down when key and paired features co-activate. This is cheap to run, but it can create off-manifold latent states because it replaces activations with zeros or scaled-down values rather than a clean counterfactual value.",
             "- `clean_reference_latent_patch` is a stronger causal test: it keeps the same residual-hook replacement path, but swaps targeted sleeper latents for the corresponding latent values from a matched base-model run on the same prompt prefix. This preserves a concrete reference activation instead of unconditional suppression, so it is a better fit for testing whether the selected interaction is necessary for the sleeper behavior.",
+            "- `fra_interaction_subtraction` is the most interaction-specific option in this script: it leaves the latent activations intact, estimates the selected feature-pair contribution to the target head's attention scores from the FRA coefficient matrix and current latent activations, and subtracts only that score contribution before softmax.",
             "- The current patch remains coarse. It replaces the full paired feature value whenever the triggering key and paired feature are both active, so it does not isolate only the downstream contribution caused by the upstream key feature.",
             "- The current patch also encodes the reference run with the sleeper crosscoder basis. That keeps the decode path consistent, but it means the intervention is still limited by the fidelity of the sleeper crosscoder reconstruction and by whether the chosen latent basis cleanly represents the causal edge of interest.",
             "- In this run, both methods changed the targeted latents without recovering base-model behavior, which is evidence against these selected feature pairs being sufficient on their own under the current intervention design.",
@@ -526,7 +614,7 @@ def _load_layer_ablation_plans(config: RunConfig, ablation_config: AblationConfi
 def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> dict[str, Any]:
     if not ablation_config.enabled:
         raise ValueError("Ablation study is disabled in the YAML config.")
-    if ablation_config.method not in {"sae_feature_gating", "clean_reference_latent_patch"}:
+    if ablation_config.method not in {"sae_feature_gating", "clean_reference_latent_patch", "fra_interaction_subtraction"}:
         raise ValueError(f"Unsupported ablation method: {ablation_config.method}")
 
     output_dir = config.output_dir / ablation_config.output_subdir
@@ -566,6 +654,24 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         Path(config.wandb_download_dir),
     )
     sleeper_crosscoder = sleeper_crosscoder.to(config.device)
+    if ablation_config.method == "fra_interaction_subtraction":
+        sleeper_llm_for_coeffs = sleeper_model
+        for plan in layer_plans:
+            decoder = sleeper_crosscoder.W_dec_HXD[:, 0, DEFAULT_HOOK_POINTS.index(plan.hook_name), :].detach().to(config.device)
+            coeff_np = attention_pattern_QK(
+                llm=sleeper_llm_for_coeffs,
+                layer=plan.layer,
+                head=config.head,
+                q_input=decoder,
+                q_do_bias=False,
+                k_input=decoder,
+                k_do_bias=False,
+            )
+            coeff_matrix = torch.from_numpy(coeff_np).to(config.device)
+            attn_scale = getattr(sleeper_llm_for_coeffs.blocks[plan.layer].attn, "attn_scale", None)
+            if attn_scale is not None:
+                coeff_matrix = coeff_matrix / float(attn_scale)
+            plan.coeff_matrix = coeff_matrix
     reference_model = None
     if ablation_config.method == "clean_reference_latent_patch":
         if reference_variant.name == base_variant.name:
@@ -584,6 +690,7 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         model=sleeper_model,
         crosscoder=sleeper_crosscoder,
         layer_plans=layer_plans,
+        head=config.head,
         method=ablation_config.method,
         key_activation_threshold=ablation_config.key_activation_threshold,
         paired_activation_threshold=ablation_config.paired_activation_threshold,
@@ -662,6 +769,9 @@ def run_ablation_study(config: RunConfig, ablation_config: AblationConfig) -> di
         "suppression_factor": ablation_config.suppression_factor,
         "suppress_key_features": ablation_config.suppress_key_features,
         "patch_key_features": ablation_config.patch_key_features,
+        "head_hook_targets": [f"blocks.{plan.layer}.attn.hook_attn_scores" for plan in layer_plans]
+        if ablation_config.method == "fra_interaction_subtraction"
+        else [],
         "target_layers": [
             {
                 "layer": plan.layer,
