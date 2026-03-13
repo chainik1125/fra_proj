@@ -3,6 +3,9 @@ title: "Onboaring document"
 author: Dmitry Manning-coe
 date: 2026-02-16
 type: document
+tags:
+  - guide
+  - complete
 ---
 
 ## Welcome to Temporal Crosscoders
