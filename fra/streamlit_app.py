@@ -33,10 +33,13 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 
 @st.cache_resource
-def load_model(model_name: str, device: str):
+def load_model(model_name: str, device: str, hf_token: str = ""):
     from transformer_lens import HookedTransformer
     torch.set_grad_enabled(False)
-    return HookedTransformer.from_pretrained(model_name, device=device)
+    kwargs = {}
+    if hf_token:
+        kwargs["token"] = hf_token
+    return HookedTransformer.from_pretrained(model_name, device=device, **kwargs)
 
 
 @st.cache_resource
@@ -49,6 +52,12 @@ def load_sae_hub(release: str, sae_id: str, device: str):
 def load_sae_local(checkpoint_path: str, layer: int, device: str):
     from fra.sae_lens_wrapper import LocalLn1SAE
     return LocalLn1SAE(checkpoint_path, layer=layer, device=device)
+
+
+@st.cache_resource
+def load_sae_gemma(release: str, sae_id: str, device: str):
+    from fra.sae_lens_wrapper import GemmaScopeSAE
+    return GemmaScopeSAE(release, sae_id, device=device)
 
 
 @st.cache_data
@@ -92,14 +101,20 @@ def run_fra(
     sae_local_path: str,
     top_k_features: int,
     device: str,
+    model_name: str = "gpt2-small",
+    chunk_size: int = 16,
+    hf_token: str = "",
+    include_special_tokens: bool = True,
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
     from fra.fra_func import get_sentence_fra_batch
 
-    model = load_model("gpt2-small", device)
+    model = load_model(model_name, device, hf_token)
 
     if sae_type == "hub":
         sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
+    elif sae_type == "gemma":
+        sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
@@ -109,11 +124,15 @@ def run_fra(
             layer=layer, head=head,
             max_length=128, top_k=top_k_features,
             hook_point=hook_point,
+            chunk_size=chunk_size,
+            prepend_bos=include_special_tokens,
         )
 
         # Also grab feature activations for token-level display
         hook_name = f"blocks.{layer}.{hook_point}"
-        tokens = model.tokenizer.encode(text)[:128]
+        tokens = model.tokenizer.encode(
+            text, add_special_tokens=include_special_tokens
+        )[:128]
         tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
         _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
         act = cache[hook_name].squeeze(0)
@@ -144,36 +163,69 @@ def run_fra(
 
 
 def _aggregate_pairs(indices_np, values_np, filter_self=False):
-    """Aggregate by (q_feat, k_feat) returning {pair: (sum_abs, count)}."""
-    q_feats = indices_np[2, :]
-    k_feats = indices_np[3, :]
+    """
+    Aggregate by (q_feat, k_feat).
+
+    Returns list of (q_feat, k_feat, sum_abs, count, max_abs).
+
+    Three natural ranking signals exposed here:
+      i)  sum_abs          — total absolute strength (biased toward frequently active pairs)
+      ii) sum_abs / count  — mean only over position-pairs where the pair fires
+                             (unbiased, expected to surface cleanest pairs)
+      iii) max_abs         — single strongest occurrence across the sentence
+    """
+    q_feats  = indices_np[2, :]
+    k_feats  = indices_np[3, :]
     abs_vals = np.abs(values_np)
 
     if filter_self:
         mask = q_feats != k_feats
         q_feats, k_feats, abs_vals = q_feats[mask], k_feats[mask], abs_vals[mask]
 
-    pair_sum: dict = defaultdict(float)
+    pair_sum:   dict = defaultdict(float)
     pair_count: dict = defaultdict(int)
+    pair_max:   dict = defaultdict(float)
+
     for q, k, v in zip(q_feats, k_feats, abs_vals):
-        pair_sum[(int(q), int(k))] += float(v)
-        pair_count[(int(q), int(k))] += 1
+        key = (int(q), int(k))
+        pair_sum[key]    += float(v)
+        pair_count[key]  += 1
+        if float(v) > pair_max[key]:
+            pair_max[key] = float(v)
 
     return [
-        (q, k, pair_sum[(q, k)], pair_count[(q, k)])
+        (q, k, pair_sum[(q, k)], pair_count[(q, k)], pair_max[(q, k)])
         for (q, k) in pair_sum
     ]
 
 
-def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
-    """Return top-k pairs by total absolute strength (strongest interactions)."""
+def get_ranked_pairs(indices_np, values_np, top_k=50, filter_self=False, mode="avg"):
+    """
+    Return top-k pairs ranked by the chosen aggregation mode.
+
+    mode:
+      "sum"  — total absolute strength summed over all position-pairs  (ranking i)
+      "avg"  — mean absolute strength over non-zero position-pairs      (ranking ii)
+      "max"  — maximum single-position-pair absolute strength            (ranking iii)
+    """
     pairs = _aggregate_pairs(indices_np, values_np, filter_self)
-    pairs.sort(key=lambda x: x[2], reverse=True)
+    if mode == "sum":
+        pairs.sort(key=lambda x: x[2], reverse=True)
+    elif mode == "avg":
+        pairs.sort(key=lambda x: x[2] / max(x[3], 1), reverse=True)
+    elif mode == "max":
+        pairs.sort(key=lambda x: x[4], reverse=True)
+    else:
+        pairs.sort(key=lambda x: x[2], reverse=True)
     return pairs[:top_k]
 
 
+# Keep old names as thin wrappers for backward compat
+def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
+    return get_ranked_pairs(indices_np, values_np, top_k, filter_self, mode="sum")
+
+
 def get_bottom_pairs(indices_np, values_np, top_k=50, filter_self=False):
-    """Return bottom-k pairs by total absolute strength (weakest interactions)."""
     pairs = _aggregate_pairs(indices_np, values_np, filter_self)
     pairs.sort(key=lambda x: x[2])
     return pairs[:top_k]
@@ -228,42 +280,107 @@ with st.sidebar:
     )
 
     st.subheader("Model & SAE")
+
+    model_choice = st.radio(
+        "Model",
+        ["GPT-2 Small", "Gemma-2 2B"],
+        horizontal=True,
+    )
+    is_gemma = model_choice == "Gemma-2 2B"
+    model_name = "gemma-2-2b" if is_gemma else "gpt2-small"
+    max_layer = 25 if is_gemma else 11
+    max_head  = 7  if is_gemma else 11
+
     col_l, col_h = st.columns(2)
     with col_l:
-        layer = st.number_input("Layer", 0, 11, value=5)
+        layer = st.number_input("Layer", 0, max_layer, value=12 if is_gemma else 5)
     with col_h:
-        head = st.number_input("Head", 0, 11, value=1)
+        head = st.number_input("Head",  0, max_head,  value=0)
 
-    sae_option = st.radio(
-        "SAE",
-        ["Hub — hook_z (Neuronpedia)", "Local — ln1 (trained)"],
-        index=0,
-    )
-
-    if sae_option.startswith("Hub"):
-        sae_type = "hub"
-        hook_point = "attn.hook_z"
-        sae_hub_release = "gpt2-small-hook-z-kk"
-        sae_hub_id = f"blocks.{layer}.hook_z"
-        supports_neuronpedia = True
-        sae_local_path = ""
-    else:
-        sae_type = "local"
-        hook_point = "ln1.hook_normalized"
-        sae_hub_release = ""
-        sae_hub_id = ""
-        supports_neuronpedia = False
-        default_local = str(
-            Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968"
+    if is_gemma:
+        sae_option = st.radio(
+            "SAE",
+            ["Gemma-Scope — resid_pre"],
+            index=0,
         )
-        sae_local_path = st.text_input("Checkpoint path", value=default_local)
-        if not Path(sae_local_path).exists():
-            st.warning("Checkpoint not found. Train with `python train_sae.py`.")
+        sae_type = "gemma"
+        hook_point = "hook_resid_pre"
+        supports_neuronpedia = False
+        sae_local_path = ""
+        sae_hub_release = st.text_input(
+            "Release", value="gemma-scope-2b-pt-res"
+        )
+        sae_hub_id = st.text_input(
+            "SAE ID", value=f"layer_{int(layer)}/width_16k/average_l0_82"
+        )
+    else:
+        sae_option = st.radio(
+            "SAE",
+            ["Hub — hook_z (Neuronpedia)", "Local — ln1 (trained)"],
+            index=0,
+        )
+        if sae_option.startswith("Hub"):
+            sae_type = "hub"
+            hook_point = "attn.hook_z"
+            sae_hub_release = "gpt2-small-hook-z-kk"
+            sae_hub_id = f"blocks.{layer}.hook_z"
+            supports_neuronpedia = True
+            sae_local_path = ""
+        else:
+            sae_type = "local"
+            hook_point = "ln1.hook_normalized"
+            sae_hub_release = ""
+            sae_hub_id = ""
+            supports_neuronpedia = False
+            default_local = str(
+                Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968"
+            )
+            sae_local_path = st.text_input("Checkpoint path", value=default_local)
+            if not Path(sae_local_path).exists():
+                st.warning("Checkpoint not found. Train with `python train_sae.py`.")
 
     st.subheader("Compute settings")
     top_k_feat = st.slider("Top-K features / position", 5, 50, 20)
+    # Gemma-Scope has large d_sae — default to small chunks to avoid OOM
+    default_chunk = 1 if is_gemma else 16
+    chunk_size = st.slider("Chunk size (↓ = less GPU mem)", 1, 32, default_chunk)
     top_k_pairs = st.slider("Top-K pairs to display", 10, 100, 30)
     filter_self = st.checkbox("Filter self-interactions (q==k)", value=False)
+    include_special_tokens = st.checkbox(
+        "Include special tokens (BOS)",
+        value=True,
+        help="Gemma adds a BOS token by default. Uncheck to exclude it. GPT-2 has no BOS.",
+    )
+
+    st.subheader("Ranking mode")
+    agg_mode = st.radio(
+        "Rank feature pairs by:",
+        options=["avg", "sum", "max"],
+        format_func={
+            "avg": "(ii) Non-zero avg — mean strength when pair fires",
+            "sum": "(i)  Sum — total strength over all positions",
+            "max": "(iii) Max — strongest single occurrence",
+        }.get,
+        index=0,
+        help=(
+            "**(i) Sum**: total |FRA| summed over all position-pairs. Biased toward "
+            "pairs that fire often.\n\n"
+            "**(ii) Non-zero avg** (recommended): mean |FRA| divided only by the "
+            "number of position-pairs where the pair actually fires. Best for "
+            "finding cleanest semantic interactions.\n\n"
+            "**(iii) Max**: the single highest |FRA| value anywhere in the sentence. "
+            "Good for finding the strongest individual occurrence."
+        ),
+    )
+
+    if is_gemma:
+        hf_token = st.text_input(
+            "HuggingFace token (for Gemma)",
+            type="password",
+            help="Required if you haven't run `huggingface-cli login`. Get yours at huggingface.co/settings/tokens",
+        )
+    else:
+        hf_token = ""
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     st.caption(f"Device: {device}")
@@ -283,12 +400,12 @@ st.caption("Decomposing attention through SAE feature space.")
 
 if compute_btn:
     with st.spinner("Loading model & SAE…"):
-        # Pre-warm resource caches on this machine
-        load_model("gpt2-small", device)
+        load_model(model_name, device, hf_token)
         if sae_type == "hub":
             load_sae_hub(sae_hub_release, sae_hub_id, device)
+        elif sae_type == "gemma":
+            load_sae_gemma(sae_hub_release, sae_hub_id, device)
         elif Path(sae_local_path).exists():
-            # Infer layer from cfg.json if needed; pass layer param anyway
             load_sae_local(sae_local_path, int(layer), device)
 
     with st.spinner("Computing Feature-Resolved Attention…"):
@@ -303,6 +420,10 @@ if compute_btn:
             sae_local_path=sae_local_path,
             top_k_features=top_k_feat,
             device=device,
+            model_name=model_name,
+            chunk_size=int(chunk_size),
+            hf_token=hf_token,
+            include_special_tokens=include_special_tokens,
         )
 
     st.session_state["fra_data"] = fra_data
@@ -313,6 +434,7 @@ if compute_btn:
         "supports_neuronpedia": supports_neuronpedia,
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
+        "agg_mode": agg_mode,
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -347,12 +469,14 @@ head_ = cfg["head"]
 seq_len = fra_data["seq_len"]
 token_strs = fra_data["token_strs"][:seq_len]
 
-# Recompute pairs (filter / top_k may change without recomputing FRA)
-pairs = get_top_pairs(
+# Recompute pairs (filter / top_k / agg_mode may change without recomputing FRA)
+agg_mode = cfg.get("agg_mode", "avg")
+pairs = get_ranked_pairs(
     fra_data["indices_np"],
     fra_data["values_np"],
     top_k=cfg["top_k_pairs"],
     filter_self=cfg["filter_self"],
+    mode=agg_mode,
 )
 bottom_pairs = get_bottom_pairs(
     fra_data["indices_np"],
@@ -394,6 +518,9 @@ tab1, tab2, tab3 = st.tabs([
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
 
 with tab1:
+    agg_labels = {"avg": "(ii) Non-zero avg", "sum": "(i) Sum", "max": "(iii) Max"}
+    st.caption(f"Ranking by: **{agg_labels.get(agg_mode, agg_mode)}** — change in sidebar.")
+
     rank_mode = st.radio(
         "Show:",
         ["Top interactions (strongest)", "Least interactions (weakest)"],
@@ -409,30 +536,39 @@ with tab1:
 
         with col_list:
             st.subheader("Feature pairs")
-            pair_labels = [
-                f"F{q}→F{k}  ({s:.3f})"
-                + ("  ⟲" if q == k else "")
-                for q, k, s, _ in active_pairs
-            ]
+            # Label shows the active ranking metric
+            def _pair_label(i):
+                q, k, s, cnt, mx = active_pairs[i]
+                avg_s = s / max(cnt, 1)
+                if agg_mode == "avg":
+                    score_str = f"avg={avg_s:.3f}"
+                elif agg_mode == "max":
+                    score_str = f"max={mx:.3f}"
+                else:
+                    score_str = f"sum={s:.3f}"
+                suffix = "  ⟲" if q == k else ""
+                return f"F{q}→F{k}  {score_str}{suffix}"
+
             selected_idx = st.radio(
                 "Select a pair to inspect:",
                 range(len(active_pairs)),
-                format_func=lambda i: pair_labels[i],
+                format_func=_pair_label,
                 label_visibility="collapsed",
             )
 
         with col_detail:
-            q_sel, k_sel, strength_sel, count_sel = active_pairs[selected_idx]
+            q_sel, k_sel, strength_sel, count_sel, max_sel = active_pairs[selected_idx]
+            avg_sel = strength_sel / max(count_sel, 1)
             is_self = q_sel == k_sel
 
             st.subheader(
                 f"Feature {q_sel} → Feature {k_sel}"
                 + ("  ⟲ self" if is_self else "")
             )
-            st.caption(
-                f"Total absolute strength: **{strength_sel:.4f}** | "
-                f"Position-pair occurrences: **{count_sel}**"
-            )
+            m1, m2, m3 = st.columns(3)
+            m1.metric("(i) Sum |FRA|",   f"{strength_sel:.4f}")
+            m2.metric("(ii) Non-zero avg", f"{avg_sel:.4f}", help=f"over {count_sel} position-pairs")
+            m3.metric("(iii) Max |FRA|",  f"{max_sel:.4f}")
             if is_self:
                 st.info(
                     "Self-interaction: query and key are the **same** feature. "
@@ -519,10 +655,10 @@ with tab1:
 
 with tab2:
     st.subheader(f"FRA Feature Interaction Matrix — L{layer_} H{head_}")
+    mode_desc = {"avg": "non-zero average", "sum": "sum", "max": "max"}.get(agg_mode, agg_mode)
     st.caption(
-        "Each cell shows the total absolute interaction strength summed over "
-        "all position pairs. Only the top features appearing in the ranked list "
-        "are shown."
+        f"Each cell shows the **{mode_desc}** absolute interaction strength "
+        "over all position pairs. Only features appearing in the ranked list are shown."
     )
 
     if not pairs:
@@ -531,7 +667,7 @@ with tab2:
         # Collect unique features from top pairs
         top_features = []
         seen = set()
-        for q, k, _, _ in pairs:
+        for q, k, *_ in pairs:
             for f in (q, k):
                 if f not in seen:
                     seen.add(f)
@@ -541,11 +677,17 @@ with tab2:
 
         feat_to_idx = {f: i for i, f in enumerate(top_features)}
         n = len(top_features)
+        # Build matrix using the currently active ranking score
         matrix = np.zeros((n, n))
-
-        for q, k, strength, _ in pairs:
+        for q, k, s, cnt, mx in pairs:
             if q in feat_to_idx and k in feat_to_idx:
-                matrix[feat_to_idx[q], feat_to_idx[k]] += strength
+                if agg_mode == "avg":
+                    score = s / max(cnt, 1)
+                elif agg_mode == "max":
+                    score = mx
+                else:
+                    score = s
+                matrix[feat_to_idx[q], feat_to_idx[k]] += score
 
         labels = [f"F{f}" for f in top_features]
 
