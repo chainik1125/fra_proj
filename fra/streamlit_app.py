@@ -623,10 +623,12 @@ with tab1:
                 fra_data["values_np"],
                 q_sel, k_sel, seq_len,
             )
+            tick_labels = [html_lib.escape(t) for t in token_strs]
+            tick_vals = list(range(len(token_strs)))
             fig_pos = go.Figure(go.Heatmap(
                 z=pos_mat,
-                x=[html_lib.escape(t) for t in token_strs],
-                y=[html_lib.escape(t) for t in token_strs],
+                x=tick_vals,
+                y=tick_vals,
                 colorscale="Blues",
                 hovertemplate=(
                     "Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}"
@@ -636,9 +638,8 @@ with tab1:
             fig_pos.update_layout(
                 height=300,
                 margin=dict(l=0, r=0, t=0, b=0),
-                xaxis_title="Key token",
-                yaxis_title="Query token",
-                yaxis_autorange="reversed",
+                xaxis=dict(title="Key token", tickvals=tick_vals, ticktext=tick_labels),
+                yaxis=dict(title="Query token", tickvals=tick_vals, ticktext=tick_labels, autorange="reversed"),
             )
             st.plotly_chart(fig_pos, use_container_width=True)
 
