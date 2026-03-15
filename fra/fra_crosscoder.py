@@ -154,28 +154,20 @@ def get_sentence_fra_crosscoder(
     #
     #   output = (x / rms(x)) * gamma
     #
-    # where rms(x) = sqrt(mean(x^2) + eps) is a scalar per position, and
-    # gamma is a fixed learnable per-element scale.
-    #
-    # Since rms is scalar, the attention score decomposes exactly:
-    #
-    #   attn(q, k) = 1/(rms_q * rms_k)
-    #                * sum_ij a_qi * a_kj * (W_dec[i] @ W_Q_eff) . (W_dec[j] @ W_K_eff)
-    #
-    # where W_Q_eff = diag(gamma) @ W_Q,  W_K_eff = diag(gamma) @ W_K.
+    # TransformerLens folds gamma into W_Q / W_K when loading Gemma
+    # (fold_ln=True converts "RMS" -> "RMSPre"), so W_Q and W_K already
+    # include the gamma factor.  The only remaining correction is the
+    # per-position scalar 1/rms(x).
 
-    gamma = target_model.blocks[layer].ln1.weight           # [d_model]
     eps = target_model.cfg.eps
 
     # Per-position RMS from the actual full residual stream
     # (target_act is both the crosscoder input and the RMSNorm input)
     rms = (target_act.pow(2).mean(dim=-1) + eps).sqrt()   # [seq]
 
-    # Fold gamma into W_Q / W_K (one-time)
+    # W_Q / W_K already have gamma folded in by TransformerLens
     W_Q = target_model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
     W_K = _get_W_K(target_model, layer, head)              # [d_model, d_head]
-    W_Q_eff = gamma.unsqueeze(1) * W_Q                    # [d_model, d_head]
-    W_K_eff = gamma.unsqueeze(1) * W_K                    # [d_model, d_head]
 
     W_dec = crosscoder.W_dec                              # [d_sae, d_model]
 
@@ -202,13 +194,13 @@ def get_sentence_fra_crosscoder(
             q_vecs = W_dec[q_active]                       # [n_q, d_model]
             k_vecs = W_dec[k_active]                       # [n_k, d_model]
 
-            q_proj = torch.matmul(q_vecs, W_Q_eff)        # [n_q, d_head]
-            k_proj = torch.matmul(k_vecs, W_K_eff)        # [n_k, d_head]
+            q_proj = torch.matmul(q_vecs, W_Q)              # [n_q, d_head]
+            k_proj = torch.matmul(k_vecs, W_K)              # [n_k, d_head]
             int_matrix = torch.matmul(q_proj, k_proj.T)   # [n_q, n_k]
 
             # Scale by activation magnitudes and RMSNorm correction.
             # The 1/(rms_q * rms_k) factor accounts for the input-dependent
-            # part of RMSNorm; gamma is already folded into W_Q_eff / W_K_eff.
+            # part of RMSNorm; gamma is already folded into W_Q / W_K.
             int_matrix = (
                 int_matrix
                 * q_feat[q_active].unsqueeze(1)
