@@ -334,7 +334,7 @@ with st.sidebar:
 
         crosscoder_repo_id = st.text_input(
             "Crosscoder HF repo",
-            value="science-of-finetuning/gemma-2-2b-crosscoder-l13-mu4.1e-02-lr1e-04",
+            value="science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
         )
         base_model_name = st.text_input("Base model", value="google/gemma-2-2b")
         it_model_name = st.text_input("Instruct model", value="google/gemma-2-2b-it")

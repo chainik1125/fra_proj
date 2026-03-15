@@ -164,7 +164,7 @@ def get_sentence_fra_crosscoder(
     #
     # where W_Q_eff = diag(gamma) @ W_Q,  W_K_eff = diag(gamma) @ W_K.
 
-    gamma = target_model.blocks[layer].ln1.w              # [d_model]
+    gamma = target_model.blocks[layer].ln1.weight           # [d_model]
     eps = target_model.cfg.eps
 
     # Per-position RMS from the actual full residual stream

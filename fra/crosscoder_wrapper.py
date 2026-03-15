@@ -8,7 +8,7 @@ of shape [d_sae, d_model].
 
 Usage:
     xcoder = GemmaCrosscoderFRA.from_pretrained(
-        "science-of-finetuning/gemma-2-2b-crosscoder-l13-mu4.1e-02-lr1e-04",
+        "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
         model_idx=0,  # 0 = base, 1 = instruct
     )
 """
@@ -70,7 +70,7 @@ class GemmaCrosscoderFRA:
     @classmethod
     def from_pretrained(
         cls,
-        repo_id: str = "science-of-finetuning/gemma-2-2b-crosscoder-l13-mu4.1e-02-lr1e-04",
+        repo_id: str = "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
         model_idx: int = 0,
         device: str = "cuda",
     ) -> "GemmaCrosscoderFRA":
