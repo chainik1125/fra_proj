@@ -51,6 +51,28 @@ def load_sae_local(checkpoint_path: str, layer: int, device: str):
     return LocalLn1SAE(checkpoint_path, layer=layer, device=device)
 
 
+@st.cache_resource
+def load_gemma_pair(base_name: str, it_name: str, device: str):
+    """Load both Gemma 2B base and instruct models."""
+    from transformer_lens import HookedTransformer
+    torch.set_grad_enabled(False)
+    base = HookedTransformer.from_pretrained(
+        base_name, device=device, dtype=torch.float16,
+    )
+    it = HookedTransformer.from_pretrained(
+        it_name, device=device, dtype=torch.float16,
+    )
+    return base, it
+
+
+@st.cache_resource
+def load_crosscoder(repo_id: str, model_idx: int, device: str):
+    from fra.crosscoder_wrapper import GemmaCrosscoderFRA
+    return GemmaCrosscoderFRA.from_pretrained(
+        repo_id, model_idx=model_idx, device=device,
+    )
+
+
 @st.cache_data
 def fetch_neuronpedia(layer: int, feature_id: int) -> str:
     """Fetch feature explanation from Neuronpedia API (cached)."""
@@ -143,6 +165,73 @@ def run_fra(
     }
 
 
+def run_fra_crosscoder(
+    text: str,
+    layer: int,
+    head: int,
+    crosscoder_layer: int,
+    crosscoder_repo_id: str,
+    model_idx: int,
+    base_model_name: str,
+    it_model_name: str,
+    top_k_features: int,
+    device: str,
+) -> dict:
+    """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
+    from fra.fra_crosscoder import get_sentence_fra_crosscoder
+
+    base_model, it_model = load_gemma_pair(base_model_name, it_model_name, device)
+    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device)
+    target_model = base_model if model_idx == 0 else it_model
+
+    with torch.no_grad():
+        fra_result = get_sentence_fra_crosscoder(
+            base_model, it_model, crosscoder, text,
+            layer=layer, head=head,
+            crosscoder_layer=crosscoder_layer,
+            max_length=128, top_k=top_k_features,
+            verbose=True,
+        )
+
+        # Feature activations for token-level display
+        hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
+        tokens = target_model.tokenizer.encode(text)[:128]
+        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+        _, base_cache = base_model.run_with_cache(
+            tok_tensor, names_filter=[hook_name],
+        )
+        _, it_cache = it_model.run_with_cache(
+            tok_tensor, names_filter=[hook_name],
+        )
+        x_stacked = torch.stack([
+            base_cache[hook_name].squeeze(0),
+            it_cache[hook_name].squeeze(0),
+        ], dim=1)
+        feat_acts = crosscoder.encode(x_stacked)  # [seq_len, d_sae]
+
+        # Standard attention pattern for comparison
+        attn_hook = f"blocks.{layer}.attn.hook_pattern"
+        _, attn_cache = target_model.run_with_cache(
+            tok_tensor, names_filter=[attn_hook],
+        )
+        attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()
+
+        token_strs = [target_model.tokenizer.decode([t]) for t in tokens]
+
+    sparse = fra_result["fra_tensor_sparse"]
+    return {
+        "indices_np": sparse.indices().cpu().numpy(),
+        "values_np": sparse.values().cpu().numpy(),
+        "shape": fra_result["shape"],
+        "seq_len": fra_result["seq_len"],
+        "total_interactions": fra_result["total_interactions"],
+        "feat_acts_np": feat_acts.cpu().numpy(),
+        "attn_pattern_np": attn_pattern,
+        "token_strs": token_strs,
+    }
+
+
 def _aggregate_pairs(indices_np, values_np, filter_self=False):
     """Aggregate by (q_feat, k_feat) returning {pair: (sum_abs, count)}."""
     q_feats = indices_np[2, :]
@@ -228,37 +317,85 @@ with st.sidebar:
     )
 
     st.subheader("Model & SAE")
-    col_l, col_h = st.columns(2)
-    with col_l:
-        layer = st.number_input("Layer", 0, 11, value=5)
-    with col_h:
-        head = st.number_input("Head", 0, 11, value=1)
 
     sae_option = st.radio(
         "SAE",
-        ["Hub — hook_z (Neuronpedia)", "Local — ln1 (trained)"],
+        [
+            "GPT-2 — Hub hook_z (Neuronpedia)",
+            "GPT-2 — Local ln1 (trained)",
+            "Gemma 2B — Crosscoder (model-diffing)",
+        ],
         index=0,
     )
 
-    if sae_option.startswith("Hub"):
-        sae_type = "hub"
-        hook_point = "attn.hook_z"
-        sae_hub_release = "gpt2-small-hook-z-kk"
-        sae_hub_id = f"blocks.{layer}.hook_z"
-        supports_neuronpedia = True
-        sae_local_path = ""
-    else:
-        sae_type = "local"
-        hook_point = "ln1.hook_normalized"
+    if sae_option.startswith("Gemma"):
+        sae_type = "crosscoder"
+        supports_neuronpedia = False
+
+        crosscoder_repo_id = st.text_input(
+            "Crosscoder HF repo",
+            value="science-of-finetuning/gemma-2-2b-crosscoder-l13-mu4.1e-02-lr1e-04",
+        )
+        base_model_name = st.text_input("Base model", value="google/gemma-2-2b")
+        it_model_name = st.text_input("Instruct model", value="google/gemma-2-2b-it")
+        model_idx = st.radio(
+            "Analyse attention of",
+            [0, 1],
+            format_func=lambda i: "Base (model 0)" if i == 0 else "Instruct (model 1)",
+            horizontal=True,
+        )
+        crosscoder_layer = st.number_input(
+            "Crosscoder layer (activations)", 0, 25, value=13,
+        )
+        col_l, col_h = st.columns(2)
+        with col_l:
+            layer = st.number_input("Attention layer", 0, 25, value=14)
+        with col_h:
+            head = st.number_input("Head", 0, 7, value=0)
+
+        st.caption(
+            "Requires ~12 GB GPU RAM for both Gemma 2B models (fp16) "
+            "plus the crosscoder. Gemma weights are gated — accept the "
+            "license on HuggingFace and run `huggingface-cli login` first."
+        )
+
+        # not used for crosscoder path
+        hook_point = ""
         sae_hub_release = ""
         sae_hub_id = ""
-        supports_neuronpedia = False
-        default_local = str(
-            Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968"
-        )
-        sae_local_path = st.text_input("Checkpoint path", value=default_local)
-        if not Path(sae_local_path).exists():
-            st.warning("Checkpoint not found. Train with `python train_sae.py`.")
+        sae_local_path = ""
+    else:
+        crosscoder_repo_id = ""
+        base_model_name = ""
+        it_model_name = ""
+        model_idx = 0
+        crosscoder_layer = 13
+
+        col_l, col_h = st.columns(2)
+        with col_l:
+            layer = st.number_input("Layer", 0, 11, value=5)
+        with col_h:
+            head = st.number_input("Head", 0, 11, value=1)
+
+        if sae_option.startswith("GPT-2 — Hub"):
+            sae_type = "hub"
+            hook_point = "attn.hook_z"
+            sae_hub_release = "gpt2-small-hook-z-kk"
+            sae_hub_id = f"blocks.{layer}.hook_z"
+            supports_neuronpedia = True
+            sae_local_path = ""
+        else:
+            sae_type = "local"
+            hook_point = "ln1.hook_normalized"
+            sae_hub_release = ""
+            sae_hub_id = ""
+            supports_neuronpedia = False
+            default_local = str(
+                Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968"
+            )
+            sae_local_path = st.text_input("Checkpoint path", value=default_local)
+            if not Path(sae_local_path).exists():
+                st.warning("Checkpoint not found. Train with `python train_sae.py`.")
 
     st.subheader("Compute settings")
     top_k_feat = st.slider("Top-K features / position", 5, 50, 20)
@@ -282,28 +419,45 @@ st.caption("Decomposing attention through SAE feature space.")
 # ---------------------------------------------------------------------------
 
 if compute_btn:
-    with st.spinner("Loading model & SAE…"):
-        # Pre-warm resource caches on this machine
-        load_model("gpt2-small", device)
-        if sae_type == "hub":
-            load_sae_hub(sae_hub_release, sae_hub_id, device)
-        elif Path(sae_local_path).exists():
-            # Infer layer from cfg.json if needed; pass layer param anyway
-            load_sae_local(sae_local_path, int(layer), device)
+    if sae_type == "crosscoder":
+        with st.spinner("Loading Gemma models & crosscoder…"):
+            load_gemma_pair(base_model_name, it_model_name, device)
+            load_crosscoder(crosscoder_repo_id, model_idx, device)
 
-    with st.spinner("Computing Feature-Resolved Attention…"):
-        fra_data = run_fra(
-            text=text,
-            layer=int(layer),
-            head=int(head),
-            hook_point=hook_point,
-            sae_type=sae_type,
-            sae_hub_release=sae_hub_release,
-            sae_hub_id=sae_hub_id,
-            sae_local_path=sae_local_path,
-            top_k_features=top_k_feat,
-            device=device,
-        )
+        with st.spinner("Computing Feature-Resolved Attention (crosscoder)…"):
+            fra_data = run_fra_crosscoder(
+                text=text,
+                layer=int(layer),
+                head=int(head),
+                crosscoder_layer=int(crosscoder_layer),
+                crosscoder_repo_id=crosscoder_repo_id,
+                model_idx=int(model_idx),
+                base_model_name=base_model_name,
+                it_model_name=it_model_name,
+                top_k_features=top_k_feat,
+                device=device,
+            )
+    else:
+        with st.spinner("Loading model & SAE…"):
+            load_model("gpt2-small", device)
+            if sae_type == "hub":
+                load_sae_hub(sae_hub_release, sae_hub_id, device)
+            elif Path(sae_local_path).exists():
+                load_sae_local(sae_local_path, int(layer), device)
+
+        with st.spinner("Computing Feature-Resolved Attention…"):
+            fra_data = run_fra(
+                text=text,
+                layer=int(layer),
+                head=int(head),
+                hook_point=hook_point,
+                sae_type=sae_type,
+                sae_hub_release=sae_hub_release,
+                sae_hub_id=sae_hub_id,
+                sae_local_path=sae_local_path,
+                top_k_features=top_k_feat,
+                device=device,
+            )
 
     st.session_state["fra_data"] = fra_data
     st.session_state["fra_config"] = {
