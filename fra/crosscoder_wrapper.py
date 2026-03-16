@@ -46,14 +46,15 @@ class GemmaCrosscoderFRA:
         b_dec: torch.Tensor,       # (n_models, d_model) -- centering bias
         model_idx: int = 0,
         device: str = "cuda",
+        dtype: torch.dtype = torch.float16,
     ):
         self.device = device
         self.model_idx = model_idx
 
-        self._W_enc = W_enc.to(device)          # (n_models, d_model, d_sae)
-        self.b_enc = b_enc.to(device)            # (d_sae,)
-        self._W_dec_full = W_dec.to(device)      # (n_models, d_sae, d_model)
-        self._b_dec = b_dec.to(device)           # (n_models, d_model)
+        self._W_enc = W_enc.to(device=device, dtype=dtype)      # (n_models, d_model, d_sae)
+        self.b_enc = b_enc.to(device=device, dtype=dtype)        # (d_sae,)
+        self._W_dec_full = W_dec.to(device=device, dtype=dtype)  # (n_models, d_sae, d_model)
+        self._b_dec = b_dec.to(device=device, dtype=dtype)       # (n_models, d_model)
 
         self.n_models = W_enc.shape[0]
         self.d_model = W_enc.shape[1]
@@ -73,6 +74,7 @@ class GemmaCrosscoderFRA:
         repo_id: str = "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
         model_idx: int = 0,
         device: str = "cuda",
+        dtype: torch.dtype = torch.float16,
     ) -> "GemmaCrosscoderFRA":
         """Download and load a crosscoder from HuggingFace.
 
@@ -98,6 +100,7 @@ class GemmaCrosscoderFRA:
             b_dec=sd["decoder.bias"],
             model_idx=model_idx,
             device=device,
+            dtype=dtype,
         )
 
     # ------------------------------------------------------------------
