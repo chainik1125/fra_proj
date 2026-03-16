@@ -8,14 +8,16 @@ models (e.g. Gemma 2B base + instruct).
 The key differences from the single-model FRA:
   1. Both models are run to produce stacked activations for the crosscoder.
   2. GQA (grouped-query attention) is handled when indexing W_K.
-  3. The crosscoder and attention layers can differ (the crosscoder was
-     trained at one layer; we can analyze attention at another).
+  3. The attention layer is always ``crosscoder_layer + 1`` — the layer
+     whose input is exactly the residual stream the crosscoder encodes.
   4. RMSNorm correction: the crosscoder decoder vectors live in residual-
      stream space, but W_Q / W_K project from post-RMSNorm space.  We
      account for this exactly by folding gamma into W_Q / W_K and dividing
      each position pair's interactions by rms_q * rms_k (both scalars
      computed from the full residual stream at each position).
 """
+
+import math
 
 import torch
 from typing import Any, Dict
@@ -54,7 +56,6 @@ def get_sentence_fra_crosscoder(
     it_model: HookedTransformer,
     crosscoder: Any,
     text: str,
-    layer: int = 14,
     head: int = 0,
     crosscoder_layer: int = 13,
     max_length: int = 128,
@@ -65,23 +66,25 @@ def get_sentence_fra_crosscoder(
 
     The crosscoder was trained on ``hook_resid_post`` at ``crosscoder_layer``.
     That residual stream state is the input to the *next* layer's attention
-    (``hook_resid_pre`` at ``crosscoder_layer + 1``), so by default we
-    analyse attention at ``crosscoder_layer + 1``.  The same activations are
-    used for crosscoder encoding and for the RMSNorm correction.
+    (``hook_resid_pre`` at ``crosscoder_layer + 1``), so we always analyse
+    attention at ``crosscoder_layer + 1``.  The same activations are used
+    for crosscoder encoding and for the RMSNorm correction.
+
+    The attention layer is **not** independently configurable — it is always
+    ``crosscoder_layer + 1``.  This ensures the FRA decomposition corresponds
+    to the features the crosscoder actually learned.
 
     Args:
         base_model:  HookedTransformer for model-index 0 (base).
         it_model:    HookedTransformer for model-index 1 (instruct).
         crosscoder:  ``GemmaCrosscoderFRA`` instance.
         text:        Input text to analyse.
-        layer:       Attention layer whose W_Q / W_K to use.  Defaults to
-                     ``crosscoder_layer + 1`` (the layer that reads from the
-                     crosscoder's residual stream).
         head:        Attention head index.
         crosscoder_layer:
             Layer from which to extract residual-stream activations for the
             crosscoder (default 13, matching the published checkpoint).
-            Uses ``hook_resid_post`` at this layer.
+            Uses ``hook_resid_post`` at this layer.  The attention layer
+            is derived as ``crosscoder_layer + 1``.
         max_length:  Maximum sequence length.
         top_k:       Keep only top-k features per position.
         verbose:     Show progress bar.
@@ -93,6 +96,7 @@ def get_sentence_fra_crosscoder(
           - ``seq_len``
           - ``total_interactions``
     """
+    layer = crosscoder_layer + 1
     target_model = base_model if crosscoder.model_idx == 0 else it_model
     other_model = it_model if crosscoder.model_idx == 0 else base_model
     device = next(target_model.parameters()).device
@@ -158,16 +162,21 @@ def get_sentence_fra_crosscoder(
     # (fold_ln=True converts "RMS" -> "RMSPre"), so W_Q and W_K already
     # include the gamma factor.  The only remaining correction is the
     # per-position scalar 1/rms(x).
+    #
+    # The RMS must be computed from the residual stream that actually
+    # feeds into the attention layer's RMSNorm — i.e. hook_resid_pre at
+    # ``layer``, which equals hook_resid_post at ``crosscoder_layer``.
+    # Since layer is always crosscoder_layer + 1, ``target_act`` is
+    # exactly that residual stream.
 
     eps = target_model.cfg.eps
-
-    # Per-position RMS from the actual full residual stream
-    # (target_act is both the crosscoder input and the RMSNorm input)
     rms = (target_act.pow(2).mean(dim=-1) + eps).sqrt()   # [seq]
 
     # W_Q / W_K already have gamma folded in by TransformerLens
     W_Q = target_model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
     W_K = _get_W_K(target_model, layer, head)              # [d_model, d_head]
+    d_head = W_Q.shape[-1]
+    attn_scale = math.sqrt(d_head)
 
     W_dec = crosscoder.W_dec                              # [d_sae, d_model]
 
@@ -198,14 +207,15 @@ def get_sentence_fra_crosscoder(
             k_proj = torch.matmul(k_vecs, W_K)              # [n_k, d_head]
             int_matrix = torch.matmul(q_proj, k_proj.T)   # [n_q, n_k]
 
-            # Scale by activation magnitudes and RMSNorm correction.
+            # Scale by 1/sqrt(d_head) (standard attention scaling),
+            # activation magnitudes, and RMSNorm correction.
             # The 1/(rms_q * rms_k) factor accounts for the input-dependent
             # part of RMSNorm; gamma is already folded into W_Q / W_K.
             int_matrix = (
                 int_matrix
                 * q_feat[q_active].unsqueeze(1)
                 * k_feat[k_active].unsqueeze(0)
-                / (rms[query_idx] * rms[key_idx])
+                / (attn_scale * rms[query_idx] * rms[key_idx])
             )
 
             mask = int_matrix.abs() > 1e-10

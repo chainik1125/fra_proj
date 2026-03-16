@@ -1,3 +1,5 @@
+import math
+
 from transformer_lens import HookedTransformer
 import torch
 import numpy as np
@@ -43,7 +45,8 @@ def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
     if k_do_bias:
         k += b_K
         
-    attention_scores = einsum(q, k, "q a, k a -> q k")
+    d_head = W_Q.shape[-1]
+    attention_scores = einsum(q, k, "q a, k a -> q k") / math.sqrt(d_head)
 
     return attention_scores.detach().cpu().numpy()
 
@@ -238,7 +241,9 @@ def get_sentence_fra_batch(
     # Get attention weights
     W_Q = model.blocks[layer].attn.W_Q[head]
     W_K = model.blocks[layer].attn.W_K[head]
-    
+    d_head = W_Q.shape[-1]
+    attn_scale = math.sqrt(d_head)
+
     # Get decoder weights
     if hasattr(sae, 'W_dec'):
         W_dec = sae.W_dec
@@ -271,11 +276,11 @@ def get_sentence_fra_batch(
             q_vecs = W_dec[q_active]
             k_vecs = W_dec[k_active]
             
-            # Compute attention scores
+            # Compute attention scores (with standard 1/sqrt(d_head) scaling)
             q_proj = torch.matmul(q_vecs, W_Q)
             k_proj = torch.matmul(k_vecs, W_K)
-            int_matrix = torch.matmul(q_proj, k_proj.T)
-            
+            int_matrix = torch.matmul(q_proj, k_proj.T) / attn_scale
+
             # Scale by feature activations
             int_matrix = int_matrix * q_feat[q_active].unsqueeze(1) * k_feat[k_active].unsqueeze(0)
             

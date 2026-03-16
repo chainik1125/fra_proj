@@ -3,6 +3,7 @@ name = "temp-xc"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "dictionary-learning @ git+https://github.com/jkminder/dictionary_learning",
     "eindex",
     "ipython",
     "matplotlib",

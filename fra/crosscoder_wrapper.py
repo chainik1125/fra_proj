@@ -6,6 +6,11 @@ activations from a base model and an instruct model.  Exposes the interface
 that the FRA pipeline expects: .encode() returning [seq, d_sae] and .W_dec
 of shape [d_sae, d_model].
 
+Delegates all weight loading, encoding, and activation-function logic to the
+``dictionary_learning`` package (BatchTopKCrossCoder / CrossCoder), which
+correctly handles BatchTopK sparsification, activation normalization, and
+the HuggingFace hub format.
+
 Usage:
     xcoder = GemmaCrosscoderFRA.from_pretrained(
         "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
@@ -13,10 +18,11 @@ Usage:
     )
 """
 
-import json
+from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+
+from dictionary_learning import BatchTopKCrossCoder, CrossCoder
 
 
 class GemmaCrosscoderFRA:
@@ -36,33 +42,27 @@ class GemmaCrosscoderFRA:
     Note: the decoder vectors live in *residual-stream* space, while W_Q / W_K
     project from *post-LayerNorm* space.  This is an approximation (the same
     one made by hook_z SAEs in the original dashboard).
+
+    This class delegates encoding and weight management to the
+    ``dictionary_learning`` package's own CrossCoder / BatchTopKCrossCoder
+    implementation, which correctly handles BatchTopK activation, threshold-
+    based sparsification, and activation normalization.
     """
 
     def __init__(
         self,
-        W_enc: torch.Tensor,       # (n_models, d_model, d_sae)
-        b_enc: torch.Tensor,       # (d_sae,)
-        W_dec: torch.Tensor,       # (n_models, d_sae, d_model)
-        b_dec: torch.Tensor,       # (n_models, d_model) -- centering bias
+        crosscoder: CrossCoder,
         model_idx: int = 0,
-        device: str = "cuda",
-        dtype: torch.dtype = torch.float16,
     ):
-        self.device = device
+        self._crosscoder = crosscoder
         self.model_idx = model_idx
 
-        self._W_enc = W_enc.to(device=device, dtype=dtype)      # (n_models, d_model, d_sae)
-        self.b_enc = b_enc.to(device=device, dtype=dtype)        # (d_sae,)
-        self._W_dec_full = W_dec.to(device=device, dtype=dtype)  # (n_models, d_sae, d_model)
-        self._b_dec = b_dec.to(device=device, dtype=dtype)       # (n_models, d_model)
+        self.d_sae = crosscoder.dict_size
+        self.d_model = crosscoder.activation_dim
 
-        self.n_models = W_enc.shape[0]
-        self.d_model = W_enc.shape[1]
-        self.d_sae = W_enc.shape[2]
-        self.d_in = self.d_model
-
-        # Single-model decoder slice for FRA
-        self.W_dec = self._W_dec_full[model_idx].contiguous()  # (d_sae, d_model)
+        # Single-model decoder slice for FRA: (d_sae, d_model)
+        # decoder.weight has shape (n_models, d_sae, d_model)
+        self.W_dec = crosscoder.decoder.weight[model_idx].detach().contiguous()
 
     # ------------------------------------------------------------------
     # Loading
@@ -78,49 +78,49 @@ class GemmaCrosscoderFRA:
     ) -> "GemmaCrosscoderFRA":
         """Download and load a crosscoder from HuggingFace.
 
-        Expects the ``dictionary_learning`` save format with:
-          - ``config.json``  (activation_dim, dict_size, num_layers)
-          - ``model.safetensors``
+        Uses ``dictionary_learning.BatchTopKCrossCoder.from_pretrained``
+        with ``from_hub=True``, which handles downloading ``config.json``
+        and ``model.safetensors`` via ``PyTorchModelHubMixin``.
+
+        Falls back to ``CrossCoder`` if the model is not a BatchTopK
+        variant.
         """
-        from huggingface_hub import hf_hub_download
-        from safetensors.torch import load_file
+        try:
+            crosscoder = BatchTopKCrossCoder.from_pretrained(
+                repo_id,
+                from_hub=True,
+                device=device,
+                dtype=dtype,
+            )
+        except Exception:
+            crosscoder = CrossCoder.from_pretrained(
+                repo_id,
+                from_hub=True,
+                device=device,
+                dtype=dtype,
+            )
 
-        config_path = hf_hub_download(repo_id, "config.json")
-        weights_path = hf_hub_download(repo_id, "model.safetensors")
-
-        with open(config_path) as f:
-            config = json.load(f)
-
-        sd = load_file(weights_path, device="cpu")
-
-        return cls(
-            W_enc=sd["encoder.weight"],
-            b_enc=sd["encoder.bias"],
-            W_dec=sd["decoder.weight"],
-            b_dec=sd["decoder.bias"],
-            model_idx=model_idx,
-            device=device,
-            dtype=dtype,
-        )
+        return cls(crosscoder=crosscoder, model_idx=model_idx)
 
     # ------------------------------------------------------------------
-    # Encode / decode
+    # Encode
     # ------------------------------------------------------------------
 
+    @torch.no_grad()
     def encode(self, x_stacked: torch.Tensor) -> torch.Tensor:
         """Encode stacked residual-stream activations from both models.
+
+        Delegates to the ``dictionary_learning`` crosscoder's ``encode()``
+        method, which handles activation normalization and the correct
+        sparsification (BatchTopK threshold or ReLU) automatically.
 
         Args:
             x_stacked: ``(seq_len, n_models, d_model)``
 
         Returns:
-            ``(seq_len, d_sae)`` -- sparse feature activations (ReLU).
+            ``(seq_len, d_sae)`` -- sparse feature activations.
         """
-        x_centered = x_stacked - self._b_dec          # (seq, n_models, d_model)
-        # Contract over model and d_model dims:
-        #   (seq, n_models, d_model) @ (n_models, d_model, d_sae) -> (seq, d_sae)
-        pre_act = torch.einsum("smd,mdl->sl", x_centered, self._W_enc) + self.b_enc
-        return F.relu(pre_act)
+        return self._crosscoder.encode(x_stacked)
 
     def decode(self, features: torch.Tensor) -> torch.Tensor:
         """Decode features back to stacked residual-stream space.
@@ -131,8 +131,7 @@ class GemmaCrosscoderFRA:
         Returns:
             ``(seq_len, n_models, d_model)``
         """
-        # (seq, d_sae) @ (n_models, d_sae, d_model) -> (seq, n_models, d_model)
-        return torch.einsum("sl,mld->smd", features, self._W_dec_full) + self._b_dec
+        return self._crosscoder.decode(features)
 
     def feature_sparsity(self, features: torch.Tensor) -> float:
         return (features == 0).float().mean().item()

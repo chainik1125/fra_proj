@@ -167,7 +167,6 @@ def run_fra(
 
 def run_fra_crosscoder(
     text: str,
-    layer: int,
     head: int,
     crosscoder_layer: int,
     crosscoder_repo_id: str,
@@ -183,11 +182,12 @@ def run_fra_crosscoder(
     base_model, it_model = load_gemma_pair(base_model_name, it_model_name, device)
     crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device)
     target_model = base_model if model_idx == 0 else it_model
+    layer = crosscoder_layer + 1
 
     with torch.no_grad():
         fra_result = get_sentence_fra_crosscoder(
             base_model, it_model, crosscoder, text,
-            layer=layer, head=head,
+            head=head,
             crosscoder_layer=crosscoder_layer,
             max_length=128, top_k=top_k_features,
             verbose=True,
@@ -347,11 +347,9 @@ with st.sidebar:
         crosscoder_layer = st.number_input(
             "Crosscoder layer (activations)", 0, 25, value=13,
         )
-        col_l, col_h = st.columns(2)
-        with col_l:
-            layer = st.number_input("Attention layer", 0, 25, value=14)
-        with col_h:
-            head = st.number_input("Head", 0, 7, value=0)
+        layer = crosscoder_layer + 1
+        st.caption(f"Attention layer: **{layer}** (crosscoder layer + 1)")
+        head = st.number_input("Head", 0, 7, value=0)
 
         st.caption(
             "Requires ~12 GB GPU RAM for both Gemma 2B models (fp16) "
@@ -427,7 +425,6 @@ if compute_btn:
         with st.spinner("Computing Feature-Resolved Attention (crosscoder)…"):
             fra_data = run_fra_crosscoder(
                 text=text,
-                layer=int(layer),
                 head=int(head),
                 crosscoder_layer=int(crosscoder_layer),
                 crosscoder_repo_id=crosscoder_repo_id,

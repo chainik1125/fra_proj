@@ -3,6 +3,7 @@
 Optimized dashboard for visualizing top accumulated feature pairs.
 Main optimization: Use torch operations instead of Python loops for finding top-k.
 """
+from __future__ import annotations
 
 import torch
 import numpy as np
@@ -32,41 +33,38 @@ def process_sparse_accumulation_fast(
     interaction_sum = interaction_sum_sparse.coalesce()
     interaction_count = interaction_count_sparse.coalesce()
     
-    # Get indices and values
-    sum_indices = interaction_sum.indices()  # [2, nnz]
-    sum_values = interaction_sum.values()    # [nnz]
-    
-    # For count tensor, we need to match indices
-    count_indices = interaction_count.indices()  # [2, nnz]
-    count_values = interaction_count.values()    # [nnz]
-    
-    print(f"  Found {sum_indices.shape[1]} unique feature pairs")
-    
-    # OPTIMIZATION: Use torch operations to compute averages directly
-    # First, ensure both tensors have same sparsity pattern by adding them
-    # This ensures matching indices
-    combined = interaction_sum + interaction_count * 0  # Trick to get matching indices
-    combined = combined.coalesce()
-    
-    # Now we can safely divide
-    # Get the actual values at the combined indices
-    indices = combined.indices()
-    
-    # Create dense lookup for fast access (only if feasible)
-    if indices.shape[1] < 1000000:  # Only if not too many pairs
-        # Direct division since indices now match
-        avg_values = sum_values / count_values
-    else:
-        # For very large tensors, use sparse operations
-        avg_sparse = interaction_sum / interaction_count.to(interaction_sum.dtype)
-        avg_sparse = avg_sparse.coalesce()
-        indices = avg_sparse.indices()
-        avg_values = avg_sparse.values()
-    
+    print(f"  Found {interaction_sum.indices().shape[1]} unique feature pairs (sum)")
+
+    # Compute per-pair averages via sparse division.
+    # Both tensors share the same sparsity pattern in normal use, but we
+    # guard against mismatches by using proper sparse arithmetic.
+    avg_sparse = interaction_sum / interaction_count.to(interaction_sum.dtype)
+    avg_sparse = avg_sparse.coalesce()
+    indices = avg_sparse.indices()       # [2, nnz]
+    avg_values = avg_sparse.values()     # [nnz]
+
+    # Also coalesce the inputs so their values align with avg_sparse indices
+    interaction_sum = interaction_sum.coalesce()
+    interaction_count = interaction_count.coalesce()
+    sum_values = interaction_sum.values()
+    count_values = interaction_count.values()
+
     # Find top-k using torch.topk (much faster than sorting all)
-    k = min(top_k, len(avg_values))
+    k = min(top_k, avg_values.shape[0])
     top_values, top_idx = torch.topk(avg_values, k)
-    
+
+    # Build a lookup from (q_feat, k_feat) -> (sum, count) for the original
+    # tensors, so we can report accurate per-pair stats even if sparsity
+    # patterns were slightly misaligned.
+    sum_idx = interaction_sum.indices()   # [2, nnz]
+    count_idx = interaction_count.indices()
+    sum_lookup: dict[tuple[int, int], float] = {}
+    for j in range(sum_idx.shape[1]):
+        sum_lookup[(sum_idx[0, j].item(), sum_idx[1, j].item())] = sum_values[j].item()
+    count_lookup: dict[tuple[int, int], int] = {}
+    for j in range(count_idx.shape[1]):
+        count_lookup[(count_idx[0, j].item(), count_idx[1, j].item())] = int(count_values[j].item())
+
     # Extract top pairs
     top_pairs = []
     for i in range(k):
@@ -74,9 +72,10 @@ def process_sparse_accumulation_fast(
         q_feat = indices[0, idx].item()
         k_feat = indices[1, idx].item()
         avg_val = top_values[i].item()
-        sum_val = sum_values[idx].item() if idx < len(sum_values) else avg_val
-        count_val = count_values[idx].item() if idx < len(count_values) else 1
-        
+        pair_key = (q_feat, k_feat)
+        sum_val = sum_lookup.get(pair_key, avg_val)
+        count_val = count_lookup.get(pair_key, 1)
+
         top_pairs.append({
             'query_feature': q_feat,
             'key_feature': k_feat,

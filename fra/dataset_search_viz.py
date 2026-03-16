@@ -522,9 +522,9 @@ def generate_dataset_search_html(
                 highlighted_text = ""
                 
                 for idx, token in enumerate(tokens):
-                    if idx == min(example.query_pos, len(tokens)-1):
+                    if example.query_pos < len(tokens) and idx == example.query_pos:
                         highlighted_text += f'<span class="token-highlight highlight-query">{html.escape(token)}</span> '
-                    elif idx == min(example.key_pos, len(tokens)-1):
+                    elif example.key_pos < len(tokens) and idx == example.key_pos:
                         highlighted_text += f'<span class="token-highlight highlight-key">{html.escape(token)}</span> '
                     else:
                         highlighted_text += html.escape(token) + " "
