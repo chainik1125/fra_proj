@@ -56,13 +56,13 @@ PROMPTS = {
 def get_activations(base_model, it_model, crosscoder, text, apply_template=True):
     """Run both models and encode through crosscoder. Returns feature acts [seq, d_sae]."""
     if apply_template:
-        text = it_model.tokenizer.apply_chat_template(
+        tokens = it_model.tokenizer.apply_chat_template(
             [{"role": "user", "content": text}],
-            tokenize=False,
+            tokenize=True,
             add_generation_prompt=True,
         )
-
-    tokens = it_model.tokenizer.encode(text)
+    else:
+        tokens = it_model.tokenizer.encode(text)
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(DEVICE)
 
     hook_name = f"blocks.{CROSSCODER_LAYER}.hook_resid_post"

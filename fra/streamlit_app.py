@@ -166,7 +166,7 @@ def run_fra(
 
 
 def run_fra_crosscoder(
-    text: str,
+    tokens: list,
     head: int,
     crosscoder_layer: int,
     crosscoder_repo_id: str,
@@ -186,38 +186,24 @@ def run_fra_crosscoder(
 
     with torch.no_grad():
         fra_result = get_sentence_fra_crosscoder(
-            base_model, it_model, crosscoder, text,
+            base_model, it_model, crosscoder, tokens,
             head=head,
             crosscoder_layer=crosscoder_layer,
             max_length=128, top_k=top_k_features,
             verbose=True,
         )
 
-        # Feature activations for token-level display
-        hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
-        tokens = target_model.tokenizer.encode(text)[:128]
-        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-
-        _, base_cache = base_model.run_with_cache(
-            tok_tensor, names_filter=[hook_name],
-        )
-        _, it_cache = it_model.run_with_cache(
-            tok_tensor, names_filter=[hook_name],
-        )
-        x_stacked = torch.stack([
-            base_cache[hook_name].squeeze(0),
-            it_cache[hook_name].squeeze(0),
-        ], dim=1)
-        feat_acts = crosscoder.encode(x_stacked)  # [seq_len, d_sae]
+        feat_acts = fra_result["feature_activations"]
 
         # Standard attention pattern for comparison
+        tok_tensor = torch.tensor(tokens[:128]).unsqueeze(0).to(device)
         attn_hook = f"blocks.{layer}.attn.hook_pattern"
         _, attn_cache = target_model.run_with_cache(
             tok_tensor, names_filter=[attn_hook],
         )
         attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()
 
-        token_strs = [target_model.tokenizer.decode([t]) for t in tokens]
+        token_strs = [target_model.tokenizer.decode([t]) for t in tokens[:128]]
 
     sparse = fra_result["fra_tensor_sparse"]
     return {
@@ -433,20 +419,22 @@ if compute_btn:
             load_gemma_pair(base_model_name, it_model_name, device)
             load_crosscoder(crosscoder_repo_id, model_idx, device)
 
-        fra_text = text
+        base_model, it_model = load_gemma_pair(base_model_name, it_model_name, device)
+        target_model = base_model if model_idx == 0 else it_model
         if apply_chat_template:
-            _, it_model = load_gemma_pair(base_model_name, it_model_name, device)
-            fra_text = it_model.tokenizer.apply_chat_template(
+            fra_tokens = it_model.tokenizer.apply_chat_template(
                 [{"role": "user", "content": text}],
-                tokenize=False,
+                tokenize=True,
                 add_generation_prompt=True,
             )
             with st.expander("Templated input"):
-                st.code(fra_text)
+                st.code(it_model.tokenizer.decode(fra_tokens))
+        else:
+            fra_tokens = target_model.tokenizer.encode(text)
 
         with st.spinner("Computing Feature-Resolved Attention (crosscoder)…"):
             fra_data = run_fra_crosscoder(
-                text=fra_text,
+                tokens=fra_tokens,
                 head=int(head),
                 crosscoder_layer=int(crosscoder_layer),
                 crosscoder_repo_id=crosscoder_repo_id,

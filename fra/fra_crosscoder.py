@@ -55,7 +55,7 @@ def get_sentence_fra_crosscoder(
     base_model: HookedTransformer,
     it_model: HookedTransformer,
     crosscoder: Any,
-    text: str,
+    tokens: list,
     head: int = 0,
     crosscoder_layer: int = 13,
     max_length: int = 128,
@@ -78,7 +78,8 @@ def get_sentence_fra_crosscoder(
         base_model:  HookedTransformer for model-index 0 (base).
         it_model:    HookedTransformer for model-index 1 (instruct).
         crosscoder:  ``GemmaCrosscoderFRA`` instance.
-        text:        Input text to analyse.
+        tokens:      Token IDs to analyse.  Caller is responsible for
+                     tokenization (including chat template if needed).
         head:        Attention head index.
         crosscoder_layer:
             Layer from which to extract residual-stream activations for the
@@ -95,14 +96,14 @@ def get_sentence_fra_crosscoder(
           - ``shape``
           - ``seq_len``
           - ``total_interactions``
+          - ``feature_activations``  (torch.Tensor, [seq, d_sae])
     """
     layer = crosscoder_layer + 1
     target_model = base_model if crosscoder.model_idx == 0 else it_model
     other_model = it_model if crosscoder.model_idx == 0 else base_model
     device = next(target_model.parameters()).device
 
-    # ---- tokenise ----
-    tokens = target_model.tokenizer.encode(text)
+    # ---- truncate if needed ----
     if max_length is not None and len(tokens) > max_length:
         tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
@@ -265,4 +266,5 @@ def get_sentence_fra_crosscoder(
         "shape": shape,
         "seq_len": seq_len,
         "total_interactions": total_interactions,
+        "feature_activations": feature_activations,
     }
