@@ -735,13 +735,17 @@ with tab3:
 
     col_std, col_fra = st.columns(2)
 
+    # Use integer positions to avoid Plotly merging duplicate token labels
+    attn_tick_vals = list(range(seq_len))
+    attn_tick_labels = [html_lib.escape(t) for t in token_strs]
+
     with col_std:
         st.markdown("**Standard token-level attention** (post-softmax)")
         attn = fra_data["attn_pattern_np"][:seq_len, :seq_len]
         fig_attn = go.Figure(go.Heatmap(
             z=attn,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=attn_tick_vals,
+            y=attn_tick_vals,
             colorscale="RdBu",
             hovertemplate=(
                 "Q: %{y}<br>K: %{x}<br>Weight: %{z:.4f}<extra></extra>"
@@ -750,9 +754,8 @@ with tab3:
         fig_attn.update_layout(
             height=420,
             margin=dict(l=0, r=0, t=0, b=0),
-            xaxis_title="Key",
-            yaxis_title="Query",
-            yaxis_autorange="reversed",
+            xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
+            yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
         )
         st.plotly_chart(fig_attn, use_container_width=True)
 
@@ -772,8 +775,8 @@ with tab3:
 
         fig_fra_attn = go.Figure(go.Heatmap(
             z=fra_pos_mat,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=attn_tick_vals,
+            y=attn_tick_vals,
             colorscale="RdBu",
             hovertemplate=(
                 "Q: %{y}<br>K: %{x}<br>FRA strength: %{z:.4f}<extra></extra>"
@@ -782,9 +785,8 @@ with tab3:
         fig_fra_attn.update_layout(
             height=420,
             margin=dict(l=0, r=0, t=0, b=0),
-            xaxis_title="Key",
-            yaxis_title="Query",
-            yaxis_autorange="reversed",
+            xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
+            yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
         )
         st.plotly_chart(fig_fra_attn, use_container_width=True)
 
