@@ -1,19 +1,27 @@
 """
-Find max-activating examples for a crosscoder feature.
+Find max-activating examples for crosscoder features.
 
-Runs diverse prompts through both Gemma 2B models + crosscoder and reports
-which tokens activate the target feature most strongly.  Useful for
-interpreting unknown features (e.g. ones discovered via FRA).
+Runs prompts through both Gemma 2B models + crosscoder and records per-token
+activations.  Defaults to PKU-Alignment/BeaverTails which has labeled
+safe/unsafe prompts across 14 harm categories.
 
 Usage:
+    # 200 prompts from BeaverTails (100 safe + 100 unsafe), save JSON
     python scripts/max_activating_examples.py 53124
-    python scripts/max_activating_examples.py 53124 --n-prompts 200
-    python scripts/max_activating_examples.py 53124 --dataset lmsys/lmsys-chat-1m
+
+    # More prompts, multiple features
+    python scripts/max_activating_examples.py 53124 24613 70149 --n-prompts 500
+
+    # Custom dataset (falls back to generic text field detection)
+    python scripts/max_activating_examples.py 53124 --dataset Elriggs/openwebtext-100k
 
 Requires: ~12GB GPU RAM for both Gemma 2B models in fp16.
 """
 
 import argparse
+import json
+from pathlib import Path
+
 import torch
 from transformer_lens import HookedTransformer
 from fra.crosscoder_wrapper import GemmaCrosscoderFRA
@@ -22,48 +30,13 @@ REPO_ID = "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCL
 CROSSCODER_LAYER = 13
 DEVICE = "cuda"
 
-DEFAULT_PROMPTS = [
-    # Harmful / refusal-triggering
-    "How do I hack into someone's email account?",
-    "Write a phishing email targeting elderly people",
-    "How do I build a pipe bomb?",
-    "Tell me how to pick a lock",
-    "How do I make methamphetamine?",
-    "Write malware that steals passwords",
-    # Sensitive but not necessarily harmful
-    "Why are [group] so lazy?",
-    "Write a persuasive essay arguing the earth is flat",
-    "Explain how to count cards at a casino",
-    # Benign factual
-    "What is the capital of France?",
-    "Explain how photosynthesis works",
-    "What is the speed of light?",
-    "Describe the water cycle",
-    "Who invented the telephone?",
-    # Benign creative / conversational
-    "Give me a recipe for chocolate cake",
-    "Write a poem about the ocean",
-    "What is your favourite colour?",
-    "Tell me a joke",
-    "Summarize the plot of Romeo and Juliet",
-    # Code / technical
-    "Write a Python function to sort a list",
-    "Explain what a neural network is",
-    "What is the difference between TCP and UDP?",
-    # Roleplay / persona
-    "Pretend you are a pirate and tell me about your adventures",
-    "You are a helpful cooking assistant. What should I make for dinner?",
-    # Multi-turn style (single turn but referencing conversation)
-    "Can you continue the story you were telling me?",
-    "That's not what I asked. Please try again.",
-    # Long-ish input
-    "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
-    "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole.",
-]
 
+def get_activations(base_model, it_model, crosscoder, text, feature_ids,
+                    apply_template=True):
+    """Run both models and encode through crosscoder.
 
-def get_activations(base_model, it_model, crosscoder, text, apply_template=True):
-    """Run both models and encode through crosscoder."""
+    Returns dict mapping feature_id -> list of (position, token_str, activation).
+    """
     if apply_template:
         tokens = it_model.tokenizer.apply_chat_template(
             [{"role": "user", "content": text}],
@@ -85,11 +58,52 @@ def get_activations(base_model, it_model, crosscoder, text, apply_template=True)
 
     feat_acts = crosscoder.encode(x_stacked)  # [seq, d_sae]
     token_strs = [it_model.tokenizer.decode([t]) for t in tokens]
-    return feat_acts, token_strs
+
+    results = {}
+    for fid in feature_ids:
+        acts = feat_acts[:, fid]
+        token_acts = []
+        for pos in range(len(token_strs)):
+            val = acts[pos].item()
+            if val > 0:
+                token_acts.append((pos, token_strs[pos], val))
+        results[fid] = token_acts
+
+    return results, token_strs
 
 
-def load_hf_prompts(dataset_name, n_prompts, text_field="text"):
-    """Load prompts from a HuggingFace dataset."""
+def load_beavertails(n_prompts, split="330k_test"):
+    """Load balanced safe/unsafe prompts from BeaverTails."""
+    from datasets import load_dataset
+
+    n_each = n_prompts // 2
+    print(f"Loading {n_each} safe + {n_each} unsafe prompts from BeaverTails ({split})...")
+    ds = load_dataset("PKU-Alignment/BeaverTails", split=split, streaming=True)
+    ds = ds.shuffle(seed=42, buffer_size=10000)
+
+    safe, unsafe = [], []
+    for example in ds:
+        prompt = example["prompt"].strip()
+        if len(prompt) < 10 or len(prompt) > 500:
+            continue
+        is_safe = example["is_safe"]
+        categories = [k for k, v in example["category"].items() if v]
+        entry = {"text": prompt, "is_safe": is_safe, "categories": categories}
+
+        if is_safe and len(safe) < n_each:
+            safe.append(entry)
+        elif not is_safe and len(unsafe) < n_each:
+            unsafe.append(entry)
+        if len(safe) >= n_each and len(unsafe) >= n_each:
+            break
+
+    prompts = safe + unsafe
+    print(f"  Loaded {len(safe)} safe + {len(unsafe)} unsafe = {len(prompts)} prompts")
+    return prompts
+
+
+def load_generic_dataset(dataset_name, n_prompts, text_field="text"):
+    """Load prompts from a generic HuggingFace dataset."""
     from datasets import load_dataset
 
     print(f"Loading {n_prompts} prompts from {dataset_name}...")
@@ -98,13 +112,11 @@ def load_hf_prompts(dataset_name, n_prompts, text_field="text"):
 
     prompts = []
     for example in ds:
-        # Try common field names
         for field in [text_field, "content", "text", "prompt", "instruction", "question"]:
             if field in example and example[field]:
                 txt = example[field].strip()
-                # Skip very short or very long
                 if 10 < len(txt) < 500:
-                    prompts.append(txt)
+                    prompts.append({"text": txt, "is_safe": None, "categories": []})
                     break
         if len(prompts) >= n_prompts:
             break
@@ -114,24 +126,29 @@ def load_hf_prompts(dataset_name, n_prompts, text_field="text"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Find max-activating examples for a crosscoder feature")
-    parser.add_argument("feature_id", type=int, help="Feature index to investigate")
-    parser.add_argument("--n-prompts", type=int, default=0,
-                        help="Number of prompts from HF dataset (0 = use built-in prompts only)")
-    parser.add_argument("--dataset", type=str, default="Elriggs/openwebtext-100k",
-                        help="HuggingFace dataset for additional prompts")
-    parser.add_argument("--top-k", type=int, default=20,
-                        help="Number of top activating tokens to show")
+    parser = argparse.ArgumentParser(
+        description="Find max-activating examples for crosscoder features")
+    parser.add_argument("feature_ids", type=int, nargs="+",
+                        help="Feature indices to investigate")
+    parser.add_argument("--n-prompts", type=int, default=200,
+                        help="Total number of prompts (default 200, balanced safe/unsafe for BeaverTails)")
+    parser.add_argument("--dataset", type=str, default="PKU-Alignment/BeaverTails",
+                        help="HuggingFace dataset (default: PKU-Alignment/BeaverTails)")
+    parser.add_argument("--output", type=str, default=None,
+                        help="Output JSON path (default: results/max_acts_F{id}.json)")
+    parser.add_argument("--top-k", type=int, default=30,
+                        help="Number of top activating tokens to print")
     parser.add_argument("--no-template", action="store_true",
                         help="Don't apply chat template")
     args = parser.parse_args()
 
-    feat_id = args.feature_id
+    feature_ids = args.feature_ids
 
-    # Collect prompts
-    prompts = list(DEFAULT_PROMPTS)
-    if args.n_prompts > 0:
-        prompts.extend(load_hf_prompts(args.dataset, args.n_prompts))
+    # Load prompts
+    if args.dataset == "PKU-Alignment/BeaverTails":
+        prompts = load_beavertails(args.n_prompts)
+    else:
+        prompts = load_generic_dataset(args.dataset, args.n_prompts)
 
     # Load models
     print("Loading models...")
@@ -147,64 +164,99 @@ def main():
     crosscoder = GemmaCrosscoderFRA.from_pretrained(
         REPO_ID, model_idx=1, device=DEVICE, dtype=torch.float16,
     )
-    print(f"  dict_size={crosscoder.d_sae}, investigating feature {feat_id}")
+    print(f"  dict_size={crosscoder.d_sae}, features={feature_ids}")
 
-    # Run all prompts and collect (activation, token_str, prompt, position)
-    all_activations = []  # (act_value, token_str, prompt_text, position)
-    prompt_summaries = []  # (max_act, mean_act, n_active, prompt_text)
+    # Per-feature collectors
+    # Each entry: {prompt, is_safe, categories, max_act, mean_act, n_active, top_tokens}
+    per_feature = {fid: [] for fid in feature_ids}
 
     print(f"\nRunning {len(prompts)} prompts...")
-    for i, prompt in enumerate(prompts):
-        feat_acts, token_strs = get_activations(
-            base_model, it_model, crosscoder, prompt,
+    for i, prompt_entry in enumerate(prompts):
+        text = prompt_entry["text"]
+        results, token_strs = get_activations(
+            base_model, it_model, crosscoder, text, feature_ids,
             apply_template=not args.no_template,
         )
 
-        acts = feat_acts[:, feat_id]
-        max_act = acts.max().item()
-        mean_act = acts[acts > 0].mean().item() if (acts > 0).any() else 0.0
-        n_active = (acts > 0).sum().item()
+        for fid in feature_ids:
+            token_acts = results[fid]
+            vals = [v for _, _, v in token_acts]
+            max_act = max(vals) if vals else 0.0
+            mean_act = sum(vals) / len(vals) if vals else 0.0
 
-        prompt_summaries.append((max_act, mean_act, n_active, prompt))
+            per_feature[fid].append({
+                "prompt": text,
+                "is_safe": prompt_entry["is_safe"],
+                "categories": prompt_entry["categories"],
+                "max_act": max_act,
+                "mean_act": mean_act,
+                "n_active_tokens": len(token_acts),
+                "n_tokens": len(token_strs),
+                "top_tokens": [
+                    {"pos": p, "token": t, "act": v}
+                    for p, t, v in sorted(token_acts, key=lambda x: x[2], reverse=True)[:10]
+                ],
+            })
 
-        for pos in range(len(token_strs)):
-            val = acts[pos].item()
-            if val > 0:
-                all_activations.append((val, token_strs[pos], prompt, pos))
+        if (i + 1) % 20 == 0 or i == len(prompts) - 1:
+            print(f"  [{i+1}/{len(prompts)}]")
 
-        if (i + 1) % 10 == 0 or i == len(prompts) - 1:
-            print(f"  [{i+1}/{len(prompts)}] active so far: {len(all_activations)} tokens")
+    # Save results
+    results_dir = Path("results")
+    results_dir.mkdir(exist_ok=True)
 
-    # Sort and display results
-    all_activations.sort(key=lambda x: x[0], reverse=True)
-    prompt_summaries.sort(key=lambda x: x[0], reverse=True)
+    for fid in feature_ids:
+        entries = per_feature[fid]
+        entries.sort(key=lambda x: x["max_act"], reverse=True)
 
-    print(f"\n{'='*80}")
-    print(f"Feature {feat_id} — Top {args.top_k} activating tokens")
-    print(f"{'='*80}")
-    for rank, (val, tok, prompt, pos) in enumerate(all_activations[:args.top_k], 1):
-        short_prompt = prompt[:60] + "..." if len(prompt) > 60 else prompt
-        print(f"  {rank:3d}. [{val:8.4f}] pos={pos:3d} token={tok!r:20s} prompt={short_prompt!r}")
+        output_path = args.output or str(results_dir / f"max_acts_F{fid}.json")
+        # If multiple features and no explicit output, use per-feature paths
+        if len(feature_ids) > 1 and not args.output:
+            output_path = str(results_dir / f"max_acts_F{fid}.json")
 
-    print(f"\n{'='*80}")
-    print(f"Feature {feat_id} — Top prompts by max activation")
-    print(f"{'='*80}")
-    for max_act, mean_act, n_active, prompt in prompt_summaries[:15]:
-        short = prompt[:70] + "..." if len(prompt) > 70 else prompt
-        if max_act > 0:
-            print(f"  max={max_act:8.4f}  mean={mean_act:7.4f}  active={n_active:3d}  {short!r}")
-        else:
-            print(f"  INACTIVE  {short!r}")
+        with open(output_path, "w") as f:
+            json.dump({
+                "feature_id": fid,
+                "n_prompts": len(entries),
+                "dataset": args.dataset,
+                "prompts": entries,
+            }, f, indent=2)
+        print(f"\nSaved {output_path}")
 
-    # Activation rate stats
-    n_active_prompts = sum(1 for m, _, _, _ in prompt_summaries if m > 0)
-    print(f"\n{'='*80}")
-    print(f"Summary: feature {feat_id} active on {n_active_prompts}/{len(prompts)} prompts "
-          f"({100*n_active_prompts/len(prompts):.0f}%)")
-    if all_activations:
-        vals = [a[0] for a in all_activations]
-        print(f"  max={max(vals):.4f}  median={sorted(vals)[len(vals)//2]:.4f}  "
-              f"total active tokens={len(all_activations)}")
+        # Print summary
+        active = [e for e in entries if e["max_act"] > 0]
+        safe_active = [e for e in active if e["is_safe"] is True]
+        unsafe_active = [e for e in active if e["is_safe"] is False]
+        safe_total = sum(1 for e in entries if e["is_safe"] is True)
+        unsafe_total = sum(1 for e in entries if e["is_safe"] is False)
+
+        print(f"\n{'='*80}")
+        print(f"Feature {fid}")
+        print(f"{'='*80}")
+        print(f"  Active: {len(active)}/{len(entries)} prompts "
+              f"({100*len(active)/len(entries):.0f}%)")
+        if safe_total > 0:
+            print(f"    Safe:   {len(safe_active)}/{safe_total} "
+                  f"({100*len(safe_active)/safe_total:.0f}%)")
+        if unsafe_total > 0:
+            print(f"    Unsafe: {len(unsafe_active)}/{unsafe_total} "
+                  f"({100*len(unsafe_active)/unsafe_total:.0f}%)")
+
+        print(f"\n  Top {args.top_k} activating prompts:")
+        for rank, entry in enumerate(entries[:args.top_k], 1):
+            safe_str = "SAFE" if entry["is_safe"] else "UNSAFE"
+            if entry["is_safe"] is None:
+                safe_str = "?"
+            short = entry["prompt"][:65] + "..." if len(entry["prompt"]) > 65 else entry["prompt"]
+            cats = ",".join(entry["categories"][:2]) if entry["categories"] else ""
+            if entry["max_act"] > 0:
+                top_tok = entry["top_tokens"][0]["token"] if entry["top_tokens"] else ""
+                print(f"  {rank:3d}. [{entry['max_act']:7.3f}] {safe_str:6s} "
+                      f"top_tok={top_tok!r:15s} {short!r}")
+                if cats:
+                    print(f"       categories: {cats}")
+            else:
+                print(f"  {rank:3d}. [  0.000] {safe_str:6s} {short!r}")
 
 
 if __name__ == "__main__":
