@@ -351,6 +351,16 @@ with st.sidebar:
         st.caption(f"Attention layer: **{layer}** (crosscoder layer + 1)")
         head = st.number_input("Head", 0, 7, value=0)
 
+        apply_chat_template = st.checkbox(
+            "Apply chat template",
+            value=True,
+            help=(
+                "Wrap the input text using the instruct model's "
+                "tokenizer.apply_chat_template(). Required for "
+                "refusal / safety features to activate."
+            ),
+        )
+
         st.caption(
             "Requires ~12 GB GPU RAM for both Gemma 2B models (fp16) "
             "plus the crosscoder. Gemma weights are gated — accept the "
@@ -368,6 +378,7 @@ with st.sidebar:
         it_model_name = ""
         model_idx = 0
         crosscoder_layer = 13
+        apply_chat_template = False
 
         col_l, col_h = st.columns(2)
         with col_l:
@@ -422,9 +433,20 @@ if compute_btn:
             load_gemma_pair(base_model_name, it_model_name, device)
             load_crosscoder(crosscoder_repo_id, model_idx, device)
 
+        fra_text = text
+        if apply_chat_template:
+            _, it_model = load_gemma_pair(base_model_name, it_model_name, device)
+            fra_text = it_model.tokenizer.apply_chat_template(
+                [{"role": "user", "content": text}],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            with st.expander("Templated input"):
+                st.code(fra_text)
+
         with st.spinner("Computing Feature-Resolved Attention (crosscoder)…"):
             fra_data = run_fra_crosscoder(
-                text=text,
+                text=fra_text,
                 head=int(head),
                 crosscoder_layer=int(crosscoder_layer),
                 crosscoder_repo_id=crosscoder_repo_id,
