@@ -420,15 +420,17 @@ def _render_prompt_card(entry, feature_id, idx):
 
 def token_activation_bar(token_strs, activations, color, height=220):
     """Return a Plotly bar chart of per-token activations."""
+    tick_vals = list(range(len(token_strs)))
+    tick_labels = [html_lib.escape(t) for t in token_strs]
     fig = go.Figure(go.Bar(
-        x=[html_lib.escape(t) for t in token_strs],
+        x=tick_vals,
         y=activations,
         marker_color=color,
     ))
     fig.update_layout(
         height=height,
         margin=dict(l=0, r=0, t=0, b=30),
-        xaxis_title=None,
+        xaxis=dict(tickvals=tick_vals, ticktext=tick_labels),
         yaxis_title="Activation",
         showlegend=False,
     )
