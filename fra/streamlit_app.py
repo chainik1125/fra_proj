@@ -143,12 +143,14 @@ def run_fra(
             act = act.flatten(-2, -1)
         feat_acts = sae.encode(act)  # [seq_len, d_sae]
 
-        # Standard attention pattern for comparison
-        attn_hook = f"blocks.{layer}.attn.hook_pattern"
+        # Standard attention pattern + pre-softmax scores for comparison
+        attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
+        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
         _, attn_cache = model.run_with_cache(
-            tok_tensor, names_filter=[attn_hook]
+            tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook]
         )
-        attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()  # [S, S]
+        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().numpy()  # [S, S]
+        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().numpy()    # [S, S]
 
         token_strs = [model.tokenizer.decode([t]) for t in tokens]
 
@@ -161,6 +163,7 @@ def run_fra(
         "total_interactions": fra_result["total_interactions"],
         "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
+        "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,
     }
 
@@ -195,13 +198,15 @@ def run_fra_crosscoder(
 
         feat_acts = fra_result["feature_activations"]
 
-        # Standard attention pattern for comparison
+        # Standard attention pattern + pre-softmax scores for comparison
         tok_tensor = torch.tensor(tokens[:128]).unsqueeze(0).to(device)
-        attn_hook = f"blocks.{layer}.attn.hook_pattern"
+        attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
+        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
         _, attn_cache = target_model.run_with_cache(
-            tok_tensor, names_filter=[attn_hook],
+            tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook],
         )
-        attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()
+        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().numpy()
+        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().numpy()
 
         token_strs = [target_model.tokenizer.decode([t]) for t in tokens[:128]]
 
@@ -214,6 +219,7 @@ def run_fra_crosscoder(
         "total_interactions": fra_result["total_interactions"],
         "feat_acts_np": feat_acts.cpu().numpy(),
         "attn_pattern_np": attn_pattern,
+        "attn_scores_np": attn_scores,
         "token_strs": token_strs,
     }
 
@@ -733,66 +739,96 @@ with tab2:
 with tab3:
     st.subheader(f"Standard vs FRA Attention — L{layer_} H{head_}")
 
-    col_std, col_fra = st.columns(2)
-
     # Use integer positions to avoid Plotly merging duplicate token labels
     attn_tick_vals = list(range(seq_len))
     attn_tick_labels = [html_lib.escape(t) for t in token_strs]
 
-    with col_std:
-        st.markdown("**Standard token-level attention** (post-softmax)")
-        attn = fra_data["attn_pattern_np"][:seq_len, :seq_len]
-        fig_attn = go.Figure(go.Heatmap(
-            z=attn,
+    # -- Build the four matrices --
+
+    # Standard logits: masked pre-softmax scores (upper triangle = -inf → NaN for display)
+    std_logits = fra_data["attn_scores_np"][:seq_len, :seq_len].copy()
+    causal_mask = np.triu(np.ones((seq_len, seq_len), dtype=bool), k=1)
+    std_logits[causal_mask] = np.nan
+
+    # Standard probs: post-softmax (already causal)
+    std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
+    std_probs[causal_mask] = np.nan
+
+    # FRA logits: signed sum over feature pairs per position
+    idxs = fra_data["indices_np"]
+    vals = fra_data["values_np"]
+    fra_logits = np.zeros((seq_len, seq_len))
+    q_pos_all = idxs[0, :]
+    k_pos_all = idxs[1, :]
+    for qp, kp, v in zip(q_pos_all, k_pos_all, vals):
+        if qp < seq_len and kp < seq_len:
+            fra_logits[qp, kp] += v
+
+    # FRA probs: row-wise softmax of FRA logits (causal: only over k <= q)
+    fra_probs = np.full((seq_len, seq_len), np.nan)
+    for q in range(seq_len):
+        row = fra_logits[q, :q + 1]
+        row_exp = np.exp(row - row.max())
+        fra_probs[q, :q + 1] = row_exp / row_exp.sum()
+
+    fra_logits[causal_mask] = np.nan
+
+    # -- Shared layout helper --
+
+    def _attn_heatmap(z, hover_label, colorscale="RdBu", zmid=None):
+        fig = go.Figure(go.Heatmap(
+            z=z,
             x=attn_tick_vals,
             y=attn_tick_vals,
-            colorscale="RdBu",
+            colorscale=colorscale,
+            zmid=zmid,
             hovertemplate=(
-                "Q: %{y}<br>K: %{x}<br>Weight: %{z:.4f}<extra></extra>"
+                f"Q: %{{y}}<br>K: %{{x}}<br>{hover_label}: %{{z:.4f}}"
+                "<extra></extra>"
             ),
         ))
-        fig_attn.update_layout(
-            height=420,
+        fig.update_layout(
+            height=380,
             margin=dict(l=0, r=0, t=0, b=0),
             xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
             yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
         )
-        st.plotly_chart(fig_attn, use_container_width=True)
+        return fig
 
-    with col_fra:
-        st.markdown(
-            "**FRA attention** — summed over all feature pairs, per position"
+    # -- Row 1: Logits --
+
+    st.markdown("#### Pre-softmax logits")
+    col_std_logit, col_fra_logit = st.columns(2)
+
+    with col_std_logit:
+        st.markdown("**Standard** (masked QK scores)")
+        st.plotly_chart(
+            _attn_heatmap(std_logits, "Logit", zmid=0),
+            use_container_width=True,
         )
-        # Collapse feature dims: sum abs(value) for each (q_pos, k_pos)
-        idxs = fra_data["indices_np"]
-        vals_abs = np.abs(fra_data["values_np"])
-        fra_pos_mat = np.zeros((seq_len, seq_len))
-        q_pos_all = idxs[0, :]
-        k_pos_all = idxs[1, :]
-        for qp, kp, v in zip(q_pos_all, k_pos_all, vals_abs):
-            if qp < seq_len and kp < seq_len:
-                fra_pos_mat[qp, kp] += v
 
-        fig_fra_attn = go.Figure(go.Heatmap(
-            z=fra_pos_mat,
-            x=attn_tick_vals,
-            y=attn_tick_vals,
-            colorscale="RdBu",
-            hovertemplate=(
-                "Q: %{y}<br>K: %{x}<br>FRA strength: %{z:.4f}<extra></extra>"
-            ),
-        ))
-        fig_fra_attn.update_layout(
-            height=420,
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
-            yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
+    with col_fra_logit:
+        st.markdown("**FRA** (signed sum over feature pairs)")
+        st.plotly_chart(
+            _attn_heatmap(fra_logits, "Logit", zmid=0),
+            use_container_width=True,
         )
-        st.plotly_chart(fig_fra_attn, use_container_width=True)
 
-    st.info(
-        "The FRA attention matrix collapses the feature dimensions — it shows "
-        "the *total feature-level interaction* at each position pair, comparable "
-        "to the standard attention weight. Differences between the two highlight "
-        "where FRA captures additional structure beyond raw token attention."
-    )
+    # -- Row 2: Probs --
+
+    st.markdown("#### Post-softmax probabilities")
+    col_std_prob, col_fra_prob = st.columns(2)
+
+    with col_std_prob:
+        st.markdown("**Standard** (attention weights)")
+        st.plotly_chart(
+            _attn_heatmap(std_probs, "Weight"),
+            use_container_width=True,
+        )
+
+    with col_fra_prob:
+        st.markdown("**FRA** (softmax of FRA logits)")
+        st.plotly_chart(
+            _attn_heatmap(fra_probs, "Weight"),
+            use_container_width=True,
+        )
