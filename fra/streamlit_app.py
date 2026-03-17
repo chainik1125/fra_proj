@@ -50,25 +50,82 @@ def load_sae_local(checkpoint_path: str, layer: int, device: str):
 
 
 @st.cache_resource
-def load_gemma_pair(base_name: str, it_name: str, device: str):
-    """Load both Gemma 2B base and instruct models."""
+def load_model_pair(base_name: str, it_name: str, device: str,
+                    it_arch_name: str = ""):
+    """Load both base and target models for a crosscoder pair.
+
+    If the target model isn't in TransformerLens's registry (e.g.
+    DeepSeek-R1-Distill-Llama-8B), pass ``it_arch_name`` to specify a
+    compatible architecture name and load via ``hf_model``.
+    """
+    from transformers import AutoModelForCausalLM
     from transformer_lens import HookedTransformer
     torch.set_grad_enabled(False)
     base = HookedTransformer.from_pretrained(
         base_name, device=device, dtype=torch.float16,
     )
-    it = HookedTransformer.from_pretrained(
-        it_name, device=device, dtype=torch.float16,
-    )
+    if it_arch_name:
+        hf_model = AutoModelForCausalLM.from_pretrained(
+            it_name, torch_dtype=torch.float16,
+        )
+        it = HookedTransformer.from_pretrained(
+            it_arch_name, device=device, dtype=torch.float16,
+            hf_model=hf_model, tokenizer=base.tokenizer,
+        )
+        del hf_model
+    else:
+        it = HookedTransformer.from_pretrained(
+            it_name, device=device, dtype=torch.float16,
+        )
     return base, it
 
 
 @st.cache_resource
-def load_crosscoder(repo_id: str, model_idx: int, device: str):
+def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = ""):
     from fra.crosscoder_wrapper import GemmaCrosscoderFRA
+    if subfolder:
+        return GemmaCrosscoderFRA.from_cc_weights(
+            repo_id, subfolder, model_idx=model_idx, device=device,
+        )
     return GemmaCrosscoderFRA.from_pretrained(
         repo_id, model_idx=model_idx, device=device,
     )
+
+
+# ---------------------------------------------------------------------------
+# Crosscoder presets
+# ---------------------------------------------------------------------------
+
+CROSSCODER_PRESETS = {
+    "Gemma 2B — Base vs Instruct": {
+        "base_model": "google/gemma-2-2b",
+        "it_model": "google/gemma-2-2b-it",
+        "it_arch_name": "",
+        "repo_id": "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
+        "layers": {13: ""},
+        "default_layer": 13,
+        "max_layer": 25,
+        "n_heads": 8,
+        "model_labels": ("Base (model 0)", "Instruct (model 1)"),
+        "ram_note": "~12 GB GPU RAM (both Gemma 2B models fp16 + crosscoder).",
+    },
+    "Llama 8B — Base vs R1-Distill (Reasoning)": {
+        "base_model": "meta-llama/Llama-3.1-8B",
+        "it_model": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+        "it_arch_name": "meta-llama/Llama-3.1-8B",
+        "repo_id": "mitroitskii/Crosscoder-Llama-3.1-8B-vs-Llama-R1-Distill-8B",
+        "layers": {
+            7: "BatchTopK-Crosscoder/L7R",
+            15: "BatchTopK-Crosscoder/L15R",
+            23: "BatchTopK-Crosscoder/L23R",
+        },
+        "default_layer": 15,
+        "max_layer": 31,
+        "n_heads": 32,
+        "model_labels": ("Base (model 0)", "Reasoning (model 1)"),
+        "ram_note": "~36 GB GPU RAM (both Llama 8B models fp16 + crosscoder).",
+    },
+}
 
 
 @st.cache_data
@@ -176,12 +233,16 @@ def run_fra_crosscoder(
     it_model_name: str,
     top_k_features: int,
     device: str,
+    subfolder: str = "",
+    it_arch_name: str = "",
 ) -> dict:
     """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
     from fra.fra_crosscoder import get_sentence_fra_crosscoder
 
-    base_model, it_model = load_gemma_pair(base_model_name, it_model_name, device)
-    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device)
+    base_model, it_model = load_model_pair(
+        base_model_name, it_model_name, device, it_arch_name,
+    )
+    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device, subfolder)
     target_model = base_model if model_idx == 0 else it_model
     layer = crosscoder_layer + 1
 
@@ -399,49 +460,56 @@ with st.sidebar:
         [
             "GPT-2 — Hub hook_z (Neuronpedia)",
             "GPT-2 — Local ln1 (trained)",
-            "Gemma 2B — Crosscoder (model-diffing)",
+            "Crosscoder (model-diffing)",
         ],
         index=0,
     )
 
-    if sae_option.startswith("Gemma"):
+    if sae_option.startswith("Crosscoder"):
         sae_type = "crosscoder"
         supports_neuronpedia = False
 
-        crosscoder_repo_id = st.text_input(
-            "Crosscoder HF repo",
-            value="science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
-        )
-        base_model_name = st.text_input("Base model", value="google/gemma-2-2b")
-        it_model_name = st.text_input("Instruct model", value="google/gemma-2-2b-it")
+        preset_name = st.selectbox("Preset", list(CROSSCODER_PRESETS.keys()))
+        preset = CROSSCODER_PRESETS[preset_name]
+
+        crosscoder_repo_id = preset["repo_id"]
+        base_model_name = preset["base_model"]
+        it_model_name = preset["it_model"]
+
+        st.caption(f"Base: `{base_model_name}`")
+        st.caption(f"Target: `{it_model_name}`")
+
         model_idx = st.radio(
             "Analyse attention of",
             [0, 1],
-            format_func=lambda i: "Base (model 0)" if i == 0 else "Instruct (model 1)",
+            format_func=lambda i: preset["model_labels"][i],
             horizontal=True,
         )
-        crosscoder_layer = st.number_input(
-            "Crosscoder layer (activations)", 0, 25, value=13,
+
+        available_layers = sorted(preset["layers"].keys())
+        crosscoder_layer = st.selectbox(
+            "Crosscoder layer",
+            available_layers,
+            index=available_layers.index(preset["default_layer"]),
         )
+        cc_subfolder = preset["layers"][crosscoder_layer]
+        cc_it_arch = preset["it_arch_name"]
+
         layer = crosscoder_layer + 1
         st.caption(f"Attention layer: **{layer}** (crosscoder layer + 1)")
-        head = st.number_input("Head", 0, 7, value=0)
+        head = st.number_input("Head", 0, preset["n_heads"] - 1, value=0)
 
         apply_chat_template = st.checkbox(
             "Apply chat template",
             value=True,
             help=(
-                "Wrap the input text using the instruct model's "
+                "Wrap the input text using the target model's "
                 "tokenizer.apply_chat_template(). Required for "
-                "refusal / safety features to activate."
+                "safety / reasoning features to activate."
             ),
         )
 
-        st.caption(
-            "Requires ~12 GB GPU RAM for both Gemma 2B models (fp16) "
-            "plus the crosscoder. Gemma weights are gated — accept the "
-            "license on HuggingFace and run `huggingface-cli login` first."
-        )
+        st.caption(preset["ram_note"])
 
         # not used for crosscoder path
         hook_point = ""
@@ -454,6 +522,8 @@ with st.sidebar:
         it_model_name = ""
         model_idx = 0
         crosscoder_layer = 13
+        cc_subfolder = ""
+        cc_it_arch = ""
         apply_chat_template = False
 
         col_l, col_h = st.columns(2)
@@ -505,11 +575,13 @@ st.caption("Decomposing attention through SAE feature space.")
 
 if compute_btn:
     if sae_type == "crosscoder":
-        with st.spinner("Loading Gemma models & crosscoder…"):
-            load_gemma_pair(base_model_name, it_model_name, device)
-            load_crosscoder(crosscoder_repo_id, model_idx, device)
+        with st.spinner("Loading models & crosscoder…"):
+            load_model_pair(base_model_name, it_model_name, device, cc_it_arch)
+            load_crosscoder(crosscoder_repo_id, model_idx, device, cc_subfolder)
 
-        base_model, it_model = load_gemma_pair(base_model_name, it_model_name, device)
+        base_model, it_model = load_model_pair(
+            base_model_name, it_model_name, device, cc_it_arch,
+        )
         target_model = base_model if model_idx == 0 else it_model
         if apply_chat_template:
             fra_tokens = it_model.tokenizer.apply_chat_template(
@@ -533,6 +605,8 @@ if compute_btn:
                 it_model_name=it_model_name,
                 top_k_features=top_k_feat,
                 device=device,
+                subfolder=cc_subfolder,
+                it_arch_name=cc_it_arch,
             )
     else:
         with st.spinner("Loading model & SAE…"):
@@ -948,6 +1022,10 @@ with tab4:
             st.markdown("")
             ma_run = st.button("Run", type="primary", use_container_width=True)
 
+        if ma_run and sae_type != "crosscoder":
+            st.error("Max-act computation requires a crosscoder preset (select one in the sidebar).")
+            ma_run = False
+
         if ma_run:
             # Parse feature IDs
             try:
@@ -963,12 +1041,11 @@ with tab4:
                     prompts = _load_prompts(ma_n_prompts)
                     status.update(label=f"Loaded {len(prompts)} prompts. Loading models...")
 
-                    base_model, it_model = load_gemma_pair(
-                        "google/gemma-2-2b", "google/gemma-2-2b-it", ma_device,
+                    base_model, it_model = load_model_pair(
+                        base_model_name, it_model_name, ma_device, cc_it_arch,
                     )
                     cc = load_crosscoder(
-                        "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
-                        1, ma_device,
+                        crosscoder_repo_id, model_idx, ma_device, cc_subfolder,
                     )
                     status.update(label="Running prompts...")
 
@@ -979,7 +1056,8 @@ with tab4:
 
                 results = _compute_max_acts(
                     base_model, it_model, cc, ma_feature_ids, prompts,
-                    apply_template=True, crosscoder_layer=13, device=ma_device,
+                    apply_template=apply_chat_template,
+                    crosscoder_layer=crosscoder_layer, device=ma_device,
                     progress_callback=_ma_progress,
                 )
                 progress.empty()

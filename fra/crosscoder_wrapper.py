@@ -102,6 +102,45 @@ class GemmaCrosscoderFRA:
 
         return cls(crosscoder=crosscoder, model_idx=model_idx)
 
+    @classmethod
+    def from_cc_weights(
+        cls,
+        repo_id: str,
+        subfolder: str,
+        model_idx: int = 0,
+        device: str = "cuda",
+        dtype: torch.dtype = torch.float16,
+    ) -> "GemmaCrosscoderFRA":
+        """Load from the older ``cc_weights.pt`` + ``config.json`` format.
+
+        Used by crosscoders that weren't saved via PyTorchModelHubMixin
+        (e.g. Mitroitskii reasoning crosscoder).  The state-dict keys are
+        identical to the ``dictionary_learning`` format so we just need to
+        read the config manually and instantiate the class ourselves.
+        """
+        import json
+        from huggingface_hub import hf_hub_download
+
+        weights_path = hf_hub_download(repo_id, f"{subfolder}/cc_weights.pt")
+        config_path = hf_hub_download(repo_id, f"{subfolder}/config.json")
+
+        with open(config_path) as f:
+            cfg = json.load(f)
+
+        # Handle nested config (trainer wrapper)
+        tcfg = cfg.get("trainer", cfg)
+        crosscoder = BatchTopKCrossCoder(
+            activation_dim=tcfg["activation_dim"],
+            dict_size=tcfg["dict_size"],
+            num_layers=2,
+            k=tcfg.get("k", 100),
+        )
+        state_dict = torch.load(weights_path, map_location=device, weights_only=True)
+        crosscoder.load_state_dict(state_dict, strict=False)
+        crosscoder = crosscoder.to(device=device, dtype=dtype)
+
+        return cls(crosscoder=crosscoder, model_idx=model_idx)
+
     # ------------------------------------------------------------------
     # Encode
     # ------------------------------------------------------------------
