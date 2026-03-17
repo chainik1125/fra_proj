@@ -9,8 +9,6 @@ import html as html_lib
 import sys
 from collections import defaultdict
 from pathlib import Path
-from urllib.parse import quote
-
 import numpy as np
 import plotly.graph_objects as go
 import requests
@@ -273,42 +271,88 @@ def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):
     return mat
 
 
-def get_active_query_features(indices_np, values_np):
-    """Return list of (q_feat, total_outgoing_strength, n_key_features) sorted by strength."""
-    q_feats = indices_np[2, :]
-    k_feats = indices_np[3, :]
-    abs_vals = np.abs(values_np)
-
-    unique_q = np.unique(q_feats)
-    results = []
-    for qf in unique_q:
-        mask = q_feats == qf
-        total_strength = float(abs_vals[mask].sum())
-        n_keys = len(np.unique(k_feats[mask]))
-        results.append((int(qf), total_strength, n_keys))
-
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results
 
 
-def get_top_keys_for_query(indices_np, values_np, query_feat, top_k=30):
-    """Return top key features for a query feature: (k_feat, sum_abs, count) sorted by sum_abs."""
-    q_feats = indices_np[2, :]
-    k_feats = indices_np[3, :]
-    abs_vals = np.abs(values_np)
+def _render_prompt_card(entry, feature_id, idx):
+    """Render a single max-act prompt card with token-level highlighting."""
+    is_safe = entry.get("is_safe")
+    if is_safe is True:
+        badge = '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:4px;font-weight:bold;font-size:0.85em;">SAFE</span>'
+        highlight_color = "66,133,244"  # blue
+    elif is_safe is False:
+        badge = '<span style="background:#dc3545;color:white;padding:2px 8px;border-radius:4px;font-weight:bold;font-size:0.85em;">UNSAFE</span>'
+        highlight_color = "220,53,69"  # red
+    else:
+        badge = '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:4px;font-weight:bold;font-size:0.85em;">?</span>'
+        highlight_color = "108,117,125"  # gray
 
-    mask = q_feats == query_feat
-    k_masked = k_feats[mask]
-    v_masked = abs_vals[mask]
+    cats = entry.get("categories", [])
+    cats_str = ", ".join(cats[:3]) if cats else ""
 
-    unique_keys = np.unique(k_masked)
-    results = []
-    for kf in unique_keys:
-        k_mask = k_masked == kf
-        results.append((int(kf), float(v_masked[k_mask].sum()), int(k_mask.sum())))
+    max_act = entry.get("max_act", 0)
+    n_active = entry.get("n_active_tokens", 0)
+    n_tokens = entry.get("n_tokens", 0)
 
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results[:top_k]
+    # Header: badge + stats
+    header_html = f"{badge}"
+    if cats_str:
+        header_html += f'&nbsp; <span style="color:#888;font-size:0.85em;">{html_lib.escape(cats_str)}</span>'
+    header_html += (
+        f'&nbsp;&nbsp; <span style="font-size:0.85em;">'
+        f"max act: <b>{max_act:.3f}</b> &middot; "
+        f"active tokens: {n_active}/{n_tokens}</span>"
+    )
+
+    # Token-level highlighted text
+    token_strs_list = entry.get("token_strs")
+    token_acts_list = entry.get("token_acts")
+
+    if token_strs_list and token_acts_list:
+        # Full token-level highlighting
+        max_val = max(token_acts_list) if token_acts_list else 1.0
+        if max_val == 0:
+            max_val = 1.0
+        spans = []
+        for tok, act in zip(token_strs_list, token_acts_list):
+            escaped = html_lib.escape(tok)
+            if act > 0:
+                alpha = min(0.15 + 0.85 * (act / max_val), 1.0)
+                spans.append(
+                    f'<span title="act={act:.4f}" style="background:rgba({highlight_color},{alpha:.2f});'
+                    f'padding:1px 2px;border-radius:2px;font-family:monospace;font-size:0.88em;">'
+                    f'{escaped}</span>'
+                )
+            else:
+                spans.append(
+                    f'<span style="font-family:monospace;font-size:0.88em;">{escaped}</span>'
+                )
+        text_html = " ".join(spans)
+    else:
+        # Fallback for old JSON without token_strs/token_acts
+        text_html = (
+            f'<span style="font-family:monospace;font-size:0.88em;">'
+            f'{html_lib.escape(entry.get("prompt", ""))}</span>'
+        )
+        top_tokens = entry.get("top_tokens", [])
+        if top_tokens:
+            tok_parts = [
+                f'{html_lib.escape(t["token"])} ({t["act"]:.3f})'
+                for t in top_tokens[:5]
+            ]
+            text_html += (
+                f'<br><span style="color:#888;font-size:0.82em;">'
+                f'Top tokens: {", ".join(tok_parts)}</span>'
+            )
+
+    st.markdown(
+        f'<div style="margin-bottom:12px;">'
+        f'<div style="margin-bottom:4px;">{header_html}</div>'
+        f'<div>{text_html}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    if idx < 100:  # avoid rendering 100+ dividers
+        st.markdown("---")
 
 
 def token_activation_bar(token_strs, activations, color, height=220):
@@ -328,70 +372,6 @@ def token_activation_bar(token_strs, activations, color, height=220):
     return fig
 
 
-def save_feature_data(query_feat, key_features, fra_data, token_strs, output_dir="results/features"):
-    """Save query feature and its top key features to human-readable JSON files."""
-    import json
-
-    feat_acts_np = fra_data["feat_acts_np"]
-    indices_np = fra_data["indices_np"]
-    values_np = fra_data["values_np"]
-    seq_len = fra_data["seq_len"]
-
-    out = Path(output_dir) / f"F{query_feat}"
-    out.mkdir(parents=True, exist_ok=True)
-
-    q_acts = feat_acts_np[:seq_len, query_feat].tolist()
-    total_strength = sum(s for _, s, _ in key_features)
-
-    summary = {
-        "query_feature": query_feat,
-        "total_outgoing_strength": round(total_strength, 6),
-        "token_strs": token_strs,
-        "query_activations": [round(a, 6) for a in q_acts],
-        "top_key_features": [
-            {
-                "feature_id": kf,
-                "interaction_strength": round(s, 6),
-                "count": c,
-                "pct_of_total": round(100 * s / total_strength, 1) if total_strength > 0 else 0,
-            }
-            for kf, s, c in key_features
-        ],
-    }
-    (out / "summary.json").write_text(json.dumps(summary, indent=2))
-
-    for kf, _, _ in key_features:
-        k_acts = feat_acts_np[:seq_len, kf].tolist()
-
-        # Position pairs where this (query, key) interaction occurs
-        mask = (indices_np[2] == query_feat) & (indices_np[3] == kf)
-        q_pos = indices_np[0, mask].tolist()
-        k_pos = indices_np[1, mask].tolist()
-        pair_vals = np.abs(values_np[mask]).tolist()
-
-        tokens_with_acts = [
-            {
-                "token": token_strs[i],
-                "pos": i,
-                "query_act": round(float(q_acts[i]), 6),
-                "key_act": round(float(k_acts[i]), 6),
-            }
-            for i in range(seq_len)
-            if q_acts[i] != 0 or k_acts[i] != 0
-        ]
-
-        key_data = {
-            "key_feature": kf,
-            "key_activations": [round(a, 6) for a in k_acts],
-            "position_pairs": [
-                {"q_pos": int(qp), "k_pos": int(kp), "strength": round(float(v), 6)}
-                for qp, kp, v in zip(q_pos, k_pos, pair_vals)
-            ],
-            "tokens_with_activations": tokens_with_acts,
-        }
-        (out / f"F{kf}.json").write_text(json.dumps(key_data, indent=2))
-
-    return str(out)
 
 
 # ---------------------------------------------------------------------------
@@ -593,64 +573,45 @@ if compute_btn:
 # Main results area
 # ---------------------------------------------------------------------------
 
-if "fra_data" not in st.session_state:
-    st.info("Configure the sidebar and click **▶ Compute FRA** to begin.")
-    with st.expander("What is Feature-Resolved Attention?"):
-        st.markdown(
-            """
-**Feature-Resolved Attention (FRA)** replaces the standard `[seq, seq]` attention
-matrix with a `[seq, seq, d_sae, d_sae]` tensor, where each entry captures how much
-**SAE query-feature _i_** at position _q_ attends to **SAE key-feature _j_** at
-position _k_.
+_has_fra = "fra_data" in st.session_state
 
-This lets us ask:
-- Which _semantic_ features in the query attend strongly to which key features?
-- Are there **conceptual induction heads** that copy specific concepts across positions?
-- How do feature-level interactions differ from token-level ones?
-"""
-        )
-    st.stop()
+# Summary row + tokenised text (only when FRA has been computed)
+if _has_fra:
+    fra_data = st.session_state["fra_data"]
+    cfg = st.session_state["fra_config"]
+    layer_ = cfg["layer"]
+    head_ = cfg["head"]
+    seq_len = fra_data["seq_len"]
+    token_strs = fra_data["token_strs"][:seq_len]
 
-fra_data = st.session_state["fra_data"]
-cfg = st.session_state["fra_config"]
-layer_ = cfg["layer"]
-head_ = cfg["head"]
-seq_len = fra_data["seq_len"]
-token_strs = fra_data["token_strs"][:seq_len]
+    # Recompute pairs (filter / top_k may change without recomputing FRA)
+    pairs = get_top_pairs(
+        fra_data["indices_np"],
+        fra_data["values_np"],
+        top_k=cfg["top_k_pairs"],
+        filter_self=cfg["filter_self"],
+    )
+    bottom_pairs = get_bottom_pairs(
+        fra_data["indices_np"],
+        fra_data["values_np"],
+        top_k=cfg["top_k_pairs"],
+        filter_self=cfg["filter_self"],
+    )
 
-# Recompute pairs (filter / top_k may change without recomputing FRA)
-pairs = get_top_pairs(
-    fra_data["indices_np"],
-    fra_data["values_np"],
-    top_k=cfg["top_k_pairs"],
-    filter_self=cfg["filter_self"],
-)
-bottom_pairs = get_bottom_pairs(
-    fra_data["indices_np"],
-    fra_data["values_np"],
-    top_k=cfg["top_k_pairs"],
-    filter_self=cfg["filter_self"],
-)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Tokens", seq_len)
+    c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
+    total_unique = len(_aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], cfg["filter_self"]))
+    c3.metric("Unique feature pairs", f"{total_unique:,}")
+    c4.metric("Layer / Head", f"L{layer_} / H{head_}")
 
-# ---------------------------------------------------------------------------
-# Summary row
-# ---------------------------------------------------------------------------
-
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Tokens", seq_len)
-c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
-total_unique = len(_aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], cfg["filter_self"]))
-c3.metric("Unique feature pairs", f"{total_unique:,}")
-c4.metric(f"Layer / Head", f"L{layer_} / H{head_}")
-
-# Tokenised text display
-tok_html = " ".join(
-    f'<span style="background:#e9ecef;padding:2px 5px;border-radius:3px;'
-    f'font-family:monospace;font-size:0.9em;">{html_lib.escape(t)}</span>'
-    for t in token_strs
-)
-st.markdown(tok_html, unsafe_allow_html=True)
-st.markdown("")
+    tok_html = " ".join(
+        f'<span style="background:#e9ecef;padding:2px 5px;border-radius:3px;'
+        f'font-family:monospace;font-size:0.9em;">{html_lib.escape(t)}</span>'
+        for t in token_strs
+    )
+    st.markdown(tok_html, unsafe_allow_html=True)
+    st.markdown("")
 
 # ---------------------------------------------------------------------------
 # Tabs
@@ -666,380 +627,95 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
 
 with tab1:
-    rank_mode = st.radio(
-        "Show:",
-        ["Top interactions (strongest)", "Least interactions (weakest)"],
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    active_pairs = pairs if rank_mode.startswith("Top") else bottom_pairs
-
-    if not active_pairs:
-        st.warning("No interactions found with current filters.")
+    if not _has_fra:
+        st.info("Click **▶ Compute FRA** in the sidebar to see interactions.")
     else:
-        col_list, col_detail = st.columns([1, 2])
-
-        with col_list:
-            st.subheader("Feature pairs")
-            pair_labels = [
-                f"F{q}→F{k}  ({s:.3f})"
-                + ("  ⟲" if q == k else "")
-                for q, k, s, _ in active_pairs
-            ]
-            selected_idx = st.radio(
-                "Select a pair to inspect:",
-                range(len(active_pairs)),
-                format_func=lambda i: pair_labels[i],
-                label_visibility="collapsed",
-            )
-
-        with col_detail:
-            q_sel, k_sel, strength_sel, count_sel = active_pairs[selected_idx]
-            is_self = q_sel == k_sel
-
-            st.subheader(
-                f"Feature {q_sel} → Feature {k_sel}"
-                + ("  ⟲ self" if is_self else "")
-            )
-            st.caption(
-                f"Total absolute strength: **{strength_sel:.4f}** | "
-                f"Position-pair occurrences: **{count_sel}**"
-            )
-            if is_self:
-                st.info(
-                    "Self-interaction: query and key are the **same** feature. "
-                    "This is a candidate for a **conceptual induction head** channel."
-                )
-
-            # --- Per-token activation bars ---
-            feat_acts = fra_data["feat_acts_np"]  # [seq_len, d_sae]
-            q_acts = feat_acts[:, q_sel]
-            k_acts = feat_acts[:, k_sel]
-
-            barA, barB = st.columns(2)
-            with barA:
-                st.markdown(f"**Query feature {q_sel}** — token activations")
-                st.plotly_chart(
-                    token_activation_bar(
-                        token_strs, q_acts, "rgba(102,126,234,0.75)"
-                    ),
-                    use_container_width=True,
-                )
-            with barB:
-                st.markdown(f"**Key feature {k_sel}** — token activations")
-                st.plotly_chart(
-                    token_activation_bar(
-                        token_strs, k_acts, "rgba(118,75,162,0.75)"
-                    ),
-                    use_container_width=True,
-                )
-
-            # --- Position heatmap: [seq, seq] for this pair ---
-            st.markdown("**Position heatmap** — where does this pair interact?")
-            pos_mat = get_position_heatmap(
-                fra_data["indices_np"],
-                fra_data["values_np"],
-                q_sel, k_sel, seq_len,
-            )
-            tick_labels = [html_lib.escape(t) for t in token_strs]
-            tick_vals = list(range(len(token_strs)))
-            fig_pos = go.Figure(go.Heatmap(
-                z=pos_mat,
-                x=tick_vals,
-                y=tick_vals,
-                colorscale="Blues",
-                hovertemplate=(
-                    "Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}"
-                    "<extra></extra>"
-                ),
-            ))
-            fig_pos.update_layout(
-                height=300,
-                margin=dict(l=0, r=0, t=0, b=0),
-                xaxis=dict(title="Key token", tickvals=tick_vals, ticktext=tick_labels),
-                yaxis=dict(title="Query token", tickvals=tick_vals, ticktext=tick_labels, autorange="reversed"),
-            )
-            st.plotly_chart(fig_pos, use_container_width=True)
-
-            # --- Neuronpedia iframes ---
-            if cfg["supports_neuronpedia"]:
-                np_col1, np_col2 = st.columns(2)
-                with np_col1:
-                    desc_q = fetch_neuronpedia(layer_, q_sel)
-                    st.markdown(
-                        f"**Neuronpedia — F{q_sel}:** _{desc_q}_"
-                    )
-                    st.components.v1.iframe(
-                        neuronpedia_embed_url(layer_, q_sel),
-                        height=380,
-                    )
-                with np_col2:
-                    desc_k = fetch_neuronpedia(layer_, k_sel)
-                    st.markdown(
-                        f"**Neuronpedia — F{k_sel}:** _{desc_k}_"
-                    )
-                    st.components.v1.iframe(
-                        neuronpedia_embed_url(layer_, k_sel),
-                        height=380,
-                    )
-            else:
-                st.info(
-                    "Neuronpedia is only available with the hub (hook_z) SAE. "
-                    "Switch SAE type in the sidebar to enable it."
-                )
-
-# ── Tab 2: Feature Matrix ──────────────────────────────────────────────────
-
-with tab2:
-    st.subheader(f"FRA Feature Interaction Matrix — L{layer_} H{head_}")
-    st.caption(
-        "Each cell shows the total absolute interaction strength summed over "
-        "all position pairs. Only the top features appearing in the ranked list "
-        "are shown."
-    )
-
-    if not pairs:
-        st.warning("No pairs to display.")
-    else:
-        # Collect unique features from top pairs
-        top_features = []
-        seen = set()
-        for q, k, _, _ in pairs:
-            for f in (q, k):
-                if f not in seen:
-                    seen.add(f)
-                    top_features.append(f)
-            if len(top_features) >= 30:
-                break
-
-        feat_to_idx = {f: i for i, f in enumerate(top_features)}
-        n = len(top_features)
-        matrix = np.zeros((n, n))
-
-        for q, k, strength, _ in pairs:
-            if q in feat_to_idx and k in feat_to_idx:
-                matrix[feat_to_idx[q], feat_to_idx[k]] += strength
-
-        labels = [f"F{f}" for f in top_features]
-
-        fig_mat = go.Figure(go.Heatmap(
-            z=matrix,
-            x=labels,
-            y=labels,
-            colorscale="Viridis",
-            hovertemplate=(
-                "Query: %{y}<br>Key: %{x}<br>Strength: %{z:.4f}<extra></extra>"
-            ),
-        ))
-        fig_mat.update_layout(
-            height=600,
-            xaxis_title="Key Feature",
-            yaxis_title="Query Feature",
-            yaxis_autorange="reversed",
+        rank_mode = st.radio(
+            "Show:",
+            ["Top interactions (strongest)", "Least interactions (weakest)"],
+            horizontal=True,
+            label_visibility="collapsed",
         )
-        st.plotly_chart(fig_mat, use_container_width=True)
+        active_pairs = pairs if rank_mode.startswith("Top") else bottom_pairs
 
-# ── Tab 3: Attention Comparison ────────────────────────────────────────────
-
-with tab3:
-    st.subheader(f"Standard vs FRA Attention — L{layer_} H{head_}")
-
-    # Use integer positions to avoid Plotly merging duplicate token labels
-    attn_tick_vals = list(range(seq_len))
-    attn_tick_labels = [html_lib.escape(t) for t in token_strs]
-
-    # -- Build the four matrices --
-
-    # Standard logits: masked pre-softmax scores (upper triangle = -inf → NaN for display)
-    std_logits = fra_data["attn_scores_np"][:seq_len, :seq_len].copy()
-    causal_mask = np.triu(np.ones((seq_len, seq_len), dtype=bool), k=1)
-    std_logits[causal_mask] = np.nan
-
-    # Standard probs: post-softmax (already causal)
-    std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
-    std_probs[causal_mask] = np.nan
-
-    # FRA logits: signed sum over feature pairs per position
-    idxs = fra_data["indices_np"]
-    vals = fra_data["values_np"]
-    fra_logits = np.zeros((seq_len, seq_len))
-    q_pos_all = idxs[0, :]
-    k_pos_all = idxs[1, :]
-    for qp, kp, v in zip(q_pos_all, k_pos_all, vals):
-        if qp < seq_len and kp < seq_len:
-            fra_logits[qp, kp] += v
-
-    # FRA probs: row-wise softmax of FRA logits (causal: only over k <= q)
-    fra_probs = np.full((seq_len, seq_len), np.nan)
-    for q in range(seq_len):
-        row = fra_logits[q, :q + 1]
-        row_exp = np.exp(row - row.max())
-        fra_probs[q, :q + 1] = row_exp / row_exp.sum()
-
-    fra_logits[causal_mask] = np.nan
-
-    # -- Shared layout helper --
-
-    def _attn_heatmap(z, hover_label, colorscale="RdBu", zmid=None):
-        fig = go.Figure(go.Heatmap(
-            z=z,
-            x=attn_tick_vals,
-            y=attn_tick_vals,
-            colorscale=colorscale,
-            zmid=zmid,
-            hovertemplate=(
-                f"Q: %{{y}}<br>K: %{{x}}<br>{hover_label}: %{{z:.4f}}"
-                "<extra></extra>"
-            ),
-        ))
-        fig.update_layout(
-            height=380,
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
-            yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
-        )
-        return fig
-
-    # -- Row 1: Logits --
-
-    st.markdown("#### Pre-softmax logits")
-    col_std_logit, col_fra_logit = st.columns(2)
-
-    with col_std_logit:
-        st.markdown("**Standard** (masked QK scores)")
-        st.plotly_chart(
-            _attn_heatmap(std_logits, "Logit", zmid=0),
-            use_container_width=True,
-        )
-
-    with col_fra_logit:
-        st.markdown("**FRA** (signed sum over feature pairs)")
-        st.plotly_chart(
-            _attn_heatmap(fra_logits, "Logit", zmid=0),
-            use_container_width=True,
-        )
-
-    # -- Row 2: Probs --
-
-    st.markdown("#### Post-softmax probabilities")
-    col_std_prob, col_fra_prob = st.columns(2)
-
-    with col_std_prob:
-        st.markdown("**Standard** (attention weights)")
-        st.plotly_chart(
-            _attn_heatmap(std_probs, "Weight"),
-            use_container_width=True,
-        )
-
-    with col_fra_prob:
-        st.markdown("**FRA** (softmax of FRA logits)")
-        st.plotly_chart(
-            _attn_heatmap(fra_probs, "Weight"),
-            use_container_width=True,
-        )
-
-# ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
-
-with tab4:
-    st.subheader(f"Max-Act Examples — L{layer_} H{head_}")
-
-    active_q_feats = get_active_query_features(
-        fra_data["indices_np"], fra_data["values_np"],
-    )
-
-    if not active_q_feats:
-        st.warning("No active query features found.")
-    else:
-        q_options = {
-            f"F{qf} (strength: {s:.3f}, {n} key features)": qf
-            for qf, s, n in active_q_feats
-        }
-        selected_q_label = st.selectbox(
-            "Query feature",
-            list(q_options.keys()),
-        )
-        selected_q_feat = q_options[selected_q_label]
-
-        top_keys = get_top_keys_for_query(
-            fra_data["indices_np"], fra_data["values_np"],
-            selected_q_feat, top_k=30,
-        )
-        total_q_strength = sum(s for _, s, _ in top_keys)
-
-        if not top_keys:
-            st.warning("No key features found for this query feature.")
+        if not active_pairs:
+            st.warning("No interactions found with current filters.")
         else:
-            col_keys, col_detail = st.columns([1, 2])
+            col_list, col_detail = st.columns([1, 2])
 
-            with col_keys:
-                st.markdown("**Key features** (ranked by interaction strength)")
-                key_labels = [
-                    f"F{kf} — {s:.3f} ({100 * s / total_q_strength:.0f}%)"
-                    if total_q_strength > 0
-                    else f"F{kf} — {s:.3f}"
-                    for kf, s, _ in top_keys
+            with col_list:
+                st.subheader("Feature pairs")
+                pair_labels = [
+                    f"F{q}→F{k}  ({s:.3f})"
+                    + ("  ⟲" if q == k else "")
+                    for q, k, s, _ in active_pairs
                 ]
-                selected_key_idx = st.radio(
-                    "Select key feature:",
-                    range(len(top_keys)),
-                    format_func=lambda i: key_labels[i],
+                selected_idx = st.radio(
+                    "Select a pair to inspect:",
+                    range(len(active_pairs)),
+                    format_func=lambda i: pair_labels[i],
                     label_visibility="collapsed",
                 )
 
             with col_detail:
-                k_feat, k_strength, k_count = top_keys[selected_key_idx]
-                feat_acts = fra_data["feat_acts_np"]
-                q_acts = feat_acts[:seq_len, selected_q_feat]
-                k_acts = feat_acts[:seq_len, k_feat]
+                q_sel, k_sel, strength_sel, count_sel = active_pairs[selected_idx]
+                is_self = q_sel == k_sel
+
+                st.subheader(
+                    f"Feature {q_sel} → Feature {k_sel}"
+                    + ("  ⟲ self" if is_self else "")
+                )
+                st.caption(
+                    f"Total absolute strength: **{strength_sel:.4f}** | "
+                    f"Position-pair occurrences: **{count_sel}**"
+                )
+                if is_self:
+                    st.info(
+                        "Self-interaction: query and key are the **same** feature. "
+                        "This is a candidate for a **conceptual induction head** channel."
+                    )
+
+                # --- Per-token activation bars ---
+                feat_acts = fra_data["feat_acts_np"]  # [seq_len, d_sae]
+                q_acts = feat_acts[:, q_sel]
+                k_acts = feat_acts[:, k_sel]
+
+                barA, barB = st.columns(2)
+                with barA:
+                    st.markdown(f"**Query feature {q_sel}** — token activations")
+                    st.plotly_chart(
+                        token_activation_bar(
+                            token_strs, q_acts, "rgba(102,126,234,0.75)"
+                        ),
+                        use_container_width=True,
+                    )
+                with barB:
+                    st.markdown(f"**Key feature {k_sel}** — token activations")
+                    st.plotly_chart(
+                        token_activation_bar(
+                            token_strs, k_acts, "rgba(118,75,162,0.75)"
+                        ),
+                        use_container_width=True,
+                    )
+
+                # --- Position heatmap: [seq, seq] for this pair ---
+                st.markdown("**Position heatmap** — where does this pair interact?")
+                pos_mat = get_position_heatmap(
+                    fra_data["indices_np"],
+                    fra_data["values_np"],
+                    q_sel, k_sel, seq_len,
+                )
                 tick_labels = [html_lib.escape(t) for t in token_strs]
                 tick_vals = list(range(len(token_strs)))
-
-                # -- Query feature activation heatmap --
-                st.markdown(f"**Query F{selected_q_feat}** — per-token activations")
-                fig_q = go.Figure(go.Heatmap(
-                    z=[q_acts.tolist()],
-                    x=tick_vals,
-                    y=[""],
-                    colorscale="Blues",
-                    hovertemplate="Token: %{x}<br>Activation: %{z:.4f}<extra></extra>",
-                ))
-                fig_q.update_layout(
-                    height=100,
-                    margin=dict(l=0, r=0, t=0, b=30),
-                    xaxis=dict(tickvals=tick_vals, ticktext=tick_labels),
-                    yaxis=dict(showticklabels=False),
-                )
-                st.plotly_chart(fig_q, use_container_width=True)
-
-                # -- Key feature activation heatmap --
-                st.markdown(f"**Key F{k_feat}** — per-token activations")
-                fig_k = go.Figure(go.Heatmap(
-                    z=[k_acts.tolist()],
-                    x=tick_vals,
-                    y=[""],
-                    colorscale="Purples",
-                    hovertemplate="Token: %{x}<br>Activation: %{z:.4f}<extra></extra>",
-                ))
-                fig_k.update_layout(
-                    height=100,
-                    margin=dict(l=0, r=0, t=0, b=30),
-                    xaxis=dict(tickvals=tick_vals, ticktext=tick_labels),
-                    yaxis=dict(showticklabels=False),
-                )
-                st.plotly_chart(fig_k, use_container_width=True)
-
-                # -- Position interaction heatmap --
-                st.markdown(f"**Position heatmap** — F{selected_q_feat} → F{k_feat}")
-                pos_mat = get_position_heatmap(
-                    fra_data["indices_np"], fra_data["values_np"],
-                    selected_q_feat, k_feat, seq_len,
-                )
                 fig_pos = go.Figure(go.Heatmap(
                     z=pos_mat,
                     x=tick_vals,
                     y=tick_vals,
                     colorscale="Blues",
-                    hovertemplate="Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}<extra></extra>",
+                    hovertemplate=(
+                        "Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}"
+                        "<extra></extra>"
+                    ),
                 ))
                 fig_pos.update_layout(
                     height=300,
@@ -1049,17 +725,356 @@ with tab4:
                 )
                 st.plotly_chart(fig_pos, use_container_width=True)
 
-                # -- Interaction summary --
-                pct = (100 * k_strength / total_q_strength) if total_q_strength > 0 else 0
-                st.caption(
-                    f"Total strength: **{k_strength:.4f}** | "
-                    f"Position pairs: **{k_count}** | "
-                    f"% of query total: **{pct:.1f}%**"
-                )
-
-                # -- Save button --
-                if st.button(f"💾 Save F{selected_q_feat} data", key="save_feature"):
-                    save_path = save_feature_data(
-                        selected_q_feat, top_keys, fra_data, token_strs,
+                # --- Neuronpedia iframes ---
+                if cfg["supports_neuronpedia"]:
+                    np_col1, np_col2 = st.columns(2)
+                    with np_col1:
+                        desc_q = fetch_neuronpedia(layer_, q_sel)
+                        st.markdown(
+                            f"**Neuronpedia — F{q_sel}:** _{desc_q}_"
+                        )
+                        st.components.v1.iframe(
+                            neuronpedia_embed_url(layer_, q_sel),
+                            height=380,
+                        )
+                    with np_col2:
+                        desc_k = fetch_neuronpedia(layer_, k_sel)
+                        st.markdown(
+                            f"**Neuronpedia — F{k_sel}:** _{desc_k}_"
+                        )
+                        st.components.v1.iframe(
+                            neuronpedia_embed_url(layer_, k_sel),
+                            height=380,
+                        )
+                else:
+                    st.info(
+                        "Neuronpedia is only available with the hub (hook_z) SAE. "
+                        "Switch SAE type in the sidebar to enable it."
                     )
-                    st.success(f"Saved to {save_path}/")
+
+# ── Tab 2: Feature Matrix ──────────────────────────────────────────────────
+
+with tab2:
+    if not _has_fra:
+        st.info("Click **▶ Compute FRA** in the sidebar to see the feature matrix.")
+    else:
+        st.subheader(f"FRA Feature Interaction Matrix — L{layer_} H{head_}")
+        st.caption(
+            "Each cell shows the total absolute interaction strength summed over "
+            "all position pairs. Only the top features appearing in the ranked list "
+            "are shown."
+        )
+
+        if not pairs:
+            st.warning("No pairs to display.")
+        else:
+            # Collect unique features from top pairs
+            top_features = []
+            seen = set()
+            for q, k, _, _ in pairs:
+                for f in (q, k):
+                    if f not in seen:
+                        seen.add(f)
+                        top_features.append(f)
+                if len(top_features) >= 30:
+                    break
+
+            feat_to_idx = {f: i for i, f in enumerate(top_features)}
+            n = len(top_features)
+            matrix = np.zeros((n, n))
+
+            for q, k, strength, _ in pairs:
+                if q in feat_to_idx and k in feat_to_idx:
+                    matrix[feat_to_idx[q], feat_to_idx[k]] += strength
+
+            labels = [f"F{f}" for f in top_features]
+
+            fig_mat = go.Figure(go.Heatmap(
+                z=matrix,
+                x=labels,
+                y=labels,
+                colorscale="Viridis",
+                hovertemplate=(
+                    "Query: %{y}<br>Key: %{x}<br>Strength: %{z:.4f}<extra></extra>"
+                ),
+            ))
+            fig_mat.update_layout(
+                height=600,
+                xaxis_title="Key Feature",
+                yaxis_title="Query Feature",
+                yaxis_autorange="reversed",
+            )
+            st.plotly_chart(fig_mat, use_container_width=True)
+
+# ── Tab 3: Attention Comparison ────────────────────────────────────────────
+
+with tab3:
+    if not _has_fra:
+        st.info("Click **▶ Compute FRA** in the sidebar to see attention comparison.")
+    else:
+        st.subheader(f"Standard vs FRA Attention — L{layer_} H{head_}")
+
+        # Use integer positions to avoid Plotly merging duplicate token labels
+        attn_tick_vals = list(range(seq_len))
+        attn_tick_labels = [html_lib.escape(t) for t in token_strs]
+
+        # -- Build the four matrices --
+
+        # Standard logits: masked pre-softmax scores (upper triangle = -inf → NaN for display)
+        std_logits = fra_data["attn_scores_np"][:seq_len, :seq_len].copy()
+        causal_mask = np.triu(np.ones((seq_len, seq_len), dtype=bool), k=1)
+        std_logits[causal_mask] = np.nan
+
+        # Standard probs: post-softmax (already causal)
+        std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
+        std_probs[causal_mask] = np.nan
+
+        # FRA logits: signed sum over feature pairs per position
+        idxs = fra_data["indices_np"]
+        vals = fra_data["values_np"]
+        fra_logits = np.zeros((seq_len, seq_len))
+        q_pos_all = idxs[0, :]
+        k_pos_all = idxs[1, :]
+        for qp, kp, v in zip(q_pos_all, k_pos_all, vals):
+            if qp < seq_len and kp < seq_len:
+                fra_logits[qp, kp] += v
+
+        # FRA probs: row-wise softmax of FRA logits (causal: only over k <= q)
+        fra_probs = np.full((seq_len, seq_len), np.nan)
+        for q in range(seq_len):
+            row = fra_logits[q, :q + 1]
+            row_exp = np.exp(row - row.max())
+            fra_probs[q, :q + 1] = row_exp / row_exp.sum()
+
+        fra_logits[causal_mask] = np.nan
+
+        # -- Shared layout helper --
+
+        def _attn_heatmap(z, hover_label, colorscale="RdBu", zmid=None):
+            fig = go.Figure(go.Heatmap(
+                z=z,
+                x=attn_tick_vals,
+                y=attn_tick_vals,
+                colorscale=colorscale,
+                zmid=zmid,
+                hovertemplate=(
+                    f"Q: %{{y}}<br>K: %{{x}}<br>{hover_label}: %{{z:.4f}}"
+                    "<extra></extra>"
+                ),
+            ))
+            fig.update_layout(
+                height=380,
+                margin=dict(l=0, r=0, t=0, b=0),
+                xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
+                yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
+            )
+            return fig
+
+        # -- Row 1: Logits --
+
+        st.markdown("#### Pre-softmax logits")
+        col_std_logit, col_fra_logit = st.columns(2)
+
+        with col_std_logit:
+            st.markdown("**Standard** (masked QK scores)")
+            st.plotly_chart(
+                _attn_heatmap(std_logits, "Logit", zmid=0),
+                use_container_width=True,
+            )
+
+        with col_fra_logit:
+            st.markdown("**FRA** (signed sum over feature pairs)")
+            st.plotly_chart(
+                _attn_heatmap(fra_logits, "Logit", zmid=0),
+                use_container_width=True,
+            )
+
+        # -- Row 2: Probs --
+
+        st.markdown("#### Post-softmax probabilities")
+        col_std_prob, col_fra_prob = st.columns(2)
+
+        with col_std_prob:
+            st.markdown("**Standard** (attention weights)")
+            st.plotly_chart(
+                _attn_heatmap(std_probs, "Weight"),
+                use_container_width=True,
+            )
+
+        with col_fra_prob:
+            st.markdown("**FRA** (softmax of FRA logits)")
+            st.plotly_chart(
+                _attn_heatmap(fra_probs, "Weight"),
+                use_container_width=True,
+            )
+
+# ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
+
+with tab4:
+    from fra.max_act import (
+        compute_max_acts as _compute_max_acts,
+        list_available_features as _list_available_features,
+        load_prompts as _load_prompts,
+        load_results as _load_results,
+        save_results as _save_results,
+    )
+
+    st.subheader("Max-Act Examples")
+    st.caption(
+        "Browse max-activating examples for crosscoder features across a corpus "
+        "of safe and unsafe prompts."
+    )
+
+    _RESULTS_DIR = str(Path(__file__).parent.parent / "results")
+
+    # --- Mode selector ---
+    ma_mode = st.radio("Mode", ["Load existing", "Compute new"], horizontal=True)
+
+    if ma_mode == "Compute new":
+        # --- Compute mode ---
+        ma_col_input, ma_col_btn = st.columns([3, 1])
+        with ma_col_input:
+            ma_feat_str = st.text_input(
+                "Feature IDs (comma-separated)",
+                value="53124",
+                help="e.g. 53124, 24613",
+            )
+            ma_n_prompts = st.number_input(
+                "Number of prompts",
+                min_value=10, max_value=5000, value=200, step=10,
+            )
+        with ma_col_btn:
+            st.markdown("")  # spacing
+            st.markdown("")
+            ma_run = st.button("Run", type="primary", use_container_width=True)
+
+        if ma_run:
+            # Parse feature IDs
+            try:
+                ma_feature_ids = [int(x.strip()) for x in ma_feat_str.split(",") if x.strip()]
+            except ValueError:
+                st.error("Invalid feature IDs. Enter comma-separated integers.")
+                ma_feature_ids = []
+
+            if ma_feature_ids:
+                ma_device = "cuda" if torch.cuda.is_available() else "cpu"
+
+                with st.status("Loading prompts...", expanded=True) as status:
+                    prompts = _load_prompts(ma_n_prompts)
+                    status.update(label=f"Loaded {len(prompts)} prompts. Loading models...")
+
+                    base_model, it_model = load_gemma_pair(
+                        "google/gemma-2-2b", "google/gemma-2-2b-it", ma_device,
+                    )
+                    cc = load_crosscoder(
+                        "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
+                        1, ma_device,
+                    )
+                    status.update(label="Running prompts...")
+
+                progress = st.progress(0, text="Processing prompts...")
+
+                def _ma_progress(i, n):
+                    progress.progress((i + 1) / n, text=f"Processing prompt {i+1}/{n}...")
+
+                results = _compute_max_acts(
+                    base_model, it_model, cc, ma_feature_ids, prompts,
+                    apply_template=True, crosscoder_layer=13, device=ma_device,
+                    progress_callback=_ma_progress,
+                )
+                progress.empty()
+
+                # Save to disk and session state
+                for fid in ma_feature_ids:
+                    _save_results(fid, results[fid], len(results[fid]),
+                                  "BeaverTails+UltraChat", _RESULTS_DIR)
+
+                st.session_state["max_act_results"] = results
+                st.session_state["max_act_feature_ids"] = ma_feature_ids
+                st.success(f"Computed and saved results for {len(ma_feature_ids)} feature(s).")
+
+    else:
+        # --- Load mode ---
+        available = _list_available_features(_RESULTS_DIR)
+        if not available:
+            st.info(f"No pre-computed results found in `{_RESULTS_DIR}/`.")
+        else:
+            ma_load_fid = st.selectbox(
+                "Feature",
+                available,
+                format_func=lambda fid: f"F{fid}",
+            )
+            if ma_load_fid is not None:
+                loaded = _load_results(ma_load_fid, _RESULTS_DIR)
+                if loaded:
+                    st.session_state["max_act_results"] = {ma_load_fid: loaded["prompts"]}
+                    st.session_state["max_act_feature_ids"] = [ma_load_fid]
+
+    # --- Results display (shared) ---
+    if "max_act_results" in st.session_state and st.session_state.get("max_act_feature_ids"):
+        ma_results = st.session_state["max_act_results"]
+        ma_fids = st.session_state["max_act_feature_ids"]
+
+        # Feature selector if multiple
+        if len(ma_fids) > 1:
+            ma_display_fid = st.selectbox(
+                "Display feature",
+                ma_fids,
+                format_func=lambda fid: f"F{fid}",
+                key="ma_display_fid",
+            )
+        else:
+            ma_display_fid = ma_fids[0]
+
+        entries = ma_results.get(ma_display_fid, [])
+        if not entries:
+            st.warning(f"No entries for feature {ma_display_fid}.")
+        else:
+            # Summary metrics
+            total = len(entries)
+            active = [e for e in entries if e["max_act"] > 0]
+            safe_entries = [e for e in entries if e.get("is_safe") is True]
+            unsafe_entries = [e for e in entries if e.get("is_safe") is False]
+            safe_active = [e for e in active if e.get("is_safe") is True]
+            unsafe_active = [e for e in active if e.get("is_safe") is False]
+
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1.metric("Total prompts", total)
+            mc2.metric("Active", f"{len(active)}/{total}")
+            mc3.metric("Safe active", f"{len(safe_active)}/{len(safe_entries)}" if safe_entries else "N/A")
+            mc4.metric("Unsafe active", f"{len(unsafe_active)}/{len(unsafe_entries)}" if unsafe_entries else "N/A")
+
+            st.markdown("---")
+
+            # Filter
+            ma_filter = st.radio(
+                "Filter",
+                ["All", "Safe only", "Unsafe only"],
+                horizontal=True,
+                key="ma_filter",
+            )
+            if ma_filter == "Safe only":
+                display_entries = [e for e in entries if e.get("is_safe") is True]
+            elif ma_filter == "Unsafe only":
+                display_entries = [e for e in entries if e.get("is_safe") is False]
+            else:
+                display_entries = entries
+
+            # Pagination
+            if "ma_page_size" not in st.session_state:
+                st.session_state["ma_page_size"] = 15
+            page_size = st.session_state["ma_page_size"]
+            page_entries = display_entries[:page_size]
+
+            st.caption(f"Showing {len(page_entries)} of {len(display_entries)} prompts "
+                       f"(sorted by max activation)")
+
+            # Render prompt cards
+            for idx, entry in enumerate(page_entries):
+                _render_prompt_card(entry, ma_display_fid, idx)
+
+            # Load more button
+            if page_size < len(display_entries):
+                if st.button("Load more (+10)"):
+                    st.session_state["ma_page_size"] = page_size + 10
+                    st.rerun()
