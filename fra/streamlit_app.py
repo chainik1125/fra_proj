@@ -273,6 +273,44 @@ def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):
     return mat
 
 
+def get_active_query_features(indices_np, values_np):
+    """Return list of (q_feat, total_outgoing_strength, n_key_features) sorted by strength."""
+    q_feats = indices_np[2, :]
+    k_feats = indices_np[3, :]
+    abs_vals = np.abs(values_np)
+
+    unique_q = np.unique(q_feats)
+    results = []
+    for qf in unique_q:
+        mask = q_feats == qf
+        total_strength = float(abs_vals[mask].sum())
+        n_keys = len(np.unique(k_feats[mask]))
+        results.append((int(qf), total_strength, n_keys))
+
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results
+
+
+def get_top_keys_for_query(indices_np, values_np, query_feat, top_k=30):
+    """Return top key features for a query feature: (k_feat, sum_abs, count) sorted by sum_abs."""
+    q_feats = indices_np[2, :]
+    k_feats = indices_np[3, :]
+    abs_vals = np.abs(values_np)
+
+    mask = q_feats == query_feat
+    k_masked = k_feats[mask]
+    v_masked = abs_vals[mask]
+
+    unique_keys = np.unique(k_masked)
+    results = []
+    for kf in unique_keys:
+        k_mask = k_masked == kf
+        results.append((int(kf), float(v_masked[k_mask].sum()), int(k_mask.sum())))
+
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results[:top_k]
+
+
 def token_activation_bar(token_strs, activations, color, height=220):
     """Return a Plotly bar chart of per-token activations."""
     fig = go.Figure(go.Bar(
@@ -288,6 +326,72 @@ def token_activation_bar(token_strs, activations, color, height=220):
         showlegend=False,
     )
     return fig
+
+
+def save_feature_data(query_feat, key_features, fra_data, token_strs, output_dir="results/features"):
+    """Save query feature and its top key features to human-readable JSON files."""
+    import json
+
+    feat_acts_np = fra_data["feat_acts_np"]
+    indices_np = fra_data["indices_np"]
+    values_np = fra_data["values_np"]
+    seq_len = fra_data["seq_len"]
+
+    out = Path(output_dir) / f"F{query_feat}"
+    out.mkdir(parents=True, exist_ok=True)
+
+    q_acts = feat_acts_np[:seq_len, query_feat].tolist()
+    total_strength = sum(s for _, s, _ in key_features)
+
+    summary = {
+        "query_feature": query_feat,
+        "total_outgoing_strength": round(total_strength, 6),
+        "token_strs": token_strs,
+        "query_activations": [round(a, 6) for a in q_acts],
+        "top_key_features": [
+            {
+                "feature_id": kf,
+                "interaction_strength": round(s, 6),
+                "count": c,
+                "pct_of_total": round(100 * s / total_strength, 1) if total_strength > 0 else 0,
+            }
+            for kf, s, c in key_features
+        ],
+    }
+    (out / "summary.json").write_text(json.dumps(summary, indent=2))
+
+    for kf, _, _ in key_features:
+        k_acts = feat_acts_np[:seq_len, kf].tolist()
+
+        # Position pairs where this (query, key) interaction occurs
+        mask = (indices_np[2] == query_feat) & (indices_np[3] == kf)
+        q_pos = indices_np[0, mask].tolist()
+        k_pos = indices_np[1, mask].tolist()
+        pair_vals = np.abs(values_np[mask]).tolist()
+
+        tokens_with_acts = [
+            {
+                "token": token_strs[i],
+                "pos": i,
+                "query_act": round(float(q_acts[i]), 6),
+                "key_act": round(float(k_acts[i]), 6),
+            }
+            for i in range(seq_len)
+            if q_acts[i] != 0 or k_acts[i] != 0
+        ]
+
+        key_data = {
+            "key_feature": kf,
+            "key_activations": [round(a, 6) for a in k_acts],
+            "position_pairs": [
+                {"q_pos": int(qp), "k_pos": int(kp), "strength": round(float(v), 6)}
+                for qp, kp, v in zip(q_pos, k_pos, pair_vals)
+            ],
+            "tokens_with_activations": tokens_with_acts,
+        }
+        (out / f"F{kf}.json").write_text(json.dumps(key_data, indent=2))
+
+    return str(out)
 
 
 # ---------------------------------------------------------------------------
@@ -552,10 +656,11 @@ st.markdown("")
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
+    "🧩 Max-Act Examples",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -832,3 +937,129 @@ with tab3:
             _attn_heatmap(fra_probs, "Weight"),
             use_container_width=True,
         )
+
+# ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
+
+with tab4:
+    st.subheader(f"Max-Act Examples — L{layer_} H{head_}")
+
+    active_q_feats = get_active_query_features(
+        fra_data["indices_np"], fra_data["values_np"],
+    )
+
+    if not active_q_feats:
+        st.warning("No active query features found.")
+    else:
+        q_options = {
+            f"F{qf} (strength: {s:.3f}, {n} key features)": qf
+            for qf, s, n in active_q_feats
+        }
+        selected_q_label = st.selectbox(
+            "Query feature",
+            list(q_options.keys()),
+        )
+        selected_q_feat = q_options[selected_q_label]
+
+        top_keys = get_top_keys_for_query(
+            fra_data["indices_np"], fra_data["values_np"],
+            selected_q_feat, top_k=30,
+        )
+        total_q_strength = sum(s for _, s, _ in top_keys)
+
+        if not top_keys:
+            st.warning("No key features found for this query feature.")
+        else:
+            col_keys, col_detail = st.columns([1, 2])
+
+            with col_keys:
+                st.markdown("**Key features** (ranked by interaction strength)")
+                key_labels = [
+                    f"F{kf} — {s:.3f} ({100 * s / total_q_strength:.0f}%)"
+                    if total_q_strength > 0
+                    else f"F{kf} — {s:.3f}"
+                    for kf, s, _ in top_keys
+                ]
+                selected_key_idx = st.radio(
+                    "Select key feature:",
+                    range(len(top_keys)),
+                    format_func=lambda i: key_labels[i],
+                    label_visibility="collapsed",
+                )
+
+            with col_detail:
+                k_feat, k_strength, k_count = top_keys[selected_key_idx]
+                feat_acts = fra_data["feat_acts_np"]
+                q_acts = feat_acts[:seq_len, selected_q_feat]
+                k_acts = feat_acts[:seq_len, k_feat]
+                tick_labels = [html_lib.escape(t) for t in token_strs]
+                tick_vals = list(range(len(token_strs)))
+
+                # -- Query feature activation heatmap --
+                st.markdown(f"**Query F{selected_q_feat}** — per-token activations")
+                fig_q = go.Figure(go.Heatmap(
+                    z=[q_acts.tolist()],
+                    x=tick_vals,
+                    y=[""],
+                    colorscale="Blues",
+                    hovertemplate="Token: %{x}<br>Activation: %{z:.4f}<extra></extra>",
+                ))
+                fig_q.update_layout(
+                    height=100,
+                    margin=dict(l=0, r=0, t=0, b=30),
+                    xaxis=dict(tickvals=tick_vals, ticktext=tick_labels),
+                    yaxis=dict(showticklabels=False),
+                )
+                st.plotly_chart(fig_q, use_container_width=True)
+
+                # -- Key feature activation heatmap --
+                st.markdown(f"**Key F{k_feat}** — per-token activations")
+                fig_k = go.Figure(go.Heatmap(
+                    z=[k_acts.tolist()],
+                    x=tick_vals,
+                    y=[""],
+                    colorscale="Purples",
+                    hovertemplate="Token: %{x}<br>Activation: %{z:.4f}<extra></extra>",
+                ))
+                fig_k.update_layout(
+                    height=100,
+                    margin=dict(l=0, r=0, t=0, b=30),
+                    xaxis=dict(tickvals=tick_vals, ticktext=tick_labels),
+                    yaxis=dict(showticklabels=False),
+                )
+                st.plotly_chart(fig_k, use_container_width=True)
+
+                # -- Position interaction heatmap --
+                st.markdown(f"**Position heatmap** — F{selected_q_feat} → F{k_feat}")
+                pos_mat = get_position_heatmap(
+                    fra_data["indices_np"], fra_data["values_np"],
+                    selected_q_feat, k_feat, seq_len,
+                )
+                fig_pos = go.Figure(go.Heatmap(
+                    z=pos_mat,
+                    x=tick_vals,
+                    y=tick_vals,
+                    colorscale="Blues",
+                    hovertemplate="Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}<extra></extra>",
+                ))
+                fig_pos.update_layout(
+                    height=300,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(title="Key token", tickvals=tick_vals, ticktext=tick_labels),
+                    yaxis=dict(title="Query token", tickvals=tick_vals, ticktext=tick_labels, autorange="reversed"),
+                )
+                st.plotly_chart(fig_pos, use_container_width=True)
+
+                # -- Interaction summary --
+                pct = (100 * k_strength / total_q_strength) if total_q_strength > 0 else 0
+                st.caption(
+                    f"Total strength: **{k_strength:.4f}** | "
+                    f"Position pairs: **{k_count}** | "
+                    f"% of query total: **{pct:.1f}%**"
+                )
+
+                # -- Save button --
+                if st.button(f"💾 Save F{selected_q_feat} data", key="save_feature"):
+                    save_path = save_feature_data(
+                        selected_q_feat, top_keys, fra_data, token_strs,
+                    )
+                    st.success(f"Saved to {save_path}/")
