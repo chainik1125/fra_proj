@@ -65,12 +65,14 @@ def load_model_pair(base_name: str, it_name: str, device: str,
         base_name, device=device, dtype=torch.float16,
     )
     if it_arch_name:
+        from transformers import AutoTokenizer
         hf_model = AutoModelForCausalLM.from_pretrained(
-            it_name, torch_dtype=torch.float16,
+            it_name, dtype=torch.float16,
         )
+        hf_tokenizer = AutoTokenizer.from_pretrained(it_name)
         it = HookedTransformer.from_pretrained(
             it_arch_name, device=device, dtype=torch.float16,
-            hf_model=hf_model, tokenizer=base.tokenizer,
+            hf_model=hf_model, tokenizer=hf_tokenizer,
         )
         del hf_model
     else:
