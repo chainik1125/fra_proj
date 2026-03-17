@@ -1112,6 +1112,53 @@ with tab4:
         if not entries:
             st.warning(f"No entries for feature {ma_display_fid}.")
         else:
+            # Filter controls (rendered before metrics so BOS toggle affects them)
+            _fc1, _fc2 = st.columns([2, 1])
+            with _fc1:
+                ma_filter = st.radio(
+                    "Filter",
+                    ["All", "Safe only", "Unsafe only"],
+                    horizontal=True,
+                    key="ma_filter",
+                )
+            with _fc2:
+                ma_ignore_bos = st.toggle(
+                    "Ignore BOS",
+                    value=False,
+                    key="ma_ignore_bos",
+                    help="Exclude the BOS (beginning-of-sequence) token from "
+                         "activation stats and sorting. BOS often dominates "
+                         "max activation, masking the real signal.",
+                )
+
+            # Apply BOS filtering: strip position-0 token and recalculate stats
+            if ma_ignore_bos:
+                adjusted = []
+                for e in entries:
+                    t_strs = e.get("token_strs")
+                    t_acts = e.get("token_acts")
+                    if t_strs and t_acts and len(t_strs) > 1:
+                        new_acts = t_acts[1:]
+                        active_vals = [v for v in new_acts if v > 0]
+                        new_max = max(active_vals) if active_vals else 0.0
+                        new_mean = sum(active_vals) / len(active_vals) if active_vals else 0.0
+                        new_top = [
+                            t for t in e.get("top_tokens", []) if t["pos"] != 0
+                        ]
+                        adjusted.append({
+                            **e,
+                            "token_strs": t_strs[1:],
+                            "token_acts": new_acts,
+                            "max_act": new_max,
+                            "mean_act": new_mean,
+                            "n_active_tokens": len(active_vals),
+                            "n_tokens": len(new_acts),
+                            "top_tokens": new_top,
+                        })
+                    else:
+                        adjusted.append(e)
+                entries = sorted(adjusted, key=lambda x: x["max_act"], reverse=True)
+
             # Summary metrics
             total = len(entries)
             active = [e for e in entries if e["max_act"] > 0]
@@ -1128,13 +1175,6 @@ with tab4:
 
             st.markdown("---")
 
-            # Filter
-            ma_filter = st.radio(
-                "Filter",
-                ["All", "Safe only", "Unsafe only"],
-                horizontal=True,
-                key="ma_filter",
-            )
             if ma_filter == "Safe only":
                 display_entries = [e for e in entries if e.get("is_safe") is True]
             elif ma_filter == "Unsafe only":
