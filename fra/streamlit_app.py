@@ -324,7 +324,7 @@ def compute_data_independent_submatrix(
     K = W_sub @ W_K                             # [k, d_head]
     d_head = W_Q.shape[-1]
     DI = (Q @ K.T) / math.sqrt(d_head)         # [k, k]
-    return DI.cpu().float().numpy()
+    return DI.detach().cpu().float().numpy()
 
 
 def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
@@ -1245,7 +1245,7 @@ with tab5:
                 help="Exclude position 0 from feature ranking.",
             )
         with di_col2:
-            di_top_k = st.slider("Top-K features", 5, 50, 20, key="di_top_k")
+            di_top_k = st.slider("Top-K features by activation", 5, 50, 20, key="di_top_k")
 
         # Find top-k features by max |activation| across positions
         feat_acts = fra_data["feat_acts_np"]  # [seq, d_sae]
