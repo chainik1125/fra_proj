@@ -6,6 +6,7 @@ Run with:
 """
 
 import html as html_lib
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -305,6 +306,25 @@ def _aggregate_pairs(indices_np, values_np, filter_self=False):
         (q, k, pair_sum[(q, k)], pair_count[(q, k)])
         for (q, k) in pair_sum
     ]
+
+
+def compute_data_independent_submatrix(
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    feature_indices: list[int],
+) -> np.ndarray:
+    """Compute k*k data-independent attention submatrix for given features.
+
+    DI(i,j) = (W_dec[i] @ W_Q) @ (W_dec[j] @ W_K)^T / sqrt(d_h)
+    """
+    idx = torch.tensor(feature_indices, device=W_dec.device)
+    W_sub = W_dec[idx]                          # [k, d_in]
+    Q = W_sub @ W_Q                             # [k, d_head]
+    K = W_sub @ W_K                             # [k, d_head]
+    d_head = W_Q.shape[-1]
+    DI = (Q @ K.T) / math.sqrt(d_head)         # [k, k]
+    return DI.cpu().float().numpy()
 
 
 def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
@@ -695,11 +715,12 @@ if _has_fra:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🧩 Max-Act Examples",
+    "🔗 Data-Independent",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -1200,3 +1221,82 @@ with tab4:
                 if st.button("Load more (+10)"):
                     st.session_state["ma_page_size"] = page_size + 10
                     st.rerun()
+
+# ── Tab 5: Data-Independent Heatmap ──────────────────────────────────────
+
+with tab5:
+    if not _has_fra:
+        st.info("Click **▶ Compute FRA** to see data-independent interactions.")
+    else:
+        from fra.fra_crosscoder import _get_W_K
+
+        st.subheader(f"Data-Independent Interaction — L{layer_} H{head_}")
+        st.caption(
+            "Heatmap of DI(i,j) = (W_dec[i]·W_Q) · (W_dec[j]·W_K)ᵀ / √d_h  — "
+            "the inherent feature interaction via the QK circuit, independent of "
+            "any input."
+        )
+
+        di_col1, di_col2 = st.columns([1, 1])
+        with di_col1:
+            di_ignore_bos = st.checkbox(
+                "Ignore BOS token", value=False,
+                key="di_ignore_bos",
+                help="Exclude position 0 from feature ranking.",
+            )
+        with di_col2:
+            di_top_k = st.slider("Top-K features", 5, 50, 20, key="di_top_k")
+
+        # Find top-k features by max |activation| across positions
+        feat_acts = fra_data["feat_acts_np"]  # [seq, d_sae]
+        if di_ignore_bos and feat_acts.shape[0] > 1:
+            feat_acts = feat_acts[1:]
+        max_acts = np.abs(feat_acts).max(axis=0)  # [d_sae]
+        top_k_indices = np.argsort(max_acts)[-di_top_k:][::-1].tolist()
+
+        # Get model + weight matrices (GQA-aware for all model types)
+        if sae_type == "crosscoder":
+            base_model, it_model = load_model_pair(
+                base_model_name, it_model_name, device, cc_it_arch,
+            )
+            target_model = base_model if model_idx == 0 else it_model
+            crosscoder = load_crosscoder(
+                crosscoder_repo_id, model_idx, device, cc_subfolder,
+            )
+            W_dec = crosscoder.W_dec
+            attn_layer = int(crosscoder_layer) + 1
+        else:
+            target_model = load_model("gpt2-small", device)
+            if sae_type == "hub":
+                sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+            else:
+                sae_obj = load_sae_local(sae_local_path, int(layer), device)
+            W_dec = sae_obj.W_dec
+            attn_layer = cfg["layer"]
+
+        W_Q = target_model.blocks[attn_layer].attn.W_Q[head_]
+        W_K_mat = _get_W_K(target_model, attn_layer, head_)
+
+        matrix = compute_data_independent_submatrix(
+            W_dec, W_Q, W_K_mat, top_k_indices,
+        )
+
+        labels = [f"F{i}" for i in top_k_indices]
+
+        fig_di = go.Figure(go.Heatmap(
+            z=matrix,
+            x=labels,
+            y=labels,
+            colorscale="RdBu",
+            zmid=0,
+            hovertemplate=(
+                "Query: %{y}<br>Key: %{x}<br>DI: %{z:.4f}<extra></extra>"
+            ),
+        ))
+        fig_di.update_layout(
+            height=600,
+            xaxis_title="Key Feature",
+            yaxis_title="Query Feature",
+            yaxis_autorange="reversed",
+        )
+        st.plotly_chart(fig_di, use_container_width=True)
