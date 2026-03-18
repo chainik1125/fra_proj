@@ -1505,15 +1505,22 @@ with tab5:
         "scan all pairs globally."
     )
 
-    qk_mode = st.radio(
-        "Mode",
-        ["Fixed Query", "Fixed Key", "Global"],
-        horizontal=True,
-        key="qk_mode",
-    )
+    if not _has_fra:
+        st.info(
+            "Click **▶ Compute FRA** first to load the model and SAE weights. "
+            "The QK Circuit tab reuses the already-loaded weights."
+        )
+    else:
 
-    # Shared weight-loading kwargs
-    _wt_kw = dict(
+        qk_mode = st.radio(
+            "Mode",
+            ["Fixed Query", "Fixed Key", "Global"],
+            horizontal=True,
+            key="qk_mode",
+        )
+
+        # Shared weight-loading kwargs (models already cached from FRA compute)
+        _wt_kw = dict(
         base_model_name=base_model_name, it_model_name=it_model_name,
         cc_it_arch=cc_it_arch, model_idx=model_idx,
         crosscoder_repo_id=crosscoder_repo_id, cc_subfolder=cc_subfolder,
@@ -1522,101 +1529,101 @@ with tab5:
         sae_local_path=sae_local_path, layer=layer,
     )
 
-    if qk_mode == "Fixed Query":
-        qk_col_in, qk_col_btn = st.columns([3, 1])
-        with qk_col_in:
-            qk_fq_id = st.number_input("Query feature ID", min_value=0, value=0, key="qk_fq_id")
-        with qk_col_btn:
-            st.markdown("")
-            st.markdown("")
-            qk_fq_go = st.button("Compute", type="primary", key="qk_fq_btn")
+        if qk_mode == "Fixed Query":
+            qk_col_in, qk_col_btn = st.columns([3, 1])
+            with qk_col_in:
+                qk_fq_id = st.number_input("Query feature ID", min_value=0, value=0, key="qk_fq_id")
+            with qk_col_btn:
+                st.markdown("")
+                st.markdown("")
+                qk_fq_go = st.button("Compute", type="primary", key="qk_fq_btn")
 
-        if qk_fq_go:
-            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                sae_type, int(head), device, **_wt_kw,
+            if qk_fq_go:
+                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                    sae_type, int(head), device, **_wt_kw,
+                )
+                di_row = compute_di_row(W_dec, W_Q, W_K_, qk_fq_id)
+                bands = sample_di_bands(di_row)
+                st.session_state["qk_fq_result"] = {
+                    "di_vals": di_row, "bands": bands,
+                    "query_id": qk_fq_id, "head": int(head),
+                }
+
+            if "qk_fq_result" in st.session_state:
+                r = st.session_state["qk_fq_result"]
+                st.markdown(f"**Query F{r['query_id']}** — top key features by |DI| (H{r['head']})")
+                _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
+                _render_band_table(r["bands"], id_label="Key Feature")
+
+        elif qk_mode == "Fixed Key":
+            qk_col_in, qk_col_btn = st.columns([3, 1])
+            with qk_col_in:
+                qk_fk_id = st.number_input("Key feature ID", min_value=0, value=0, key="qk_fk_id")
+            with qk_col_btn:
+                st.markdown("")
+                st.markdown("")
+                qk_fk_go = st.button("Compute", type="primary", key="qk_fk_btn")
+
+            if qk_fk_go:
+                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                    sae_type, int(head), device, **_wt_kw,
+                )
+                di_col = compute_di_col(W_dec, W_Q, W_K_, qk_fk_id)
+                bands = sample_di_bands(di_col)
+                st.session_state["qk_fk_result"] = {
+                    "di_vals": di_col, "bands": bands,
+                    "key_id": qk_fk_id, "head": int(head),
+                }
+
+            if "qk_fk_result" in st.session_state:
+                r = st.session_state["qk_fk_result"]
+                st.markdown(f"**Key F{r['key_id']}** — top query features by |DI| (H{r['head']})")
+                _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
+                _render_band_table(r["bands"], id_label="Query Feature")
+
+        else:  # Global
+            st.warning(
+                "Global scan iterates over all feature pairs. "
+                "Takes ~30-60s on GPU, longer on CPU."
             )
-            di_row = compute_di_row(W_dec, W_Q, W_K_, qk_fq_id)
-            bands = sample_di_bands(di_row)
-            st.session_state["qk_fq_result"] = {
-                "di_vals": di_row, "bands": bands,
-                "query_id": qk_fq_id, "head": int(head),
-            }
+            qk_g_topk = st.slider("Top-K global pairs", 10, 200, 50, key="qk_g_topk")
+            qk_g_go = st.button("Run Global Scan", type="primary", key="qk_g_btn")
 
-        if "qk_fq_result" in st.session_state:
-            r = st.session_state["qk_fq_result"]
-            st.markdown(f"**Query F{r['query_id']}** — top key features by |DI| (H{r['head']})")
-            _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
-            _render_band_table(r["bands"], id_label="Key Feature")
+            if qk_g_go:
+                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                    sae_type, int(head), device, **_wt_kw,
+                )
+                progress = st.progress(0, text="Scanning feature pairs...")
 
-    elif qk_mode == "Fixed Key":
-        qk_col_in, qk_col_btn = st.columns([3, 1])
-        with qk_col_in:
-            qk_fk_id = st.number_input("Key feature ID", min_value=0, value=0, key="qk_fk_id")
-        with qk_col_btn:
-            st.markdown("")
-            st.markdown("")
-            qk_fk_go = st.button("Compute", type="primary", key="qk_fk_btn")
+                def _g_progress(i, n):
+                    progress.progress(i / n, text=f"Chunk {i}/{n}...")
 
-        if qk_fk_go:
-            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                sae_type, int(head), device, **_wt_kw,
-            )
-            di_col = compute_di_col(W_dec, W_Q, W_K_, qk_fk_id)
-            bands = sample_di_bands(di_col)
-            st.session_state["qk_fk_result"] = {
-                "di_vals": di_col, "bands": bands,
-                "key_id": qk_fk_id, "head": int(head),
-            }
+                result = compute_global_di_topk(
+                    W_dec, W_Q, W_K_, top_k=qk_g_topk,
+                    progress_callback=_g_progress,
+                )
+                progress.empty()
 
-        if "qk_fk_result" in st.session_state:
-            r = st.session_state["qk_fk_result"]
-            st.markdown(f"**Key F{r['key_id']}** — top query features by |DI| (H{r['head']})")
-            _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
-            _render_band_table(r["bands"], id_label="Query Feature")
+                # Build bands from the sampled histogram data
+                bands = sample_di_bands(result["hist_sample"])
 
-    else:  # Global
-        st.warning(
-            "Global scan iterates over all feature pairs. "
-            "Takes ~30-60s on GPU, longer on CPU."
-        )
-        qk_g_topk = st.slider("Top-K global pairs", 10, 200, 50, key="qk_g_topk")
-        qk_g_go = st.button("Run Global Scan", type="primary", key="qk_g_btn")
+                st.session_state["qk_global_result"] = {
+                    **result, "bands": bands, "head": int(head),
+                }
 
-        if qk_g_go:
-            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                sae_type, int(head), device, **_wt_kw,
-            )
-            progress = st.progress(0, text="Scanning feature pairs...")
+            if "qk_global_result" in st.session_state:
+                r = st.session_state["qk_global_result"]
+                st.markdown(f"**Global top pairs by |DI|** (H{r['head']})")
+                _render_di_histogram(r["hist_sample"], r["bands"]["_stats"])
 
-            def _g_progress(i, n):
-                progress.progress(i / n, text=f"Chunk {i}/{n}...")
+                # Top pairs table
+                import pandas as pd
+                top_df = pd.DataFrame({
+                    "Query Feature": [f"F{q}" for q in r["query_ids"]],
+                    "Key Feature": [f"F{k}" for k in r["key_ids"]],
+                    "DI": [f"{v:.6f}" for v in r["di_values"]],
+                })
+                st.dataframe(top_df, use_container_width=True, hide_index=True)
 
-            result = compute_global_di_topk(
-                W_dec, W_Q, W_K_, top_k=qk_g_topk,
-                progress_callback=_g_progress,
-            )
-            progress.empty()
-
-            # Build bands from the sampled histogram data
-            bands = sample_di_bands(result["hist_sample"])
-
-            st.session_state["qk_global_result"] = {
-                **result, "bands": bands, "head": int(head),
-            }
-
-        if "qk_global_result" in st.session_state:
-            r = st.session_state["qk_global_result"]
-            st.markdown(f"**Global top pairs by |DI|** (H{r['head']})")
-            _render_di_histogram(r["hist_sample"], r["bands"]["_stats"])
-
-            # Top pairs table
-            import pandas as pd
-            top_df = pd.DataFrame({
-                "Query Feature": [f"F{q}" for q in r["query_ids"]],
-                "Key Feature": [f"F{k}" for k in r["key_ids"]],
-                "DI": [f"{v:.6f}" for v in r["di_values"]],
-            })
-            st.dataframe(top_df, use_container_width=True, hide_index=True)
-
-            st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
-            _render_band_table(r["bands"], id_label="Feature")
+                st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
+                _render_band_table(r["bands"], id_label="Feature")
