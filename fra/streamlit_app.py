@@ -826,6 +826,15 @@ with tab1:
                     "**Data-independent ranking** — is this pair "
                     "inherently coupled via the QK circuit?"
                 )
+                st.caption(
+                    "DI(i,j) = (W_dec[i]·W_Q)·(W_dec[j]·W_K)ᵀ/√d_h measures "
+                    "how strongly the model's **weights alone** couple two features, "
+                    "ignoring activations. A pair can top the FRA list via high "
+                    "activations even if its DI rank is moderate. The histogram "
+                    "shows DI(query, j) for **all** key features j — a rank in "
+                    "the tail means the QK circuit is specifically wired for this "
+                    "pair, not just driven by co-activation."
+                )
 
                 from fra.fra_crosscoder import _get_W_K
 
@@ -868,7 +877,7 @@ with tab1:
 
                 di_m1, di_m2, di_m3 = st.columns(3)
                 di_m1.metric("DI value", f"{target_val:.4f}")
-                di_m2.metric("Rank (by |DI|)", f"{rank:,} / {total:,}")
+                di_m2.metric("Rank (by |DI|)", f"{rank:,}", help=f"Out of {total:,} features")
                 di_m3.metric("Percentile", f"{percentile:.2f}%")
 
                 fig_hist = go.Figure()
