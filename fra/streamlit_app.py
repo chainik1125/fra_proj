@@ -325,6 +325,171 @@ def compute_di_row(
     return di_row.detach().cpu().float().numpy()
 
 
+def compute_di_col(
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    key_feature: int,
+) -> np.ndarray:
+    """Compute DI(i, key_feature) for all query features i.
+
+    Returns array of shape [d_sae].
+    """
+    k_vec = W_dec[key_feature] @ W_K            # [d_head]
+    Q_all = W_dec @ W_Q                         # [d_sae, d_head]
+    d_head = W_Q.shape[-1]
+    di_col = (Q_all @ k_vec) / math.sqrt(d_head)  # [d_sae]
+    return di_col.detach().cpu().float().numpy()
+
+
+def compute_global_di_topk(
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    top_k: int = 50,
+    chunk_size: int = 1024,
+    n_sample_rows: int = 500,
+    progress_callback=None,
+) -> dict:
+    """Scan all (i,j) pairs for global top-k by |DI|.
+
+    Also samples random rows for the distribution histogram.
+
+    Returns dict with keys: query_ids, key_ids, di_values, hist_sample.
+    """
+    d_sae = W_dec.shape[0]
+    d_head = W_Q.shape[-1]
+    scale = math.sqrt(d_head)
+    K_all = W_dec @ W_K                          # [d_sae, d_head]
+    n_chunks = math.ceil(d_sae / chunk_size)
+
+    # Sample random rows for histogram
+    rng = np.random.default_rng(42)
+    sample_idxs = rng.choice(d_sae, size=min(n_sample_rows, d_sae), replace=False)
+    Q_sample = W_dec[torch.tensor(sample_idxs, device=W_dec.device)] @ W_Q
+    hist_sample = ((Q_sample @ K_all.T) / scale).detach().cpu().float().numpy().ravel()
+
+    # Running top-k across chunks
+    top_vals = torch.empty(0, device=W_dec.device)
+    top_q = torch.empty(0, dtype=torch.long, device=W_dec.device)
+    top_k_buf = torch.empty(0, dtype=torch.long, device=W_dec.device)
+
+    for c in range(n_chunks):
+        start = c * chunk_size
+        end = min(start + chunk_size, d_sae)
+        Q_chunk = W_dec[start:end] @ W_Q         # [chunk, d_head]
+        DI_chunk = (Q_chunk @ K_all.T) / scale   # [chunk, d_sae]
+
+        flat_abs = DI_chunk.abs().flatten()
+        k_local = min(top_k, flat_abs.numel())
+        _, idx_c = torch.topk(flat_abs, k_local)
+        q_c = idx_c // d_sae + start
+        k_c = idx_c % d_sae
+        signed_c = DI_chunk.flatten()[idx_c]
+
+        # Merge with running top-k
+        all_signed = torch.cat([top_vals, signed_c])
+        all_q = torch.cat([top_q, q_c])
+        all_k = torch.cat([top_k_buf, k_c])
+
+        k_merge = min(top_k, all_signed.numel())
+        _, keep = torch.topk(all_signed.abs(), k_merge)
+        top_vals = all_signed[keep]
+        top_q = all_q[keep]
+        top_k_buf = all_k[keep]
+
+        if progress_callback:
+            progress_callback(c + 1, n_chunks)
+
+    order = torch.argsort(top_vals.abs(), descending=True)
+    return {
+        "query_ids": top_q[order].cpu().numpy(),
+        "key_ids": top_k_buf[order].cpu().numpy(),
+        "di_values": top_vals[order].detach().cpu().float().numpy(),
+        "hist_sample": hist_sample,
+    }
+
+
+def sample_di_bands(
+    di_values: np.ndarray,
+    feature_ids: np.ndarray | None = None,
+    n_per_band: int = 5,
+) -> dict:
+    """Pick representative features at distribution bands.
+
+    Returns dict with band_name -> list of (feature_id, di_value).
+    Includes '_stats' key with mean and std.
+    """
+    if feature_ids is None:
+        feature_ids = np.arange(len(di_values))
+
+    mean = float(np.mean(di_values))
+    std = float(np.std(di_values))
+    abs_vals = np.abs(di_values)
+
+    bands = {}
+
+    # Top positive / negative
+    bands["Top |DI| (positive)"] = [
+        (int(feature_ids[i]), float(di_values[i]))
+        for i in np.argsort(-di_values)[:n_per_band]
+    ]
+    bands["Top |DI| (negative)"] = [
+        (int(feature_ids[i]), float(di_values[i]))
+        for i in np.argsort(di_values)[:n_per_band]
+    ]
+
+    # Band thresholds
+    for label, target in [
+        ("+2 SD", mean + 2 * std),
+        ("+1 SD", mean + 1 * std),
+        ("Near mean", mean),
+    ]:
+        dist = np.abs(di_values - target)
+        nearest = np.argsort(dist)[:n_per_band]
+        bands[label] = [
+            (int(feature_ids[i]), float(di_values[i]))
+            for i in nearest
+        ]
+
+    # Lowest |DI|
+    bands["Low |DI|"] = [
+        (int(feature_ids[i]), float(di_values[i]))
+        for i in np.argsort(abs_vals)[:n_per_band]
+    ]
+
+    bands["_stats"] = {"mean": mean, "std": std}
+    return bands
+
+
+def _load_di_weights(sae_type, head, device, **kw):
+    """Load (W_dec, W_Q, W_K, attn_layer) for DI computation."""
+    from fra.fra_crosscoder import _get_W_K
+
+    if sae_type == "crosscoder":
+        base, it = load_model_pair(
+            kw["base_model_name"], kw["it_model_name"], device, kw["cc_it_arch"],
+        )
+        model = base if kw["model_idx"] == 0 else it
+        cc = load_crosscoder(
+            kw["crosscoder_repo_id"], kw["model_idx"], device, kw["cc_subfolder"],
+        )
+        W_dec = cc.W_dec
+        attn_layer = int(kw["crosscoder_layer"]) + 1
+    else:
+        model = load_model("gpt2-small", device)
+        if sae_type == "hub":
+            sae_obj = load_sae_hub(kw["sae_hub_release"], kw["sae_hub_id"], device)
+        else:
+            sae_obj = load_sae_local(kw["sae_local_path"], int(kw["layer"]), device)
+        W_dec = sae_obj.W_dec
+        attn_layer = int(kw["layer"])
+
+    W_Q = model.blocks[attn_layer].attn.W_Q[head]
+    W_K = _get_W_K(model, attn_layer, head)
+    return W_dec, W_Q, W_K, attn_layer
+
+
 def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
     """Return top-k pairs by total absolute strength (strongest interactions)."""
     pairs = _aggregate_pairs(indices_np, values_np, filter_self)
@@ -713,11 +878,12 @@ if _has_fra:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🧩 Max-Act Examples",
+    "🔗 QK Circuit",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -837,29 +1003,15 @@ with tab1:
                     "rather than the interaction being driven by co-activation alone."
                 )
 
-                from fra.fra_crosscoder import _get_W_K
-
-                if sae_type == "crosscoder":
-                    _di_base, _di_it = load_model_pair(
-                        base_model_name, it_model_name, device, cc_it_arch,
-                    )
-                    _di_model = _di_base if model_idx == 0 else _di_it
-                    _di_cc = load_crosscoder(
-                        crosscoder_repo_id, model_idx, device, cc_subfolder,
-                    )
-                    _di_W_dec = _di_cc.W_dec
-                    _di_layer = int(crosscoder_layer) + 1
-                else:
-                    _di_model = load_model("gpt2-small", device)
-                    if sae_type == "hub":
-                        _di_sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
-                    else:
-                        _di_sae = load_sae_local(sae_local_path, int(layer), device)
-                    _di_W_dec = _di_sae.W_dec
-                    _di_layer = cfg["layer"]
-
-                _di_W_Q = _di_model.blocks[_di_layer].attn.W_Q[head_]
-                _di_W_K = _get_W_K(_di_model, _di_layer, head_)
+                _di_W_dec, _di_W_Q, _di_W_K, _di_layer = _load_di_weights(
+                    sae_type, head_, device,
+                    base_model_name=base_model_name, it_model_name=it_model_name,
+                    cc_it_arch=cc_it_arch, model_idx=model_idx,
+                    crosscoder_repo_id=crosscoder_repo_id, cc_subfolder=cc_subfolder,
+                    crosscoder_layer=crosscoder_layer,
+                    sae_hub_release=sae_hub_release, sae_hub_id=sae_hub_id,
+                    sae_local_path=sae_local_path, layer=layer,
+                )
 
                 # Cache DI row — only recompute when query feature changes
                 _di_key = (q_sel, _di_layer, head_)
@@ -1296,3 +1448,175 @@ with tab4:
                 if st.button("Load more (+10)"):
                     st.session_state["ma_page_size"] = page_size + 10
                     st.rerun()
+
+# ── Tab 5: QK Circuit ────────────────────────────────────────────────────
+
+def _render_band_table(bands: dict, id_label: str = "Feature"):
+    """Render band comparison as a streamlit table."""
+    rows = []
+    for band_name, entries in bands.items():
+        if band_name.startswith("_"):
+            continue
+        for fid, val in entries:
+            rows.append({"Band": band_name, id_label: f"F{fid}", "DI": f"{val:.6f}"})
+    import pandas as pd
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
+def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
+    """Render DI distribution histogram with SD lines."""
+    mean, std = stats["mean"], stats["std"]
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(
+        x=di_values, nbinsx=200,
+        marker_color="rgba(102,126,234,0.6)",
+    ))
+    for mult, dash in [(0, "dot"), (1, "dash"), (2, "solid")]:
+        for sign in [1, -1]:
+            val = mean + sign * mult * std
+            if mult == 0 and sign == -1:
+                continue  # don't double-draw mean
+            fig.add_vline(
+                x=val, line_dash=dash,
+                line_color="gray" if mult < 2 else "orange",
+                annotation_text=f"{'+' if sign > 0 else '-'}{mult}σ" if mult > 0 else "μ",
+                annotation_position="top left" if sign > 0 else "top right",
+            )
+    if mark_val is not None:
+        fig.add_vline(
+            x=mark_val, line_dash="dash", line_color="red",
+            annotation_text=mark_label or "",
+        )
+    fig.update_layout(
+        height=300,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis_title="DI value",
+        yaxis_title="Count",
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+with tab5:
+    st.subheader("QK Circuit — Data-Independent Interaction")
+    st.caption(
+        "Explore the inherent feature coupling in this attention head's QK circuit, "
+        "independent of any input. Choose a mode to fix one side of the pair or "
+        "scan all pairs globally."
+    )
+
+    qk_mode = st.radio(
+        "Mode",
+        ["Fixed Query", "Fixed Key", "Global"],
+        horizontal=True,
+        key="qk_mode",
+    )
+
+    # Shared weight-loading kwargs
+    _wt_kw = dict(
+        base_model_name=base_model_name, it_model_name=it_model_name,
+        cc_it_arch=cc_it_arch, model_idx=model_idx,
+        crosscoder_repo_id=crosscoder_repo_id, cc_subfolder=cc_subfolder,
+        crosscoder_layer=crosscoder_layer,
+        sae_hub_release=sae_hub_release, sae_hub_id=sae_hub_id,
+        sae_local_path=sae_local_path, layer=layer,
+    )
+
+    if qk_mode == "Fixed Query":
+        qk_col_in, qk_col_btn = st.columns([3, 1])
+        with qk_col_in:
+            qk_fq_id = st.number_input("Query feature ID", min_value=0, value=0, key="qk_fq_id")
+        with qk_col_btn:
+            st.markdown("")
+            st.markdown("")
+            qk_fq_go = st.button("Compute", type="primary", key="qk_fq_btn")
+
+        if qk_fq_go:
+            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                sae_type, int(head), device, **_wt_kw,
+            )
+            di_row = compute_di_row(W_dec, W_Q, W_K_, qk_fq_id)
+            bands = sample_di_bands(di_row)
+            st.session_state["qk_fq_result"] = {
+                "di_vals": di_row, "bands": bands,
+                "query_id": qk_fq_id, "head": int(head),
+            }
+
+        if "qk_fq_result" in st.session_state:
+            r = st.session_state["qk_fq_result"]
+            st.markdown(f"**Query F{r['query_id']}** — top key features by |DI| (H{r['head']})")
+            _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
+            _render_band_table(r["bands"], id_label="Key Feature")
+
+    elif qk_mode == "Fixed Key":
+        qk_col_in, qk_col_btn = st.columns([3, 1])
+        with qk_col_in:
+            qk_fk_id = st.number_input("Key feature ID", min_value=0, value=0, key="qk_fk_id")
+        with qk_col_btn:
+            st.markdown("")
+            st.markdown("")
+            qk_fk_go = st.button("Compute", type="primary", key="qk_fk_btn")
+
+        if qk_fk_go:
+            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                sae_type, int(head), device, **_wt_kw,
+            )
+            di_col = compute_di_col(W_dec, W_Q, W_K_, qk_fk_id)
+            bands = sample_di_bands(di_col)
+            st.session_state["qk_fk_result"] = {
+                "di_vals": di_col, "bands": bands,
+                "key_id": qk_fk_id, "head": int(head),
+            }
+
+        if "qk_fk_result" in st.session_state:
+            r = st.session_state["qk_fk_result"]
+            st.markdown(f"**Key F{r['key_id']}** — top query features by |DI| (H{r['head']})")
+            _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
+            _render_band_table(r["bands"], id_label="Query Feature")
+
+    else:  # Global
+        st.warning(
+            "Global scan iterates over all feature pairs. "
+            "Takes ~30-60s on GPU, longer on CPU."
+        )
+        qk_g_topk = st.slider("Top-K global pairs", 10, 200, 50, key="qk_g_topk")
+        qk_g_go = st.button("Run Global Scan", type="primary", key="qk_g_btn")
+
+        if qk_g_go:
+            W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
+                sae_type, int(head), device, **_wt_kw,
+            )
+            progress = st.progress(0, text="Scanning feature pairs...")
+
+            def _g_progress(i, n):
+                progress.progress(i / n, text=f"Chunk {i}/{n}...")
+
+            result = compute_global_di_topk(
+                W_dec, W_Q, W_K_, top_k=qk_g_topk,
+                progress_callback=_g_progress,
+            )
+            progress.empty()
+
+            # Build bands from the sampled histogram data
+            bands = sample_di_bands(result["hist_sample"])
+
+            st.session_state["qk_global_result"] = {
+                **result, "bands": bands, "head": int(head),
+            }
+
+        if "qk_global_result" in st.session_state:
+            r = st.session_state["qk_global_result"]
+            st.markdown(f"**Global top pairs by |DI|** (H{r['head']})")
+            _render_di_histogram(r["hist_sample"], r["bands"]["_stats"])
+
+            # Top pairs table
+            import pandas as pd
+            top_df = pd.DataFrame({
+                "Query Feature": [f"F{q}" for q in r["query_ids"]],
+                "Key Feature": [f"F{k}" for k in r["key_ids"]],
+                "DI": [f"{v:.6f}" for v in r["di_values"]],
+            })
+            st.dataframe(top_df, use_container_width=True, hide_index=True)
+
+            st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
+            _render_band_table(r["bands"], id_label="Feature")
