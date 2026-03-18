@@ -831,9 +831,10 @@ with tab1:
                     "how strongly the model's **weights alone** couple two features, "
                     "ignoring activations. A pair can top the FRA list via high "
                     "activations even if its DI rank is moderate. The histogram "
-                    "shows DI(query, j) for **all** key features j — a rank in "
-                    "the tail means the QK circuit is specifically wired for this "
-                    "pair, not just driven by co-activation."
+                    "shows DI(query, j) for **all** key features j — a high |DI| "
+                    "rank means the QK circuit specifically wires this pair "
+                    "(positive = promotes attention, negative = suppresses), "
+                    "rather than the interaction being driven by co-activation alone."
                 )
 
                 from fra.fra_crosscoder import _get_W_K
