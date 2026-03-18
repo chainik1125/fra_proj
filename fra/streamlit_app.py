@@ -308,23 +308,21 @@ def _aggregate_pairs(indices_np, values_np, filter_self=False):
     ]
 
 
-def compute_data_independent_submatrix(
+def compute_di_row(
     W_dec: torch.Tensor,
     W_Q: torch.Tensor,
     W_K: torch.Tensor,
-    feature_indices: list[int],
+    query_feature: int,
 ) -> np.ndarray:
-    """Compute k*k data-independent attention submatrix for given features.
+    """Compute DI(query_feature, j) for all key features j.
 
-    DI(i,j) = (W_dec[i] @ W_Q) @ (W_dec[j] @ W_K)^T / sqrt(d_h)
+    Returns array of shape [d_sae].
     """
-    idx = torch.tensor(feature_indices, device=W_dec.device)
-    W_sub = W_dec[idx]                          # [k, d_in]
-    Q = W_sub @ W_Q                             # [k, d_head]
-    K = W_sub @ W_K                             # [k, d_head]
+    q_vec = W_dec[query_feature] @ W_Q          # [d_head]
+    K_all = W_dec @ W_K                         # [d_sae, d_head]
     d_head = W_Q.shape[-1]
-    DI = (Q @ K.T) / math.sqrt(d_head)         # [k, k]
-    return DI.detach().cpu().float().numpy()
+    di_row = (K_all @ q_vec) / math.sqrt(d_head)  # [d_sae]
+    return di_row.detach().cpu().float().numpy()
 
 
 def get_top_pairs(indices_np, values_np, top_k=50, filter_self=False):
@@ -715,12 +713,11 @@ if _has_fra:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🧩 Max-Act Examples",
-    "🔗 Data-Independent",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -823,6 +820,74 @@ with tab1:
                     yaxis=dict(title="Query token", tickvals=tick_vals, ticktext=tick_labels, autorange="reversed"),
                 )
                 st.plotly_chart(fig_pos, use_container_width=True)
+
+                # --- Data-Independent Ranking ---
+                st.markdown(
+                    "**Data-independent ranking** — is this pair "
+                    "inherently coupled via the QK circuit?"
+                )
+
+                from fra.fra_crosscoder import _get_W_K
+
+                if sae_type == "crosscoder":
+                    _di_base, _di_it = load_model_pair(
+                        base_model_name, it_model_name, device, cc_it_arch,
+                    )
+                    _di_model = _di_base if model_idx == 0 else _di_it
+                    _di_cc = load_crosscoder(
+                        crosscoder_repo_id, model_idx, device, cc_subfolder,
+                    )
+                    _di_W_dec = _di_cc.W_dec
+                    _di_layer = int(crosscoder_layer) + 1
+                else:
+                    _di_model = load_model("gpt2-small", device)
+                    if sae_type == "hub":
+                        _di_sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                    else:
+                        _di_sae = load_sae_local(sae_local_path, int(layer), device)
+                    _di_W_dec = _di_sae.W_dec
+                    _di_layer = cfg["layer"]
+
+                _di_W_Q = _di_model.blocks[_di_layer].attn.W_Q[head_]
+                _di_W_K = _get_W_K(_di_model, _di_layer, head_)
+
+                # Cache DI row — only recompute when query feature changes
+                _di_key = (q_sel, _di_layer, head_)
+                if st.session_state.get("_di_cache_key") != _di_key:
+                    st.session_state["_di_row"] = compute_di_row(
+                        _di_W_dec, _di_W_Q, _di_W_K, q_sel,
+                    )
+                    st.session_state["_di_cache_key"] = _di_key
+                di_row = st.session_state["_di_row"]
+
+                target_val = float(di_row[k_sel])
+                abs_row = np.abs(di_row)
+                rank = int((abs_row > abs(target_val)).sum()) + 1
+                total = len(di_row)
+                percentile = (1 - rank / total) * 100
+
+                di_m1, di_m2, di_m3 = st.columns(3)
+                di_m1.metric("DI value", f"{target_val:.4f}")
+                di_m2.metric("Rank (by |DI|)", f"{rank:,} / {total:,}")
+                di_m3.metric("Percentile", f"{percentile:.2f}%")
+
+                fig_hist = go.Figure()
+                fig_hist.add_trace(go.Histogram(
+                    x=di_row, nbinsx=200,
+                    marker_color="rgba(102,126,234,0.6)",
+                ))
+                fig_hist.add_vline(
+                    x=target_val, line_dash="dash", line_color="red",
+                    annotation_text=f"F{q_sel}→F{k_sel}: {target_val:.4f}",
+                )
+                fig_hist.update_layout(
+                    height=300,
+                    margin=dict(l=0, r=0, t=30, b=0),
+                    xaxis_title="DI value",
+                    yaxis_title="Count",
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_hist, use_container_width=True)
 
                 # --- Neuronpedia iframes ---
                 if cfg["supports_neuronpedia"]:
@@ -1221,82 +1286,3 @@ with tab4:
                 if st.button("Load more (+10)"):
                     st.session_state["ma_page_size"] = page_size + 10
                     st.rerun()
-
-# ── Tab 5: Data-Independent Heatmap ──────────────────────────────────────
-
-with tab5:
-    if not _has_fra:
-        st.info("Click **▶ Compute FRA** to see data-independent interactions.")
-    else:
-        from fra.fra_crosscoder import _get_W_K
-
-        st.subheader(f"Data-Independent Interaction — L{layer_} H{head_}")
-        st.caption(
-            "Heatmap of DI(i,j) = (W_dec[i]·W_Q) · (W_dec[j]·W_K)ᵀ / √d_h  — "
-            "the inherent feature interaction via the QK circuit, independent of "
-            "any input."
-        )
-
-        di_col1, di_col2 = st.columns([1, 1])
-        with di_col1:
-            di_ignore_bos = st.checkbox(
-                "Ignore BOS token", value=False,
-                key="di_ignore_bos",
-                help="Exclude position 0 from feature ranking.",
-            )
-        with di_col2:
-            di_top_k = st.slider("Top-K features by activation", 5, 50, 20, key="di_top_k")
-
-        # Find top-k features by max |activation| across positions
-        feat_acts = fra_data["feat_acts_np"]  # [seq, d_sae]
-        if di_ignore_bos and feat_acts.shape[0] > 1:
-            feat_acts = feat_acts[1:]
-        max_acts = np.abs(feat_acts).max(axis=0)  # [d_sae]
-        top_k_indices = np.argsort(max_acts)[-di_top_k:][::-1].tolist()
-
-        # Get model + weight matrices (GQA-aware for all model types)
-        if sae_type == "crosscoder":
-            base_model, it_model = load_model_pair(
-                base_model_name, it_model_name, device, cc_it_arch,
-            )
-            target_model = base_model if model_idx == 0 else it_model
-            crosscoder = load_crosscoder(
-                crosscoder_repo_id, model_idx, device, cc_subfolder,
-            )
-            W_dec = crosscoder.W_dec
-            attn_layer = int(crosscoder_layer) + 1
-        else:
-            target_model = load_model("gpt2-small", device)
-            if sae_type == "hub":
-                sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
-            else:
-                sae_obj = load_sae_local(sae_local_path, int(layer), device)
-            W_dec = sae_obj.W_dec
-            attn_layer = cfg["layer"]
-
-        W_Q = target_model.blocks[attn_layer].attn.W_Q[head_]
-        W_K_mat = _get_W_K(target_model, attn_layer, head_)
-
-        matrix = compute_data_independent_submatrix(
-            W_dec, W_Q, W_K_mat, top_k_indices,
-        )
-
-        labels = [f"F{i}" for i in top_k_indices]
-
-        fig_di = go.Figure(go.Heatmap(
-            z=matrix,
-            x=labels,
-            y=labels,
-            colorscale="RdBu",
-            zmid=0,
-            hovertemplate=(
-                "Query: %{y}<br>Key: %{x}<br>DI: %{z:.4f}<extra></extra>"
-            ),
-        ))
-        fig_di.update_layout(
-            height=600,
-            xaxis_title="Key Feature",
-            yaxis_title="Query Feature",
-            yaxis_autorange="reversed",
-        )
-        st.plotly_chart(fig_di, use_container_width=True)
