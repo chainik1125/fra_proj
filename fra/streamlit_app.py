@@ -407,6 +407,8 @@ def compute_global_di_topk(
         "key_ids": top_k_buf[order].cpu().numpy(),
         "di_values": top_vals[order].detach().cpu().float().numpy(),
         "hist_sample": hist_sample,
+        "hist_sample_idxs": sample_idxs,
+        "d_sae": d_sae,
     }
 
 
@@ -1463,6 +1465,38 @@ def _render_band_table(bands: dict, id_label: str = "Feature"):
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
+def _decode_global_band_pairs(bands: dict, sample_idxs: np.ndarray, d_sae: int):
+    """Decode flat hist_sample indices into (query_feat, key_feat) per band."""
+    decoded = {}
+    for band_name, entries in bands.items():
+        if band_name.startswith("_"):
+            continue
+        pairs = []
+        for flat_idx, val in entries:
+            q_sample = flat_idx // d_sae
+            k_feat = flat_idx % d_sae
+            q_feat = int(sample_idxs[q_sample]) if q_sample < len(sample_idxs) else flat_idx
+            pairs.append((q_feat, k_feat, val))
+        decoded[band_name] = pairs
+    return decoded
+
+
+def _render_global_band_table(bands: dict, sample_idxs: np.ndarray, d_sae: int):
+    """Render band table for global scan, decoding flat indices to (query, key) pairs."""
+    decoded = _decode_global_band_pairs(bands, sample_idxs, d_sae)
+    rows = []
+    for band_name, pairs in decoded.items():
+        for q_feat, k_feat, val in pairs:
+            rows.append({
+                "Band": band_name,
+                "Query Feature": f"F{q_feat}",
+                "Key Feature": f"F{k_feat}",
+                "DI": f"{val:.6f}",
+            })
+    import pandas as pd
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
 def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
     """Render DI distribution histogram with SD lines."""
     mean, std = stats["mean"], stats["std"]
@@ -1626,4 +1660,4 @@ with tab5:
                 st.dataframe(top_df, use_container_width=True, hide_index=True)
 
                 st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
-                _render_band_table(r["bands"], id_label="Feature")
+                _render_global_band_table(r["bands"], r["hist_sample_idxs"], r["d_sae"])
