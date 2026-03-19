@@ -111,6 +111,7 @@ CROSSCODER_PRESETS = {
         "n_heads": 8,
         "model_labels": ("Base (model 0)", "Instruct (model 1)"),
         "ram_note": "~12 GB GPU RAM (both Gemma 2B models fp16 + crosscoder).",
+        "is_reasoning": False,
     },
     "Llama 8B — Base vs R1-Distill (Reasoning)": {
         "base_model": "meta-llama/Llama-3.1-8B",
@@ -127,6 +128,7 @@ CROSSCODER_PRESETS = {
         "n_heads": 32,
         "model_labels": ("Base (model 0)", "Reasoning (model 1)"),
         "ram_note": "~36 GB GPU RAM (both Llama 8B models fp16 + crosscoder).",
+        "is_reasoning": True,
     },
 }
 
@@ -698,6 +700,30 @@ with st.sidebar:
             ),
         )
 
+        is_reasoning = preset.get("is_reasoning", False)
+        reasoning_trace = ""
+        reasoning_response = ""
+        if is_reasoning and apply_chat_template:
+            reasoning_trace = st.text_area(
+                "Reasoning trace",
+                value="",
+                height=100,
+                help=(
+                    "Optional. The model's chain-of-thought "
+                    "(content inside <think>…</think>). "
+                    "Leave blank to analyse only the user prompt."
+                ),
+            )
+            reasoning_response = st.text_area(
+                "Response",
+                value="",
+                height=100,
+                help=(
+                    "Optional. The model's final response "
+                    "after reasoning. Requires a reasoning trace."
+                ),
+            )
+
         st.caption(preset["ram_note"])
 
         # not used for crosscoder path
@@ -714,6 +740,8 @@ with st.sidebar:
         cc_subfolder = ""
         cc_it_arch = ""
         apply_chat_template = False
+        reasoning_trace = ""
+        reasoning_response = ""
 
         col_l, col_h = st.columns(2)
         with col_l:
@@ -773,10 +801,24 @@ if compute_btn:
         )
         target_model = base_model if model_idx == 0 else it_model
         if apply_chat_template:
+            has_assistant = bool(reasoning_trace.strip() or reasoning_response.strip())
+            messages = [{"role": "user", "content": text}]
+            if has_assistant:
+                assistant_parts = []
+                if reasoning_trace.strip():
+                    assistant_parts.append(
+                        f"<think>\n{reasoning_trace.strip()}\n</think>"
+                    )
+                if reasoning_response.strip():
+                    assistant_parts.append(reasoning_response.strip())
+                messages.append({
+                    "role": "assistant",
+                    "content": "\n".join(assistant_parts),
+                })
             fra_tokens = it_model.tokenizer.apply_chat_template(
-                [{"role": "user", "content": text}],
+                messages,
                 tokenize=True,
-                add_generation_prompt=True,
+                add_generation_prompt=not has_assistant,
             )
             with st.expander("Templated input"):
                 st.code(it_model.tokenizer.decode(fra_tokens))
@@ -885,7 +927,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🧩 Max-Act Examples",
-    "🔗 QK Circuit",
+    "🔗 Data-Independent",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -1502,9 +1544,8 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
     mean, std = stats["mean"], stats["std"]
     fig = go.Figure()
     # Pre-bin with numpy to avoid sending millions of raw points to the browser.
-    # Clip to ±5 SD to focus on the meaningful range, then use log scale so
-    # the peaked centre doesn't squash the tails flat.
-    clip_lo, clip_hi = mean - 5 * std, mean + 5 * std
+    # Clip to ±3 SD to zoom in on the meaningful range.
+    clip_lo, clip_hi = mean - 3 * std, mean + 3 * std
     clipped = di_values[(di_values >= clip_lo) & (di_values <= clip_hi)]
     counts, bin_edges = np.histogram(clipped, bins=200)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
@@ -1533,8 +1574,7 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
         height=300,
         margin=dict(l=0, r=0, t=30, b=0),
         xaxis_title="DI value",
-        yaxis_title="Count (log)",
-        yaxis_type="log",
+        yaxis_title="Count",
         showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True)
