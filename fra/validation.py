@@ -45,6 +45,50 @@ DEFAULT_TEXTS = [
     "The president of the United States gave a speech about the economy and foreign policy.",
 ]
 
+# Longer, more diverse texts for Gemma — better coverage of training distribution.
+# Short simple sentences tend to have atypical residual stream norms at deeper layers,
+# pushing SAE L0 far from its training-time average.
+GEMMA_TEXTS = [
+    (
+        "In a recent study published in Nature, researchers found that the rate of"
+        " ice loss in Antarctica has accelerated significantly over the past decade."
+        " The findings suggest that sea level rise could exceed earlier projections"
+        " by as much as thirty percent. Scientists warn that without immediate action"
+        " to reduce greenhouse gas emissions, coastal cities around the world face"
+        " unprecedented flooding risks within the next fifty years."
+    ),
+    (
+        "The quick brown fox jumps over the lazy dog. Mary had a little lamb whose"
+        " fleece was white as snow. Every day the farmer walked to the market to sell"
+        " his vegetables and buy supplies for the week ahead. The children played in"
+        " the park while their parents sat on benches reading newspapers and talking"
+        " about the weather and local politics."
+    ),
+    (
+        "def fibonacci(n):\n    if n <= 1:\n        return n\n    a, b = 0, 1\n"
+        "    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b\n\n"
+        "# The Fibonacci sequence appears throughout nature, from the spiral arrangement"
+        " of leaves on a stem to the breeding patterns of rabbits. Leonardo of Pisa,"
+        " known as Fibonacci, introduced these numbers to Western mathematics in 1202."
+    ),
+    (
+        "The transformer architecture, introduced in the paper Attention Is All You Need,"
+        " revolutionized natural language processing by replacing recurrent layers with"
+        " self-attention mechanisms. Each attention head computes query, key, and value"
+        " projections from the input embeddings, then uses scaled dot-product attention"
+        " to produce a weighted combination of values. This allows the model to attend"
+        " to different positions in the input sequence simultaneously."
+    ),
+    (
+        "Tokyo is the capital of Japan and one of the most populous metropolitan areas"
+        " in the world. The city blends ultramodern architecture with traditional temples"
+        " and gardens. Its efficient public transportation system moves millions of"
+        " commuters daily. From the bustling streets of Shibuya to the serene grounds"
+        " of the Imperial Palace, Tokyo offers a fascinating contrast between the old"
+        " and the new."
+    ),
+]
+
 # ── Utility functions ─────────────────────────────────────────────────────
 
 
@@ -253,8 +297,13 @@ def test_sae_reconstruction(model, sae, text, layer, hook_point):
     x_np = x.cpu().numpy()
     x_hat_np = x_hat.cpu().numpy()
 
-    n_active = (features != 0).sum(dim=-1).float().mean().item()
+    # Per-token L0 (active features)
+    per_token_l0 = (features != 0).sum(dim=-1).float()
+    n_active = per_token_l0.mean().item()
     sparsity = (features == 0).float().mean().item()
+
+    # Per-token residual stream norms (for distribution diagnostics)
+    per_token_norms = x.norm(dim=-1)
 
     # Diagnostic norms
     x_norm = float(np.linalg.norm(x_np))
@@ -264,11 +313,18 @@ def test_sae_reconstruction(model, sae, text, layer, hook_point):
     return {
         "recon": compute_errors(x_np, x_hat_np),
         "avg_active_features": n_active,
+        "l0_min": float(per_token_l0.min().item()),
+        "l0_max": float(per_token_l0.max().item()),
+        "l0_std": float(per_token_l0.std().item()),
         "sparsity": sparsity,
         "d_sae": features.shape[-1],
         "x_norm": x_norm,
         "x_hat_norm": x_hat_norm,
         "diff_norm": diff_norm,
+        "token_norm_mean": float(per_token_norms.mean().item()),
+        "token_norm_min": float(per_token_norms.min().item()),
+        "token_norm_max": float(per_token_norms.max().item()),
+        "seq_len": len(tokens),
     }
 
 
@@ -447,7 +503,7 @@ def avg_dicts(dicts, keys):
 
 def avg_error_dicts(dicts):
     """Average error metric dicts."""
-    keys = ["fro_rel_err", "cosine_sim", "r_squared", "mean_rel_err", "mean_abs_err"]
+    keys = ["fro_rel_err", "cosine_sim", "r_squared", "mean_rel_err", "median_rel_err", "mean_abs_err"]
     return avg_dicts(dicts, keys)
 
 
@@ -484,11 +540,15 @@ def main():
     args = parser.parse_args()
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-    texts = [args.text] if args.text else DEFAULT_TEXTS
+    is_gemma = args.model == "gemma"
+    if args.text:
+        texts = [args.text]
+    elif is_gemma:
+        texts = GEMMA_TEXTS
+    else:
+        texts = DEFAULT_TEXTS
 
     # ── Model-dependent defaults ──
-    is_gemma = args.model == "gemma"
-
     if is_gemma:
         model_name = "gemma-2-2b"
         sae_type = args.sae or "gemma"
@@ -633,7 +693,9 @@ def main():
         print("  Running test (b): SAE reconstruction...", flush=True)
         b_result = test_sae_reconstruction(model, sae, text, layer, hook_point)
         all_b.append(b_result)
-        print(f"    active features={b_result['avg_active_features']:.0f}/{b_result['d_sae']}")
+        print(f"    L0={b_result['avg_active_features']:.0f}/{b_result['d_sae']}, "
+              f"token ||x|| mean={b_result['token_norm_mean']:.0f}, "
+              f"seq_len={b_result['seq_len']}")
 
         # Test (c)
         print("  Running test (c): loss recovery...", flush=True)
@@ -698,14 +760,57 @@ def main():
     avg_sparsity = np.mean([r["sparsity"] for r in all_b])
     print(f"  Avg active features : {avg_active:.1f}")
     print(f"  Sparsity            : {avg_sparsity:.4f} ({avg_sparsity*100:.1f}%)")
+
+    # L0 distribution across texts
+    l0_mins = [r["l0_min"] for r in all_b]
+    l0_maxs = [r["l0_max"] for r in all_b]
+    l0_stds = [r["l0_std"] for r in all_b]
+    print(f"  L0 range (tokens)   : {np.mean(l0_mins):.0f} – {np.mean(l0_maxs):.0f}  (std={np.mean(l0_stds):.0f})")
+
+    # Per-token residual stream norms
+    avg_tok_norm = np.mean([r["token_norm_mean"] for r in all_b])
+    min_tok_norm = np.mean([r["token_norm_min"] for r in all_b])
+    max_tok_norm = np.mean([r["token_norm_max"] for r in all_b])
+    print(f"  Token ||x|| (mean)  : {avg_tok_norm:.1f}  (range: {min_tok_norm:.1f} – {max_tok_norm:.1f})")
+
     avg_x = np.mean([r["x_norm"] for r in all_b])
     avg_xhat = np.mean([r["x_hat_norm"] for r in all_b])
     avg_diff = np.mean([r["diff_norm"] for r in all_b])
     print(f"  ||x||               : {avg_x:.2f}")
     print(f"  ||x_hat||           : {avg_xhat:.2f}")
     print(f"  ||x - x_hat||      : {avg_diff:.2f}")
+    scale_ratio = avg_xhat / avg_x if avg_x > 0 else float("nan")
     if avg_x > 0:
-        print(f"  ||x_hat|| / ||x||  : {avg_xhat/avg_x:.2f}  (1.0 = same scale)")
+        print(f"  ||x_hat|| / ||x||  : {scale_ratio:.2f}  (1.0 = same scale)")
+
+    # Parse expected L0 from SAE ID if available
+    expected_l0 = None
+    sae_id_str = args.sae_id or (f"layer_{sae_load_layer}/width_16k/average_l0_82"
+                                  if is_gemma else "")
+    if "average_l0_" in sae_id_str:
+        try:
+            expected_l0 = int(sae_id_str.split("average_l0_")[1].split("/")[0])
+        except (ValueError, IndexError):
+            pass
+
+    # Out-of-distribution warning
+    if expected_l0 is not None:
+        l0_ratio = avg_active / expected_l0
+        print(f"\n  Expected L0 (SAE ID): {expected_l0}")
+        print(f"  Observed / Expected  : {l0_ratio:.2f}x")
+        if l0_ratio > 3.0:
+            print(f"  WARNING: L0 is {l0_ratio:.1f}x the expected value.")
+            print(f"    Test text residual norms (mean={avg_tok_norm:.0f}) may be much")
+            print(f"    larger than the SAE training distribution average.")
+            print(f"    Reconstruction error is likely inflated by out-of-distribution inputs.")
+            print(f"    Consider using longer/more diverse text samples.")
+        elif l0_ratio > 2.0:
+            print(f"  NOTE: L0 moderately above expected — inputs may have above-average norms.")
+        elif l0_ratio < 0.3:
+            print(f"  WARNING: L0 far below expected — inputs may be out-of-distribution (low norms).")
+    if scale_ratio > 2.0 or scale_ratio < 0.5:
+        print(f"\n  WARNING: Scale ratio {scale_ratio:.2f} — SAE reconstruction magnitude is off.")
+        print(f"    This suggests the SAE is operating outside its trained input distribution.")
 
     # ── Test (c) ──
     valid_c = [r for r in all_c if r is not None]
@@ -764,10 +869,21 @@ def main():
     attn_pass = "PASS" if attn_err < 0.50 else "FAIL"
     resid_pass = "PASS" if resid_err < 0.20 else "FAIL"
 
+    # Check if L0 is out-of-distribution (inflated error)
+    l0_ood = False
+    if expected_l0 is not None and avg_active / expected_l0 > 3.0:
+        l0_ood = True
+
     print(f"  (a) Attention error  : {attn_err:.1%}  "
           f"(target <50%)  [{attn_pass}]")
+    resid_note = ""
+    if l0_ood:
+        resid_note = f"  (L0={avg_active:.0f} >> expected {expected_l0}, likely OOD)"
     print(f"  (b) Residual error   : {resid_err:.1%}  "
-          f"(target <20%)  [{resid_pass}]")
+          f"(target <20%)  [{resid_pass}]{resid_note}")
+    print(f"       L0 (observed)   : {avg_active:.0f}"
+          + (f"  (expected ~{expected_l0})" if expected_l0 else "")
+          + (f"  scale={scale_ratio:.2f}x" if avg_x > 0 else ""))
 
     if not np.isnan(fra_rec):
         rec_pass = "PASS" if fra_rec > 0.70 else "FAIL"

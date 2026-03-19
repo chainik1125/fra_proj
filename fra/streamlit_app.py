@@ -16,6 +16,7 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 import torch
+import torch.nn.functional as F
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -509,10 +510,11 @@ st.markdown("")
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
+    "🔬 Ablation",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -774,3 +776,211 @@ with tab3:
         "to the standard attention weight. Differences between the two highlight "
         "where FRA captures additional structure beyond raw token attention."
     )
+
+# ── Tab 4: Ablation ──────────────────────────────────────────────────────
+
+with tab4:
+    st.subheader(f"Feature-Pair Ablation — L{layer_} H{head_}")
+    st.caption(
+        "Ablate selected feature pairs from the FRA tensor and measure the "
+        "impact on model output. This reveals which cross-feature interactions "
+        "are causally important to this attention head's computation."
+    )
+
+    # Build pair selection UI
+    all_pairs_for_ablation = get_ranked_pairs(
+        fra_data["indices_np"], fra_data["values_np"],
+        top_k=100, filter_self=False, mode=agg_mode,
+    )
+
+    if not all_pairs_for_ablation:
+        st.warning("No feature pairs found. Compute FRA first.")
+    else:
+        # Separate off-diagonal and on-diagonal
+        offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
+        ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+
+        st.markdown(f"**{len(offdiag_list)}** off-diagonal pairs, "
+                    f"**{len(ondiag_list)}** on-diagonal pairs in top 100.")
+
+        abl_col1, abl_col2 = st.columns([1, 1])
+
+        with abl_col1:
+            n_ablate = st.slider(
+                "Number of top pairs to ablate",
+                min_value=1, max_value=min(50, len(offdiag_list) or 1),
+                value=min(10, len(offdiag_list) or 1),
+            )
+            abl_target = st.radio(
+                "Ablation target",
+                ["Top off-diagonal (i≠j)", "Top on-diagonal (i==j)", "Random off-diagonal"],
+                help=(
+                    "**Off-diagonal**: cross-feature interactions (feature i attending to "
+                    "different feature j). **On-diagonal**: self-interactions (same feature "
+                    "at query and key). Random is a control."
+                ),
+            )
+
+        with abl_col2:
+            st.markdown("**Pairs to ablate:**")
+            if abl_target.startswith("Top off"):
+                selected_pairs = offdiag_list[:n_ablate]
+            elif abl_target.startswith("Top on"):
+                selected_pairs = ondiag_list[:n_ablate]
+            else:
+                import random
+                rng = random.Random(42)
+                selected_pairs = rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
+
+            for i, (q, k, s, cnt, mx) in enumerate(selected_pairs[:15]):
+                avg = s / max(cnt, 1)
+                marker = "⟲" if q == k else "→"
+                st.text(f"  F{q} {marker} F{k}  (avg={avg:.4f}, sum={s:.4f})")
+            if len(selected_pairs) > 15:
+                st.text(f"  ... and {len(selected_pairs) - 15} more")
+
+        run_abl = st.button("▶  Run Ablation", type="primary")
+
+        if run_abl:
+            with st.spinner("Running ablation..."):
+                from fra.ablation_study import (
+                    ablate_fra_pairs,
+                    compute_bias_corrections,
+                    reconstruct_scores,
+                    run_condition,
+                )
+
+                # Get model and SAE from cache
+                mdl = load_model(model_name, device, hf_token)
+                if sae_type == "hub":
+                    sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                elif sae_type == "gemma":
+                    sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                else:
+                    sae_obj = load_sae_local(sae_local_path, int(layer_), device)
+
+                # Bias corrections
+                bias = compute_bias_corrections(
+                    mdl, sae_obj, cfg["text"], layer_, head_, hook_point
+                )
+
+                if bias is None:
+                    st.error("Text too short for ablation.")
+                else:
+                    # The dashboard may have excluded BOS or truncated differently
+                    # than compute_bias_corrections (which re-tokenizes).
+                    # Truncate bias vectors to match the FRA's seq_len.
+                    bias_seq = bias["seq_len"]
+                    if bias_seq != seq_len:
+                        # Trim bias terms to dashboard's seq_len
+                        bias["term_q"] = bias["term_q"][:seq_len]
+                        bias["term_k"] = bias["term_k"][:seq_len]
+                        bias["seq_len"] = seq_len
+                        # Also trim token tensor and labels
+                        bias["tok_tensor"] = bias["tok_tensor"][:, :seq_len]
+                        bias["shift_labels"] = bias["tok_tensor"][0, 1:]
+                        # Re-run unpatched loss with trimmed tokens
+                        logits_trim = mdl(bias["tok_tensor"])
+                        bias["unpatched_loss"] = F.cross_entropy(
+                            logits_trim[0, :-1], bias["shift_labels"]
+                        ).item()
+                        bias["unpatched_logits"] = logits_trim
+
+                    # Rebuild sparse tensor from stored indices/values
+                    d_sae_val = fra_data["feat_acts_np"].shape[1]
+                    sp_indices = torch.tensor(fra_data["indices_np"], dtype=torch.long)
+                    sp_values = torch.tensor(fra_data["values_np"], dtype=torch.float32)
+                    sp_size = torch.Size([seq_len, seq_len, d_sae_val, d_sae_val])
+                    fra_sparse = torch.sparse_coo_tensor(sp_indices, sp_values, size=sp_size).coalesce()
+
+                    # Full FRA scores (baseline)
+                    from fra.validation import fra_sum_to_attn
+                    fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
+                    scores_full = reconstruct_scores(fra_sum_full, bias, device)
+
+                    # Ablated scores
+                    pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
+                    fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
+                    fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
+                    scores_abl = reconstruct_scores(fra_sum_abl, bias, device)
+
+                    # Zero scores
+                    mask_t = torch.triu(
+                        torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
+                    )
+                    scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
+
+                    # Run conditions
+                    tok_t = bias["tok_tensor"]
+                    shift_lab = bias["shift_labels"]
+                    unp_logits = bias["unpatched_logits"]
+
+                    r_full = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_full, unp_logits)
+                    r_abl = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_abl, unp_logits)
+                    r_zero = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_zero, unp_logits)
+
+                    # Display results
+                    st.markdown("---")
+                    st.subheader("Ablation Results")
+
+                    hc = r_zero["loss"] - bias["unpatched_loss"]
+                    mc1, mc2, mc3, mc4 = st.columns(4)
+                    mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
+                    mc2.metric("FRA full loss", f"{r_full['loss']:.4f}",
+                               delta=f"{r_full['loss'] - bias['unpatched_loss']:+.4f}")
+                    mc3.metric("Ablated loss", f"{r_abl['loss']:.4f}",
+                               delta=f"{r_abl['loss'] - bias['unpatched_loss']:+.4f}")
+                    mc4.metric("Zero-ablated loss", f"{r_zero['loss']:.4f}",
+                               delta=f"{r_zero['loss'] - bias['unpatched_loss']:+.4f}")
+
+                    mc5, mc6, mc7 = st.columns(3)
+                    mc5.metric("Ablation KL div", f"{r_abl['kl_div']:.4f}",
+                               help="KL divergence from unpatched distribution")
+                    mc6.metric("Top-1 predictions changed",
+                               f"{r_abl['top1_change_frac']*100:.1f}%")
+                    if hc > 0.01:
+                        rec_full = (r_zero['loss'] - r_full['loss']) / hc
+                        rec_abl = (r_zero['loss'] - r_abl['loss']) / hc
+                        mc7.metric("Recovery (full→ablated)",
+                                   f"{rec_full:.3f} → {rec_abl:.3f}",
+                                   delta=f"{rec_abl - rec_full:+.3f}")
+
+                    # Attention heatmap comparison
+                    st.markdown("**Attention score comparison**")
+                    hm1, hm2, hm3 = st.columns(3)
+
+                    def _score_heatmap(scores_np, title):
+                        # Mask upper triangle for display
+                        disp = scores_np.copy()
+                        disp[np.triu_indices_from(disp, k=1)] = np.nan
+                        fig = go.Figure(go.Heatmap(
+                            z=disp,
+                            x=[html_lib.escape(t) for t in token_strs],
+                            y=[html_lib.escape(t) for t in token_strs],
+                            colorscale="RdBu",
+                            zmid=0,
+                            hovertemplate="Q: %{y}<br>K: %{x}<br>Score: %{z:.2f}<extra></extra>",
+                        ))
+                        fig.update_layout(
+                            title=title, height=350,
+                            margin=dict(l=0, r=0, t=30, b=0),
+                            yaxis_autorange="reversed",
+                        )
+                        return fig
+
+                    with hm1:
+                        st.plotly_chart(
+                            _score_heatmap(scores_full.cpu().numpy(), "FRA Full"),
+                            use_container_width=True,
+                        )
+                    with hm2:
+                        st.plotly_chart(
+                            _score_heatmap(scores_abl.cpu().numpy(), "After Ablation"),
+                            use_container_width=True,
+                        )
+                    with hm3:
+                        diff = scores_abl.cpu().numpy() - scores_full.cpu().numpy()
+                        st.plotly_chart(
+                            _score_heatmap(diff, "Difference (Abl - Full)"),
+                            use_container_width=True,
+                        )
