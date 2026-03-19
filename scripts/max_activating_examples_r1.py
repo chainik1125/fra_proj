@@ -2,11 +2,11 @@
 Find max-activating examples for Llama 8B / R1-Distill crosscoder features.
 
 Runs prompts through both Llama 3.1-8B (base) + DeepSeek-R1-Distill-Llama-8B
-and records per-token activations.  By default loads math prompts from
-competition_math and general prompts from UltraChat for a balanced comparison.
+and records per-token activations.  By default loads math problems with full
+R1 reasoning traces (<think>…</think>) from OpenR1-Math-220k.
 
 Usage:
-    # 200 prompts (100 math + 100 general), save JSON
+    # 200 reasoning traces, save JSON
     python scripts/max_activating_examples_r1.py 188
 
     # Paper features, more prompts
@@ -15,7 +15,7 @@ Usage:
     # Specific layer (default 15)
     python scripts/max_activating_examples_r1.py 188 --layer 7
 
-    # Custom dataset
+    # Custom dataset (falls back to generic text field detection)
     python scripts/max_activating_examples_r1.py 188 --dataset Elriggs/openwebtext-100k
 
 Requires: ~36GB GPU RAM for both Llama 8B models in fp16.
@@ -117,7 +117,7 @@ def main():
     )
 
     # Save results
-    dataset_name = args.dataset or "MATH+UltraChat"
+    dataset_name = args.dataset or "OpenR1-Math-220k"
     for fid in feature_ids:
         entries = per_feature[fid]
 

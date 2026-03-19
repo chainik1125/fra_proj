@@ -59,60 +59,51 @@ def load_prompts(n_prompts):
 
 
 def load_reasoning_prompts(n_prompts):
-    """Load balanced math/reasoning + general prompts for R1-Distill analysis.
+    """Load math problems with full R1 reasoning traces from OpenR1-Math-220k.
 
-    Sources:
-    - **Math/reasoning**: ``hendrycks/competition_math`` (MATH dataset) — competition
-      problems that should elicit chain-of-thought reasoning and ``<think>`` traces.
-    - **General chat**: ``HuggingFaceH4/ultrachat_200k`` — normal conversational
-      prompts for contrast (same source used by the Gemma safety loader).
+    Each entry includes the user prompt **and** a complete R1 generation
+    containing ``<think>…</think>`` plus the final answer, stored in the
+    ``reasoning_trace`` field.  Only generations flagged as correct by
+    ``correctness_math_verify`` are used.
+
+    Source: ``open-r1/OpenR1-Math-220k`` (``default`` config, Apache 2.0).
     """
     from datasets import load_dataset
 
-    n_each = n_prompts // 2
-
-    # Math / competition-style reasoning prompts
-    print(f"Loading {n_each} math prompts from MATH (competition_math)...")
-    math_ds = load_dataset(
-        "hendrycks/competition_math", split="test", streaming=True,
+    print(f"Loading {n_prompts} reasoning traces from OpenR1-Math-220k...")
+    ds = load_dataset(
+        "open-r1/OpenR1-Math-220k", "default", split="train", streaming=True,
     )
-    math_ds = math_ds.shuffle(seed=42, buffer_size=5000)
+    ds = ds.shuffle(seed=42, buffer_size=10000)
 
-    math_prompts = []
-    for example in math_ds:
-        prompt = example["problem"].strip()
-        if len(prompt) < 10 or len(prompt) > 500:
+    prompts = []
+    for example in ds:
+        problem = example["problem"].strip()
+        if len(problem) < 10 or len(problem) > 500:
             continue
-        category = example.get("type", "unknown")
-        math_prompts.append({
-            "text": prompt,
+
+        # Pick the first correct generation that has a <think> block
+        generations = example.get("generations", [])
+        correctness = example.get("correctness_math_verify", [])
+        trace = None
+        for gen, correct in zip(generations, correctness):
+            if correct and "<think>" in gen and "</think>" in gen:
+                trace = gen.strip()
+                break
+        if trace is None:
+            continue
+
+        category = example.get("problem_type", "unknown")
+        prompts.append({
+            "text": problem,
             "is_safe": None,
             "categories": [f"math/{category}"],
+            "reasoning_trace": trace,
         })
-        if len(math_prompts) >= n_each:
+        if len(prompts) >= n_prompts:
             break
 
-    # General chat prompts from UltraChat (for contrast)
-    print(f"Loading {n_each} general prompts from UltraChat...")
-    uc = load_dataset(
-        "HuggingFaceH4/ultrachat_200k", split="test_sft", streaming=True,
-    )
-    uc = uc.shuffle(seed=42, buffer_size=10000)
-
-    general = []
-    for example in uc:
-        prompt = example["prompt"].strip()
-        if len(prompt) < 10 or len(prompt) > 500:
-            continue
-        general.append({"text": prompt, "is_safe": None, "categories": ["general"]})
-        if len(general) >= n_each:
-            break
-
-    prompts = math_prompts + general
-    print(
-        f"  Loaded {len(math_prompts)} math (MATH) + {len(general)} general "
-        f"(UltraChat) = {len(prompts)} prompts"
-    )
+    print(f"  Loaded {len(prompts)} prompts with reasoning traces")
     return prompts
 
 
@@ -144,8 +135,18 @@ def load_generic_dataset(dataset_name, n_prompts, text_field="text"):
 # ---------------------------------------------------------------------------
 
 def get_activations(base_model, it_model, crosscoder, text, feature_ids,
-                    apply_template=True, crosscoder_layer=13, device="cuda"):
+                    apply_template=True, crosscoder_layer=13, device="cuda",
+                    reasoning_trace=None):
     """Run both models and encode through crosscoder.
+
+    Parameters
+    ----------
+    reasoning_trace : str, optional
+        Full R1 generation including ``<think>…</think>`` and the response.
+        When provided the token sequence is built from the chat-template
+        prefix (which adds ``<|Assistant|><think>\\n``) followed by the raw
+        trace text (with the leading ``<think>\\n`` stripped to avoid
+        duplication).
 
     Returns:
         results: dict mapping feature_id -> list of (position, token_str, activation)
@@ -153,11 +154,29 @@ def get_activations(base_model, it_model, crosscoder, text, feature_ids,
         all_acts: dict mapping feature_id -> list of float (activation per token, including zeros)
     """
     if apply_template:
-        tokens = it_model.tokenizer.apply_chat_template(
-            [{"role": "user", "content": text}],
-            tokenize=True,
-            add_generation_prompt=True,
-        )
+        if reasoning_trace:
+            # Build full sequence: template prefix + trace content.
+            # The template's add_generation_prompt appends <|Assistant|><think>\n,
+            # so strip the leading <think>\n from the trace to avoid duplication.
+            prefix = it_model.tokenizer.apply_chat_template(
+                [{"role": "user", "content": text}],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            trace_content = reasoning_trace
+            if trace_content.startswith("<think>\n"):
+                trace_content = trace_content[len("<think>\n"):]
+            elif trace_content.startswith("<think>"):
+                trace_content = trace_content[len("<think>"):]
+            tokens = it_model.tokenizer.encode(
+                prefix + trace_content, add_special_tokens=False,
+            )
+        else:
+            tokens = it_model.tokenizer.apply_chat_template(
+                [{"role": "user", "content": text}],
+                tokenize=True,
+                add_generation_prompt=True,
+            )
     else:
         tokens = it_model.tokenizer.encode(text)
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
@@ -217,6 +236,7 @@ def compute_max_acts(base_model, it_model, crosscoder, feature_ids, prompts,
             apply_template=apply_template,
             crosscoder_layer=crosscoder_layer,
             device=device,
+            reasoning_trace=prompt_entry.get("reasoning_trace"),
         )
 
         for fid in feature_ids:

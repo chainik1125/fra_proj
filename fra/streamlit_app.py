@@ -1331,15 +1331,27 @@ with tab4:
         compute_max_acts as _compute_max_acts,
         list_available_features as _list_available_features,
         load_prompts as _load_prompts,
+        load_reasoning_prompts as _load_reasoning_prompts,
         load_results as _load_results,
         save_results as _save_results,
     )
 
+    _is_reasoning_preset = (
+        sae_type == "crosscoder"
+        and CROSSCODER_PRESETS.get(preset_name, {}).get("is_reasoning", False)
+    ) if sae_type == "crosscoder" else False
+
     st.subheader("Max-Act Examples")
-    st.caption(
-        "Browse max-activating examples for crosscoder features across a corpus "
-        "of safe and unsafe prompts."
-    )
+    if _is_reasoning_preset:
+        st.caption(
+            "Browse max-activating examples for crosscoder features across "
+            "math problems with full R1 reasoning traces (OpenR1-Math-220k)."
+        )
+    else:
+        st.caption(
+            "Browse max-activating examples for crosscoder features across a corpus "
+            "of safe and unsafe prompts."
+        )
 
     _RESULTS_DIR = str(Path(__file__).parent.parent / "results")
 
@@ -1380,7 +1392,10 @@ with tab4:
                 ma_device = "cuda" if torch.cuda.is_available() else "cpu"
 
                 with st.status("Loading prompts...", expanded=True) as status:
-                    prompts = _load_prompts(ma_n_prompts)
+                    if _is_reasoning_preset:
+                        prompts = _load_reasoning_prompts(ma_n_prompts)
+                    else:
+                        prompts = _load_prompts(ma_n_prompts)
                     status.update(label=f"Loaded {len(prompts)} prompts. Loading models...")
 
                     base_model, it_model = load_model_pair(
@@ -1405,9 +1420,10 @@ with tab4:
                 progress.empty()
 
                 # Save to disk and session state
+                _ma_dataset = "OpenR1-Math-220k" if _is_reasoning_preset else "BeaverTails+UltraChat"
                 for fid in ma_feature_ids:
                     _save_results(fid, results[fid], len(results[fid]),
-                                  "BeaverTails+UltraChat", _RESULTS_DIR)
+                                  _ma_dataset, _RESULTS_DIR)
 
                 st.session_state["max_act_results"] = results
                 st.session_state["max_act_feature_ids"] = ma_feature_ids
