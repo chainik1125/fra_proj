@@ -136,7 +136,7 @@ def load_generic_dataset(dataset_name, n_prompts, text_field="text"):
 
 def get_activations(base_model, it_model, crosscoder, text, feature_ids,
                     apply_template=True, crosscoder_layer=13, device="cuda",
-                    reasoning_trace=None, max_length=128):
+                    reasoning_trace=None):
     """Run both models and encode through crosscoder.
 
     Parameters
@@ -179,8 +179,6 @@ def get_activations(base_model, it_model, crosscoder, text, feature_ids,
             )
     else:
         tokens = it_model.tokenizer.encode(text)
-    if max_length is not None and len(tokens) > max_length:
-        tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
     hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
