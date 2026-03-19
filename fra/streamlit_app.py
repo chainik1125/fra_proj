@@ -709,8 +709,9 @@ with st.sidebar:
                 value="",
                 height=100,
                 help=(
-                    "Optional. The model's chain-of-thought "
-                    "(content inside <think>…</think>). "
+                    "Optional. The model's chain-of-thought. "
+                    "The chat template already adds <think>; this "
+                    "text goes inside the thinking block. "
                     "Leave blank to analyse only the user prompt."
                 ),
             )
@@ -720,7 +721,7 @@ with st.sidebar:
                 height=100,
                 help=(
                     "Optional. The model's final response "
-                    "after reasoning. Requires a reasoning trace."
+                    "after </think>. Requires a reasoning trace."
                 ),
             )
 
@@ -801,25 +802,29 @@ if compute_btn:
         )
         target_model = base_model if model_idx == 0 else it_model
         if apply_chat_template:
-            has_assistant = bool(reasoning_trace.strip() or reasoning_response.strip())
-            messages = [{"role": "user", "content": text}]
-            if has_assistant:
-                assistant_parts = []
-                if reasoning_trace.strip():
-                    assistant_parts.append(
-                        f"<think>\n{reasoning_trace.strip()}\n</think>"
-                    )
+            if reasoning_trace.strip() or reasoning_response.strip():
+                # The R1 template strips <think> from assistant messages,
+                # so for full-trace analysis we build the string manually
+                # and tokenize directly (standard practice — see
+                # mitroitskii/interp-experiments/reasoning_circuits).
+                prefix = it_model.tokenizer.apply_chat_template(
+                    [{"role": "user", "content": text}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+                # prefix already ends with <|Assistant|><think>\n
+                full_text = prefix + reasoning_trace.strip()
                 if reasoning_response.strip():
-                    assistant_parts.append(reasoning_response.strip())
-                messages.append({
-                    "role": "assistant",
-                    "content": "\n".join(assistant_parts),
-                })
-            fra_tokens = it_model.tokenizer.apply_chat_template(
-                messages,
-                tokenize=True,
-                add_generation_prompt=not has_assistant,
-            )
+                    full_text += "\n</think>\n" + reasoning_response.strip()
+                fra_tokens = it_model.tokenizer.encode(
+                    full_text, add_special_tokens=False,
+                )
+            else:
+                fra_tokens = it_model.tokenizer.apply_chat_template(
+                    [{"role": "user", "content": text}],
+                    tokenize=True,
+                    add_generation_prompt=True,
+                )
             with st.expander("Templated input"):
                 st.code(it_model.tokenizer.decode(fra_tokens))
         else:
