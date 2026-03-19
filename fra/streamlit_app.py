@@ -625,6 +625,54 @@ def token_activation_bar(token_strs, activations, color, height=220):
 
 
 
+_HEATMAP_TICK_THRESHOLD = 15
+
+
+def _show_heatmap(fig, tick_vals, tick_labels, seq_len, *,
+                  x_title="Key", y_title="Query",
+                  compact_height=300, key=None):
+    """Render a heatmap with compact/expanded modes for long sequences.
+
+    When *seq_len* ≤ ``_HEATMAP_TICK_THRESHOLD`` the chart is shown inline
+    with token tick-labels.  Otherwise a small unlabelled preview is shown
+    with an expander that reveals a full-width, labelled version sized to
+    fit all tokens comfortably.
+    """
+    if seq_len <= _HEATMAP_TICK_THRESHOLD:
+        fig.update_layout(
+            height=compact_height,
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(title=x_title, tickvals=tick_vals, ticktext=tick_labels),
+            yaxis=dict(title=y_title, tickvals=tick_vals, ticktext=tick_labels,
+                       autorange="reversed"),
+        )
+        st.plotly_chart(fig, use_container_width=True, key=key)
+    else:
+        # Compact preview — no tick labels, fixed small height
+        preview = go.Figure(fig)
+        preview.update_layout(
+            height=250,
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(title=x_title, showticklabels=False),
+            yaxis=dict(title=y_title, showticklabels=False,
+                       autorange="reversed"),
+        )
+        st.plotly_chart(preview, use_container_width=True,
+                        key=f"{key}_preview" if key else None)
+
+        with st.expander("Expand full heatmap"):
+            full_height = max(500, seq_len * 18)
+            fig.update_layout(
+                height=full_height,
+                margin=dict(l=0, r=0, t=0, b=0),
+                xaxis=dict(title=x_title, tickvals=tick_vals,
+                           ticktext=tick_labels, tickangle=90),
+                yaxis=dict(title=y_title, tickvals=tick_vals,
+                           ticktext=tick_labels, autorange="reversed"),
+            )
+            st.plotly_chart(fig, use_container_width=True,
+                            key=f"{key}_expand" if key else None)
+
 
 # ---------------------------------------------------------------------------
 # Sidebar — configuration
@@ -1028,13 +1076,9 @@ with tab1:
                         "<extra></extra>"
                     ),
                 ))
-                fig_pos.update_layout(
-                    height=300,
-                    margin=dict(l=0, r=0, t=0, b=0),
-                    xaxis=dict(title="Key token", tickvals=tick_vals, ticktext=tick_labels),
-                    yaxis=dict(title="Query token", tickvals=tick_vals, ticktext=tick_labels, autorange="reversed"),
-                )
-                st.plotly_chart(fig_pos, use_container_width=True)
+                _show_heatmap(fig_pos, tick_vals, tick_labels, seq_len,
+                              x_title="Key token", y_title="Query token",
+                              key="pos_heatmap")
 
                 # --- Data-Independent Ranking ---
                 st.markdown(
@@ -1223,10 +1267,10 @@ with tab3:
 
         fra_logits[causal_mask] = np.nan
 
-        # -- Shared layout helper --
+        # -- Shared figure builder --
 
-        def _attn_heatmap(z, hover_label, colorscale="RdBu", zmid=None):
-            fig = go.Figure(go.Heatmap(
+        def _attn_fig(z, hover_label, colorscale="RdBu", zmid=None):
+            return go.Figure(go.Heatmap(
                 z=z,
                 x=attn_tick_vals,
                 y=attn_tick_vals,
@@ -1237,13 +1281,6 @@ with tab3:
                     "<extra></extra>"
                 ),
             ))
-            fig.update_layout(
-                height=380,
-                margin=dict(l=0, r=0, t=0, b=0),
-                xaxis=dict(title="Key", tickvals=attn_tick_vals, ticktext=attn_tick_labels),
-                yaxis=dict(title="Query", tickvals=attn_tick_vals, ticktext=attn_tick_labels, autorange="reversed"),
-            )
-            return fig
 
         # -- Row 1: Logits --
 
@@ -1252,16 +1289,18 @@ with tab3:
 
         with col_std_logit:
             st.markdown("**Standard** (masked QK scores)")
-            st.plotly_chart(
-                _attn_heatmap(std_logits, "Logit", zmid=0),
-                use_container_width=True,
+            _show_heatmap(
+                _attn_fig(std_logits, "Logit", zmid=0),
+                attn_tick_vals, attn_tick_labels, seq_len,
+                compact_height=380, key="attn_std_logit",
             )
 
         with col_fra_logit:
             st.markdown("**FRA** (signed sum over feature pairs)")
-            st.plotly_chart(
-                _attn_heatmap(fra_logits, "Logit", zmid=0),
-                use_container_width=True,
+            _show_heatmap(
+                _attn_fig(fra_logits, "Logit", zmid=0),
+                attn_tick_vals, attn_tick_labels, seq_len,
+                compact_height=380, key="attn_fra_logit",
             )
 
         # -- Row 2: Probs --
@@ -1271,16 +1310,18 @@ with tab3:
 
         with col_std_prob:
             st.markdown("**Standard** (attention weights)")
-            st.plotly_chart(
-                _attn_heatmap(std_probs, "Weight"),
-                use_container_width=True,
+            _show_heatmap(
+                _attn_fig(std_probs, "Weight"),
+                attn_tick_vals, attn_tick_labels, seq_len,
+                compact_height=380, key="attn_std_prob",
             )
 
         with col_fra_prob:
             st.markdown("**FRA** (softmax of FRA logits)")
-            st.plotly_chart(
-                _attn_heatmap(fra_probs, "Weight"),
-                use_container_width=True,
+            _show_heatmap(
+                _attn_fig(fra_probs, "Weight"),
+                attn_tick_vals, attn_tick_labels, seq_len,
+                compact_height=380, key="attn_fra_prob",
             )
 
 # ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
