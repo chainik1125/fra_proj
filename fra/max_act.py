@@ -58,6 +58,64 @@ def load_prompts(n_prompts):
     return prompts
 
 
+def load_reasoning_prompts(n_prompts):
+    """Load balanced math/reasoning + general prompts for R1-Distill analysis.
+
+    Sources:
+    - **Math/reasoning**: ``hendrycks/competition_math`` (MATH dataset) — competition
+      problems that should elicit chain-of-thought reasoning and ``<think>`` traces.
+    - **General chat**: ``HuggingFaceH4/ultrachat_200k`` — normal conversational
+      prompts for contrast (same source used by the Gemma safety loader).
+    """
+    from datasets import load_dataset
+
+    n_each = n_prompts // 2
+
+    # Math / competition-style reasoning prompts
+    print(f"Loading {n_each} math prompts from MATH (competition_math)...")
+    math_ds = load_dataset(
+        "hendrycks/competition_math", split="test", streaming=True,
+    )
+    math_ds = math_ds.shuffle(seed=42, buffer_size=5000)
+
+    math_prompts = []
+    for example in math_ds:
+        prompt = example["problem"].strip()
+        if len(prompt) < 10 or len(prompt) > 500:
+            continue
+        category = example.get("type", "unknown")
+        math_prompts.append({
+            "text": prompt,
+            "is_safe": None,
+            "categories": [f"math/{category}"],
+        })
+        if len(math_prompts) >= n_each:
+            break
+
+    # General chat prompts from UltraChat (for contrast)
+    print(f"Loading {n_each} general prompts from UltraChat...")
+    uc = load_dataset(
+        "HuggingFaceH4/ultrachat_200k", split="test_sft", streaming=True,
+    )
+    uc = uc.shuffle(seed=42, buffer_size=10000)
+
+    general = []
+    for example in uc:
+        prompt = example["prompt"].strip()
+        if len(prompt) < 10 or len(prompt) > 500:
+            continue
+        general.append({"text": prompt, "is_safe": None, "categories": ["general"]})
+        if len(general) >= n_each:
+            break
+
+    prompts = math_prompts + general
+    print(
+        f"  Loaded {len(math_prompts)} math (MATH) + {len(general)} general "
+        f"(UltraChat) = {len(prompts)} prompts"
+    )
+    return prompts
+
+
 def load_generic_dataset(dataset_name, n_prompts, text_field="text"):
     """Load prompts from a generic HuggingFace dataset."""
     from datasets import load_dataset
