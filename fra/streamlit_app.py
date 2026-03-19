@@ -1501,8 +1501,12 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
     """Render DI distribution histogram with SD lines."""
     mean, std = stats["mean"], stats["std"]
     fig = go.Figure()
-    # Pre-bin with numpy to avoid sending millions of raw points to the browser
-    counts, bin_edges = np.histogram(di_values, bins=200)
+    # Pre-bin with numpy to avoid sending millions of raw points to the browser.
+    # Clip to ±5 SD to focus on the meaningful range, then use log scale so
+    # the peaked centre doesn't squash the tails flat.
+    clip_lo, clip_hi = mean - 5 * std, mean + 5 * std
+    clipped = di_values[(di_values >= clip_lo) & (di_values <= clip_hi)]
+    counts, bin_edges = np.histogram(clipped, bins=200)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     fig.add_trace(go.Bar(
         x=bin_centers, y=counts,
@@ -1529,7 +1533,8 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
         height=300,
         margin=dict(l=0, r=0, t=30, b=0),
         xaxis_title="DI value",
-        yaxis_title="Count",
+        yaxis_title="Count (log)",
+        yaxis_type="log",
         showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True)
