@@ -1501,8 +1501,12 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
     """Render DI distribution histogram with SD lines."""
     mean, std = stats["mean"], stats["std"]
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=di_values, nbinsx=200,
+    # Pre-bin with numpy to avoid sending millions of raw points to the browser
+    counts, bin_edges = np.histogram(di_values, bins=200)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    fig.add_trace(go.Bar(
+        x=bin_centers, y=counts,
+        width=(bin_edges[1] - bin_edges[0]),
         marker_color="rgba(102,126,234,0.6)",
     ))
     for mult, dash in [(0, "dot"), (1, "dash"), (2, "solid")]:
