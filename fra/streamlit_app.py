@@ -32,10 +32,13 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 
 @st.cache_resource(show_spinner=False)
-def load_model(model_name: str, device: str):
+def load_model(model_name: str, device: str, hf_token: str = ""):
     from transformer_lens import HookedTransformer
     torch.set_grad_enabled(False)
-    return HookedTransformer.from_pretrained(model_name, device=device)
+    kwargs = {}
+    if hf_token:
+        kwargs["token"] = hf_token
+    return HookedTransformer.from_pretrained(model_name, device=device, **kwargs)
 
 
 @st.cache_resource(show_spinner=False)
@@ -48,6 +51,28 @@ def load_sae_hub(release: str, sae_id: str, device: str):
 def load_sae_local(checkpoint_path: str, layer: int, device: str):
     from fra.sae_lens_wrapper import LocalLn1SAE
     return LocalLn1SAE(checkpoint_path, layer=layer, device=device)
+
+
+@st.cache_resource(show_spinner=False)
+def load_sae_gemma(release: str, sae_id: str, device: str):
+    from fra.sae_lens_wrapper import GemmaScopeSAE
+    return GemmaScopeSAE(release, sae_id, device=device)
+
+
+@st.cache_resource(show_spinner=False)
+def load_model_gemma(model_name: str, device: str, hf_token: str = ""):
+    from transformer_lens import HookedTransformer
+    torch.set_grad_enabled(False)
+    kwargs = {
+        "fold_ln": False,
+        "center_unembed": False,
+        "center_writing_weights": False,
+        "fold_value_biases": False,
+        "refactor_factored_attn_matrices": False,
+    }
+    if hf_token:
+        kwargs["token"] = hf_token
+    return HookedTransformer.from_pretrained(model_name, device=device, **kwargs)
 
 
 @st.cache_resource(show_spinner=False)
@@ -96,24 +121,59 @@ def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = 
 
 
 # ---------------------------------------------------------------------------
-# Crosscoder presets
+# Presets — every model / SAE combination the dashboard supports
 # ---------------------------------------------------------------------------
 
-CROSSCODER_PRESETS = {
-    "Gemma 2B — Base vs Instruct": {
+PRESETS = {
+    "GPT-2 Small — SAE (hook_z, Neuronpedia)": {
+        "type": "sae_hub",
+        "model": "gpt2-small",
+        "release": "gpt2-small-hook-z-kk",
+        "sae_id_template": "blocks.{layer}.hook_z",
+        "hook_point": "attn.hook_z",
+        "layers": list(range(12)),
+        "default_layer": 5,
+        "n_heads": 12,
+        "supports_neuronpedia": True,
+    },
+    "GPT-2 Small — SAE (ln1, local)": {
+        "type": "sae_local",
+        "model": "gpt2-small",
+        "checkpoint_path": "./checkpoints/q9sczrvl/50003968",
+        "hook_point": "ln1.hook_normalized",
+        "layers": list(range(12)),
+        "default_layer": 2,
+        "n_heads": 12,
+        "supports_neuronpedia": False,
+    },
+    "Gemma-2 2B — Gemma-Scope (resid_pre)": {
+        "type": "sae_gemma",
+        "model": "gemma-2-2b",
+        "release": "gemma-scope-2b-pt-res",
+        "sae_id_template": "layer_{layer}/width_16k/average_l0_82",
+        "hook_point": "hook_resid_pre",
+        "layers": list(range(26)),
+        "default_layer": 12,
+        "n_heads": 8,
+        "supports_neuronpedia": False,
+        "hf_token_required": True,
+        "chunk_size_default": 1,
+    },
+    "Gemma-2 2B — Crosscoder (Base vs Instruct)": {
+        "type": "crosscoder",
         "base_model": "google/gemma-2-2b",
         "it_model": "google/gemma-2-2b-it",
         "it_arch_name": "",
         "repo_id": "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss",
         "layers": {13: ""},
         "default_layer": 13,
-        "max_layer": 25,
         "n_heads": 8,
         "model_labels": ("Base (model 0)", "Instruct (model 1)"),
         "ram_note": "~12 GB GPU RAM (both Gemma 2B models fp16 + crosscoder).",
         "is_reasoning": False,
     },
-    "Llama 8B — Base vs R1-Distill (Reasoning)": {
+    "Llama 8B — Crosscoder (Base vs R1-Distill)": {
+        "type": "crosscoder",
         "base_model": "meta-llama/Llama-3.1-8B",
         "it_model": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
         "it_arch_name": "meta-llama/Llama-3.1-8B",
@@ -124,7 +184,6 @@ CROSSCODER_PRESETS = {
             23: "BatchTopK-Crosscoder/L23R",
         },
         "default_layer": 15,
-        "max_layer": 31,
         "n_heads": 32,
         "model_labels": ("Base (model 0)", "Reasoning (model 1)"),
         "ram_note": "~36 GB GPU RAM (both Llama 8B models fp16 + crosscoder).",
@@ -174,14 +233,23 @@ def run_fra(
     sae_local_path: str,
     top_k_features: int,
     device: str,
+    model_name: str = "gpt2-small",
+    chunk_size: int = 16,
+    hf_token: str = "",
+    include_special_tokens: bool = True,
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
     from fra.fra_func import get_sentence_fra_batch
 
-    model = load_model("gpt2-small", device)
+    if sae_type == "gemma":
+        model = load_model_gemma(model_name, device, hf_token)
+    else:
+        model = load_model(model_name, device, hf_token)
 
     if sae_type == "hub":
         sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
+    elif sae_type == "gemma":
+        sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
@@ -191,6 +259,8 @@ def run_fra(
             layer=layer, head=head,
             max_length=128, top_k=top_k_features,
             hook_point=hook_point,
+            chunk_size=chunk_size,
+            prepend_bos=include_special_tokens,
         )
 
         # Also grab feature activations for token-level display
@@ -289,7 +359,7 @@ def run_fra_crosscoder(
 
 
 def _aggregate_pairs(indices_np, values_np, filter_self=False):
-    """Aggregate by (q_feat, k_feat) returning {pair: (sum_abs, count)}."""
+    """Aggregate by (q_feat, k_feat) returning (q, k, sum_abs, count, max_abs)."""
     q_feats = indices_np[2, :]
     k_feats = indices_np[3, :]
     abs_vals = np.abs(values_np)
@@ -300,12 +370,15 @@ def _aggregate_pairs(indices_np, values_np, filter_self=False):
 
     pair_sum: dict = defaultdict(float)
     pair_count: dict = defaultdict(int)
+    pair_max: dict = defaultdict(float)
     for q, k, v in zip(q_feats, k_feats, abs_vals):
         pair_sum[(int(q), int(k))] += float(v)
         pair_count[(int(q), int(k))] += 1
+        if float(v) > pair_max[(int(q), int(k))]:
+            pair_max[(int(q), int(k))] = float(v)
 
     return [
-        (q, k, pair_sum[(q, k)], pair_count[(q, k)])
+        (q, k, pair_sum[(q, k)], pair_count[(q, k)], pair_max[(q, k)])
         for (q, k) in pair_sum
     ]
 
@@ -480,9 +553,17 @@ def _load_di_weights(sae_type, head, device, **kw):
         )
         W_dec = cc.W_dec
         attn_layer = int(kw["crosscoder_layer"]) + 1
+    elif sae_type == "sae_gemma":
+        model = load_model_gemma(
+            kw.get("model_name", "gemma-2-2b"), device, kw.get("hf_token", ""),
+        )
+        sae_obj = load_sae_gemma(kw["sae_hub_release"], kw["sae_hub_id"], device)
+        W_dec = sae_obj.W_dec
+        attn_layer = int(kw["layer"])
     else:
-        model = load_model("gpt2-small", device)
-        if sae_type == "hub":
+        _model_name = kw.get("model_name", "gpt2-small")
+        model = load_model(_model_name, device)
+        if sae_type in ("hub", "sae_hub"):
             sae_obj = load_sae_hub(kw["sae_hub_release"], kw["sae_hub_id"], device)
         else:
             sae_obj = load_sae_local(kw["sae_local_path"], int(kw["layer"]), device)
@@ -505,6 +586,24 @@ def get_bottom_pairs(indices_np, values_np, top_k=50, filter_self=False):
     """Return bottom-k pairs by total absolute strength (weakest interactions)."""
     pairs = _aggregate_pairs(indices_np, values_np, filter_self)
     pairs.sort(key=lambda x: x[2])
+    return pairs[:top_k]
+
+
+def get_ranked_pairs(indices_np, values_np, top_k=50, filter_self=False, mode="avg"):
+    """Return top-k pairs ranked by the selected aggregation mode.
+
+    Modes:
+        sum  -- total absolute interaction strength
+        avg  -- mean absolute interaction per position-pair occurrence
+        max  -- single strongest position-pair interaction
+    """
+    pairs = _aggregate_pairs(indices_np, values_np, filter_self)
+    if mode == "sum":
+        pairs.sort(key=lambda x: x[2], reverse=True)
+    elif mode == "avg":
+        pairs.sort(key=lambda x: x[2] / max(x[3], 1), reverse=True)
+    elif mode == "max":
+        pairs.sort(key=lambda x: x[4], reverse=True)
     return pairs[:top_k]
 
 
@@ -694,23 +793,42 @@ with st.sidebar:
 
     st.subheader("Model & SAE")
 
-    sae_option = st.radio(
-        "SAE",
-        [
-            "GPT-2 — Hub hook_z (Neuronpedia)",
-            "GPT-2 — Local ln1 (trained)",
-            "Crosscoder (model-diffing)",
-        ],
-        index=0,
-    )
+    preset_name = st.selectbox("Preset", list(PRESETS.keys()))
+    preset = PRESETS[preset_name]
+    sae_type = preset["type"]
+    supports_neuronpedia = preset.get("supports_neuronpedia", False)
+    hook_point = preset.get("hook_point", "")
 
-    if sae_option.startswith("Crosscoder"):
-        sae_type = "crosscoder"
-        supports_neuronpedia = False
+    # ── Layer selector ──────────────────────────────────────────────────
+    if sae_type == "crosscoder":
+        available_layers = sorted(preset["layers"].keys())
+        crosscoder_layer = st.selectbox(
+            "Crosscoder layer",
+            available_layers,
+            index=available_layers.index(preset["default_layer"]),
+        )
+        cc_subfolder = preset["layers"][crosscoder_layer]
+        cc_it_arch = preset.get("it_arch_name", "")
+        layer = crosscoder_layer + 1
+        st.caption(f"Attention layer: **{layer}** (crosscoder layer + 1)")
+    else:
+        layer = st.number_input(
+            "Layer",
+            min_value=min(preset["layers"]),
+            max_value=max(preset["layers"]),
+            value=preset["default_layer"],
+        )
+        # defaults for crosscoder-only variables
+        crosscoder_layer = 13
+        cc_subfolder = ""
+        cc_it_arch = ""
 
-        preset_name = st.selectbox("Preset", list(CROSSCODER_PRESETS.keys()))
-        preset = CROSSCODER_PRESETS[preset_name]
+    # ── Head selector ───────────────────────────────────────────────────
+    head = st.number_input("Head", 0, preset["n_heads"] - 1, value=0)
 
+    # ── Type-specific extras ────────────────────────────────────────────
+    # Crosscoder extras
+    if sae_type == "crosscoder":
         crosscoder_repo_id = preset["repo_id"]
         base_model_name = preset["base_model"]
         it_model_name = preset["it_model"]
@@ -724,19 +842,6 @@ with st.sidebar:
             format_func=lambda i: preset["model_labels"][i],
             horizontal=True,
         )
-
-        available_layers = sorted(preset["layers"].keys())
-        crosscoder_layer = st.selectbox(
-            "Crosscoder layer",
-            available_layers,
-            index=available_layers.index(preset["default_layer"]),
-        )
-        cc_subfolder = preset["layers"][crosscoder_layer]
-        cc_it_arch = preset["it_arch_name"]
-
-        layer = crosscoder_layer + 1
-        st.caption(f"Attention layer: **{layer}** (crosscoder layer + 1)")
-        head = st.number_input("Head", 0, preset["n_heads"] - 1, value=0)
 
         apply_chat_template = st.checkbox(
             "Apply chat template",
@@ -776,48 +881,68 @@ with st.sidebar:
         st.caption(preset["ram_note"])
 
         # not used for crosscoder path
-        hook_point = ""
         sae_hub_release = ""
         sae_hub_id = ""
         sae_local_path = ""
+        hf_token = ""
+        chunk_size = 16
     else:
+        # defaults for crosscoder-only variables
         crosscoder_repo_id = ""
         base_model_name = ""
         it_model_name = ""
         model_idx = 0
-        crosscoder_layer = 13
-        cc_subfolder = ""
-        cc_it_arch = ""
         apply_chat_template = False
         reasoning_trace = ""
         reasoning_response = ""
 
-        col_l, col_h = st.columns(2)
-        with col_l:
-            layer = st.number_input("Layer", 0, 11, value=5)
-        with col_h:
-            head = st.number_input("Head", 0, 11, value=1)
-
-        if sae_option.startswith("GPT-2 — Hub"):
-            sae_type = "hub"
-            hook_point = "attn.hook_z"
-            sae_hub_release = "gpt2-small-hook-z-kk"
-            sae_hub_id = f"blocks.{layer}.hook_z"
-            supports_neuronpedia = True
+        if sae_type == "sae_hub":
+            sae_hub_release = preset["release"]
+            sae_hub_id = preset["sae_id_template"].format(layer=layer)
             sae_local_path = ""
-        else:
-            sae_type = "local"
-            hook_point = "ln1.hook_normalized"
+            hf_token = ""
+            chunk_size = 16
+        elif sae_type == "sae_local":
             sae_hub_release = ""
             sae_hub_id = ""
-            supports_neuronpedia = False
             default_local = str(
-                Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968"
+                Path(__file__).parent.parent / preset["checkpoint_path"].lstrip("./")
             )
             sae_local_path = st.text_input("Checkpoint path", value=default_local)
             if not Path(sae_local_path).exists():
                 st.warning("Checkpoint not found. Train with `python train_sae.py`.")
+            hf_token = ""
+            chunk_size = 16
+        elif sae_type == "sae_gemma":
+            sae_hub_release = preset["release"]
+            sae_hub_id = preset["sae_id_template"].format(layer=layer)
+            sae_local_path = ""
+            if preset.get("hf_token_required"):
+                hf_token = st.text_input(
+                    "HuggingFace token",
+                    type="password",
+                    help="Required to download Gemma model weights.",
+                )
+            else:
+                hf_token = ""
+            chunk_size = st.slider(
+                "Chunk size",
+                min_value=1,
+                max_value=32,
+                value=preset.get("chunk_size_default", 1),
+                help="Batch chunk size for FRA computation. Lower = less VRAM.",
+            )
 
+    # ── Ranking mode ────────────────────────────────────────────────────
+    _RANK_LABELS = {"sum": "Sum |FRA|", "avg": "Avg |FRA|", "max": "Max |FRA|"}
+    agg_mode = st.radio(
+        "Rank feature pairs by:",
+        list(_RANK_LABELS.keys()),
+        format_func=lambda k: _RANK_LABELS[k],
+        horizontal=True,
+    )
+
+    # ── Common compute settings ─────────────────────────────────────────
     st.subheader("Compute settings")
     top_k_feat = st.slider("Top-K features / position", 5, 50, 20)
     top_k_pairs = st.slider("Top-K pairs to display", 10, 100, 30)
@@ -893,12 +1018,20 @@ if compute_btn:
                 it_arch_name=cc_it_arch,
             )
     else:
+        # Map preset types to internal run_fra sae_type codes
+        _run_sae_type = {"sae_hub": "hub", "sae_local": "local", "sae_gemma": "gemma"}[sae_type]
+        _run_model = preset.get("model", "gpt2-small")
+
         with st.spinner("Loading model & SAE…"):
-            load_model("gpt2-small", device)
-            if sae_type == "hub":
-                load_sae_hub(sae_hub_release, sae_hub_id, device)
-            elif Path(sae_local_path).exists():
-                load_sae_local(sae_local_path, int(layer), device)
+            if sae_type == "sae_gemma":
+                load_model_gemma(_run_model, device, hf_token)
+                load_sae_gemma(sae_hub_release, sae_hub_id, device)
+            else:
+                load_model(_run_model, device)
+                if sae_type == "sae_hub":
+                    load_sae_hub(sae_hub_release, sae_hub_id, device)
+                elif sae_local_path and Path(sae_local_path).exists():
+                    load_sae_local(sae_local_path, int(layer), device)
 
         with st.spinner("Computing Feature-Resolved Attention…"):
             fra_data = run_fra(
@@ -906,12 +1039,16 @@ if compute_btn:
                 layer=int(layer),
                 head=int(head),
                 hook_point=hook_point,
-                sae_type=sae_type,
+                sae_type=_run_sae_type,
                 sae_hub_release=sae_hub_release,
                 sae_hub_id=sae_hub_id,
                 sae_local_path=sae_local_path,
                 top_k_features=top_k_feat,
                 device=device,
+                model_name=_run_model,
+                chunk_size=chunk_size,
+                hf_token=hf_token,
+                include_special_tokens=(sae_type != "sae_gemma"),
             )
 
     st.session_state["fra_data"] = fra_data
@@ -922,6 +1059,11 @@ if compute_btn:
         "supports_neuronpedia": supports_neuronpedia,
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
+        "agg_mode": agg_mode,
+        "sae_type": sae_type,
+        "model_name": preset.get("model", "gpt2-small"),
+        "hf_token": hf_token if sae_type == "sae_gemma" else "",
+        "hook_point": preset.get("hook_point", ""),
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -942,12 +1084,14 @@ if _has_fra:
     seq_len = fra_data["seq_len"]
     token_strs = fra_data["token_strs"][:seq_len]
 
-    # Recompute pairs (filter / top_k may change without recomputing FRA)
-    pairs = get_top_pairs(
+    # Recompute pairs (filter / top_k / ranking may change without recomputing FRA)
+    _agg = cfg.get("agg_mode", "sum")
+    pairs = get_ranked_pairs(
         fra_data["indices_np"],
         fra_data["values_np"],
         top_k=cfg["top_k_pairs"],
         filter_self=cfg["filter_self"],
+        mode=_agg,
     )
     bottom_pairs = get_bottom_pairs(
         fra_data["indices_np"],
@@ -971,16 +1115,26 @@ if _has_fra:
     st.markdown(tok_html, unsafe_allow_html=True)
     st.markdown("")
 
+    _metric_label = {"sum": "sum", "avg": "avg", "max": "max"}.get(_agg, "sum")
+
+    def _pair_metric(q, k, s, c, m):
+        if _agg == "avg":
+            return s / max(c, 1)
+        if _agg == "max":
+            return m
+        return s
+
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
-    "🔍 Attention Comparison",
+    "✅ Validation",
     "🧩 Max-Act Examples",
     "🔗 Data-Independent",
+    "🔬 Ablation",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -1005,9 +1159,9 @@ with tab1:
             with col_list:
                 st.subheader("Feature pairs")
                 pair_labels = [
-                    f"F{q}→F{k}  ({s:.3f})"
+                    f"F{q}→F{k}  ({_pair_metric(q, k, s, c, m):.3f} {_metric_label})"
                     + ("  ⟲" if q == k else "")
-                    for q, k, s, _ in active_pairs
+                    for q, k, s, c, m in active_pairs
                 ]
                 selected_idx = st.radio(
                     "Select a pair to inspect:",
@@ -1017,7 +1171,7 @@ with tab1:
                 )
 
             with col_detail:
-                q_sel, k_sel, strength_sel, count_sel = active_pairs[selected_idx]
+                q_sel, k_sel, strength_sel, count_sel, max_sel = active_pairs[selected_idx]
                 is_self = q_sel == k_sel
 
                 st.subheader(
@@ -1104,6 +1258,8 @@ with tab1:
                     crosscoder_layer=crosscoder_layer,
                     sae_hub_release=sae_hub_release, sae_hub_id=sae_hub_id,
                     sae_local_path=sae_local_path, layer=layer,
+                    model_name=preset.get("model", "gpt2-small"),
+                    hf_token=hf_token if sae_type == "sae_gemma" else "",
                 )
 
                 # Cache DI row — only recompute when query feature changes
@@ -1179,8 +1335,8 @@ with tab2:
     else:
         st.subheader(f"FRA Feature Interaction Matrix — L{layer_} H{head_}")
         st.caption(
-            "Each cell shows the total absolute interaction strength summed over "
-            "all position pairs. Only the top features appearing in the ranked list "
+            f"Each cell shows the **{_agg}** interaction strength across "
+            "position pairs. Only the top features appearing in the ranked list "
             "are shown."
         )
 
@@ -1190,7 +1346,7 @@ with tab2:
             # Collect unique features from top pairs
             top_features = []
             seen = set()
-            for q, k, _, _ in pairs:
+            for q, k, *_ in pairs:
                 for f in (q, k):
                     if f not in seen:
                         seen.add(f)
@@ -1202,9 +1358,10 @@ with tab2:
             n = len(top_features)
             matrix = np.zeros((n, n))
 
-            for q, k, strength, _ in pairs:
+            for q, k, s, c, m in pairs:
                 if q in feat_to_idx and k in feat_to_idx:
-                    matrix[feat_to_idx[q], feat_to_idx[k]] += strength
+                    val = _pair_metric(q, k, s, c, m)
+                    matrix[feat_to_idx[q], feat_to_idx[k]] += val
 
             labels = [f"F{f}" for f in top_features]
 
@@ -1324,6 +1481,46 @@ with tab3:
                 compact_height=380, key="attn_fra_prob",
             )
 
+        # -- Reconstruction quality metrics --
+
+        st.markdown("---")
+        st.markdown("#### Reconstruction Metrics")
+        st.caption(
+            "Quantitative comparison of FRA-reconstructed attention vs the "
+            "model's actual pre-softmax scores (causal region only)."
+        )
+
+        # Compare FRA logits (before NaN masking) to standard logits
+        _causal = np.tril(np.ones((seq_len, seq_len)))
+        _std_causal = fra_data["attn_scores_np"][:seq_len, :seq_len] * _causal
+        _fra_causal = fra_logits.copy()
+        _fra_causal[causal_mask] = 0.0
+        _fra_causal *= _causal
+
+        _diff = np.abs(_std_causal - _fra_causal)
+        _norm_std = np.linalg.norm(_std_causal.flatten())
+        _fro_rel = float(np.linalg.norm(_diff) / (_norm_std + 1e-10))
+        _flat_s = _std_causal.flatten().astype(np.float64)
+        _flat_f = _fra_causal.flatten().astype(np.float64)
+        _cos = float(np.dot(_flat_s, _flat_f) / (
+            np.linalg.norm(_flat_s) * np.linalg.norm(_flat_f) + 1e-10
+        ))
+        _r2 = float(1 - np.sum((_flat_s - _flat_f) ** 2) / (
+            np.sum((_flat_s - _flat_s.mean()) ** 2) + 1e-10
+        ))
+
+        vm1, vm2, vm3, vm4 = st.columns(4)
+        vm1.metric("Frobenius rel. error", f"{_fro_rel:.1%}")
+        vm2.metric("Cosine similarity", f"{_cos:.4f}")
+        vm3.metric("R²", f"{_r2:.4f}")
+        vm4.metric("Mean abs. error", f"{float(np.mean(_diff)):.4f}")
+
+        _pass_attn = _fro_rel < 0.50
+        if _pass_attn:
+            st.success(f"Attention reconstruction: PASS (Frobenius error {_fro_rel:.1%} < 50%)")
+        else:
+            st.warning(f"Attention reconstruction: FAIL (Frobenius error {_fro_rel:.1%} >= 50%)")
+
 # ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
 
 with tab4:
@@ -1338,7 +1535,7 @@ with tab4:
 
     _is_reasoning_preset = (
         sae_type == "crosscoder"
-        and CROSSCODER_PRESETS.get(preset_name, {}).get("is_reasoning", False)
+        and PRESETS.get(preset_name, {}).get("is_reasoning", False)
     ) if sae_type == "crosscoder" else False
 
     st.subheader("Max-Act Examples")
@@ -1672,6 +1869,8 @@ with tab5:
         crosscoder_layer=crosscoder_layer,
         sae_hub_release=sae_hub_release, sae_hub_id=sae_hub_id,
         sae_local_path=sae_local_path, layer=layer,
+        model_name=preset.get("model", "gpt2-small"),
+        hf_token=hf_token if sae_type == "sae_gemma" else "",
     )
 
         if qk_mode == "Fixed Query":
@@ -1772,3 +1971,339 @@ with tab5:
 
                 st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
                 _render_global_band_table(r["bands"], r["hist_sample_idxs"], r["d_sae"])
+
+# ── Tab 6: Ablation ────────────────────────────────────────────────────────
+
+with tab6:
+    if not _has_fra:
+        st.info("Click **▶ Compute FRA** in the sidebar to run ablation studies.")
+    else:
+        st.subheader(f"Feature-Pair Ablation — L{layer_} H{head_}")
+        st.caption(
+            "Ablate selected feature pairs from the FRA tensor and measure the "
+            "impact on model output. This reveals which cross-feature interactions "
+            "are causally important to this attention head's computation."
+        )
+
+        # Build pair selection UI
+        _abl_mode = cfg.get("agg_mode", "sum")
+        all_pairs_for_ablation = get_ranked_pairs(
+            fra_data["indices_np"], fra_data["values_np"],
+            top_k=100, filter_self=False, mode=_abl_mode,
+        )
+
+        if not all_pairs_for_ablation:
+            st.warning("No feature pairs found.")
+        else:
+            offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
+            ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+
+            st.markdown(f"**{len(offdiag_list)}** off-diagonal pairs, "
+                        f"**{len(ondiag_list)}** on-diagonal pairs in top 100.")
+
+            abl_col1, abl_col2 = st.columns([1, 1])
+
+            with abl_col1:
+                n_ablate = st.slider(
+                    "Number of top pairs to ablate",
+                    min_value=1, max_value=min(50, len(offdiag_list) or 1),
+                    value=min(10, len(offdiag_list) or 1),
+                )
+                abl_target = st.radio(
+                    "Ablation target",
+                    ["Top off-diagonal (i≠j)", "Top on-diagonal (i==j)",
+                     "Random off-diagonal"],
+                    help=(
+                        "**Off-diagonal**: cross-feature interactions. "
+                        "**On-diagonal**: self-interactions. Random is a control."
+                    ),
+                )
+
+            with abl_col2:
+                st.markdown("**Pairs to ablate:**")
+                if abl_target.startswith("Top off"):
+                    _sel_pairs = offdiag_list[:n_ablate]
+                elif abl_target.startswith("Top on"):
+                    _sel_pairs = ondiag_list[:n_ablate]
+                else:
+                    import random as _rng_mod
+                    _rng = _rng_mod.Random(42)
+                    _sel_pairs = _rng.sample(
+                        offdiag_list, min(n_ablate, len(offdiag_list)),
+                    )
+
+                for _i, (q, k, s, cnt, mx) in enumerate(_sel_pairs[:15]):
+                    avg = s / max(cnt, 1)
+                    marker = "⟲" if q == k else "→"
+                    st.text(f"  F{q} {marker} F{k}  (avg={avg:.4f}, sum={s:.4f})")
+                if len(_sel_pairs) > 15:
+                    st.text(f"  ... and {len(_sel_pairs) - 15} more")
+
+            run_abl = st.button("▶  Run Ablation", type="primary")
+
+            if run_abl:
+                with st.spinner("Running ablation..."):
+                    import torch.nn.functional as _F
+                    from fra.ablation_study import (
+                        ablate_fra_pairs,
+                        reconstruct_scores,
+                        run_condition,
+                    )
+                    from fra.validation import fra_sum_to_attn
+
+                    # Rebuild sparse tensor from stored indices/values
+                    d_sae_val = fra_data["feat_acts_np"].shape[1]
+                    sp_indices = torch.tensor(
+                        fra_data["indices_np"], dtype=torch.long,
+                    )
+                    sp_values = torch.tensor(
+                        fra_data["values_np"], dtype=torch.float32,
+                    )
+                    sp_size = torch.Size(
+                        [seq_len, seq_len, d_sae_val, d_sae_val],
+                    )
+                    fra_sparse = torch.sparse_coo_tensor(
+                        sp_indices, sp_values, size=sp_size,
+                    ).coalesce()
+
+                    _sae_type = cfg.get("sae_type", sae_type)
+
+                    if _sae_type == "crosscoder":
+                        # Crosscoder path: no bias correction needed
+                        # (b_Q=0, b_K=0; FRA already has 1/sqrt(d_head)
+                        #  + RMSNorm)
+                        _cc_base, _cc_it = load_model_pair(
+                            base_model_name, it_model_name, device,
+                            cc_it_arch,
+                        )
+                        _cc_target = (
+                            _cc_base if model_idx == 0 else _cc_it
+                        )
+
+                        # Get tokens from the FRA computation
+                        _cc_tokens = _cc_target.tokenizer.encode(
+                            cfg["text"],
+                        )[:128]
+                        _cc_tok_t = torch.tensor(
+                            _cc_tokens,
+                        ).unsqueeze(0).to(device)
+                        _cc_shift = _cc_tok_t[0, 1:]
+
+                        _cc_logits = _cc_target(_cc_tok_t)
+                        _cc_unp_loss = _F.cross_entropy(
+                            _cc_logits[0, :-1], _cc_shift,
+                        ).item()
+
+                        # Build bias dict with zero corrections
+                        _cc_bias = {
+                            "term_q": np.zeros(seq_len),
+                            "term_k": np.zeros(seq_len),
+                            "term_const": 0.0,
+                            "attn_scale": 1.0,  # already scaled
+                            "seq_len": seq_len,
+                            "tok_tensor": _cc_tok_t,
+                            "shift_labels": _cc_shift,
+                            "unpatched_loss": _cc_unp_loss,
+                            "unpatched_logits": _cc_logits,
+                        }
+                        _target_model = _cc_target
+                        _bias = _cc_bias
+                    else:
+                        # Single-SAE path
+                        from fra.ablation_study import (
+                            compute_bias_corrections,
+                        )
+
+                        _model_name = cfg.get("model_name", "gpt2-small")
+                        _hf = cfg.get("hf_token", "")
+                        _hook = cfg.get("hook_point", "attn.hook_z")
+
+                        if _sae_type in ("sae_gemma", "gemma"):
+                            _mdl = load_model_gemma(
+                                _model_name, device, _hf,
+                            )
+                            _sae_obj = load_sae_gemma(
+                                sae_hub_release, sae_hub_id, device,
+                            )
+                        elif _sae_type in ("sae_hub", "hub"):
+                            _mdl = load_model(_model_name, device)
+                            _sae_obj = load_sae_hub(
+                                sae_hub_release, sae_hub_id, device,
+                            )
+                        else:
+                            _mdl = load_model(_model_name, device)
+                            _sae_obj = load_sae_local(
+                                sae_local_path, int(layer_), device,
+                            )
+
+                        _bias = compute_bias_corrections(
+                            _mdl, _sae_obj, cfg["text"],
+                            layer_, head_, _hook,
+                        )
+                        if _bias is not None and _bias["seq_len"] != seq_len:
+                            _bias["term_q"] = _bias["term_q"][:seq_len]
+                            _bias["term_k"] = _bias["term_k"][:seq_len]
+                            _bias["seq_len"] = seq_len
+                            _bias["tok_tensor"] = _bias["tok_tensor"][
+                                :, :seq_len
+                            ]
+                            _bias["shift_labels"] = _bias["tok_tensor"][
+                                0, 1:
+                            ]
+                            _logits_trim = _mdl(_bias["tok_tensor"])
+                            _bias["unpatched_loss"] = _F.cross_entropy(
+                                _logits_trim[0, :-1],
+                                _bias["shift_labels"],
+                            ).item()
+                            _bias["unpatched_logits"] = _logits_trim
+                        _target_model = _mdl
+
+                    if _bias is None:
+                        st.error("Text too short for ablation.")
+                    else:
+                        # Full FRA scores (baseline)
+                        fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
+                        scores_full = reconstruct_scores(
+                            fra_sum_full, _bias, device,
+                        )
+
+                        # Ablated scores
+                        pairs_to_abl = [
+                            (int(p[0]), int(p[1])) for p in _sel_pairs
+                        ]
+                        fra_ablated = ablate_fra_pairs(
+                            fra_sparse, pairs_to_abl, d_sae_val,
+                        )
+                        fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
+                        scores_abl = reconstruct_scores(
+                            fra_sum_abl, _bias, device,
+                        )
+
+                        # Zero scores
+                        _mask_t = torch.triu(
+                            torch.full(
+                                (seq_len, seq_len), float("-inf"),
+                                device=device,
+                            ),
+                            diagonal=1,
+                        )
+                        scores_zero = (
+                            torch.zeros((seq_len, seq_len), device=device)
+                            + _mask_t
+                        )
+
+                        _tok_t = _bias["tok_tensor"]
+                        _shift = _bias["shift_labels"]
+                        _unp_log = _bias["unpatched_logits"]
+
+                        r_full = run_condition(
+                            _target_model, layer_, head_,
+                            _tok_t, _shift, scores_full, _unp_log,
+                        )
+                        r_abl = run_condition(
+                            _target_model, layer_, head_,
+                            _tok_t, _shift, scores_abl, _unp_log,
+                        )
+                        r_zero = run_condition(
+                            _target_model, layer_, head_,
+                            _tok_t, _shift, scores_zero, _unp_log,
+                        )
+
+                        # Display results
+                        st.markdown("---")
+                        st.subheader("Ablation Results")
+
+                        hc = r_zero["loss"] - _bias["unpatched_loss"]
+                        mc1, mc2, mc3, mc4 = st.columns(4)
+                        mc1.metric(
+                            "Unpatched loss",
+                            f"{_bias['unpatched_loss']:.4f}",
+                        )
+                        mc2.metric(
+                            "FRA full loss",
+                            f"{r_full['loss']:.4f}",
+                            delta=f"{r_full['loss'] - _bias['unpatched_loss']:+.4f}",
+                        )
+                        mc3.metric(
+                            "Ablated loss",
+                            f"{r_abl['loss']:.4f}",
+                            delta=f"{r_abl['loss'] - _bias['unpatched_loss']:+.4f}",
+                        )
+                        mc4.metric(
+                            "Zero-ablated loss",
+                            f"{r_zero['loss']:.4f}",
+                            delta=f"{r_zero['loss'] - _bias['unpatched_loss']:+.4f}",
+                        )
+
+                        mc5, mc6, mc7 = st.columns(3)
+                        mc5.metric(
+                            "Ablation KL div",
+                            f"{r_abl['kl_div']:.4f}",
+                        )
+                        mc6.metric(
+                            "Top-1 changed",
+                            f"{r_abl['top1_change_frac']*100:.1f}%",
+                        )
+                        if hc > 0.01:
+                            rec_full = (
+                                r_zero["loss"] - r_full["loss"]
+                            ) / hc
+                            rec_abl = (
+                                r_zero["loss"] - r_abl["loss"]
+                            ) / hc
+                            mc7.metric(
+                                "Recovery (full→ablated)",
+                                f"{rec_full:.3f} → {rec_abl:.3f}",
+                                delta=f"{rec_abl - rec_full:+.3f}",
+                            )
+
+                        # Attention heatmap comparison
+                        st.markdown("**Attention score comparison**")
+                        _abl_ticks = list(range(seq_len))
+                        _abl_labels = [
+                            html_lib.escape(t) for t in token_strs
+                        ]
+
+                        def _abl_heatmap(scores_np, title):
+                            disp = scores_np.copy()
+                            disp[np.triu_indices_from(disp, k=1)] = np.nan
+                            return go.Figure(go.Heatmap(
+                                z=disp, x=_abl_ticks, y=_abl_ticks,
+                                colorscale="RdBu", zmid=0,
+                                hovertemplate=(
+                                    "Q: %{y}<br>K: %{x}<br>"
+                                    "Score: %{z:.2f}<extra></extra>"
+                                ),
+                            ))
+
+                        hm1, hm2, hm3 = st.columns(3)
+                        with hm1:
+                            _show_heatmap(
+                                _abl_heatmap(
+                                    scores_full.cpu().numpy(), "FRA Full",
+                                ),
+                                _abl_ticks, _abl_labels, seq_len,
+                                compact_height=350, key="abl_full",
+                            )
+                            st.caption("FRA Full")
+                        with hm2:
+                            _show_heatmap(
+                                _abl_heatmap(
+                                    scores_abl.cpu().numpy(),
+                                    "After Ablation",
+                                ),
+                                _abl_ticks, _abl_labels, seq_len,
+                                compact_height=350, key="abl_after",
+                            )
+                            st.caption("After Ablation")
+                        with hm3:
+                            _diff_np = (
+                                scores_abl.cpu().numpy()
+                                - scores_full.cpu().numpy()
+                            )
+                            _show_heatmap(
+                                _abl_heatmap(_diff_np, "Difference"),
+                                _abl_ticks, _abl_labels, seq_len,
+                                compact_height=350, key="abl_diff",
+                            )
+                            st.caption("Difference (ablated − full)")

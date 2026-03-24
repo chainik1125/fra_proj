@@ -1,12 +1,14 @@
 """
 SAE wrappers for the FRA pipeline.
 
-Two classes are provided:
+Three classes are provided:
   - SAELensAttentionSAE  : wraps a pre-trained hook_z SAE from the SAE Lens hub
                            (legacy; decoder is in concatenated-heads space)
   - LocalLn1SAE          : wraps a locally-trained ln1.hook_normalized SAE saved
                            by train_sae.py via sae.save_model(checkpoint_dir).
                            Decoder lives in d_model space — correct for FRA.
+  - GemmaScopeSAE        : wraps a Gemma-Scope residual-stream SAE (google/gemma-scope-2b-pt).
+                           Decoder lives in d_model=2304 space; use hook_point="hook_resid_pre".
 """
 
 import torch
@@ -190,6 +192,74 @@ class LocalLn1SAE:
     def decode(self, features: torch.Tensor) -> torch.Tensor:
         """Decode SAE features back to d_model space."""
         return self.sae.decode(features)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        features = self.encode(x)
+        return features, self.decode(features)
+
+    def feature_sparsity(self, features: torch.Tensor) -> float:
+        return (features == 0).float().mean().item()
+
+
+class GemmaScopeSAE:
+    """
+    Wrapper for Gemma-Scope residual-stream SAEs.
+
+    These SAEs are trained on hook_resid_post, so their decoder vectors live
+    in d_model=2304 space.  For FRA, use with the *next* layer's attention:
+    SAE on resid_post[N] → FRA on layer N+1 (hook_resid_pre at layer N+1).
+
+    Gemma-Scope SAEs were trained with per-token constant-norm rescaling
+    (x * sqrt(d_in) / ||x||) but SAE Lens doesn't apply this at inference
+    (bug in the loader).  This wrapper applies the normalization in encode()
+    and reverses it in decode().
+
+    Example usage:
+        sae = GemmaScopeSAE("gemma-scope-2b-pt-res", "layer_12/width_16k/average_l0_82")
+        # Use hook_point="hook_resid_pre" at layer 13 for FRA
+    """
+
+    def __init__(self, release: str, sae_id: str, device: str = "cuda",
+                 normalize_activations: bool = False):
+        self.release  = release
+        self.sae_id   = sae_id
+        self.device   = device
+        self._normalize = normalize_activations
+        self._norm_coeff = None  # set during encode, used by decode & FRA
+
+        # SAE Lens returns (sae, cfg_dict, log_sparsities) for Gemma-Scope
+        result = SAE.from_pretrained(release, sae_id, device=device)
+        if isinstance(result, tuple):
+            self.sae = result[0]
+        else:
+            self.sae = result
+
+        self.d_in  = self.sae.cfg.d_in   # 2304 for Gemma-2-2B
+        self.d_sae = self.sae.cfg.d_sae  # e.g. 16384
+
+        self.W_dec = self.sae.W_dec  # [d_sae, d_model]
+        self.W_enc = self.sae.W_enc  # [d_model, d_sae]
+        self.b_enc = self.sae.b_enc  # [d_sae]
+        self.b_dec = self.sae.b_dec  # [d_model]
+
+        # Parse layer from sae_id e.g. "layer_12/width_16k/average_l0_82"
+        try:
+            self.layer = int(sae_id.split("/")[0].split("_")[1])
+        except (IndexError, ValueError):
+            self.layer = 0
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        if self._normalize:
+            x_norms = x.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            self._norm_coeff = (self.d_in ** 0.5) / x_norms
+            x = x * self._norm_coeff
+        return self.sae.encode(x)
+
+    def decode(self, f: torch.Tensor) -> torch.Tensor:
+        x_hat = self.sae.decode(f)
+        if self._normalize and self._norm_coeff is not None:
+            x_hat = x_hat / self._norm_coeff
+        return x_hat
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         features = self.encode(x)
