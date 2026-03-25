@@ -1234,72 +1234,6 @@ with tab1:
                               x_title="Key token", y_title="Query token",
                               key="pos_heatmap")
 
-                # --- Data-Independent Ranking ---
-                st.markdown(
-                    "**Data-independent ranking** — is this pair "
-                    "inherently coupled via the QK circuit?"
-                )
-                st.caption(
-                    "DI(i,j) = (W_dec[i]·W_Q)·(W_dec[j]·W_K)ᵀ/√d_h measures "
-                    "how strongly the model's **weights alone** couple two features, "
-                    "ignoring activations. A pair can top the FRA list via high "
-                    "activations even if its DI rank is moderate. The histogram "
-                    "shows DI(query, j) for **all** key features j — a high |DI| "
-                    "rank means the QK circuit specifically wires this pair "
-                    "(positive = promotes attention, negative = suppresses), "
-                    "rather than the interaction being driven by co-activation alone."
-                )
-
-                _di_W_dec, _di_W_Q, _di_W_K, _di_layer = _load_di_weights(
-                    sae_type, head_, device,
-                    base_model_name=base_model_name, it_model_name=it_model_name,
-                    cc_it_arch=cc_it_arch, model_idx=model_idx,
-                    crosscoder_repo_id=crosscoder_repo_id, cc_subfolder=cc_subfolder,
-                    crosscoder_layer=crosscoder_layer,
-                    sae_hub_release=sae_hub_release, sae_hub_id=sae_hub_id,
-                    sae_local_path=sae_local_path, layer=layer,
-                    model_name=preset.get("model", "gpt2-small"),
-                    hf_token=hf_token if sae_type == "sae_gemma" else "",
-                )
-
-                # Cache DI row — only recompute when query feature changes
-                _di_key = (q_sel, _di_layer, head_)
-                if st.session_state.get("_di_cache_key") != _di_key:
-                    st.session_state["_di_row"] = compute_di_row(
-                        _di_W_dec, _di_W_Q, _di_W_K, q_sel,
-                    )
-                    st.session_state["_di_cache_key"] = _di_key
-                di_row = st.session_state["_di_row"]
-
-                target_val = float(di_row[k_sel])
-                abs_row = np.abs(di_row)
-                rank = int((abs_row > abs(target_val)).sum()) + 1
-                total = len(di_row)
-                percentile = (1 - rank / total) * 100
-
-                di_m1, di_m2, di_m3 = st.columns(3)
-                di_m1.metric("DI value", f"{target_val:.4f}")
-                di_m2.metric("Rank (by |DI|)", f"{rank:,}", help=f"Out of {total:,} features")
-                di_m3.metric("Percentile", f"{percentile:.2f}%")
-
-                fig_hist = go.Figure()
-                fig_hist.add_trace(go.Histogram(
-                    x=di_row, nbinsx=200,
-                    marker_color="rgba(102,126,234,0.6)",
-                ))
-                fig_hist.add_vline(
-                    x=target_val, line_dash="dash", line_color="red",
-                    annotation_text=f"F{q_sel}→F{k_sel}: {target_val:.4f}",
-                )
-                fig_hist.update_layout(
-                    height=300,
-                    margin=dict(l=0, r=0, t=30, b=0),
-                    xaxis_title="DI value",
-                    yaxis_title="Count",
-                    showlegend=False,
-                )
-                st.plotly_chart(fig_hist, use_container_width=True)
-
                 # --- Neuronpedia iframes ---
                 if cfg["supports_neuronpedia"]:
                     np_col1, np_col2 = st.columns(2)
@@ -1840,29 +1774,17 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
 
 
 with tab5:
-    st.subheader("QK Circuit — Data-Independent Interaction")
+    st.subheader("QK Circuit — Data-Independent")
     st.caption(
-        "Explore the inherent feature coupling in this attention head's QK circuit, "
-        "independent of any input. Choose a mode to fix one side of the pair or "
-        "scan all pairs globally."
+        "Analyse feature pairs through the QK circuit's inherent geometry. "
+        "Select a pair manually, from data-dependent (DD) FRA rankings, or from "
+        "a global data-independent (DI) scan, then compare DD and DI signals."
     )
 
-    if not _has_fra:
-        st.info(
-            "Click **▶ Compute FRA** first to load the model and SAE weights. "
-            "The QK Circuit tab reuses the already-loaded weights."
-        )
-    else:
+    import pandas as pd
 
-        qk_mode = st.radio(
-            "Mode",
-            ["Fixed Query", "Fixed Key", "Global"],
-            horizontal=True,
-            key="qk_mode",
-        )
-
-        # Shared weight-loading kwargs (models already cached from FRA compute)
-        _wt_kw = dict(
+    # Shared weight-loading kwargs (safe to build even before FRA is computed)
+    _wt_kw = dict(
         base_model_name=base_model_name, it_model_name=it_model_name,
         cc_it_arch=cc_it_arch, model_idx=model_idx,
         crosscoder_repo_id=crosscoder_repo_id, cc_subfolder=cc_subfolder,
@@ -1872,6 +1794,308 @@ with tab5:
         model_name=preset.get("model", "gpt2-small"),
         hf_token=hf_token if sae_type == "sae_gemma" else "",
     )
+
+    # ── helpers for cached DI computation ──────────────────────────────────
+    if "_tab5_di_weights" not in st.session_state:
+        st.session_state["_tab5_di_weights"] = None
+    if "_tab5_di_row_cache" not in st.session_state:
+        st.session_state["_tab5_di_row_cache"] = {}
+    if "_tab5_dd_di_comparison" not in st.session_state:
+        st.session_state["_tab5_dd_di_comparison"] = None
+    if "_tab5_global_di" not in st.session_state:
+        st.session_state["_tab5_global_di"] = None
+
+    def _ensure_di_weights():
+        """Load and cache DI weight matrices."""
+        if st.session_state["_tab5_di_weights"] is None:
+            W_dec, W_Q, W_K_, _attn = _load_di_weights(
+                sae_type, int(head), device, **_wt_kw,
+            )
+            st.session_state["_tab5_di_weights"] = (W_dec, W_Q, W_K_)
+        return st.session_state["_tab5_di_weights"]
+
+    def _get_di_row(query_id):
+        """Compute (and cache) the full DI row for *query_id*."""
+        cache = st.session_state["_tab5_di_row_cache"]
+        if query_id not in cache:
+            W_dec, W_Q, W_K_ = _ensure_di_weights()
+            cache[query_id] = compute_di_row(W_dec, W_Q, W_K_, query_id)
+        return cache[query_id]
+
+    def _di_for_pair(q, k):
+        """Return the scalar DI value for a (query, key) pair."""
+        return float(_get_di_row(q)[k])
+
+    # ── Section 1: Pair Selector + Metrics ─────────────────────────────────
+    st.markdown("### Pair selector")
+
+    _t5_pair_mode = st.radio(
+        "Selection mode",
+        ["Manual", "Top DD pairs", "Top DI pairs"],
+        horizontal=True,
+        key="_t5_pair_mode",
+    )
+
+    _t5_q_sel = None
+    _t5_k_sel = None
+
+    if _t5_pair_mode == "Manual":
+        _mc1, _mc2 = st.columns(2)
+        with _mc1:
+            _t5_q_sel = st.number_input(
+                "Query feature ID", min_value=0, value=0, key="_t5_man_q",
+            )
+        with _mc2:
+            _t5_k_sel = st.number_input(
+                "Key feature ID", min_value=0, value=0, key="_t5_man_k",
+            )
+
+    elif _t5_pair_mode == "Top DD pairs":
+        if not _has_fra:
+            st.info("Compute FRA first to use data-dependent pair ranking.")
+        else:
+            _t5_agg = cfg.get("agg_mode", "sum")
+            _t5_dd_pairs = get_ranked_pairs(
+                fra_data["indices_np"], fra_data["values_np"],
+                top_k=30, filter_self=False, mode=_t5_agg,
+            )
+            if not _t5_dd_pairs:
+                st.warning("No DD pairs found.")
+            else:
+                _t5_dd_labels = [
+                    f"F{q}\u2192F{k} (score={_pair_metric(q, k, s, c, m):.4f})"
+                    for q, k, s, c, m in _t5_dd_pairs
+                ]
+                _t5_dd_idx = st.selectbox(
+                    "Pick a DD pair", range(len(_t5_dd_pairs)),
+                    format_func=lambda i: _t5_dd_labels[i],
+                    key="_t5_dd_sel",
+                )
+                _t5_q_sel = _t5_dd_pairs[_t5_dd_idx][0]
+                _t5_k_sel = _t5_dd_pairs[_t5_dd_idx][1]
+
+    else:  # Top DI pairs
+        _t5_di_go = st.button(
+            "Compute global DI top-k", type="primary", key="_t5_di_go",
+        )
+        if _t5_di_go:
+            with st.spinner("Running global DI scan..."):
+                W_dec, W_Q, W_K_ = _ensure_di_weights()
+                progress = st.progress(0, text="Scanning feature pairs...")
+
+                def _t5_di_progress(i, n):
+                    progress.progress(i / n, text=f"Chunk {i}/{n}...")
+
+                result = compute_global_di_topk(
+                    W_dec, W_Q, W_K_, top_k=50,
+                    progress_callback=_t5_di_progress,
+                )
+                progress.empty()
+                st.session_state["_tab5_global_di"] = result
+
+        if st.session_state["_tab5_global_di"] is not None:
+            _gdi = st.session_state["_tab5_global_di"]
+            _gdi_labels = [
+                f"F{q}\u2192F{k} (DI={v:.4f})"
+                for q, k, v in zip(_gdi["query_ids"], _gdi["key_ids"], _gdi["di_values"])
+            ]
+            _gdi_idx = st.selectbox(
+                "Pick a DI pair", range(len(_gdi_labels)),
+                format_func=lambda i: _gdi_labels[i],
+                key="_t5_gdi_sel",
+            )
+            _t5_q_sel = int(_gdi["query_ids"][_gdi_idx])
+            _t5_k_sel = int(_gdi["key_ids"][_gdi_idx])
+        else:
+            if _t5_pair_mode == "Top DI pairs":
+                st.caption("Click the button above to compute global DI pairs.")
+
+    # ── Metrics + Heatmap for the selected pair ────────────────────────────
+    if _t5_q_sel is not None and _t5_k_sel is not None:
+        st.markdown("---")
+        st.markdown(f"#### Pair F{_t5_q_sel} \u2192 F{_t5_k_sel}")
+
+        # Compute DI for this pair
+        _t5_di_val = _di_for_pair(_t5_q_sel, _t5_k_sel)
+        _t5_di_row = _get_di_row(_t5_q_sel)
+
+        # DI rank / percentile among ALL key features
+        _t5_abs_row = np.abs(_t5_di_row)
+        _t5_abs_val = abs(_t5_di_val)
+        _t5_di_rank = int(np.sum(_t5_abs_row >= _t5_abs_val))  # 1-based rank
+        _t5_di_pct = 100.0 * (1.0 - _t5_di_rank / len(_t5_abs_row))
+
+        # DD score (only if FRA is available)
+        _t5_dd_val = None
+        if _has_fra:
+            _t5_agg = cfg.get("agg_mode", "sum")
+            # Search for this pair in ranked list
+            for _pq, _pk, _ps, _pc, _pm in pairs:
+                if _pq == _t5_q_sel and _pk == _t5_k_sel:
+                    _t5_dd_val = _pair_metric(_pq, _pk, _ps, _pc, _pm)
+                    break
+
+        # Metric cards
+        _mc1, _mc2, _mc3, _mc4 = st.columns(4)
+        _mc1.metric(
+            "DD score",
+            f"{_t5_dd_val:.4f}" if _t5_dd_val is not None else "N/A",
+        )
+        _mc2.metric("DI score", f"{_t5_di_val:.4f}")
+        _mc3.metric("DI |rank|", f"{_t5_di_rank:,} / {len(_t5_di_row):,}")
+        _mc4.metric("DI percentile", f"{_t5_di_pct:.1f}%")
+
+        # DI histogram with this pair marked
+        _t5_di_stats = {
+            "mean": float(np.mean(_t5_di_row)),
+            "std": float(np.std(_t5_di_row)),
+        }
+        _render_di_histogram(
+            _t5_di_row, _t5_di_stats,
+            mark_val=_t5_di_val,
+            mark_label=f"F{_t5_q_sel}\u2192F{_t5_k_sel}",
+        )
+
+        # Position heatmap (only with FRA data)
+        if _has_fra:
+            st.markdown("**Position heatmap** — where does this pair interact?")
+            _t5_pos_mat = get_position_heatmap(
+                fra_data["indices_np"], fra_data["values_np"],
+                _t5_q_sel, _t5_k_sel, seq_len,
+            )
+            if _t5_pos_mat.sum() > 0:
+                _t5_tick_labels = [html_lib.escape(t) for t in token_strs]
+                _t5_tick_vals = list(range(len(token_strs)))
+                _t5_fig_pos = go.Figure(go.Heatmap(
+                    z=_t5_pos_mat,
+                    x=_t5_tick_vals,
+                    y=_t5_tick_vals,
+                    colorscale="Blues",
+                    hovertemplate=(
+                        "Q-pos: %{y}<br>K-pos: %{x}<br>"
+                        "Strength: %{z:.4f}<extra></extra>"
+                    ),
+                ))
+                _show_heatmap(
+                    _t5_fig_pos, _t5_tick_vals, _t5_tick_labels, seq_len,
+                    x_title="Key token", y_title="Query token",
+                    key="_t5_pos_heatmap",
+                )
+            else:
+                st.caption("No interactions at any position for this pair.")
+
+    # ── Section 2: DD vs DI Comparison ─────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### DD vs DI comparison")
+
+    if not _has_fra:
+        st.info(
+            "Compute FRA first to compare data-dependent and data-independent "
+            "rankings for the top pairs."
+        )
+    else:
+        _t5_cmp_agg = cfg.get("agg_mode", "sum")
+        _t5_cmp_n = 30
+        _t5_cmp_pairs = get_ranked_pairs(
+            fra_data["indices_np"], fra_data["values_np"],
+            top_k=_t5_cmp_n, filter_self=False, mode=_t5_cmp_agg,
+        )
+
+        _t5_cmp_go = st.button(
+            f"Compute DI for top {len(_t5_cmp_pairs)} DD pairs",
+            type="primary",
+            key="_t5_cmp_go",
+        )
+
+        if _t5_cmp_go and _t5_cmp_pairs:
+            _cmp_rows = []
+            _cmp_progress = st.progress(0, text="Computing DI for DD pairs...")
+            for _ci, (_cq, _ck, _cs, _cc, _cm) in enumerate(_t5_cmp_pairs):
+                _cdi = _di_for_pair(_cq, _ck)
+                _cmp_rows.append({
+                    "q": _cq, "k": _ck,
+                    "dd": _pair_metric(_cq, _ck, _cs, _cc, _cm),
+                    "di": _cdi,
+                })
+                _cmp_progress.progress(
+                    (_ci + 1) / len(_t5_cmp_pairs),
+                    text=f"Pair {_ci + 1}/{len(_t5_cmp_pairs)}...",
+                )
+            _cmp_progress.empty()
+            st.session_state["_tab5_dd_di_comparison"] = _cmp_rows
+
+        if st.session_state["_tab5_dd_di_comparison"] is not None:
+            _cmp = st.session_state["_tab5_dd_di_comparison"]
+
+            # Scatter: DD score vs |DI| score
+            _scatter_dd = [r["dd"] for r in _cmp]
+            _scatter_di = [abs(r["di"]) for r in _cmp]
+            _scatter_labels = [f"F{r['q']}\u2192F{r['k']}" for r in _cmp]
+
+            # Determine which point is the selected pair (if any)
+            _sel_mask = [
+                (_t5_q_sel is not None and r["q"] == _t5_q_sel
+                 and _t5_k_sel is not None and r["k"] == _t5_k_sel)
+                for r in _cmp
+            ]
+            _scatter_colors = [
+                "red" if s else "rgba(102,126,234,0.7)" for s in _sel_mask
+            ]
+            _scatter_sizes = [12 if s else 7 for s in _sel_mask]
+
+            _fig_scatter = go.Figure()
+            _fig_scatter.add_trace(go.Scatter(
+                x=_scatter_dd,
+                y=_scatter_di,
+                mode="markers",
+                marker=dict(color=_scatter_colors, size=_scatter_sizes),
+                text=_scatter_labels,
+                hovertemplate="%{text}<br>DD: %{x:.4f}<br>|DI|: %{y:.4f}<extra></extra>",
+            ))
+            _fig_scatter.update_layout(
+                height=400,
+                margin=dict(l=0, r=0, t=30, b=0),
+                xaxis_title=f"DD score ({_t5_cmp_agg})",
+                yaxis_title="|DI| score",
+                showlegend=False,
+            )
+            st.plotly_chart(_fig_scatter, use_container_width=True, key="_t5_scatter")
+
+            # Sortable table
+            _tbl_rows = []
+            for _ri, _r in enumerate(_cmp):
+                _is_sel = _sel_mask[_ri]
+                _q_str = f"\u2192 **F{_r['q']}**" if _is_sel else f"F{_r['q']}"
+                _k_str = f"\u2192 **F{_r['k']}**" if _is_sel else f"F{_r['k']}"
+                _tbl_rows.append({
+                    "DD Rank": _ri + 1,
+                    "Query": _q_str,
+                    "Key": _k_str,
+                    "DD Score": round(_r["dd"], 4),
+                    "|DI| Score": round(abs(_r["di"]), 4),
+                })
+            # Sort by DI rank (descending |DI|)
+            _tbl_sorted = sorted(_tbl_rows, key=lambda x: x["|DI| Score"], reverse=True)
+            for _di_rank, _row in enumerate(_tbl_sorted, 1):
+                _row["DI Rank"] = _di_rank
+            # Restore DD rank order for display
+            _tbl_sorted.sort(key=lambda x: x["DD Rank"])
+
+            _tbl_df = pd.DataFrame(_tbl_sorted)[
+                ["DD Rank", "Query", "Key", "DD Score", "|DI| Score", "DI Rank"]
+            ]
+            st.dataframe(_tbl_df, use_container_width=True, hide_index=True)
+
+    # ── Section 3: Exploration (expander) ──────────────────────────────────
+    st.markdown("---")
+    with st.expander("Explore single features / global scan"):
+
+        qk_mode = st.radio(
+            "Mode",
+            ["Fixed Query", "Fixed Key", "Global"],
+            horizontal=True,
+            key="qk_mode",
+        )
 
         if qk_mode == "Fixed Query":
             qk_col_in, qk_col_btn = st.columns([3, 1])
@@ -1883,9 +2107,7 @@ with tab5:
                 qk_fq_go = st.button("Compute", type="primary", key="qk_fq_btn")
 
             if qk_fq_go:
-                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                    sae_type, int(head), device, **_wt_kw,
-                )
+                W_dec, W_Q, W_K_ = _ensure_di_weights()
                 di_row = compute_di_row(W_dec, W_Q, W_K_, qk_fq_id)
                 bands = sample_di_bands(di_row)
                 st.session_state["qk_fq_result"] = {
@@ -1909,9 +2131,7 @@ with tab5:
                 qk_fk_go = st.button("Compute", type="primary", key="qk_fk_btn")
 
             if qk_fk_go:
-                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                    sae_type, int(head), device, **_wt_kw,
-                )
+                W_dec, W_Q, W_K_ = _ensure_di_weights()
                 di_col = compute_di_col(W_dec, W_Q, W_K_, qk_fk_id)
                 bands = sample_di_bands(di_col)
                 st.session_state["qk_fk_result"] = {
@@ -1934,9 +2154,7 @@ with tab5:
             qk_g_go = st.button("Run Global Scan", type="primary", key="qk_g_btn")
 
             if qk_g_go:
-                W_dec, W_Q, W_K_, attn_layer = _load_di_weights(
-                    sae_type, int(head), device, **_wt_kw,
-                )
+                W_dec, W_Q, W_K_ = _ensure_di_weights()
                 progress = st.progress(0, text="Scanning feature pairs...")
 
                 def _g_progress(i, n):
@@ -1961,7 +2179,6 @@ with tab5:
                 _render_di_histogram(r["hist_sample"], r["bands"]["_stats"])
 
                 # Top pairs table
-                import pandas as pd
                 top_df = pd.DataFrame({
                     "Query Feature": [f"F{q}" for q in r["query_ids"]],
                     "Key Feature": [f"F{k}" for k in r["key_ids"]],
