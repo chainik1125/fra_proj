@@ -291,9 +291,13 @@ def run_condition(model, layer, head, tok_tensor, shift_labels,
     loss = F.cross_entropy(patched_logits[0, :-1], shift_labels).item()
 
     # KL divergence (position-averaged)
-    p = F.softmax(unpatched_logits[0, :-1], dim=-1)
-    q = F.softmax(patched_logits[0, :-1], dim=-1)
-    kl = F.kl_div(q.log(), p, reduction="batchmean").item()
+    # Use log_softmax + log_target=True to avoid 0 * -inf = NaN from vocabulary underflow
+    kl = F.kl_div(
+        F.log_softmax(patched_logits[0, :-1].float(), dim=-1),
+        F.log_softmax(unpatched_logits[0, :-1].float(), dim=-1),
+        reduction="batchmean",
+        log_target=True,
+    ).item()
 
     # Top-1 prediction change
     pred_clean = unpatched_logits[0, :-1].argmax(dim=-1)

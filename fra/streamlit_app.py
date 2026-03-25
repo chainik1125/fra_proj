@@ -291,7 +291,8 @@ def run_fra(
         "shape": fra_result["shape"],
         "seq_len": fra_result["seq_len"],
         "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
+        "feat_acts_np": feat_acts.cpu().numpy(),         # [seq_len, d_sae], raw
+        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),  # [seq_len, d_sae], top-k filtered
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
         "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,
@@ -351,10 +352,12 @@ def run_fra_crosscoder(
         "shape": fra_result["shape"],
         "seq_len": fra_result["seq_len"],
         "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),
+        "feat_acts_np": feat_acts.cpu().numpy(),         # [seq_len, d_sae], raw
+        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),  # [seq_len, d_sae], top-k filtered
         "attn_pattern_np": attn_pattern,
         "attn_scores_np": attn_scores,
         "token_strs": token_strs,
+        "tokens": tokens[:fra_result["seq_len"]],  # actual token IDs used for FRA computation
     }
 
 
@@ -399,22 +402,6 @@ def compute_di_row(
     di_row = (K_all @ q_vec) / math.sqrt(d_head)  # [d_sae]
     return di_row.detach().cpu().float().numpy()
 
-
-def compute_di_col(
-    W_dec: torch.Tensor,
-    W_Q: torch.Tensor,
-    W_K: torch.Tensor,
-    key_feature: int,
-) -> np.ndarray:
-    """Compute DI(i, key_feature) for all query features i.
-
-    Returns array of shape [d_sae].
-    """
-    k_vec = W_dec[key_feature] @ W_K            # [d_head]
-    Q_all = W_dec @ W_Q                         # [d_sae, d_head]
-    d_head = W_Q.shape[-1]
-    di_col = (Q_all @ k_vec) / math.sqrt(d_head)  # [d_sae]
-    return di_col.detach().cpu().float().numpy()
 
 
 def compute_global_di_topk(
@@ -486,57 +473,6 @@ def compute_global_di_topk(
         "d_sae": d_sae,
     }
 
-
-def sample_di_bands(
-    di_values: np.ndarray,
-    feature_ids: np.ndarray | None = None,
-    n_per_band: int = 5,
-) -> dict:
-    """Pick representative features at distribution bands.
-
-    Returns dict with band_name -> list of (feature_id, di_value).
-    Includes '_stats' key with mean and std.
-    """
-    if feature_ids is None:
-        feature_ids = np.arange(len(di_values))
-
-    mean = float(np.mean(di_values))
-    std = float(np.std(di_values))
-    abs_vals = np.abs(di_values)
-
-    bands = {}
-
-    # Top positive / negative
-    bands["Top |DI| (positive)"] = [
-        (int(feature_ids[i]), float(di_values[i]))
-        for i in np.argsort(-di_values)[:n_per_band]
-    ]
-    bands["Top |DI| (negative)"] = [
-        (int(feature_ids[i]), float(di_values[i]))
-        for i in np.argsort(di_values)[:n_per_band]
-    ]
-
-    # Band thresholds
-    for label, target in [
-        ("+2 SD", mean + 2 * std),
-        ("+1 SD", mean + 1 * std),
-        ("Near mean", mean),
-    ]:
-        dist = np.abs(di_values - target)
-        nearest = np.argsort(dist)[:n_per_band]
-        bands[label] = [
-            (int(feature_ids[i]), float(di_values[i]))
-            for i in nearest
-        ]
-
-    # Lowest |DI|
-    bands["Low |DI|"] = [
-        (int(feature_ids[i]), float(di_values[i]))
-        for i in np.argsort(abs_vals)[:n_per_band]
-    ]
-
-    bands["_stats"] = {"mean": mean, "std": std}
-    return bands
 
 
 def _load_di_weights(sae_type, head, device, **kw):
@@ -704,14 +640,29 @@ def _render_prompt_card(entry, feature_id, idx):
         st.markdown("---")
 
 
-def token_activation_bar(token_strs, activations, color, height=220):
-    """Return a Plotly bar chart of per-token activations."""
+def token_activation_bar(token_strs, activations, color, height=220, topk_activations=None):
+    """Return a Plotly bar chart of per-token activations.
+
+    If *topk_activations* is provided (the top-k filtered values used during FRA
+    computation), positions where the feature was dropped by top-k filtering are
+    shown as grey bars so the user can see which activations were invisible to FRA.
+    """
     tick_vals = list(range(len(token_strs)))
     tick_labels = [html_lib.escape(t) for t in token_strs]
+
+    if topk_activations is not None:
+        # Per-bar color: grey where dropped (raw != 0 but topk == 0), normal otherwise
+        colors = [
+            "rgba(180,180,180,0.5)" if (act != 0 and topk == 0) else color
+            for act, topk in zip(activations, topk_activations)
+        ]
+    else:
+        colors = color
+
     fig = go.Figure(go.Bar(
         x=tick_vals,
         y=activations,
-        marker_color=color,
+        marker_color=colors,
     ))
     fig.update_layout(
         height=height,
@@ -724,53 +675,51 @@ def token_activation_bar(token_strs, activations, color, height=220):
 
 
 
-_HEATMAP_TICK_THRESHOLD = 15
-
-
 def _show_heatmap(fig, tick_vals, tick_labels, seq_len, *,
                   x_title="Key", y_title="Query",
                   compact_height=300, key=None):
-    """Render a heatmap with compact/expanded modes for long sequences.
+    """Render a heatmap without tick labels by default.
 
-    When *seq_len* ≤ ``_HEATMAP_TICK_THRESHOLD`` the chart is shown inline
-    with token tick-labels.  Otherwise a small unlabelled preview is shown
-    with an expander that reveals a full-width, labelled version sized to
-    fit all tokens comfortably.
+    Tick data is always embedded in the figure so a 'Show tokens' toggle
+    button (inside the Plotly chart) can reveal them.  This button works
+    both in the inline compact view and in Streamlit's full-screen modal
+    (⤢, appears on hover over the chart).
     """
-    if seq_len <= _HEATMAP_TICK_THRESHOLD:
-        fig.update_layout(
-            height=compact_height,
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(title=x_title, tickvals=tick_vals, ticktext=tick_labels),
-            yaxis=dict(title=y_title, tickvals=tick_vals, ticktext=tick_labels,
-                       autorange="reversed"),
-        )
-        st.plotly_chart(fig, use_container_width=True, key=key)
-    else:
-        # Compact preview — no tick labels, fixed small height
-        preview = go.Figure(fig)
-        preview.update_layout(
-            height=250,
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(title=x_title, showticklabels=False),
-            yaxis=dict(title=y_title, showticklabels=False,
-                       autorange="reversed"),
-        )
-        st.plotly_chart(preview, use_container_width=True,
-                        key=f"{key}_preview" if key else None)
-
-        with st.expander("Expand full heatmap"):
-            full_height = max(500, seq_len * 18)
-            fig.update_layout(
-                height=full_height,
-                margin=dict(l=0, r=0, t=0, b=0),
-                xaxis=dict(title=x_title, tickvals=tick_vals,
-                           ticktext=tick_labels, tickangle=90),
-                yaxis=dict(title=y_title, tickvals=tick_vals,
-                           ticktext=tick_labels, autorange="reversed"),
-            )
-            st.plotly_chart(fig, use_container_width=True,
-                            key=f"{key}_expand" if key else None)
+    fig.update_layout(
+        height=compact_height,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis=dict(
+            title=x_title,
+            tickvals=tick_vals, ticktext=tick_labels,
+            tickangle=90, showticklabels=False,
+        ),
+        yaxis=dict(
+            title=y_title,
+            tickvals=tick_vals, ticktext=tick_labels,
+            autorange="reversed", showticklabels=False,
+        ),
+        updatemenus=[dict(
+            type="buttons",
+            direction="right",
+            x=0.0, xanchor="left",
+            y=1.0, yanchor="bottom",
+            pad={"t": 4},
+            showactive=True,
+            buttons=[dict(
+                label="Show tokens",
+                method="relayout",
+                args=[{
+                    "xaxis.showticklabels": True,
+                    "yaxis.showticklabels": True,
+                }],
+                args2=[{
+                    "xaxis.showticklabels": False,
+                    "yaxis.showticklabels": False,
+                }],
+            )],
+        )],
+    )
+    st.plotly_chart(fig, use_container_width=True, key=key)
 
 
 # ---------------------------------------------------------------------------
@@ -1192,13 +1141,17 @@ with tab1:
                 feat_acts = fra_data["feat_acts_np"]  # [seq_len, d_sae]
                 q_acts = feat_acts[:, q_sel]
                 k_acts = feat_acts[:, k_sel]
+                topk_acts = fra_data.get("topk_acts_np")
+                q_topk = topk_acts[:, q_sel] if topk_acts is not None else None
+                k_topk = topk_acts[:, k_sel] if topk_acts is not None else None
 
                 barA, barB = st.columns(2)
                 with barA:
                     st.markdown(f"**Query feature {q_sel}** — token activations")
                     st.plotly_chart(
                         token_activation_bar(
-                            token_strs, q_acts, "rgba(102,126,234,0.75)"
+                            token_strs, q_acts, "rgba(102,126,234,0.75)",
+                            topk_activations=q_topk,
                         ),
                         use_container_width=True,
                     )
@@ -1206,7 +1159,8 @@ with tab1:
                     st.markdown(f"**Key feature {k_sel}** — token activations")
                     st.plotly_chart(
                         token_activation_bar(
-                            token_strs, k_acts, "rgba(118,75,162,0.75)"
+                            token_strs, k_acts, "rgba(118,75,162,0.75)",
+                            topk_activations=k_topk,
                         ),
                         use_container_width=True,
                     )
@@ -1424,12 +1378,17 @@ with tab3:
             "model's actual pre-softmax scores (causal region only)."
         )
 
-        # Compare FRA logits (before NaN masking) to standard logits
-        _causal = np.tril(np.ones((seq_len, seq_len)))
-        _std_causal = fra_data["attn_scores_np"][:seq_len, :seq_len] * _causal
+        # Compare FRA logits (before NaN masking) to standard logits.
+        # Use np.where to extract the causal region — multiplying raw scores
+        # by 0 would produce NaN wherever the model stored -inf (upper triangle).
+        _causal_mask_bool = np.tril(np.ones((seq_len, seq_len), dtype=bool))
+        _std_causal = np.where(
+            _causal_mask_bool,
+            fra_data["attn_scores_np"][:seq_len, :seq_len],
+            0.0,
+        )
         _fra_causal = fra_logits.copy()
-        _fra_causal[causal_mask] = 0.0
-        _fra_causal *= _causal
+        _fra_causal[~_causal_mask_bool] = 0.0
 
         _diff = np.abs(_std_causal - _fra_causal)
         _norm_std = np.linalg.norm(_std_causal.flatten())
@@ -1688,49 +1647,6 @@ with tab4:
 
 # ── Tab 5: QK Circuit ────────────────────────────────────────────────────
 
-def _render_band_table(bands: dict, id_label: str = "Feature"):
-    """Render band comparison as a streamlit table."""
-    rows = []
-    for band_name, entries in bands.items():
-        if band_name.startswith("_"):
-            continue
-        for fid, val in entries:
-            rows.append({"Band": band_name, id_label: f"F{fid}", "DI": f"{val:.6f}"})
-    import pandas as pd
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-
-def _decode_global_band_pairs(bands: dict, sample_idxs: np.ndarray, d_sae: int):
-    """Decode flat hist_sample indices into (query_feat, key_feat) per band."""
-    decoded = {}
-    for band_name, entries in bands.items():
-        if band_name.startswith("_"):
-            continue
-        pairs = []
-        for flat_idx, val in entries:
-            q_sample = flat_idx // d_sae
-            k_feat = flat_idx % d_sae
-            q_feat = int(sample_idxs[q_sample]) if q_sample < len(sample_idxs) else flat_idx
-            pairs.append((q_feat, k_feat, val))
-        decoded[band_name] = pairs
-    return decoded
-
-
-def _render_global_band_table(bands: dict, sample_idxs: np.ndarray, d_sae: int):
-    """Render band table for global scan, decoding flat indices to (query, key) pairs."""
-    decoded = _decode_global_band_pairs(bands, sample_idxs, d_sae)
-    rows = []
-    for band_name, pairs in decoded.items():
-        for q_feat, k_feat, val in pairs:
-            rows.append({
-                "Band": band_name,
-                "Query Feature": f"F{q_feat}",
-                "Key Feature": f"F{k_feat}",
-                "DI": f"{val:.6f}",
-            })
-    import pandas as pd
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
 
 def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
     """Render DI distribution histogram with SD lines."""
@@ -1774,7 +1690,7 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
 
 
 with tab5:
-    st.subheader("QK Circuit — Data-Independent")
+    st.subheader("Feature Resolved QK Circuit — Data-Independent")
     st.caption(
         "Analyse feature pairs through the QK circuit's inherent geometry. "
         "Select a pair manually, from data-dependent (DD) FRA rankings, or from "
@@ -1796,6 +1712,22 @@ with tab5:
     )
 
     # ── helpers for cached DI computation ──────────────────────────────────
+    # Cache key captures everything that affects which weights get loaded.
+    # When the preset, head, layer, or model changes, the cache is invalidated.
+    _di_cache_key = (sae_type, int(head), int(layer),
+                     preset.get("model", ""), preset.get("repo_id", ""),
+                     preset.get("release", ""), cc_subfolder)
+
+    if st.session_state.get("_tab5_di_cache_key") != _di_cache_key:
+        st.session_state["_tab5_di_weights"] = None
+        st.session_state["_tab5_di_row_cache"] = {}
+        st.session_state["_tab5_dd_di_comparison"] = None
+        st.session_state["_tab5_global_di"] = None
+        st.session_state["_tab5_global_sample"] = None
+        st.session_state["_tab5_di_cache_key"] = _di_cache_key
+        st.session_state.pop("_t5_man_confirmed", None)
+        st.session_state.pop("_t5_dd_confirmed", None)
+
     if "_tab5_di_weights" not in st.session_state:
         st.session_state["_tab5_di_weights"] = None
     if "_tab5_di_row_cache" not in st.session_state:
@@ -1804,6 +1736,8 @@ with tab5:
         st.session_state["_tab5_dd_di_comparison"] = None
     if "_tab5_global_di" not in st.session_state:
         st.session_state["_tab5_global_di"] = None
+    if "_tab5_global_sample" not in st.session_state:
+        st.session_state["_tab5_global_sample"] = None
 
     def _ensure_di_weights():
         """Load and cache DI weight matrices."""
@@ -1834,31 +1768,40 @@ with tab5:
         ["Manual", "Top DD pairs", "Top DI pairs"],
         horizontal=True,
         key="_t5_pair_mode",
+        help=(
+            "**Top DD pairs** — the same FRA-ranked pairs as Tab 1, reusing the "
+            "**Top-K pairs to display** sidebar setting and the current input's computation.\n\n"
+            "**Top DI pairs** — ranked by data-independent QK score, scanning all feature "
+            "pairs regardless of input. K is set by the slider that appears below."
+        ),
     )
 
     _t5_q_sel = None
     _t5_k_sel = None
 
     if _t5_pair_mode == "Manual":
-        _mc1, _mc2 = st.columns(2)
+        _mc1, _mc2, _mc3 = st.columns([2, 2, 1])
         with _mc1:
-            _t5_q_sel = st.number_input(
+            _t5_q_input = st.number_input(
                 "Query feature ID", min_value=0, value=0, key="_t5_man_q",
             )
         with _mc2:
-            _t5_k_sel = st.number_input(
+            _t5_k_input = st.number_input(
                 "Key feature ID", min_value=0, value=0, key="_t5_man_k",
             )
+        with _mc3:
+            _t5_man_go = st.button("Go", key="_t5_man_go", use_container_width=True)
+        if _t5_man_go:
+            st.session_state["_t5_man_confirmed"] = (_t5_q_input, _t5_k_input)
+        if "_t5_man_confirmed" in st.session_state:
+            _t5_q_sel, _t5_k_sel = st.session_state["_t5_man_confirmed"]
 
     elif _t5_pair_mode == "Top DD pairs":
         if not _has_fra:
             st.info("Compute FRA first to use data-dependent pair ranking.")
         else:
-            _t5_agg = cfg.get("agg_mode", "sum")
-            _t5_dd_pairs = get_ranked_pairs(
-                fra_data["indices_np"], fra_data["values_np"],
-                top_k=30, filter_self=False, mode=_t5_agg,
-            )
+            # Reuse the pairs already computed for Tab 1 (same sidebar k + agg_mode)
+            _t5_dd_pairs = pairs
             if not _t5_dd_pairs:
                 st.warning("No DD pairs found.")
             else:
@@ -1866,15 +1809,35 @@ with tab5:
                     f"F{q}\u2192F{k} (score={_pair_metric(q, k, s, c, m):.4f})"
                     for q, k, s, c, m in _t5_dd_pairs
                 ]
-                _t5_dd_idx = st.selectbox(
-                    "Pick a DD pair", range(len(_t5_dd_pairs)),
-                    format_func=lambda i: _t5_dd_labels[i],
-                    key="_t5_dd_sel",
-                )
-                _t5_q_sel = _t5_dd_pairs[_t5_dd_idx][0]
-                _t5_k_sel = _t5_dd_pairs[_t5_dd_idx][1]
+                _dd_col_sel, _dd_col_btn = st.columns([4, 1])
+                with _dd_col_sel:
+                    _t5_dd_idx = st.selectbox(
+                        "Pick a DD pair", range(len(_t5_dd_pairs)),
+                        format_func=lambda i: _t5_dd_labels[i],
+                        key="_t5_dd_sel",
+                    )
+                with _dd_col_btn:
+                    st.markdown("")
+                    st.markdown("")
+                    _t5_dd_go = st.button("View", key="_t5_dd_go", use_container_width=True)
+                if _t5_dd_go:
+                    st.session_state["_t5_dd_confirmed"] = (
+                        _t5_dd_pairs[_t5_dd_idx][0], _t5_dd_pairs[_t5_dd_idx][1],
+                    )
+                if "_t5_dd_confirmed" in st.session_state:
+                    _t5_q_sel, _t5_k_sel = st.session_state["_t5_dd_confirmed"]
 
     else:  # Top DI pairs
+        _t5_di_k = st.slider(
+            "Top-K DI pairs", min_value=10, max_value=200, value=50,
+            key="_t5_di_k",
+        )
+
+        # Invalidate cached result if k changed since last scan
+        _gdi_cached = st.session_state["_tab5_global_di"]
+        if _gdi_cached is not None and _gdi_cached.get("top_k_used") != _t5_di_k:
+            st.session_state["_tab5_global_di"] = None
+
         _t5_di_go = st.button(
             "Compute global DI top-k", type="primary", key="_t5_di_go",
         )
@@ -1887,9 +1850,10 @@ with tab5:
                     progress.progress(i / n, text=f"Chunk {i}/{n}...")
 
                 result = compute_global_di_topk(
-                    W_dec, W_Q, W_K_, top_k=50,
+                    W_dec, W_Q, W_K_, top_k=_t5_di_k,
                     progress_callback=_t5_di_progress,
                 )
+                result["top_k_used"] = _t5_di_k
                 progress.empty()
                 st.session_state["_tab5_global_di"] = result
 
@@ -1942,10 +1906,27 @@ with tab5:
             f"{_t5_dd_val:.4f}" if _t5_dd_val is not None else "N/A",
         )
         _mc2.metric("DI score", f"{_t5_di_val:.4f}")
-        _mc3.metric("DI |rank|", f"{_t5_di_rank:,} / {len(_t5_di_row):,}")
+        _mc3.metric(
+            "F\u2096 rank by |DI|",
+            f"{_t5_di_rank:,} / {len(_t5_di_row):,}",
+            help=(
+                f"How many key features score higher |DI| than F{_t5_k_sel} "
+                f"when F{_t5_q_sel} is the query. "
+                f"Rank 1 means F{_t5_k_sel} is the single strongest key."
+            ),
+        )
         _mc4.metric("DI percentile", f"{_t5_di_pct:.1f}%")
 
-        # DI histogram with this pair marked
+        # ── Three DI distribution histograms ───────────────────────────────
+        st.markdown("#### DI distributions")
+
+        # --- Histogram 1: row distribution (F_q → all keys) ---
+        st.markdown(f"**Row distribution — F{_t5_q_sel} as query**")
+        st.caption(
+            f"DI(F{_t5_q_sel}, F\u2095) for every key feature F\u2095 in the dictionary "
+            f"({len(_t5_di_row):,} values). "
+            f"Red line marks the selected key F{_t5_k_sel}."
+        )
         _t5_di_stats = {
             "mean": float(np.mean(_t5_di_row)),
             "std": float(np.std(_t5_di_row)),
@@ -1956,33 +1937,68 @@ with tab5:
             mark_label=f"F{_t5_q_sel}\u2192F{_t5_k_sel}",
         )
 
-        # Position heatmap (only with FRA data)
-        if _has_fra:
-            st.markdown("**Position heatmap** — where does this pair interact?")
-            _t5_pos_mat = get_position_heatmap(
-                fra_data["indices_np"], fra_data["values_np"],
-                _t5_q_sel, _t5_k_sel, seq_len,
-            )
-            if _t5_pos_mat.sum() > 0:
-                _t5_tick_labels = [html_lib.escape(t) for t in token_strs]
-                _t5_tick_vals = list(range(len(token_strs)))
-                _t5_fig_pos = go.Figure(go.Heatmap(
-                    z=_t5_pos_mat,
-                    x=_t5_tick_vals,
-                    y=_t5_tick_vals,
-                    colorscale="Blues",
-                    hovertemplate=(
-                        "Q-pos: %{y}<br>K-pos: %{x}<br>"
-                        "Strength: %{z:.4f}<extra></extra>"
-                    ),
-                ))
-                _show_heatmap(
-                    _t5_fig_pos, _t5_tick_vals, _t5_tick_labels, seq_len,
-                    x_title="Key token", y_title="Query token",
-                    key="_t5_pos_heatmap",
+        # --- Histogram 2: global sample (all feature pairs) ---
+        st.markdown("**Global distribution — all feature pairs (sampled)**")
+        st.caption(
+            "Approximate distribution of DI(F\u1d62, F\u2095) across all query\u2013key pairs, "
+            "estimated from 500 random query rows. "
+            "Red line marks the selected pair."
+        )
+        if st.session_state.get("_tab5_global_sample") is None:
+            with st.spinner("Computing global DI sample…"):
+                _gs_W_dec, _gs_W_Q, _gs_W_K = _ensure_di_weights()
+                _gs_rng = np.random.default_rng(42)
+                _gs_idxs = _gs_rng.choice(
+                    _gs_W_dec.shape[0],
+                    size=min(500, _gs_W_dec.shape[0]),
+                    replace=False,
                 )
-            else:
-                st.caption("No interactions at any position for this pair.")
+                _gs_Q = _gs_W_dec[torch.tensor(_gs_idxs, device=_gs_W_dec.device)] @ _gs_W_Q
+                _gs_K = _gs_W_dec @ _gs_W_K
+                _gs_scale = math.sqrt(_gs_W_Q.shape[-1])
+                _gs_vals = ((_gs_Q @ _gs_K.T) / _gs_scale).detach().cpu().float().numpy().ravel()
+                st.session_state["_tab5_global_sample"] = _gs_vals
+        _gs_sample = st.session_state["_tab5_global_sample"]
+        _gs_stats = {
+            "mean": float(np.mean(_gs_sample)),
+            "std": float(np.std(_gs_sample)),
+        }
+        _render_di_histogram(
+            _gs_sample, _gs_stats,
+            mark_val=_t5_di_val,
+            mark_label=f"F{_t5_q_sel}\u2192F{_t5_k_sel}",
+        )
+
+        # --- Histogram 3: DD pairs (top interacting features on input text) ---
+        if _has_fra:
+            st.markdown(f"**Input-specific distribution — top {len(pairs)} FRA pairs**")
+            st.caption(
+                f"DI scores for the top {len(pairs)} feature pairs by "
+                f"{cfg.get('agg_mode', 'sum')} FRA strength on the current input. "
+                f"Red line marks the selected pair."
+            )
+            _dd_di_vals = np.array([_di_for_pair(q, k) for q, k, *_ in pairs])
+            _dd_stats = {
+                "mean": float(np.mean(_dd_di_vals)),
+                "std": float(np.std(_dd_di_vals)),
+            }
+            _pair_in_top = any(
+                q == _t5_q_sel and k == _t5_k_sel for q, k, *_ in pairs
+            )
+            if not _pair_in_top:
+                st.warning(
+                    f"F{_t5_q_sel}\u2192F{_t5_k_sel} does not appear in the top "
+                    f"{len(pairs)} FRA pairs for the current input — "
+                    "red line shows where it would fall."
+                )
+            _render_di_histogram(
+                _dd_di_vals, _dd_stats,
+                mark_val=_t5_di_val,
+                mark_label=f"F{_t5_q_sel}\u2192F{_t5_k_sel}",
+            )
+        else:
+            st.info("Compute FRA on an input to see the input-specific DI distribution.")
+
 
     # ── Section 2: DD vs DI Comparison ─────────────────────────────────────
     st.markdown("---")
@@ -2086,108 +2102,6 @@ with tab5:
             ]
             st.dataframe(_tbl_df, use_container_width=True, hide_index=True)
 
-    # ── Section 3: Exploration (expander) ──────────────────────────────────
-    st.markdown("---")
-    with st.expander("Explore single features / global scan"):
-
-        qk_mode = st.radio(
-            "Mode",
-            ["Fixed Query", "Fixed Key", "Global"],
-            horizontal=True,
-            key="qk_mode",
-        )
-
-        if qk_mode == "Fixed Query":
-            qk_col_in, qk_col_btn = st.columns([3, 1])
-            with qk_col_in:
-                qk_fq_id = st.number_input("Query feature ID", min_value=0, value=0, key="qk_fq_id")
-            with qk_col_btn:
-                st.markdown("")
-                st.markdown("")
-                qk_fq_go = st.button("Compute", type="primary", key="qk_fq_btn")
-
-            if qk_fq_go:
-                W_dec, W_Q, W_K_ = _ensure_di_weights()
-                di_row = compute_di_row(W_dec, W_Q, W_K_, qk_fq_id)
-                bands = sample_di_bands(di_row)
-                st.session_state["qk_fq_result"] = {
-                    "di_vals": di_row, "bands": bands,
-                    "query_id": qk_fq_id, "head": int(head),
-                }
-
-            if "qk_fq_result" in st.session_state:
-                r = st.session_state["qk_fq_result"]
-                st.markdown(f"**Query F{r['query_id']}** — top key features by |DI| (H{r['head']})")
-                _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
-                _render_band_table(r["bands"], id_label="Key Feature")
-
-        elif qk_mode == "Fixed Key":
-            qk_col_in, qk_col_btn = st.columns([3, 1])
-            with qk_col_in:
-                qk_fk_id = st.number_input("Key feature ID", min_value=0, value=0, key="qk_fk_id")
-            with qk_col_btn:
-                st.markdown("")
-                st.markdown("")
-                qk_fk_go = st.button("Compute", type="primary", key="qk_fk_btn")
-
-            if qk_fk_go:
-                W_dec, W_Q, W_K_ = _ensure_di_weights()
-                di_col = compute_di_col(W_dec, W_Q, W_K_, qk_fk_id)
-                bands = sample_di_bands(di_col)
-                st.session_state["qk_fk_result"] = {
-                    "di_vals": di_col, "bands": bands,
-                    "key_id": qk_fk_id, "head": int(head),
-                }
-
-            if "qk_fk_result" in st.session_state:
-                r = st.session_state["qk_fk_result"]
-                st.markdown(f"**Key F{r['key_id']}** — top query features by |DI| (H{r['head']})")
-                _render_di_histogram(r["di_vals"], r["bands"]["_stats"])
-                _render_band_table(r["bands"], id_label="Query Feature")
-
-        else:  # Global
-            st.warning(
-                "Global scan iterates over all feature pairs. "
-                "Takes ~30-60s on GPU, longer on CPU."
-            )
-            qk_g_topk = st.slider("Top-K global pairs", 10, 200, 50, key="qk_g_topk")
-            qk_g_go = st.button("Run Global Scan", type="primary", key="qk_g_btn")
-
-            if qk_g_go:
-                W_dec, W_Q, W_K_ = _ensure_di_weights()
-                progress = st.progress(0, text="Scanning feature pairs...")
-
-                def _g_progress(i, n):
-                    progress.progress(i / n, text=f"Chunk {i}/{n}...")
-
-                result = compute_global_di_topk(
-                    W_dec, W_Q, W_K_, top_k=qk_g_topk,
-                    progress_callback=_g_progress,
-                )
-                progress.empty()
-
-                # Build bands from the sampled histogram data
-                bands = sample_di_bands(result["hist_sample"])
-
-                st.session_state["qk_global_result"] = {
-                    **result, "bands": bands, "head": int(head),
-                }
-
-            if "qk_global_result" in st.session_state:
-                r = st.session_state["qk_global_result"]
-                st.markdown(f"**Global top pairs by |DI|** (H{r['head']})")
-                _render_di_histogram(r["hist_sample"], r["bands"]["_stats"])
-
-                # Top pairs table
-                top_df = pd.DataFrame({
-                    "Query Feature": [f"F{q}" for q in r["query_ids"]],
-                    "Key Feature": [f"F{k}" for k in r["key_ids"]],
-                    "DI": [f"{v:.6f}" for v in r["di_values"]],
-                })
-                st.dataframe(top_df, use_container_width=True, hide_index=True)
-
-                st.markdown("**Distribution bands** (sampled from ~500 random query rows)")
-                _render_global_band_table(r["bands"], r["hist_sample_idxs"], r["d_sae"])
 
 # ── Tab 6: Ablation ────────────────────────────────────────────────────────
 
@@ -2297,12 +2211,9 @@ with tab6:
                             _cc_base if model_idx == 0 else _cc_it
                         )
 
-                        # Get tokens from the FRA computation
-                        _cc_tokens = _cc_target.tokenizer.encode(
-                            cfg["text"],
-                        )[:128]
+                        # Use the exact tokens FRA was computed on (may include chat template)
                         _cc_tok_t = torch.tensor(
-                            _cc_tokens,
+                            fra_data["tokens"],
                         ).unsqueeze(0).to(device)
                         _cc_shift = _cc_tok_t[0, 1:]
 

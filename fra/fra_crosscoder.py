@@ -171,7 +171,8 @@ def get_sentence_fra_crosscoder(
     # exactly that residual stream.
 
     eps = target_model.cfg.eps
-    rms = (target_act.pow(2).mean(dim=-1) + eps).sqrt()   # [seq]
+    rms = (target_act.float().pow(2).mean(dim=-1) + eps).sqrt()   # [seq], float32 for numerical stability
+
 
     # W_Q / W_K already have gamma folded in by TransformerLens
     W_Q = target_model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
@@ -267,4 +268,5 @@ def get_sentence_fra_crosscoder(
         "seq_len": seq_len,
         "total_interactions": total_interactions,
         "feature_activations": feature_activations,
+        "topk_features": topk_features,  # [seq_len, d_sae], top-k filtered activations
     }
