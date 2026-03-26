@@ -259,7 +259,8 @@ def get_sentence_fra_crosscoder(
         total_interactions = 0
 
     if verbose:
-        density = total_interactions / max(seq_len * seq_len * top_k * top_k, 1)
+        _k = top_k if top_k is not None else d_sae
+        density = total_interactions / max(seq_len * seq_len * _k * _k, 1)
         print(
             f"4D FRA tensor: shape={shape}, "
             f"nnz={total_interactions:,}, density={density:.2%}"
