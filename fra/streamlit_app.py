@@ -231,7 +231,7 @@ def run_fra(
     sae_hub_release: str,
     sae_hub_id: str,
     sae_local_path: str,
-    top_k_features: int,
+    top_k_features: int | None,
     device: str,
     model_name: str = "gpt2-small",
     chunk_size: int = 16,
@@ -307,7 +307,7 @@ def run_fra_crosscoder(
     model_idx: int,
     base_model_name: str,
     it_model_name: str,
-    top_k_features: int,
+    top_k_features: int | None,
     device: str,
     subfolder: str = "",
     it_arch_name: str = "",
@@ -893,7 +893,17 @@ with st.sidebar:
 
     # ── Common compute settings ─────────────────────────────────────────
     st.subheader("Compute settings")
-    top_k_feat = st.slider("Top-K features / position", 5, 50, 20)
+    use_all_features = st.checkbox(
+        "Use ALL features (debug)",
+        value=False,
+        help="Skip top-k truncation and use every active SAE feature. "
+             "Isolates reconstruction error from feature selection error. "
+             "Very memory/compute heavy!",
+    )
+    top_k_feat = st.slider(
+        "Top-K features / position", 5, 50, 20,
+        disabled=use_all_features,
+    )
     top_k_pairs = st.slider("Top-K pairs to display", 10, 100, 30)
     filter_self = st.checkbox("Filter self-interactions (q==k)", value=False)
 
@@ -961,7 +971,7 @@ if compute_btn:
                 model_idx=int(model_idx),
                 base_model_name=base_model_name,
                 it_model_name=it_model_name,
-                top_k_features=top_k_feat,
+                top_k_features=None if use_all_features else top_k_feat,
                 device=device,
                 subfolder=cc_subfolder,
                 it_arch_name=cc_it_arch,
@@ -992,7 +1002,7 @@ if compute_btn:
                 sae_hub_release=sae_hub_release,
                 sae_hub_id=sae_hub_id,
                 sae_local_path=sae_local_path,
-                top_k_features=top_k_feat,
+                top_k_features=None if use_all_features else top_k_feat,
                 device=device,
                 model_name=_run_model,
                 chunk_size=chunk_size,

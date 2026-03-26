@@ -155,7 +155,7 @@ def get_sentence_fra_batch(
     layer: int,
     head: int,
     max_length: int = 128,
-    top_k: int = 20,
+    top_k: int | None = 20,
     verbose: bool = False,
     hook_point: str = "ln1.hook_normalized",
     chunk_size: int = 16,
@@ -243,24 +243,27 @@ def get_sentence_fra_batch(
 
     d_sae = feature_activations.shape[-1]
 
-    # Keep only top-k features per position
-    topk_features = []
-    for pos in range(seq_len):
-        feat = feature_activations[pos]
-        active_mask = feat != 0
-        n_active = active_mask.sum().item()
+    # Keep only top-k features per position (or all active features when top_k is None)
+    if top_k is None:
+        topk_features = feature_activations  # use all active features
+    else:
+        topk_features = []
+        for pos in range(seq_len):
+            feat = feature_activations[pos]
+            active_mask = feat != 0
+            n_active = active_mask.sum().item()
 
-        if n_active > 0:
-            k = min(top_k, n_active)
-            topk_vals, topk_idx = torch.topk(feat.abs(), k)
-            sparse_feat = torch.zeros_like(feat)
-            sparse_feat[topk_idx] = feat[topk_idx]
-        else:
-            sparse_feat = torch.zeros_like(feat)
+            if n_active > 0:
+                k = min(top_k, n_active)
+                topk_vals, topk_idx = torch.topk(feat.abs(), k)
+                sparse_feat = torch.zeros_like(feat)
+                sparse_feat[topk_idx] = feat[topk_idx]
+            else:
+                sparse_feat = torch.zeros_like(feat)
 
-        topk_features.append(sparse_feat)
+            topk_features.append(sparse_feat)
 
-    topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
+        topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
 
     # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
     W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]

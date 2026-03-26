@@ -59,7 +59,7 @@ def get_sentence_fra_crosscoder(
     head: int = 0,
     crosscoder_layer: int = 13,
     max_length: int = 128,
-    top_k: int = 20,
+    top_k: int | None = 20,
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """Compute 4-D FRA tensor using a model-diffing crosscoder.
@@ -139,19 +139,22 @@ def get_sentence_fra_crosscoder(
     d_sae = feature_activations.shape[-1]
 
     # ---- top-k sparsification ----
-    topk_features = []
-    for pos in range(seq_len):
-        feat = feature_activations[pos]
-        n_active = (feat != 0).sum().item()
-        if n_active > 0:
-            k = min(top_k, n_active)
-            _, topk_idx = torch.topk(feat.abs(), k)
-            sparse_feat = torch.zeros_like(feat)
-            sparse_feat[topk_idx] = feat[topk_idx]
-        else:
-            sparse_feat = torch.zeros_like(feat)
-        topk_features.append(sparse_feat)
-    topk_features = torch.stack(topk_features)
+    if top_k is None:
+        topk_features = feature_activations  # use all active features
+    else:
+        topk_features = []
+        for pos in range(seq_len):
+            feat = feature_activations[pos]
+            n_active = (feat != 0).sum().item()
+            if n_active > 0:
+                k = min(top_k, n_active)
+                _, topk_idx = torch.topk(feat.abs(), k)
+                sparse_feat = torch.zeros_like(feat)
+                sparse_feat[topk_idx] = feat[topk_idx]
+            else:
+                sparse_feat = torch.zeros_like(feat)
+            topk_features.append(sparse_feat)
+        topk_features = torch.stack(topk_features)
 
     # ---- RMSNorm correction ----
     # The crosscoder decoder vectors live in residual-stream space, but
