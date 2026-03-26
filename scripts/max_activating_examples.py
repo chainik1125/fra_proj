@@ -22,8 +22,8 @@ import argparse
 
 import torch
 from transformer_lens import HookedTransformer
-from fra.crosscoder_wrapper import GemmaCrosscoderFRA
-from fra.max_act import (
+from fra.coders.crosscoder import GemmaCrosscoderFRA
+from fra.analysis.max_act import (
     load_prompts,
     load_generic_dataset,
     compute_max_acts,

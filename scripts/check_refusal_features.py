@@ -23,7 +23,7 @@ Make sure you've run `huggingface-cli login` first (Gemma weights are gated).
 
 import torch
 from transformer_lens import HookedTransformer
-from fra.crosscoder_wrapper import GemmaCrosscoderFRA
+from fra.coders.crosscoder import GemmaCrosscoderFRA
 
 REPO_ID = "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss"
 CROSSCODER_LAYER = 13

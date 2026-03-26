@@ -1,9 +1,9 @@
 """Setup a logger to be used in all modules in the library.
 
 To use the logger, import it in any module and use it as follows:
-    
+
     ```
-    from fra.log import logger
+    from fra.utils.log import logger
     logger.info("Info message")
     logger.warning("Warning message")
     ```
@@ -13,7 +13,7 @@ import logging
 from logging.config import dictConfig
 from pathlib import Path
 
-DEFAULT_LOGFILE = Path(__file__).resolve().parent.parent / "logs" / "logs.log"
+DEFAULT_LOGFILE = Path(__file__).resolve().parent.parent.parent / "logs" / "logs.log"
 
 
 def setup_logger(logfile: Path = DEFAULT_LOGFILE) -> logging.Logger:

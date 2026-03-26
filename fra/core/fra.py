@@ -5,7 +5,8 @@ import torch
 import numpy as np
 from typing import Any, Dict
 from einops import einsum
-from fra.activation_utils import get_llm_activations
+from fra.core.activations import get_llm_activations
+from fra.core.helpers import topk_sparsify
 from tqdm import tqdm
 
 
@@ -243,27 +244,7 @@ def get_sentence_fra_batch(
 
     d_sae = feature_activations.shape[-1]
 
-    # Keep only top-k features per position (or all active features when top_k is None)
-    if top_k is None:
-        topk_features = feature_activations  # use all active features
-    else:
-        topk_features = []
-        for pos in range(seq_len):
-            feat = feature_activations[pos]
-            active_mask = feat != 0
-            n_active = active_mask.sum().item()
-
-            if n_active > 0:
-                k = min(top_k, n_active)
-                topk_vals, topk_idx = torch.topk(feat.abs(), k)
-                sparse_feat = torch.zeros_like(feat)
-                sparse_feat[topk_idx] = feat[topk_idx]
-            else:
-                sparse_feat = torch.zeros_like(feat)
-
-            topk_features.append(sparse_feat)
-
-        topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
+    topk_features = topk_sparsify(feature_activations, top_k)
 
     # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
     W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]

@@ -25,30 +25,7 @@ from typing import Any, Dict
 from tqdm import tqdm
 from transformer_lens import HookedTransformer
 
-
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-
-def _get_W_K(model: HookedTransformer, layer: int, head: int) -> torch.Tensor:
-    """Index W_K correctly for both MHA and GQA models.
-
-    TransformerLens may or may not expand KV heads to match Q heads.
-    This helper handles both cases.
-    """
-    W_K = model.blocks[layer].attn.W_K
-    if W_K.shape[0] == model.cfg.n_heads:
-        # Standard MHA or already-expanded GQA
-        return W_K[head]
-    # GQA with un-expanded KV heads
-    n_kv = W_K.shape[0]
-    heads_per_kv = model.cfg.n_heads // n_kv
-    return W_K[head // heads_per_kv]
-
-
-# ------------------------------------------------------------------
-# Core FRA function
-# ------------------------------------------------------------------
+from fra.core.helpers import get_W_K, topk_sparsify
 
 @torch.no_grad()
 def get_sentence_fra_crosscoder(
@@ -139,22 +116,7 @@ def get_sentence_fra_crosscoder(
     d_sae = feature_activations.shape[-1]
 
     # ---- top-k sparsification ----
-    if top_k is None:
-        topk_features = feature_activations  # use all active features
-    else:
-        topk_features = []
-        for pos in range(seq_len):
-            feat = feature_activations[pos]
-            n_active = (feat != 0).sum().item()
-            if n_active > 0:
-                k = min(top_k, n_active)
-                _, topk_idx = torch.topk(feat.abs(), k)
-                sparse_feat = torch.zeros_like(feat)
-                sparse_feat[topk_idx] = feat[topk_idx]
-            else:
-                sparse_feat = torch.zeros_like(feat)
-            topk_features.append(sparse_feat)
-        topk_features = torch.stack(topk_features)
+    topk_features = topk_sparsify(feature_activations, top_k)
 
     # ---- RMSNorm correction ----
     # The crosscoder decoder vectors live in residual-stream space, but
@@ -179,7 +141,7 @@ def get_sentence_fra_crosscoder(
 
     # W_Q / W_K already have gamma folded in by TransformerLens
     W_Q = target_model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
-    W_K = _get_W_K(target_model, layer, head)              # [d_model, d_head]
+    W_K = get_W_K(target_model, layer, head)              # [d_model, d_head]
     d_head = W_Q.shape[-1]
     attn_scale = math.sqrt(d_head)
 

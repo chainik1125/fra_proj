@@ -62,7 +62,7 @@ def load_reasoning_prompts(n_prompts):
     """Load math problems with full R1 reasoning traces from OpenR1-Math-220k.
 
     Each entry includes the user prompt **and** a complete R1 generation
-    containing ``<think>…</think>`` plus the final answer, stored in the
+    containing ``<think>...</think>`` plus the final answer, stored in the
     ``reasoning_trace`` field.  Only generations flagged as correct by
     ``correctness_math_verify`` are used.
 
@@ -142,7 +142,7 @@ def get_activations(base_model, it_model, crosscoder, text, feature_ids,
     Parameters
     ----------
     reasoning_trace : str, optional
-        Full R1 generation including ``<think>…</think>`` and the response.
+        Full R1 generation including ``<think>...</think>`` and the response.
         When provided the token sequence is built from the chat-template
         prefix (which adds ``<|Assistant|><think>\\n``) followed by the raw
         trace text (with the leading ``<think>\\n`` stripped to avoid

@@ -2,7 +2,7 @@
 FRA Dashboard — Feature-Resolved Attention interactive viewer.
 
 Run with:
-    streamlit run fra/streamlit_app.py
+    streamlit run fra/dashboard.py
 """
 
 import html as html_lib
@@ -43,19 +43,19 @@ def load_model(model_name: str, device: str, hf_token: str = ""):
 
 @st.cache_resource(show_spinner=False)
 def load_sae_hub(release: str, sae_id: str, device: str):
-    from fra.sae_lens_wrapper import SAELensAttentionSAE
+    from fra.coders.sae_lens import SAELensAttentionSAE
     return SAELensAttentionSAE(release, sae_id, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_local(checkpoint_path: str, layer: int, device: str):
-    from fra.sae_lens_wrapper import LocalLn1SAE
+    from fra.coders.sae_lens import LocalLn1SAE
     return LocalLn1SAE(checkpoint_path, layer=layer, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_gemma(release: str, sae_id: str, device: str):
-    from fra.sae_lens_wrapper import GemmaScopeSAE
+    from fra.coders.sae_lens import GemmaScopeSAE
     return GemmaScopeSAE(release, sae_id, device=device)
 
 
@@ -110,7 +110,7 @@ def load_model_pair(base_name: str, it_name: str, device: str,
 
 @st.cache_resource(show_spinner=False)
 def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = ""):
-    from fra.crosscoder_wrapper import GemmaCrosscoderFRA
+    from fra.coders.crosscoder import GemmaCrosscoderFRA
     if subfolder:
         return GemmaCrosscoderFRA.from_cc_weights(
             repo_id, subfolder, model_idx=model_idx, device=device,
@@ -239,7 +239,7 @@ def run_fra(
     include_special_tokens: bool = True,
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
-    from fra.fra_func import get_sentence_fra_batch
+    from fra.core.fra import get_sentence_fra_batch
 
     if sae_type == "gemma":
         model = load_model_gemma(model_name, device, hf_token)
@@ -313,7 +313,7 @@ def run_fra_crosscoder(
     it_arch_name: str = "",
 ) -> dict:
     """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
-    from fra.fra_crosscoder import get_sentence_fra_crosscoder
+    from fra.core.fra_crosscoder import get_sentence_fra_crosscoder
 
     base_model, it_model = load_model_pair(
         base_model_name, it_model_name, device, it_arch_name,
@@ -477,7 +477,7 @@ def compute_global_di_topk(
 
 def _load_di_weights(sae_type, head, device, **kw):
     """Load (W_dec, W_Q, W_K, attn_layer) for DI computation."""
-    from fra.fra_crosscoder import _get_W_K
+    from fra.core.helpers import get_W_K
 
     if sae_type == "crosscoder":
         base, it = load_model_pair(
@@ -507,7 +507,7 @@ def _load_di_weights(sae_type, head, device, **kw):
         attn_layer = int(kw["layer"])
 
     W_Q = model.blocks[attn_layer].attn.W_Q[head]
-    W_K = _get_W_K(model, attn_layer, head)
+    W_K = get_W_K(model, attn_layer, head)
     return W_dec, W_Q, W_K, attn_layer
 
 
@@ -1427,7 +1427,7 @@ with tab3:
 # ── Tab 4: Max-Act Examples ────────────────────────────────────────────────
 
 with tab4:
-    from fra.max_act import (
+    from fra.analysis.max_act import (
         compute_max_acts as _compute_max_acts,
         list_available_features as _list_available_features,
         load_prompts as _load_prompts,
@@ -2185,12 +2185,12 @@ with tab6:
             if run_abl:
                 with st.spinner("Running ablation..."):
                     import torch.nn.functional as _F
-                    from fra.ablation_study import (
+                    from fra.analysis.ablation import (
                         ablate_fra_pairs,
                         reconstruct_scores,
                         run_condition,
                     )
-                    from fra.validation import fra_sum_to_attn
+                    from fra.core.helpers import fra_sum_to_attn
 
                     # Rebuild sparse tensor from stored indices/values
                     d_sae_val = fra_data["feat_acts_np"].shape[1]
@@ -2248,7 +2248,7 @@ with tab6:
                         _bias = _cc_bias
                     else:
                         # Single-SAE path
-                        from fra.ablation_study import (
+                        from fra.analysis.ablation import (
                             compute_bias_corrections,
                         )
 
