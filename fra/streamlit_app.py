@@ -6,6 +6,7 @@ Run with:
 """
 
 import html as html_lib
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -85,6 +86,62 @@ def neuronpedia_embed_url(layer: int, feature_id: int) -> str:
         f"https://www.neuronpedia.org/gpt2-small/{layer}-att-kk/{feature_id}"
         f"?embed=true&embedexplanation=true&embedplots=true&embedtest=false"
     )
+
+
+@st.cache_data
+def load_sae_explanations(model_id: str, layer: int) -> dict[int, str]:
+    """Load local SAE feature explanations for a model/layer from JSONL batches."""
+    explanations: dict[int, str] = {}
+    if not model_id:
+        return explanations
+
+    explanations_dir = Path(__file__).parent / "SAE_Explanations"
+    if not explanations_dir.exists():
+        return explanations
+
+    layer_prefix = f"{layer}-"
+    for jsonl_path in sorted(explanations_dir.glob("batch-*.jsonl")):
+        try:
+            with jsonl_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    if str(row.get("modelId", "")) != model_id:
+                        continue
+                    if not str(row.get("layer", "")).startswith(layer_prefix):
+                        continue
+
+                    idx = row.get("index")
+                    desc = str(row.get("description", "")).strip()
+                    if idx is None or not desc:
+                        continue
+
+                    try:
+                        explanations[int(idx)] = desc
+                    except (ValueError, TypeError):
+                        continue
+        except OSError:
+            continue
+
+    return explanations
+
+
+def format_feature_label(feature_id: int, explanations: dict[int, str], max_len: int = 64) -> str:
+    """Render user-facing feature labels using explanation text when available."""
+    desc = explanations.get(int(feature_id), "")
+    if not desc:
+        return f"Feature #{feature_id}"
+
+    desc = " ".join(desc.split())
+    if len(desc) > max_len:
+        desc = f"{desc[: max_len - 3]}..."
+    return f"{desc} [#{feature_id}]"
 
 
 # ---------------------------------------------------------------------------
@@ -432,6 +489,7 @@ if compute_btn:
         "layer": int(layer),
         "head": int(head),
         "text": text,
+        "model_name": model_name,
         "supports_neuronpedia": supports_neuronpedia,
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
@@ -467,8 +525,17 @@ fra_data = st.session_state["fra_data"]
 cfg = st.session_state["fra_config"]
 layer_ = cfg["layer"]
 head_ = cfg["head"]
+model_name_ = cfg.get("model_name", "")
 seq_len = fra_data["seq_len"]
 token_strs = fra_data["token_strs"][:seq_len]
+use_sae_explanations = model_name_ == "gemma-2-2b"
+sae_explanations = load_sae_explanations(model_name_, layer_) if use_sae_explanations else {}
+
+
+def display_feature_label(feature_id: int, max_len: int = 64) -> str:
+    if use_sae_explanations:
+        return format_feature_label(feature_id, sae_explanations, max_len=max_len)
+    return f"F{feature_id}"
 
 # Recompute pairs (filter / top_k / agg_mode may change without recomputing FRA)
 agg_mode = cfg.get("agg_mode", "avg")
@@ -549,7 +616,9 @@ with tab1:
                 else:
                     score_str = f"sum={s:.3f}"
                 suffix = "  ⟲" if q == k else ""
-                return f"F{q}→F{k}  {score_str}{suffix}"
+                q_lbl = display_feature_label(q, max_len=38)
+                k_lbl = display_feature_label(k, max_len=38)
+                return f"{q_lbl} → {k_lbl}  {score_str}{suffix}"
 
             selected_idx = st.radio(
                 "Select a pair to inspect:",
@@ -562,9 +631,11 @@ with tab1:
             q_sel, k_sel, strength_sel, count_sel, max_sel = active_pairs[selected_idx]
             avg_sel = strength_sel / max(count_sel, 1)
             is_self = q_sel == k_sel
+            q_full = display_feature_label(q_sel, max_len=120)
+            k_full = display_feature_label(k_sel, max_len=120)
 
             st.subheader(
-                f"Feature {q_sel} → Feature {k_sel}"
+                f"{q_full} → {k_full}"
                 + ("  ⟲ self" if is_self else "")
             )
             m1, m2, m3 = st.columns(3)
@@ -584,7 +655,7 @@ with tab1:
 
             barA, barB = st.columns(2)
             with barA:
-                st.markdown(f"**Query feature {q_sel}** — token activations")
+                st.markdown(f"**Query: {q_full}** — token activations")
                 st.plotly_chart(
                     token_activation_bar(
                         token_strs, q_acts, "rgba(102,126,234,0.75)"
@@ -592,7 +663,7 @@ with tab1:
                     use_container_width=True,
                 )
             with barB:
-                st.markdown(f"**Key feature {k_sel}** — token activations")
+                st.markdown(f"**Key: {k_full}** — token activations")
                 st.plotly_chart(
                     token_activation_bar(
                         token_strs, k_acts, "rgba(118,75,162,0.75)"
@@ -632,7 +703,7 @@ with tab1:
                 with np_col1:
                     desc_q = fetch_neuronpedia(layer_, q_sel)
                     st.markdown(
-                        f"**Neuronpedia — F{q_sel}:** _{desc_q}_"
+                        f"**Neuronpedia — {q_full}:** _{desc_q}_"
                     )
                     st.components.v1.iframe(
                         neuronpedia_embed_url(layer_, q_sel),
@@ -641,7 +712,7 @@ with tab1:
                 with np_col2:
                     desc_k = fetch_neuronpedia(layer_, k_sel)
                     st.markdown(
-                        f"**Neuronpedia — F{k_sel}:** _{desc_k}_"
+                        f"**Neuronpedia — {k_full}:** _{desc_k}_"
                     )
                     st.components.v1.iframe(
                         neuronpedia_embed_url(layer_, k_sel),
@@ -691,7 +762,7 @@ with tab2:
                     score = s
                 matrix[feat_to_idx[q], feat_to_idx[k]] += score
 
-        labels = [f"F{f}" for f in top_features]
+        labels = [display_feature_label(f, max_len=28) for f in top_features]
 
         fig_mat = go.Figure(go.Heatmap(
             z=matrix,

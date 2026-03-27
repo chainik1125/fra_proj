@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import yaml
@@ -9,6 +9,18 @@ from transformer_lens import HookedTransformer
 from datasets import load_dataset
 
 from fra.log import logger
+
+
+def infer_hook_point_from_sae(sae: Any, default: str = "ln1.hook_normalized") -> str:
+    """Infer the correct FRA hook point based on SAE wrapper type."""
+    class_name = sae.__class__.__name__
+    if class_name == "SAELensAttentionSAE":
+        return "attn.hook_z"
+    if class_name == "GemmaScopeSAE":
+        return "hook_resid_pre"
+    if class_name == "LocalLn1SAE":
+        return "ln1.hook_normalized"
+    return default
 
 
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
@@ -37,16 +49,99 @@ def load_model(model_name: str = "gpt2-small", device: str = "cuda") -> HookedTr
         HookedTransformer model
     """
     logger.info(f"Loading model: {model_name} on {device}")
-    model = HookedTransformer.from_pretrained(
-        model_name,
-        device=device,
-        center_unembed=True,
-        center_writing_weights=True,
-        fold_ln=False,
-        refactor_factored_attn_matrices=False,
-    )
+    if model_name.startswith("gpt2"):
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            device=device,
+            center_unembed=True,
+            center_writing_weights=True,
+            fold_ln=False,
+            refactor_factored_attn_matrices=False,
+        )
+    else:
+        # Keep defaults for non-GPT2 models (e.g. Gemma) to avoid incompatible kwargs.
+        model = HookedTransformer.from_pretrained(model_name, device=device)
     logger.info(f"Model loaded successfully: {model.cfg.n_layers} layers, {model.cfg.n_heads} heads")
     return model
+
+
+def load_sae_wrapper(
+    sae_cfg: Dict[str, Any],
+    layer: int,
+    device: str,
+) -> Any:
+    """Load an SAE wrapper from configuration.
+
+    Supported types:
+      - "hub": SAE Lens hook_z SAE (e.g. GPT-2 attention SAEs)
+      - "gemma": Gemma-Scope residual stream SAE
+      - "local_ln1": Local ln1.hook_normalized SAE checkpoint
+      - "legacy_repo": old HF .pt/.json format used by ckkissane attention SAEs
+    """
+    sae_type = sae_cfg.get("type", "hub")
+
+    if sae_type == "hub":
+        from fra.sae_lens_wrapper import SAELensAttentionSAE
+
+        release = sae_cfg.get("release", "gpt2-small-hook-z-kk")
+        sae_id = sae_cfg.get("sae_id", f"blocks.{layer}.hook_z")
+        return SAELensAttentionSAE(release, sae_id, device=device)
+
+    if sae_type == "gemma":
+        from fra.sae_lens_wrapper import GemmaScopeSAE
+
+        release = sae_cfg.get("release", "gemma-scope-2b-pt-res")
+        sae_id_template = sae_cfg.get("sae_id_template", "layer_{layer}/width_16k/average_l0_82")
+        sae_id = sae_cfg.get("sae_id", sae_id_template.format(layer=layer))
+        normalize_activations = sae_cfg.get("normalize_activations", False)
+        return GemmaScopeSAE(
+            release=release,
+            sae_id=sae_id,
+            device=device,
+            normalize_activations=normalize_activations,
+        )
+
+    if sae_type == "local_ln1":
+        from fra.sae_lens_wrapper import LocalLn1SAE
+
+        checkpoint_path = sae_cfg["checkpoint_path"]
+        return LocalLn1SAE(checkpoint_path=checkpoint_path, layer=layer, device=device)
+
+    if sae_type == "legacy_repo":
+        from fra.sae_wrapper import SimpleAttentionSAE
+
+        repo = sae_cfg["repo"]
+        sae_data = load_sae(repo=repo, layer=layer, device=device)
+        return SimpleAttentionSAE(sae_data)
+
+    raise ValueError(f"Unsupported SAE type: {sae_type}")
+
+
+def load_model_and_sae_from_config(
+    config_path: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
+) -> Tuple[HookedTransformer, Any, Dict[str, Any]]:
+    """Load model + SAE from fra/config.yaml style config.
+
+    Returns:
+        model, sae_wrapper, config
+    """
+    if config is None:
+        resolved_path = config_path or str(Path(__file__).parent / "config.yaml")
+        config = load_config(resolved_path)
+
+    device = config["model"].get("device", "cuda")
+    if device == "cuda" and not torch.cuda.is_available():
+        device = "cpu"
+
+    model_name = config["model"].get("name", "gpt2-small")
+    model = load_model(model_name=model_name, device=device)
+
+    sae_cfg = config.get("sae", {})
+    layer = int(sae_cfg.get("layer", 0))
+    sae = load_sae_wrapper(sae_cfg=sae_cfg, layer=layer, device=device)
+
+    return model, sae, config
 
 
 def load_sae(repo: str, layer: int, device: str = "cuda") -> Dict[str, Any]:

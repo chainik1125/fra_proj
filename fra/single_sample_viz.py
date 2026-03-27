@@ -717,16 +717,16 @@ def generate_dashboard_from_config(
     
     # Load model if not provided
     if model is None:
-        print("Loading model...")
-        model = HookedTransformer.from_pretrained("gpt2-small", device=device)
+        print("Loading model and SAE from config...")
+        from fra.utils import load_model_and_sae_from_config
+        model, sae, cfg = load_model_and_sae_from_config(config_path=config_path)
+        layer = int(cfg["sae"].get("layer", layer))
     
     # Load SAE if not provided
     if sae is None:
-        from fra.induction_head import SAELensAttentionSAE
-        print(f"Loading SAE for layer {layer}...")
-        RELEASE = "gpt2-small-hook-z-kk"
-        SAE_ID = f"blocks.{layer}.hook_z"
-        sae = SAELensAttentionSAE(RELEASE, SAE_ID, device=device)
+        from fra.utils import load_model_and_sae_from_config
+        _, sae, cfg = load_model_and_sae_from_config(config_path=config_path)
+        layer = int(cfg["sae"].get("layer", layer))
     
     # Generate dashboard
     print(f"Generating dashboard for layer {layer}, head {head}...")

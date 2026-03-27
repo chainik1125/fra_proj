@@ -4,29 +4,31 @@ Fast version using batch processing instead of iterating one by one.
 """
 
 import torch
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from transformer_lens import HookedTransformer
 from tqdm import tqdm
 import numpy as np
 
-from fra.induction_head import SAELensAttentionSAE
 from fra.fra_func import get_sentence_fra_batch
+from fra.utils import infer_hook_point_from_sae, load_model_and_sae_from_config
 
 
 def compute_dataset_average_fast(
     model: HookedTransformer,
-    sae: SAELensAttentionSAE,
+    sae: Any,
     dataset_texts: List[str],
     layer: int = 5,
     head: int = 0,
     filter_self_interactions: bool = True,
+    hook_point: Optional[str] = None,
     verbose: bool = True
 ) -> Dict[str, Any]:
     """
     Fast computation of average feature interactions using batch processing.
     """
-    d_sae = sae.sae.W_dec.shape[0]
+    d_sae = sae.W_dec.shape[0] if hasattr(sae, "W_dec") else sae.sae.W_dec.shape[0]
     device = next(model.parameters()).device
+    hook_point = hook_point or infer_hook_point_from_sae(sae)
     
     # Use dictionaries for sparse accumulation
     interaction_sum = {}  # (q_feat, k_feat) -> sum of strengths
@@ -46,7 +48,8 @@ def compute_dataset_average_fast(
         # Get FRA for this sample
         fra_result = get_sentence_fra_batch(
             model, sae, text, layer, head,
-            max_length=128, top_k=20, verbose=False
+            max_length=128, top_k=20, verbose=False,
+            hook_point=hook_point,
         )
         
         if fra_result is None:
@@ -126,8 +129,9 @@ if __name__ == "__main__":
     # Load model and SAE
     print("\nLoading model and SAE...")
     t0 = time.time()
-    model = HookedTransformer.from_pretrained("gpt2-small", device="cuda")
-    sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", "blocks.5.hook_z", device="cuda")
+    model, sae, config = load_model_and_sae_from_config()
+    layer = int(config["sae"]["layer"])
+    hook_point = config["sae"].get("hook_point") or infer_hook_point_from_sae(sae)
     print(f"Loading time: {time.time()-t0:.1f}s")
     
     # Test texts
@@ -147,9 +151,10 @@ if __name__ == "__main__":
         model=model,
         sae=sae,
         dataset_texts=test_texts,
-        layer=5,
+        layer=layer,
         head=0,
         filter_self_interactions=True,
+        hook_point=hook_point,
         verbose=True
     )
     

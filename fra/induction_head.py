@@ -10,7 +10,8 @@ from typing import Dict, Any, List, Tuple, Optional
 from tqdm import tqdm
 from transformer_lens import HookedTransformer
 from sae_lens import SAE
-from fra.fra_func import attention_pattern_QK
+from fra.fra_func import attention_pattern_QK, get_sentence_fra_batch
+from fra.utils import infer_hook_point_from_sae
 
 
 def data_independent_attention(model: HookedTransformer, layer: int, head: int, sae_dec: torch.Tensor):
@@ -144,12 +145,13 @@ def get_attention_activations(
 @torch.no_grad()
 def compute_fra(
     model: HookedTransformer,
-    sae: SAELensAttentionSAE,
+    sae: Any,
     text: str,
     layer: int,
     head: int,
     max_length: int = 128,
     top_k: int = 20,
+    hook_point: Optional[str] = None,
     verbose: bool = False
 ) -> Dict[str, Any]:
     """
@@ -177,154 +179,74 @@ def compute_fra(
             - sparsity: Percentage sparsity
     """
     device = next(model.parameters()).device
-    
-    # Get activations
+    hook_point = hook_point or infer_hook_point_from_sae(sae)
+
     if verbose:
-        print("Getting attention activations...")
-    activations = get_attention_activations(model, text, layer=layer, max_length=max_length)
-    seq_len = min(activations.shape[0], max_length)
-    
-    # Encode to SAE features
-    if verbose:
-        print("Encoding to SAE features...")
-    feature_activations = sae.encode(activations)  # [seq_len, d_sae]
-    
-    # Calculate sparsity statistics
+        print(f"Computing FRA via 4D sparse backend (hook_point={hook_point})...")
+
+    fra_4d = get_sentence_fra_batch(
+        model=model,
+        sae=sae,
+        text=text,
+        layer=layer,
+        head=head,
+        max_length=max_length,
+        top_k=top_k,
+        verbose=verbose,
+        hook_point=hook_point,
+    )
+
+    sparse_4d = fra_4d["fra_tensor_sparse"].coalesce()
+    indices_4d = sparse_4d.indices()  # [4, nnz]
+    values_4d = sparse_4d.values()    # [nnz]
+    seq_len = int(fra_4d["seq_len"])
+    pair_count = seq_len * (seq_len + 1) // 2
+    d_sae = fra_4d["shape"][2]
+
+    # Aggregate from [q_pos, k_pos, q_feat, k_feat] to [q_feat, k_feat].
+    pair_indices = indices_4d[2:4, :]
+    fra_matrix = torch.sparse_coo_tensor(
+        indices=pair_indices,
+        values=values_4d,
+        size=(d_sae, d_sae),
+        device=values_4d.device,
+        dtype=values_4d.dtype,
+    ).coalesce()
+
+    if pair_count > 0 and fra_matrix._nnz() > 0:
+        fra_matrix = torch.sparse_coo_tensor(
+            indices=fra_matrix.indices(),
+            values=fra_matrix.values() / pair_count,
+            size=fra_matrix.size(),
+            device=fra_matrix.device,
+            dtype=fra_matrix.dtype,
+        ).coalesce()
+
+    fra_matrix_abs = torch.sparse_coo_tensor(
+        indices=fra_matrix.indices(),
+        values=fra_matrix.values().abs(),
+        size=fra_matrix.size(),
+        device=fra_matrix.device,
+        dtype=fra_matrix.dtype,
+    ).coalesce()
+
+    # Compute sparsity stats at the selected hook-point.
+    tokens = model.tokenizer.encode(text)
+    if max_length is not None and len(tokens) > max_length:
+        tokens = tokens[:max_length]
+    tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+    hook_name = f"blocks.{layer}.{hook_point}"
+    _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
+    act = cache[hook_name].squeeze(0)
+    if act.dim() == 3:
+        act = act.flatten(-2, -1)
+    feature_activations = sae.encode(act)
     l0_per_token = (feature_activations != 0).sum(-1).float()
     avg_l0 = l0_per_token.mean().item()
-    sparsity = 1 - (avg_l0 / sae.d_sae)
-    
-    if verbose:
-        print(f"  Average L0: {avg_l0:.1f} features per token")
-        print(f"  Sparsity: {sparsity*100:.2f}%")
-    
-    # Keep only top-k features per position
-    if verbose:
-        print(f"Selecting top-{top_k} features per position...")
-    
-    topk_features = []
-    for pos in range(seq_len):
-        feat = feature_activations[pos]
-        active_mask = feat != 0
-        n_active = active_mask.sum().item()
-        
-        if n_active > 0:
-            k = min(top_k, n_active)
-            topk_vals, topk_idx = torch.topk(feat.abs(), k)
-            sparse_feat = torch.zeros_like(feat)
-            sparse_feat[topk_idx] = feat[topk_idx]
-        else:
-            sparse_feat = torch.zeros_like(feat)
-        
-        topk_features.append(sparse_feat)
-    
-    topk_features = torch.stack(topk_features)
-    
-    # Get attention weights for the specified head
-    W_Q = model.blocks[layer].attn.W_Q[head]
-    W_K = model.blocks[layer].attn.W_K[head]
-    
-    # Process all position pairs (lower triangle for causal attention)
-    total_pairs = seq_len * (seq_len + 1) // 2
-    
-    if verbose:
-        pbar = tqdm(total=total_pairs, desc=f"Computing FRA (L{layer}H{head})")
-    
-    # Accumulate interactions in COO format
-    row_indices = []
-    col_indices = []
-    values = []
-    
-    pair_count = 0
-    for key_idx in range(seq_len):
-        for query_idx in range(key_idx, seq_len):
-            q_feat = topk_features[query_idx]
-            k_feat = topk_features[key_idx]
-            
-            q_active = torch.where(q_feat != 0)[0]
-            k_active = torch.where(k_feat != 0)[0]
-            
-            if len(q_active) == 0 or len(k_active) == 0:
-                pair_count += 1
-                if verbose:
-                    pbar.update(1)
-                continue
-            
-            # Get decoder vectors for active features
-            q_vecs = sae.W_dec[q_active]
-            k_vecs = sae.W_dec[k_active]
-            
-            # Compute attention scores
-            q_proj = torch.matmul(q_vecs, W_Q)
-            k_proj = torch.matmul(k_vecs, W_K)
-            int_matrix = torch.matmul(q_proj, k_proj.T)
-            
-            # Scale by feature activations
-            int_matrix = int_matrix * q_feat[q_active].unsqueeze(1) * k_feat[k_active].unsqueeze(0)
-            
-            # Find non-zero interactions
-            mask = int_matrix.abs() > 1e-10
-            if mask.any():
-                local_r, local_c = torch.where(mask)
-                
-                # Convert to global feature indices
-                global_rows = q_active[local_r].cpu().tolist()
-                global_cols = k_active[local_c].cpu().tolist()
-                vals = int_matrix[mask].cpu().tolist()
-                
-                row_indices.extend(global_rows)
-                col_indices.extend(global_cols)
-                values.extend(vals)
-            
-            pair_count += 1
-            if verbose:
-                pbar.update(1)
-    
-    if verbose:
-        pbar.close()
-    
-    # Create sparse matrices
-    d_sae = sae.d_sae
-    
-    if len(row_indices) > 0:
-        indices = torch.tensor([row_indices, col_indices], dtype=torch.long, device=device)
-        vals = torch.tensor(values, dtype=torch.float32, device=device)
-        
-        # Average by number of position pairs
-        vals = vals / pair_count if pair_count > 0 else vals
-        
-        # Create sparse matrix
-        fra_matrix = torch.sparse_coo_tensor(
-            indices, vals,
-            size=(d_sae, d_sae),
-            device=device,
-            dtype=torch.float32
-        ).coalesce()
-        
-        # Absolute value version
-        abs_vals = vals.abs()
-        fra_matrix_abs = torch.sparse_coo_tensor(
-            indices, abs_vals,
-            size=(d_sae, d_sae),
-            device=device,
-            dtype=torch.float32
-        ).coalesce()
-        
-        nnz = fra_matrix._nnz()
-        density = nnz / (d_sae * d_sae)
-    else:
-        # Empty matrices if no interactions found
-        empty_indices = torch.zeros((2, 0), dtype=torch.long, device=device)
-        empty_vals = torch.zeros(0, dtype=torch.float32, device=device)
-        
-        fra_matrix = torch.sparse_coo_tensor(
-            empty_indices, empty_vals,
-            size=(d_sae, d_sae),
-            device=device
-        )
-        fra_matrix_abs = fra_matrix.clone()
-        nnz = 0
-        density = 0
+    sparsity = 1 - (avg_l0 / d_sae)
+
+    nnz = fra_matrix._nnz()
+    density = nnz / (d_sae * d_sae) if d_sae > 0 else 0
     
     return {
         'fra_matrix': fra_matrix,
@@ -417,12 +339,10 @@ def loader(config_path: str = None):
         if not config_path.exists():
             config_path = Path.cwd() / "config.yaml"
     
+    from fra.utils import load_config, load_dataset_hf, load_model_and_sae_from_config
+
     # Load configuration
     config = load_config(str(config_path))
-    
-    # Set device
-    device = torch.device(config["model"]["device"] if torch.cuda.is_available() else "cpu")
-    logger.info(f"Using device: {device}")
     
     # Set random seed for reproducibility
     torch.manual_seed(config["experiment"]["seed"])
@@ -431,18 +351,8 @@ def loader(config_path: str = None):
     output_dir = Path(config["experiment"]["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Step 1: Load model
-    model = load_model(
-        model_name=config["model"]["name"],
-        device=str(device)
-    )
-    
-    # Step 2: Load SAE for specified layer
-    sae_data = load_sae(
-        repo=config["sae"]["repo"],
-        layer=config["sae"]["layer"],
-        device=str(device)
-    )
+    # Step 1/2: Load model + SAE wrapper from unified config path.
+    model, sae, config = load_model_and_sae_from_config(config_path=str(config_path), config=config)
     
     # Step 3: Load dataset (with streaming for memory efficiency)
     dataset = load_dataset_hf(
@@ -452,15 +362,15 @@ def loader(config_path: str = None):
         seed=config["experiment"]["seed"]
     )
     
-    logger.info("Successfully loaded all components!")
-    logger.info(f"Model: {config['model']['name']} with {model.cfg.n_layers} layers")
-    logger.info(f"SAE: Layer {config['sae']['layer']}, dict_mult={sae_data['config'].get('dict_mult', 'unknown')}")
-    logger.info(f"Dataset: {config['dataset']['name']} loaded")
+    print("Successfully loaded all components!")
+    print(f"Model: {config['model']['name']} with {model.cfg.n_layers} layers")
+    print(f"SAE: type={config['sae'].get('type', 'hub')}, layer={config['sae'].get('layer', 0)}")
+    print(f"Dataset: {config['dataset']['name']} loaded")
     
     # TODO: Implement Feature-Resolved Attention analysis
     # This will be implemented in the next steps
     
-    return model, sae_data, dataset
+    return model, sae, dataset
 
 
 def main():
@@ -469,7 +379,12 @@ def main():
     import tarfile
     import os
     from fra.fra_func import get_sentence_fra_batch
-    from fra.utils import load_config, load_dataset_hf
+    from fra.utils import (
+        infer_hook_point_from_sae,
+        load_config,
+        load_dataset_hf,
+        load_model_and_sae_from_config,
+    )
     from fra.single_sample_viz import create_fra_dashboard
     
     torch.set_grad_enabled(False)
@@ -483,17 +398,11 @@ def main():
     config = load_config(str(config_path))
     print(f"\nConfiguration loaded from: {config_path}")
     
-    # Load model
-    print(f"\nLoading {config['model']['name']}...")
-    device = config["model"]["device"] if torch.cuda.is_available() else "cpu"
-    model = HookedTransformer.from_pretrained(config["model"]["name"], device=device)
-    
-    # Load SAE
-    layer = config["sae"]["layer"]
-    print(f"Loading SAE Lens attention SAE for layer {layer}...")
-    RELEASE = "gpt2-small-hook-z-kk"
-    SAE_ID = f"blocks.{layer}.hook_z"
-    sae = SAELensAttentionSAE(RELEASE, SAE_ID, device=device)
+    # Load model + SAE
+    print(f"\nLoading {config['model']['name']} and configured SAE...")
+    model, sae, config = load_model_and_sae_from_config(config_path=str(config_path), config=config)
+    layer = int(config["sae"].get("layer", 0))
+    hook_point = config["sae"].get("hook_point") or infer_hook_point_from_sae(sae)
     print(f"  SAE dimensions: d_in={sae.d_in}, d_sae={sae.d_sae}")
 
     # Load dataset
@@ -520,7 +429,10 @@ def main():
     top_k = config.get("fra", {}).get("top_k_features", 10)
     
     # Extract full 4D FRA tensor for a single sentence
-    fra_4d = get_sentence_fra_batch(model, sae, text, layer=layer, head=0, top_k=top_k, verbose=True)
+    fra_4d = get_sentence_fra_batch(
+        model, sae, text, layer=layer, head=0, top_k=top_k, verbose=True,
+        hook_point=hook_point,
+    )
     
     # Analyze multiple heads with averaged FRA
     for head in [0, 5, 10]:  # Test a few different heads
@@ -530,7 +442,7 @@ def main():
         result = compute_fra(
             model, sae, text, 
             layer=layer, head=head,
-            top_k=top_k, verbose=False
+            top_k=top_k, hook_point=hook_point, verbose=False
         )
         elapsed = time.time() - t0
         

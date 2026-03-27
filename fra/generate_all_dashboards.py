@@ -21,6 +21,7 @@ from fra.data_ind_viz import create_data_independent_dashboard
 from fra.dataset_search import run_dataset_search
 from fra.dataset_search_viz import create_dashboard_from_search
 from fra.single_sample_viz import create_fra_dashboard
+from fra.utils import infer_hook_point_from_sae, load_model_and_sae_from_config
 
 
 def generate_all_dashboards(
@@ -59,12 +60,16 @@ def generate_all_dashboards(
     if model is None:
         if verbose:
             print("Loading model...")
-        model = HookedTransformer.from_pretrained("gpt2-small", device="cuda")
+        model, sae, config = load_model_and_sae_from_config()
+        layer = int(config["sae"].get("layer", layer))
+        hook_point = config["sae"].get("hook_point") or infer_hook_point_from_sae(sae)
     
     if sae is None:
-        if verbose:
-            print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        _, sae, config = load_model_and_sae_from_config()
+        layer = int(config["sae"].get("layer", layer))
+        hook_point = config["sae"].get("hook_point") or infer_hook_point_from_sae(sae)
+    else:
+        hook_point = infer_hook_point_from_sae(sae)
     
     print("\n" + "="*60)
     print("🚀 Generating FRA Dashboards")
@@ -103,6 +108,7 @@ def generate_all_dashboards(
         head=head,
         num_samples=num_samples,
         filter_self_interactions=filter_self_interactions,
+        hook_point=hook_point,
         save_path=None  # Don't save pickle for now
     )
     

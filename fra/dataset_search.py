@@ -17,9 +17,12 @@ from dataclasses import dataclass
 import pickle
 from datetime import datetime
 
-from fra.induction_head import SAELensAttentionSAE
 from fra.fra_func import get_sentence_fra_batch
-from fra.utils import load_dataset_hf
+from fra.utils import (
+    infer_hook_point_from_sae,
+    load_dataset_hf,
+    load_model_and_sae_from_config,
+)
 
 
 @dataclass
@@ -56,7 +59,7 @@ class DatasetSearchResults:
 
 def search_dataset_for_interactions(
     model: HookedTransformer,
-    sae: SAELensAttentionSAE,
+    sae: Any,
     dataset_texts: List[str],
     layer: int = 5,
     head: int = 0,
@@ -65,6 +68,7 @@ def search_dataset_for_interactions(
     batch_size: int = 1,
     device: str = "cuda",
     filter_self_interactions: bool = True,
+    hook_point: Optional[str] = None,
     verbose: bool = True
 ) -> DatasetSearchResults:
     """
@@ -85,7 +89,8 @@ def search_dataset_for_interactions(
     Returns:
         DatasetSearchResults with interaction statistics and examples
     """
-    d_sae = sae.sae.W_dec.shape[0]
+    d_sae = sae.W_dec.shape[0] if hasattr(sae, "W_dec") else sae.sae.W_dec.shape[0]
+    hook_point = hook_point or infer_hook_point_from_sae(sae)
     
     # Initialize accumulators using dictionaries for sparse storage
     # This avoids creating huge tensors
@@ -116,7 +121,8 @@ def search_dataset_for_interactions(
                 # Get FRA for this sample with reduced top_k for memory efficiency
                 fra_result = get_sentence_fra_batch(
                     model, sae, text, layer, head,
-                    max_length=128, top_k=20, verbose=False  # Reduced top_k for memory
+                    max_length=128, top_k=20, verbose=False,
+                    hook_point=hook_point,  # Reduced top_k for memory
                 )
                 
                 if fra_result is None:
@@ -313,13 +319,14 @@ def load_search_results(filepath: str) -> DatasetSearchResults:
 
 def run_dataset_search(
     model: Optional[HookedTransformer] = None,
-    sae: Optional[SAELensAttentionSAE] = None,
+    sae: Optional[Any] = None,
     layer: int = 5,
     head: int = 0,
     num_samples: int = 100,
     dataset_path: Optional[str] = None,
     save_path: Optional[str] = None,
-    filter_self_interactions: bool = True
+    filter_self_interactions: bool = True,
+    hook_point: Optional[str] = None,
 ) -> DatasetSearchResults:
     """
     Convenience function to run dataset search with automatic loading.
@@ -338,13 +345,18 @@ def run_dataset_search(
     """
     # Load model if needed
     if model is None:
-        print("Loading model...")
-        model = HookedTransformer.from_pretrained("gpt2-small", device="cuda")
+        print("Loading model and SAE from config...")
+        model, sae, config = load_model_and_sae_from_config()
+        layer = int(config["sae"].get("layer", layer))
+        hook_point = hook_point or config["sae"].get("hook_point")
     
     # Load SAE if needed
     if sae is None:
-        print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        _, sae, config = load_model_and_sae_from_config()
+        layer = int(config["sae"].get("layer", layer))
+        hook_point = hook_point or config["sae"].get("hook_point")
+
+    hook_point = hook_point or infer_hook_point_from_sae(sae)
     
     # Load dataset
     print("Loading dataset...")
@@ -374,6 +386,7 @@ def run_dataset_search(
         top_k_per_pair=5,
         batch_size=1,
         filter_self_interactions=filter_self_interactions,
+        hook_point=hook_point,
         verbose=True
     )
     

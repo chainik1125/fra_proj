@@ -19,6 +19,7 @@ import tarfile
 
 from fra.induction_head import SAELensAttentionSAE, data_independent_attention
 from fra.single_sample_viz import fetch_neuronpedia_explanation, get_neuronpedia_url
+from fra.utils import load_model_and_sae_from_config
 
 
 def create_data_independent_dashboard(
@@ -473,12 +474,17 @@ def generate_data_independent_dashboard_from_config(
     # Load model if not provided
     if model is None:
         print("Loading model...")
-        model = HookedTransformer.from_pretrained("gpt2-small", device="cuda")
+        model, sae, config = load_model_and_sae_from_config(config_path=config_path)
+        layer = int(config["sae"].get("layer", layer))
     
     # Load SAE if not provided
     if sae is None:
-        print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        if model is None:
+            model, sae, config = load_model_and_sae_from_config(config_path=config_path)
+            layer = int(config["sae"].get("layer", layer))
+        else:
+            _, sae, config = load_model_and_sae_from_config(config_path=config_path)
+            layer = int(config["sae"].get("layer", layer))
     
     # Generate dashboard
     return create_data_independent_dashboard(
