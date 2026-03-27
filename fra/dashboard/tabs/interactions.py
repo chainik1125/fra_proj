@@ -7,9 +7,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from fra.core.helpers import get_position_heatmap, rank_pairs, aggregate_pairs
-from fra.dashboard._loaders import fetch_neuronpedia
-from fra.dashboard._state import get_fra_config, get_fra_data
-from fra.dashboard._widgets import (
+from fra.dashboard.loaders import fetch_neuronpedia
+from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.widgets import (
     _show_heatmap,
     neuronpedia_embed_url,
     token_activation_bar,

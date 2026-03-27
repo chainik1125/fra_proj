@@ -405,6 +405,8 @@ def get_sentence_fra_batch(
         'seq_len': seq_len,
         'total_interactions': total_interactions,
         'normalized': do_normalize,
+        'topk_features': topk_features,
+        'feature_activations': feature_activations,
     }
 
 

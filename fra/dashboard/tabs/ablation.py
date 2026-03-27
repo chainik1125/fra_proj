@@ -7,7 +7,7 @@ import streamlit as st
 import torch
 
 from fra.core.helpers import rank_pairs
-from fra.dashboard._loaders import (
+from fra.dashboard.loaders import (
     load_crosscoder,
     load_model,
     load_model_gemma,
@@ -16,8 +16,8 @@ from fra.dashboard._loaders import (
     load_sae_hub,
     load_sae_local,
 )
-from fra.dashboard._state import get_fra_config, get_fra_data
-from fra.dashboard._widgets import _show_heatmap, make_heatmap
+from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.widgets import _show_heatmap, make_heatmap
 
 
 def render(tab):
@@ -341,8 +341,8 @@ def render(tab):
                         disp = scores_np.copy()
                         disp[np.triu_indices_from(disp, k=1)] = np.nan
                         return make_heatmap(
-                            disp, _abl_ticks, hover_label,
-                            colorscale="RdBu", zmid=0,
+                            disp, _abl_ticks, _abl_ticks,
+                            hover_label=hover_label, colorscale="RdBu", zmid=0,
                         )
 
                     hm1, hm2, hm3 = st.columns(3)

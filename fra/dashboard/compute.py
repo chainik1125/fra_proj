@@ -2,7 +2,7 @@
 
 import torch
 
-from fra.dashboard._loaders import (
+from fra.dashboard.loaders import (
     load_crosscoder,
     load_model,
     load_model_gemma,
@@ -54,17 +54,9 @@ def run_fra(
             prepend_bos=include_special_tokens,
         )
 
-        # Also grab feature activations for token-level display
-        hook_name = f"blocks.{layer}.{hook_point}"
+        # Standard attention pattern + pre-softmax scores for comparison
         tokens = model.tokenizer.encode(text)[:128]
         tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-        _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
-        act = cache[hook_name].squeeze(0)
-        if act.dim() == 3:
-            act = act.flatten(-2, -1)
-        feat_acts = sae.encode(act)  # [seq_len, d_sae]
-
-        # Standard attention pattern + pre-softmax scores for comparison
         attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
         attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
         _, attn_cache = model.run_with_cache(
@@ -82,8 +74,8 @@ def run_fra(
         "shape": fra_result["shape"],
         "seq_len": fra_result["seq_len"],
         "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),         # [seq_len, d_sae], raw
-        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),  # [seq_len, d_sae], top-k filtered
+        "feat_acts_np": fra_result["feature_activations"].cpu().numpy(),  # [seq_len, d_sae], raw
+        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),       # [seq_len, d_sae], top-k filtered
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
         "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,

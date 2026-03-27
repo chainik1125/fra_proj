@@ -5,9 +5,9 @@ from pathlib import Path
 import streamlit as st
 import torch
 
-from fra.dashboard._loaders import load_crosscoder, load_model_pair
-from fra.dashboard._state import PRESETS, get_fra_data
-from fra.dashboard._widgets import _render_prompt_card
+from fra.dashboard.loaders import load_crosscoder, load_model_pair
+from fra.dashboard.state import PRESETS, get_fra_data
+from fra.dashboard.widgets import _render_prompt_card
 
 
 def render(tab):

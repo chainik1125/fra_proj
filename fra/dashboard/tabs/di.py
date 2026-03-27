@@ -9,8 +9,8 @@ import torch
 
 from fra.analysis.induction import compute_di_row, compute_global_di_topk
 from fra.core.helpers import rank_pairs
-from fra.dashboard._compute import _load_di_weights
-from fra.dashboard._state import PRESETS, get_fra_config, get_fra_data
+from fra.dashboard.compute import _load_di_weights
+from fra.dashboard.state import PRESETS, get_fra_config, get_fra_data
 
 
 # ---------------------------------------------------------------------------

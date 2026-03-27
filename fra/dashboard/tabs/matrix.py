@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from fra.core.helpers import rank_pairs
-from fra.dashboard._state import get_fra_config, get_fra_data
+from fra.dashboard.state import get_fra_config, get_fra_data
 
 
 def render(tab):

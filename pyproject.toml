@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dashboard = "fra.dashboard._run:main"
+dashboard = "fra.dashboard.run:main"
 
 [build-system]
 requires = ["setuptools"]

@@ -6,8 +6,8 @@ import numpy as np
 import streamlit as st
 
 from fra.core.helpers import compute_errors
-from fra.dashboard._state import get_fra_config, get_fra_data
-from fra.dashboard._widgets import _show_heatmap, make_heatmap
+from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.widgets import _show_heatmap, make_heatmap
 
 
 def render(tab):
@@ -67,7 +67,7 @@ def render(tab):
         with col_std_logit:
             st.markdown("**Standard** (masked QK scores)")
             _show_heatmap(
-                make_heatmap(std_logits, attn_tick_vals, "Logit", zmid=0),
+                make_heatmap(std_logits, attn_tick_vals, attn_tick_vals, hover_label="Logit", zmid=0),
                 attn_tick_vals, attn_tick_labels, seq_len,
                 compact_height=380, key="attn_std_logit",
             )
@@ -75,7 +75,7 @@ def render(tab):
         with col_fra_logit:
             st.markdown("**FRA** (signed sum over feature pairs)")
             _show_heatmap(
-                make_heatmap(fra_logits, attn_tick_vals, "Logit", zmid=0),
+                make_heatmap(fra_logits, attn_tick_vals, attn_tick_vals, hover_label="Logit", zmid=0),
                 attn_tick_vals, attn_tick_labels, seq_len,
                 compact_height=380, key="attn_fra_logit",
             )
@@ -88,7 +88,7 @@ def render(tab):
         with col_std_prob:
             st.markdown("**Standard** (attention weights)")
             _show_heatmap(
-                make_heatmap(std_probs, attn_tick_vals, "Weight"),
+                make_heatmap(std_probs, attn_tick_vals, attn_tick_vals, hover_label="Weight"),
                 attn_tick_vals, attn_tick_labels, seq_len,
                 compact_height=380, key="attn_std_prob",
             )
@@ -96,7 +96,7 @@ def render(tab):
         with col_fra_prob:
             st.markdown("**FRA** (softmax of FRA logits)")
             _show_heatmap(
-                make_heatmap(fra_probs, attn_tick_vals, "Weight"),
+                make_heatmap(fra_probs, attn_tick_vals, attn_tick_vals, hover_label="Weight"),
                 attn_tick_vals, attn_tick_labels, seq_len,
                 compact_height=380, key="attn_fra_prob",
             )
