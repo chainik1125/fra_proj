@@ -43,7 +43,14 @@ def create_fra_dashboard(
     Returns:
         Path to the generated HTML file
     """
-    from fra.induction_head import compute_fra, get_top_feature_interactions, get_attention_activations
+    # Legacy: compute_fra, get_top_feature_interactions, get_attention_activations
+    # were removed from fra.analysis.induction during consolidation.
+    # This function is non-functional until ported to use fra.core.fra.
+    raise NotImplementedError(
+        "create_fra_dashboard depends on legacy functions (compute_fra, "
+        "get_top_feature_interactions, get_attention_activations) that have been "
+        "removed. Use the Streamlit dashboard (fra/dashboard/) instead."
+    )
     from datetime import datetime
 
     # Set default output path in results folder
@@ -70,8 +77,8 @@ def create_fra_dashboard(
     )
 
     # Get feature activations for all tokens
-    from fra.induction_head import get_attention_activations
-    activations = get_attention_activations(model, text, layer=layer, max_length=128)
+    # Legacy: get_attention_activations removed (see NotImplementedError above)
+    activations = None  # unreachable
     feature_activations = sae.encode(activations)  # [seq_len, d_sae]
 
     # Get top interactions
@@ -664,7 +671,7 @@ def generate_dashboard_from_config(
 
     # Load SAE if not provided
     if sae is None:
-        from fra.induction_head import SAELensAttentionSAE
+        from fra.coders.sae_lens import SAELensAttentionSAE
         print(f"Loading SAE for layer {layer}...")
         RELEASE = "gpt2-small-hook-z-kk"
         SAE_ID = f"blocks.{layer}.hook_z"

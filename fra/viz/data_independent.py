@@ -17,7 +17,8 @@ from datetime import datetime
 import json
 import tarfile
 
-from fra.induction_head import SAELensAttentionSAE, data_independent_attention
+from fra.coders.sae_lens import SAELensAttentionSAE
+from fra.analysis.induction import data_independent_attention
 from fra.viz.neuronpedia import fetch_neuronpedia_explanation, get_neuronpedia_url
 
 

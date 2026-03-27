@@ -17,8 +17,8 @@ from dataclasses import dataclass
 import pickle
 from datetime import datetime
 
-from fra.induction_head import SAELensAttentionSAE
-from fra.fra_func import get_sentence_fra_batch
+from fra.coders.sae_lens import SAELensAttentionSAE
+from fra.core.fra import get_sentence_fra_batch
 from fra.utils import load_dataset_hf
 
 

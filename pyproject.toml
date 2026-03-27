@@ -13,6 +13,9 @@ dependencies = [
     "streamlit",
 ]
 
+[project.scripts]
+dashboard = "fra.dashboard._run:main"
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

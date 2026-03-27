@@ -26,7 +26,7 @@ import torch
 import torch.nn.functional as F
 
 from fra.core.fra import get_sentence_fra_batch
-from fra.core.helpers import get_qk_weights, fra_sum_to_attn
+from fra.core.helpers import get_qk_weights, fra_sum_to_attn, rank_pairs
 
 # Import load_sae from validation (will live in fra.analysis.validation after move)
 from fra.analysis.validation import load_sae
@@ -62,60 +62,6 @@ ABLATION_TEXTS = [
         " sister was reading, but it had no pictures or conversations in it."
     ),
 ]
-
-
-# ── Feature pair ranking ──────────────────────────────────────────────────
-
-
-def rank_feature_pairs(fra_sparse, diagonal=None, mode="sum"):
-    """
-    Rank (q_feat, k_feat) pairs by aggregated absolute strength.
-
-    Args:
-        fra_sparse: 4D sparse COO tensor [seq, seq, d_sae, d_sae]
-        diagonal: None=all, True=only i==j, False=only i!=j
-        mode: "sum" | "avg" | "max"
-
-    Returns:
-        List of (q_feat, k_feat, sum_abs, count) sorted descending.
-    """
-    indices = fra_sparse.indices().cpu().numpy()  # [4, nnz]
-    values = fra_sparse.values().cpu().numpy()
-
-    q_feats = indices[2]
-    k_feats = indices[3]
-    abs_vals = np.abs(values)
-
-    if diagonal is True:
-        mask = q_feats == k_feats
-        q_feats, k_feats, abs_vals = q_feats[mask], k_feats[mask], abs_vals[mask]
-    elif diagonal is False:
-        mask = q_feats != k_feats
-        q_feats, k_feats, abs_vals = q_feats[mask], k_feats[mask], abs_vals[mask]
-
-    pair_sum: dict = defaultdict(float)
-    pair_count: dict = defaultdict(int)
-    pair_max: dict = defaultdict(float)
-
-    for q, k, v in zip(q_feats, k_feats, abs_vals):
-        key = (int(q), int(k))
-        pair_sum[key] += float(v)
-        pair_count[key] += 1
-        pair_max[key] = max(pair_max[key], float(v))
-
-    pairs = [
-        (q, k, pair_sum[(q, k)], pair_count[(q, k)], pair_max[(q, k)])
-        for (q, k) in pair_sum
-    ]
-
-    if mode == "sum":
-        pairs.sort(key=lambda x: x[2], reverse=True)
-    elif mode == "avg":
-        pairs.sort(key=lambda x: x[2] / max(x[3], 1), reverse=True)
-    elif mode == "max":
-        pairs.sort(key=lambda x: x[4], reverse=True)
-
-    return pairs
 
 
 # ── Sparse tensor ablation ────────────────────────────────────────────────
@@ -328,8 +274,10 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
     d_sae = fra_sparse.shape[2]
 
     # 3. Rank feature pairs (off-diagonal and on-diagonal)
-    offdiag_pairs = rank_feature_pairs(fra_sparse, diagonal=False, mode=rank_mode)
-    ondiag_pairs = rank_feature_pairs(fra_sparse, diagonal=True, mode=rank_mode)
+    _indices_np = fra_sparse.indices().cpu().numpy()
+    _values_np = fra_sparse.values().cpu().numpy()
+    offdiag_pairs = rank_pairs(_indices_np, _values_np, top_k=len(_values_np), diagonal=False, mode=rank_mode)
+    ondiag_pairs = rank_pairs(_indices_np, _values_np, top_k=len(_values_np), diagonal=True, mode=rank_mode)
 
     n_offdiag = len(offdiag_pairs)
     n_ondiag = len(ondiag_pairs)

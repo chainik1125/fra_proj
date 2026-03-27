@@ -7,6 +7,7 @@ and reconstruction metrics.
 """
 
 import math
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -157,3 +158,85 @@ def print_errors(label: str, errs: dict) -> None:
     print(f"    R-squared           : {errs['r_squared']:.6f}")
     print(f"    Mean elem rel error : {errs['mean_rel_err']:.4f}  (median: {errs['median_rel_err']:.4f})")
     print(f"    Mean abs error      : {errs['mean_abs_err']:.6f}")
+
+
+# ── Pair ranking ─────────────────────────────────────────────────────────
+
+
+def aggregate_pairs(indices_np, values_np, diagonal=None):
+    """Aggregate sparse 4D FRA entries by (q_feat, k_feat) pair.
+
+    Args:
+        indices_np: [4, nnz] array (q_pos, k_pos, q_feat, k_feat)
+        values_np: [nnz] array
+        diagonal: None=all pairs, True=only i==j, False=only i!=j
+
+    Returns:
+        List of (q_feat, k_feat, sum_abs, count, max_abs) tuples.
+    """
+    q_feats = indices_np[2, :]
+    k_feats = indices_np[3, :]
+    abs_vals = np.abs(values_np)
+
+    if diagonal is True:
+        mask = q_feats == k_feats
+        q_feats, k_feats, abs_vals = q_feats[mask], k_feats[mask], abs_vals[mask]
+    elif diagonal is False:
+        mask = q_feats != k_feats
+        q_feats, k_feats, abs_vals = q_feats[mask], k_feats[mask], abs_vals[mask]
+
+    pair_sum: dict = defaultdict(float)
+    pair_count: dict = defaultdict(int)
+    pair_max: dict = defaultdict(float)
+    for q, k, v in zip(q_feats, k_feats, abs_vals):
+        pair_sum[(int(q), int(k))] += float(v)
+        pair_count[(int(q), int(k))] += 1
+        if float(v) > pair_max[(int(q), int(k))]:
+            pair_max[(int(q), int(k))] = float(v)
+
+    return [
+        (q, k, pair_sum[(q, k)], pair_count[(q, k)], pair_max[(q, k)])
+        for (q, k) in pair_sum
+    ]
+
+
+def rank_pairs(indices_np, values_np, top_k=50, diagonal=None, mode="sum"):
+    """Return top-k (q_feat, k_feat) pairs ranked by aggregation mode.
+
+    Modes:
+        sum  -- total absolute interaction strength
+        avg  -- mean absolute interaction per position-pair occurrence
+        max  -- single strongest position-pair interaction
+
+    Args:
+        indices_np: [4, nnz] array (q_pos, k_pos, q_feat, k_feat)
+        values_np: [nnz] array
+        top_k: Number of pairs to return.
+        diagonal: None=all pairs, True=only i==j, False=only i!=j
+        mode: Ranking criterion ("sum", "avg", or "max").
+
+    Returns:
+        List of (q_feat, k_feat, sum_abs, count, max_abs) tuples,
+        sorted descending by *mode*.
+    """
+    pairs = aggregate_pairs(indices_np, values_np, diagonal=diagonal)
+    if mode == "sum":
+        pairs.sort(key=lambda x: x[2], reverse=True)
+    elif mode == "avg":
+        pairs.sort(key=lambda x: x[2] / max(x[3], 1), reverse=True)
+    elif mode == "max":
+        pairs.sort(key=lambda x: x[4], reverse=True)
+    return pairs[:top_k]
+
+
+def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):
+    """Extract [seq_len, seq_len] heatmap for a specific (q_feat, k_feat) pair."""
+    mask = (indices_np[2] == q_feat) & (indices_np[3] == k_feat)
+    q_pos = indices_np[0, mask]
+    k_pos = indices_np[1, mask]
+    vals = np.abs(values_np[mask])
+
+    mat = np.zeros((seq_len, seq_len))
+    for qp, kp, v in zip(q_pos, k_pos, vals):
+        mat[qp, kp] += v
+    return mat
