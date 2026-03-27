@@ -115,9 +115,15 @@ def test_attention_reconstruction(model, sae, text, layer, head,
     Compare FRA-reconstructed attention to actual pre-softmax QK scores.
 
     Three sub-comparisons:
-      a1. FRA sum vs actual raw QK (end-to-end)
-      a2. SAE full-recon QK vs actual raw QK (SAE approximation error)
+      a1. FRA sum vs actual QK (end-to-end)
+      a2. SAE full-recon QK vs actual QK (SAE approximation error)
       a3. FRA sum vs SAE QK without b_dec (top-k truncation error)
+
+    Ground truth (actual_qk) is read directly from hook_attn_scores so it is
+    architecture-agnostic — RMSNorm, GQA, ALiBi etc. are handled by the model.
+    a2/a3 still compute QK from SAE reconstructions in the SAE's hook-point
+    space (hook_point arg), which is intentional: they measure approximation
+    error within that space.
     """
     device = next(model.parameters()).device
     tokens = model.tokenizer.encode(text)[:128]
@@ -125,18 +131,22 @@ def test_attention_reconstruction(model, sae, text, layer, head,
     seq_len = len(tokens)
 
     # ── Activations ──
-    hook_name = f"blocks.{layer}.{hook_point}"
-    _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
-    x = cache[hook_name].squeeze(0)          # [seq, d_model]
+    sae_hook_name = f"blocks.{layer}.{hook_point}"
+    attn_scores_hook_name = f"blocks.{layer}.attn.hook_attn_scores"
+    _, cache = model.run_with_cache(
+        tok_tensor, names_filter=[sae_hook_name, attn_scores_hook_name],
+    )
+    x = cache[sae_hook_name].squeeze(0)      # [seq, d_model] (SAE input space)
     if x.dim() == 3:
         x = x.flatten(-2, -1)
 
     W_Q, W_K, _, _ = get_qk_weights(model, layer, head)
     attn_scale = model.blocks[layer].attn.attn_scale
 
-    # ── 1. Actual QK (ground truth, scaled by 1/sqrt(d_head)) ──
-    # FRA tensors now include this scaling, so ground truth must match.
-    actual_qk = (((x @ W_Q) @ (x @ W_K).T) / attn_scale).cpu().numpy()
+    # ── 1. Actual QK (ground truth) — read directly from the model cache ──
+    # This is architecture-agnostic: RMSNorm, GQA, ALiBi etc. are all handled
+    # by the model itself.  Shape: [batch, n_heads, seq, seq] → [seq, seq].
+    actual_qk = cache[attn_scores_hook_name].squeeze(0)[head].cpu().numpy()
 
     # ── 2. SAE full-reconstruction QK (includes b_dec, scaled) ──
     features = sae.encode(x)
