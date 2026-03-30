@@ -22,10 +22,9 @@ import math
 import torch
 from typing import Any, Dict
 
-from tqdm import tqdm
 from transformer_lens import HookedTransformer
 
-from fra.core.helpers import get_W_K, topk_sparsify
+from fra.core.helpers import compute_fra_sparse, get_W_K, topk_sparsify
 
 @torch.no_grad()
 def get_sentence_fra_crosscoder(
@@ -138,7 +137,6 @@ def get_sentence_fra_crosscoder(
     eps = target_model.cfg.eps
     rms = (target_act.float().pow(2).mean(dim=-1) + eps).sqrt()   # [seq], float32 for numerical stability
 
-
     # W_Q / W_K already have gamma folded in by TransformerLens
     W_Q = target_model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
     W_K = get_W_K(target_model, layer, head)              # [d_model, d_head]
@@ -147,78 +145,24 @@ def get_sentence_fra_crosscoder(
 
     W_dec = crosscoder.W_dec                              # [d_sae, d_model]
 
-    # ---- FRA loop (lower-triangular, causal) ----
-    all_indices = []
-    all_values = []
-    total_pairs = seq_len * (seq_len + 1) // 2
+    fra_tensor_sparse = compute_fra_sparse(
+        topk_features, W_dec, W_Q, W_K, attn_scale,
+        rms=rms,
+        chunk_size=16,
+        verbose=verbose,
+        layer_head_label=f"L{layer}H{head}",
+    )
 
-    pbar = tqdm(total=total_pairs, desc=f"Computing FRA (L{layer}H{head})",
-                disable=not verbose)
+    # Move to device if it fits
+    if str(device) != "cpu":
+        try:
+            fra_tensor_sparse = fra_tensor_sparse.to(device)
+        except RuntimeError:
+            if verbose:
+                print("Warning: sparse tensor too large for GPU, keeping on CPU.")
 
-    for key_idx in range(seq_len):
-        for query_idx in range(key_idx, seq_len):
-            q_feat = topk_features[query_idx]
-            k_feat = topk_features[key_idx]
-
-            q_active = torch.where(q_feat != 0)[0]
-            k_active = torch.where(k_feat != 0)[0]
-
-            if len(q_active) == 0 or len(k_active) == 0:
-                pbar.update(1)
-                continue
-
-            q_vecs = W_dec[q_active]                       # [n_q, d_model]
-            k_vecs = W_dec[k_active]                       # [n_k, d_model]
-
-            q_proj = torch.matmul(q_vecs, W_Q)              # [n_q, d_head]
-            k_proj = torch.matmul(k_vecs, W_K)              # [n_k, d_head]
-            int_matrix = torch.matmul(q_proj, k_proj.T)   # [n_q, n_k]
-
-            # Scale by 1/sqrt(d_head) (standard attention scaling),
-            # activation magnitudes, and RMSNorm correction.
-            # The 1/(rms_q * rms_k) factor accounts for the input-dependent
-            # part of RMSNorm; gamma is already folded into W_Q / W_K.
-            int_matrix = (
-                int_matrix
-                * q_feat[q_active].unsqueeze(1)
-                * k_feat[k_active].unsqueeze(0)
-                / (attn_scale * rms[query_idx] * rms[key_idx])
-            )
-
-            mask = int_matrix.abs() > 1e-10
-            if mask.any():
-                local_r, local_c = torch.where(mask)
-                n = len(local_r)
-                pos_indices = torch.zeros((4, n), dtype=torch.long)
-                pos_indices[0, :] = query_idx
-                pos_indices[1, :] = key_idx
-                pos_indices[2, :] = q_active[local_r]
-                pos_indices[3, :] = k_active[local_c]
-
-                all_indices.append(pos_indices)
-                all_values.append(int_matrix[mask])
-
-            pbar.update(1)
-
-    pbar.close()
-
-    # ---- assemble sparse tensor ----
-    shape = (seq_len, seq_len, d_sae, d_sae)
-
-    if all_indices:
-        indices = torch.cat(all_indices, dim=1).to(device)
-        values = torch.cat(all_values).to(device)
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            indices, values, size=shape, device=device, dtype=torch.float32,
-        ).coalesce()
-        total_interactions = fra_tensor_sparse._nnz()
-    else:
-        empty_idx = torch.zeros((4, 0), dtype=torch.long, device=device)
-        empty_val = torch.zeros(0, dtype=torch.float32, device=device)
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            empty_idx, empty_val, size=shape, device=device,
-        )
-        total_interactions = 0
+    total_interactions = fra_tensor_sparse._nnz()
+    shape = fra_tensor_sparse.shape
 
     if verbose:
         _k = top_k if top_k is not None else d_sae

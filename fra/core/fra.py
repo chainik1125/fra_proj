@@ -6,8 +6,7 @@ import numpy as np
 from typing import Any, Dict
 from einops import einsum
 from fra.core.activations import get_llm_activations
-from fra.core.helpers import topk_sparsify
-from tqdm import tqdm
+from fra.core.helpers import compute_fra_sparse, topk_sparsify
 
 
 
@@ -281,115 +280,37 @@ def get_sentence_fra_batch(
     else:
         dec_norms = None
 
-    # Collect all sparse interactions on CPU (GPU only holds one chunk at a time).
-    # Loop order: query-outer, key-inner.  For each query position we pre-compute
-    # q_proj = W_dec[q_active] @ W_Q  once, then reuse across all key positions.
-    # chunk_size controls how many query positions are batched before we flush to CPU,
-    # bounding GPU memory to O(chunk_size × top_k² × d_head) at any time.
-    all_indices_cpu: list[torch.Tensor] = []   # each: [4, n_int], CPU, long
-    all_values_cpu:  list[torch.Tensor] = []   # each: [n_int],    CPU, float32
-
-    total_pairs = seq_len * (seq_len + 1) // 2
-    if verbose:
-        pbar = tqdm(total=total_pairs, desc=f"Computing 4D FRA (L{layer}H{head})")
-
-    for q_start in range(0, seq_len, chunk_size):
-        q_end = min(q_start + chunk_size, seq_len)
-        chunk_indices: list[torch.Tensor] = []
-        chunk_values:  list[torch.Tensor] = []
-
-        for query_idx in range(q_start, q_end):
-            q_feat   = topk_features[query_idx]           # [d_sae]
-            q_active = torch.where(q_feat != 0)[0]        # [n_q]
-
-            if len(q_active) == 0:
-                if verbose:
-                    pbar.update(query_idx + 1)  # query_idx+1 key positions skipped
-                continue
-
-            # Pre-compute query projection once for all key positions in this row
-            q_vecs  = W_dec[q_active]          # [n_q, d_model]
-            q_proj  = q_vecs @ W_Q             # [n_q, d_head]
-            q_scales = q_feat[q_active]        # [n_q]
-            if dec_norms is not None:
-                q_scales = q_scales / dec_norms[q_active]
-
-            for key_idx in range(query_idx + 1):   # causal: key ≤ query
-                k_feat   = topk_features[key_idx]
-                k_active = torch.where(k_feat != 0)[0]
-
-                if len(k_active) == 0:
-                    if verbose:
-                        pbar.update(1)
-                    continue
-
-                k_vecs = W_dec[k_active]       # [n_k, d_model]
-                k_proj = k_vecs @ W_K          # [n_k, d_head]
-
-                k_scales = k_feat[k_active]    # [n_k]
-                if dec_norms is not None:
-                    k_scales = k_scales / dec_norms[k_active]
-
-                int_matrix = (q_proj @ k_proj.T) / attn_scale              # [n_q, n_k]
-                int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
-
-                mask = int_matrix.abs() > 1e-10
-                if mask.any():
-                    local_r, local_c = torch.where(mask)
-                    n_int = len(local_r)
-
-                    # Build index tensor on CPU immediately — no GPU memory held
-                    pos_indices = torch.empty((4, n_int), dtype=torch.long)
-                    pos_indices[0] = query_idx
-                    pos_indices[1] = key_idx
-                    pos_indices[2] = q_active[local_r].cpu()
-                    pos_indices[3] = k_active[local_c].cpu()
-
-                    chunk_indices.append(pos_indices)
-                    chunk_values.append(int_matrix[mask].detach().cpu().float())
-
-                if verbose:
-                    pbar.update(1)
-
-        # Flush this chunk to main CPU lists and free GPU intermediates
-        all_indices_cpu.extend(chunk_indices)
-        all_values_cpu.extend(chunk_values)
-        device_str = device.type if hasattr(device, 'type') else str(device)
-        if device_str != "cpu":
-            torch.cuda.empty_cache()
-
-    if verbose:
-        pbar.close()
-
-    # Combine all interactions
-    shape = (seq_len, seq_len, d_sae, d_sae)
-    if len(all_indices_cpu) > 0:
-        indices_cpu = torch.cat(all_indices_cpu, dim=1)  # [4, total_nnz]
-        values_cpu  = torch.cat(all_values_cpu)          # [total_nnz]
-
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            indices_cpu, values_cpu,
-            size=shape,
-            device="cpu",
-            dtype=torch.float32,
-        ).coalesce()
-
-        # Move to device only if it fits (for large SAEs keep on CPU)
-        if str(device) != "cpu":
-            try:
-                fra_tensor_sparse = fra_tensor_sparse.to(device)
-            except RuntimeError:
-                if verbose:
-                    print("Warning: sparse tensor too large for GPU, keeping on CPU.")
-
-        total_interactions = fra_tensor_sparse._nnz()
+    # RMSNorm correction: when the SAE's decoder vectors live in residual-
+    # stream space (hook_resid_pre / hook_resid_post) but W_Q / W_K project
+    # from post-RMSNorm space, we must divide each interaction by the
+    # per-position RMS.  When the hook is already post-LayerNorm
+    # (ln1.hook_normalized) or in head space (attn.hook_z), no correction
+    # is needed.
+    if "resid" in hook_point:
+        eps = model.cfg.eps
+        rms = (act.float().pow(2).mean(dim=-1) + eps).sqrt()  # [seq_len]
     else:
-        empty_indices = torch.zeros((4, 0), dtype=torch.long)
-        empty_values  = torch.zeros(0, dtype=torch.float32)
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            empty_indices, empty_values, size=shape, device="cpu"
-        )
-        total_interactions = 0
+        rms = None
+
+    fra_tensor_sparse = compute_fra_sparse(
+        topk_features, W_dec, W_Q, W_K, attn_scale,
+        rms=rms,
+        dec_norms=dec_norms,
+        chunk_size=chunk_size,
+        verbose=verbose,
+        layer_head_label=f"L{layer}H{head}",
+    )
+
+    # Move to device if it fits (for large SAEs keep on CPU)
+    if str(device) != "cpu":
+        try:
+            fra_tensor_sparse = fra_tensor_sparse.to(device)
+        except RuntimeError:
+            if verbose:
+                print("Warning: sparse tensor too large for GPU, keeping on CPU.")
+
+    total_interactions = fra_tensor_sparse._nnz()
+    shape = fra_tensor_sparse.shape
 
     if verbose:
         _k = top_k if top_k is not None else d_sae
