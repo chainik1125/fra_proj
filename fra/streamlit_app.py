@@ -105,7 +105,6 @@ def run_fra(
     model_name: str = "gpt2-small",
     chunk_size: int = 16,
     hf_token: str = "",
-    include_special_tokens: bool = True,
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
     from fra.fra_func import get_sentence_fra_batch
@@ -119,6 +118,7 @@ def run_fra(
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
+    # Let the tokenizer decide whether to prepend BOS (model-appropriate default)
     with torch.no_grad():
         fra_result = get_sentence_fra_batch(
             model, sae, text,
@@ -126,14 +126,12 @@ def run_fra(
             max_length=128, top_k=top_k_features,
             hook_point=hook_point,
             chunk_size=chunk_size,
-            prepend_bos=include_special_tokens,
+            prepend_bos=None,
         )
 
         # Also grab feature activations for token-level display
         hook_name = f"blocks.{layer}.{hook_point}"
-        tokens = model.tokenizer.encode(
-            text, add_special_tokens=include_special_tokens
-        )[:128]
+        tokens = model.tokenizer.encode(text)[:128]
         tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
         _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
         act = cache[hook_name].squeeze(0)
@@ -150,6 +148,13 @@ def run_fra(
 
         token_strs = [model.tokenizer.decode([t]) for t in tokens]
 
+        # Detect whether the tokenizer prepended a BOS token
+        has_bos = (
+            model.tokenizer.bos_token_id is not None
+            and len(tokens) > 0
+            and tokens[0] == model.tokenizer.bos_token_id
+        )
+
     sparse = fra_result["fra_tensor_sparse"]
     return {
         "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
@@ -160,6 +165,7 @@ def run_fra(
         "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
         "token_strs": token_strs,
+        "has_bos": has_bos,
     }
 
 
@@ -347,10 +353,14 @@ with st.sidebar:
     chunk_size = st.slider("Chunk size (↓ = less GPU mem)", 1, 32, default_chunk)
     top_k_pairs = st.slider("Top-K pairs to display", 10, 100, 30)
     filter_self = st.checkbox("Filter self-interactions (q==k)", value=False)
-    include_special_tokens = st.checkbox(
-        "Include special tokens (BOS)",
-        value=True,
-        help="Gemma adds a BOS token by default. Uncheck to exclude it. GPT-2 has no BOS.",
+    hide_bos = st.checkbox(
+        "Hide BOS token in display",
+        value=False,
+        help=(
+            "Some models (e.g. Gemma) prepend a BOS token that dominates attention. "
+            "Check this to exclude position 0 from all visualisations. "
+            "BOS is always included in computation for correctness."
+        ),
     )
 
     st.subheader("Ranking mode")
@@ -424,7 +434,6 @@ if compute_btn:
             model_name=model_name,
             chunk_size=int(chunk_size),
             hf_token=hf_token,
-            include_special_tokens=include_special_tokens,
         )
 
     st.session_state["fra_data"] = fra_data
@@ -436,6 +445,7 @@ if compute_btn:
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
         "agg_mode": agg_mode,
+        "hide_bos": hide_bos,
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -467,21 +477,46 @@ fra_data = st.session_state["fra_data"]
 cfg = st.session_state["fra_config"]
 layer_ = cfg["layer"]
 head_ = cfg["head"]
-seq_len = fra_data["seq_len"]
-token_strs = fra_data["token_strs"][:seq_len]
+seq_len_full = fra_data["seq_len"]
+
+# --- BOS filtering ---
+# If the model prepended a BOS token and the user wants to hide it,
+# we mask out position 0 from the sparse indices for display purposes.
+_hide_bos = cfg.get("hide_bos", False) and fra_data.get("has_bos", False)
+if _hide_bos:
+    # Filter sparse entries: drop any row where q_pos==0 or k_pos==0,
+    # then shift remaining positions down by 1.
+    _idx = fra_data["indices_np"]
+    _vals = fra_data["values_np"]
+    _keep = (_idx[0] > 0) & (_idx[1] > 0)
+    display_indices = _idx[:, _keep].copy()
+    display_indices[0] -= 1  # shift q_pos
+    display_indices[1] -= 1  # shift k_pos
+    display_values = _vals[_keep]
+    seq_len = seq_len_full - 1
+    token_strs = fra_data["token_strs"][1:seq_len_full]
+    feat_acts_display = fra_data["feat_acts_np"][1:seq_len_full]
+    attn_pattern_display = fra_data["attn_pattern_np"][1:seq_len_full, 1:seq_len_full]
+else:
+    display_indices = fra_data["indices_np"]
+    display_values = fra_data["values_np"]
+    seq_len = seq_len_full
+    token_strs = fra_data["token_strs"][:seq_len_full]
+    feat_acts_display = fra_data["feat_acts_np"][:seq_len_full]
+    attn_pattern_display = fra_data["attn_pattern_np"][:seq_len_full, :seq_len_full]
 
 # Recompute pairs (filter / top_k / agg_mode may change without recomputing FRA)
 agg_mode = cfg.get("agg_mode", "avg")
 pairs = get_ranked_pairs(
-    fra_data["indices_np"],
-    fra_data["values_np"],
+    display_indices,
+    display_values,
     top_k=cfg["top_k_pairs"],
     filter_self=cfg["filter_self"],
     mode=agg_mode,
 )
 bottom_pairs = get_bottom_pairs(
-    fra_data["indices_np"],
-    fra_data["values_np"],
+    display_indices,
+    display_values,
     top_k=cfg["top_k_pairs"],
     filter_self=cfg["filter_self"],
 )
@@ -493,9 +528,12 @@ bottom_pairs = get_bottom_pairs(
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Tokens", seq_len)
 c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
-total_unique = len(_aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], cfg["filter_self"]))
+total_unique = len(_aggregate_pairs(display_indices, display_values, cfg["filter_self"]))
 c3.metric("Unique feature pairs", f"{total_unique:,}")
 c4.metric(f"Layer / Head", f"L{layer_} / H{head_}")
+
+if _hide_bos:
+    st.caption("BOS token hidden from display (still included in computation).")
 
 # Tokenised text display
 tok_html = " ".join(
@@ -578,7 +616,7 @@ with tab1:
                 )
 
             # --- Per-token activation bars ---
-            feat_acts = fra_data["feat_acts_np"]  # [seq_len, d_sae]
+            feat_acts = feat_acts_display  # [seq_len, d_sae]
             q_acts = feat_acts[:, q_sel]
             k_acts = feat_acts[:, k_sel]
 
@@ -603,8 +641,8 @@ with tab1:
             # --- Position heatmap: [seq, seq] for this pair ---
             st.markdown("**Position heatmap** — where does this pair interact?")
             pos_mat = get_position_heatmap(
-                fra_data["indices_np"],
-                fra_data["values_np"],
+                display_indices,
+                display_values,
                 q_sel, k_sel, seq_len,
             )
             fig_pos = go.Figure(go.Heatmap(
@@ -719,7 +757,7 @@ with tab3:
 
     with col_std:
         st.markdown("**Standard token-level attention** (post-softmax)")
-        attn = fra_data["attn_pattern_np"][:seq_len, :seq_len]
+        attn = attn_pattern_display
         fig_attn = go.Figure(go.Heatmap(
             z=attn,
             x=[html_lib.escape(t) for t in token_strs],
@@ -743,8 +781,8 @@ with tab3:
             "**FRA attention** — summed over all feature pairs, per position"
         )
         # Collapse feature dims: sum abs(value) for each (q_pos, k_pos)
-        idxs = fra_data["indices_np"]
-        vals_abs = np.abs(fra_data["values_np"])
+        idxs = display_indices
+        vals_abs = np.abs(display_values)
         fra_pos_mat = np.zeros((seq_len, seq_len))
         q_pos_all = idxs[0, :]
         k_pos_all = idxs[1, :]
@@ -789,7 +827,7 @@ with tab4:
 
     # Build pair selection UI
     all_pairs_for_ablation = get_ranked_pairs(
-        fra_data["indices_np"], fra_data["values_np"],
+        display_indices, display_values,
         top_k=100, filter_self=False, mode=agg_mode,
     )
 
@@ -823,6 +861,15 @@ with tab4:
 
         with abl_col2:
             st.markdown("**Pairs to ablate:**")
+            st.info(
+                "Ablation removes entire feature-pair **channels** from the 4D FRA tensor. "
+                "For a selected pair (i, j), all entries FRA[:, :, i, j] across every position "
+                "pair are zeroed out — the pair's interaction is removed everywhere in the sequence, "
+                "not just at one position.\n\n"
+                "**avg** = mean |FRA| per occurrence (how strong is this pair where it fires?).  \n"
+                "**sum** = total |FRA| across all position pairs (overall importance in the sequence).",
+                icon="ℹ️",
+            )
             if abl_target.startswith("Top off"):
                 selected_pairs = offdiag_list[:n_ablate]
             elif abl_target.startswith("Top on"):
@@ -867,17 +914,17 @@ with tab4:
                 if bias is None:
                     st.error("Text too short for ablation.")
                 else:
-                    # The dashboard may have excluded BOS or truncated differently
-                    # than compute_bias_corrections (which re-tokenizes).
-                    # Truncate bias vectors to match the FRA's seq_len.
+                    # Ablation always uses the full (unfiltered) FRA tensor,
+                    # including BOS if present.
+                    abl_seq = seq_len_full
                     bias_seq = bias["seq_len"]
-                    if bias_seq != seq_len:
-                        # Trim bias terms to dashboard's seq_len
-                        bias["term_q"] = bias["term_q"][:seq_len]
-                        bias["term_k"] = bias["term_k"][:seq_len]
-                        bias["seq_len"] = seq_len
+                    if bias_seq != abl_seq:
+                        # Trim bias terms to match the full FRA seq_len
+                        bias["term_q"] = bias["term_q"][:abl_seq]
+                        bias["term_k"] = bias["term_k"][:abl_seq]
+                        bias["seq_len"] = abl_seq
                         # Also trim token tensor and labels
-                        bias["tok_tensor"] = bias["tok_tensor"][:, :seq_len]
+                        bias["tok_tensor"] = bias["tok_tensor"][:, :abl_seq]
                         bias["shift_labels"] = bias["tok_tensor"][0, 1:]
                         # Re-run unpatched loss with trimmed tokens
                         logits_trim = mdl(bias["tok_tensor"])
@@ -890,25 +937,25 @@ with tab4:
                     d_sae_val = fra_data["feat_acts_np"].shape[1]
                     sp_indices = torch.tensor(fra_data["indices_np"], dtype=torch.long)
                     sp_values = torch.tensor(fra_data["values_np"], dtype=torch.float32)
-                    sp_size = torch.Size([seq_len, seq_len, d_sae_val, d_sae_val])
+                    sp_size = torch.Size([abl_seq, abl_seq, d_sae_val, d_sae_val])
                     fra_sparse = torch.sparse_coo_tensor(sp_indices, sp_values, size=sp_size).coalesce()
 
                     # Full FRA scores (baseline)
                     from fra.validation import fra_sum_to_attn
-                    fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
+                    fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
                     scores_full = reconstruct_scores(fra_sum_full, bias, device)
 
                     # Ablated scores
                     pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
                     fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
-                    fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
+                    fra_sum_abl = fra_sum_to_attn(fra_ablated, abl_seq)
                     scores_abl = reconstruct_scores(fra_sum_abl, bias, device)
 
                     # Zero scores
                     mask_t = torch.triu(
-                        torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
+                        torch.full((abl_seq, abl_seq), float("-inf"), device=device), diagonal=1
                     )
-                    scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
+                    scores_zero = torch.zeros((abl_seq, abl_seq), device=device) + mask_t
 
                     # Run conditions
                     tok_t = bias["tok_tensor"]
@@ -949,14 +996,17 @@ with tab4:
                     st.markdown("**Attention score comparison**")
                     hm1, hm2, hm3 = st.columns(3)
 
+                    # Ablation uses full (unfiltered) tokens for labels
+                    abl_token_strs = fra_data["token_strs"][:seq_len_full]
+
                     def _score_heatmap(scores_np, title):
                         # Mask upper triangle for display
                         disp = scores_np.copy()
                         disp[np.triu_indices_from(disp, k=1)] = np.nan
                         fig = go.Figure(go.Heatmap(
                             z=disp,
-                            x=[html_lib.escape(t) for t in token_strs],
-                            y=[html_lib.escape(t) for t in token_strs],
+                            x=[html_lib.escape(t) for t in abl_token_strs],
+                            y=[html_lib.escape(t) for t in abl_token_strs],
                             colorscale="RdBu",
                             zmid=0,
                             hovertemplate="Q: %{y}<br>K: %{x}<br>Score: %{z:.2f}<extra></extra>",
