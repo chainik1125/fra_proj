@@ -761,8 +761,13 @@ def get_sentence_fra_crosscoder(
     # correction is always needed.  Use the full reconstructed activations
     # (not actual model activations) so that FRA scores match coder-patched
     # scores when all features are kept.
-    x_hat_stacked = crosscoder.decode(feature_activations.to(crosscoder.W_dec.dtype))
-    x_hat = x_hat_stacked[:, crosscoder.model_idx].float()  # [seq, d_model]
+    #
+    # Decode in float32 to match the precision used for per-feature W_dec
+    # projections inside compute_fra_sparse (which casts W_dec.float()).
+    # Using the native float16 decode would introduce precision mismatch
+    # between the RMS denominator and the per-feature numerators.
+    b_dec_rms = crosscoder._crosscoder.decoder.bias[crosscoder.model_idx].float().to(device)
+    x_hat = feature_activations.float() @ crosscoder.W_dec.float() + b_dec_rms
     return _build_fra_result(
         target_model, layer, head, feature_activations, crosscoder.W_dec, device,
         top_k=top_k,
