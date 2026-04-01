@@ -169,7 +169,7 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     }
 
 
-def reconstruct_scores(fra_sum_2d, bias, device):
+def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None):
     """
     Build full pre-softmax attention scores from FRA sum + bias corrections.
 
@@ -177,6 +177,10 @@ def reconstruct_scores(fra_sum_2d, bias, device):
         fra_sum_2d: [seq, seq] numpy array (FRA collapsed over feature dims)
         bias: dict from compute_bias_corrections
         device: torch device
+        actual_bos_scores: Optional [seq, seq] numpy array of actual attention
+            scores.  When provided, row 0 and column 0 (BOS positions) are
+            copied from the actual scores into the reconstruction.  Use this
+            when the SAE was not trained on BOS activations.
 
     Returns:
         [seq, seq] torch tensor ready to patch into hook_attn_scores.
@@ -195,7 +199,17 @@ def reconstruct_scores(fra_sum_2d, bias, device):
     causal = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
     scores += causal
 
-    return torch.tensor(scores, dtype=torch.float32, device=device)
+    scores_t = torch.tensor(scores, dtype=torch.float32, device=device)
+
+    if actual_bos_scores is not None:
+        actual_t = torch.tensor(
+            actual_bos_scores[:seq_len, :seq_len],
+            dtype=torch.float32, device=device,
+        )
+        scores_t[0, :] = actual_t[0, :]
+        scores_t[:, 0] = actual_t[:, 0]
+
+    return scores_t
 
 
 # ── Run a single ablation condition ───────────────────────────────────────

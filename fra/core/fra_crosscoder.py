@@ -145,9 +145,25 @@ def get_sentence_fra_crosscoder(
 
     W_dec = crosscoder.W_dec                              # [d_sae, d_model]
 
+    # RoPE parameters
+    rope_sin = None
+    rope_cos = None
+    rotary_dim = None
+    rotary_adjacent_pairs = False
+    if getattr(target_model.cfg, "positional_embedding_type", None) == "rotary":
+        attn_block = target_model.blocks[layer].attn
+        rope_sin = attn_block.rotary_sin
+        rope_cos = attn_block.rotary_cos
+        rotary_dim = target_model.cfg.rotary_dim
+        rotary_adjacent_pairs = getattr(target_model.cfg, "rotary_adjacent_pairs", False)
+
     fra_tensor_sparse = compute_fra_sparse(
         topk_features, W_dec, W_Q, W_K, attn_scale,
         rms=rms,
+        rope_sin=rope_sin,
+        rope_cos=rope_cos,
+        rotary_dim=rotary_dim,
+        rotary_adjacent_pairs=rotary_adjacent_pairs,
         chunk_size=16,
         verbose=verbose,
         layer_head_label=f"L{layer}H{head}",

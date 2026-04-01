@@ -55,7 +55,9 @@ def run_fra(
         )
 
         # Standard attention pattern + pre-softmax scores for comparison
-        tokens = model.tokenizer.encode(text)[:128]
+        tokens = model.tokenizer.encode(
+            text, add_special_tokens=include_special_tokens,
+        )[:128]
         tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
         attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
         attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
@@ -79,6 +81,7 @@ def run_fra(
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
         "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,
+        "tokens": tokens[:fra_result["seq_len"]],
     }
 
 

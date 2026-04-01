@@ -17,6 +17,7 @@ PRESETS = {
         "default_layer": 5,
         "n_heads": 12,
         "supports_neuronpedia": True,
+        "trained_on_bos": True,
     },
     "GPT-2 Small — SAE (ln1, local)": {
         "type": "sae_local",
@@ -27,6 +28,7 @@ PRESETS = {
         "default_layer": 2,
         "n_heads": 12,
         "supports_neuronpedia": False,
+        "trained_on_bos": True,
     },
     "Gemma-2 2B — Gemma-Scope (resid_pre)": {
         "type": "sae_gemma",
@@ -40,6 +42,7 @@ PRESETS = {
         "supports_neuronpedia": False,
         "hf_token_required": True,
         "chunk_size_default": 1,
+        "trained_on_bos": False,
     },
     "Gemma-2 2B — Crosscoder (Base vs Instruct)": {
         "type": "crosscoder",
@@ -53,6 +56,7 @@ PRESETS = {
         "model_labels": ("Base (model 0)", "Instruct (model 1)"),
         "ram_note": "~12 GB GPU RAM (both Gemma 2B models fp16 + crosscoder).",
         "is_reasoning": False,
+        "trained_on_bos": True,
     },
     "Llama 8B — Crosscoder (Base vs R1-Distill)": {
         "type": "crosscoder",
@@ -70,6 +74,7 @@ PRESETS = {
         "model_labels": ("Base (model 0)", "Reasoning (model 1)"),
         "ram_note": "~36 GB GPU RAM (both Llama 8B models fp16 + crosscoder).",
         "is_reasoning": True,
+        "trained_on_bos": True,
     },
 }
 

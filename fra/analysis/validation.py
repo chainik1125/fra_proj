@@ -110,7 +110,8 @@ def load_sae(sae_type: str, layer: int, device: str,
 
 @torch.no_grad()
 def test_attention_reconstruction(model, sae, text, layer, head,
-                                  hook_point, top_k, chunk_size):
+                                  hook_point, top_k, chunk_size,
+                                  trained_on_bos=True):
     """
     Compare FRA-reconstructed attention to actual pre-softmax QK scores.
 
@@ -181,13 +182,14 @@ def test_attention_reconstruction(model, sae, text, layer, head,
     fra_max *= causal
     fra_mean *= causal
 
+    _excl = not trained_on_bos
     results = {
-        "a1_fra_vs_actual": compute_errors(actual_qk, fra_sum_corr),
-        "a2_sae_vs_actual": compute_errors(actual_qk, sae_qk),
-        "a3_fra_vs_sae_nobias": compute_errors(sae_qk_nobias, fra_sum_corr),
+        "a1_fra_vs_actual": compute_errors(actual_qk, fra_sum_corr, exclude_bos=_excl),
+        "a2_sae_vs_actual": compute_errors(actual_qk, sae_qk, exclude_bos=_excl),
+        "a3_fra_vs_sae_nobias": compute_errors(sae_qk_nobias, fra_sum_corr, exclude_bos=_excl),
         # Max/mean vs actual QK (only sum is mathematically correct; max/mean are diagnostic)
-        "fra_max_vs_actual": compute_errors(actual_qk, fra_max),
-        "fra_mean_vs_actual": compute_errors(actual_qk, fra_mean),
+        "fra_max_vs_actual": compute_errors(actual_qk, fra_max, exclude_bos=_excl),
+        "fra_mean_vs_actual": compute_errors(actual_qk, fra_mean, exclude_bos=_excl),
         "normalized": fra_result.get("normalized", False),
         "seq_len": seq_len,
         "nnz": fra_result["total_interactions"],
@@ -199,7 +201,8 @@ def test_attention_reconstruction(model, sae, text, layer, head,
 
 
 @torch.no_grad()
-def test_sae_reconstruction(model, sae, text, layer, hook_point):
+def test_sae_reconstruction(model, sae, text, layer, hook_point,
+                            trained_on_bos=True):
     """Measure SAE encode->decode quality on the residual stream."""
     device = next(model.parameters()).device
     tokens = model.tokenizer.encode(text)[:128]
@@ -231,7 +234,7 @@ def test_sae_reconstruction(model, sae, text, layer, hook_point):
     diff_norm = float(np.linalg.norm(x_np - x_hat_np))
 
     return {
-        "recon": compute_errors(x_np, x_hat_np),
+        "recon": compute_errors(x_np, x_hat_np, exclude_bos=not trained_on_bos),
         "avg_active_features": n_active,
         "l0_min": float(per_token_l0.min().item()),
         "l0_max": float(per_token_l0.max().item()),
@@ -253,7 +256,8 @@ def test_sae_reconstruction(model, sae, text, layer, hook_point):
 
 @torch.no_grad()
 def test_loss_recovery(model, sae, text, layer, head,
-                       hook_point, top_k, chunk_size):
+                       hook_point, top_k, chunk_size,
+                       trained_on_bos=True):
     """
     Patch a single head's pre-softmax attention scores and measure loss.
 
@@ -345,6 +349,18 @@ def test_loss_recovery(model, sae, text, layer, head,
         torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
     )
     sae_scores_t = sae_full + mask_t
+
+    # ── Copy actual BOS scores when SAE wasn't trained on BOS ──
+    if not trained_on_bos:
+        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
+        _, attn_cache = model.run_with_cache(
+            tok_tensor, names_filter=[attn_scores_hook],
+        )
+        actual_scores = attn_cache[attn_scores_hook].squeeze(0)[head]  # [seq, seq]
+        fra_scores_t[0, :] = actual_scores[0, :seq_len]
+        fra_scores_t[:, 0] = actual_scores[:seq_len, 0]
+        sae_scores_t[0, :] = actual_scores[0, :seq_len]
+        sae_scores_t[:, 0] = actual_scores[:seq_len, 0]
 
     # ── Hook name for patching ──
     score_hook = f"blocks.{layer}.attn.hook_attn_scores"

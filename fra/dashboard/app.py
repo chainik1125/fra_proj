@@ -342,7 +342,7 @@ if compute_btn:
                 model_name=_run_model,
                 chunk_size=chunk_size,
                 hf_token=hf_token,
-                include_special_tokens=(sae_type != "sae_gemma"),
+                include_special_tokens=True,
             )
 
     st.session_state["fra_data"] = fra_data
@@ -358,6 +358,7 @@ if compute_btn:
         "model_name": preset.get("model", "gpt2-small"),
         "hf_token": hf_token if sae_type == "sae_gemma" else "",
         "hook_point": preset.get("hook_point", ""),
+        "trained_on_bos": preset.get("trained_on_bos", True),
     }
     st.success(
         f"Done \u2014 {fra_data['total_interactions']:,} non-zero interactions found."
@@ -421,20 +422,18 @@ if _has_fra:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "\U0001f4ca Top Interactions",
     "\U0001f525 Feature Matrix",
-    "\u2705 Validation",
+    "\u2705 Reconstruction",
     "\U0001f9e9 Max-Act Examples",
     "\U0001f517 Data-Independent",
-    "\U0001f52c Ablation",
 ])
 
-from fra.dashboard.tabs import interactions, matrix, validation, max_act, di, ablation
+from fra.dashboard.tabs import interactions, matrix, reconstruction, max_act, di
 
 interactions.render(tab1)
 matrix.render(tab2)
-validation.render(tab3)
+reconstruction.render(tab3)
 max_act.render(tab4)
 di.render(tab5)
-ablation.render(tab6)

@@ -292,10 +292,29 @@ def get_sentence_fra_batch(
     else:
         rms = None
 
+    # RoPE parameters — for models using rotary positional embeddings
+    # (Gemma-2, Llama, etc.) we apply the position-dependent rotation to
+    # projected q/k vectors inside the FRA loop so the decomposition matches
+    # the actual attention scores.
+    rope_sin = None
+    rope_cos = None
+    rotary_dim = None
+    rotary_adjacent_pairs = False
+    if getattr(model.cfg, "positional_embedding_type", None) == "rotary":
+        attn_block = model.blocks[layer].attn
+        rope_sin = attn_block.rotary_sin    # [n_ctx, rotary_dim]
+        rope_cos = attn_block.rotary_cos    # [n_ctx, rotary_dim]
+        rotary_dim = model.cfg.rotary_dim
+        rotary_adjacent_pairs = getattr(model.cfg, "rotary_adjacent_pairs", False)
+
     fra_tensor_sparse = compute_fra_sparse(
         topk_features, W_dec, W_Q, W_K, attn_scale,
         rms=rms,
         dec_norms=dec_norms,
+        rope_sin=rope_sin,
+        rope_cos=rope_cos,
+        rotary_dim=rotary_dim,
+        rotary_adjacent_pairs=rotary_adjacent_pairs,
         chunk_size=chunk_size,
         verbose=verbose,
         layer_head_label=f"L{layer}H{head}",

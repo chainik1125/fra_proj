@@ -89,6 +89,54 @@ def topk_sparsify(
     return torch.stack(topk_features)
 
 
+# ── RoPE helper ────────────────────────────────────────────────────────
+
+
+def apply_rope_to_projected(
+    projected: torch.Tensor,
+    position: int,
+    rope_sin: torch.Tensor,
+    rope_cos: torch.Tensor,
+    rotary_dim: int,
+    rotary_adjacent_pairs: bool = False,
+) -> torch.Tensor:
+    """Apply RoPE rotation to projected vectors at a single position.
+
+    This mirrors TransformerLens's ``apply_rotary`` + ``rotate_every_two``
+    logic but operates on a ``[n_features, d_head]`` tensor at a single
+    sequence position instead of the full ``[batch, pos, head, d_head]``
+    tensor.
+
+    Args:
+        projected: ``[n_features, d_head]`` -- features projected through
+            W_Q or W_K.
+        position: Integer sequence position for looking up sin/cos.
+        rope_sin: ``[n_ctx, rotary_dim]`` precomputed sine table.
+        rope_cos: ``[n_ctx, rotary_dim]`` precomputed cosine table.
+        rotary_dim: Number of dimensions to rotate (may be < d_head).
+        rotary_adjacent_pairs: True for GPT-J style, False for GPT-NeoX
+            style (Gemma, Llama).
+    """
+    x_rot = projected[:, :rotary_dim]
+    x_pass = projected[:, rotary_dim:]
+
+    # rotate_every_two
+    x_flip = x_rot.clone()
+    if rotary_adjacent_pairs:
+        x_flip[:, ::2] = -x_rot[:, 1::2]
+        x_flip[:, 1::2] = x_rot[:, ::2]
+    else:
+        n = rotary_dim // 2
+        x_flip[:, :n] = -x_rot[:, n:]
+        x_flip[:, n:] = x_rot[:, :n]
+
+    cos = rope_cos[position]  # [rotary_dim]
+    sin = rope_sin[position]  # [rotary_dim]
+    x_rotated = x_rot * cos.unsqueeze(0) + x_flip * sin.unsqueeze(0)
+
+    return torch.cat([x_rotated, x_pass], dim=-1)
+
+
 # ── Core FRA loop ───────────────────────────────────────────────────────
 
 
@@ -101,6 +149,10 @@ def compute_fra_sparse(
     *,
     rms: torch.Tensor | None = None,
     dec_norms: torch.Tensor | None = None,
+    rope_sin: torch.Tensor | None = None,
+    rope_cos: torch.Tensor | None = None,
+    rotary_dim: int | None = None,
+    rotary_adjacent_pairs: bool = False,
     chunk_size: int = 16,
     verbose: bool = False,
     layer_head_label: str = "",
@@ -123,6 +175,11 @@ def compute_fra_sparse(
                 ``rms[query_idx] * rms[key_idx]``.
         dec_norms: Optional ``[d_sae]`` decoder-weight norms for SAEs
                 trained with ``rescale_acts_by_decoder_norm=True``.
+        rope_sin: Optional ``[n_ctx, rotary_dim]`` precomputed sine table
+                from the attention block.  Pass for RoPE models (Gemma, Llama).
+        rope_cos: Optional ``[n_ctx, rotary_dim]`` precomputed cosine table.
+        rotary_dim: Number of RoPE dimensions (``model.cfg.rotary_dim``).
+        rotary_adjacent_pairs: RoPE pair ordering flag from model config.
         chunk_size: Number of query positions per GPU batch before flushing
                 to CPU.  Controls peak GPU memory.
         verbose: Show progress bar.
@@ -165,6 +222,13 @@ def compute_fra_sparse(
             if dec_norms is not None:
                 q_scales = q_scales / dec_norms[q_active]
 
+            # Apply RoPE to query once per query position (outside key loop)
+            if rope_sin is not None:
+                q_proj = apply_rope_to_projected(
+                    q_proj, query_idx, rope_sin, rope_cos,
+                    rotary_dim, rotary_adjacent_pairs,
+                )
+
             for key_idx in range(query_idx + 1):
                 k_feat = topk_features[key_idx]
                 k_active = torch.where(k_feat != 0)[0]
@@ -175,6 +239,13 @@ def compute_fra_sparse(
 
                 k_vecs = W_dec[k_active]                      # [n_k, d_model]
                 k_proj = k_vecs @ W_K                         # [n_k, d_head]
+
+                # Apply RoPE to key for this key position
+                if rope_sin is not None:
+                    k_proj = apply_rope_to_projected(
+                        k_proj, key_idx, rope_sin, rope_cos,
+                        rotary_dim, rotary_adjacent_pairs,
+                    )
                 k_scales = k_feat[k_active]                   # [n_k]
                 if dec_norms is not None:
                     k_scales = k_scales / dec_norms[k_active]
@@ -263,8 +334,22 @@ def fra_mean_to_attn(sparse_tensor: torch.Tensor, seq_len: int) -> np.ndarray:
 
 
 def compute_errors(actual: np.ndarray, reconstructed: np.ndarray,
-                   eps: float = 1e-3) -> dict:
-    """Compute reconstruction error metrics with small-denominator handling."""
+                   eps: float = 1e-3, exclude_bos: bool = False) -> dict:
+    """Compute reconstruction error metrics with small-denominator handling.
+
+    Args:
+        exclude_bos: When True, exclude position 0 (BOS token) from metrics.
+            For 2-D attention matrices this removes both row 0 and column 0.
+            For 1-D vectors this removes element 0.
+    """
+    if exclude_bos:
+        if actual.ndim >= 2:
+            actual = actual[1:, 1:]
+            reconstructed = reconstructed[1:, 1:]
+        else:
+            actual = actual[1:]
+            reconstructed = reconstructed[1:]
+
     diff = np.abs(actual - reconstructed)
     denom = np.maximum(np.abs(actual), eps)
 

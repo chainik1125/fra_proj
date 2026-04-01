@@ -99,6 +99,16 @@ def render(tab):
             "a global data-independent (DI) scan, then compare DD and DI signals."
         )
 
+        # RoPE caveat
+        _model_name = cfg.get("model_name", "") if cfg else ""
+        _sae_type = cfg.get("sae_type", "") if cfg else ""
+        if "gemma" in _model_name or "llama" in _model_name.lower() or _sae_type == "crosscoder":
+            st.info(
+                "This model uses rotary positional embeddings (RoPE). "
+                "DI scores are position-independent and do not include RoPE "
+                "rotations, so actual interaction strengths vary by position.",
+            )
+
         import pandas as pd
 
         # Read sidebar state
