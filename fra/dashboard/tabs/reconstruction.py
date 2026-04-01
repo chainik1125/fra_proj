@@ -1,7 +1,9 @@
 """Tab — Reconstruction & Ablation (unified).
 
-Section A: Activation reconstruction — SAE encode→decode quality + SAE-patched loss.
-Section B: Attention reconstruction — FRA heatmaps, metrics, FRA-patched loss, ablation.
+Three top-level sections:
+  1. Heatmaps — FRA vs standard attention (pregenerated)
+  2. Metrics — Reconstruction Quality (pregenerated) + Patched Loss (behind Run button)
+  3. Ablations — custom pair ablation (behind Run button)
 """
 
 import html as html_lib
@@ -46,6 +48,67 @@ def _apply_softcap_t(scores, softcap):
     if softcap > 0:
         return softcap * torch.tanh(scores / softcap)
     return scores
+
+
+@torch.no_grad()
+def _compute_recon_metrics(cfg, fra_data, device):
+    """Compute SAE/crosscoder encode→decode reconstruction quality.
+
+    Uses cached model/SAE loaders, stores result in session state so it's
+    only computed once per FRA run.
+    """
+    sae_type = cfg.get("sae_type", "")
+    is_crosscoder = sae_type == "crosscoder"
+    trained_on_bos = cfg.get("trained_on_bos", True)
+    exclude_bos = not trained_on_bos
+
+    if is_crosscoder:
+        base, it, target, crosscoder, model_idx, cc_layer = (
+            _load_crosscoder_resources(cfg, device)
+        )
+        tokens = fra_data["tokens"][:128]
+        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+        hook_name = f"blocks.{cc_layer}.hook_resid_post"
+        _, base_cache = base.run_with_cache(tok_tensor, names_filter=[hook_name])
+        _, it_cache = it.run_with_cache(tok_tensor, names_filter=[hook_name])
+        base_act = base_cache[hook_name].squeeze(0)
+        it_act = it_cache[hook_name].squeeze(0)
+        if crosscoder.model_idx == 0:
+            x_stacked = torch.stack([base_act, it_act], dim=1)
+        else:
+            x_stacked = torch.stack([it_act, base_act], dim=1)
+        target_act = base_act if crosscoder.model_idx == 0 else it_act
+        features = crosscoder.encode(x_stacked)
+        x_hat_stacked = crosscoder.decode(features)
+        target_hat = x_hat_stacked[:, crosscoder.model_idx]
+        x_np = target_act.cpu().float().numpy()
+        xhat_np = target_hat.detach().cpu().float().numpy()
+    else:
+        model, sae = _load_model_sae(cfg, device)
+        layer_ = cfg["layer"]
+        hook_point = cfg.get("hook_point", "ln1.hook_normalized")
+        tokens = fra_data["tokens"][:128]
+        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+        hook_name = f"blocks.{layer_}.{hook_point}"
+        _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
+        act = cache[hook_name].squeeze(0)
+        if act.dim() == 3:
+            act = act.flatten(-2, -1)
+        features = sae.encode(act)
+        x_hat = sae.decode(features)
+        x_np = act.cpu().float().numpy()
+        xhat_np = x_hat.cpu().float().numpy()
+
+    per_token_l0 = (features != 0).sum(dim=-1).float()
+    return {
+        "recon": compute_errors(x_np, xhat_np, exclude_bos=exclude_bos),
+        "avg_active_features": float(per_token_l0.mean()),
+        "sparsity": float((features == 0).float().mean()),
+        "l0_min": float(per_token_l0.min()),
+        "l0_max": float(per_token_l0.max()),
+        "l0_std": float(per_token_l0.std()),
+        "d_sae": features.shape[-1],
+    }
 
 
 def _load_model_sae(cfg, device):
@@ -579,20 +642,22 @@ def render(tab):
 
         coder_label = "Crosscoder" if is_crosscoder else "SAE"
 
-        # ═══════════════════════════════════════════════════════════════
-        # Section A: Attention Reconstruction (FRA) — always shown
-        # ═══════════════════════════════════════════════════════════════
-
-        st.subheader(f"Attention Reconstruction (FRA) \u2014 L{layer_} H{head_}")
-
-        # ── Heatmaps (always available from fra_data) ──
-
+        # Shared FRA data
+        _softcap = fra_data.get("softcap", 0.0) or 0.0
+        idxs = fra_data["indices_np"]
+        vals = fra_data["values_np"]
+        causal_mask = np.triu(np.ones((seq_len, seq_len), dtype=bool), k=1)
         attn_tick_vals = list(range(seq_len))
         attn_tick_labels = [html_lib.escape(t) for t in token_strs]
 
+        # ═══════════════════════════════════════════════════════════════
+        # Section 1: Heatmaps
+        # ═══════════════════════════════════════════════════════════════
+
+        st.subheader(f"Heatmaps \u2014 L{layer_} H{head_}")
+
         # Standard logits
         std_logits = fra_data["attn_scores_np"][:seq_len, :seq_len].copy()
-        causal_mask = np.triu(np.ones((seq_len, seq_len), dtype=bool), k=1)
         std_logits[causal_mask] = np.nan
 
         # Standard probs
@@ -600,9 +665,6 @@ def render(tab):
         std_probs[causal_mask] = np.nan
 
         # FRA logits — apply softcap to match what the model does
-        _softcap = fra_data.get("softcap", 0.0) or 0.0
-        idxs = fra_data["indices_np"]
-        vals = fra_data["values_np"]
         fra_logits = np.zeros((seq_len, seq_len))
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
@@ -664,13 +726,28 @@ def render(tab):
                 compact_height=380, key="attn_fra_prob",
             )
 
-        # ── Reconstruction quality metrics ──
+        # ═══════════════════════════════════════════════════════════════
+        # Section 2: Metrics
+        # ═══════════════════════════════════════════════════════════════
 
         st.markdown("---")
-        st.markdown("#### FRA Reconstruction Metrics")
+        st.subheader(f"Metrics \u2014 L{layer_} H{head_}")
+
+        # ── 2a: Reconstruction Quality (pregenerated) ─────────────────
+
+        st.markdown("#### Reconstruction Quality")
+
+        if exclude_bos:
+            st.caption(
+                "BOS position excluded from all metrics "
+                "(coder not trained on BOS activations).",
+            )
+
+        # FRA → attention score reconstruction
+        st.markdown(f"**FRA \u2192 Attention Scores**")
         st.caption(
-            "Quantitative comparison of FRA-reconstructed attention vs the "
-            "model's actual pre-softmax scores (causal region only).",
+            "FRA-reconstructed attention vs the model's actual "
+            "pre-softmax scores (causal region only).",
         )
 
         _causal_bool = np.tril(np.ones((seq_len, seq_len), dtype=bool))
@@ -688,12 +765,6 @@ def render(tab):
 
         errs = compute_errors(_std_causal, _fra_causal, exclude_bos=exclude_bos)
 
-        if exclude_bos:
-            st.caption(
-                "Note: BOS position excluded from metrics "
-                "(SAE not trained on BOS activations).",
-            )
-
         vm1, vm2, vm3, vm4 = st.columns(4)
         vm1.metric("Frobenius rel. error", f"{errs['fro_rel_err']:.1%}")
         vm2.metric("Cosine similarity", f"{errs['cosine_sim']:.4f}")
@@ -706,139 +777,119 @@ def render(tab):
         else:
             st.warning(f"Attention reconstruction: FAIL (Frobenius error {errs['fro_rel_err']:.1%} >= 50%)")
 
+        # SAE / crosscoder → residual stream reconstruction
+        if "_recon_metrics" not in st.session_state:
+            with st.spinner(f"Computing {coder_label} reconstruction quality\u2026"):
+                st.session_state["_recon_metrics"] = _compute_recon_metrics(
+                    cfg, fra_data, device,
+                )
+        recon_m = st.session_state.get("_recon_metrics")
+        if recon_m is not None:
+            st.markdown(f"**{coder_label} \u2192 Residual Stream**")
+            st.caption(
+                f"How well the {coder_label.lower()} reconstructs the residual stream "
+                "activations (encode then decode).",
+            )
+            recon = recon_m["recon"]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Frobenius rel. error", f"{recon['fro_rel_err']:.1%}")
+            c2.metric("Cosine similarity", f"{recon['cosine_sim']:.4f}")
+            c3.metric("R\u00b2", f"{recon['r_squared']:.4f}")
+            c4.metric("Mean abs. error", f"{recon['mean_abs_err']:.4f}")
+
+            c5, c6, c7 = st.columns(3)
+            c5.metric("Avg active features (L0)", f"{recon_m['avg_active_features']:.0f}")
+            c6.metric("L0 range", f"{recon_m['l0_min']:.0f} \u2013 {recon_m['l0_max']:.0f}")
+            c7.metric("Sparsity", f"{recon_m['sparsity']:.1%}")
+
+        # ── 2b: Patched Loss (behind Run button) ─────────────────────
+
         st.markdown("---")
+        st.markdown("#### Patched Loss")
+        st.caption(
+            "Patch one attention head's pre-softmax scores with "
+            f"{coder_label}-reconstructed or FRA-reconstructed scores "
+            "and measure the impact on next-token prediction loss.",
+        )
 
-        # ═══════════════════════════════════════════════════════════════
-        # Section B: Activation Reconstruction + Loss Recovery
-        #   (requires loading models — behind a button)
-        # ═══════════════════════════════════════════════════════════════
-
-        st.subheader(f"Activation Reconstruction & Loss Recovery \u2014 L{layer_} H{head_}")
-
-        run_val = st.button(
-            "\u25b6  Run Reconstruction Tests", type="primary",
+        run_loss = st.button(
+            "\u25b6  Run Patched Loss", type="primary",
             help=(
-                f"Load the {coder_label} and compute: "
-                "(1) encode\u2192decode reconstruction quality, "
-                f"(2) {coder_label}-patched and FRA-patched loss recovery."
+                f"Load the {coder_label}, reconstruct attention scores, "
+                "and measure patched vs unpatched loss."
             ),
         )
 
-        if run_val:
-            with st.spinner("Running reconstruction tests\u2026"):
+        if run_loss:
+            with st.spinner("Computing patched losses\u2026"):
                 if is_crosscoder:
-                    from fra.analysis.validation import (
-                        test_crosscoder_reconstruction,
-                    )
-
                     base, it, target, crosscoder, model_idx, cc_layer = (
                         _load_crosscoder_resources(cfg, device)
-                    )
-                    sae_r = test_crosscoder_reconstruction(
-                        base, it, crosscoder, fra_data["tokens"], cc_layer,
-                        trained_on_bos=trained_on_bos,
                     )
                     loss_r = _run_crosscoder_loss_metrics(
                         cfg, fra_data, device, exclude_bos=exclude_bos,
                         target=target, crosscoder=crosscoder,
                         model_idx=model_idx, crosscoder_layer=cc_layer,
                     )
-                    st.session_state["_val_sae"] = sae_r
-                    st.session_state["_val_loss"] = loss_r
                 else:
-                    from fra.analysis.validation import test_sae_reconstruction
-
                     model, sae = _load_model_sae(cfg, device)
-                    hook = cfg.get("hook_point", "attn.hook_z")
-                    sae_r = test_sae_reconstruction(
-                        model, sae, cfg["text"], layer_, hook,
-                        trained_on_bos=trained_on_bos,
-                    )
                     loss_r = _run_loss_metrics(
                         model, sae, cfg, fra_data, device,
                         exclude_bos=exclude_bos,
                     )
-                    st.session_state["_val_sae"] = sae_r
-                    st.session_state["_val_loss"] = loss_r
+                st.session_state["_val_loss"] = loss_r
 
-        sae_r = st.session_state.get("_val_sae")
         loss_r = st.session_state.get("_val_loss")
 
-        if sae_r is None and loss_r is None:
+        if loss_r is None:
             st.caption(
-                "Press **Run Reconstruction Tests** to compute activation "
-                "reconstruction quality and loss patching metrics.",
+                "Press **Run Patched Loss** to compute loss recovery metrics.",
             )
-        else:
-            # ── Activation reconstruction quality ──
-            if sae_r is not None:
-                st.markdown(f"#### {coder_label} Reconstruction Quality")
-                st.caption(
-                    "How well the coder reconstructs the residual stream activations "
-                    "(encode then decode). "
-                    "**Frobenius rel. error**: \u2016actual \u2212 recon\u2016 / \u2016actual\u2016 "
-                    "(0% = perfect, <10% excellent, <30% good). "
-                    "**Cosine sim**: directional agreement (1.0 = perfect). "
-                    "**R\u00b2**: variance explained (1.0 = perfect, >0.9 good). "
-                    "**MAE**: average element-wise absolute error (lower is better, scale-dependent)."
+        elif loss_r.get("sae") is not None:
+            hc = loss_r["zero"]["loss"] - loss_r["unpatched_loss"]
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Unpatched loss", f"{loss_r['unpatched_loss']:.4f}")
+            c2.metric(
+                f"{coder_label}-patched",
+                f"{loss_r['sae']['loss']:.4f}",
+                delta=f"{loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}",
+            )
+            c3.metric(
+                "FRA-patched",
+                f"{loss_r['fra']['loss']:.4f}",
+                delta=f"{loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}",
+            )
+            c4.metric(
+                "Zero-ablated",
+                f"{loss_r['zero']['loss']:.4f}",
+                delta=f"{loss_r['zero']['loss'] - loss_r['unpatched_loss']:+.4f}",
+            )
+            if hc > 0.01:
+                sae_rec = (loss_r["zero"]["loss"] - loss_r["sae"]["loss"]) / hc
+                fra_rec = (loss_r["zero"]["loss"] - loss_r["fra"]["loss"]) / hc
+                c5.metric(
+                    "Recovery",
+                    f"{coder_label}: {sae_rec:.3f}",
+                    delta=f"FRA: {fra_rec:.3f}",
+                    delta_color="off",
                 )
-                if exclude_bos:
-                    st.caption("BOS position excluded from metrics.")
-                recon = sae_r["recon"]
+            else:
+                c5.metric("Recovery", "N/A")
 
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Frobenius rel. error", f"{recon['fro_rel_err']:.1%}")
-                c2.metric("Cosine similarity", f"{recon['cosine_sim']:.4f}")
-                c3.metric("R\u00b2", f"{recon['r_squared']:.4f}")
-                c4.metric("Mean abs. error", f"{recon['mean_abs_err']:.4f}")
-
-            # ── Loss recovery (coder-patched + FRA-patched together) ──
-            if loss_r is not None and loss_r.get("sae") is not None:
-                st.markdown("#### Loss Recovery")
-                hc = loss_r["zero"]["loss"] - loss_r["unpatched_loss"]
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Unpatched loss", f"{loss_r['unpatched_loss']:.4f}")
-                c2.metric(
-                    f"{coder_label}-patched",
-                    f"{loss_r['sae']['loss']:.4f}",
-                    delta=f"{loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}",
-                )
-                c3.metric(
-                    "FRA-patched",
-                    f"{loss_r['fra']['loss']:.4f}",
-                    delta=f"{loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}",
-                )
-                c4.metric(
-                    "Zero-ablated",
-                    f"{loss_r['zero']['loss']:.4f}",
-                    delta=f"{loss_r['zero']['loss'] - loss_r['unpatched_loss']:+.4f}",
-                )
-                if hc > 0.01:
-                    sae_rec = (loss_r["zero"]["loss"] - loss_r["sae"]["loss"]) / hc
-                    fra_rec = (loss_r["zero"]["loss"] - loss_r["fra"]["loss"]) / hc
-                    c5.metric(
-                        "Recovery",
-                        f"{coder_label}: {sae_rec:.3f}",
-                        delta=f"FRA: {fra_rec:.3f}",
-                        delta_color="off",
-                    )
-                else:
-                    c5.metric("Recovery", "N/A")
-
-                st.caption(
-                    f"With all features and no top-k truncation, {coder_label}-patched "
-                    "and FRA-patched losses should match."
-                )
+            st.caption(
+                f"With all features and no top-k truncation, {coder_label}-patched "
+                "and FRA-patched losses should match.",
+            )
 
         # ═══════════════════════════════════════════════════════════════
-        # Ablation Expander
+        # Section 3: Ablations
         # ═══════════════════════════════════════════════════════════════
 
         st.markdown("---")
-        with st.expander("Advanced: Custom Pair Ablation"):
-            st.caption(
-                "Ablate selected feature pairs from the FRA tensor and measure the "
-                "impact on model output. This reveals which cross-feature interactions "
-                "are causally important to this attention head's computation.",
-            )
-            _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=exclude_bos)
+        st.subheader(f"Ablations \u2014 L{layer_} H{head_}")
+        st.caption(
+            "Ablate selected feature pairs from the FRA tensor and measure the "
+            "impact on model output. This reveals which cross-feature interactions "
+            "are causally important to this attention head's computation.",
+        )
+        _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=exclude_bos)

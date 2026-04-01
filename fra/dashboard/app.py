@@ -346,6 +346,9 @@ if compute_btn:
             )
 
     st.session_state["fra_data"] = fra_data
+    # Clear cached reconstruction tab results from previous runs
+    st.session_state.pop("_recon_metrics", None)
+    st.session_state.pop("_val_loss", None)
     st.session_state["fra_config"] = {
         "layer": int(layer),
         "head": int(head),
