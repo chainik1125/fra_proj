@@ -11,6 +11,7 @@ import streamlit as st
 import torch
 import torch.nn.functional as _F
 
+from fra.core.fra import _extract_rope_params, apply_rope_to_projected
 from fra.core.helpers import compute_errors, fra_sum_to_attn, get_W_K, rank_pairs
 from fra.dashboard.loaders import (
     load_crosscoder,
@@ -126,6 +127,22 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
 
     q_full = x_hat @ W_Q + b_Q
     k_full = x_hat @ W_K + b_K
+
+    # Apply RoPE (must match what compute_fra_sparse does)
+    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
+        _extract_rope_params(model, layer_)
+    )
+    if rope_sin is not None:
+        for pos in range(seq_len):
+            q_full[pos] = apply_rope_to_projected(
+                q_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            k_full[pos] = apply_rope_to_projected(
+                k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+
     sae_scores = (q_full @ k_full.T) / attn_scale
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device),
@@ -235,6 +252,22 @@ def _run_crosscoder_loss_metrics(
 
     q_full = x_hat_norm @ W_Q + b_Q
     k_full = x_hat_norm @ W_K + b_K
+
+    # Apply RoPE (must match what compute_fra_sparse does)
+    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
+        _extract_rope_params(target, layer_)
+    )
+    if rope_sin is not None:
+        for pos in range(seq_len):
+            q_full[pos] = apply_rope_to_projected(
+                q_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            k_full[pos] = apply_rope_to_projected(
+                k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+
     scores_coder = (q_full @ k_full.T) / attn_scale + mask_t
 
     if actual_bos is not None:
