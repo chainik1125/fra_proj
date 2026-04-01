@@ -548,7 +548,7 @@ def render(tab):
         coder_label = "Crosscoder" if is_crosscoder else "SAE"
 
         if sae_r is not None:
-            st.markdown(f"#### {coder_label} Encode\u2192Decode Quality")
+            st.markdown(f"#### {coder_label} Reconstruction Quality")
             recon = sae_r["recon"]
 
             c1, c2, c3, c4 = st.columns(4)
@@ -561,18 +561,23 @@ def render(tab):
         if loss_r is not None and loss_r.get("sae") is not None:
             st.markdown(f"#### Loss Recovery ({coder_label}-patched)")
             hc = loss_r["zero"]["loss"] - loss_r["unpatched_loss"]
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("Unpatched loss", f"{loss_r['unpatched_loss']:.4f}")
             c2.metric(
                 f"{coder_label}-patched loss",
                 f"{loss_r['sae']['loss']:.4f}",
                 delta=f"{loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}",
             )
+            c3.metric(
+                "Zero-ablated loss",
+                f"{loss_r['zero']['loss']:.4f}",
+                delta=f"{loss_r['zero']['loss'] - loss_r['unpatched_loss']:+.4f}",
+            )
             if hc > 0.01:
                 sae_rec = (loss_r["zero"]["loss"] - loss_r["sae"]["loss"]) / hc
-                c3.metric(f"{coder_label} recovery", f"{sae_rec:.3f}")
+                c4.metric("Loss recovered", f"{sae_rec:.3f}")
             else:
-                c3.metric(f"{coder_label} recovery", "N/A")
+                c4.metric("Loss recovered", "N/A")
 
         st.markdown("---")
 
@@ -719,9 +724,9 @@ def render(tab):
             )
             if hc > 0.01:
                 fra_rec = (loss_r["zero"]["loss"] - loss_r["fra"]["loss"]) / hc
-                lc4.metric("FRA recovery", f"{fra_rec:.3f}")
+                lc4.metric("Loss recovered", f"{fra_rec:.3f}")
             else:
-                lc4.metric("FRA recovery", "N/A")
+                lc4.metric("Loss recovered", "N/A")
 
             st.caption(
                 "Note: with all features and no top-k truncation, "
