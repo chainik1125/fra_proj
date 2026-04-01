@@ -219,17 +219,24 @@ def main():
         short = text[:60] + "..." if len(text) > 60 else text
         print(f"\n--- Text {i+1}/{len(texts)}: \"{short}\"")
 
+        # Gemma-Scope SAEs are not trained on BOS
+        _trained_on_bos = not is_gemma
+
         # Test (a)
         print("  Running test (a): attention reconstruction...", flush=True)
         a_result, fra_result = test_attention_reconstruction(
-            model, sae, text, layer, head, hook_point, top_k, chunk_size
+            model, sae, text, layer, head, hook_point, top_k, chunk_size,
+            trained_on_bos=_trained_on_bos,
         )
         all_a.append(a_result)
         print(f"    seq_len={a_result['seq_len']}, nnz={a_result['nnz']:,}")
 
         # Test (b)
         print("  Running test (b): SAE reconstruction...", flush=True)
-        b_result = test_sae_reconstruction(model, sae, text, layer, hook_point)
+        b_result = test_sae_reconstruction(
+            model, sae, text, layer, hook_point,
+            trained_on_bos=_trained_on_bos,
+        )
         all_b.append(b_result)
         print(f"    L0={b_result['avg_active_features']:.0f}/{b_result['d_sae']}, "
               f"token ||x|| mean={b_result['token_norm_mean']:.0f}, "
@@ -238,7 +245,8 @@ def main():
         # Test (c)
         print("  Running test (c): loss recovery...", flush=True)
         c_result = test_loss_recovery(
-            model, sae, text, layer, head, hook_point, top_k, chunk_size
+            model, sae, text, layer, head, hook_point, top_k, chunk_size,
+            trained_on_bos=_trained_on_bos,
         )
         all_c.append(c_result)
         if c_result:
