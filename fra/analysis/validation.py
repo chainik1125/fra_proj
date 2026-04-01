@@ -22,6 +22,25 @@ import torch
 import torch.nn.functional as F
 
 from fra.core.fra import get_sentence_fra_batch
+
+
+def _get_softcap(model):
+    """Return the attention logit soft-cap value, or 0 if unused."""
+    return getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+
+def _softcap_np(scores, softcap):
+    """Apply tanh soft-capping to a numpy array (no-op if softcap==0)."""
+    if softcap > 0:
+        return softcap * np.tanh(scores / softcap)
+    return scores
+
+
+def _softcap_t(scores, softcap):
+    """Apply tanh soft-capping to a torch tensor (no-op if softcap==0)."""
+    if softcap > 0:
+        return softcap * torch.tanh(scores / softcap)
+    return scores
 from fra.core.helpers import (
     compute_errors,
     fra_max_to_attn,
@@ -151,14 +170,19 @@ def test_attention_reconstruction(model, sae, text, layer, head,
     actual_qk = cache[attn_scores_hook_name].squeeze(0)[head].float().cpu().numpy()
 
     # ── 2. SAE full-reconstruction QK (includes b_dec, scaled) ──
+    softcap = _get_softcap(model)
     features = sae.encode(x)
     x_hat = sae.decode(features).float()       # includes b_dec
-    sae_qk = (((x_hat @ W_Q) @ (x_hat @ W_K).T) / attn_scale).cpu().numpy()
+    sae_qk = _softcap_np(
+        (((x_hat @ W_Q) @ (x_hat @ W_K).T) / attn_scale).cpu().numpy(), softcap,
+    )
 
     # ── 3. SAE QK without b_dec (what FRA decomposes into, scaled) ──
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
     x_hat_nobias = x_hat - b_dec.float()
-    sae_qk_nobias = (((x_hat_nobias @ W_Q) @ (x_hat_nobias @ W_K).T) / attn_scale).cpu().numpy()
+    sae_qk_nobias = _softcap_np(
+        (((x_hat_nobias @ W_Q) @ (x_hat_nobias @ W_K).T) / attn_scale).cpu().numpy(), softcap,
+    )
 
     # ── 4. FRA computation (normalized = auto-detect) ──
     fra_result = get_sentence_fra_batch(
@@ -168,11 +192,11 @@ def test_attention_reconstruction(model, sae, text, layer, head,
         normalize_by_decoder_norm=None,  # auto-detect
     )
     sparse = fra_result["fra_tensor_sparse"]
-    fra_sum_corr = fra_sum_to_attn(sparse, seq_len)
+    fra_sum_corr = _softcap_np(fra_sum_to_attn(sparse, seq_len), softcap)
 
     # Max and mean aggregation modes
-    fra_max = fra_max_to_attn(sparse, seq_len)
-    fra_mean = fra_mean_to_attn(sparse, seq_len)
+    fra_max = _softcap_np(fra_max_to_attn(sparse, seq_len), softcap)
+    fra_mean = _softcap_np(fra_mean_to_attn(sparse, seq_len), softcap)
 
     # ── Compare only lower triangle (causal region) ──
     causal = np.tril(np.ones((seq_len, seq_len)))
@@ -330,9 +354,11 @@ def test_loss_recovery(model, sae, text, layer, head,
 
     # fra_sum already includes 1/sqrt(d_head) from the FRA computation;
     # only the bias correction terms are unscaled dot products.
-    fra_full = fra_sum + (
-        term_q[:, None] + term_k[None, :] + term_const
-    ) / attn_scale
+    softcap = _get_softcap(model)
+    fra_full = _softcap_np(
+        fra_sum + (term_q[:, None] + term_k[None, :] + term_const) / attn_scale,
+        softcap,
+    )
 
     # Apply causal mask (upper triangle -> -inf)
     causal_mask = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
@@ -345,7 +371,7 @@ def test_loss_recovery(model, sae, text, layer, head,
     # ── SAE full scores (direct recomputation, no top-k) ──
     q_full = x_hat @ W_Q + b_Q   # [seq, d_head]
     k_full = x_hat @ W_K + b_K
-    sae_full = (q_full @ k_full.T) / attn_scale
+    sae_full = _softcap_t((q_full @ k_full.T) / attn_scale, softcap)
     # Apply causal mask
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
@@ -472,12 +498,17 @@ def test_crosscoder_attention_reconstruction(
     fra_sum = fra_sum_to_attn(sparse, seq_len)
 
     # Ground truth: actual pre-softmax scores from target model
+    # (hook_attn_scores fires after softcap in Gemma-2, so these are post-softcap)
     tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
     attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
     _, cache = target_model.run_with_cache(
         tok_tensor, names_filter=[attn_scores_hook],
     )
     actual_scores = cache[attn_scores_hook][0, head].cpu().float().numpy()  # [seq, seq]
+
+    # Apply softcap to FRA sum (raw linear QK) to match post-softcap actual scores
+    softcap = _get_softcap(target_model)
+    fra_sum = _softcap_np(fra_sum, softcap)
 
     # Compare only causal region
     causal = np.tril(np.ones((seq_len, seq_len)))
@@ -580,6 +611,9 @@ def test_crosscoder_loss_recovery(
 
     # For crosscoders: no bias correction needed (b_Q=0, b_K=0 for Gemma/Llama,
     # and FRA already includes 1/sqrt(d_head) + RMSNorm correction)
+    # Apply softcap before causal mask (matches model's hook_attn_scores)
+    softcap = _get_softcap(target_model)
+    fra_sum = _softcap_np(fra_sum, softcap)
     causal_mask = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
     fra_scores = fra_sum + causal_mask
     fra_scores_t = torch.tensor(fra_scores, dtype=torch.float32, device=device)
