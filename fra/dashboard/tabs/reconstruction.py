@@ -535,8 +535,7 @@ def render(tab):
         # Reconstruction tests button (runs both Section A and loss portions of B)
         run_val = st.button(
             "\u25b6  Run Reconstruction Tests", type="primary",
-            help="Loads the model and coder to compute reconstruction quality "
-                 "and loss patching metrics.",
+            help="Compute reconstruction quality and loss patching metrics.",
         )
 
         if run_val:

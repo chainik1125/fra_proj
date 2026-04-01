@@ -646,7 +646,13 @@ def get_sentence_fra_batch(
 
     # RMSNorm correction is needed when the SAE's decoder vectors live in
     # residual-stream space but W_Q / W_K project from post-RMSNorm space.
-    rms_activations = act if "resid" in hook_point else None
+    # Use the full reconstructed activations (not actual model activations)
+    # so that FRA scores match coder-patched scores when all features are kept.
+    if "resid" in hook_point:
+        x_hat = feature_activations @ W_dec
+        rms_activations = x_hat
+    else:
+        rms_activations = None
 
     result = _build_fra_result(
         model, layer, head, feature_activations, W_dec, device,
@@ -751,12 +757,14 @@ def get_sentence_fra_crosscoder(
     feature_activations = crosscoder.encode(x_stacked)   # [seq, d_sae]
 
     # Crosscoder decoder vectors live in residual-stream space, so RMSNorm
-    # correction is always needed.  target_act is the residual stream that
-    # feeds into the attention layer's RMSNorm.
+    # correction is always needed.  Use the full reconstructed activations
+    # (not actual model activations) so that FRA scores match coder-patched
+    # scores when all features are kept.
+    x_hat = feature_activations.to(crosscoder.W_dec.dtype) @ crosscoder.W_dec
     return _build_fra_result(
         target_model, layer, head, feature_activations, crosscoder.W_dec, device,
         top_k=top_k,
-        rms_activations=target_act,
+        rms_activations=x_hat.float(),
         chunk_size=chunk_size,
         verbose=verbose,
     )
