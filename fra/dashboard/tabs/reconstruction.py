@@ -565,6 +565,7 @@ def render(tab):
                     )
                     sae_r = test_crosscoder_reconstruction(
                         base, it, crosscoder, fra_data["tokens"], cc_layer,
+                        trained_on_bos=trained_on_bos,
                     )
                     loss_r = _run_crosscoder_loss_metrics(
                         cfg, fra_data, device, exclude_bos=exclude_bos,
@@ -596,12 +597,23 @@ def render(tab):
 
         if sae_r is not None:
             st.markdown(f"#### {coder_label} Reconstruction Quality")
+            st.caption(
+                "How well the coder reconstructs the residual stream activations "
+                "(encode then decode). "
+                "**Frobenius rel. error**: ‖actual − recon‖ / ‖actual‖ "
+                "(0% = perfect, <10% excellent, <30% good). "
+                "**Cosine sim**: directional agreement (1.0 = perfect). "
+                "**R²**: variance explained (1.0 = perfect, >0.9 good). "
+                "**MAE**: average element-wise absolute error (lower is better, scale-dependent)."
+            )
+            if exclude_bos:
+                st.caption("BOS position excluded from metrics.")
             recon = sae_r["recon"]
 
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Frobenius rel. error", f"{recon['fro_rel_err']:.1%}")
             c2.metric("Cosine similarity", f"{recon['cosine_sim']:.4f}")
-            c3.metric("R\u00b2", f"{recon['r_squared']:.4f}")
+            c3.metric("R²", f"{recon['r_squared']:.4f}")
             c4.metric("Mean abs. error", f"{recon['mean_abs_err']:.4f}")
 
         # Display coder-patched loss (Section A portion)

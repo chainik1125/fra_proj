@@ -454,6 +454,7 @@ def avg_error_dicts(dicts):
 def test_crosscoder_attention_reconstruction(
     target_model, base_model, it_model, crosscoder,
     tokens, layer, head, crosscoder_layer, top_k=20,
+    trained_on_bos=True,
 ):
     """Test (a) for crosscoders: FRA sum vs actual pre-softmax scores."""
     from fra.core.fra import get_sentence_fra_crosscoder
@@ -484,7 +485,7 @@ def test_crosscoder_attention_reconstruction(
     actual_scores_causal = actual_scores[:seq_len, :seq_len] * causal
 
     return {
-        "fra_vs_actual": compute_errors(actual_scores_causal, fra_sum),
+        "fra_vs_actual": compute_errors(actual_scores_causal, fra_sum, exclude_bos=not trained_on_bos),
         "seq_len": seq_len,
         "nnz": fra_result["total_interactions"],
     }
@@ -493,6 +494,7 @@ def test_crosscoder_attention_reconstruction(
 @torch.no_grad()
 def test_crosscoder_reconstruction(
     base_model, it_model, crosscoder, tokens, crosscoder_layer,
+    trained_on_bos=True,
 ):
     """Test (b) for crosscoders: encode-decode quality."""
     device = next(base_model.parameters()).device
@@ -528,7 +530,7 @@ def test_crosscoder_reconstruction(
     active_per_token = (features != 0).sum(dim=-1).float()
 
     return {
-        "recon": compute_errors(x_np, xhat_np),
+        "recon": compute_errors(x_np, xhat_np, exclude_bos=not trained_on_bos),
         "d_sae": features.shape[-1],
         "avg_active_features": float(active_per_token.mean()),
         "sparsity": float((features == 0).float().mean()),
@@ -549,6 +551,7 @@ def test_crosscoder_reconstruction(
 def test_crosscoder_loss_recovery(
     target_model, base_model, it_model, crosscoder,
     tokens, layer, head, crosscoder_layer, top_k=20,
+    trained_on_bos=True,
 ):
     """Test (c) for crosscoders: loss recovery via attention patching."""
     from fra.core.fra import get_sentence_fra_crosscoder
@@ -586,6 +589,18 @@ def test_crosscoder_loss_recovery(
     zero_scores += torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1,
     )
+
+    # Copy actual BOS scores when coder wasn't trained on BOS
+    if not trained_on_bos:
+        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
+        _, attn_cache = target_model.run_with_cache(
+            tok_tensor, names_filter=[attn_scores_hook],
+        )
+        actual_scores = attn_cache[attn_scores_hook].squeeze(0)[head]  # [seq, seq]
+        fra_scores_t[0, :] = actual_scores[0, :seq_len]
+        fra_scores_t[:, 0] = actual_scores[:seq_len, 0]
+        zero_scores[0, :] = actual_scores[0, :seq_len]
+        zero_scores[:, 0] = actual_scores[:seq_len, 0]
 
     # Patch and measure
     hook_name = f"blocks.{layer}.attn.hook_attn_scores"
@@ -636,6 +651,7 @@ def run_crosscoder_validation(args):
         subfolder = ""
         model_idx = args.model_idx
         n_heads = 8
+        trained_on_bos = False
         texts = args.text and [args.text] or GEMMA_TEXTS
     else:  # crosscoder-llama
         base_name = "meta-llama/Llama-3.1-8B"
@@ -648,6 +664,7 @@ def run_crosscoder_validation(args):
         subfolder = layer_map.get(cc_layer, f"BatchTopK-Crosscoder/L{cc_layer}R")
         model_idx = args.model_idx
         n_heads = 32
+        trained_on_bos = True
         texts = args.text and [args.text] or GEMMA_TEXTS
 
     layer = cc_layer + 1
@@ -719,6 +736,7 @@ def run_crosscoder_validation(args):
         a_result = test_crosscoder_attention_reconstruction(
             target_model, base_model, it_model, crosscoder,
             tokens, layer, head, cc_layer, top_k,
+            trained_on_bos=trained_on_bos,
         )
         all_a.append(a_result)
         print(f"    seq_len={a_result['seq_len']}, nnz={a_result['nnz']:,}")
@@ -726,6 +744,7 @@ def run_crosscoder_validation(args):
         print("  Running test (b): crosscoder reconstruction...", flush=True)
         b_result = test_crosscoder_reconstruction(
             base_model, it_model, crosscoder, tokens, cc_layer,
+            trained_on_bos=trained_on_bos,
         )
         all_b.append(b_result)
         print(f"    L0={b_result['avg_active_features']:.0f}/{b_result['d_sae']}, "
@@ -735,6 +754,7 @@ def run_crosscoder_validation(args):
         c_result = test_crosscoder_loss_recovery(
             target_model, base_model, it_model, crosscoder,
             tokens, layer, head, cc_layer, top_k,
+            trained_on_bos=trained_on_bos,
         )
         all_c.append(c_result)
         if c_result:
