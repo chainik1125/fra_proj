@@ -1,7 +1,11 @@
 """Feature-Resolved Attention (FRA) library."""
 
-from fra.core.fra import get_sentence_fra_batch, attention_pattern_QK
-from fra.core.fra_crosscoder import get_sentence_fra_crosscoder
+from fra.core.fra import (
+    get_sentence_fra_batch,
+    get_sentence_fra_crosscoder,
+    attention_pattern_QK,
+    topk_sparsify,
+)
 from fra.core.helpers import (
     aggregate_pairs,
     compute_errors,
@@ -10,5 +14,4 @@ from fra.core.helpers import (
     get_qk_weights,
     get_W_K,
     rank_pairs,
-    topk_sparsify,
 )

@@ -1,13 +1,392 @@
+"""
+Feature-Resolved Attention (FRA) computation.
+
+Provides two entry points for computing 4-D FRA tensors:
+  - ``get_sentence_fra_batch``: single-model SAE path
+  - ``get_sentence_fra_crosscoder``: two-model crosscoder path
+
+Both share the core tensor construction via ``_build_fra_result()``.
+"""
+
 import math
 
-from transformer_lens import HookedTransformer
-import torch
 import numpy as np
+import torch
 from typing import Any, Dict
 from einops import einsum
-from fra.core.activations import get_llm_activations
-from fra.core.helpers import compute_fra_sparse, topk_sparsify
+from tqdm import tqdm
+from transformer_lens import HookedTransformer
 
+from fra.core.activations import get_llm_activations
+from fra.core.helpers import get_W_K
+
+
+# ── Top-k sparsification ─────────────────────────────────────────────────
+
+
+def topk_sparsify(
+    feature_activations: torch.Tensor,
+    top_k: int | None,
+) -> torch.Tensor:
+    """Keep only top-k features per position by absolute activation magnitude.
+
+    Args:
+        feature_activations: [seq_len, d_sae] tensor of feature activations.
+        top_k: Number of features to keep per position.  None keeps all
+               active (non-zero) features without truncation.
+
+    Returns:
+        [seq_len, d_sae] tensor with at most top_k non-zero entries per row.
+    """
+    if top_k is None:
+        return feature_activations
+
+    seq_len = feature_activations.shape[0]
+    topk_features = []
+    for pos in range(seq_len):
+        feat = feature_activations[pos]
+        n_active = (feat != 0).sum().item()
+
+        if n_active > 0:
+            k = min(top_k, n_active)
+            _, topk_idx = torch.topk(feat.abs(), k)
+            sparse_feat = torch.zeros_like(feat)
+            sparse_feat[topk_idx] = feat[topk_idx]
+        else:
+            sparse_feat = torch.zeros_like(feat)
+
+        topk_features.append(sparse_feat)
+
+    return torch.stack(topk_features)
+
+
+# ── RoPE helper ────────────────────────────────────────────────────────
+
+
+def apply_rope_to_projected(
+    projected: torch.Tensor,
+    position: int,
+    rope_sin: torch.Tensor,
+    rope_cos: torch.Tensor,
+    rotary_dim: int,
+    rotary_adjacent_pairs: bool = False,
+) -> torch.Tensor:
+    """Apply RoPE rotation to projected vectors at a single position.
+
+    This mirrors TransformerLens's ``apply_rotary`` + ``rotate_every_two``
+    logic but operates on a ``[n_features, d_head]`` tensor at a single
+    sequence position instead of the full ``[batch, pos, head, d_head]``
+    tensor.
+
+    Args:
+        projected: ``[n_features, d_head]`` -- features projected through
+            W_Q or W_K.
+        position: Integer sequence position for looking up sin/cos.
+        rope_sin: ``[n_ctx, rotary_dim]`` precomputed sine table.
+        rope_cos: ``[n_ctx, rotary_dim]`` precomputed cosine table.
+        rotary_dim: Number of dimensions to rotate (may be < d_head).
+        rotary_adjacent_pairs: True for GPT-J style, False for GPT-NeoX
+            style (Gemma, Llama).
+    """
+    x_rot = projected[:, :rotary_dim]
+    x_pass = projected[:, rotary_dim:]
+
+    # rotate_every_two
+    x_flip = x_rot.clone()
+    if rotary_adjacent_pairs:
+        x_flip[:, ::2] = -x_rot[:, 1::2]
+        x_flip[:, 1::2] = x_rot[:, ::2]
+    else:
+        n = rotary_dim // 2
+        x_flip[:, :n] = -x_rot[:, n:]
+        x_flip[:, n:] = x_rot[:, :n]
+
+    cos = rope_cos[position]  # [rotary_dim]
+    sin = rope_sin[position]  # [rotary_dim]
+    x_rotated = x_rot * cos.unsqueeze(0) + x_flip * sin.unsqueeze(0)
+
+    return torch.cat([x_rotated, x_pass], dim=-1)
+
+
+# ── Core FRA loop ───────────────────────────────────────────────────────
+
+
+def compute_fra_sparse(
+    topk_features: torch.Tensor,
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    attn_scale: float,
+    *,
+    rms: torch.Tensor | None = None,
+    dec_norms: torch.Tensor | None = None,
+    rope_sin: torch.Tensor | None = None,
+    rope_cos: torch.Tensor | None = None,
+    rotary_dim: int | None = None,
+    rotary_adjacent_pairs: bool = False,
+    chunk_size: int = 16,
+    verbose: bool = False,
+    layer_head_label: str = "",
+) -> torch.sparse_coo_tensor:
+    """Compute the 4-D FRA sparse tensor from pre-computed feature activations.
+
+    All model-specific setup (activation extraction, encoding, weight lookup)
+    happens in the caller; this function is the shared inner loop.
+
+    Args:
+        topk_features: ``[seq_len, d_sae]`` already top-k sparsified.
+        W_dec:  ``[d_sae, d_model]`` decoder weight matrix.
+        W_Q:    ``[d_model, d_head]`` query projection for one head.
+        W_K:    ``[d_model, d_head]`` key projection for one head.
+        attn_scale: ``sqrt(d_head)`` scaling factor.
+        rms:    Optional ``[seq_len]`` per-position RMS values for RMSNorm
+                correction.  When provided, each interaction is divided by
+                ``rms[query_idx] * rms[key_idx]``.
+        dec_norms: Optional ``[d_sae]`` decoder-weight norms for SAEs
+                trained with ``rescale_acts_by_decoder_norm=True``.
+        rope_sin: Optional ``[n_ctx, rotary_dim]`` precomputed sine table
+                from the attention block.  Pass for RoPE models (Gemma, Llama).
+        rope_cos: Optional ``[n_ctx, rotary_dim]`` precomputed cosine table.
+        rotary_dim: Number of RoPE dimensions (``model.cfg.rotary_dim``).
+        rotary_adjacent_pairs: RoPE pair ordering flag from model config.
+        chunk_size: Number of query positions per GPU batch before flushing
+                to CPU.  Controls peak GPU memory.
+        verbose: Show progress bar.
+        layer_head_label: Label for progress bar (e.g. ``"L5H3"``).
+
+    Returns:
+        ``torch.sparse_coo_tensor`` on CPU, shape
+        ``[seq_len, seq_len, d_sae, d_sae]``, coalesced.
+    """
+    seq_len = topk_features.shape[0]
+    d_sae = topk_features.shape[1]
+    shape = (seq_len, seq_len, d_sae, d_sae)
+
+    all_indices_cpu: list[torch.Tensor] = []
+    all_values_cpu: list[torch.Tensor] = []
+
+    total_pairs = seq_len * (seq_len + 1) // 2
+    pbar = tqdm(
+        total=total_pairs,
+        desc=f"Computing FRA ({layer_head_label})" if layer_head_label else "Computing FRA",
+        disable=not verbose,
+    )
+
+    for q_start in range(0, seq_len, chunk_size):
+        q_end = min(q_start + chunk_size, seq_len)
+        chunk_indices: list[torch.Tensor] = []
+        chunk_values: list[torch.Tensor] = []
+
+        for query_idx in range(q_start, q_end):
+            q_feat = topk_features[query_idx]
+            q_active = torch.where(q_feat != 0)[0]
+
+            if len(q_active) == 0:
+                pbar.update(query_idx + 1)
+                continue
+
+            q_vecs = W_dec[q_active]                          # [n_q, d_model]
+            q_proj = q_vecs @ W_Q                             # [n_q, d_head]
+            q_scales = q_feat[q_active]                       # [n_q]
+            if dec_norms is not None:
+                q_scales = q_scales / dec_norms[q_active]
+
+            # Apply RoPE to query once per query position (outside key loop)
+            if rope_sin is not None:
+                q_proj = apply_rope_to_projected(
+                    q_proj, query_idx, rope_sin, rope_cos,
+                    rotary_dim, rotary_adjacent_pairs,
+                )
+
+            for key_idx in range(query_idx + 1):
+                k_feat = topk_features[key_idx]
+                k_active = torch.where(k_feat != 0)[0]
+
+                if len(k_active) == 0:
+                    pbar.update(1)
+                    continue
+
+                k_vecs = W_dec[k_active]                      # [n_k, d_model]
+                k_proj = k_vecs @ W_K                         # [n_k, d_head]
+
+                # Apply RoPE to key for this key position
+                if rope_sin is not None:
+                    k_proj = apply_rope_to_projected(
+                        k_proj, key_idx, rope_sin, rope_cos,
+                        rotary_dim, rotary_adjacent_pairs,
+                    )
+                k_scales = k_feat[k_active]                   # [n_k]
+                if dec_norms is not None:
+                    k_scales = k_scales / dec_norms[k_active]
+
+                int_matrix = (q_proj @ k_proj.T) / attn_scale  # [n_q, n_k]
+                int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
+
+                if rms is not None:
+                    int_matrix = int_matrix / (rms[query_idx] * rms[key_idx])
+
+                mask = int_matrix.abs() > 1e-10
+                if mask.any():
+                    local_r, local_c = torch.where(mask)
+                    n_int = len(local_r)
+
+                    pos_indices = torch.empty((4, n_int), dtype=torch.long)
+                    pos_indices[0] = query_idx
+                    pos_indices[1] = key_idx
+                    pos_indices[2] = q_active[local_r].cpu()
+                    pos_indices[3] = k_active[local_c].cpu()
+
+                    chunk_indices.append(pos_indices)
+                    chunk_values.append(int_matrix[mask].detach().cpu().float())
+
+                pbar.update(1)
+
+        all_indices_cpu.extend(chunk_indices)
+        all_values_cpu.extend(chunk_values)
+
+        device = topk_features.device
+        if device.type != "cpu":
+            torch.cuda.empty_cache()
+
+    pbar.close()
+
+    if all_indices_cpu:
+        indices = torch.cat(all_indices_cpu, dim=1)
+        values = torch.cat(all_values_cpu)
+        fra_sparse = torch.sparse_coo_tensor(
+            indices, values, size=shape, device="cpu", dtype=torch.float32,
+        ).coalesce()
+    else:
+        fra_sparse = torch.sparse_coo_tensor(
+            torch.zeros((4, 0), dtype=torch.long),
+            torch.zeros(0, dtype=torch.float32),
+            size=shape, device="cpu",
+        )
+
+    return fra_sparse
+
+
+# ── Shared FRA helpers ─────────────────────────────────────────────────
+
+
+def _extract_rope_params(model, layer):
+    """Extract RoPE parameters from a model's attention block.
+
+    Returns (rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs).
+    All None/False when the model does not use rotary embeddings.
+    """
+    if getattr(model.cfg, "positional_embedding_type", None) != "rotary":
+        return None, None, None, False
+    attn_block = model.blocks[layer].attn
+    return (
+        attn_block.rotary_sin,
+        attn_block.rotary_cos,
+        model.cfg.rotary_dim,
+        getattr(model.cfg, "rotary_adjacent_pairs", False),
+    )
+
+
+def _build_fra_result(
+    model: HookedTransformer,
+    layer: int,
+    head: int,
+    feature_activations: torch.Tensor,
+    W_dec: torch.Tensor,
+    device,
+    *,
+    top_k: int | None = 20,
+    rms_activations: torch.Tensor | None = None,
+    dec_norms: torch.Tensor | None = None,
+    chunk_size: int = 16,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """Shared post-encoding FRA construction.
+
+    Handles top-k sparsification, weight extraction, RMSNorm correction,
+    RoPE, ``compute_fra_sparse``, device transfer, and result assembly.
+
+    Args:
+        model: Target model (for W_Q / W_K and RoPE parameters).
+        layer: Attention layer index.
+        head: Attention head index.
+        feature_activations: ``[seq, d_sae]`` raw encoded features.
+        W_dec: ``[d_sae, d_model]`` decoder weights.
+        device: Torch device for the result tensor.
+        top_k: Features per position to keep (None = all).
+        rms_activations: ``[seq, d_model]`` residual stream for RMSNorm
+            correction, or None to skip.
+        dec_norms: ``[d_sae]`` decoder norms for rescale correction, or None.
+        chunk_size: GPU batch size for ``compute_fra_sparse``.
+        verbose: Show progress.
+
+    Returns:
+        Dict with ``fra_tensor_sparse``, ``shape``, ``seq_len``,
+        ``total_interactions``, ``feature_activations``, ``topk_features``.
+    """
+    topk_features = topk_sparsify(feature_activations, top_k)
+
+    # Attention weights
+    W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
+    W_K_mat = get_W_K(model, layer, head)           # [d_model, d_head]
+    d_head = W_Q.shape[-1]
+    attn_scale = math.sqrt(d_head)
+
+    # RMSNorm correction
+    rms = None
+    if rms_activations is not None:
+        eps = model.cfg.eps
+        rms = (rms_activations.float().pow(2).mean(dim=-1) + eps).sqrt()
+
+    # RoPE
+    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
+        _extract_rope_params(model, layer)
+    )
+
+    fra_tensor_sparse = compute_fra_sparse(
+        topk_features, W_dec, W_Q, W_K_mat, attn_scale,
+        rms=rms,
+        dec_norms=dec_norms,
+        rope_sin=rope_sin,
+        rope_cos=rope_cos,
+        rotary_dim=rotary_dim,
+        rotary_adjacent_pairs=rotary_adjacent_pairs,
+        chunk_size=chunk_size,
+        verbose=verbose,
+        layer_head_label=f"L{layer}H{head}",
+    )
+
+    # Move to device if it fits
+    if str(device) != "cpu":
+        try:
+            fra_tensor_sparse = fra_tensor_sparse.to(device)
+        except RuntimeError:
+            if verbose:
+                print("Warning: sparse tensor too large for GPU, keeping on CPU.")
+
+    seq_len = feature_activations.shape[0]
+    d_sae = feature_activations.shape[-1]
+    total_interactions = fra_tensor_sparse._nnz()
+    shape = fra_tensor_sparse.shape
+
+    if verbose:
+        _k = top_k if top_k is not None else d_sae
+        density = total_interactions / max(seq_len * seq_len * _k * _k, 1)
+        print(
+            f"4D FRA tensor: shape={shape}, "
+            f"nnz={total_interactions:,}, density={density:.2%}"
+        )
+
+    return {
+        "fra_tensor_sparse": fra_tensor_sparse,
+        "shape": shape,
+        "seq_len": seq_len,
+        "total_interactions": total_interactions,
+        "feature_activations": feature_activations,
+        "topk_features": topk_features,
+    }
+
+
+# ── Legacy analysis helpers ────────────────────────────────────────────
 
 
 def lower_triangular_mask(pattern: np.ndarray) -> np.ma.MaskedArray:
@@ -16,11 +395,11 @@ def lower_triangular_mask(pattern: np.ndarray) -> np.ma.MaskedArray:
     return np.ma.array(np.tril(pattern, k=0), mask=mask)
 
 
-def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor, 
+def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
                         q_do_bias: bool, k_input: torch.Tensor, k_do_bias: bool) -> np.ndarray:
     """
     Compute attention pattern from query and key inputs.
-    
+
     Args:
         layer: Layer index
         head: Head index
@@ -28,7 +407,7 @@ def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
         q_do_bias: Whether to add query bias
         k_input: Key input tensor
         k_do_bias: Whether to add key bias
-        
+
     Returns:
         Attention scores as numpy array
     """
@@ -36,27 +415,27 @@ def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
     b_Q = llm.blocks[layer].attn.b_Q[head]
     W_K = llm.blocks[layer].attn.W_K[head]
     b_K = llm.blocks[layer].attn.b_K[head]
-    
+
     q = einsum(W_Q, q_input, "d a, s d -> s a")
     if q_do_bias:
         q += b_Q
-        
+
     k = einsum(W_K, k_input, "d a, s d -> s a")
     if k_do_bias:
         k += b_K
-        
+
     d_head = W_Q.shape[-1]
     attention_scores = einsum(q, k, "q a, k a -> q k") / math.sqrt(d_head)
 
     return attention_scores.detach().cpu().numpy()
 
 
-def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, head: int, 
+def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, head: int,
                                            input_text: str, query_position: int, key_position: int,
                                            hook_point: str = "hook_attn_out") -> Dict:
     """
     Analyze interactions between features in attention.
-    
+
     Args:
         layer: Layer index
         head: Head index
@@ -66,39 +445,33 @@ def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, hea
     """
     activations_SD = get_llm_activations(model,input_text,hook_point=hook_point,layers=layer)
     feature_activations_SH = sae.encode(activations_SD)
-    
+
     feature_activations_query = feature_activations_SH[query_position]
     query_active_features = torch.where(feature_activations_query != 0)[0]
-    
+
     feature_activations_key = feature_activations_SH[key_position]
     key_active_features = torch.where(feature_activations_key != 0)[0]
-    
+
     query_activations_for_features = sae.W_dec[query_active_features]
     key_activations_for_features = sae.W_dec[key_active_features]
-    
-    interaction_matrix_unscaled = attention_pattern_QK(model, layer, head, 
-                                                        query_activations_for_features, False, 
+
+    interaction_matrix_unscaled = attention_pattern_QK(model, layer, head,
+                                                        query_activations_for_features, False,
                                                         key_activations_for_features, False)
 
 
-    
+
     # Convert to numpy after using for indexing
     query_features_tensor = query_active_features
     key_features_tensor = key_active_features
-    
+
     matrix_scaling = feature_activations_query[query_features_tensor].unsqueeze(1) * \
                     feature_activations_key[key_features_tensor].unsqueeze(0)
     matrix_scaling = matrix_scaling.detach().cpu().numpy()
-    
+
     query_active_features = query_features_tensor.cpu().numpy()
     key_active_features = key_features_tensor.cpu().numpy()
-    
-    # if self.feature_activations_active_mean is not None:
-    #     interaction_matrix_unscaled *= self.feature_activations_active_mean[query_active_features][:, np.newaxis]
-    #     interaction_matrix_unscaled *= self.feature_activations_active_mean[key_active_features][np.newaxis, :]
-    #     matrix_scaling /= self.feature_activations_active_mean[query_active_features][:, np.newaxis]
-    #     matrix_scaling /= self.feature_activations_active_mean[key_active_features][np.newaxis, :]
-    
+
     return {
         'query_active_features': query_active_features,
         'key_active_features': key_active_features,
@@ -122,29 +495,34 @@ def get_sentence_averages(llm:Any,sae:Any,layer:int,head:int,input_text:str,hook
 				query_active_features=feature_analysis["query_active_features"]
 				key_active_features=feature_analysis["key_active_features"]
 				data_independent=feature_analysis["interaction_matrix_unscaled"]
-				
+
 				resized_data_dependent_int=np.zeros((hidden_dim,hidden_dim))
 				resized_data_dependent_int[query_active_features[:,None],key_active_features[None,:]]=int_matrix
 
 				resized_data_dependent_localization=np.zeros((hidden_dim,hidden_dim))
 				resized_data_dependent_localization[query_active_features[:,None],key_active_features[None,:]]=np.abs(int_matrix)*(query_index-key_index)
 
-				
-				
-				
+
+
+
 				data_dep_int_matrix=data_dep_int_matrix+resized_data_dependent_int
 				data_dep_int_matrix_abs=data_dep_int_matrix_abs+np.abs(resized_data_dependent_int)
 				data_dep_localization_matrix=data_dep_localization_matrix+resized_data_dependent_localization
 
 				count+=1
-	
+
 	data_dep_int_matrix/=count
 	data_dep_localization_matrix=data_dep_localization_matrix/np.clip(data_dep_int_matrix_abs,a_min=1,a_max=None)
 	data_dep_int_matrix_abs/=count
 
 	return data_dep_int_matrix,data_dep_int_matrix_abs,data_dep_localization_matrix
 
-    
+
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Entry point: single-model SAE path
+# ═══════════════════════════════════════════════════════════════════════
 
 
 @torch.no_grad()
@@ -218,7 +596,6 @@ def get_sentence_fra_batch(
     _, cache = model.run_with_cache(tokens_tensor, names_filter=[hook_name])
 
     act = cache[hook_name].squeeze(0)  # remove batch dim
-    seq_len = act.shape[0]
 
     # hook_z is [seq_len, n_heads, d_head] → flatten to [seq_len, n_heads*d_head]
     # ln1.hook_normalized is already [seq_len, d_model]
@@ -227,7 +604,7 @@ def get_sentence_fra_batch(
 
     # Encode to SAE features
     if verbose:
-        print(f"Encoding {seq_len} positions to SAE features...")
+        print(f"Encoding {act.shape[0]} positions to SAE features...")
 
     if hasattr(sae, 'encode'):
         feature_activations = sae.encode(act)   # [seq_len, d_sae]
@@ -240,19 +617,6 @@ def get_sentence_fra_batch(
     # Top-k ranking is unaffected (same scalar per position).
     if hasattr(sae, '_norm_coeff') and sae._norm_coeff is not None:
         feature_activations = feature_activations / sae._norm_coeff
-
-    d_sae = feature_activations.shape[-1]
-
-    topk_features = topk_sparsify(feature_activations, top_k)
-
-    # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
-    W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
-    n_kv = model.blocks[layer].attn.W_K.shape[0]
-    n_q  = model.blocks[layer].attn.W_Q.shape[0]
-    kv_head = head * n_kv // n_q                   # for GPT-2: kv_head == head
-    W_K = model.blocks[layer].attn.W_K[kv_head]   # [d_model, d_head]
-    d_head = W_Q.shape[-1]
-    attn_scale = math.sqrt(d_head)
 
     # Get decoder weights
     if hasattr(sae, 'W_dec'):
@@ -276,78 +640,126 @@ def get_sentence_fra_batch(
     if do_normalize:
         dec_norms = W_dec.norm(dim=-1)  # [d_sae]
         if verbose:
-            print(f"Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
+            print("Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
     else:
         dec_norms = None
 
-    # RMSNorm correction: when the SAE's decoder vectors live in residual-
-    # stream space (hook_resid_pre / hook_resid_post) but W_Q / W_K project
-    # from post-RMSNorm space, we must divide each interaction by the
-    # per-position RMS.  When the hook is already post-LayerNorm
-    # (ln1.hook_normalized) or in head space (attn.hook_z), no correction
-    # is needed.
-    if "resid" in hook_point:
-        eps = model.cfg.eps
-        rms = (act.float().pow(2).mean(dim=-1) + eps).sqrt()  # [seq_len]
-    else:
-        rms = None
+    # RMSNorm correction is needed when the SAE's decoder vectors live in
+    # residual-stream space but W_Q / W_K project from post-RMSNorm space.
+    rms_activations = act if "resid" in hook_point else None
 
-    # RoPE parameters — for models using rotary positional embeddings
-    # (Gemma-2, Llama, etc.) we apply the position-dependent rotation to
-    # projected q/k vectors inside the FRA loop so the decomposition matches
-    # the actual attention scores.
-    rope_sin = None
-    rope_cos = None
-    rotary_dim = None
-    rotary_adjacent_pairs = False
-    if getattr(model.cfg, "positional_embedding_type", None) == "rotary":
-        attn_block = model.blocks[layer].attn
-        rope_sin = attn_block.rotary_sin    # [n_ctx, rotary_dim]
-        rope_cos = attn_block.rotary_cos    # [n_ctx, rotary_dim]
-        rotary_dim = model.cfg.rotary_dim
-        rotary_adjacent_pairs = getattr(model.cfg, "rotary_adjacent_pairs", False)
-
-    fra_tensor_sparse = compute_fra_sparse(
-        topk_features, W_dec, W_Q, W_K, attn_scale,
-        rms=rms,
+    result = _build_fra_result(
+        model, layer, head, feature_activations, W_dec, device,
+        top_k=top_k,
+        rms_activations=rms_activations,
         dec_norms=dec_norms,
-        rope_sin=rope_sin,
-        rope_cos=rope_cos,
-        rotary_dim=rotary_dim,
-        rotary_adjacent_pairs=rotary_adjacent_pairs,
         chunk_size=chunk_size,
         verbose=verbose,
-        layer_head_label=f"L{layer}H{head}",
+    )
+    result["normalized"] = do_normalize
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Entry point: two-model crosscoder path
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@torch.no_grad()
+def get_sentence_fra_crosscoder(
+    base_model: HookedTransformer,
+    it_model: HookedTransformer,
+    crosscoder: Any,
+    tokens: list,
+    head: int = 0,
+    crosscoder_layer: int = 13,
+    max_length: int = 128,
+    top_k: int | None = 20,
+    verbose: bool = False,
+    chunk_size: int = 16,
+) -> Dict[str, Any]:
+    """Compute 4-D FRA tensor using a model-diffing crosscoder.
+
+    The crosscoder was trained on ``hook_resid_post`` at ``crosscoder_layer``.
+    That residual stream state is the input to the *next* layer's attention
+    (``hook_resid_pre`` at ``crosscoder_layer + 1``), so we always analyse
+    attention at ``crosscoder_layer + 1``.  The same activations are used
+    for crosscoder encoding and for the RMSNorm correction.
+
+    The attention layer is **not** independently configurable — it is always
+    ``crosscoder_layer + 1``.  This ensures the FRA decomposition corresponds
+    to the features the crosscoder actually learned.
+
+    Args:
+        base_model:  HookedTransformer for model-index 0 (base).
+        it_model:    HookedTransformer for model-index 1 (instruct).
+        crosscoder:  ``GemmaCrosscoderFRA`` instance.
+        tokens:      Token IDs to analyse.  Caller is responsible for
+                     tokenization (including chat template if needed).
+        head:        Attention head index.
+        crosscoder_layer:
+            Layer from which to extract residual-stream activations for the
+            crosscoder (default 13, matching the published checkpoint).
+            Uses ``hook_resid_post`` at this layer.  The attention layer
+            is derived as ``crosscoder_layer + 1``.
+        max_length:  Maximum sequence length.
+        top_k:       Keep only top-k features per position.
+        verbose:     Show progress bar.
+        chunk_size:  Query positions per GPU batch (controls peak memory).
+
+    Returns:
+        Dict with keys:
+          - ``fra_tensor_sparse``  (torch.sparse_coo_tensor, 4-D)
+          - ``shape``
+          - ``seq_len``
+          - ``total_interactions``
+          - ``feature_activations``  (torch.Tensor, [seq, d_sae])
+          - ``topk_features``  (torch.Tensor, [seq, d_sae])
+    """
+    layer = crosscoder_layer + 1
+    target_model = base_model if crosscoder.model_idx == 0 else it_model
+    other_model = it_model if crosscoder.model_idx == 0 else base_model
+    device = next(target_model.parameters()).device
+
+    # Truncate if needed
+    if max_length is not None and len(tokens) > max_length:
+        tokens = tokens[:max_length]
+    tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    # Extract activations from both models at crosscoder_layer
+    hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
+
+    _, target_cache = target_model.run_with_cache(
+        tokens_tensor, names_filter=[hook_name],
+    )
+    _, other_cache = other_model.run_with_cache(
+        tokens_tensor, names_filter=[hook_name],
     )
 
-    # Move to device if it fits (for large SAEs keep on CPU)
-    if str(device) != "cpu":
-        try:
-            fra_tensor_sparse = fra_tensor_sparse.to(device)
-        except RuntimeError:
-            if verbose:
-                print("Warning: sparse tensor too large for GPU, keeping on CPU.")
+    target_act = target_cache[hook_name].squeeze(0)      # [seq, d_model]
+    other_act = other_cache[hook_name].squeeze(0)
 
-    total_interactions = fra_tensor_sparse._nnz()
-    shape = fra_tensor_sparse.shape
+    # Stack in crosscoder order: [base, instruct]
+    if crosscoder.model_idx == 0:
+        x_stacked = torch.stack([target_act, other_act], dim=1)
+    else:
+        x_stacked = torch.stack([other_act, target_act], dim=1)
 
+    # Encode through crosscoder
     if verbose:
-        _k = top_k if top_k is not None else d_sae
-        density = total_interactions / (seq_len * seq_len * _k * _k)
-        print(f"4D FRA tensor: shape={shape}, nnz={total_interactions:,}, density={density:.2%}")
-        sparse_mem = (total_interactions * 5 * 4) / (1024**2)   # 4 indices + 1 value
-        dense_mem  = (seq_len * seq_len * d_sae * d_sae * 4) / (1024**3)
-        print(f"Memory: sparse={sparse_mem:.2f}MB vs dense={dense_mem:.2f}GB")
+        print(f"Encoding {target_act.shape[0]} positions through crosscoder...")
+    feature_activations = crosscoder.encode(x_stacked)   # [seq, d_sae]
 
-    return {
-        'fra_tensor_sparse': fra_tensor_sparse,
-        'shape': shape,
-        'seq_len': seq_len,
-        'total_interactions': total_interactions,
-        'normalized': do_normalize,
-        'topk_features': topk_features,
-        'feature_activations': feature_activations,
-    }
+    # Crosscoder decoder vectors live in residual-stream space, so RMSNorm
+    # correction is always needed.  target_act is the residual stream that
+    # feeds into the attention layer's RMSNorm.
+    return _build_fra_result(
+        target_model, layer, head, feature_activations, crosscoder.W_dec, device,
+        top_k=top_k,
+        rms_activations=target_act,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
 
 
 if __name__ == "__main__":

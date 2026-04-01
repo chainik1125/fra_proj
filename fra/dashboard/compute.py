@@ -99,7 +99,7 @@ def run_fra_crosscoder(
     it_arch_name: str = "",
 ) -> dict:
     """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
-    from fra.core.fra_crosscoder import get_sentence_fra_crosscoder
+    from fra.core.fra import get_sentence_fra_crosscoder
 
     base_model, it_model = load_model_pair(
         base_model_name, it_model_name, device, it_arch_name,

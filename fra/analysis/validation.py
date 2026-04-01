@@ -453,7 +453,7 @@ def test_crosscoder_attention_reconstruction(
     tokens, layer, head, crosscoder_layer, top_k=20,
 ):
     """Test (a) for crosscoders: FRA sum vs actual pre-softmax scores."""
-    from fra.core.fra_crosscoder import get_sentence_fra_crosscoder
+    from fra.core.fra import get_sentence_fra_crosscoder
 
     device = next(target_model.parameters()).device
     tokens = tokens[:128]
@@ -546,7 +546,7 @@ def test_crosscoder_loss_recovery(
     tokens, layer, head, crosscoder_layer, top_k=20,
 ):
     """Test (c) for crosscoders: loss recovery via attention patching."""
-    from fra.core.fra_crosscoder import get_sentence_fra_crosscoder
+    from fra.core.fra import get_sentence_fra_crosscoder
 
     device = next(target_model.parameters()).device
     tokens = tokens[:128]
