@@ -542,12 +542,8 @@ def test_crosscoder_reconstruction(
     base_act = base_cache[hook_name].squeeze(0)
     it_act = it_cache[hook_name].squeeze(0)
 
-    # Stack in crosscoder order
-    if crosscoder.model_idx == 0:
-        x_stacked = torch.stack([base_act, it_act], dim=1)
-    else:
-        x_stacked = torch.stack([it_act, base_act], dim=1)
-
+    # Always stack [base, instruct] — crosscoder order is fixed
+    x_stacked = torch.stack([base_act, it_act], dim=1)
     target_act = base_act if crosscoder.model_idx == 0 else it_act
 
     # Encode and decode
