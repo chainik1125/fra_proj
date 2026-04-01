@@ -69,6 +69,8 @@ def run_fra(
 
         token_strs = [model.tokenizer.decode([t]) for t in tokens]
 
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
     sparse = fra_result["fra_tensor_sparse"]
     return {
         "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
@@ -82,6 +84,7 @@ def run_fra(
         "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,
         "tokens": tokens[:fra_result["seq_len"]],
+        "softcap": softcap,
     }
 
 
@@ -131,6 +134,8 @@ def run_fra_crosscoder(
 
         token_strs = [target_model.tokenizer.decode([t]) for t in tokens[:128]]
 
+    softcap = getattr(target_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
     sparse = fra_result["fra_tensor_sparse"]
     return {
         "indices_np": sparse.indices().cpu().numpy(),
@@ -144,6 +149,7 @@ def run_fra_crosscoder(
         "attn_scores_np": attn_scores,
         "token_strs": token_strs,
         "tokens": tokens[:fra_result["seq_len"]],  # actual token IDs used for FRA computation
+        "softcap": softcap,
     }
 
 

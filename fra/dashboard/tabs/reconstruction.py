@@ -29,6 +29,25 @@ from fra.dashboard.widgets import _show_heatmap, make_heatmap
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
+def _get_softcap(model, layer):
+    """Return the attention logit soft-cap value, or 0 if the model doesn't use it."""
+    return getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+
+def _apply_softcap_np(scores, softcap):
+    """Apply tanh soft-capping to a numpy score array (no-op if softcap==0)."""
+    if softcap > 0:
+        return softcap * np.tanh(scores / softcap)
+    return scores
+
+
+def _apply_softcap_t(scores, softcap):
+    """Apply tanh soft-capping to a torch score tensor (no-op if softcap==0)."""
+    if softcap > 0:
+        return softcap * torch.tanh(scores / softcap)
+    return scores
+
+
 def _load_model_sae(cfg, device):
     """Load model and SAE using cached dashboard loaders."""
     sae_type = cfg.get("sae_type", "")
@@ -109,7 +128,9 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
         size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
     ).coalesce()
     fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
-    scores_fra = reconstruct_scores(fra_sum, bias, device, actual_bos_scores=actual_bos)
+    softcap = _get_softcap(model, layer_)
+    scores_fra = reconstruct_scores(fra_sum, bias, device, actual_bos_scores=actual_bos,
+                                    softcap=softcap)
 
     # SAE scores from stored feature activations
     feat_acts = torch.tensor(
@@ -143,7 +164,10 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
                 rotary_dim, rotary_adjacent_pairs,
             ).squeeze(0)
 
-    sae_scores = (q_full @ k_full.T) / attn_scale
+    softcap = _get_softcap(model, layer_)
+    sae_scores = _apply_softcap_t(
+        (q_full @ k_full.T) / attn_scale, softcap,
+    )
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device),
         diagonal=1,
@@ -268,7 +292,10 @@ def _run_crosscoder_loss_metrics(
                 rotary_dim, rotary_adjacent_pairs,
             ).squeeze(0)
 
-    scores_coder = (q_full @ k_full.T) / attn_scale + mask_t
+    softcap = _get_softcap(target, layer_)
+    scores_coder = _apply_softcap_t(
+        (q_full @ k_full.T) / attn_scale, softcap,
+    ) + mask_t
 
     # ── FRA-patched condition ──
     # FRA sum ≈ (q_nobias @ k_nobias.T) / attn_scale (feature pairs only).
@@ -278,11 +305,10 @@ def _run_crosscoder_loss_metrics(
     bias_correction = (
         (q_full @ k_full.T) - (q_nobias @ k_nobias.T)
     ) / attn_scale
-    scores_fra = (
-        torch.tensor(fra_sum, dtype=torch.float32, device=device)
-        + bias_correction
-        + mask_t
-    )
+    scores_fra = _apply_softcap_t(
+        torch.tensor(fra_sum, dtype=torch.float32, device=device) + bias_correction,
+        softcap,
+    ) + mask_t
 
     if actual_bos is not None:
         actual_t = torch.tensor(
@@ -434,13 +460,16 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
             return
 
         actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
+        _sc = fra_data.get("softcap", 0.0) or 0.0
         fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
-        scores_full = reconstruct_scores(fra_sum_full, bias, device, actual_bos_scores=actual_bos)
+        scores_full = reconstruct_scores(fra_sum_full, bias, device,
+                                         actual_bos_scores=actual_bos, softcap=_sc)
 
         pairs_to_abl = [(int(p[0]), int(p[1])) for p in sel_pairs]
         fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae)
         fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
-        scores_abl = reconstruct_scores(fra_sum_abl, bias, device, actual_bos_scores=actual_bos)
+        scores_abl = reconstruct_scores(fra_sum_abl, bias, device,
+                                        actual_bos_scores=actual_bos, softcap=_sc)
 
         mask_t = torch.triu(
             torch.full((seq_len, seq_len), float("-inf"), device=device),
@@ -660,13 +689,15 @@ def render(tab):
         std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
         std_probs[causal_mask] = np.nan
 
-        # FRA logits
+        # FRA logits — apply softcap to match what the model does
+        _softcap = fra_data.get("softcap", 0.0) or 0.0
         idxs = fra_data["indices_np"]
         vals = fra_data["values_np"]
         fra_logits = np.zeros((seq_len, seq_len))
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
                 fra_logits[qp, kp] += v
+        fra_logits = _apply_softcap_np(fra_logits, _softcap)
 
         # Copy actual BOS row/col into FRA logits when SAE wasn't trained on BOS
         if exclude_bos:
@@ -742,6 +773,7 @@ def render(tab):
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
                 _fra_causal[qp, kp] += v
+        _fra_causal = _apply_softcap_np(_fra_causal, _softcap)
         _fra_causal[~_causal_bool] = 0.0
 
         errs = compute_errors(_std_causal, _fra_causal, exclude_bos=exclude_bos)

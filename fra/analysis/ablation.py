@@ -171,7 +171,8 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     }
 
 
-def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None):
+def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
+                       softcap: float = 0.0):
     """
     Build full pre-softmax attention scores from FRA sum + bias corrections.
 
@@ -183,6 +184,9 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None):
             scores.  When provided, row 0 and column 0 (BOS positions) are
             copied from the actual scores into the reconstruction.  Use this
             when the SAE was not trained on BOS activations.
+        softcap: Attention logit soft-cap value (e.g. 50.0 for Gemma-2).
+            When > 0, applies ``softcap * tanh(scores / softcap)`` before
+            the causal mask, matching the model's own attention implementation.
 
     Returns:
         [seq, seq] torch tensor ready to patch into hook_attn_scores.
@@ -196,6 +200,10 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None):
         + bias["term_k"][None, :]
         + bias["term_const"]
     ) / bias["attn_scale"]
+
+    # Logit soft-capping (Gemma-2): applied before causal mask
+    if softcap > 0:
+        scores = softcap * np.tanh(scores / softcap)
 
     # Causal mask
     causal = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
