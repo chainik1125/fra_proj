@@ -845,34 +845,36 @@ def render(tab):
             )
         elif loss_r.get("sae") is not None:
             hc = loss_r["zero"]["loss"] - loss_r["unpatched_loss"]
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("Unpatched loss", f"{loss_r['unpatched_loss']:.4f}")
-            c2.metric(
-                f"{coder_label}-patched",
-                f"{loss_r['sae']['loss']:.4f}",
-                delta=f"{loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}",
-            )
-            c3.metric(
-                "FRA-patched",
-                f"{loss_r['fra']['loss']:.4f}",
-                delta=f"{loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}",
-            )
-            c4.metric(
-                "Zero-ablated",
+            has_recovery = hc > 0.01
+
+            # Reference row
+            r1, r2, r3 = st.columns(3)
+            r1.metric("Unpatched loss", f"{loss_r['unpatched_loss']:.4f}")
+            r2.metric(
+                "Zero-ablated loss",
                 f"{loss_r['zero']['loss']:.4f}",
                 delta=f"{loss_r['zero']['loss'] - loss_r['unpatched_loss']:+.4f}",
             )
-            if hc > 0.01:
-                sae_rec = (loss_r["zero"]["loss"] - loss_r["sae"]["loss"]) / hc
-                fra_rec = (loss_r["zero"]["loss"] - loss_r["fra"]["loss"]) / hc
-                c5.metric(
-                    "Recovery",
-                    f"{coder_label}: {sae_rec:.3f}",
-                    delta=f"FRA: {fra_rec:.3f}",
-                    delta_color="off",
-                )
+            if has_recovery:
+                r3.metric("Headroom (zero \u2212 unpatched)", f"{hc:.4f}")
             else:
-                c5.metric("Recovery", "N/A")
+                r3.metric("Headroom", "< 0.01")
+
+            # Patched conditions: loss + recovery side by side
+            st.markdown(
+                f"| | **{coder_label}-patched** | **FRA-patched** |\n"
+                f"|---|---|---|\n"
+                f"| **Loss** | {loss_r['sae']['loss']:.4f} "
+                f"({loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}) "
+                f"| {loss_r['fra']['loss']:.4f} "
+                f"({loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}) |\n"
+                + (
+                    f"| **Recovery** | "
+                    f"{(loss_r['zero']['loss'] - loss_r['sae']['loss']) / hc:.3f} | "
+                    f"{(loss_r['zero']['loss'] - loss_r['fra']['loss']) / hc:.3f} |\n"
+                    if has_recovery else ""
+                ),
+            )
 
             st.caption(
                 f"With all features and no top-k truncation, {coder_label}-patched "
