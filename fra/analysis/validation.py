@@ -448,6 +448,7 @@ def avg_error_dicts(dicts):
 # ── Crosscoder validation ─────────────────────────────────────────────────
 
 
+@torch.no_grad()
 def test_crosscoder_attention_reconstruction(
     target_model, base_model, it_model, crosscoder,
     tokens, layer, head, crosscoder_layer, top_k=20,
@@ -487,6 +488,7 @@ def test_crosscoder_attention_reconstruction(
     }
 
 
+@torch.no_grad()
 def test_crosscoder_reconstruction(
     base_model, it_model, crosscoder, tokens, crosscoder_layer,
 ):
@@ -519,7 +521,7 @@ def test_crosscoder_reconstruction(
     target_hat = x_hat_stacked[:, crosscoder.model_idx]  # [seq, d_model]
 
     x_np = target_act.cpu().float().numpy()
-    xhat_np = target_hat.cpu().float().numpy()
+    xhat_np = target_hat.detach().cpu().float().numpy()
 
     active_per_token = (features != 0).sum(dim=-1).float()
 
@@ -541,6 +543,7 @@ def test_crosscoder_reconstruction(
     }
 
 
+@torch.no_grad()
 def test_crosscoder_loss_recovery(
     target_model, base_model, it_model, crosscoder,
     tokens, layer, head, crosscoder_layer, top_k=20,
