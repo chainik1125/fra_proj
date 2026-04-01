@@ -649,7 +649,8 @@ def get_sentence_fra_batch(
     # Use the full reconstructed activations (not actual model activations)
     # so that FRA scores match coder-patched scores when all features are kept.
     if "resid" in hook_point:
-        x_hat = feature_activations @ W_dec
+        b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
+        x_hat = feature_activations @ W_dec + b_dec
         rms_activations = x_hat
     else:
         rms_activations = None
@@ -760,11 +761,12 @@ def get_sentence_fra_crosscoder(
     # correction is always needed.  Use the full reconstructed activations
     # (not actual model activations) so that FRA scores match coder-patched
     # scores when all features are kept.
-    x_hat = feature_activations.to(crosscoder.W_dec.dtype) @ crosscoder.W_dec
+    x_hat_stacked = crosscoder.decode(feature_activations.to(crosscoder.W_dec.dtype))
+    x_hat = x_hat_stacked[:, crosscoder.model_idx].float()  # [seq, d_model]
     return _build_fra_result(
         target_model, layer, head, feature_activations, crosscoder.W_dec, device,
         top_k=top_k,
-        rms_activations=x_hat.float(),
+        rms_activations=x_hat,
         chunk_size=chunk_size,
         verbose=verbose,
     )

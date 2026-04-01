@@ -185,7 +185,7 @@ def _run_crosscoder_loss_metrics(
     *, target, crosscoder, model_idx, crosscoder_layer,
 ):
     """Compute crosscoder / FRA / zero loss patching for crosscoder path."""
-    from fra.analysis.ablation import reconstruct_scores, run_condition
+    from fra.analysis.ablation import run_condition
 
     layer_ = cfg["layer"]
     head_ = cfg["head"]
@@ -196,19 +196,6 @@ def _run_crosscoder_loss_metrics(
 
     logits_clean = target(tok_t)
     unpatched_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
-
-    # Zero bias for crosscoders
-    bias = {
-        "term_q": np.zeros(seq_len),
-        "term_k": np.zeros(seq_len),
-        "term_const": 0.0,
-        "attn_scale": 1.0,
-        "seq_len": seq_len,
-        "tok_tensor": tok_t,
-        "shift_labels": shift,
-        "unpatched_loss": unpatched_loss,
-        "unpatched_logits": logits_clean,
-    }
 
     d_sae = fra_data["feat_acts_np"].shape[1]
     fra_sparse = torch.sparse_coo_tensor(
@@ -223,10 +210,6 @@ def _run_crosscoder_loss_metrics(
         diagonal=1,
     )
 
-    # ── FRA-patched condition ──
-    fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
-    scores_fra = reconstruct_scores(fra_sum, bias, device, actual_bos_scores=actual_bos)
-
     # ── Crosscoder-patched condition ──
     # Decode stored features → reconstructed residual stream activations,
     # then apply RMSNorm and project through W_Q / W_K to get attention scores.
@@ -235,6 +218,10 @@ def _run_crosscoder_loss_metrics(
     )
     x_hat_stacked = crosscoder.decode(feat_acts.to(crosscoder.W_dec.dtype))  # [seq, 2, d_model]
     x_hat = x_hat_stacked[:, model_idx].float()           # [seq, d_model]
+
+    # Decoder bias: crosscoder.decode() adds this, but FRA only decomposes
+    # the feature-weighted decoder directions (without bias).
+    b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
 
     # RMSNorm: crosscoder decodes into residual-stream space, but W_Q / W_K
     # (with gamma folded in by TransformerLens) expect post-RMSNorm input.
@@ -250,10 +237,16 @@ def _run_crosscoder_loss_metrics(
     b_K = target.blocks[layer_].attn.b_K[kv_head].float()
     attn_scale = target.blocks[layer_].attn.attn_scale
 
+    # Full Q/K (with decoder bias contribution and attention biases)
     q_full = x_hat_norm @ W_Q + b_Q
     k_full = x_hat_norm @ W_K + b_K
 
-    # Apply RoPE (must match what compute_fra_sparse does)
+    # Q/K from feature directions only (no decoder bias) — what FRA decomposes
+    x_hat_nobias_norm = (x_hat - b_dec) / rms
+    q_nobias = x_hat_nobias_norm @ W_Q
+    k_nobias = x_hat_nobias_norm @ W_K
+
+    # Apply RoPE to all Q/K vectors
     rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
         _extract_rope_params(target, layer_)
     )
@@ -267,8 +260,30 @@ def _run_crosscoder_loss_metrics(
                 k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
                 rotary_dim, rotary_adjacent_pairs,
             ).squeeze(0)
+            q_nobias[pos] = apply_rope_to_projected(
+                q_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            k_nobias[pos] = apply_rope_to_projected(
+                k_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
 
     scores_coder = (q_full @ k_full.T) / attn_scale + mask_t
+
+    # ── FRA-patched condition ──
+    # FRA sum ≈ (q_nobias @ k_nobias.T) / attn_scale (feature pairs only).
+    # The decoder bias creates cross-terms that FRA doesn't capture, so we
+    # compute the correction matrix: full_scores - nobias_scores.
+    fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
+    bias_correction = (
+        (q_full @ k_full.T) - (q_nobias @ k_nobias.T)
+    ) / attn_scale
+    scores_fra = (
+        torch.tensor(fra_sum, dtype=torch.float32, device=device)
+        + bias_correction
+        + mask_t
+    )
 
     if actual_bos is not None:
         actual_t = torch.tensor(
@@ -276,6 +291,8 @@ def _run_crosscoder_loss_metrics(
         )
         scores_coder[0, :] = actual_t[0, :]
         scores_coder[:, 0] = actual_t[:, 0]
+        scores_fra[0, :] = actual_t[0, :]
+        scores_fra[:, 0] = actual_t[:, 0]
 
     # ── Zero condition ──
     scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
