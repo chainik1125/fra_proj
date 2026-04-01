@@ -216,7 +216,7 @@ def _run_crosscoder_loss_metrics(
     feat_acts = torch.tensor(
         fra_data["feat_acts_np"], dtype=torch.float32, device=device,
     )
-    x_hat_stacked = crosscoder.decode(feat_acts)          # [seq, 2, d_model]
+    x_hat_stacked = crosscoder.decode(feat_acts.to(crosscoder.W_dec.dtype))  # [seq, 2, d_model]
     x_hat = x_hat_stacked[:, model_idx].float()           # [seq, d_model]
 
     # RMSNorm: crosscoder decodes into residual-stream space, but W_Q / W_K
