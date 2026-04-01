@@ -37,16 +37,10 @@ def load_sae_gemma(release: str, sae_id: str, device: str):
 def load_model_gemma(model_name: str, device: str, hf_token: str = ""):
     from transformer_lens import HookedTransformer
     torch.set_grad_enabled(False)
-    kwargs = {
-        "fold_ln": False,
-        "center_unembed": False,
-        "center_writing_weights": False,
-        "fold_value_biases": False,
-        "refactor_factored_attn_matrices": False,
-    }
+    kwargs = {}
     if hf_token:
         kwargs["token"] = hf_token
-    return HookedTransformer.from_pretrained(model_name, device=device, dtype=torch.float16, **kwargs)
+    return HookedTransformer.from_pretrained_no_processing(model_name, device=device, dtype=torch.float16, **kwargs)
 
 
 @st.cache_resource(show_spinner=False)
