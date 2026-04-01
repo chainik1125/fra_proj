@@ -64,20 +64,20 @@ def run_fra(
         _, attn_cache = model.run_with_cache(
             tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook]
         )
-        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().numpy()  # [S, S]
-        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().numpy()    # [S, S]
+        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().float().numpy()  # [S, S]
+        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().float().numpy()    # [S, S]
 
         token_strs = [model.tokenizer.decode([t]) for t in tokens]
 
     sparse = fra_result["fra_tensor_sparse"]
     return {
         "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
-        "values_np": sparse.values().cpu().numpy(),     # [nnz]
+        "values_np": sparse.values().cpu().float().numpy(),     # [nnz]
         "shape": fra_result["shape"],
         "seq_len": fra_result["seq_len"],
         "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": fra_result["feature_activations"].cpu().numpy(),  # [seq_len, d_sae], raw
-        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),       # [seq_len, d_sae], top-k filtered
+        "feat_acts_np": fra_result["feature_activations"].cpu().float().numpy(),  # [seq_len, d_sae], raw
+        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),       # [seq_len, d_sae], top-k filtered
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
         "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
         "token_strs": token_strs,
@@ -126,20 +126,20 @@ def run_fra_crosscoder(
         _, attn_cache = target_model.run_with_cache(
             tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook],
         )
-        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().numpy()
-        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().numpy()
+        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().float().numpy()
+        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().float().numpy()
 
         token_strs = [target_model.tokenizer.decode([t]) for t in tokens[:128]]
 
     sparse = fra_result["fra_tensor_sparse"]
     return {
         "indices_np": sparse.indices().cpu().numpy(),
-        "values_np": sparse.values().cpu().numpy(),
+        "values_np": sparse.values().cpu().float().numpy(),
         "shape": fra_result["shape"],
         "seq_len": fra_result["seq_len"],
         "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),         # [seq_len, d_sae], raw
-        "topk_acts_np": fra_result["topk_features"].cpu().numpy(),  # [seq_len, d_sae], top-k filtered
+        "feat_acts_np": feat_acts.cpu().float().numpy(),         # [seq_len, d_sae], raw
+        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),  # [seq_len, d_sae], top-k filtered
         "attn_pattern_np": attn_pattern,
         "attn_scores_np": attn_scores,
         "token_strs": token_strs,

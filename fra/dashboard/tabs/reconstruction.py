@@ -115,14 +115,14 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
     feat_acts = torch.tensor(
         fra_data["feat_acts_np"], dtype=torch.float32, device=device,
     )
-    x_hat = sae.decode(feat_acts)
+    x_hat = sae.decode(feat_acts).float()
 
-    W_Q = model.blocks[layer_].attn.W_Q[head_]
-    W_K = get_W_K(model, layer_, head_)
-    b_Q = model.blocks[layer_].attn.b_Q[head_]
+    W_Q = model.blocks[layer_].attn.W_Q[head_].float()
+    W_K = get_W_K(model, layer_, head_).float()
+    b_Q = model.blocks[layer_].attn.b_Q[head_].float()
     n_kv = model.cfg.n_key_value_heads or model.cfg.n_heads
     kv_head = head_ // (model.cfg.n_heads // n_kv)
-    b_K = model.blocks[layer_].attn.b_K[kv_head]
+    b_K = model.blocks[layer_].attn.b_K[kv_head].float()
     attn_scale = model.blocks[layer_].attn.attn_scale
 
     q_full = x_hat @ W_Q + b_Q
@@ -174,7 +174,6 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
         "fra": r_fra,
         "sae": r_sae,
         "zero": r_zero,
-        "bias": bias,
         "fra_sparse": fra_sparse,
         "d_sae": d_sae,
     }
@@ -307,7 +306,6 @@ def _run_crosscoder_loss_metrics(
         "fra": r_fra,
         "sae": r_coder,
         "zero": r_zero,
-        "bias": bias,
         "fra_sparse": fra_sparse,
         "d_sae": d_sae,
     }

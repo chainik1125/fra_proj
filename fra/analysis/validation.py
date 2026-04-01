@@ -142,21 +142,22 @@ def test_attention_reconstruction(model, sae, text, layer, head,
         x = x.flatten(-2, -1)
 
     W_Q, W_K, _, _ = get_qk_weights(model, layer, head)
+    W_Q, W_K = W_Q.float(), W_K.float()
     attn_scale = model.blocks[layer].attn.attn_scale
 
     # ── 1. Actual QK (ground truth) — read directly from the model cache ──
     # This is architecture-agnostic: RMSNorm, GQA, ALiBi etc. are all handled
     # by the model itself.  Shape: [batch, n_heads, seq, seq] → [seq, seq].
-    actual_qk = cache[attn_scores_hook_name].squeeze(0)[head].cpu().numpy()
+    actual_qk = cache[attn_scores_hook_name].squeeze(0)[head].float().cpu().numpy()
 
     # ── 2. SAE full-reconstruction QK (includes b_dec, scaled) ──
     features = sae.encode(x)
-    x_hat = sae.decode(features)               # includes b_dec
+    x_hat = sae.decode(features).float()       # includes b_dec
     sae_qk = (((x_hat @ W_Q) @ (x_hat @ W_K).T) / attn_scale).cpu().numpy()
 
     # ── 3. SAE QK without b_dec (what FRA decomposes into, scaled) ──
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
-    x_hat_nobias = x_hat - b_dec
+    x_hat_nobias = x_hat - b_dec.float()
     sae_qk_nobias = (((x_hat_nobias @ W_Q) @ (x_hat_nobias @ W_K).T) / attn_scale).cpu().numpy()
 
     # ── 4. FRA computation (normalized = auto-detect) ──
@@ -217,8 +218,8 @@ def test_sae_reconstruction(model, sae, text, layer, hook_point,
     features = sae.encode(x)
     x_hat = sae.decode(features)
 
-    x_np = x.cpu().numpy()
-    x_hat_np = x_hat.cpu().numpy()
+    x_np = x.cpu().float().numpy()
+    x_hat_np = x_hat.cpu().float().numpy()
 
     # Per-token L0 (active features)
     per_token_l0 = (features != 0).sum(dim=-1).float()
@@ -289,11 +290,12 @@ def test_loss_recovery(model, sae, text, layer, head,
         x = x.flatten(-2, -1)
 
     W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
+    W_Q, W_K, b_Q, b_K = W_Q.float(), W_K.float(), b_Q.float(), b_K.float()
     attn_scale = model.blocks[layer].attn.attn_scale
 
     # SAE reconstruction
     features = sae.encode(x)
-    x_hat = sae.decode(features)  # includes b_dec
+    x_hat = sae.decode(features).float()  # includes b_dec
 
     # FRA (normalized = auto-detect)
     fra_result = get_sentence_fra_batch(
@@ -311,13 +313,13 @@ def test_loss_recovery(model, sae, text, layer, head,
     # where combined biases absorb b_dec, b_Q, b_K
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
 
-    x_hat_nobias = (x_hat - b_dec)  # [seq, d_model]
+    x_hat_nobias = (x_hat - b_dec.float())  # [seq, d_model]
     q_nobias = (x_hat_nobias @ W_Q).cpu().numpy()   # [seq, d_head]
     k_nobias = (x_hat_nobias @ W_K).cpu().numpy()
 
     # Combined bias: b_dec contribution + attention bias
-    combined_q_bias = (b_dec @ W_Q + b_Q).cpu().numpy()  # [d_head]
-    combined_k_bias = (b_dec @ W_K + b_K).cpu().numpy()
+    combined_q_bias = (b_dec.float() @ W_Q + b_Q).cpu().numpy()  # [d_head]
+    combined_k_bias = (b_dec.float() @ W_K + b_K).cpu().numpy()
 
     # Full score[q,k] = (q_nobias[q] + cqb) . (k_nobias[k] + ckb) / scale
     # = q_nobias[q].k_nobias[k] + q_nobias[q].ckb + cqb.k_nobias[k] + cqb.ckb
@@ -474,7 +476,7 @@ def test_crosscoder_attention_reconstruction(
     _, cache = target_model.run_with_cache(
         tok_tensor, names_filter=[attn_scores_hook],
     )
-    actual_scores = cache[attn_scores_hook][0, head].cpu().numpy()  # [seq, seq]
+    actual_scores = cache[attn_scores_hook][0, head].cpu().float().numpy()  # [seq, seq]
 
     # Compare only causal region
     causal = np.tril(np.ones((seq_len, seq_len)))

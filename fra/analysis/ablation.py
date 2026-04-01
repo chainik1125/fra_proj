@@ -138,12 +138,14 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
         x = x.flatten(-2, -1)
 
     W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
+    W_Q, W_K, b_Q, b_K = W_Q.float(), W_K.float(), b_Q.float(), b_K.float()
     attn_scale = model.blocks[layer].attn.attn_scale
 
     # SAE reconstruction
     features = sae.encode(x)
-    x_hat = sae.decode(features)
+    x_hat = sae.decode(features).float()
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
+    b_dec = b_dec.float()
 
     x_hat_nobias = x_hat - b_dec
     q_nobias = (x_hat_nobias @ W_Q).cpu().numpy()
