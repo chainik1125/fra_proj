@@ -97,10 +97,12 @@ def compute_errors(actual: np.ndarray, reconstructed: np.ndarray,
             For 1-D vectors this removes element 0.
     """
     if exclude_bos:
-        if actual.ndim >= 2:
+        if actual.ndim >= 2 and actual.shape[0] == actual.shape[1]:
+            # Square matrix (attention scores): remove BOS row and column
             actual = actual[1:, 1:]
             reconstructed = reconstructed[1:, 1:]
         else:
+            # Activation matrix [seq, d_model] or 1-D: remove position 0 only
             actual = actual[1:]
             reconstructed = reconstructed[1:]
 

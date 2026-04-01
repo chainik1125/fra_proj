@@ -325,8 +325,7 @@ def _build_fra_result(
     """
     topk_features = topk_sparsify(feature_activations, top_k).float()
 
-    # Attention weights — cast to float32 so FRA accumulation matches the
-    # float32 reconstruction path in the dashboard.
+    # Attention weights — float32 for accumulation precision
     W_Q = model.blocks[layer].attn.W_Q[head].float()       # [d_model, d_head]
     W_K_mat = get_W_K(model, layer, head).float()           # [d_model, d_head]
     d_head = W_Q.shape[-1]
