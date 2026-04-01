@@ -323,11 +323,12 @@ def _build_fra_result(
         Dict with ``fra_tensor_sparse``, ``shape``, ``seq_len``,
         ``total_interactions``, ``feature_activations``, ``topk_features``.
     """
-    topk_features = topk_sparsify(feature_activations, top_k)
+    topk_features = topk_sparsify(feature_activations, top_k).float()
 
-    # Attention weights
-    W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
-    W_K_mat = get_W_K(model, layer, head)           # [d_model, d_head]
+    # Attention weights — cast to float32 so FRA accumulation matches the
+    # float32 reconstruction path in the dashboard.
+    W_Q = model.blocks[layer].attn.W_Q[head].float()       # [d_model, d_head]
+    W_K_mat = get_W_K(model, layer, head).float()           # [d_model, d_head]
     d_head = W_Q.shape[-1]
     attn_scale = math.sqrt(d_head)
 
@@ -343,7 +344,7 @@ def _build_fra_result(
     )
 
     fra_tensor_sparse = compute_fra_sparse(
-        topk_features, W_dec, W_Q, W_K_mat, attn_scale,
+        topk_features, W_dec.float(), W_Q, W_K_mat, attn_scale,
         rms=rms,
         dec_norms=dec_norms,
         rope_sin=rope_sin,
