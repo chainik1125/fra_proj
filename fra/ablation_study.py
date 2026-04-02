@@ -23,6 +23,9 @@ Run:
   python -m fra.ablation_study                         # GPT-2, local ln1, L2
   python -m fra.ablation_study --heads 0 1 5 --k 10 50 100
   python -m fra.ablation_study --sae hub --layer 5     # hook_z SAE at L5
+    python -m fra.ablation_study --model gemma --layer 12 --n-texts 5
+        # no --heads: auto-screens all heads first (resource-heavy)
+    python -m fra.ablation_study --model gemma --layer 12 --heads 7 --k 10 50 100 500
 """
 
 import argparse
@@ -209,6 +212,8 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     attn_scale = model.blocks[layer].attn.attn_scale
 
     # SAE reconstruction
+
+    # Tries to remove the bias correction term for pure feature to feature reconstruction
     features = sae.encode(x)
     x_hat = sae.decode(features)
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
@@ -532,6 +537,10 @@ def main():
     parser.add_argument("--layer", type=int, default=None)
     parser.add_argument("--heads", type=int, nargs="+", default=None,
                         help="Heads to test (default: auto-select top 3 by contribution)")
+    parser.add_argument("--screen-texts", type=int, default=None,
+                        help="Texts used for auto head-screening (default: use --n-texts pool)")
+    parser.add_argument("--screen-top-heads", type=int, default=3,
+                        help="When auto-screening, evaluate this many top heads in full ablation")
     parser.add_argument("--k", type=int, nargs="+", default=[10, 50, 100, 500],
                         help="Number of feature pairs to ablate")
     parser.add_argument("--top-k-features", type=int, default=20,
@@ -608,9 +617,28 @@ def main():
     if args.heads is not None:
         heads = args.heads
     else:
-        print("\nScreening heads (zero-ablation)...", flush=True)
-        head_contribs = screen_heads(model, texts[:3], layer, hook_point)
-        heads = [h for h, c in head_contribs[:3]]
+        screen_texts_n = args.screen_texts if args.screen_texts is not None else len(texts)
+        screen_texts = texts[:max(1, screen_texts_n)]
+        n_heads_total = model.cfg.n_heads
+        est_forwards = len(screen_texts) * n_heads_total
+        if device == "cpu":
+            print(
+                "\nWARNING: Auto head-screening on CPU can be very slow. "
+                "Pass --heads to skip screening or use --device cuda.",
+                flush=True,
+            )
+        print(
+            "\nScreening heads (zero-ablation, all heads)...",
+            flush=True,
+        )
+        print(
+            f"  Screening texts: {len(screen_texts)} | Heads: {n_heads_total} "
+            f"| Approx forwards: {est_forwards}",
+            flush=True,
+        )
+        head_contribs = screen_heads(model, screen_texts, layer, hook_point)
+        n_select = max(1, args.screen_top_heads)
+        heads = [h for h, c in head_contribs[:n_select]]
         print("  Head contributions (top 5):")
         for h, c in head_contribs[:5]:
             print(f"    H{h}: {c:+.4f} ({'helps' if c > 0 else 'hurts/neutral'})")
