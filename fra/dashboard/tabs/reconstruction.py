@@ -17,6 +17,7 @@ from fra.core.helpers import (
     compute_bias_correction,
     compute_errors,
     fra_sum_to_attn,
+    get_attn_scale,
     project_qk,
     rank_pairs,
 )
@@ -53,6 +54,55 @@ def _apply_softcap_t(scores, softcap):
     if softcap > 0:
         return softcap * torch.tanh(scores / softcap)
     return scores
+
+
+@torch.no_grad()
+def _get_bias_correction_np(cfg, fra_data, device):
+    """Compute the [seq, seq] bias correction matrix (b_dec cross-terms).
+
+    The FRA sum only captures feature×feature interactions.  The remaining
+    terms (feature×b_dec, b_dec×b_dec, and any b_Q/b_K biases) must be
+    added back before comparing against actual attention scores.
+
+    Cached in ``st.session_state["_bias_correction_np"]`` — cleared when
+    a new FRA run is triggered (see app.py).
+    """
+    key = "_bias_correction_np"
+    if key in st.session_state:
+        return st.session_state[key]
+
+    layer_ = cfg["layer"]
+    head_ = cfg["head"]
+    sae_type = cfg.get("sae_type", "")
+    seq_len = fra_data["seq_len"]
+
+    feat_acts = torch.tensor(
+        fra_data["feat_acts_np"][:seq_len], dtype=torch.float32, device=device,
+    )
+
+    if sae_type == "crosscoder":
+        _, _, target, crosscoder, _, _ = _load_crosscoder_resources(cfg, device)
+        b_dec = crosscoder.b_dec.float().to(device)
+        x_hat = feat_acts @ crosscoder.W_dec.float() + b_dec
+        model = target
+        needs_rms = True
+    else:
+        model, sae = _load_model_sae(cfg, device)
+        x_hat = sae.decode(feat_acts).float()
+        b_dec = sae.b_dec.float()
+        needs_rms = "resid" in cfg.get("hook_point", "")
+
+    q_full, k_full, q_nobias, k_nobias = project_qk(
+        model, layer_, head_, x_hat, b_dec, needs_rms=needs_rms,
+    )
+    attn_scale = get_attn_scale(model, layer_)
+    bias_corr = compute_bias_correction(
+        q_full, k_full, q_nobias, k_nobias, attn_scale,
+    )
+
+    result = bias_corr[:seq_len, :seq_len].cpu().numpy()
+    st.session_state[key] = result
+    return result
 
 
 @torch.no_grad()
@@ -496,6 +546,10 @@ def render(tab):
         attn_tick_vals = list(range(seq_len))
         attn_tick_labels = [html_lib.escape(t) for t in token_strs]
 
+        # Bias correction: b_dec cross-terms that FRA doesn't capture
+        with st.spinner("Computing bias correction\u2026"):
+            bias_corr_np = _get_bias_correction_np(cfg, fra_data, device)
+
         # ═══════════════════════════════════════════════════════════════
         # Section 1: Heatmaps
         # ═══════════════════════════════════════════════════════════════
@@ -510,11 +564,12 @@ def render(tab):
         std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
         std_probs[causal_mask] = np.nan
 
-        # FRA logits — apply softcap to match what the model does
+        # FRA logits — add bias correction, then apply softcap
         fra_logits = np.zeros((seq_len, seq_len))
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
                 fra_logits[qp, kp] += v
+        fra_logits += bias_corr_np
         fra_logits = _apply_softcap_np(fra_logits, _softcap)
 
         # Copy actual BOS row/col into FRA logits when SAE wasn't trained on BOS
@@ -545,7 +600,7 @@ def render(tab):
             )
 
         with col_fra_logit:
-            st.markdown("**FRA** (signed sum over feature pairs)")
+            st.markdown("**FRA** (feature pairs + bias correction)")
             _show_heatmap(
                 make_heatmap(fra_logits_display, attn_tick_vals, attn_tick_vals, hover_label="Logit", zmid=0),
                 attn_tick_vals, attn_tick_labels, seq_len,
@@ -606,6 +661,7 @@ def render(tab):
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
                 _fra_causal[qp, kp] += v
+        _fra_causal += bias_corr_np
         _fra_causal = _apply_softcap_np(_fra_causal, _softcap)
         _fra_causal[~_causal_bool] = 0.0
 
