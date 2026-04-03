@@ -1,6 +1,31 @@
 """Coder wrappers — SAE and crosscoder interfaces for FRA."""
 
+from abc import ABC, abstractmethod
 from pathlib import Path
+
+import torch
+
+
+class Coder(ABC):
+    """Abstract interface for SAE and crosscoder wrappers used by FRA.
+
+    Every coder must expose:
+      - ``encode(x)`` → sparse feature activations ``[..., d_sae]``
+      - ``decode(f)`` → reconstructed activations ``[..., d_model]``
+      - ``W_dec``     — decoder weight matrix ``[d_sae, d_model]``
+      - ``b_dec``     — decoder bias ``[d_model]``
+      - ``d_sae``     — number of dictionary features
+    """
+
+    W_dec: torch.Tensor
+    b_dec: torch.Tensor
+    d_sae: int
+
+    @abstractmethod
+    def encode(self, x: torch.Tensor, /) -> torch.Tensor: ...
+
+    @abstractmethod
+    def decode(self, features: torch.Tensor, /) -> torch.Tensor: ...
 
 
 def load_sae(sae_type: str, layer: int, device: str,

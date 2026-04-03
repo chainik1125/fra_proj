@@ -338,14 +338,14 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
             _, _, target, crosscoder, model_idx, _ = (
                 _load_crosscoder_resources(cfg, device)
             )
-            b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
+            b_dec = crosscoder.b_dec.float().to(device)
             x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
             _target = target
             _needs_rms = True
         else:
             model, sae = _load_model_sae(cfg, device)
             x_hat = sae.decode(feat_acts).float()
-            b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float()
+            b_dec = sae.b_dec.float()
             _target = model
             _needs_rms = "resid" in cfg.get("hook_point", "")
 
@@ -675,7 +675,7 @@ def render(tab):
                     base, it, target, crosscoder, model_idx, cc_layer = (
                         _load_crosscoder_resources(cfg, device)
                     )
-                    b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
+                    b_dec = crosscoder.b_dec.float().to(device)
                     x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
                     loss_r = _run_loss_metrics(
                         target, x_hat, b_dec, cfg, fra_data, device,
@@ -684,7 +684,7 @@ def render(tab):
                 else:
                     model, sae = _load_model_sae(cfg, device)
                     x_hat = sae.decode(feat_acts).float()
-                    b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float()
+                    b_dec = sae.b_dec.float()
                     hook_point = cfg.get("hook_point", "")
                     loss_r = _run_loss_metrics(
                         model, x_hat, b_dec, cfg, fra_data, device,

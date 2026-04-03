@@ -7,8 +7,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Any
 
+from fra.coders import Coder
 
-class SimpleAttentionSAE:
+
+class SimpleAttentionSAE(Coder):
     """Wrapper for attention SAEs with encode/decode methods."""
 
     def __init__(self, sae_data: Dict[str, Any]):

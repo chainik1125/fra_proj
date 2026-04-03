@@ -17,8 +17,10 @@ from pathlib import Path
 from typing import Any
 from sae_lens import SAE
 
+from fra.coders import Coder
 
-class SAELensAttentionSAE:
+
+class SAELensAttentionSAE(Coder):
     """Wrapper for SAE Lens attention SAEs with encode/decode methods."""
 
     def __init__(self, release: str, sae_id: str, device: str = "cuda"):
@@ -139,7 +141,7 @@ class SAELensAttentionSAE:
         return (features == 0).float().mean().item()
 
 
-class LocalLn1SAE:
+class LocalLn1SAE(Coder):
     """
     Wrapper for a locally-trained TopK SAE saved by train_sae.py.
 
@@ -201,7 +203,7 @@ class LocalLn1SAE:
         return (features == 0).float().mean().item()
 
 
-class GemmaScopeSAE:
+class GemmaScopeSAE(Coder):
     """
     Wrapper for Gemma-Scope residual-stream SAEs.
 

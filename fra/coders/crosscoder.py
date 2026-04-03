@@ -25,7 +25,10 @@ import torch
 from dictionary_learning import BatchTopKCrossCoder, CrossCoder
 
 
-class GemmaCrosscoderFRA:
+from fra.coders import Coder
+
+
+class GemmaCrosscoderFRA(Coder):
     """FRA-compatible wrapper for a model-diffing crosscoder.
 
     The crosscoder was trained on stacked residual-stream activations from two
@@ -63,6 +66,7 @@ class GemmaCrosscoderFRA:
         # Single-model decoder slice for FRA: (d_sae, d_model)
         # decoder.weight has shape (n_models, d_sae, d_model)
         self.W_dec = crosscoder.decoder.weight[model_idx].detach().contiguous()
+        self.b_dec = crosscoder.decoder.bias[model_idx].detach().contiguous()
 
     # ------------------------------------------------------------------
     # Loading

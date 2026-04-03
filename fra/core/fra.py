@@ -581,7 +581,7 @@ def get_sentence_fra_batch(
     # Use the full reconstructed activations (not actual model activations)
     # so that FRA scores match coder-patched scores when all features are kept.
     if "resid" in hook_point:
-        b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
+        b_dec = sae.b_dec
         x_hat = feature_activations @ W_dec + b_dec
         rms_activations = x_hat
     else:
@@ -698,7 +698,7 @@ def get_sentence_fra_crosscoder(
     # projections inside compute_fra_sparse (which casts W_dec.float()).
     # Using the native float16 decode would introduce precision mismatch
     # between the RMS denominator and the per-feature numerators.
-    b_dec_rms = crosscoder._crosscoder.decoder.bias[crosscoder.model_idx].float().to(device)
+    b_dec_rms = crosscoder.b_dec.float().to(device)
     x_hat = feature_activations.float() @ crosscoder.W_dec.float() + b_dec_rms
     return _build_fra_result(
         target_model, layer, head, feature_activations, crosscoder.W_dec, device,
