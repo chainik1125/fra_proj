@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 import torch
 
-from fra.analysis.di import compute_di_row, compute_global_di_topk
+from fra.analysis.di import compute_di_row, compute_di_sample, compute_global_di_topk
 from fra.core.helpers import rank_pairs
 from fra.dashboard.compute import _load_di_weights
 from fra.dashboard.state import PRESETS, get_fra_config, get_fra_data
@@ -425,30 +425,17 @@ def render(tab):
                 "Red line marks the selected pair."
             )
             if st.session_state.get("_tab5_global_sample") is None:
-                with st.spinner("Computing global DI sample\u2026"):
-                    from fra.core.helpers import apply_rope_to_projected
-
-                    _gs_W_dec, _gs_W_Q, _gs_W_K = _ew()
-                    _gs_rng = np.random.default_rng(42)
-                    _gs_idxs = _gs_rng.choice(
-                        _gs_W_dec.shape[0],
-                        size=min(500, _gs_W_dec.shape[0]),
-                        replace=False,
-                    )
-                    _gs_Q = _gs_W_dec[torch.tensor(_gs_idxs, device=_gs_W_dec.device)] @ _gs_W_Q
-                    _gs_K = _gs_W_dec @ _gs_W_K
-                    _gs_delta = st.session_state.get("_tab5_rope_delta", 0)
-                    _gs_rp = st.session_state.get("_tab5_rope_params")
-                    if _gs_rp is not None and _gs_rp[0] is not None and _gs_delta > 0:
-                        _gs_Q = apply_rope_to_projected(
-                            _gs_Q, _gs_delta, *_gs_rp,
+                _gdi_cached = st.session_state.get("_tab5_global_di")
+                if _gdi_cached is not None and "hist_sample" in _gdi_cached:
+                    st.session_state["_tab5_global_sample"] = _gdi_cached["hist_sample"]
+                else:
+                    with st.spinner("Computing global DI sample\u2026"):
+                        _gs_W_dec, _gs_W_Q, _gs_W_K = _ew()
+                        st.session_state["_tab5_global_sample"] = compute_di_sample(
+                            _gs_W_dec, _gs_W_Q, _gs_W_K,
+                            rope_params=st.session_state.get("_tab5_rope_params"),
+                            delta=st.session_state.get("_tab5_rope_delta", 0),
                         )
-                        _gs_K = apply_rope_to_projected(
-                            _gs_K, 0, *_gs_rp,
-                        )
-                    _gs_scale = math.sqrt(_gs_W_Q.shape[-1])
-                    _gs_vals = ((_gs_Q @ _gs_K.T) / _gs_scale).detach().cpu().float().numpy().ravel()
-                    st.session_state["_tab5_global_sample"] = _gs_vals
             _gs_sample = st.session_state["_tab5_global_sample"]
             _gs_stats = {
                 "mean": float(np.mean(_gs_sample)),

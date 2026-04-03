@@ -83,6 +83,43 @@ def compute_di_row(
     return di_row.detach().cpu().float().numpy()
 
 
+def compute_di_sample(
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    n_sample_rows: int = 500,
+    rope_params: tuple | None = None,
+    delta: int = 0,
+) -> np.ndarray:
+    """Sample DI values across random query-key pairs.
+
+    Returns a 1-D array of sampled DI scores suitable for histogram display.
+    """
+    from fra.core.helpers import apply_rope_to_projected
+
+    d_sae = W_dec.shape[0]
+    d_head = W_Q.shape[-1]
+    dtype = W_Q.dtype
+    scale = math.sqrt(d_head)
+
+    K_all = W_dec.to(dtype) @ W_K
+    rng = np.random.default_rng(42)
+    sample_idxs = rng.choice(d_sae, size=min(n_sample_rows, d_sae), replace=False)
+    Q_sample = W_dec[torch.tensor(sample_idxs, device=W_dec.device)].to(dtype) @ W_Q
+
+    _use_rope = rope_params is not None and rope_params[0] is not None and delta > 0
+    if _use_rope:
+        rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = rope_params
+        Q_sample = apply_rope_to_projected(
+            Q_sample, delta, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+        )
+        K_all = apply_rope_to_projected(
+            K_all, 0, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+        )
+
+    return ((Q_sample @ K_all.T) / scale).detach().cpu().float().numpy().ravel()
+
+
 def compute_global_di_topk(
     W_dec: torch.Tensor,
     W_Q: torch.Tensor,
@@ -108,7 +145,8 @@ def compute_global_di_topk(
     d_sae = W_dec.shape[0]
     d_head = W_Q.shape[-1]
     scale = math.sqrt(d_head)
-    K_all = W_dec @ W_K                          # [d_sae, d_head]
+    dtype = W_Q.dtype
+    K_all = W_dec.to(dtype) @ W_K                # [d_sae, d_head]
 
     _use_rope = (
         rope_params is not None
@@ -126,7 +164,7 @@ def compute_global_di_topk(
     # Sample random rows for histogram
     rng = np.random.default_rng(42)
     sample_idxs = rng.choice(d_sae, size=min(n_sample_rows, d_sae), replace=False)
-    Q_sample = W_dec[torch.tensor(sample_idxs, device=W_dec.device)] @ W_Q
+    Q_sample = W_dec[torch.tensor(sample_idxs, device=W_dec.device)].to(dtype) @ W_Q
     if _use_rope:
         Q_sample = apply_rope_to_projected(
             Q_sample, delta, rope_sin, rope_cos,
@@ -142,7 +180,7 @@ def compute_global_di_topk(
     for c in range(n_chunks):
         start = c * chunk_size
         end = min(start + chunk_size, d_sae)
-        Q_chunk = W_dec[start:end] @ W_Q         # [chunk, d_head]
+        Q_chunk = W_dec[start:end].to(dtype) @ W_Q  # [chunk, d_head]
         if _use_rope:
             Q_chunk = apply_rope_to_projected(
                 Q_chunk, delta, rope_sin, rope_cos,
