@@ -56,7 +56,7 @@ PRESETS = {
         "model_labels": ("Base (model 0)", "Instruct (model 1)"),
         "ram_note": "~12 GB GPU RAM (both Gemma 2B models fp16 + crosscoder).",
         "is_reasoning": False,
-        "trained_on_bos": False,
+        "trained_on_bos": True,
     },
     "Llama 8B — Crosscoder (Base vs R1-Distill)": {
         "type": "crosscoder",
