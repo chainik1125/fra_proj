@@ -57,17 +57,24 @@ def _apply_softcap_t(scores, softcap):
 
 
 @torch.no_grad()
-def _get_bias_correction_np(cfg, fra_data, device):
-    """Compute the [seq, seq] bias correction matrix (b_dec cross-terms).
+def _get_projection_cache(cfg, fra_data, device):
+    """Compute and cache QK projections and bias correction.
 
-    The FRA sum only captures feature×feature interactions.  The remaining
-    terms (feature×b_dec, b_dec×b_dec, and any b_Q/b_K biases) must be
-    added back before comparing against actual attention scores.
+    Single source of truth for bias correction and coder-score components,
+    shared by heatmaps, loss-patching, and ablation sections.
 
-    Cached in ``st.session_state["_bias_correction_np"]`` — cleared when
+    Cached in ``st.session_state["_projection_cache"]`` — cleared when
     a new FRA run is triggered (see app.py).
+
+    Returns dict with keys:
+        bias_corr_np:  ``[seq, seq]`` numpy bias correction matrix.
+        bias_corr:     Same as tensor (on *device*).
+        q_full:        ``[seq, d_head]`` full reconstruction projected through W_Q.
+        k_full:        ``[seq, d_head]`` full reconstruction projected through W_K.
+        attn_scale:    ``sqrt(d_head)``.
+        softcap:       Attention logit soft-cap value (0 if unused).
     """
-    key = "_bias_correction_np"
+    key = "_projection_cache"
     if key in st.session_state:
         return st.session_state[key]
 
@@ -96,11 +103,20 @@ def _get_bias_correction_np(cfg, fra_data, device):
         model, layer_, head_, x_hat, b_dec, needs_rms=needs_rms,
     )
     attn_scale = get_attn_scale(model, layer_)
+    softcap = _get_softcap(model, layer_)
     bias_corr = compute_bias_correction(
         q_full, k_full, q_nobias, k_nobias, attn_scale,
     )
+    bias_corr_sl = bias_corr[:seq_len, :seq_len]
 
-    result = bias_corr[:seq_len, :seq_len].cpu().numpy()
+    result = {
+        "bias_corr_np": bias_corr_sl.cpu().numpy(),
+        "bias_corr": bias_corr_sl.to(device),
+        "q_full": q_full.to(device),
+        "k_full": k_full.to(device),
+        "attn_scale": attn_scale,
+        "softcap": softcap,
+    }
     st.session_state[key] = result
     return result
 
@@ -205,31 +221,35 @@ def _load_crosscoder_resources(cfg, device):
     return base, it, target, crosscoder, model_idx, crosscoder_layer
 
 
-def _run_loss_metrics(model, x_hat, b_dec, cfg, fra_data, device,
-                      exclude_bos=False, needs_rms=False):
-    """Compute FRA / coder / zero loss patching using stored FRA data.
+def _run_loss_metrics(proj, fra_scores, cfg, fra_data, device, exclude_bos=False):
+    """Compute FRA / coder / zero loss patching.
 
-    Works for both SAE and crosscoder paths — the caller decodes features
-    into ``x_hat`` and ``b_dec`` and passes them in.
+    Uses the pre-computed ``fra_scores`` (the canonical causally-masked FRA
+    reconstruction) and cached QK projections from ``_get_projection_cache``.
+    Only the model forward pass is done here.
 
     Args:
-        model: The model whose attention head is being patched.
-        x_hat: ``[seq, d]`` full coder reconstruction (features + bias).
-        b_dec: ``[d]`` decoder bias vector.
+        proj: Projection cache dict from ``_get_projection_cache``.
+        fra_scores: ``[seq, seq]`` numpy array — the FRA-reconstructed
+            attention scores (with bias correction, softcap, causal mask,
+            and BOS override already applied).
         cfg: Dashboard config dict (must contain ``layer`` and ``head``).
         fra_data: Stored FRA results dict.
         device: Torch device.
-        exclude_bos: Copy actual BOS scores into reconstruction.
-        needs_rms: Apply RMSNorm before projecting through W_Q / W_K.
-            Required when the coder decodes into residual-stream space
-            (crosscoders and residual-stream SAEs).
+        exclude_bos: Copy actual BOS scores into coder reconstruction.
     """
     from fra.analysis.ablation import run_condition
 
     layer_ = cfg["layer"]
     head_ = cfg["head"]
+    sae_type = cfg.get("sae_type", "")
     seq_len = fra_data["seq_len"]
-    actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
+
+    # Reload model (st.cache_resource makes this a dict lookup)
+    if sae_type == "crosscoder":
+        _, _, model, _, _, _ = _load_crosscoder_resources(cfg, device)
+    else:
+        model, _ = _load_model_sae(cfg, device)
 
     tokens = fra_data["tokens"][:seq_len]
     tok_t = torch.tensor(tokens).unsqueeze(0).to(device)
@@ -239,49 +259,27 @@ def _run_loss_metrics(model, x_hat, b_dec, cfg, fra_data, device,
     logits_clean = model(tok_t)
     unpatched_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
 
-    # Project through W_Q/W_K (with RMSNorm + RoPE as needed)
-    q_full, k_full, q_nobias, k_nobias = project_qk(
-        model, layer_, head_, x_hat, b_dec, needs_rms=needs_rms,
-    )
-    attn_scale = model.blocks[layer_].attn.attn_scale
-
-    softcap = _get_softcap(model, layer_)
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device),
         diagonal=1,
     )
 
     # Coder scores: full reconstruction through Q/K
+    q_full = proj["q_full"]
+    k_full = proj["k_full"]
     scores_coder = _apply_softcap_t(
-        (q_full @ k_full.T) / attn_scale, softcap,
+        (q_full @ k_full.T) / proj["attn_scale"], proj["softcap"],
     ) + mask_t
-
-    # FRA scores: fra_sum + bias correction
-    d_sae = fra_data["feat_acts_np"].shape[1]
-    fra_sparse = torch.sparse_coo_tensor(
-        torch.tensor(fra_data["indices_np"], dtype=torch.long),
-        torch.tensor(fra_data["values_np"], dtype=torch.float32),
-        size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
-    ).coalesce()
-    fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
-
-    bias_corr = compute_bias_correction(
-        q_full, k_full, q_nobias, k_nobias, attn_scale,
-    )
-    scores_fra = _apply_softcap_t(
-        torch.tensor(fra_sum, dtype=torch.float32, device=device) + bias_corr,
-        softcap,
-    ) + mask_t
-
-    # Copy actual BOS scores when coder wasn't trained on BOS
-    if actual_bos is not None:
+    if exclude_bos:
         actual_t = torch.tensor(
-            actual_bos[:seq_len, :seq_len], dtype=torch.float32, device=device,
+            fra_data["attn_scores_np"][:seq_len, :seq_len],
+            dtype=torch.float32, device=device,
         )
-        scores_fra[0, :] = actual_t[0, :]
-        scores_fra[:, 0] = actual_t[:, 0]
         scores_coder[0, :] = actual_t[0, :]
         scores_coder[:, 0] = actual_t[:, 0]
+
+    # FRA scores: use the canonical reconstruction directly
+    scores_fra = torch.tensor(fra_scores, dtype=torch.float32, device=device)
 
     # Zero scores
     scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
@@ -296,8 +294,6 @@ def _run_loss_metrics(model, x_hat, b_dec, cfg, fra_data, device,
         "fra": r_fra,
         "sae": r_coder,
         "zero": r_zero,
-        "fra_sparse": fra_sparse,
-        "d_sae": d_sae,
     }
 
 
@@ -380,32 +376,14 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
             size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
         ).coalesce()
 
-        # Load model + compute bias correction
-        feat_acts = torch.tensor(
-            fra_data["feat_acts_np"], dtype=torch.float32, device=device,
-        )
-        if sae_type == "crosscoder":
-            _, _, target, crosscoder, model_idx, _ = (
-                _load_crosscoder_resources(cfg, device)
-            )
-            b_dec = crosscoder.b_dec.float().to(device)
-            x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
-            _target = target
-            _needs_rms = True
-        else:
-            model, sae = _load_model_sae(cfg, device)
-            x_hat = sae.decode(feat_acts).float()
-            b_dec = sae.b_dec.float()
-            _target = model
-            _needs_rms = "resid" in cfg.get("hook_point", "")
+        # Use cached projections for bias correction; reload model for forward pass
+        _proj = _get_projection_cache(cfg, fra_data, device)
+        bias_corr = _proj["bias_corr_np"]
 
-        q_full, k_full, q_nobias, k_nobias = project_qk(
-            _target, layer_, head_, x_hat, b_dec, needs_rms=_needs_rms,
-        )
-        attn_scale = _target.blocks[layer_].attn.attn_scale
-        bias_corr = compute_bias_correction(
-            q_full, k_full, q_nobias, k_nobias, attn_scale,
-        ).cpu().numpy()
+        if sae_type == "crosscoder":
+            _, _, _target, _, _, _ = _load_crosscoder_resources(cfg, device)
+        else:
+            _target, _ = _load_model_sae(cfg, device)
 
         tok_t = torch.tensor(fra_data["tokens"]).unsqueeze(0).to(device)
         shift = tok_t[0, 1:]
@@ -548,7 +526,8 @@ def render(tab):
 
         # Bias correction: b_dec cross-terms that FRA doesn't capture
         with st.spinner("Computing bias correction\u2026"):
-            bias_corr_np = _get_bias_correction_np(cfg, fra_data, device)
+            proj = _get_projection_cache(cfg, fra_data, device)
+        bias_corr_np = proj["bias_corr_np"]
 
         # ═══════════════════════════════════════════════════════════════
         # Section 1: Heatmaps
@@ -564,28 +543,31 @@ def render(tab):
         std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
         std_probs[causal_mask] = np.nan
 
-        # FRA logits — add bias correction, then apply softcap
-        fra_logits = np.zeros((seq_len, seq_len))
+        # FRA-reconstructed attention scores (single source of truth).
+        # Matches the model's hook_attn_scores: post-softcap, post-causal-mask.
+        fra_scores = np.zeros((seq_len, seq_len))
         for qp, kp, v in zip(idxs[0], idxs[1], vals):
             if qp < seq_len and kp < seq_len:
-                fra_logits[qp, kp] += v
-        fra_logits += bias_corr_np
-        fra_logits = _apply_softcap_np(fra_logits, _softcap)
+                fra_scores[qp, kp] += v
+        fra_scores += bias_corr_np
+        fra_scores = _apply_softcap_np(fra_scores, _softcap)
+        fra_scores[causal_mask] = -np.inf
 
-        # Copy actual BOS row/col into FRA logits when SAE wasn't trained on BOS
+        # Copy actual BOS row/col when SAE wasn't trained on BOS
         if exclude_bos:
-            fra_logits[0, :] = fra_data["attn_scores_np"][0, :seq_len]
-            fra_logits[:, 0] = fra_data["attn_scores_np"][:seq_len, 0]
+            fra_scores[0, :] = fra_data["attn_scores_np"][0, :seq_len]
+            fra_scores[:, 0] = fra_data["attn_scores_np"][:seq_len, 0]
 
-        # FRA probs
+        # Display version: -inf → NaN for plotting
+        fra_logits_display = fra_scores.copy()
+        fra_logits_display[causal_mask] = np.nan
+
+        # FRA probs: softmax over causal region
         fra_probs = np.full((seq_len, seq_len), np.nan)
         for q in range(seq_len):
-            row = fra_logits[q, :q + 1]
+            row = fra_scores[q, :q + 1]
             row_exp = np.exp(row - row.max())
             fra_probs[q, :q + 1] = row_exp / row_exp.sum()
-
-        fra_logits_display = fra_logits.copy()
-        fra_logits_display[causal_mask] = np.nan
 
         # Row 1: Logits
         st.markdown("#### Pre-softmax logits")
@@ -657,13 +639,7 @@ def render(tab):
             fra_data["attn_scores_np"][:seq_len, :seq_len],
             0.0,
         )
-        _fra_causal = np.zeros((seq_len, seq_len))
-        for qp, kp, v in zip(idxs[0], idxs[1], vals):
-            if qp < seq_len and kp < seq_len:
-                _fra_causal[qp, kp] += v
-        _fra_causal += bias_corr_np
-        _fra_causal = _apply_softcap_np(_fra_causal, _softcap)
-        _fra_causal[~_causal_bool] = 0.0
+        _fra_causal = np.where(_causal_bool, fra_scores, 0.0)
 
         errs = compute_errors(_std_causal, _fra_causal, exclude_bos=exclude_bos)
 
@@ -724,29 +700,10 @@ def render(tab):
 
         if run_loss:
             with st.spinner("Computing patched losses\u2026"):
-                feat_acts = torch.tensor(
-                    fra_data["feat_acts_np"], dtype=torch.float32, device=device,
+                loss_r = _run_loss_metrics(
+                    proj, fra_scores, cfg, fra_data, device,
+                    exclude_bos=exclude_bos,
                 )
-                if is_crosscoder:
-                    base, it, target, crosscoder, model_idx, cc_layer = (
-                        _load_crosscoder_resources(cfg, device)
-                    )
-                    b_dec = crosscoder.b_dec.float().to(device)
-                    x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
-                    loss_r = _run_loss_metrics(
-                        target, x_hat, b_dec, cfg, fra_data, device,
-                        exclude_bos=exclude_bos, needs_rms=True,
-                    )
-                else:
-                    model, sae = _load_model_sae(cfg, device)
-                    x_hat = sae.decode(feat_acts).float()
-                    b_dec = sae.b_dec.float()
-                    hook_point = cfg.get("hook_point", "")
-                    loss_r = _run_loss_metrics(
-                        model, x_hat, b_dec, cfg, fra_data, device,
-                        exclude_bos=exclude_bos,
-                        needs_rms="resid" in hook_point,
-                    )
                 st.session_state["_val_loss"] = loss_r
 
         loss_r = st.session_state.get("_val_loss")

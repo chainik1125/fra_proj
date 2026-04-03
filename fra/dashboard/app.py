@@ -354,7 +354,7 @@ if compute_btn:
     # Clear cached reconstruction tab results from previous runs
     st.session_state.pop("_recon_metrics", None)
     st.session_state.pop("_val_loss", None)
-    st.session_state.pop("_bias_correction_np", None)
+    st.session_state.pop("_projection_cache", None)
     st.session_state["fra_config"] = {
         "layer": int(layer),
         "head": int(head),
