@@ -6,6 +6,7 @@ Run:
   python scripts/run_ablation.py                         # GPT-2, local ln1, L2
   python scripts/run_ablation.py --heads 0 1 5 --k 10 50 100
   python scripts/run_ablation.py --sae hub --layer 5     # hook_z SAE at L5
+  python scripts/run_ablation.py --model gemma --layer 13 # Gemma FRA L13 (SAE L12)
 """
 
 import argparse
@@ -51,8 +52,7 @@ def main():
     # Model/SAE defaults
     if is_gemma:
         sae_type = args.sae or "gemma"
-        sae_layer = args.layer if args.layer is not None else 12
-        layer = sae_layer + 1
+        layer = args.layer if args.layer is not None else 13
         hook_point = "hook_resid_pre"
         chunk_size = args.chunk_size or 1
     else:
@@ -80,9 +80,8 @@ def main():
     print(f"  Device     : {device}")
 
     # Load SAE
-    sae_load_layer = sae_layer if is_gemma else layer
     print("\nLoading SAE...", end=" ", flush=True)
-    sae = load_sae(sae_type, sae_load_layer, device)
+    sae = load_sae(sae_type, layer, device)
     print(f"done. (d_sae={sae.d_sae})")
 
     # Load model

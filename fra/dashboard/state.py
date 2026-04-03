@@ -37,7 +37,7 @@ PRESETS = {
         "sae_id_template": "layer_{layer}/width_16k/average_l0_82",
         "hook_point": "hook_resid_pre",
         "layers": list(range(1, 26)),
-        "default_layer": 12,
+        "default_layer": 13,
         "n_heads": 8,
         "supports_neuronpedia": False,
         "hf_token_required": True,

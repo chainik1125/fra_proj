@@ -13,7 +13,9 @@ def load_sae(sae_type: str, layer: int, device: str,
     elif sae_type == "gemma":
         from fra.coders.sae_lens import GemmaScopeSAE
         rel = release or "gemma-scope-2b-pt-res"
-        sid = sae_id or f"layer_{layer}/width_16k/average_l0_82"
+        # layer is the FRA/attention layer; Gemma-Scope SAEs are trained on
+        # resid_post[N-1] which equals resid_pre[N], so subtract 1.
+        sid = sae_id or f"layer_{layer - 1}/width_16k/average_l0_82"
         return GemmaScopeSAE(rel, sid, device=device)
     else:
         from fra.coders.sae_lens import LocalLn1SAE
