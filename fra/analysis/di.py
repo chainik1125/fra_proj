@@ -65,8 +65,9 @@ def compute_di_row(
     """
     from fra.core.helpers import apply_rope_to_projected
 
-    q_vec = W_dec[query_feature:query_feature + 1] @ W_Q  # [1, d_head]
-    K_all = W_dec @ W_K                                    # [d_sae, d_head]
+    dtype = W_Q.dtype
+    q_vec = W_dec[query_feature:query_feature + 1].to(dtype) @ W_Q  # [1, d_head]
+    K_all = W_dec.to(dtype) @ W_K                                    # [d_sae, d_head]
     d_head = W_Q.shape[-1]
 
     if rope_params is not None and rope_params[0] is not None and delta > 0:
