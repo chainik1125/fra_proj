@@ -36,7 +36,7 @@ PRESETS = {
         "release": "gemma-scope-2b-pt-res",
         "sae_id_template": "layer_{layer}/width_16k/average_l0_82",
         "hook_point": "hook_resid_pre",
-        "layers": list(range(26)),
+        "layers": list(range(1, 26)),
         "default_layer": 12,
         "n_heads": 8,
         "supports_neuronpedia": False,

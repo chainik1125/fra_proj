@@ -178,8 +178,13 @@ with st.sidebar:
             chunk_size = 16
         elif sae_type == "sae_gemma":
             sae_hub_release = preset["release"]
-            sae_hub_id = preset["sae_id_template"].format(layer=layer)
+            sae_layer = layer - 1
+            sae_hub_id = preset["sae_id_template"].format(layer=sae_layer)
             sae_local_path = ""
+            st.caption(
+                f"SAE trained on `resid_post[{sae_layer}]` "
+                f"→ activations from `resid_pre[{layer}]`"
+            )
             if preset.get("hf_token_required"):
                 hf_token = st.text_input(
                     "HuggingFace token",
