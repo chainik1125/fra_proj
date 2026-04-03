@@ -40,7 +40,7 @@ def load_model_gemma(model_name: str, device: str, hf_token: str = ""):
     kwargs = {}
     if hf_token:
         kwargs["token"] = hf_token
-    return HookedTransformer.from_pretrained_no_processing(model_name, device=device, dtype=torch.float16, **kwargs)
+    return HookedTransformer.from_pretrained(model_name, device=device, dtype=torch.float16, **kwargs)
 
 
 @st.cache_resource(show_spinner=False)
