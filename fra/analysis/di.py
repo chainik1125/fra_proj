@@ -1,7 +1,9 @@
 """
-Feature-Resolved Attention (FRA) for Induction Heads -- library functions.
+Data-independent (DI) QK circuit analysis.
 
-Provides data-independent attention analysis and DI computation helpers.
+Provides position-independent (and optionally RoPE-adjusted) scoring of
+feature pairs through the QK circuit, using only decoder weights and
+projection matrices — no input data required.
 """
 
 import math
@@ -29,16 +31,13 @@ def data_independent_attention(model: HookedTransformer, layer: int, head: int, 
     Returns:
         interaction_matrix: Data-independent attention pattern [d_sae, d_sae]
     """
-    # Use SAE decoder weights directly as "activations" for all features
-    # This shows the inherent feature-to-feature attention preferences
     query_activations_for_features = sae_dec
     key_activations_for_features = sae_dec
 
-    # Compute attention pattern using the decoder weights
     interaction_matrix_unscaled = attention_pattern_QK(
         model, layer, head,
-        query_activations_for_features, False,  # No bias for queries
-        key_activations_for_features, False     # No bias for keys
+        query_activations_for_features, False,
+        key_activations_for_features, False,
     )
 
     return interaction_matrix_unscaled

@@ -18,7 +18,7 @@ import json
 import tarfile
 
 from fra.coders.sae_lens import SAELensAttentionSAE
-from fra.analysis.induction import data_independent_attention
+from fra.analysis.di import data_independent_attention
 from fra.viz.neuronpedia import fetch_neuronpedia_explanation, get_neuronpedia_url
 
 

@@ -44,7 +44,7 @@ def create_fra_dashboard(
         Path to the generated HTML file
     """
     # Legacy: compute_fra, get_top_feature_interactions, get_attention_activations
-    # were removed from fra.analysis.induction during consolidation.
+    # were removed from fra.analysis during consolidation.
     # This function is non-functional until ported to use fra.core.fra.
     raise NotImplementedError(
         "create_fra_dashboard depends on legacy functions (compute_fra, "
