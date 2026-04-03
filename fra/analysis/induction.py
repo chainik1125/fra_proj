@@ -49,15 +49,37 @@ def compute_di_row(
     W_Q: torch.Tensor,
     W_K: torch.Tensor,
     query_feature: int,
+    rope_params: tuple | None = None,
+    delta: int = 0,
 ) -> np.ndarray:
     """Compute DI(query_feature, j) for all key features j.
 
+    When *rope_params* is provided and *delta* >= 0, the RoPE rotation
+    matrix for relative position *delta* is included:
+
+        DI = (R(delta) W_Q d_q)^T (R(0) W_K d_k) / sqrt(d_head)
+
+    This sets the query position to *delta* and the key position to 0 so
+    that i - j = delta.
+
     Returns array of shape [d_sae].
     """
-    q_vec = W_dec[query_feature] @ W_Q          # [d_head]
-    K_all = W_dec @ W_K                         # [d_sae, d_head]
+    from fra.core.helpers import apply_rope_to_projected
+
+    q_vec = W_dec[query_feature:query_feature + 1] @ W_Q  # [1, d_head]
+    K_all = W_dec @ W_K                                    # [d_sae, d_head]
     d_head = W_Q.shape[-1]
-    di_row = (K_all @ q_vec) / math.sqrt(d_head)  # [d_sae]
+
+    if rope_params is not None and rope_params[0] is not None and delta > 0:
+        rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = rope_params
+        q_vec = apply_rope_to_projected(
+            q_vec, delta, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+        )
+        K_all = apply_rope_to_projected(
+            K_all, 0, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+        )
+
+    di_row = (K_all @ q_vec.squeeze(0)) / math.sqrt(d_head)  # [d_sae]
     return di_row.detach().cpu().float().numpy()
 
 
@@ -69,23 +91,47 @@ def compute_global_di_topk(
     chunk_size: int = 1024,
     n_sample_rows: int = 500,
     progress_callback=None,
+    rope_params: tuple | None = None,
+    delta: int = 0,
 ) -> dict:
     """Scan all (i,j) pairs for global top-k by |DI|.
+
+    When *rope_params* is provided and *delta* > 0, includes the RoPE
+    rotation for relative position *delta*.
 
     Also samples random rows for the distribution histogram.
 
     Returns dict with keys: query_ids, key_ids, di_values, hist_sample.
     """
+    from fra.core.helpers import apply_rope_to_projected
+
     d_sae = W_dec.shape[0]
     d_head = W_Q.shape[-1]
     scale = math.sqrt(d_head)
     K_all = W_dec @ W_K                          # [d_sae, d_head]
+
+    _use_rope = (
+        rope_params is not None
+        and rope_params[0] is not None
+        and delta > 0
+    )
+    if _use_rope:
+        rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = rope_params
+        K_all = apply_rope_to_projected(
+            K_all, 0, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+        )
+
     n_chunks = math.ceil(d_sae / chunk_size)
 
     # Sample random rows for histogram
     rng = np.random.default_rng(42)
     sample_idxs = rng.choice(d_sae, size=min(n_sample_rows, d_sae), replace=False)
     Q_sample = W_dec[torch.tensor(sample_idxs, device=W_dec.device)] @ W_Q
+    if _use_rope:
+        Q_sample = apply_rope_to_projected(
+            Q_sample, delta, rope_sin, rope_cos,
+            rotary_dim, rotary_adjacent_pairs,
+        )
     hist_sample = ((Q_sample @ K_all.T) / scale).detach().cpu().float().numpy().ravel()
 
     # Running top-k across chunks
@@ -97,6 +143,11 @@ def compute_global_di_topk(
         start = c * chunk_size
         end = min(start + chunk_size, d_sae)
         Q_chunk = W_dec[start:end] @ W_Q         # [chunk, d_head]
+        if _use_rope:
+            Q_chunk = apply_rope_to_projected(
+                Q_chunk, delta, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            )
         DI_chunk = (Q_chunk @ K_all.T) / scale   # [chunk, d_sae]
 
         flat_abs = DI_chunk.abs().flatten()

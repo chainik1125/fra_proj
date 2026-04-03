@@ -154,8 +154,8 @@ def run_fra_crosscoder(
 
 
 def _load_di_weights(sae_type, head, device, **kw):
-    """Load (W_dec, W_Q, W_K, attn_layer) for DI computation."""
-    from fra.core.helpers import get_W_K
+    """Load (W_dec, W_Q, W_K, attn_layer, rope_params) for DI computation."""
+    from fra.core.helpers import get_W_K, _extract_rope_params
 
     if sae_type == "crosscoder":
         base, it = load_model_pair(
@@ -186,4 +186,5 @@ def _load_di_weights(sae_type, head, device, **kw):
 
     W_Q = model.blocks[attn_layer].attn.W_Q[head]
     W_K = get_W_K(model, attn_layer, head)
-    return W_dec, W_Q, W_K, attn_layer
+    rope_params = _extract_rope_params(model, attn_layer)
+    return W_dec, W_Q, W_K, attn_layer, rope_params

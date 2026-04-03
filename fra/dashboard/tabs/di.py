@@ -18,27 +18,32 @@ from fra.dashboard.state import PRESETS, get_fra_config, get_fra_data
 # ---------------------------------------------------------------------------
 
 def _ensure_di_weights(sae_type, head, device, _wt_kw):
-    """Load and cache DI weight matrices."""
+    """Load and cache DI weight matrices + RoPE params."""
     if st.session_state["_tab5_di_weights"] is None:
-        W_dec, W_Q, W_K_, _attn = _load_di_weights(
+        W_dec, W_Q, W_K_, _attn, rope_params = _load_di_weights(
             sae_type, int(head), device, **_wt_kw,
         )
         st.session_state["_tab5_di_weights"] = (W_dec, W_Q, W_K_)
+        st.session_state["_tab5_rope_params"] = rope_params
     return st.session_state["_tab5_di_weights"]
 
 
-def _get_di_row(query_id, sae_type, head, device, _wt_kw):
+def _get_di_row(query_id, sae_type, head, device, _wt_kw, delta=0):
     """Compute (and cache) the full DI row for *query_id*."""
     cache = st.session_state["_tab5_di_row_cache"]
     if query_id not in cache:
         W_dec, W_Q, W_K_ = _ensure_di_weights(sae_type, head, device, _wt_kw)
-        cache[query_id] = compute_di_row(W_dec, W_Q, W_K_, query_id)
+        rope_params = st.session_state.get("_tab5_rope_params")
+        cache[query_id] = compute_di_row(
+            W_dec, W_Q, W_K_, query_id,
+            rope_params=rope_params, delta=delta,
+        )
     return cache[query_id]
 
 
-def _di_for_pair(q, k, sae_type, head, device, _wt_kw):
+def _di_for_pair(q, k, sae_type, head, device, _wt_kw, delta=0):
     """Return the scalar DI value for a (query, key) pair."""
-    return float(_get_di_row(q, sae_type, head, device, _wt_kw)[k])
+    return float(_get_di_row(q, sae_type, head, device, _wt_kw, delta=delta)[k])
 
 
 def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
@@ -99,15 +104,14 @@ def render(tab):
             "a global data-independent (DI) scan, then compare DD and DI signals."
         )
 
-        # RoPE caveat
+        # RoPE detection -- drives delta slider visibility
         _model_name = cfg.get("model_name", "") if cfg else ""
         _sae_type = cfg.get("sae_type", "") if cfg else ""
-        if "gemma" in _model_name or "llama" in _model_name.lower() or _sae_type == "crosscoder":
-            st.info(
-                "This model uses rotary positional embeddings (RoPE). "
-                "DI scores are position-independent and do not include RoPE "
-                "rotations, so actual interaction strengths vary by position.",
-            )
+        _is_rope = (
+            "gemma" in _model_name
+            or "llama" in _model_name.lower()
+            or _sae_type == "crosscoder"
+        )
 
         import pandas as pd
 
@@ -150,34 +154,39 @@ def render(tab):
 
         if st.session_state.get("_tab5_di_cache_key") != _di_cache_key:
             st.session_state["_tab5_di_weights"] = None
+            st.session_state["_tab5_rope_params"] = None
             st.session_state["_tab5_di_row_cache"] = {}
             st.session_state["_tab5_dd_di_comparison"] = None
             st.session_state["_tab5_global_di"] = None
             st.session_state["_tab5_global_sample"] = None
             st.session_state["_tab5_di_cache_key"] = _di_cache_key
+            st.session_state["_tab5_rope_delta"] = 0
             st.session_state.pop("_t5_man_confirmed", None)
             st.session_state.pop("_t5_dd_confirmed", None)
 
-        if "_tab5_di_weights" not in st.session_state:
-            st.session_state["_tab5_di_weights"] = None
-        if "_tab5_di_row_cache" not in st.session_state:
-            st.session_state["_tab5_di_row_cache"] = {}
-        if "_tab5_dd_di_comparison" not in st.session_state:
-            st.session_state["_tab5_dd_di_comparison"] = None
-        if "_tab5_global_di" not in st.session_state:
-            st.session_state["_tab5_global_di"] = None
-        if "_tab5_global_sample" not in st.session_state:
-            st.session_state["_tab5_global_sample"] = None
+        for _k, _default in [
+            ("_tab5_di_weights", None),
+            ("_tab5_rope_params", None),
+            ("_tab5_di_row_cache", {}),
+            ("_tab5_dd_di_comparison", None),
+            ("_tab5_global_di", None),
+            ("_tab5_global_sample", None),
+            ("_tab5_rope_delta", 0),
+        ]:
+            if _k not in st.session_state:
+                st.session_state[_k] = _default
 
         # Convenience closures that capture current sidebar state
         def _ew():
             return _ensure_di_weights(sae_type, head, device, _wt_kw)
 
         def _gdr(query_id):
-            return _get_di_row(query_id, sae_type, head, device, _wt_kw)
+            _delta = st.session_state.get("_tab5_rope_delta", 0)
+            return _get_di_row(query_id, sae_type, head, device, _wt_kw, delta=_delta)
 
         def _dfp(q, k):
-            return _di_for_pair(q, k, sae_type, head, device, _wt_kw)
+            _delta = st.session_state.get("_tab5_rope_delta", 0)
+            return _di_for_pair(q, k, sae_type, head, device, _wt_kw, delta=_delta)
 
         # Helper to compute pair metric with current agg mode
         _agg = cfg.get("agg_mode", "sum") if cfg else "sum"
@@ -203,6 +212,36 @@ def render(tab):
 
         # -- Section 1: Pair Selector + Metrics --
         st.markdown("### Pair selector")
+
+        if _is_rope:
+            def _on_delta_change():
+                """Invalidate DI caches that depend on the delta value."""
+                st.session_state["_tab5_di_row_cache"] = {}
+                st.session_state["_tab5_dd_di_comparison"] = None
+                st.session_state["_tab5_global_di"] = None
+                st.session_state["_tab5_global_sample"] = None
+
+            _rope_delta = st.slider(
+                "RoPE relative position (delta)",
+                min_value=0, max_value=20, value=st.session_state.get("_tab5_rope_delta", 0),
+                key="_t5_rope_delta_slider",
+                on_change=_on_delta_change,
+                help=(
+                    "Relative position offset (i − j) for the RoPE rotation matrix "
+                    "W_R^(δ). At δ=0, DI scores are position-independent (no rotation). "
+                    "Higher values show how feature interactions change at larger "
+                    "query–key distances."
+                ),
+            )
+            st.session_state["_tab5_rope_delta"] = _rope_delta
+            if _rope_delta == 0:
+                st.caption(
+                    "δ=0: DI scores are position-independent (no RoPE rotation applied)."
+                )
+            else:
+                st.caption(
+                    f"δ={_rope_delta}: DI scores include the RoPE rotation W_R^({_rope_delta})."
+                )
 
         _t5_pair_mode = st.radio(
             "Selection mode",
@@ -292,6 +331,8 @@ def render(tab):
                     result = compute_global_di_topk(
                         W_dec, W_Q, W_K_, top_k=_t5_di_k,
                         progress_callback=_t5_di_progress,
+                        rope_params=st.session_state.get("_tab5_rope_params"),
+                        delta=st.session_state.get("_tab5_rope_delta", 0),
                     )
                     result["top_k_used"] = _t5_di_k
                     progress.empty()
@@ -385,6 +426,8 @@ def render(tab):
             )
             if st.session_state.get("_tab5_global_sample") is None:
                 with st.spinner("Computing global DI sample\u2026"):
+                    from fra.core.helpers import apply_rope_to_projected
+
                     _gs_W_dec, _gs_W_Q, _gs_W_K = _ew()
                     _gs_rng = np.random.default_rng(42)
                     _gs_idxs = _gs_rng.choice(
@@ -394,6 +437,15 @@ def render(tab):
                     )
                     _gs_Q = _gs_W_dec[torch.tensor(_gs_idxs, device=_gs_W_dec.device)] @ _gs_W_Q
                     _gs_K = _gs_W_dec @ _gs_W_K
+                    _gs_delta = st.session_state.get("_tab5_rope_delta", 0)
+                    _gs_rp = st.session_state.get("_tab5_rope_params")
+                    if _gs_rp is not None and _gs_rp[0] is not None and _gs_delta > 0:
+                        _gs_Q = apply_rope_to_projected(
+                            _gs_Q, _gs_delta, *_gs_rp,
+                        )
+                        _gs_K = apply_rope_to_projected(
+                            _gs_K, 0, *_gs_rp,
+                        )
                     _gs_scale = math.sqrt(_gs_W_Q.shape[-1])
                     _gs_vals = ((_gs_Q @ _gs_K.T) / _gs_scale).detach().cpu().float().numpy().ravel()
                     st.session_state["_tab5_global_sample"] = _gs_vals
