@@ -13,8 +13,13 @@ import streamlit as st
 import torch
 import torch.nn.functional as _F
 
-from fra.core.fra import _extract_rope_params, apply_rope_to_projected
-from fra.core.helpers import compute_errors, fra_sum_to_attn, get_W_K, rank_pairs
+from fra.core.helpers import (
+    compute_bias_correction,
+    compute_errors,
+    fra_sum_to_attn,
+    project_qk,
+    rank_pairs,
+)
 from fra.dashboard.loaders import (
     load_crosscoder,
     load_model,
@@ -150,8 +155,25 @@ def _load_crosscoder_resources(cfg, device):
     return base, it, target, crosscoder, model_idx, crosscoder_layer
 
 
-def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
-    """Compute FRA / SAE / zero loss patching using stored FRA data."""
+def _run_loss_metrics(model, x_hat, b_dec, cfg, fra_data, device,
+                      exclude_bos=False, needs_rms=False):
+    """Compute FRA / coder / zero loss patching using stored FRA data.
+
+    Works for both SAE and crosscoder paths — the caller decodes features
+    into ``x_hat`` and ``b_dec`` and passes them in.
+
+    Args:
+        model: The model whose attention head is being patched.
+        x_hat: ``[seq, d]`` full coder reconstruction (features + bias).
+        b_dec: ``[d]`` decoder bias vector.
+        cfg: Dashboard config dict (must contain ``layer`` and ``head``).
+        fra_data: Stored FRA results dict.
+        device: Torch device.
+        exclude_bos: Copy actual BOS scores into reconstruction.
+        needs_rms: Apply RMSNorm before projecting through W_Q / W_K.
+            Required when the coder decodes into residual-stream space
+            (crosscoders and residual-stream SAEs).
+    """
     from fra.analysis.ablation import run_condition
 
     layer_ = cfg["layer"]
@@ -159,62 +181,19 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
     seq_len = fra_data["seq_len"]
     actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
 
-    # Use stored tokens (same as FRA computation) for consistency
     tokens = fra_data["tokens"][:seq_len]
     tok_t = torch.tensor(tokens).unsqueeze(0).to(device)
     if len(tokens) < 3:
         return None
     shift = tok_t[0, 1:]
-    unp_log = model(tok_t)
-    unpatched_loss = _F.cross_entropy(unp_log[0, :-1], shift).item()
+    logits_clean = model(tok_t)
+    unpatched_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
 
-    # SAE decode stored features → full reconstruction
-    feat_acts = torch.tensor(
-        fra_data["feat_acts_np"], dtype=torch.float32, device=device,
+    # Project through W_Q/W_K (with RMSNorm + RoPE as needed)
+    q_full, k_full, q_nobias, k_nobias = project_qk(
+        model, layer_, head_, x_hat, b_dec, needs_rms=needs_rms,
     )
-    x_hat = sae.decode(feat_acts).float()
-
-    # Decoder bias and no-bias reconstruction
-    b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float()
-    x_hat_nobias = x_hat - b_dec
-
-    # Weight matrices
-    W_Q = model.blocks[layer_].attn.W_Q[head_].float()
-    W_K = get_W_K(model, layer_, head_).float()
-    b_Q = model.blocks[layer_].attn.b_Q[head_].float()
-    n_kv = model.cfg.n_key_value_heads or model.cfg.n_heads
-    kv_head = head_ // (model.cfg.n_heads // n_kv)
-    b_K = model.blocks[layer_].attn.b_K[kv_head].float()
     attn_scale = model.blocks[layer_].attn.attn_scale
-
-    # Full Q/K (with bias) and nobias Q/K (what FRA decomposes)
-    q_full = x_hat @ W_Q + b_Q
-    k_full = x_hat @ W_K + b_K
-    q_nobias = x_hat_nobias @ W_Q
-    k_nobias = x_hat_nobias @ W_K
-
-    # Apply RoPE to ALL Q/K vectors (must match compute_fra_sparse)
-    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
-        _extract_rope_params(model, layer_)
-    )
-    if rope_sin is not None:
-        for pos in range(seq_len):
-            q_full[pos] = apply_rope_to_projected(
-                q_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            k_full[pos] = apply_rope_to_projected(
-                k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            q_nobias[pos] = apply_rope_to_projected(
-                q_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            k_nobias[pos] = apply_rope_to_projected(
-                k_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
 
     softcap = _get_softcap(model, layer_)
     mask_t = torch.triu(
@@ -222,13 +201,12 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
         diagonal=1,
     )
 
-    # SAE scores: full reconstruction through Q/K
-    scores_sae = _apply_softcap_t(
+    # Coder scores: full reconstruction through Q/K
+    scores_coder = _apply_softcap_t(
         (q_full @ k_full.T) / attn_scale, softcap,
     ) + mask_t
 
-    # FRA scores: fra_sum + RoPE-aware bias correction
-    # (mirrors crosscoder path — exact in RoPE space, only top-k error remains)
+    # FRA scores: fra_sum + bias correction
     d_sae = fra_data["feat_acts_np"].shape[1]
     fra_sparse = torch.sparse_coo_tensor(
         torch.tensor(fra_data["indices_np"], dtype=torch.long),
@@ -237,163 +215,31 @@ def _run_loss_metrics(model, sae, cfg, fra_data, device, exclude_bos=False):
     ).coalesce()
     fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
 
-    bias_correction = (
-        (q_full @ k_full.T) - (q_nobias @ k_nobias.T)
-    ) / attn_scale
+    bias_corr = compute_bias_correction(
+        q_full, k_full, q_nobias, k_nobias, attn_scale,
+    )
     scores_fra = _apply_softcap_t(
-        torch.tensor(fra_sum, dtype=torch.float32, device=device) + bias_correction,
+        torch.tensor(fra_sum, dtype=torch.float32, device=device) + bias_corr,
         softcap,
     ) + mask_t
 
-    # Copy actual BOS scores when SAE wasn't trained on BOS
+    # Copy actual BOS scores when coder wasn't trained on BOS
     if actual_bos is not None:
         actual_t = torch.tensor(
             actual_bos[:seq_len, :seq_len], dtype=torch.float32, device=device,
         )
         scores_fra[0, :] = actual_t[0, :]
         scores_fra[:, 0] = actual_t[:, 0]
-        scores_sae[0, :] = actual_t[0, :]
-        scores_sae[:, 0] = actual_t[:, 0]
+        scores_coder[0, :] = actual_t[0, :]
+        scores_coder[:, 0] = actual_t[:, 0]
 
     # Zero scores
     scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
 
     # Run conditions
-    r_fra = run_condition(model, layer_, head_, tok_t, shift, scores_fra, unp_log)
-    r_sae = run_condition(model, layer_, head_, tok_t, shift, scores_sae, unp_log)
-    r_zero = run_condition(model, layer_, head_, tok_t, shift, scores_zero, unp_log)
-
-    return {
-        "unpatched_loss": unpatched_loss,
-        "fra": r_fra,
-        "sae": r_sae,
-        "zero": r_zero,
-        "fra_sparse": fra_sparse,
-        "d_sae": d_sae,
-    }
-
-
-def _run_crosscoder_loss_metrics(
-    cfg, fra_data, device, exclude_bos=False,
-    *, target, crosscoder, model_idx, crosscoder_layer,
-):
-    """Compute crosscoder / FRA / zero loss patching for crosscoder path."""
-    from fra.analysis.ablation import run_condition
-
-    layer_ = cfg["layer"]
-    head_ = cfg["head"]
-    seq_len = fra_data["seq_len"]
-
-    tok_t = torch.tensor(fra_data["tokens"]).unsqueeze(0).to(device)
-    shift = tok_t[0, 1:]
-
-    logits_clean = target(tok_t)
-    unpatched_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
-
-    d_sae = fra_data["feat_acts_np"].shape[1]
-    fra_sparse = torch.sparse_coo_tensor(
-        torch.tensor(fra_data["indices_np"], dtype=torch.long),
-        torch.tensor(fra_data["values_np"], dtype=torch.float32),
-        size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
-    ).coalesce()
-    actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
-
-    mask_t = torch.triu(
-        torch.full((seq_len, seq_len), float("-inf"), device=device),
-        diagonal=1,
-    )
-
-    # ── Crosscoder-patched condition ──
-    # Decode stored features → reconstructed residual stream activations,
-    # then apply RMSNorm and project through W_Q / W_K to get attention scores.
-    # Decode in float32 to match FRA computation precision (which uses
-    # W_dec.float() for per-feature projections).
-    feat_acts = torch.tensor(
-        fra_data["feat_acts_np"], dtype=torch.float32, device=device,
-    )
-    b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
-    x_hat = feat_acts @ crosscoder.W_dec.float() + b_dec  # [seq, d_model]
-
-    # RMSNorm: crosscoder decodes into residual-stream space, but W_Q / W_K
-    # (with gamma folded in by TransformerLens) expect post-RMSNorm input.
-    eps = target.cfg.eps
-    rms = (x_hat.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
-    x_hat_norm = x_hat / rms
-
-    W_Q = target.blocks[layer_].attn.W_Q[head_].float()
-    W_K = get_W_K(target, layer_, head_).float()
-    n_kv = target.cfg.n_key_value_heads or target.cfg.n_heads
-    kv_head = head_ // (target.cfg.n_heads // n_kv)
-    b_Q = target.blocks[layer_].attn.b_Q[head_].float()
-    b_K = target.blocks[layer_].attn.b_K[kv_head].float()
-    attn_scale = target.blocks[layer_].attn.attn_scale
-
-    # Full Q/K (with decoder bias contribution and attention biases)
-    q_full = x_hat_norm @ W_Q + b_Q
-    k_full = x_hat_norm @ W_K + b_K
-
-    # Q/K from feature directions only (no decoder bias) — what FRA decomposes
-    x_hat_nobias_norm = (x_hat - b_dec) / rms
-    q_nobias = x_hat_nobias_norm @ W_Q
-    k_nobias = x_hat_nobias_norm @ W_K
-
-    # Apply RoPE to all Q/K vectors
-    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
-        _extract_rope_params(target, layer_)
-    )
-    if rope_sin is not None:
-        for pos in range(seq_len):
-            q_full[pos] = apply_rope_to_projected(
-                q_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            k_full[pos] = apply_rope_to_projected(
-                k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            q_nobias[pos] = apply_rope_to_projected(
-                q_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-            k_nobias[pos] = apply_rope_to_projected(
-                k_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
-                rotary_dim, rotary_adjacent_pairs,
-            ).squeeze(0)
-
-    softcap = _get_softcap(target, layer_)
-    scores_coder = _apply_softcap_t(
-        (q_full @ k_full.T) / attn_scale, softcap,
-    ) + mask_t
-
-    # ── FRA-patched condition ──
-    # FRA sum ≈ (q_nobias @ k_nobias.T) / attn_scale (feature pairs only).
-    # The decoder bias creates cross-terms that FRA doesn't capture, so we
-    # compute the correction matrix: full_scores - nobias_scores.
-    fra_sum = fra_sum_to_attn(fra_sparse, seq_len)
-    bias_correction = (
-        (q_full @ k_full.T) - (q_nobias @ k_nobias.T)
-    ) / attn_scale
-    scores_fra = _apply_softcap_t(
-        torch.tensor(fra_sum, dtype=torch.float32, device=device) + bias_correction,
-        softcap,
-    ) + mask_t
-
-    if actual_bos is not None:
-        actual_t = torch.tensor(
-            actual_bos[:seq_len, :seq_len], dtype=torch.float32, device=device,
-        )
-        scores_coder[0, :] = actual_t[0, :]
-        scores_coder[:, 0] = actual_t[:, 0]
-        scores_fra[0, :] = actual_t[0, :]
-        scores_fra[:, 0] = actual_t[:, 0]
-
-    # ── Zero condition ──
-    scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
-
-    # ── Run all conditions ──
-    r_fra = run_condition(target, layer_, head_, tok_t, shift, scores_fra, logits_clean)
-    r_coder = run_condition(target, layer_, head_, tok_t, shift, scores_coder, logits_clean)
-    r_zero = run_condition(target, layer_, head_, tok_t, shift, scores_zero, logits_clean)
+    r_fra = run_condition(model, layer_, head_, tok_t, shift, scores_fra, logits_clean)
+    r_coder = run_condition(model, layer_, head_, tok_t, shift, scores_coder, logits_clean)
+    r_zero = run_condition(model, layer_, head_, tok_t, shift, scores_zero, logits_clean)
 
     return {
         "unpatched_loss": unpatched_loss,
@@ -484,44 +330,46 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
             size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
         ).coalesce()
 
-        # Load model + compute bias (same pattern as before)
+        # Load model + compute bias correction
+        feat_acts = torch.tensor(
+            fra_data["feat_acts_np"], dtype=torch.float32, device=device,
+        )
         if sae_type == "crosscoder":
-            _, _, target, _, _, _ = _load_crosscoder_resources(cfg, device)
-            tok_t = torch.tensor(fra_data["tokens"]).unsqueeze(0).to(device)
-            shift = tok_t[0, 1:]
-            logits_clean = target(tok_t)
-            unp_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
-            bias = {
-                "term_q": np.zeros(seq_len),
-                "term_k": np.zeros(seq_len),
-                "term_const": 0.0,
-                "attn_scale": 1.0,
-                "seq_len": seq_len,
-                "tok_tensor": tok_t,
-                "shift_labels": shift,
-                "unpatched_loss": unp_loss,
-                "unpatched_logits": logits_clean,
-            }
-            _target = target
-        else:
-            from fra.analysis.ablation import compute_bias_corrections
-            model, sae = _load_model_sae(cfg, device)
-            hook = cfg.get("hook_point", "attn.hook_z")
-            bias = compute_bias_corrections(
-                model, sae, cfg["text"], layer_, head_, hook,
+            _, _, target, crosscoder, model_idx, _ = (
+                _load_crosscoder_resources(cfg, device)
             )
-            if bias is not None and bias["seq_len"] != seq_len:
-                bias["term_q"] = bias["term_q"][:seq_len]
-                bias["term_k"] = bias["term_k"][:seq_len]
-                bias["seq_len"] = seq_len
-                bias["tok_tensor"] = bias["tok_tensor"][:, :seq_len]
-                bias["shift_labels"] = bias["tok_tensor"][0, 1:]
-                _logits = model(bias["tok_tensor"])
-                bias["unpatched_loss"] = _F.cross_entropy(
-                    _logits[0, :-1], bias["shift_labels"],
-                ).item()
-                bias["unpatched_logits"] = _logits
+            b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
+            x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
+            _target = target
+            _needs_rms = True
+        else:
+            model, sae = _load_model_sae(cfg, device)
+            x_hat = sae.decode(feat_acts).float()
+            b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float()
             _target = model
+            _needs_rms = "resid" in cfg.get("hook_point", "")
+
+        q_full, k_full, q_nobias, k_nobias = project_qk(
+            _target, layer_, head_, x_hat, b_dec, needs_rms=_needs_rms,
+        )
+        attn_scale = _target.blocks[layer_].attn.attn_scale
+        bias_corr = compute_bias_correction(
+            q_full, k_full, q_nobias, k_nobias, attn_scale,
+        ).cpu().numpy()
+
+        tok_t = torch.tensor(fra_data["tokens"]).unsqueeze(0).to(device)
+        shift = tok_t[0, 1:]
+        logits_clean = _target(tok_t)
+        unp_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
+
+        bias = {
+            "bias_correction": bias_corr,
+            "seq_len": seq_len,
+            "tok_tensor": tok_t,
+            "shift_labels": shift,
+            "unpatched_loss": unp_loss,
+            "unpatched_logits": logits_clean,
+        }
 
         if bias is None:
             st.error("Text too short for ablation.")
@@ -820,20 +668,28 @@ def render(tab):
 
         if run_loss:
             with st.spinner("Computing patched losses\u2026"):
+                feat_acts = torch.tensor(
+                    fra_data["feat_acts_np"], dtype=torch.float32, device=device,
+                )
                 if is_crosscoder:
                     base, it, target, crosscoder, model_idx, cc_layer = (
                         _load_crosscoder_resources(cfg, device)
                     )
-                    loss_r = _run_crosscoder_loss_metrics(
-                        cfg, fra_data, device, exclude_bos=exclude_bos,
-                        target=target, crosscoder=crosscoder,
-                        model_idx=model_idx, crosscoder_layer=cc_layer,
+                    b_dec = crosscoder._crosscoder.decoder.bias[model_idx].float().to(device)
+                    x_hat = (feat_acts @ crosscoder.W_dec.float() + b_dec)
+                    loss_r = _run_loss_metrics(
+                        target, x_hat, b_dec, cfg, fra_data, device,
+                        exclude_bos=exclude_bos, needs_rms=True,
                     )
                 else:
                     model, sae = _load_model_sae(cfg, device)
+                    x_hat = sae.decode(feat_acts).float()
+                    b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float()
+                    hook_point = cfg.get("hook_point", "")
                     loss_r = _run_loss_metrics(
-                        model, sae, cfg, fra_data, device,
+                        model, x_hat, b_dec, cfg, fra_data, device,
                         exclude_bos=exclude_bos,
+                        needs_rms="resid" in hook_point,
                     )
                 st.session_state["_val_loss"] = loss_r
 

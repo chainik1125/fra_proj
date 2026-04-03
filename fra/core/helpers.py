@@ -1,11 +1,12 @@
 """
 Shared helpers for FRA analysis.
 
-Weight extraction, reconstruction metrics, pair ranking, and FRA
-aggregation utilities used across dashboard, analysis, and viz modules.
+Weight extraction, reconstruction metrics, pair ranking, FRA
+aggregation, RoPE, and attention-score projection utilities used
+across dashboard, analysis, and viz modules.
 
-FRA-specific computation (``topk_sparsify``, ``compute_fra_sparse``,
-``apply_rope_to_projected``) lives in ``fra.core.fra``.
+FRA-specific computation (``topk_sparsify``, ``compute_fra_sparse``)
+lives in ``fra.core.fra``.
 """
 
 import math
@@ -49,6 +50,171 @@ def get_attn_scale(model: HookedTransformer, layer: int) -> float:
     """Return sqrt(d_head) for the given layer."""
     d_head = model.blocks[layer].attn.W_Q.shape[-1]
     return math.sqrt(d_head)
+
+
+# ── RoPE utilities ───────────────────────────────────────────────────────
+
+
+def apply_rope_to_projected(
+    projected: torch.Tensor,
+    position: int,
+    rope_sin: torch.Tensor,
+    rope_cos: torch.Tensor,
+    rotary_dim: int,
+    rotary_adjacent_pairs: bool = False,
+) -> torch.Tensor:
+    """Apply RoPE rotation to projected vectors at a single position.
+
+    This mirrors TransformerLens's ``apply_rotary`` + ``rotate_every_two``
+    logic but operates on a ``[n_features, d_head]`` tensor at a single
+    sequence position instead of the full ``[batch, pos, head, d_head]``
+    tensor.
+
+    Args:
+        projected: ``[n_features, d_head]`` -- features projected through
+            W_Q or W_K.
+        position: Integer sequence position for looking up sin/cos.
+        rope_sin: ``[n_ctx, rotary_dim]`` precomputed sine table.
+        rope_cos: ``[n_ctx, rotary_dim]`` precomputed cosine table.
+        rotary_dim: Number of dimensions to rotate (may be < d_head).
+        rotary_adjacent_pairs: True for GPT-J style, False for GPT-NeoX
+            style (Gemma, Llama).
+    """
+    x_rot = projected[:, :rotary_dim]
+    x_pass = projected[:, rotary_dim:]
+
+    # rotate_every_two
+    x_flip = x_rot.clone()
+    if rotary_adjacent_pairs:
+        x_flip[:, ::2] = -x_rot[:, 1::2]
+        x_flip[:, 1::2] = x_rot[:, ::2]
+    else:
+        n = rotary_dim // 2
+        x_flip[:, :n] = -x_rot[:, n:]
+        x_flip[:, n:] = x_rot[:, :n]
+
+    cos = rope_cos[position]  # [rotary_dim]
+    sin = rope_sin[position]  # [rotary_dim]
+    x_rotated = x_rot * cos.unsqueeze(0) + x_flip * sin.unsqueeze(0)
+
+    return torch.cat([x_rotated, x_pass], dim=-1)
+
+
+def _extract_rope_params(model, layer):
+    """Extract RoPE parameters from a model's attention block.
+
+    Returns (rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs).
+    All None/False when the model does not use rotary embeddings.
+    """
+    if getattr(model.cfg, "positional_embedding_type", None) != "rotary":
+        return None, None, None, False
+    attn_block = model.blocks[layer].attn
+    return (
+        attn_block.rotary_sin,
+        attn_block.rotary_cos,
+        model.cfg.rotary_dim,
+        getattr(model.cfg, "rotary_adjacent_pairs", False),
+    )
+
+
+# ── Attention score projection ───────────────────────────────────────────
+
+
+@torch.no_grad()
+def project_qk(
+    model: HookedTransformer,
+    layer: int,
+    head: int,
+    x_hat: torch.Tensor,
+    b_dec: torch.Tensor,
+    needs_rms: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Project coder reconstruction through W_Q/W_K with RMSNorm and RoPE.
+
+    Returns ``(q_full, k_full, q_nobias, k_nobias)`` each ``[seq, d_head]``
+    in float32.
+
+    - ``q_full / k_full``: full reconstruction (with b_dec and b_Q/b_K)
+    - ``q_nobias / k_nobias``: feature-only part (b_dec subtracted, no b_Q/b_K)
+
+    When ``needs_rms=True``, both x_hat and (x_hat - b_dec) are divided by
+    the **same** RMS denominator (computed from x_hat), matching the FRA
+    computation in ``compute_fra_sparse``.
+
+    Args:
+        model: HookedTransformer with fold_ln=True.
+        layer: Attention layer index.
+        head: Attention head index.
+        x_hat: ``[seq, d_model]`` coder reconstruction (features + b_dec).
+        b_dec: ``[d_model]`` decoder bias.
+        needs_rms: Apply RMSNorm correction (required when the coder
+            decodes into residual-stream space).
+    """
+    x_hat = x_hat.float()
+    b_dec = b_dec.float()
+
+    if needs_rms:
+        eps = model.cfg.eps
+        rms = (x_hat.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
+        x_hat_norm = x_hat / rms
+        x_hat_nobias_norm = (x_hat - b_dec) / rms
+    else:
+        x_hat_norm = x_hat
+        x_hat_nobias_norm = x_hat - b_dec
+
+    W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
+    W_Q, W_K, b_Q, b_K = W_Q.float(), W_K.float(), b_Q.float(), b_K.float()
+
+    q_full = x_hat_norm @ W_Q + b_Q
+    k_full = x_hat_norm @ W_K + b_K
+    q_nobias = x_hat_nobias_norm @ W_Q
+    k_nobias = x_hat_nobias_norm @ W_K
+
+    # Apply RoPE at each position
+    rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
+        _extract_rope_params(model, layer)
+    )
+    if rope_sin is not None:
+        seq_len = x_hat.shape[0]
+        for pos in range(seq_len):
+            q_full[pos] = apply_rope_to_projected(
+                q_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            k_full[pos] = apply_rope_to_projected(
+                k_full[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            q_nobias[pos] = apply_rope_to_projected(
+                q_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+            k_nobias[pos] = apply_rope_to_projected(
+                k_nobias[pos].unsqueeze(0), pos, rope_sin, rope_cos,
+                rotary_dim, rotary_adjacent_pairs,
+            ).squeeze(0)
+
+    return q_full, k_full, q_nobias, k_nobias
+
+
+def compute_bias_correction(
+    q_full: torch.Tensor,
+    k_full: torch.Tensor,
+    q_nobias: torch.Tensor,
+    k_nobias: torch.Tensor,
+    attn_scale: float,
+) -> torch.Tensor:
+    """Compute the bias correction matrix for FRA score reconstruction.
+
+    Returns ``[seq, seq]`` tensor:
+    ``((q_full @ k_full.T) - (q_nobias @ k_nobias.T)) / attn_scale``
+
+    This captures the linear (feature x b_dec) and constant (b_dec x b_dec)
+    terms from the attention score decomposition. It must be a full matrix
+    (not separable into per-query + per-key terms) because RoPE makes the
+    correction position-pair-dependent.
+    """
+    return ((q_full @ k_full.T) - (q_nobias @ k_nobias.T)) / attn_scale
 
 
 # ── FRA aggregation ──────────────────────────────────────────────────────

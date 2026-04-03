@@ -7,7 +7,7 @@ Research repository combining documentation (Obsidian vault) and Python code for
 - `fra/` -- Python library package
   - `fra/core/` -- core FRA computation (fra.py, fra_crosscoder.py, helpers.py, activations.py)
   - `fra/coders/` -- SAE and crosscoder wrappers (sae_lens.py, sae_simple.py, crosscoder.py)
-  - `fra/analysis/` -- analysis functions (validation.py, ablation.py, max_act.py, induction.py)
+  - `fra/analysis/` -- analysis functions (ablation.py, max_act.py, induction.py)
   - `fra/viz/` -- visualization generators (neuronpedia.py, single_sample.py, data_independent.py, dataset_search.py)
   - `fra/utils/` -- utilities (loading.py, log.py)
   - `fra/dashboard/` -- Streamlit dashboard app (run with `uv run dashboard`)

@@ -21,7 +21,7 @@ from fra.analysis.ablation import (
     run_single_sample,
     screen_heads,
 )
-from fra.analysis.validation import load_sae
+from fra.coders import load_sae
 
 
 def main():

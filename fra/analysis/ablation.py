@@ -26,10 +26,14 @@ import torch
 import torch.nn.functional as F
 
 from fra.core.fra import get_sentence_fra_batch
-from fra.core.helpers import get_qk_weights, fra_sum_to_attn, rank_pairs
+from fra.core.helpers import (
+    compute_bias_correction,
+    fra_sum_to_attn,
+    project_qk,
+    rank_pairs,
+)
 
-# Import load_sae from validation (will live in fra.analysis.validation after move)
-from fra.analysis.validation import load_sae
+from fra.coders import load_sae
 
 # ── Texts ─────────────────────────────────────────────────────────────────
 
@@ -110,11 +114,11 @@ def ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae):
 @torch.no_grad()
 def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_length=128):
     """
-    Compute the bias correction terms needed to go from FRA sum to full
+    Compute the bias correction matrix needed to go from FRA sum to full
     pre-softmax attention scores.
 
-    Returns dict with: term_q, term_k, term_const, attn_scale, seq_len,
-                       tokens, unpatched_loss, unpatched_logits.
+    Returns dict with: bias_correction, seq_len, tok_tensor,
+                       shift_labels, unpatched_loss, unpatched_logits.
     """
     device = next(model.parameters()).device
     tokens = model.tokenizer.encode(text)[:max_length]
@@ -137,32 +141,22 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     if x.dim() == 3:
         x = x.flatten(-2, -1)
 
-    W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
-    W_Q, W_K, b_Q, b_K = W_Q.float(), W_K.float(), b_Q.float(), b_K.float()
-    attn_scale = model.blocks[layer].attn.attn_scale
-
     # SAE reconstruction
     features = sae.encode(x)
     x_hat = sae.decode(features).float()
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
-    b_dec = b_dec.float()
 
-    x_hat_nobias = x_hat - b_dec
-    q_nobias = (x_hat_nobias @ W_Q).cpu().numpy()
-    k_nobias = (x_hat_nobias @ W_K).cpu().numpy()
-
-    combined_q_bias = (b_dec @ W_Q + b_Q).cpu().numpy()
-    combined_k_bias = (b_dec @ W_K + b_K).cpu().numpy()
-
-    term_q = q_nobias @ combined_k_bias       # [seq]
-    term_k = k_nobias @ combined_q_bias       # [seq]
-    term_const = np.dot(combined_q_bias, combined_k_bias)
+    attn_scale = model.blocks[layer].attn.attn_scale
+    q_full, k_full, q_nobias, k_nobias = project_qk(
+        model, layer, head, x_hat, b_dec,
+        needs_rms="resid" in hook_point,
+    )
+    bias_corr = compute_bias_correction(
+        q_full, k_full, q_nobias, k_nobias, attn_scale,
+    ).cpu().numpy()
 
     return {
-        "term_q": term_q,
-        "term_k": term_k,
-        "term_const": term_const,
-        "attn_scale": attn_scale,
+        "bias_correction": bias_corr,
         "seq_len": seq_len,
         "tok_tensor": tok_tensor,
         "shift_labels": shift_labels,
@@ -193,13 +187,8 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
     """
     seq_len = bias["seq_len"]
     # fra_sum_2d already includes 1/sqrt(d_head) scaling from the FRA
-    # computation.  Only the bias correction terms are unscaled dot products
-    # and need dividing by attn_scale.
-    scores = fra_sum_2d + (
-        bias["term_q"][:, None]
-        + bias["term_k"][None, :]
-        + bias["term_const"]
-    ) / bias["attn_scale"]
+    # computation.  bias_correction is also pre-scaled.
+    scores = fra_sum_2d + bias["bias_correction"][:seq_len, :seq_len]
 
     # Logit soft-capping (Gemma-2): applied before causal mask
     if softcap > 0:

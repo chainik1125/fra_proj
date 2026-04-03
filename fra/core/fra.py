@@ -18,7 +18,7 @@ from tqdm import tqdm
 from transformer_lens import HookedTransformer
 
 from fra.core.activations import get_llm_activations
-from fra.core.helpers import get_W_K
+from fra.core.helpers import get_W_K, apply_rope_to_projected, _extract_rope_params
 
 
 # ── Top-k sparsification ─────────────────────────────────────────────────
@@ -58,54 +58,6 @@ def topk_sparsify(
         topk_features.append(sparse_feat)
 
     return torch.stack(topk_features)
-
-
-# ── RoPE helper ────────────────────────────────────────────────────────
-
-
-def apply_rope_to_projected(
-    projected: torch.Tensor,
-    position: int,
-    rope_sin: torch.Tensor,
-    rope_cos: torch.Tensor,
-    rotary_dim: int,
-    rotary_adjacent_pairs: bool = False,
-) -> torch.Tensor:
-    """Apply RoPE rotation to projected vectors at a single position.
-
-    This mirrors TransformerLens's ``apply_rotary`` + ``rotate_every_two``
-    logic but operates on a ``[n_features, d_head]`` tensor at a single
-    sequence position instead of the full ``[batch, pos, head, d_head]``
-    tensor.
-
-    Args:
-        projected: ``[n_features, d_head]`` -- features projected through
-            W_Q or W_K.
-        position: Integer sequence position for looking up sin/cos.
-        rope_sin: ``[n_ctx, rotary_dim]`` precomputed sine table.
-        rope_cos: ``[n_ctx, rotary_dim]`` precomputed cosine table.
-        rotary_dim: Number of dimensions to rotate (may be < d_head).
-        rotary_adjacent_pairs: True for GPT-J style, False for GPT-NeoX
-            style (Gemma, Llama).
-    """
-    x_rot = projected[:, :rotary_dim]
-    x_pass = projected[:, rotary_dim:]
-
-    # rotate_every_two
-    x_flip = x_rot.clone()
-    if rotary_adjacent_pairs:
-        x_flip[:, ::2] = -x_rot[:, 1::2]
-        x_flip[:, 1::2] = x_rot[:, ::2]
-    else:
-        n = rotary_dim // 2
-        x_flip[:, :n] = -x_rot[:, n:]
-        x_flip[:, n:] = x_rot[:, :n]
-
-    cos = rope_cos[position]  # [rotary_dim]
-    sin = rope_sin[position]  # [rotary_dim]
-    x_rotated = x_rot * cos.unsqueeze(0) + x_flip * sin.unsqueeze(0)
-
-    return torch.cat([x_rotated, x_pass], dim=-1)
 
 
 # ── Core FRA loop ───────────────────────────────────────────────────────
@@ -264,26 +216,6 @@ def compute_fra_sparse(
         )
 
     return fra_sparse
-
-
-# ── Shared FRA helpers ─────────────────────────────────────────────────
-
-
-def _extract_rope_params(model, layer):
-    """Extract RoPE parameters from a model's attention block.
-
-    Returns (rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs).
-    All None/False when the model does not use rotary embeddings.
-    """
-    if getattr(model.cfg, "positional_embedding_type", None) != "rotary":
-        return None, None, None, False
-    attn_block = model.blocks[layer].attn
-    return (
-        attn_block.rotary_sin,
-        attn_block.rotary_cos,
-        model.cfg.rotary_dim,
-        getattr(model.cfg, "rotary_adjacent_pairs", False),
-    )
 
 
 def _build_fra_result(
