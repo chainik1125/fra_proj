@@ -89,3 +89,29 @@ def get_fra_data():
 
 def get_fra_config():
     return st.session_state.get("fra_config")
+
+
+def get_fra_data_all():
+    """Return the all-heads FRA dict, or None if only single-head was computed."""
+    return st.session_state.get("fra_data_all")
+
+
+def get_active_fra_data(key_suffix=""):
+    """Return ``(fra_data, selected_head)`` respecting all-heads mode.
+
+    When all-heads data exists, renders a head-selector widget and returns
+    the chosen head's data.  Otherwise returns the single-head data and the
+    head stored in ``fra_config``.
+    """
+    fra_data_all = get_fra_data_all()
+    cfg = get_fra_config()
+    if fra_data_all is not None:
+        n_heads = len(fra_data_all)
+        selected = st.selectbox(
+            "View head",
+            list(range(n_heads)),
+            index=cfg.get("head", 0),
+            key=f"_head_sel_{key_suffix}",
+        )
+        return fra_data_all[selected], selected
+    return get_fra_data(), cfg["head"] if cfg else 0

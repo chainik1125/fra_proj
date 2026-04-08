@@ -5,19 +5,20 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from fra.core.helpers import rank_pairs
-from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data
 
 
 def render(tab):
     with tab:
-        fra_data = get_fra_data()
-        if fra_data is None:
+        if get_fra_data() is None:
             st.info("Click **\u25b6 Compute FRA** in the sidebar to see the feature matrix.")
             return
 
         cfg = get_fra_config()
         layer_ = cfg["layer"]
-        head_ = cfg["head"]
+
+        fra_data, head_ = get_active_fra_data("matrix")
+
 
         _agg = cfg.get("agg_mode", "sum")
 

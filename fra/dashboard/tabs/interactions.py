@@ -8,7 +8,7 @@ import streamlit as st
 
 from fra.core.helpers import get_position_heatmap, rank_pairs, aggregate_pairs
 from fra.dashboard.loaders import fetch_neuronpedia
-from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data
 from fra.dashboard.widgets import (
     _show_heatmap,
     neuronpedia_embed_url,
@@ -18,14 +18,14 @@ from fra.dashboard.widgets import (
 
 def render(tab):
     with tab:
-        fra_data = get_fra_data()
-        if fra_data is None:
+        if get_fra_data() is None:
             st.info("Click **\u25b6 Compute FRA** in the sidebar to see interactions.")
             return
 
         cfg = get_fra_config()
         layer_ = cfg["layer"]
-        head_ = cfg["head"]
+
+        fra_data, head_ = get_active_fra_data("interactions")
         seq_len = fra_data["seq_len"]
         token_strs = fra_data["token_strs"][:seq_len]
 

@@ -10,7 +10,7 @@ import torch
 from fra.analysis.di import compute_di_row, compute_di_sample, compute_global_di_topk
 from fra.core.helpers import rank_pairs
 from fra.dashboard.compute import _load_di_weights
-from fra.dashboard.state import PRESETS, get_fra_config, get_fra_data
+from fra.dashboard.state import PRESETS, get_active_fra_data, get_fra_config, get_fra_data, get_fra_data_all
 
 
 # ---------------------------------------------------------------------------
@@ -93,9 +93,17 @@ def _render_di_histogram(di_values, stats, mark_val=None, mark_label=None):
 
 def render(tab):
     with tab:
-        fra_data = get_fra_data()
         cfg = get_fra_config()
-        _has_fra = fra_data is not None
+        _has_fra = get_fra_data() is not None
+
+        # Head selector: when all-heads data exists, show dropdown and use
+        # the selected head for both FRA data and DI weight loading.
+        fra_data_all = get_fra_data_all()
+        if _has_fra:
+            fra_data, _selected_head = get_active_fra_data("di")
+        else:
+            fra_data = None
+            _selected_head = cfg["head"] if cfg else 0
 
         st.subheader("Feature Resolved QK Circuit \u2014 Data-Independent")
         st.caption(
@@ -115,11 +123,11 @@ def render(tab):
 
         import pandas as pd
 
-        # Read sidebar state
+        # Read sidebar state — use selected head (from head selector) for DI
         preset_name = st.session_state.get("_sidebar_preset_name", "")
         preset = PRESETS.get(preset_name, {})
         sae_type = st.session_state.get("_sidebar_sae_type", cfg.get("sae_type", "") if cfg else "")
-        head = st.session_state.get("_sidebar_head", cfg["head"] if cfg else 0)
+        head = _selected_head
         layer = st.session_state.get("_sidebar_layer", cfg["layer"] if cfg else 0)
         device = "cuda" if torch.cuda.is_available() else "cpu"
 

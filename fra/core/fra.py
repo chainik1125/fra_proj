@@ -227,7 +227,9 @@ def _build_fra_result(
     device,
     *,
     top_k: int | None = 20,
+    topk_features: torch.Tensor | None = None,
     rms_activations: torch.Tensor | None = None,
+    rms: torch.Tensor | None = None,
     dec_norms: torch.Tensor | None = None,
     chunk_size: int = 16,
     verbose: bool = False,
@@ -244,9 +246,15 @@ def _build_fra_result(
         feature_activations: ``[seq, d_sae]`` raw encoded features.
         W_dec: ``[d_sae, d_model]`` decoder weights.
         device: Torch device for the result tensor.
-        top_k: Features per position to keep (None = all).
+        top_k: Features per position to keep (None = all).  Ignored when
+            ``topk_features`` is provided.
+        topk_features: Pre-computed ``[seq, d_sae]`` sparsified tensor.  If
+            provided, ``topk_sparsify`` is skipped (useful when calling
+            per-head to avoid redundant work).
         rms_activations: ``[seq, d_model]`` residual stream for RMSNorm
             correction, or None to skip.
+        rms: Pre-computed ``[seq]`` RMSNorm denominators.  If provided,
+            skips recomputation from ``rms_activations``.
         dec_norms: ``[d_sae]`` decoder norms for rescale correction, or None.
         chunk_size: GPU batch size for ``compute_fra_sparse``.
         verbose: Show progress.
@@ -255,7 +263,8 @@ def _build_fra_result(
         Dict with ``fra_tensor_sparse``, ``shape``, ``seq_len``,
         ``total_interactions``, ``feature_activations``, ``topk_features``.
     """
-    topk_features = topk_sparsify(feature_activations, top_k).float()
+    if topk_features is None:
+        topk_features = topk_sparsify(feature_activations, top_k).float()
 
     # Attention weights — float32 for accumulation precision
     W_Q = model.blocks[layer].attn.W_Q[head].float()       # [d_model, d_head]
@@ -264,8 +273,7 @@ def _build_fra_result(
     attn_scale = math.sqrt(d_head)
 
     # RMSNorm correction
-    rms = None
-    if rms_activations is not None:
+    if rms is None and rms_activations is not None:
         eps = model.cfg.eps
         rms = (rms_activations.float().pow(2).mean(dim=-1) + eps).sqrt()
 
@@ -453,6 +461,177 @@ def get_sentence_averages(llm:Any,sae:Any,layer:int,head:int,input_text:str,hook
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Head-independent encoding helpers
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _encode_sae(
+    model: HookedTransformer,
+    sae: Any,
+    tokens_tensor: torch.Tensor,
+    layer: int,
+    hook_point: str = "ln1.hook_normalized",
+    *,
+    activation: torch.Tensor | None = None,
+    normalize_by_decoder_norm: bool | None = None,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """Head-independent SAE encoding.
+
+    Runs the model forward pass (unless *activation* is provided), encodes
+    through the SAE, and computes all artifacts needed by
+    ``_build_fra_result``.
+
+    Args:
+        model: The transformer model.
+        sae: SAE object with ``.encode()`` and ``.W_dec``.
+        tokens_tensor: ``[1, seq]`` token tensor (on device).
+        layer: Layer index.
+        hook_point: Hook point relative to ``blocks.{layer}.``.
+        activation: Pre-computed ``[seq, d_model]`` activation tensor.  If
+            provided the model forward pass is skipped — useful when the
+            caller captured multiple hooks in a single ``run_with_cache``.
+        normalize_by_decoder_norm: Override decoder-norm correction.
+        verbose: Print progress.
+
+    Returns:
+        Dict with ``feature_activations``, ``W_dec``, ``dec_norms``,
+        ``rms_activations``, ``normalized``.
+    """
+    device = next(model.parameters()).device
+
+    if activation is None:
+        hook_name = f"blocks.{layer}.{hook_point}"
+        _, cache = model.run_with_cache(
+            tokens_tensor, names_filter=[hook_name],
+        )
+        activation = cache[hook_name].squeeze(0)
+
+    # hook_z is [seq_len, n_heads, d_head] → flatten to [seq_len, n_heads*d_head]
+    if activation.dim() == 3:
+        activation = activation.flatten(-2, -1)
+
+    # Encode to SAE features
+    if verbose:
+        print(f"Encoding {activation.shape[0]} positions to SAE features...")
+
+    if hasattr(sae, "encode"):
+        feature_activations = sae.encode(activation)
+    else:
+        feature_activations = sae.sae.encode(activation)
+
+    # Norm coefficient correction (e.g. Gemma-Scope)
+    if hasattr(sae, "_norm_coeff") and sae._norm_coeff is not None:
+        feature_activations = feature_activations / sae._norm_coeff
+
+    # Decoder weights
+    W_dec = sae.W_dec if hasattr(sae, "W_dec") else sae.sae.W_dec
+
+    # Decoder norm detection
+    if normalize_by_decoder_norm is None:
+        inner = sae.sae if hasattr(sae, "sae") else sae
+        cfg = getattr(inner, "cfg", None)
+        do_normalize = (
+            getattr(cfg, "rescale_acts_by_decoder_norm", False) if cfg else False
+        )
+    else:
+        do_normalize = normalize_by_decoder_norm
+
+    dec_norms = W_dec.norm(dim=-1) if do_normalize else None
+    if do_normalize and verbose:
+        print("Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
+
+    # RMSNorm correction setup
+    if "resid" in hook_point:
+        b_dec = sae.b_dec
+        rms_activations = feature_activations @ W_dec + b_dec
+    else:
+        rms_activations = None
+
+    return {
+        "feature_activations": feature_activations,
+        "W_dec": W_dec,
+        "dec_norms": dec_norms,
+        "rms_activations": rms_activations,
+        "normalized": do_normalize,
+    }
+
+
+def _encode_crosscoder(
+    base_model: HookedTransformer,
+    it_model: HookedTransformer,
+    crosscoder: Any,
+    tokens_tensor: torch.Tensor,
+    crosscoder_layer: int,
+    *,
+    target_activation: torch.Tensor | None = None,
+    other_activation: torch.Tensor | None = None,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """Head-independent crosscoder encoding.
+
+    Runs both model forward passes (unless activations are provided),
+    encodes through the crosscoder, and prepares RMSNorm artifacts.
+
+    Args:
+        base_model: HookedTransformer for model-index 0 (base).
+        it_model: HookedTransformer for model-index 1 (instruct).
+        crosscoder: ``GemmaCrosscoderFRA`` instance.
+        tokens_tensor: ``[1, seq]`` token tensor (on device).
+        crosscoder_layer: Crosscoder residual-stream layer.
+        target_activation: Pre-computed ``[seq, d_model]`` from target model.
+        other_activation: Pre-computed ``[seq, d_model]`` from other model.
+        verbose: Print progress.
+
+    Returns:
+        Dict with ``feature_activations``, ``W_dec``, ``dec_norms``,
+        ``rms_activations``.
+    """
+    target_model = base_model if crosscoder.model_idx == 0 else it_model
+    other_model = it_model if crosscoder.model_idx == 0 else base_model
+    device = next(target_model.parameters()).device
+
+    hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
+
+    if target_activation is None:
+        _, target_cache = target_model.run_with_cache(
+            tokens_tensor, names_filter=[hook_name],
+        )
+        target_activation = target_cache[hook_name].squeeze(0)
+
+    if other_activation is None:
+        _, other_cache = other_model.run_with_cache(
+            tokens_tensor, names_filter=[hook_name],
+        )
+        other_activation = other_cache[hook_name].squeeze(0)
+
+    # Stack in crosscoder order: [base, instruct]
+    if crosscoder.model_idx == 0:
+        x_stacked = torch.stack([target_activation, other_activation], dim=1)
+    else:
+        x_stacked = torch.stack([other_activation, target_activation], dim=1)
+
+    if verbose:
+        print(
+            f"Encoding {target_activation.shape[0]} positions through crosscoder..."
+        )
+    feature_activations = crosscoder.encode(x_stacked)
+
+    # RMSNorm correction always needed — decode in float32 for precision
+    b_dec_rms = crosscoder.b_dec.float().to(device)
+    rms_activations = (
+        feature_activations.float() @ crosscoder.W_dec.float() + b_dec_rms
+    )
+
+    return {
+        "feature_activations": feature_activations,
+        "W_dec": crosscoder.W_dec,
+        "dec_norms": None,
+        "rms_activations": rms_activations,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Entry point: single-model SAE path
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -524,78 +703,23 @@ def get_sentence_fra_batch(
         tokens = tokens[:max_length]
 
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-    hook_name = f"blocks.{layer}.{hook_point}"
-    _, cache = model.run_with_cache(tokens_tensor, names_filter=[hook_name])
 
-    act = cache[hook_name].squeeze(0)  # remove batch dim
-
-    # hook_z is [seq_len, n_heads, d_head] → flatten to [seq_len, n_heads*d_head]
-    # ln1.hook_normalized is already [seq_len, d_model]
-    if act.dim() == 3:
-        act = act.flatten(-2, -1)
-
-    # Encode to SAE features
-    if verbose:
-        print(f"Encoding {act.shape[0]} positions to SAE features...")
-
-    if hasattr(sae, 'encode'):
-        feature_activations = sae.encode(act)   # [seq_len, d_sae]
-    else:
-        feature_activations = sae.sae.encode(act)
-
-    # If the SAE normalizes inputs (e.g. Gemma-Scope), the feature activations
-    # are in the normalized scale.  Divide by the norm coefficient so that
-    # FRA[q,k,i,j] sums to the actual (un-normalized) QK attention score.
-    # Top-k ranking is unaffected (same scalar per position).
-    if hasattr(sae, '_norm_coeff') and sae._norm_coeff is not None:
-        feature_activations = feature_activations / sae._norm_coeff
-
-    # Get decoder weights
-    if hasattr(sae, 'W_dec'):
-        W_dec = sae.W_dec   # [d_sae, d_model]
-    else:
-        W_dec = sae.sae.W_dec
-
-    # Handle rescale_acts_by_decoder_norm: when the SAE was trained with this
-    # flag, encode() returns activations scaled UP by ||W_dec[i]||, and decode()
-    # scales them back DOWN.  The true per-feature contribution to x is
-    #   (f[i] / ||W_dec[i]||) * W_dec[i]
-    # but without correction FRA would use f[i] * W_dec[i], inflating each
-    # entry by ||W_dec[q_feat]|| * ||W_dec[k_feat]||.
-    if normalize_by_decoder_norm is None:
-        inner = sae.sae if hasattr(sae, 'sae') else sae
-        cfg = getattr(inner, 'cfg', None)
-        do_normalize = getattr(cfg, 'rescale_acts_by_decoder_norm', False) if cfg else False
-    else:
-        do_normalize = normalize_by_decoder_norm
-
-    if do_normalize:
-        dec_norms = W_dec.norm(dim=-1)  # [d_sae]
-        if verbose:
-            print("Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
-    else:
-        dec_norms = None
-
-    # RMSNorm correction is needed when the SAE's decoder vectors live in
-    # residual-stream space but W_Q / W_K project from post-RMSNorm space.
-    # Use the full reconstructed activations (not actual model activations)
-    # so that FRA scores match coder-patched scores when all features are kept.
-    if "resid" in hook_point:
-        b_dec = sae.b_dec
-        x_hat = feature_activations @ W_dec + b_dec
-        rms_activations = x_hat
-    else:
-        rms_activations = None
+    encoded = _encode_sae(
+        model, sae, tokens_tensor, layer, hook_point,
+        normalize_by_decoder_norm=normalize_by_decoder_norm,
+        verbose=verbose,
+    )
 
     result = _build_fra_result(
-        model, layer, head, feature_activations, W_dec, device,
+        model, layer, head,
+        encoded["feature_activations"], encoded["W_dec"], device,
         top_k=top_k,
-        rms_activations=rms_activations,
-        dec_norms=dec_norms,
+        rms_activations=encoded["rms_activations"],
+        dec_norms=encoded["dec_norms"],
         chunk_size=chunk_size,
         verbose=verbose,
     )
-    result["normalized"] = do_normalize
+    result["normalized"] = encoded["normalized"]
     return result
 
 
@@ -657,7 +781,6 @@ def get_sentence_fra_crosscoder(
     """
     layer = crosscoder_layer + 1
     target_model = base_model if crosscoder.model_idx == 0 else it_model
-    other_model = it_model if crosscoder.model_idx == 0 else base_model
     device = next(target_model.parameters()).device
 
     # Truncate if needed
@@ -665,45 +788,16 @@ def get_sentence_fra_crosscoder(
         tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
-    # Extract activations from both models at crosscoder_layer
-    hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
-
-    _, target_cache = target_model.run_with_cache(
-        tokens_tensor, names_filter=[hook_name],
-    )
-    _, other_cache = other_model.run_with_cache(
-        tokens_tensor, names_filter=[hook_name],
+    encoded = _encode_crosscoder(
+        base_model, it_model, crosscoder, tokens_tensor, crosscoder_layer,
+        verbose=verbose,
     )
 
-    target_act = target_cache[hook_name].squeeze(0)      # [seq, d_model]
-    other_act = other_cache[hook_name].squeeze(0)
-
-    # Stack in crosscoder order: [base, instruct]
-    if crosscoder.model_idx == 0:
-        x_stacked = torch.stack([target_act, other_act], dim=1)
-    else:
-        x_stacked = torch.stack([other_act, target_act], dim=1)
-
-    # Encode through crosscoder
-    if verbose:
-        print(f"Encoding {target_act.shape[0]} positions through crosscoder...")
-    feature_activations = crosscoder.encode(x_stacked)   # [seq, d_sae]
-
-    # Crosscoder decoder vectors live in residual-stream space, so RMSNorm
-    # correction is always needed.  Use the full reconstructed activations
-    # (not actual model activations) so that FRA scores match coder-patched
-    # scores when all features are kept.
-    #
-    # Decode in float32 to match the precision used for per-feature W_dec
-    # projections inside compute_fra_sparse (which casts W_dec.float()).
-    # Using the native float16 decode would introduce precision mismatch
-    # between the RMS denominator and the per-feature numerators.
-    b_dec_rms = crosscoder.b_dec.float().to(device)
-    x_hat = feature_activations.float() @ crosscoder.W_dec.float() + b_dec_rms
     return _build_fra_result(
-        target_model, layer, head, feature_activations, crosscoder.W_dec, device,
+        target_model, layer, head,
+        encoded["feature_activations"], encoded["W_dec"], device,
         top_k=top_k,
-        rms_activations=x_hat,
+        rms_activations=encoded["rms_activations"],
         chunk_size=chunk_size,
         verbose=verbose,
     )

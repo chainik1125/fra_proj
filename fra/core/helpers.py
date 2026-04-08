@@ -345,33 +345,90 @@ def aggregate_pairs(indices_np, values_np, diagonal=None):
     ]
 
 
-def rank_pairs(indices_np, values_np, top_k=50, diagonal=None, mode="sum"):
+def _pair_score(pair, mode):
+    """Extract the scalar ranking score for a pair tuple given *mode*."""
+    _q, _k, s, c, m = pair
+    if mode == "avg":
+        return s / max(c, 1)
+    if mode == "max":
+        return m
+    return s  # "sum"
+
+
+def rank_pairs(indices_np, values_np, top_k=50, diagonal=None, mode="sum",
+               multi_head_agg=None):
     """Return top-k (q_feat, k_feat) pairs ranked by aggregation mode.
 
-    Modes:
+    Modes (within-head):
         sum  -- total absolute interaction strength
         avg  -- mean absolute interaction per position-pair occurrence
         max  -- single strongest position-pair interaction
 
+    When *indices_np* and *values_np* are ``dict[int, ndarray]`` (keyed by
+    head index), pairs are first scored per-head using *mode*, then combined
+    across heads using *multi_head_agg*:
+        sum   -- sum of per-head scores
+        max   -- maximum per-head score
+        avg   -- mean over heads where the pair appears
+        min   -- minimum over heads where the pair appears
+        count -- number of heads where the pair appears
+
     Args:
-        indices_np: [4, nnz] array (q_pos, k_pos, q_feat, k_feat)
-        values_np: [nnz] array
+        indices_np: ``[4, nnz]`` array **or** ``dict[int, ndarray]``.
+        values_np:  ``[nnz]`` array **or** ``dict[int, ndarray]``.
         top_k: Number of pairs to return.
         diagonal: None=all pairs, True=only i==j, False=only i!=j
-        mode: Ranking criterion ("sum", "avg", or "max").
+        mode: Per-head ranking criterion ("sum", "avg", or "max").
+        multi_head_agg: Cross-head aggregation (required when inputs are
+            dicts).  One of "sum", "max", "avg", "min", "count".
 
     Returns:
-        List of (q_feat, k_feat, sum_abs, count, max_abs) tuples,
-        sorted descending by *mode*.
+        List of (q_feat, k_feat, agg_score, total_count, max_val) tuples,
+        sorted descending by the aggregated score.
     """
-    pairs = aggregate_pairs(indices_np, values_np, diagonal=diagonal)
-    if mode == "sum":
-        pairs.sort(key=lambda x: x[2], reverse=True)
-    elif mode == "avg":
-        pairs.sort(key=lambda x: x[2] / max(x[3], 1), reverse=True)
-    elif mode == "max":
-        pairs.sort(key=lambda x: x[4], reverse=True)
-    return pairs[:top_k]
+    # ── Single-head path (existing behaviour) ────────────────────────
+    if not isinstance(indices_np, dict):
+        pairs = aggregate_pairs(indices_np, values_np, diagonal=diagonal)
+        pairs.sort(key=lambda x: _pair_score(x, mode), reverse=True)
+        return pairs[:top_k] if top_k else pairs
+
+    # ── Multi-head path ──────────────────────────────────────────────
+    if multi_head_agg is None:
+        multi_head_agg = "sum"
+
+    # 1. Score each pair per head
+    per_head_scores: dict[tuple, list[float]] = defaultdict(list)
+    per_head_counts: dict[tuple, int] = defaultdict(int)
+    per_head_max: dict[tuple, float] = defaultdict(float)
+
+    for h in indices_np:
+        head_pairs = aggregate_pairs(indices_np[h], values_np[h], diagonal=diagonal)
+        for q, k, s, c, m in head_pairs:
+            score = _pair_score((q, k, s, c, m), mode)
+            per_head_scores[(q, k)].append(score)
+            per_head_counts[(q, k)] += c
+            if m > per_head_max[(q, k)]:
+                per_head_max[(q, k)] = m
+
+    # 2. Aggregate across heads
+    combined: list[tuple] = []
+    for (q, k), scores in per_head_scores.items():
+        if multi_head_agg == "sum":
+            agg = sum(scores)
+        elif multi_head_agg == "max":
+            agg = max(scores)
+        elif multi_head_agg == "avg":
+            agg = sum(scores) / len(scores)
+        elif multi_head_agg == "min":
+            agg = min(scores)
+        elif multi_head_agg == "count":
+            agg = float(len(scores))
+        else:
+            agg = sum(scores)
+        combined.append((q, k, agg, per_head_counts[(q, k)], per_head_max[(q, k)]))
+
+    combined.sort(key=lambda x: x[2], reverse=True)
+    return combined[:top_k] if top_k else combined
 
 
 def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):

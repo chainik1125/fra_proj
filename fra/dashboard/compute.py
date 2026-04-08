@@ -13,6 +13,77 @@ from fra.dashboard.loaders import (
 )
 
 
+# ---------------------------------------------------------------------------
+# Packing helpers
+# ---------------------------------------------------------------------------
+
+
+@torch.no_grad()
+def _pack_fra_result(model, layer, head, fra_result, tokens, device):
+    """Convert raw FRA output into a numpy-serialisable dict.
+
+    Extracts the standard attention pattern / scores via ``run_with_cache``,
+    decodes token strings, and packs everything into the dict format that
+    every downstream tab expects.
+
+    .. note::
+
+       Prefer :func:`_pack_fra_from_cache` in multi-head workflows to avoid
+       redundant forward passes.
+    """
+    tok_tensor = torch.tensor(tokens[:128]).unsqueeze(0).to(device)
+    attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
+    attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
+    _, attn_cache = model.run_with_cache(
+        tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook],
+    )
+    attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().float().numpy()
+    attn_scores = attn_cache[attn_scores_hook][0, head].cpu().float().numpy()
+
+    token_strs = [model.tokenizer.decode([t]) for t in tokens[:128]]
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+    sparse = fra_result["fra_tensor_sparse"]
+    return {
+        "indices_np": sparse.indices().cpu().numpy(),
+        "values_np": sparse.values().cpu().float().numpy(),
+        "shape": fra_result["shape"],
+        "seq_len": fra_result["seq_len"],
+        "total_interactions": fra_result["total_interactions"],
+        "feat_acts_np": fra_result["feature_activations"].cpu().float().numpy(),
+        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),
+        "attn_pattern_np": attn_pattern,
+        "attn_scores_np": attn_scores,
+        "token_strs": token_strs,
+        "tokens": tokens[:fra_result["seq_len"]],
+        "softcap": softcap,
+    }
+
+
+def _pack_fra_from_cache(fra_result, attn_pattern_np, attn_scores_np,
+                         token_strs, tokens, softcap):
+    """Pack an FRA result dict using pre-computed attention arrays.
+
+    Same output format as :func:`_pack_fra_result` but avoids a model
+    forward pass by accepting already-extracted attention data.
+    """
+    sparse = fra_result["fra_tensor_sparse"]
+    return {
+        "indices_np": sparse.indices().cpu().numpy(),
+        "values_np": sparse.values().cpu().float().numpy(),
+        "shape": fra_result["shape"],
+        "seq_len": fra_result["seq_len"],
+        "total_interactions": fra_result["total_interactions"],
+        "feat_acts_np": fra_result["feature_activations"].cpu().float().numpy(),
+        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),
+        "attn_pattern_np": attn_pattern_np,
+        "attn_scores_np": attn_scores_np,
+        "token_strs": token_strs,
+        "tokens": tokens[:fra_result["seq_len"]],
+        "softcap": softcap,
+    }
+
+
 def run_fra(
     text: str,
     layer: int,
@@ -54,38 +125,10 @@ def run_fra(
             prepend_bos=include_special_tokens,
         )
 
-        # Standard attention pattern + pre-softmax scores for comparison
-        tokens = model.tokenizer.encode(
-            text, add_special_tokens=include_special_tokens,
-        )[:128]
-        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-        attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
-        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
-        _, attn_cache = model.run_with_cache(
-            tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook]
-        )
-        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().float().numpy()  # [S, S]
-        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().float().numpy()    # [S, S]
-
-        token_strs = [model.tokenizer.decode([t]) for t in tokens]
-
-    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
-
-    sparse = fra_result["fra_tensor_sparse"]
-    return {
-        "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
-        "values_np": sparse.values().cpu().float().numpy(),     # [nnz]
-        "shape": fra_result["shape"],
-        "seq_len": fra_result["seq_len"],
-        "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": fra_result["feature_activations"].cpu().float().numpy(),  # [seq_len, d_sae], raw
-        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),       # [seq_len, d_sae], top-k filtered
-        "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
-        "attn_scores_np": attn_scores,                  # [seq_len, seq_len]
-        "token_strs": token_strs,
-        "tokens": tokens[:fra_result["seq_len"]],
-        "softcap": softcap,
-    }
+    tokens = model.tokenizer.encode(
+        text, add_special_tokens=include_special_tokens,
+    )[:128]
+    return _pack_fra_result(model, layer, head, fra_result, tokens, device)
 
 
 def run_fra_crosscoder(
@@ -120,37 +163,7 @@ def run_fra_crosscoder(
             verbose=True,
         )
 
-        feat_acts = fra_result["feature_activations"]
-
-        # Standard attention pattern + pre-softmax scores for comparison
-        tok_tensor = torch.tensor(tokens[:128]).unsqueeze(0).to(device)
-        attn_pattern_hook = f"blocks.{layer}.attn.hook_pattern"
-        attn_scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
-        _, attn_cache = target_model.run_with_cache(
-            tok_tensor, names_filter=[attn_pattern_hook, attn_scores_hook],
-        )
-        attn_pattern = attn_cache[attn_pattern_hook][0, head].cpu().float().numpy()
-        attn_scores = attn_cache[attn_scores_hook][0, head].cpu().float().numpy()
-
-        token_strs = [target_model.tokenizer.decode([t]) for t in tokens[:128]]
-
-    softcap = getattr(target_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
-
-    sparse = fra_result["fra_tensor_sparse"]
-    return {
-        "indices_np": sparse.indices().cpu().numpy(),
-        "values_np": sparse.values().cpu().float().numpy(),
-        "shape": fra_result["shape"],
-        "seq_len": fra_result["seq_len"],
-        "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().float().numpy(),         # [seq_len, d_sae], raw
-        "topk_acts_np": fra_result["topk_features"].cpu().float().numpy(),  # [seq_len, d_sae], top-k filtered
-        "attn_pattern_np": attn_pattern,
-        "attn_scores_np": attn_scores,
-        "token_strs": token_strs,
-        "tokens": tokens[:fra_result["seq_len"]],  # actual token IDs used for FRA computation
-        "softcap": softcap,
-    }
+    return _pack_fra_result(target_model, layer, head, fra_result, tokens, device)
 
 
 def _load_di_weights(sae_type, head, device, **kw):
@@ -188,3 +201,170 @@ def _load_di_weights(sae_type, head, device, **kw):
     W_K = get_W_K(model, attn_layer, head)
     rope_params = _extract_rope_params(model, attn_layer)
     return W_dec, W_Q, W_K, attn_layer, rope_params
+
+
+# ---------------------------------------------------------------------------
+# Efficient encode-once / build-per-head helpers
+# ---------------------------------------------------------------------------
+
+
+@torch.no_grad()
+def encode_fra(
+    text: str,
+    layer: int,
+    hook_point: str,
+    sae_type: str,
+    sae_hub_release: str,
+    sae_hub_id: str,
+    sae_local_path: str,
+    device: str,
+    model_name: str = "gpt2-small",
+    hf_token: str = "",
+    include_special_tokens: bool = True,
+):
+    """Head-independent encode: single combined forward pass + SAE encode.
+
+    Returns ``(encoded, attn_cache, model, tokens)`` where *encoded* is the
+    dict from ``_encode_sae`` and *attn_cache* holds pre-computed attention
+    pattern / scores tensors for **all** heads.
+    """
+    from fra.core.fra import _encode_sae
+
+    if sae_type == "gemma":
+        model = load_model_gemma(model_name, device, hf_token)
+    else:
+        model = load_model(model_name, device, hf_token)
+
+    if sae_type == "hub":
+        sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
+    elif sae_type == "gemma":
+        sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+    else:
+        sae = load_sae_local(sae_local_path, layer, device)
+
+    tokens = model.tokenizer.encode(
+        text, add_special_tokens=include_special_tokens,
+    )[:128]
+    tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    # Single forward pass capturing activations AND attention hooks
+    act_hook = f"blocks.{layer}.{hook_point}"
+    pattern_hook = f"blocks.{layer}.attn.hook_pattern"
+    scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
+    _, cache = model.run_with_cache(
+        tok_tensor,
+        names_filter=[act_hook, pattern_hook, scores_hook],
+    )
+
+    activation = cache[act_hook].squeeze(0)
+    encoded = _encode_sae(
+        model, sae, tok_tensor, layer, hook_point,
+        activation=activation,
+    )
+
+    attn_cache = {
+        "pattern": cache[pattern_hook],   # [1, n_heads, seq, seq]
+        "scores": cache[scores_hook],     # [1, n_heads, seq, seq]
+    }
+    return encoded, attn_cache, model, tokens
+
+
+@torch.no_grad()
+def encode_fra_crosscoder(
+    tokens: list,
+    crosscoder_layer: int,
+    crosscoder_repo_id: str,
+    model_idx: int,
+    base_model_name: str,
+    it_model_name: str,
+    device: str,
+    subfolder: str = "",
+    it_arch_name: str = "",
+):
+    """Head-independent encode: crosscoder path with combined forward pass.
+
+    The target model's forward pass captures both the residual-stream
+    activations (at ``crosscoder_layer``) and the attention pattern / scores
+    (at ``crosscoder_layer + 1``) in a single ``run_with_cache`` call.
+
+    Returns ``(encoded, attn_cache, target_model, tokens, attn_layer)``.
+    """
+    from fra.core.fra import _encode_crosscoder
+
+    base_model, it_model = load_model_pair(
+        base_model_name, it_model_name, device, it_arch_name,
+    )
+    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device, subfolder)
+    target_model = base_model if model_idx == 0 else it_model
+    other_model = it_model if model_idx == 0 else base_model
+    attn_layer = crosscoder_layer + 1
+
+    tokens = list(tokens[:128])
+    tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    # Target model: combined forward pass (residual + attention hooks)
+    resid_hook = f"blocks.{crosscoder_layer}.hook_resid_post"
+    pattern_hook = f"blocks.{attn_layer}.attn.hook_pattern"
+    scores_hook = f"blocks.{attn_layer}.attn.hook_attn_scores"
+    _, target_cache = target_model.run_with_cache(
+        tok_tensor,
+        names_filter=[resid_hook, pattern_hook, scores_hook],
+    )
+    target_activation = target_cache[resid_hook].squeeze(0)
+
+    # Other model: only needs residual activation
+    _, other_cache = other_model.run_with_cache(
+        tok_tensor, names_filter=[resid_hook],
+    )
+    other_activation = other_cache[resid_hook].squeeze(0)
+
+    encoded = _encode_crosscoder(
+        base_model, it_model, crosscoder, tok_tensor, crosscoder_layer,
+        target_activation=target_activation,
+        other_activation=other_activation,
+    )
+
+    attn_cache = {
+        "pattern": target_cache[pattern_hook],
+        "scores": target_cache[scores_hook],
+    }
+    return encoded, attn_cache, target_model, tokens, attn_layer
+
+
+@torch.no_grad()
+def build_fra_head(encoded, attn_cache, model, layer, head, tokens, device,
+                   top_k=None, chunk_size=16, topk_features=None, rms=None,
+                   token_strs=None, softcap=None):
+    """Build FRA result for one head from pre-encoded data.
+
+    Uses pre-computed *attn_cache* instead of running a forward pass, and
+    accepts optional pre-computed *topk_features* / *rms* to avoid
+    redundant work across heads.
+
+    Returns the same numpy-serialisable dict as :func:`run_fra`.
+    """
+    from fra.core.fra import _build_fra_result
+
+    fra_result = _build_fra_result(
+        model, layer, head,
+        encoded["feature_activations"], encoded["W_dec"], device,
+        top_k=top_k,
+        topk_features=topk_features,
+        rms_activations=encoded["rms_activations"],
+        rms=rms,
+        dec_norms=encoded["dec_norms"],
+        chunk_size=chunk_size,
+    )
+
+    attn_pattern_np = attn_cache["pattern"][0, head].cpu().float().numpy()
+    attn_scores_np = attn_cache["scores"][0, head].cpu().float().numpy()
+
+    if token_strs is None:
+        token_strs = [model.tokenizer.decode([t]) for t in tokens[:128]]
+    if softcap is None:
+        softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+    return _pack_fra_from_cache(
+        fra_result, attn_pattern_np, attn_scores_np,
+        token_strs, tokens, softcap,
+    )

@@ -30,7 +30,7 @@ from fra.dashboard.loaders import (
     load_sae_hub,
     load_sae_local,
 )
-from fra.dashboard.state import get_fra_config, get_fra_data
+from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data, get_fra_data_all
 from fra.dashboard.widgets import _show_heatmap, make_heatmap
 
 
@@ -63,8 +63,8 @@ def _get_projection_cache(cfg, fra_data, device):
     Single source of truth for bias correction and coder-score components,
     shared by heatmaps, loss-patching, and ablation sections.
 
-    Cached in ``st.session_state["_projection_cache"]`` — cleared when
-    a new FRA run is triggered (see app.py).
+    Cached per head in ``st.session_state["_projection_cache_{head}"]``.
+    All entries are cleared when a new FRA run is triggered (see app.py).
 
     Returns dict with keys:
         bias_corr_np:  ``[seq, seq]`` numpy bias correction matrix.
@@ -74,7 +74,8 @@ def _get_projection_cache(cfg, fra_data, device):
         attn_scale:    ``sqrt(d_head)``.
         softcap:       Attention logit soft-cap value (0 if unused).
     """
-    key = "_projection_cache"
+    head_ = cfg["head"]
+    key = f"_projection_cache_{head_}"
     if key in st.session_state:
         return st.session_state[key]
 
@@ -297,11 +298,55 @@ def _run_loss_metrics(proj, fra_scores, cfg, fra_data, device, exclude_bos=False
     }
 
 
+def _run_loss_metrics_all_heads(cfg, fra_data, fra_data_all, device, n_heads,
+                                fra_scores=None, head_=None, exclude_bos=False):
+    """Compute loss patching with all heads patched simultaneously.
+
+    Builds coder-reconstructed *and* FRA-reconstructed scores for every
+    head, then patches all heads in a single forward pass per condition.
+    """
+    from fra.analysis.ablation import run_condition
+
+    layer_ = cfg["layer"]
+    seq_len = fra_data["seq_len"]
+
+    model, coder_dict, zero_dict, fra_dict = _compute_all_heads_coder_scores(
+        cfg, fra_data, device, n_heads,
+        exclude_bos=exclude_bos, fra_data_all=fra_data_all,
+    )
+
+    tokens = fra_data["tokens"][:seq_len]
+    tok_t = torch.tensor(tokens).unsqueeze(0).to(device)
+    if len(tokens) < 3:
+        return None
+    shift = tok_t[0, 1:]
+    logits_clean = model(tok_t)
+    unpatched_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
+
+    r_coder = run_condition(model, layer_, None, tok_t, shift,
+                            coder_dict, logits_clean)
+    r_zero = run_condition(model, layer_, None, tok_t, shift,
+                           zero_dict, logits_clean)
+
+    r_fra = None
+    if fra_dict is not None and len(fra_dict) == n_heads:
+        r_fra = run_condition(model, layer_, None, tok_t, shift,
+                              fra_dict, logits_clean)
+
+    return {
+        "unpatched_loss": unpatched_loss,
+        "fra": r_fra,
+        "sae": r_coder,
+        "zero": r_zero,
+    }
+
+
 # ── Ablation sub-section ────────────────────────────────────────────────────
 
 
-def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=False):
-    """Render the custom pair ablation UI inside an expander."""
+def _render_ablation(cfg, fra_data, seq_len, token_strs, device,
+                     exclude_bos=False, fra_data_all=None, head_=None):
+    """Render the custom pair ablation UI."""
     from fra.analysis.ablation import (
         ablate_fra_pairs,
         reconstruct_scores,
@@ -310,20 +355,49 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
 
     _agg = cfg.get("agg_mode", "sum")
     sae_type = cfg.get("sae_type", "")
+    n_heads = cfg.get("n_heads", 1)
 
-    all_pairs = rank_pairs(
-        fra_data["indices_np"], fra_data["values_np"],
-        top_k=100, diagonal=None, mode=_agg,
-    )
+    # All-heads ablation option
+    _can_all_heads = fra_data_all is not None
+    ablate_all_heads = False
+    _mh_agg = cfg.get("multi_head_agg", "sum")
+    if _can_all_heads:
+        ablate_all_heads = st.checkbox(
+            f"Ablate across all {n_heads} heads",
+            value=False,
+            key="ablate_all_heads",
+            help=(
+                "Compute FRA for every head, rank pairs across heads, "
+                "ablate them from all heads, and patch simultaneously."
+            ),
+        )
+
+    # Rank pairs (single-head or multi-head)
+    if ablate_all_heads:
+        _idx_dict = {h: d["indices_np"] for h, d in fra_data_all.items()}
+        _val_dict = {h: d["values_np"] for h, d in fra_data_all.items()}
+        all_pairs = rank_pairs(
+            _idx_dict, _val_dict,
+            top_k=100, diagonal=None, mode=_agg,
+            multi_head_agg=_mh_agg,
+        )
+    else:
+        all_pairs = rank_pairs(
+            fra_data["indices_np"], fra_data["values_np"],
+            top_k=100, diagonal=None, mode=_agg,
+        )
+
     if not all_pairs:
         st.warning("No feature pairs found.")
         return
 
     offdiag = [p for p in all_pairs if p[0] != p[1]]
     ondiag = [p for p in all_pairs if p[0] == p[1]]
+    _scope = f"across {n_heads} heads" if ablate_all_heads else ""
     st.markdown(
         f"**{len(offdiag)}** off-diagonal pairs, "
-        f"**{len(ondiag)}** on-diagonal pairs in top 100.",
+        f"**{len(ondiag)}** on-diagonal pairs in top 100"
+        f"{' ' + _scope if _scope else ''}.",
     )
 
     col1, col2 = st.columns([1, 1])
@@ -367,18 +441,12 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
 
     with st.spinner("Running ablation\u2026"):
         layer_ = cfg["layer"]
-        head_ = cfg["head"]
-
+        if head_ is None:
+            head_ = cfg["head"]
         d_sae = fra_data["feat_acts_np"].shape[1]
-        fra_sparse = torch.sparse_coo_tensor(
-            torch.tensor(fra_data["indices_np"], dtype=torch.long),
-            torch.tensor(fra_data["values_np"], dtype=torch.float32),
-            size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
-        ).coalesce()
-
-        # Use cached projections for bias correction; reload model for forward pass
-        _proj = _get_projection_cache(cfg, fra_data, device)
-        bias_corr = _proj["bias_corr_np"]
+        pairs_to_abl = [(int(p[0]), int(p[1])) for p in sel_pairs]
+        actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
+        _sc = fra_data.get("softcap", 0.0) or 0.0
 
         if sae_type == "crosscoder":
             _, _, _target, _, _, _ = _load_crosscoder_resources(cfg, device)
@@ -390,69 +458,137 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
         logits_clean = _target(tok_t)
         unp_loss = _F.cross_entropy(logits_clean[0, :-1], shift).item()
 
-        bias = {
-            "bias_correction": bias_corr,
-            "seq_len": seq_len,
-            "tok_tensor": tok_t,
-            "shift_labels": shift,
-            "unpatched_loss": unp_loss,
-            "unpatched_logits": logits_clean,
-        }
-
-        if bias is None:
-            st.error("Text too short for ablation.")
-            return
-
-        actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
-        _sc = fra_data.get("softcap", 0.0) or 0.0
-        fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
-        scores_full = reconstruct_scores(fra_sum_full, bias, device,
-                                         actual_bos_scores=actual_bos, softcap=_sc)
-
-        pairs_to_abl = [(int(p[0]), int(p[1])) for p in sel_pairs]
-        fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae)
-        fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
-        scores_abl = reconstruct_scores(fra_sum_abl, bias, device,
-                                        actual_bos_scores=actual_bos, softcap=_sc)
-
         mask_t = torch.triu(
             torch.full((seq_len, seq_len), float("-inf"), device=device),
             diagonal=1,
         )
-        scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
 
-        tok_t = bias["tok_tensor"]
-        shift = bias["shift_labels"]
-        unp_log = bias["unpatched_logits"]
+        if ablate_all_heads:
+            # ── All-heads ablation ──────────────────────────────────
+            full_dict = {}
+            abl_dict = {}
+            zero_dict = {}
+            _hm_full_per_head = {}
+            _hm_abl_per_head = {}
 
-        r_full = run_condition(_target, layer_, head_, tok_t, shift, scores_full, unp_log)
-        r_abl = run_condition(_target, layer_, head_, tok_t, shift, scores_abl, unp_log)
-        r_zero = run_condition(_target, layer_, head_, tok_t, shift, scores_zero, unp_log)
+            for h in range(n_heads):
+                _hdata = fra_data_all[h]
+                _sparse = torch.sparse_coo_tensor(
+                    torch.tensor(_hdata["indices_np"], dtype=torch.long),
+                    torch.tensor(_hdata["values_np"], dtype=torch.float32),
+                    size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
+                ).coalesce()
+
+                # Per-head bias correction (each head auto-cached by key)
+                _cfg_h = {**cfg, "head": h}
+                _proj_h = _get_projection_cache(_cfg_h, _hdata, device)
+                _bias_h = {
+                    "bias_correction": _proj_h["bias_corr_np"],
+                    "seq_len": seq_len,
+                }
+
+                _sum_full = fra_sum_to_attn(_sparse, seq_len)
+                _s_full = reconstruct_scores(_sum_full, _bias_h, device,
+                                             actual_bos_scores=actual_bos,
+                                             softcap=_sc)
+                full_dict[h] = _s_full
+                _hm_full_per_head[h] = _s_full.cpu().numpy()
+
+                _abl_sparse = ablate_fra_pairs(_sparse, pairs_to_abl, d_sae)
+                _sum_abl = fra_sum_to_attn(_abl_sparse, seq_len)
+                _s_abl = reconstruct_scores(_sum_abl, _bias_h, device,
+                                            actual_bos_scores=actual_bos,
+                                            softcap=_sc)
+                abl_dict[h] = _s_abl
+                _hm_abl_per_head[h] = _s_abl.cpu().numpy()
+
+                zero_dict[h] = torch.zeros(
+                    (seq_len, seq_len), device=device,
+                ) + mask_t
+
+            r_full = run_condition(
+                _target, layer_, None, tok_t, shift, full_dict, logits_clean,
+            )
+            r_abl = run_condition(
+                _target, layer_, None, tok_t, shift, abl_dict, logits_clean,
+            )
+            r_zero = run_condition(
+                _target, layer_, None, tok_t, shift, zero_dict, logits_clean,
+            )
+            # For heatmaps: use selected head
+            scores_full_np = _hm_full_per_head.get(head_, _hm_full_per_head[0])
+            scores_abl_np = _hm_abl_per_head.get(head_, _hm_abl_per_head[0])
+        else:
+            # ── Single-head ablation (existing path) ────────────────
+            fra_sparse = torch.sparse_coo_tensor(
+                torch.tensor(fra_data["indices_np"], dtype=torch.long),
+                torch.tensor(fra_data["values_np"], dtype=torch.float32),
+                size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
+            ).coalesce()
+
+            _proj = _get_projection_cache(cfg, fra_data, device)
+            bias = {
+                "bias_correction": _proj["bias_corr_np"],
+                "seq_len": seq_len,
+            }
+
+            fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
+            scores_full = reconstruct_scores(fra_sum_full, bias, device,
+                                             actual_bos_scores=actual_bos,
+                                             softcap=_sc)
+
+            fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae)
+            fra_sum_abl = fra_sum_to_attn(fra_ablated, seq_len)
+            scores_abl = reconstruct_scores(fra_sum_abl, bias, device,
+                                            actual_bos_scores=actual_bos,
+                                            softcap=_sc)
+
+            scores_zero = torch.zeros(
+                (seq_len, seq_len), device=device,
+            ) + mask_t
+
+            r_full = run_condition(
+                _target, layer_, head_, tok_t, shift, scores_full, logits_clean,
+            )
+            r_abl = run_condition(
+                _target, layer_, head_, tok_t, shift, scores_abl, logits_clean,
+            )
+            r_zero = run_condition(
+                _target, layer_, head_, tok_t, shift, scores_zero, logits_clean,
+            )
+            scores_full_np = scores_full.cpu().numpy()
+            scores_abl_np = scores_abl.cpu().numpy()
 
     # Display ablation results
     st.markdown("---")
-    st.markdown("**Ablation Results**")
+    _scope_label = f"all {n_heads} heads" if ablate_all_heads else f"H{head_}"
+    st.markdown(f"**Ablation Results** ({_scope_label})")
 
-    hc = r_zero["loss"] - bias["unpatched_loss"]
+    hc = r_zero["loss"] - unp_loss
     mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
+    mc1.metric("Unpatched loss", f"{unp_loss:.4f}")
     mc2.metric(
         "FRA full loss", f"{r_full['loss']:.4f}",
-        delta=f"{r_full['loss'] - bias['unpatched_loss']:+.4f}",
+        delta=f"{r_full['loss'] - unp_loss:+.4f}",
     )
     mc3.metric(
         "Ablated loss", f"{r_abl['loss']:.4f}",
-        delta=f"{r_abl['loss'] - bias['unpatched_loss']:+.4f}",
+        delta=f"{r_abl['loss'] - unp_loss:+.4f}",
     )
     mc4.metric(
         "Zero-ablated loss", f"{r_zero['loss']:.4f}",
-        delta=f"{r_zero['loss'] - bias['unpatched_loss']:+.4f}",
+        delta=f"{r_zero['loss'] - unp_loss:+.4f}",
     )
 
     mc5, mc6, mc7 = st.columns(3)
     mc5.metric("Ablation KL div", f"{r_abl['kl_div']:.4f}")
     mc6.metric("Top-1 changed", f"{r_abl['top1_change_frac']*100:.1f}%")
-    if hc > 0.01:
+    if hc < 0:
+        mc7.metric(
+            "Headroom", f"{hc:.4f} (negative)",
+            help="Zeroing hurts less than unpatched on this input.",
+        )
+    elif hc > 0.01:
         rec_full = (r_zero["loss"] - r_full["loss"]) / hc
         rec_abl = (r_zero["loss"] - r_abl["loss"]) / hc
         mc7.metric(
@@ -463,6 +599,16 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
 
     # Attention heatmap comparison
     st.markdown("**Attention score comparison**")
+    if ablate_all_heads:
+        _hm_head = st.selectbox(
+            "Heatmap head",
+            list(range(n_heads)),
+            index=head_,
+            key="_abl_hm_head",
+        )
+        scores_full_np = _hm_full_per_head[_hm_head]
+        scores_abl_np = _hm_abl_per_head[_hm_head]
+
     ticks = list(range(seq_len))
     labels = [html_lib.escape(t) for t in token_strs]
 
@@ -474,18 +620,18 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
     hm1, hm2, hm3 = st.columns(3)
     with hm1:
         _show_heatmap(
-            _abl_hm(scores_full.cpu().numpy(), "Score"),
+            _abl_hm(scores_full_np, "Score"),
             ticks, labels, seq_len, compact_height=350, key="abl_full",
         )
         st.caption("FRA Full")
     with hm2:
         _show_heatmap(
-            _abl_hm(scores_abl.cpu().numpy(), "Score"),
+            _abl_hm(scores_abl_np, "Score"),
             ticks, labels, seq_len, compact_height=350, key="abl_after",
         )
         st.caption("After Ablation")
     with hm3:
-        diff_np = scores_abl.cpu().numpy() - scores_full.cpu().numpy()
+        diff_np = scores_abl_np - scores_full_np
         _show_heatmap(
             _abl_hm(diff_np, "Score"),
             ticks, labels, seq_len, compact_height=350, key="abl_diff",
@@ -493,19 +639,115 @@ def _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=Fal
         st.caption("Difference (ablated \u2212 full)")
 
 
+# ── All-heads helpers ────────────────────────────────────────────────────────
+
+
+@torch.no_grad()
+def _compute_all_heads_coder_scores(cfg, fra_data, device, n_heads,
+                                    exclude_bos=False, fra_data_all=None):
+    """Compute coder-reconstructed attention scores for every head.
+
+    Encodes through the SAE/crosscoder once (x_hat is shared), then
+    projects through each head's W_Q/W_K.
+
+    When *fra_data_all* is provided, also builds FRA-reconstructed scores
+    per head (sparse FRA tensor summed to ``[seq, seq]`` + per-head bias
+    correction + softcap + causal mask).
+
+    Returns ``(model, coder_dict, zero_dict, fra_dict)`` where each dict
+    maps ``{head: [seq, seq] tensor}``.  *fra_dict* is ``None`` when
+    *fra_data_all* is not supplied.
+    """
+    layer_ = cfg["layer"]
+    sae_type = cfg.get("sae_type", "")
+    seq_len = fra_data["seq_len"]
+
+    feat_acts = torch.tensor(
+        fra_data["feat_acts_np"][:seq_len], dtype=torch.float32, device=device,
+    )
+
+    if sae_type == "crosscoder":
+        _, _, model, crosscoder, _, _ = _load_crosscoder_resources(cfg, device)
+        b_dec = crosscoder.b_dec.float().to(device)
+        x_hat = feat_acts @ crosscoder.W_dec.float() + b_dec
+        needs_rms = True
+    else:
+        model, sae = _load_model_sae(cfg, device)
+        x_hat = sae.decode(feat_acts).float()
+        b_dec = sae.b_dec.float()
+        needs_rms = "resid" in cfg.get("hook_point", "")
+
+    attn_scale = get_attn_scale(model, layer_)
+    softcap = _get_softcap(model, layer_)
+    mask_t = torch.triu(
+        torch.full((seq_len, seq_len), float("-inf"), device=device),
+        diagonal=1,
+    )
+
+    coder_dict = {}
+    zero_dict = {}
+    fra_dict = {} if fra_data_all is not None else None
+    zero_scores = torch.zeros((seq_len, seq_len), device=device) + mask_t
+
+    for h in range(n_heads):
+        q_full, k_full, q_nobias, k_nobias = project_qk(
+            model, layer_, h, x_hat, b_dec, needs_rms=needs_rms,
+        )
+        scores = _apply_softcap_t(
+            (q_full @ k_full.T) / attn_scale, softcap,
+        ) + mask_t
+        if exclude_bos:
+            actual_t = torch.tensor(
+                fra_data["attn_scores_np"][:seq_len, :seq_len],
+                dtype=torch.float32, device=device,
+            )
+            scores[0, :] = actual_t[0, :]
+            scores[:, 0] = actual_t[:, 0]
+        coder_dict[h] = scores
+        zero_dict[h] = zero_scores
+
+        # FRA-reconstructed scores for this head
+        if fra_dict is not None and h in fra_data_all:
+            hd = fra_data_all[h]
+            h_idxs = hd["indices_np"]
+            h_vals = hd["values_np"]
+            # Vectorised scatter-add over position pairs
+            fra_np = np.zeros((seq_len, seq_len))
+            mask = (h_idxs[0] < seq_len) & (h_idxs[1] < seq_len)
+            np.add.at(fra_np, (h_idxs[0][mask], h_idxs[1][mask]), h_vals[mask])
+            fra_sum = torch.tensor(fra_np, dtype=torch.float32, device=device)
+            bias_corr = compute_bias_correction(
+                q_full, k_full, q_nobias, k_nobias, attn_scale,
+            )[:seq_len, :seq_len]
+            fra_h = _apply_softcap_t(fra_sum + bias_corr, softcap) + mask_t
+            if exclude_bos:
+                actual_t = torch.tensor(
+                    hd["attn_scores_np"][:seq_len, :seq_len],
+                    dtype=torch.float32, device=device,
+                )
+                fra_h[0, :] = actual_t[0, :]
+                fra_h[:, 0] = actual_t[:, 0]
+            fra_dict[h] = fra_h
+
+    return model, coder_dict, zero_dict, fra_dict
+
+
 # ── Main render ──────────────────────────────────────────────────────────────
 
 
 def render(tab):
     with tab:
-        fra_data = get_fra_data()
-        if fra_data is None:
+        if get_fra_data() is None:
             st.info("Click **\u25b6 Compute FRA** in the sidebar to see reconstruction results.")
             return
 
         cfg = get_fra_config()
         layer_ = cfg["layer"]
-        head_ = cfg["head"]
+        fra_data_all = get_fra_data_all()
+
+        # Head selector (visible only when all-heads data exists)
+        fra_data, head_ = get_active_fra_data("reconstruction")
+        n_heads = cfg.get("n_heads", 1)
         seq_len = fra_data["seq_len"]
         token_strs = fra_data["token_strs"][:seq_len]
         sae_type = cfg.get("sae_type", "")
@@ -525,8 +767,10 @@ def render(tab):
         attn_tick_labels = [html_lib.escape(t) for t in token_strs]
 
         # Bias correction: b_dec cross-terms that FRA doesn't capture
+        # Use the tab-selected head, not the sidebar head stored in cfg.
+        _cfg_head = {**cfg, "head": head_}
         with st.spinner("Computing bias correction\u2026"):
-            proj = _get_projection_cache(cfg, fra_data, device)
+            proj = _get_projection_cache(_cfg_head, fra_data, device)
         bias_corr_np = proj["bias_corr_np"]
 
         # ═══════════════════════════════════════════════════════════════
@@ -684,11 +928,32 @@ def render(tab):
 
         st.markdown("---")
         st.markdown("#### Patched Loss")
+
+        # All-heads option
+        _can_all_heads = fra_data_all is not None
+        patch_all_heads = False
+        if _can_all_heads:
+            patch_all_heads = st.checkbox(
+                f"Patch all {n_heads} heads in layer {layer_}",
+                value=False,
+                key="patch_all_heads_loss",
+                help=(
+                    "Reconstruct and patch attention scores for every head "
+                    "simultaneously.  Shows the total layer-level effect."
+                ),
+            )
+
+        _target_desc = (
+            f"all {n_heads} heads" if patch_all_heads
+            else "one attention head"
+        )
         st.caption(
-            "Patch one attention head's pre-softmax scores with "
+            f"Patch {_target_desc}'s pre-softmax scores with "
             f"{coder_label}-reconstructed or FRA-reconstructed scores "
             "and measure the impact on next-token prediction loss.",
         )
+
+        _loss_key = "_val_loss_all" if patch_all_heads else f"_val_loss_{head_}"
 
         run_loss = st.button(
             "\u25b6  Run Patched Loss", type="primary",
@@ -700,13 +965,20 @@ def render(tab):
 
         if run_loss:
             with st.spinner("Computing patched losses\u2026"):
-                loss_r = _run_loss_metrics(
-                    proj, fra_scores, cfg, fra_data, device,
-                    exclude_bos=exclude_bos,
-                )
-                st.session_state["_val_loss"] = loss_r
+                if patch_all_heads:
+                    loss_r = _run_loss_metrics_all_heads(
+                        cfg, fra_data, fra_data_all, device, n_heads,
+                        fra_scores=fra_scores, head_=head_,
+                        exclude_bos=exclude_bos,
+                    )
+                else:
+                    loss_r = _run_loss_metrics(
+                        proj, fra_scores, _cfg_head, fra_data, device,
+                        exclude_bos=exclude_bos,
+                    )
+                st.session_state[_loss_key] = loss_r
 
-        loss_r = st.session_state.get("_val_loss")
+        loss_r = st.session_state.get(_loss_key)
 
         if loss_r is None:
             st.caption(
@@ -714,7 +986,6 @@ def render(tab):
             )
         elif loss_r.get("sae") is not None:
             hc = loss_r["zero"]["loss"] - loss_r["unpatched_loss"]
-            has_recovery = hc > 0.01
 
             # Reference row
             r1, r2, r3 = st.columns(3)
@@ -724,31 +995,57 @@ def render(tab):
                 f"{loss_r['zero']['loss']:.4f}",
                 delta=f"{loss_r['zero']['loss'] - loss_r['unpatched_loss']:+.4f}",
             )
-            if has_recovery:
-                r3.metric("Headroom (zero \u2212 unpatched)", f"{hc:.4f}")
-            else:
+            if hc < 0:
+                r3.metric(
+                    "Headroom", f"{hc:.4f} (negative)",
+                    help=(
+                        "Zeroing this head improves loss \u2014 "
+                        "the head hurts on this input."
+                    ),
+                )
+            elif hc < 0.01:
                 r3.metric("Headroom", "< 0.01")
+            else:
+                r3.metric("Headroom (zero \u2212 unpatched)", f"{hc:.4f}")
+
+            has_recovery = hc > 0.01
 
             # Patched conditions: loss + recovery side by side
-            st.markdown(
-                f"| | **{coder_label}-patched** | **FRA-patched** |\n"
-                f"|---|---|---|\n"
-                f"| **Loss** | {loss_r['sae']['loss']:.4f} "
-                f"({loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}) "
-                f"| {loss_r['fra']['loss']:.4f} "
-                f"({loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}) |\n"
-                + (
-                    f"| **Recovery** | "
-                    f"{(loss_r['zero']['loss'] - loss_r['sae']['loss']) / hc:.3f} | "
-                    f"{(loss_r['zero']['loss'] - loss_r['fra']['loss']) / hc:.3f} |\n"
-                    if has_recovery else ""
-                ),
-            )
+            _has_fra_loss = loss_r.get("fra") is not None
+            if _has_fra_loss:
+                st.markdown(
+                    f"| | **{coder_label}-patched** | **FRA-patched** |\n"
+                    f"|---|---|---|\n"
+                    f"| **Loss** | {loss_r['sae']['loss']:.4f} "
+                    f"({loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}) "
+                    f"| {loss_r['fra']['loss']:.4f} "
+                    f"({loss_r['fra']['loss'] - loss_r['unpatched_loss']:+.4f}) |\n"
+                    + (
+                        f"| **Recovery** | "
+                        f"{(loss_r['zero']['loss'] - loss_r['sae']['loss']) / hc:.3f} | "
+                        f"{(loss_r['zero']['loss'] - loss_r['fra']['loss']) / hc:.3f} |\n"
+                        if has_recovery else ""
+                    ),
+                )
+            else:
+                # Fallback: only coder-patched (no FRA column)
+                st.markdown(
+                    f"| | **{coder_label}-patched** |\n"
+                    f"|---|---|\n"
+                    f"| **Loss** | {loss_r['sae']['loss']:.4f} "
+                    f"({loss_r['sae']['loss'] - loss_r['unpatched_loss']:+.4f}) |\n"
+                    + (
+                        f"| **Recovery** | "
+                        f"{(loss_r['zero']['loss'] - loss_r['sae']['loss']) / hc:.3f} |\n"
+                        if has_recovery else ""
+                    ),
+                )
 
-            st.caption(
-                f"With all features and no top-k truncation, {coder_label}-patched "
-                "and FRA-patched losses should match.",
-            )
+            if _has_fra_loss:
+                st.caption(
+                    f"With all features and no top-k truncation, {coder_label}-patched "
+                    "and FRA-patched losses should match.",
+                )
 
         # ═══════════════════════════════════════════════════════════════
         # Section 3: Ablations
@@ -761,4 +1058,6 @@ def render(tab):
             "impact on model output. This reveals which cross-feature interactions "
             "are causally important to this attention head's computation.",
         )
-        _render_ablation(cfg, fra_data, seq_len, token_strs, device, exclude_bos=exclude_bos)
+        _render_ablation(_cfg_head, fra_data, seq_len, token_strs, device,
+                         exclude_bos=exclude_bos, fra_data_all=fra_data_all,
+                         head_=head_)

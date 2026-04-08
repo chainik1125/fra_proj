@@ -218,16 +218,30 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
 def run_condition(model, layer, head, tok_tensor, shift_labels,
                   scores_tensor, unpatched_logits):
     """
-    Patch one head's attention scores and measure metrics.
+    Patch attention scores and measure metrics.
+
+    When *head* is an int, patches a single head's scores (``scores_tensor``
+    is a ``[seq, seq]`` tensor).  When *head* is ``None``, patches multiple
+    heads simultaneously (``scores_tensor`` is a ``dict[int, Tensor]``
+    mapping head indices to ``[seq, seq]`` tensors).
 
     Returns dict: loss, kl_div, top1_change_frac.
     """
-    seq_len = scores_tensor.shape[0]
     score_hook = f"blocks.{layer}.attn.hook_attn_scores"
 
-    def hook_fn(attn_scores, hook):
-        attn_scores[0, head, :seq_len, :seq_len] = scores_tensor
-        return attn_scores
+    if head is not None:
+        seq_len = scores_tensor.shape[0]
+
+        def hook_fn(attn_scores, hook):
+            attn_scores[0, head, :seq_len, :seq_len] = scores_tensor
+            return attn_scores
+    else:
+        seq_len = next(iter(scores_tensor.values())).shape[0]
+
+        def hook_fn(attn_scores, hook):
+            for h, s in scores_tensor.items():
+                attn_scores[0, h, :s.shape[0], :s.shape[1]] = s
+            return attn_scores
 
     patched_logits = model.run_with_hooks(
         tok_tensor, fwd_hooks=[(score_hook, hook_fn)]

@@ -23,8 +23,9 @@ from fra.dashboard.loaders import (
 )
 from fra.core.helpers import aggregate_pairs, rank_pairs
 from fra.dashboard.compute import (
-    run_fra,
-    run_fra_crosscoder,
+    build_fra_head,
+    encode_fra,
+    encode_fra_crosscoder,
 )
 
 # ---------------------------------------------------------------------------
@@ -88,6 +89,15 @@ with st.sidebar:
 
     # -- Head selector -----------------------------------------------------
     head = st.number_input("Head", 0, preset["n_heads"] - 1, value=0)
+    n_heads = preset["n_heads"]
+    compute_all_heads = st.checkbox(
+        f"Compute all {n_heads} heads",
+        value=False,
+        help=(
+            "Compute FRA for every head in this layer. "
+            "Enables per-tab head selection and all-heads patching/ablation."
+        ),
+    )
 
     # -- Type-specific extras ----------------------------------------------
     # Crosscoder extras
@@ -210,6 +220,23 @@ with st.sidebar:
         horizontal=True,
     )
 
+    if compute_all_heads:
+        _MH_LABELS = {
+            "sum": "Sum across heads",
+            "max": "Max across heads",
+            "avg": "Avg across heads",
+            "min": "Min across heads",
+            "count": "Count (# heads)",
+        }
+        multi_head_agg = st.radio(
+            "Rank pairs across heads by:",
+            list(_MH_LABELS.keys()),
+            format_func=lambda k: _MH_LABELS[k],
+            horizontal=True,
+        )
+    else:
+        multi_head_agg = None
+
     # -- Common compute settings -------------------------------------------
     st.subheader("Compute settings")
     use_all_features = st.checkbox(
@@ -251,6 +278,8 @@ st.session_state["_sidebar_sae_hub_id"] = sae_hub_id
 st.session_state["_sidebar_sae_local_path"] = sae_local_path
 st.session_state["_sidebar_hf_token"] = hf_token
 st.session_state["_sidebar_apply_chat_template"] = apply_chat_template
+st.session_state["_sidebar_compute_all_heads"] = compute_all_heads
+st.session_state["_sidebar_multi_head_agg"] = multi_head_agg
 
 # ---------------------------------------------------------------------------
 # Header
@@ -264,6 +293,11 @@ st.caption("Decomposing attention through SAE feature space.")
 # ---------------------------------------------------------------------------
 
 if compute_btn:
+    # Determine which heads to compute
+    heads_to_compute = list(range(n_heads)) if compute_all_heads else [int(head)]
+
+    # -- Tokenisation (shared across heads) --------------------------------
+    fra_tokens = None  # only used for crosscoder path
     if sae_type == "crosscoder":
         with st.spinner("Loading models & crosscoder\u2026"):
             load_model_pair(base_model_name, it_model_name, device, cc_it_arch)
@@ -275,16 +309,11 @@ if compute_btn:
         target_model = base_model if model_idx == 0 else it_model
         if apply_chat_template:
             if reasoning_trace.strip() or reasoning_response.strip():
-                # The R1 template strips <think> from assistant messages,
-                # so for full-trace analysis we build the string manually
-                # and tokenize directly (standard practice -- see
-                # mitroitskii/interp-experiments/reasoning_circuits).
                 prefix = it_model.tokenizer.apply_chat_template(
                     [{"role": "user", "content": text}],
                     tokenize=False,
                     add_generation_prompt=True,
                 )
-                # prefix already ends with <|Assistant|><think>\n
                 full_text = prefix + reasoning_trace.strip()
                 if reasoning_response.strip():
                     full_text += "\n</think>\n" + reasoning_response.strip()
@@ -301,23 +330,7 @@ if compute_btn:
                 st.code(it_model.tokenizer.decode(fra_tokens))
         else:
             fra_tokens = target_model.tokenizer.encode(text)
-
-        with st.spinner("Computing Feature-Resolved Attention (crosscoder)\u2026"):
-            fra_data = run_fra_crosscoder(
-                tokens=fra_tokens,
-                head=int(head),
-                crosscoder_layer=int(crosscoder_layer),
-                crosscoder_repo_id=crosscoder_repo_id,
-                model_idx=int(model_idx),
-                base_model_name=base_model_name,
-                it_model_name=it_model_name,
-                top_k_features=None if use_all_features else top_k_feat,
-                device=device,
-                subfolder=cc_subfolder,
-                it_arch_name=cc_it_arch,
-            )
     else:
-        # Map preset types to internal run_fra sae_type codes
         _run_sae_type = {"sae_hub": "hub", "sae_local": "local", "sae_gemma": "gemma"}[sae_type]
         _run_model = preset.get("model", "gpt2-small")
 
@@ -332,29 +345,84 @@ if compute_btn:
                 elif sae_local_path and Path(sae_local_path).exists():
                     load_sae_local(sae_local_path, int(layer), device)
 
-        with st.spinner("Computing Feature-Resolved Attention\u2026"):
-            fra_data = run_fra(
-                text=text,
-                layer=int(layer),
-                head=int(head),
-                hook_point=hook_point,
-                sae_type=_run_sae_type,
-                sae_hub_release=sae_hub_release,
-                sae_hub_id=sae_hub_id,
-                sae_local_path=sae_local_path,
-                top_k_features=None if use_all_features else top_k_feat,
-                device=device,
-                model_name=_run_model,
-                chunk_size=chunk_size,
-                hf_token=hf_token,
-                include_special_tokens=True,
-            )
+    # -- Encode once, build per head ----------------------------------------
+    _top_k = None if use_all_features else top_k_feat
+    fra_data_all = {}
+    _progress = st.progress(0, text="Encoding\u2026") if compute_all_heads else None
 
+    if sae_type == "crosscoder":
+        _encoded, _attn_cache, _model, _tokens, _attn_layer = (
+            encode_fra_crosscoder(
+                tokens=fra_tokens,
+                crosscoder_layer=int(crosscoder_layer),
+                crosscoder_repo_id=crosscoder_repo_id,
+                model_idx=int(model_idx),
+                base_model_name=base_model_name,
+                it_model_name=it_model_name,
+                device=device,
+                subfolder=cc_subfolder,
+                it_arch_name=cc_it_arch,
+            )
+        )
+    else:
+        _encoded, _attn_cache, _model, _tokens = encode_fra(
+            text=text,
+            layer=int(layer),
+            hook_point=hook_point,
+            sae_type=_run_sae_type,
+            sae_hub_release=sae_hub_release,
+            sae_hub_id=sae_hub_id,
+            sae_local_path=sae_local_path,
+            device=device,
+            model_name=_run_model,
+            hf_token=hf_token,
+            include_special_tokens=True,
+        )
+        _attn_layer = int(layer)
+
+    # Pre-compute head-independent artifacts once
+    from fra.core.fra import topk_sparsify
+    _topk_features = topk_sparsify(
+        _encoded["feature_activations"], _top_k,
+    ).float()
+    _rms = None
+    if _encoded["rms_activations"] is not None:
+        _eps = _model.cfg.eps
+        _rms = (
+            _encoded["rms_activations"].float().pow(2).mean(dim=-1) + _eps
+        ).sqrt()
+    _token_strs = [_model.tokenizer.decode([t]) for t in _tokens[:128]]
+    _softcap = getattr(_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+    for _i, _h in enumerate(heads_to_compute):
+        if _progress is not None:
+            _progress.progress(
+                _i / len(heads_to_compute),
+                text=f"Computing FRA for head {_h + 1}/{n_heads}\u2026",
+            )
+        fra_data_all[_h] = build_fra_head(
+            _encoded, _attn_cache, _model, _attn_layer, int(_h),
+            _tokens, device,
+            top_k=_top_k, chunk_size=chunk_size,
+            topk_features=_topk_features, rms=_rms,
+            token_strs=_token_strs, softcap=_softcap,
+        )
+
+    if _progress is not None:
+        _progress.progress(1.0, text="Done!")
+
+    # Primary head's data for backward compatibility
+    fra_data = fra_data_all[int(head)]
     st.session_state["fra_data"] = fra_data
+    st.session_state["fra_data_all"] = fra_data_all if compute_all_heads else None
+
     # Clear cached reconstruction tab results from previous runs
     st.session_state.pop("_recon_metrics", None)
-    st.session_state.pop("_val_loss", None)
-    st.session_state.pop("_projection_cache", None)
+    st.session_state.pop("_val_loss_all", None)
+    # Clear all per-head caches (projection + loss)
+    for _k in [k for k in st.session_state
+               if k.startswith("_projection_cache_") or k.startswith("_val_loss_")]:
+        del st.session_state[_k]
     st.session_state["fra_config"] = {
         "layer": int(layer),
         "head": int(head),
@@ -368,9 +436,14 @@ if compute_btn:
         "hf_token": hf_token if sae_type == "sae_gemma" else "",
         "hook_point": preset.get("hook_point", ""),
         "trained_on_bos": preset.get("trained_on_bos", True),
+        "n_heads": n_heads,
+        "compute_all_heads": compute_all_heads,
+        "multi_head_agg": multi_head_agg,
     }
+    _total = sum(d["total_interactions"] for d in fra_data_all.values())
+    _head_label = f"all {n_heads} heads" if compute_all_heads else f"head {head}"
     st.success(
-        f"Done \u2014 {fra_data['total_interactions']:,} non-zero interactions found."
+        f"Done \u2014 {_total:,} non-zero interactions found ({_head_label})."
     )
 
 # ---------------------------------------------------------------------------
@@ -391,24 +464,65 @@ if _has_fra:
     # Recompute pairs (filter / top_k / ranking may change without recomputing FRA)
     _agg = cfg.get("agg_mode", "sum")
     _diagonal = False if cfg["filter_self"] else None
-    pairs = rank_pairs(
-        fra_data["indices_np"],
-        fra_data["values_np"],
-        top_k=cfg["top_k_pairs"],
-        diagonal=_diagonal,
-        mode=_agg,
-    )
-    # Bottom pairs: weakest by sum
-    _all_pairs_for_bottom = aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal)
-    _all_pairs_for_bottom.sort(key=lambda x: x[2])
-    bottom_pairs = _all_pairs_for_bottom[:cfg["top_k_pairs"]]
+    _mh_agg = cfg.get("multi_head_agg")
+    _fra_data_all = st.session_state.get("fra_data_all")
+
+    if _fra_data_all is not None and _mh_agg is not None:
+        _idx_dict = {h: d["indices_np"] for h, d in _fra_data_all.items()}
+        _val_dict = {h: d["values_np"] for h, d in _fra_data_all.items()}
+        pairs = rank_pairs(
+            _idx_dict, _val_dict,
+            top_k=cfg["top_k_pairs"],
+            diagonal=_diagonal,
+            mode=_agg,
+            multi_head_agg=_mh_agg,
+        )
+        # Bottom pairs: use same multi-head aggregation, but sort ascending
+        _all_mh = rank_pairs(
+            _idx_dict, _val_dict,
+            top_k=0,  # 0 = return all
+            diagonal=_diagonal,
+            mode=_agg,
+            multi_head_agg=_mh_agg,
+        )
+        _all_mh.sort(key=lambda x: x[2])
+        bottom_pairs = _all_mh[:cfg["top_k_pairs"]]
+    else:
+        pairs = rank_pairs(
+            fra_data["indices_np"],
+            fra_data["values_np"],
+            top_k=cfg["top_k_pairs"],
+            diagonal=_diagonal,
+            mode=_agg,
+        )
+        # Bottom pairs: weakest by sum
+        _all_pairs_for_bottom = aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal)
+        _all_pairs_for_bottom.sort(key=lambda x: x[2])
+        bottom_pairs = _all_pairs_for_bottom[:cfg["top_k_pairs"]]
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Tokens", seq_len)
-    c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
-    total_unique = len(aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal))
-    c3.metric("Unique feature pairs", f"{total_unique:,}")
-    c4.metric("Layer / Head", f"L{layer_} / H{head_}")
+    if _fra_data_all is not None:
+        _total_nnz = sum(d["total_interactions"] for d in _fra_data_all.values())
+        c2.metric("Non-zero interactions", f"{_total_nnz:,}",
+                  help=f"Summed across all {len(_fra_data_all)} heads")
+    else:
+        c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
+    if _fra_data_all is not None:
+        _all_unique = set()
+        for d in _fra_data_all.values():
+            _all_unique.update(
+                (int(t[0]), int(t[1]))
+                for t in aggregate_pairs(d["indices_np"], d["values_np"], diagonal=_diagonal)
+            )
+        total_unique = len(_all_unique)
+        c3.metric("Unique feature pairs", f"{total_unique:,}",
+                  help=f"Union across all {len(_fra_data_all)} heads")
+    else:
+        total_unique = len(aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal))
+        c3.metric("Unique feature pairs", f"{total_unique:,}")
+    _head_str = "all" if _fra_data_all is not None else f"H{head_}"
+    c4.metric("Layer / Head", f"L{layer_} / {_head_str}")
 
     tok_html = " ".join(
         f'<span style="background:#e9ecef;padding:2px 5px;border-radius:3px;'
