@@ -27,6 +27,7 @@ import torch.nn.functional as F
 
 from fra.core.fra import get_sentence_fra_batch
 from fra.core.helpers import (
+    apply_rope_to_projected,
     compute_bias_correction,
     fra_sum_to_attn,
     project_qk,
@@ -106,6 +107,96 @@ def ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae):
     return torch.sparse_coo_tensor(
         new_indices, new_values, size=fra_sparse.shape
     ).coalesce()
+
+
+
+@torch.no_grad()
+def compute_fra_single_query_delta(
+    feat_q: torch.Tensor,
+    feat_k_all: torch.Tensor,
+    pairs: list,
+    W_dec: torch.Tensor,
+    W_Q: torch.Tensor,
+    W_K: torch.Tensor,
+    attn_scale: float,
+    rms_q: float,
+    rms_k_all: torch.Tensor,
+    rope_params: tuple,
+    q_pos: int,
+) -> torch.Tensor:
+    """Compute the FRA delta for a single new query row attending to T key positions.
+
+    For each (feat_i, feat_j) pair to ablate, computes the contribution of
+    feature i at the new query position interacting with feature j at each of
+    the T key positions. The returned delta should be subtracted from
+    ``hook_attn_scores[0, head, 0, :T]`` during generation.
+
+    All tensors must be on CPU; results are returned on CPU.
+
+    Args:
+        feat_q: ``[d_sae]`` feature activations at the new query token.
+        feat_k_all: ``[T, d_sae]`` feature activations at all T key positions.
+        pairs: List of ``(q_feat_idx, k_feat_idx)`` tuples to ablate.
+        W_dec: ``[d_sae, d_model]`` decoder weight matrix.
+        W_Q: ``[d_model, d_head]`` query projection (no bias).
+        W_K: ``[d_model, d_head]`` key projection (no bias, GQA-aware).
+        attn_scale: ``sqrt(d_head)``.
+        rms_q: RMSNorm denominator at the new query position.
+        rms_k_all: ``[T]`` RMSNorm denominators at all key positions.
+        rope_params: ``(rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs)``.
+            ``rope_sin`` / ``rope_cos`` are ``None`` when the model has no RoPE.
+        q_pos: Absolute sequence position index of the new query token.
+
+    Returns:
+        ``[T]`` float32 CPU tensor.
+    """
+    T = feat_k_all.shape[0]
+    delta = torch.zeros(T, dtype=torch.float32)
+    if not pairs or T == 0:
+        return delta
+
+    rope_sin, rope_cos, rotary_dim, rotary_adj = rope_params
+    use_rope = rope_sin is not None
+
+    W_dec = W_dec.float()
+    W_Q = W_Q.float()
+    W_K = W_K.float()
+    feat_q = feat_q.float()
+    feat_k_all = feat_k_all.float()
+    rms_k_all = rms_k_all.float()
+
+    for feat_i, feat_j in pairs:
+        q_act = feat_q[feat_i].item()
+        if q_act == 0.0:
+            continue
+        k_acts = feat_k_all[:, feat_j]  # [T]
+        if k_acts.abs().max().item() == 0.0:
+            continue
+
+        # Query: project through W_Q + RoPE at q_pos
+        q_vec = (W_dec[feat_i] @ W_Q).unsqueeze(0)  # [1, d_head]
+        if use_rope:
+            q_vec = apply_rope_to_projected(
+                q_vec, q_pos, rope_sin, rope_cos, rotary_dim, rotary_adj,
+            )
+
+        # Keys: project through W_K + RoPE at each of T positions
+        k_vec_base = (W_dec[feat_j] @ W_K).unsqueeze(0)  # [1, d_head]
+        d_head = k_vec_base.shape[-1]
+        if use_rope:
+            k_vecs = torch.empty(T, d_head, dtype=torch.float32)
+            for t in range(T):
+                k_vecs[t] = apply_rope_to_projected(
+                    k_vec_base, t, rope_sin, rope_cos, rotary_dim, rotary_adj,
+                ).squeeze(0)
+            interactions = (q_vec @ k_vecs.T).squeeze(0) / attn_scale  # [T]
+        else:
+            dot = (q_vec @ k_vec_base.T).item()
+            interactions = torch.full((T,), dot / attn_scale, dtype=torch.float32)
+
+        delta += q_act * k_acts * interactions / (rms_q * rms_k_all)
+
+    return delta
 
 
 # ── Bias corrections & score reconstruction ───────────────────────────────
