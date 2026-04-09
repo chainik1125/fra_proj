@@ -60,11 +60,13 @@ These depend only on relative position $(i - j)$ and the RMSNorm scalars. They f
 
 Decomposing the SAE latent vector into its sparse components $u^i = \sum_k u^i_k\, e_k$, the bilinear term becomes:
 
-$$\hat{A}_{ij}^{\text{bilinear}} = \frac{1}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}} \sum_{k,\ell}\; u^i_k\; u^j_\ell\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_\ell$$
+$$\hat{A}_{ij}^{\text{bilinear}} = \frac{1}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}} \sum_{k,l}\; u^i_k\; u^j_l\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_l$$
 
-where $v_k$ denotes the $k$-th column of $W^{dec}$ (the decoder direction for latent $k$). The scalar $(W_Q\, v_k)^T\, W_R^{(i-j)}\, W_K\, v_\ell$ can be precomputed for all feature pairs $(k, \ell)$ at each relative position, giving a fully decomposed per-feature attribution of the attention score. Writing $\hat{A}_{ij}^{\text{bilinear}} = \sum_{k,\ell} A_{ijk\ell}$, the FRA object is:
+where $v_k$ denotes the $k$-th column of $W^{dec}$ (the decoder direction for latent $k$). The scalar $(W_Q\, v_k)^T\, W_R^{(i-j)}\, W_K\, v_l$ can be precomputed for all feature pairs $(k, l)$ at each relative position, giving a fully decomposed per-feature attribution of the attention score. Writing $\hat{A}_{ij}^{\text{bilinear}} = \sum_{k,l} A_{ijkl}$, the FRA object is:
 
-$$A_{ijk\ell} = \frac{u^i_k\; u^j_\ell}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}}\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_\ell$$
+$$
+A_{ijkl} = \frac{u^i_k\; u^j_l}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}}\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_l
+$$
 
 ## Simplification for Gemma / Llama ($b_Q = b_K = 0$)
 
