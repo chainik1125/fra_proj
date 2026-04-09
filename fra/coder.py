@@ -392,10 +392,10 @@ class FRACoder:
         canonical form.
         """
         from pathlib import Path
-        from sleepers.analysis.ft_analysis_util import load_wandb_crosscoder
+        from crosscode.models.acausal_crosscoder import ModelHookpointAcausalCrosscoder
 
-        cc, _ = load_wandb_crosscoder(crosscoder_name, Path(download_dir))
-        cc = cc.to(device)
+        path = Path(download_dir) / crosscoder_name
+        cc = ModelHookpointAcausalCrosscoder.load(path, device=device)
 
         hookpoints = [
             "blocks.0.hook_resid_pre",
@@ -410,22 +410,22 @@ class FRACoder:
         # block 3) has no downstream attention layer.
         attn_layers = [0, 1, 2, 3, -1]
 
-        # W_dec_HXD: [d_sae, n_models, n_hookpoints, d_model]
-        W_dec_full = cc.W_dec_HXD.detach()
+        # W_dec_LMPD: [n_latents, n_models, n_hookpoints, d_model]
+        W_dec_full = cc.W_dec_LMPD.detach()
         d_sae = W_dec_full.shape[0]
         n_models = W_dec_full.shape[1]
         n_layers = W_dec_full.shape[2]
         d_model = W_dec_full.shape[3]
 
-        b_dec_raw = getattr(cc, "b_dec", None)
+        b_dec_raw = getattr(cc, "b_dec_MPD", None)
         if b_dec_raw is not None:
-            b_dec = b_dec_raw.detach()
+            b_dec = b_dec_raw[0, 0, :].detach()
         else:
             b_dec = torch.zeros(d_model, device=W_dec_full.device)
 
         return cls(
-            raw_encoder=cc._encode_BH,
-            raw_decoder=cc._decode_BXD,
+            raw_encoder=lambda x: cc.forward_train(x).latents_BL,
+            raw_decoder=cc.decode_BMPD,
             W_dec_full=W_dec_full,
             b_dec=b_dec,
             d_sae=d_sae,

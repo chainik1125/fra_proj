@@ -95,14 +95,19 @@ def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = 
 @st.cache_resource(show_spinner=False)
 def load_lora_model(base_model_repo: str, lora_repo: str, device: str):
     """Load a HookedTransformer with a LoRA adapter applied."""
-    from sleepers.scripts.llms import build_llm_lora
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from peft import PeftModel
+    from transformer_lens import HookedTransformer
     torch.set_grad_enabled(False)
-    return build_llm_lora(
-        base_model_repo=base_model_repo,
-        lora_model_repo=lora_repo,
-        cache_dir=None,
+    hf_tokenizer = AutoTokenizer.from_pretrained(base_model_repo)
+    hf_model = AutoModelForCausalLM.from_pretrained(base_model_repo)
+    hf_model = PeftModel.from_pretrained(hf_model, lora_repo)
+    hf_model = hf_model.merge_and_unload()
+    return HookedTransformer.from_pretrained(
+        base_model_repo,
+        hf_model=hf_model,
+        tokenizer=hf_tokenizer,
         device=device,
-        dtype=None,
     )
 
 

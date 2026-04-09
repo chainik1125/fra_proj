@@ -3,7 +3,9 @@ name = "temp-xc"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "crosscode @ git+https://github.com/oli-clive-griffin/crosscode",
     "dictionary-learning @ git+https://github.com/jkminder/dictionary_learning",
+    "peft",
     "eindex",
     "ipython",
     "matplotlib",
