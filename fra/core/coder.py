@@ -104,6 +104,11 @@ class FRACoder:
         return self._b_dec
 
     @property
+    def dtype(self) -> torch.dtype:
+        """dtype of the coder weights."""
+        return self._W_dec_full.dtype
+
+    @property
     def is_multi_layer(self) -> bool:
         return self.n_layers > 1
 
