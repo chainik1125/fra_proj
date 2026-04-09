@@ -9,6 +9,7 @@ import html as html_lib
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 import torch
 
 from fra.dashboard.state import PRESETS
@@ -631,3 +632,39 @@ reconstruction.render(tab3)
 max_act.render(tab4)
 di.render(tab5)
 ablation.render(tab6)
+
+# ---------------------------------------------------------------------------
+# Persist active tab across reruns via URL query param + JS injection.
+# Tab clicks are pure frontend in Streamlit (no rerun), so this is loop-free:
+#   user clicks tab i → JS writes ?tab=i to URL (no rerun)
+#   widget fires rerun → Python reads ?tab=i → JS clicks tab i back
+# ---------------------------------------------------------------------------
+_active_tab = int(st.query_params.get("tab", 0))
+components.html(
+    f"""
+    <script>
+    (function() {{
+        const TARGET = {_active_tab};
+        function restore() {{
+            const btns = window.parent.document.querySelectorAll('button[role="tab"]');
+            if (!btns.length) {{ setTimeout(restore, 50); return; }}
+            if (btns[TARGET] && btns[TARGET].getAttribute('aria-selected') !== 'true') {{
+                btns[TARGET].click();
+            }}
+            btns.forEach((btn, i) => {{
+                if (!btn.dataset.fraTabWired) {{
+                    btn.dataset.fraTabWired = '1';
+                    btn.addEventListener('click', () => {{
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('tab', i);
+                        window.parent.history.replaceState(null, '', url.toString());
+                    }});
+                }}
+            }});
+        }}
+        restore();
+    }})();
+    </script>
+    """,
+    height=0,
+)
