@@ -16,7 +16,7 @@ from typing import Optional, List
 from transformer_lens import HookedTransformer
 from datetime import datetime
 
-from fra.coders.sae_lens import SAELensAttentionSAE
+from fra.coder import FRACoder
 from fra.viz.data_independent import create_data_independent_dashboard
 from fra.viz.dataset_search import run_dataset_search
 from fra.viz.dataset_search_viz import create_dashboard_from_search
@@ -29,7 +29,7 @@ def generate_all_dashboards(
     num_samples: int = 5,
     sample_text: Optional[str] = None,
     model: Optional[HookedTransformer] = None,
-    sae: Optional[SAELensAttentionSAE] = None,
+    sae: Optional[FRACoder] = None,
     filter_self_interactions: bool = True,
     output_dir: str = "fra/results",
     create_package: bool = True,
@@ -64,7 +64,7 @@ def generate_all_dashboards(
     if sae is None:
         if verbose:
             print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        sae = FRACoder.from_sae_lens("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
 
     print("\n" + "="*60)
     print("Generating FRA Dashboards")

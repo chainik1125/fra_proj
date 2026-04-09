@@ -619,7 +619,7 @@ def generate_dashboard_from_config(
 
     Args:
         model: Pre-loaded HookedTransformer model (optional)
-        sae: Pre-loaded SAELensAttentionSAE (optional)
+        sae: Pre-loaded FRACoder (optional)
         text: Text to analyze (optional, uses default if not provided)
         layer: Layer number (default: 5)
         head: Head number (default: 0)
@@ -671,11 +671,11 @@ def generate_dashboard_from_config(
 
     # Load SAE if not provided
     if sae is None:
-        from fra.coders.sae_lens import SAELensAttentionSAE
+        from fra.coder import FRACoder
         print(f"Loading SAE for layer {layer}...")
         RELEASE = "gpt2-small-hook-z-kk"
         SAE_ID = f"blocks.{layer}.hook_z"
-        sae = SAELensAttentionSAE(RELEASE, SAE_ID, device=device)
+        sae = FRACoder.from_sae_lens(RELEASE, SAE_ID, device=device)
 
     # Generate dashboard
     print(f"Generating dashboard for layer {layer}, head {head}...")

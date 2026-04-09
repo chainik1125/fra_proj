@@ -1,4 +1,12 @@
-"""Cached resource loaders (persist across Streamlit reruns, keyed by args)."""
+"""Cached resource loaders (persist across Streamlit reruns, keyed by args).
+
+Each loader is a thin wrapper around a constructor or classmethod, decorated
+with ``@st.cache_resource``.  Streamlit hashes function arguments for cache
+keys, so each distinct construction path needs its own function — a single
+generic ``load_coder(**kwargs)`` would be fragile (kwarg ordering, extra keys,
+etc. can bust the cache).  If Streamlit's caching story improves these
+wrappers can be consolidated.
+"""
 
 import requests
 import streamlit as st
@@ -17,20 +25,20 @@ def load_model(model_name: str, device: str, hf_token: str = ""):
 
 @st.cache_resource(show_spinner=False)
 def load_sae_hub(release: str, sae_id: str, device: str):
-    from fra.coders.sae_lens import SAELensAttentionSAE
-    return SAELensAttentionSAE(release, sae_id, device=device)
+    from fra.coder import FRACoder
+    return FRACoder.from_sae_lens(release, sae_id, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_local(checkpoint_path: str, layer: int, device: str):
-    from fra.coders.sae_lens import LocalLn1SAE
-    return LocalLn1SAE(checkpoint_path, layer=layer, device=device)
+    from fra.coder import FRACoder
+    return FRACoder.from_local_sae(checkpoint_path, layer=layer, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_gemma(release: str, sae_id: str, device: str):
-    from fra.coders.sae_lens import GemmaScopeSAE
-    return GemmaScopeSAE(release, sae_id, device=device)
+    from fra.coder import FRACoder
+    return FRACoder.from_gemma_scope(release, sae_id, device=device)
 
 
 @st.cache_resource(show_spinner=False)
@@ -78,13 +86,33 @@ def load_model_pair(base_name: str, it_name: str, device: str,
 
 @st.cache_resource(show_spinner=False)
 def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = ""):
-    from fra.coders.crosscoder import GemmaCrosscoderFRA
-    if subfolder:
-        return GemmaCrosscoderFRA.from_cc_weights(
-            repo_id, subfolder, model_idx=model_idx, device=device,
-        )
-    return GemmaCrosscoderFRA.from_pretrained(
-        repo_id, model_idx=model_idx, device=device,
+    from fra.coder import FRACoder
+    return FRACoder.from_hf_crosscoder(
+        repo_id, model_idx=model_idx, device=device, subfolder=subfolder,
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def load_lora_model(base_model_repo: str, lora_repo: str, device: str):
+    """Load a HookedTransformer with a LoRA adapter applied."""
+    from sleepers.scripts.llms import build_llm_lora
+    torch.set_grad_enabled(False)
+    return build_llm_lora(
+        base_model_repo=base_model_repo,
+        lora_model_repo=lora_repo,
+        cache_dir=None,
+        device=device,
+        dtype=None,
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def load_wandb_crosscoder(crosscoder_name: str, download_dir: str,
+                          model_idx: int, device: str):
+    """Load a multi-layer crosscoder from W&B artifacts."""
+    from fra.coder import FRACoder
+    return FRACoder.from_wandb_crosscoder(
+        crosscoder_name, download_dir, model_idx=model_idx, device=device,
     )
 
 

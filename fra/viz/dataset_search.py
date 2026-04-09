@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import pickle
 from datetime import datetime
 
-from fra.coders.sae_lens import SAELensAttentionSAE
+from fra.coder import FRACoder
 from fra.core.fra import get_sentence_fra_batch
 from fra.utils import load_dataset_hf
 
@@ -56,7 +56,7 @@ class DatasetSearchResults:
 
 def search_dataset_for_interactions(
     model: HookedTransformer,
-    sae: SAELensAttentionSAE,
+    sae: FRACoder,
     dataset_texts: List[str],
     layer: int = 5,
     head: int = 0,
@@ -85,7 +85,7 @@ def search_dataset_for_interactions(
     Returns:
         DatasetSearchResults with interaction statistics and examples
     """
-    d_sae = sae.sae.W_dec.shape[0]
+    d_sae = sae.d_sae
 
     # Initialize accumulators using dictionaries for sparse storage
     # This avoids creating huge tensors
@@ -313,7 +313,7 @@ def load_search_results(filepath: str) -> DatasetSearchResults:
 
 def run_dataset_search(
     model: Optional[HookedTransformer] = None,
-    sae: Optional[SAELensAttentionSAE] = None,
+    sae: Optional[FRACoder] = None,
     layer: int = 5,
     head: int = 0,
     num_samples: int = 100,
@@ -344,7 +344,7 @@ def run_dataset_search(
     # Load SAE if needed
     if sae is None:
         print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        sae = FRACoder.from_sae_lens("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
 
     # Load dataset
     print("Loading dataset...")

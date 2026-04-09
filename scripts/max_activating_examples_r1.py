@@ -26,7 +26,7 @@ import argparse
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformer_lens import HookedTransformer
-from fra.coders.crosscoder import GemmaCrosscoderFRA
+from fra.coder import FRACoder
 from fra.analysis.max_act import (
     load_reasoning_prompts,
     load_generic_dataset,
@@ -96,8 +96,8 @@ def main():
     del hf_model
 
     print("Loading crosscoder...")
-    crosscoder = GemmaCrosscoderFRA.from_cc_weights(
-        REPO_ID, subfolder, model_idx=1, device=DEVICE,
+    crosscoder = FRACoder.from_hf_crosscoder(
+        REPO_ID, model_idx=1, device=DEVICE, subfolder=subfolder,
     )
     print(f"  dict_size={crosscoder.d_sae}, layer={crosscoder_layer}, "
           f"features={feature_ids}")

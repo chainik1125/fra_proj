@@ -22,7 +22,7 @@ import argparse
 
 import torch
 from transformer_lens import HookedTransformer
-from fra.coders.crosscoder import GemmaCrosscoderFRA
+from fra.coder import FRACoder
 from fra.analysis.max_act import (
     load_prompts,
     load_generic_dataset,
@@ -71,7 +71,7 @@ def main():
     )
 
     print("Loading crosscoder...")
-    crosscoder = GemmaCrosscoderFRA.from_pretrained(
+    crosscoder = FRACoder.from_hf_crosscoder(
         REPO_ID, model_idx=1, device=DEVICE, dtype=torch.float16,
     )
     print(f"  dict_size={crosscoder.d_sae}, features={feature_ids}")

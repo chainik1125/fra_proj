@@ -22,7 +22,7 @@ from fra.analysis.ablation import (
     run_single_sample,
     screen_heads,
 )
-from fra.coders import load_sae
+from fra.coder import FRACoder
 
 
 def main():
@@ -81,7 +81,19 @@ def main():
 
     # Load SAE
     print("\nLoading SAE...", end=" ", flush=True)
-    sae = load_sae(sae_type, layer, device)
+    if sae_type == "hub":
+        sae = FRACoder.from_sae_lens(
+            "gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device=device,
+        )
+    elif sae_type == "gemma":
+        rel = "gemma-scope-2b-pt-res"
+        # FRA/attention layer N uses resid_post[N-1], so subtract 1 for Gemma-Scope.
+        sid = f"layer_{layer - 1}/width_16k/average_l0_82"
+        sae = FRACoder.from_gemma_scope(rel, sid, device=device)
+    else:
+        from pathlib import Path
+        ckpt = str(Path(__file__).resolve().parent.parent / "fra" / "checkpoints" / "q9sczrvl" / "50003968")
+        sae = FRACoder.from_local_sae(ckpt, layer=layer, device=device)
     print(f"done. (d_sae={sae.d_sae})")
 
     # Load model

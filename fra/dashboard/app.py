@@ -20,12 +20,16 @@ from fra.dashboard.loaders import (
     load_sae_gemma,
     load_sae_hub,
     load_sae_local,
+    load_lora_model,
+    load_wandb_crosscoder,
 )
 from fra.core.helpers import aggregate_pairs, rank_pairs
 from fra.dashboard.compute import (
     build_fra_head,
+    build_fra_head_multilayer,
     encode_fra,
     encode_fra_crosscoder,
+    encode_fra_multilayer,
 )
 
 # ---------------------------------------------------------------------------
@@ -64,7 +68,18 @@ with st.sidebar:
     hook_point = preset.get("hook_point", "")
 
     # -- Layer selector ----------------------------------------------------
-    if sae_type == "crosscoder":
+    if sae_type == "crosscoder_multilayer":
+        available_layers = preset["layers"]
+        layer = st.selectbox(
+            "Attention layer",
+            available_layers,
+            index=available_layers.index(preset["default_layer"]),
+        )
+        # crosscoder-only defaults (not used for multilayer)
+        crosscoder_layer = 0
+        cc_subfolder = ""
+        cc_it_arch = ""
+    elif sae_type == "crosscoder":
         available_layers = sorted(preset["layers"].keys())
         crosscoder_layer = st.selectbox(
             "Crosscoder layer",
@@ -100,8 +115,39 @@ with st.sidebar:
     )
 
     # -- Type-specific extras ----------------------------------------------
-    # Crosscoder extras
-    if sae_type == "crosscoder":
+    # Multi-layer crosscoder extras
+    if sae_type == "crosscoder_multilayer":
+        base_model_name = preset["base_model"]
+        base_lora = preset["base_lora"]
+        sleeper_lora = preset["sleeper_lora"]
+
+        st.caption(f"Base: `{base_model_name}`")
+        st.caption(f"Base LoRA: `{base_lora}`")
+        st.caption(f"Sleeper LoRA: `{sleeper_lora}`")
+
+        model_idx = st.radio(
+            "Analyse attention of",
+            [0, 1],
+            format_func=lambda i: preset["model_labels"][i],
+            horizontal=True,
+        )
+
+        st.caption(preset.get("ram_note", ""))
+
+        # not used for multilayer path
+        crosscoder_repo_id = ""
+        it_model_name = ""
+        apply_chat_template = False
+        reasoning_trace = ""
+        reasoning_response = ""
+        sae_hub_release = ""
+        sae_hub_id = ""
+        sae_local_path = ""
+        hf_token = ""
+        chunk_size = 16
+
+    # Single-layer crosscoder extras
+    elif sae_type == "crosscoder":
         crosscoder_repo_id = preset["repo_id"]
         base_model_name = preset["base_model"]
         it_model_name = preset["it_model"]
@@ -297,8 +343,17 @@ if compute_btn:
     heads_to_compute = list(range(n_heads)) if compute_all_heads else [int(head)]
 
     # -- Tokenisation (shared across heads) --------------------------------
-    fra_tokens = None  # only used for crosscoder path
-    if sae_type == "crosscoder":
+    fra_tokens = None  # only used for crosscoder/multilayer paths
+    if sae_type == "crosscoder_multilayer":
+        _lora = base_lora if model_idx == 0 else sleeper_lora
+        with st.spinner("Loading model & crosscoder\u2026"):
+            _ml_model = load_lora_model(base_model_name, _lora, device)
+            _ml_coder = load_wandb_crosscoder(
+                preset["crosscoder_name"], preset["wandb_download_dir"],
+                int(model_idx), device,
+            )
+        fra_tokens = _ml_model.tokenizer.encode(text)
+    elif sae_type == "crosscoder":
         with st.spinner("Loading models & crosscoder\u2026"):
             load_model_pair(base_model_name, it_model_name, device, cc_it_arch)
             load_crosscoder(crosscoder_repo_id, model_idx, device, cc_subfolder)
@@ -350,7 +405,20 @@ if compute_btn:
     fra_data_all = {}
     _progress = st.progress(0, text="Encoding\u2026") if compute_all_heads else None
 
-    if sae_type == "crosscoder":
+    if sae_type == "crosscoder_multilayer":
+        _encoded_per_layer, _attn_caches, _model, _tokens = (
+            encode_fra_multilayer(
+                tokens=fra_tokens,
+                attn_layers=[int(layer)],
+                coder=_ml_coder,
+                model=_ml_model,
+                device=device,
+            )
+        )
+        _encoded = _encoded_per_layer[int(layer)]
+        _attn_cache = _attn_caches[int(layer)]
+        _attn_layer = int(layer)
+    elif sae_type == "crosscoder":
         _encoded, _attn_cache, _model, _tokens, _attn_layer = (
             encode_fra_crosscoder(
                 tokens=fra_tokens,
@@ -439,6 +507,7 @@ if compute_btn:
         "n_heads": n_heads,
         "compute_all_heads": compute_all_heads,
         "multi_head_agg": multi_head_agg,
+        "is_multi_layer": preset.get("is_multi_layer", False),
     }
     _total = sum(d["total_interactions"] for d in fra_data_all.values())
     _head_label = f"all {n_heads} heads" if compute_all_heads else f"head {head}"
@@ -545,18 +614,20 @@ if _has_fra:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "\U0001f4ca Top Interactions",
     "\U0001f525 Feature Matrix",
     "\u2705 Reconstruction",
     "\U0001f9e9 Max-Act Examples",
     "\U0001f517 Data-Independent",
+    "\u2702 Ablation",
 ])
 
-from fra.dashboard.tabs import interactions, matrix, reconstruction, max_act, di
+from fra.dashboard.tabs import ablation, interactions, matrix, reconstruction, max_act, di
 
 interactions.render(tab1)
 matrix.render(tab2)
 reconstruction.render(tab3)
 max_act.render(tab4)
 di.render(tab5)
+ablation.render(tab6)

@@ -272,10 +272,26 @@ def _build_fra_result(
     d_head = W_Q.shape[-1]
     attn_scale = math.sqrt(d_head)
 
-    # RMSNorm correction
+    # Normalization correction (LayerNorm or RMSNorm)
+    #
+    # TransformerLens folds gamma/beta into W_Q / W_K, so the residual
+    # layernorm that remains is:
+    #   RMSPre  : x / sqrt(mean(x^2) + eps)
+    #   LNPre   : (x - mean(x)) / sqrt(var(x) + eps)
+    #
+    # For LNPre we also mean-center the decoder vectors so that the FRA
+    # decomposition accounts for the centering step.
+    is_layer_norm = getattr(model.cfg, "normalization_type", "") == "LNPre"
+    W_dec_corr = W_dec.float()
+    if is_layer_norm:
+        W_dec_corr = W_dec_corr - W_dec_corr.mean(dim=-1, keepdim=True)
+
     if rms is None and rms_activations is not None:
         eps = model.cfg.eps
-        rms = (rms_activations.float().pow(2).mean(dim=-1) + eps).sqrt()
+        rms_act = rms_activations.float()
+        if is_layer_norm:
+            rms_act = rms_act - rms_act.mean(dim=-1, keepdim=True)
+        rms = (rms_act.pow(2).mean(dim=-1) + eps).sqrt()
 
     # RoPE
     rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (
@@ -283,7 +299,7 @@ def _build_fra_result(
     )
 
     fra_tensor_sparse = compute_fra_sparse(
-        topk_features, W_dec.float(), W_Q, W_K_mat, attn_scale,
+        topk_features, W_dec_corr, W_Q, W_K_mat, attn_scale,
         rms=rms,
         dec_norms=dec_norms,
         rope_sin=rope_sin,
@@ -515,30 +531,22 @@ def _encode_sae(
     if verbose:
         print(f"Encoding {activation.shape[0]} positions to SAE features...")
 
-    if hasattr(sae, "encode"):
-        feature_activations = sae.encode(activation)
-    else:
-        feature_activations = sae.sae.encode(activation)
+    feature_activations = sae.encode(activation)
 
     # Norm coefficient correction (e.g. Gemma-Scope)
-    if hasattr(sae, "_norm_coeff") and sae._norm_coeff is not None:
+    if sae._norm_coeff is not None:
         feature_activations = feature_activations / sae._norm_coeff
 
-    # Decoder weights
-    W_dec = sae.W_dec if hasattr(sae, "W_dec") else sae.sae.W_dec
+    W_dec = sae.W_dec
 
     # Decoder norm detection
     if normalize_by_decoder_norm is None:
-        inner = sae.sae if hasattr(sae, "sae") else sae
-        cfg = getattr(inner, "cfg", None)
-        do_normalize = (
-            getattr(cfg, "rescale_acts_by_decoder_norm", False) if cfg else False
-        )
+        dec_norms = sae.dec_norms
+    elif normalize_by_decoder_norm:
+        dec_norms = W_dec.norm(dim=-1)
     else:
-        do_normalize = normalize_by_decoder_norm
-
-    dec_norms = W_dec.norm(dim=-1) if do_normalize else None
-    if do_normalize and verbose:
+        dec_norms = None
+    if dec_norms is not None and verbose:
         print("Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
 
     # RMSNorm correction setup
@@ -553,7 +561,7 @@ def _encode_sae(
         "W_dec": W_dec,
         "dec_norms": dec_norms,
         "rms_activations": rms_activations,
-        "normalized": do_normalize,
+        "normalized": dec_norms is not None,
     }
 
 
@@ -576,7 +584,7 @@ def _encode_crosscoder(
     Args:
         base_model: HookedTransformer for model-index 0 (base).
         it_model: HookedTransformer for model-index 1 (instruct).
-        crosscoder: ``GemmaCrosscoderFRA`` instance.
+        crosscoder: ``FRACoder`` instance.
         tokens_tensor: ``[1, seq]`` token tensor (on device).
         crosscoder_layer: Crosscoder residual-stream layer.
         target_activation: Pre-computed ``[seq, d_model]`` from target model.
@@ -756,7 +764,7 @@ def get_sentence_fra_crosscoder(
     Args:
         base_model:  HookedTransformer for model-index 0 (base).
         it_model:    HookedTransformer for model-index 1 (instruct).
-        crosscoder:  ``GemmaCrosscoderFRA`` instance.
+        crosscoder:  ``FRACoder`` instance.
         tokens:      Token IDs to analyse.  Caller is responsible for
                      tokenization (including chat template if needed).
         head:        Attention head index.

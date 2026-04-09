@@ -23,7 +23,7 @@ Make sure you've run `huggingface-cli login` first (Gemma weights are gated).
 
 import torch
 from transformer_lens import HookedTransformer
-from fra.coders.crosscoder import GemmaCrosscoderFRA
+from fra.coder import FRACoder
 
 REPO_ID = "science-of-finetuning/gemma-2-2b-L13-k100-lr1e-04-local-shuffling-CCLoss"
 CROSSCODER_LAYER = 13
@@ -106,11 +106,13 @@ def main():
     )
 
     print("Loading crosscoder...")
-    crosscoder = GemmaCrosscoderFRA.from_pretrained(
+    crosscoder = FRACoder.from_hf_crosscoder(
         REPO_ID, model_idx=1, device=DEVICE, dtype=torch.float16,
     )
-    print(f"  type={type(crosscoder._crosscoder).__name__}, "
-          f"dict_size={crosscoder.d_sae}, k={getattr(crosscoder._crosscoder, 'k', 'N/A')}")
+    # NOTE: _raw_encoder is the underlying encoder callable; for BatchTopKCrossCoder
+    # it carries a .k attribute we log here for diagnostics.
+    print(f"  type={type(crosscoder._raw_encoder).__name__}, "
+          f"dict_size={crosscoder.d_sae}, k={getattr(crosscoder._raw_encoder, 'k', 'N/A')}")
 
     print(f"\nPre-refusal features:  {list(PRE_REFUSAL.keys())}")
     print(f"Post-refusal features: {list(POST_REFUSAL.keys())}")

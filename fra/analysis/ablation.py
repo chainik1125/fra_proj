@@ -33,7 +33,7 @@ from fra.core.helpers import (
     rank_pairs,
 )
 
-from fra.coders import load_sae
+from fra.coder import FRACoder
 
 # ── Texts ─────────────────────────────────────────────────────────────────
 

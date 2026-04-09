@@ -368,3 +368,105 @@ def build_fra_head(encoded, attn_cache, model, layer, head, tokens, device,
         fra_result, attn_pattern_np, attn_scores_np,
         token_strs, tokens, softcap,
     )
+
+
+# ---------------------------------------------------------------------------
+# Multi-layer crosscoder path
+# ---------------------------------------------------------------------------
+
+
+@torch.no_grad()
+def encode_fra_multilayer(
+    tokens: list,
+    attn_layers: list[int],
+    coder,
+    model,
+    device: str,
+):
+    """Head-independent encode for a multi-layer crosscoder.
+
+    Runs a single forward pass caching all hookpoints the coder needs plus
+    attention patterns/scores for every requested attention layer.  Encodes
+    once through the crosscoder to get shared feature activations.
+
+    Returns ``(encoded, attn_caches, model, tokens)`` where *attn_caches*
+    maps each attention layer to its ``{pattern, scores}`` tensors.
+    """
+    tokens = list(tokens[:128])
+    tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    # Hooks: all coder hookpoints + attn pattern/scores per requested layer
+    hooks_to_cache = list(coder.hookpoints)
+    for layer in attn_layers:
+        hooks_to_cache.append(f"blocks.{layer}.attn.hook_pattern")
+        hooks_to_cache.append(f"blocks.{layer}.attn.hook_attn_scores")
+
+    _, cache = model.run_with_cache(tok_tensor, names_filter=hooks_to_cache)
+
+    # Stack hookpoint activations for the crosscoder encoder
+    # Shape: [seq, n_hookpoints, d_model] then add model dim
+    act_list = [cache[hp].squeeze(0) for hp in coder.hookpoints]
+    stacked = torch.stack(act_list, dim=1)            # [seq, n_hookpoints, d_model]
+    stacked = stacked.unsqueeze(1)                     # [seq, 1, n_hookpoints, d_model]
+
+    feature_activations = coder.encode(stacked)        # [seq, d_sae]
+
+    # Per-layer attention caches
+    attn_caches = {}
+    for layer in attn_layers:
+        attn_caches[layer] = {
+            "pattern": cache[f"blocks.{layer}.attn.hook_pattern"],
+            "scores": cache[f"blocks.{layer}.attn.hook_attn_scores"],
+        }
+
+    # Build encoded dict per attention layer (different W_dec slice each)
+    encoded_per_layer = {}
+    for layer in attn_layers:
+        W_dec = coder.decoder_for_attn_layer(layer)
+        b_dec = coder.b_dec.float().to(device)
+        rms_activations = feature_activations.float() @ W_dec.float() + b_dec
+        encoded_per_layer[layer] = {
+            "feature_activations": feature_activations,
+            "W_dec": W_dec,
+            "dec_norms": coder.dec_norms,
+            "rms_activations": rms_activations,
+        }
+
+    return encoded_per_layer, attn_caches, model, tokens
+
+
+@torch.no_grad()
+def build_fra_head_multilayer(
+    encoded, attn_cache, model, layer, head, tokens, device,
+    top_k=None, chunk_size=16, topk_features=None, rms=None,
+    token_strs=None, softcap=None,
+):
+    """Build FRA for one head at one layer from multi-layer encoded data.
+
+    Same return format as :func:`build_fra_head`.
+    """
+    from fra.core.fra import _build_fra_result
+
+    fra_result = _build_fra_result(
+        model, layer, head,
+        encoded["feature_activations"], encoded["W_dec"], device,
+        top_k=top_k,
+        topk_features=topk_features,
+        rms_activations=encoded["rms_activations"],
+        rms=rms,
+        dec_norms=encoded["dec_norms"],
+        chunk_size=chunk_size,
+    )
+
+    attn_pattern_np = attn_cache["pattern"][0, head].cpu().float().numpy()
+    attn_scores_np = attn_cache["scores"][0, head].cpu().float().numpy()
+
+    if token_strs is None:
+        token_strs = [model.tokenizer.decode([t]) for t in tokens[:128]]
+    if softcap is None:
+        softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+    return _pack_fra_from_cache(
+        fra_result, attn_pattern_np, attn_scores_np,
+        token_strs, tokens, softcap,
+    )

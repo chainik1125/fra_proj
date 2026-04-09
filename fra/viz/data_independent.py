@@ -17,14 +17,14 @@ from datetime import datetime
 import json
 import tarfile
 
-from fra.coders.sae_lens import SAELensAttentionSAE
+from fra.coder import FRACoder
 from fra.analysis.di import data_independent_attention
 from fra.viz.neuronpedia import fetch_neuronpedia_explanation, get_neuronpedia_url
 
 
 def create_data_independent_dashboard(
     model: HookedTransformer,
-    sae: SAELensAttentionSAE,
+    sae: FRACoder,
     layer: int = 5,
     head: int = 0,
     top_k_features: int = 50,
@@ -51,7 +51,7 @@ def create_data_independent_dashboard(
     print(f"\nGenerating data-independent FRA dashboard for L{layer}H{head}...")
 
     # Get SAE decoder weights
-    W_dec = sae.sae.W_dec  # Shape: [d_sae, d_model]
+    W_dec = sae.W_dec  # Shape: [d_sae, d_model]
     d_sae = W_dec.shape[0]
 
     # Compute data-independent attention pattern
@@ -434,7 +434,7 @@ def generate_data_independent_html(
 
 def generate_data_independent_dashboard_from_config(
     model: Optional[HookedTransformer] = None,
-    sae: Optional[SAELensAttentionSAE] = None,
+    sae: Optional[FRACoder] = None,
     layer: int = 5,
     head: int = 0,
     top_k_features: int = 50,
@@ -479,7 +479,7 @@ def generate_data_independent_dashboard_from_config(
     # Load SAE if not provided
     if sae is None:
         print(f"Loading SAE for layer {layer}...")
-        sae = SAELensAttentionSAE("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        sae = FRACoder.from_sae_lens("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
 
     # Generate dashboard
     return create_data_independent_dashboard(
