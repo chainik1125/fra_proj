@@ -1,11 +1,200 @@
 from transformer_lens import HookedTransformer
 import torch
 import numpy as np
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 from einops import einsum
 from fra.activation_utils import get_llm_activations
 from tqdm import tqdm
 
+
+def _apply_softcap(scores: np.ndarray, softcap: float) -> np.ndarray:
+    """Apply tanh soft-capping to attention scores (no-op if softcap==0).
+
+    Gemma-2 applies ``softcap * tanh(scores / softcap)`` to attention logits
+    before the causal mask.  TransformerLens fires ``hook_attn_scores`` AFTER
+    this transformation, so FRA heatmaps must apply the same transform to
+    match actual scores.
+    """
+    if softcap > 0:
+        return softcap * np.tanh(scores / softcap)
+    return scores
+
+
+def _apply_softcap_t(scores: torch.Tensor, softcap: float) -> torch.Tensor:
+    """Torch version of softcap for patching hooks."""
+    if softcap > 0:
+        return softcap * torch.tanh(scores / softcap)
+    return scores
+
+
+@torch.no_grad()
+def compute_bias_correction(
+    model,
+    sae,
+    layer: int,
+    head: int,
+    x_hat: torch.Tensor,
+    hook_point: str = "hook_resid_pre",
+) -> np.ndarray:
+    """Compute the [seq, seq] bias correction matrix for FRA score reconstruction.
+
+    The FRA bilinear sum only captures feature×feature interactions (using
+    nobias decoder output).  The decoder bias b_dec contributes additional
+    linear and constant cross-terms.  This function computes those terms as:
+
+        bias_corr = (q_full @ k_full.T - q_nobias @ k_nobias.T) / attn_scale
+
+    where full projections include b_dec and nobias projections exclude it.
+    For RoPE models (Gemma/Llama) this must be a full [seq,seq] matrix
+    because the correction is position-pair-dependent.
+
+    Returns numpy array [seq_len, seq_len].
+    """
+    device = x_hat.device
+    x_hat = x_hat.float()
+
+    # Get b_dec
+    b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float().to(device)
+
+    # RMSNorm handling: models with RMSNorm (Gemma/Llama) need normalization.
+    # When fold_ln=True, W_Q/W_K already have gamma folded in, so we only
+    # need to divide by the RMS scalar.
+    needs_rms = getattr(model.cfg, "normalization_type", None) == "RMS"
+    if needs_rms:
+        eps = model.cfg.eps
+        rms = (x_hat.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
+        x_hat_norm = x_hat / rms
+        x_hat_nobias_norm = (x_hat - b_dec) / rms
+    else:
+        x_hat_norm = x_hat
+        x_hat_nobias_norm = x_hat - b_dec
+
+    # Get QK weights
+    W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
+    W_Q, W_K = W_Q.float(), W_K.float()
+    b_Q, b_K = b_Q.float(), b_K.float()
+    attn_scale = model.blocks[layer].attn.attn_scale
+
+    # Full projections (with b_dec)
+    q_full = x_hat_norm @ W_Q + b_Q
+    k_full = x_hat_norm @ W_K + b_K
+
+    # Nobias projections (without b_dec, no attention biases)
+    q_nobias = x_hat_nobias_norm @ W_Q
+    k_nobias = x_hat_nobias_norm @ W_K
+
+    # Apply RoPE if needed
+    rope = get_rope_params(model, layer)
+    if rope is not None:
+        r_sin, r_cos, r_dim, adj = rope
+        q_full = apply_rope_all_positions(q_full, r_sin, r_cos, r_dim, adj)
+        k_full = apply_rope_all_positions(k_full, r_sin, r_cos, r_dim, adj)
+        q_nobias = apply_rope_all_positions(q_nobias, r_sin, r_cos, r_dim, adj)
+        k_nobias = apply_rope_all_positions(k_nobias, r_sin, r_cos, r_dim, adj)
+
+    bias_corr = ((q_full @ k_full.T) - (q_nobias @ k_nobias.T)) / attn_scale
+    return bias_corr.cpu().numpy()
+
+
+def _apply_rope(
+        v: torch.Tensor,
+        pos: int,
+        rotary_sin: torch.Tensor,
+        rotary_cos: torch.Tensor,
+        rotary_dim: int,
+        adjacent_pairs: bool,
+) -> torch.Tensor:
+    """
+    Apply RoPE rotation to projected vectors at a single position.
+
+    Args:
+        v: [n, d_head] tensor (e.g. feature decoder vecs projected through W_Q/W_K)
+        pos: sequence position index
+        rotary_sin: [n_ctx, rotary_dim] pre-computed sin values
+        rotary_cos: [n_ctx, rotary_dim] pre-computed cos values
+        rotary_dim: number of dimensions to rotate (may be < d_head)
+        adjacent_pairs: True = GPT-J style, False = GPT-NeoX style (Gemma/Llama)
+
+    Returns:
+        Rotated [n, d_head] tensor.
+    """
+    v_rot = v[..., :rotary_dim]
+    v_pass = v[..., rotary_dim:]
+
+    # rotate_every_two: maps [x0, ..., xn-1, xn, ..., x2n-1]
+    #   adjacent_pairs=True  (GPT-J):  [-x1, x0, -x3, x2, ...]
+    #   adjacent_pairs=False (NeoX):   [-xn, ..., -x2n-1, x0, ..., xn-1]
+    rot = torch.empty_like(v_rot)
+    if adjacent_pairs:
+        rot[..., ::2] = -v_rot[..., 1::2]
+        rot[..., 1::2] = v_rot[..., ::2]
+    else:
+        n = v_rot.shape[-1] // 2
+        rot[..., :n] = -v_rot[..., n:]
+        rot[..., n:] = v_rot[..., :n]
+
+    cos = rotary_cos[pos]  # [rotary_dim]
+    sin = rotary_sin[pos]  # [rotary_dim]
+
+    v_rotated = v_rot * cos + rot * sin
+
+    if v_pass.shape[-1] > 0:
+        return torch.cat([v_rotated, v_pass], dim=-1)
+    return v_rotated
+
+
+def apply_rope_all_positions(
+        v: torch.Tensor,
+        rotary_sin: torch.Tensor,
+        rotary_cos: torch.Tensor,
+        rotary_dim: int,
+        adjacent_pairs: bool,
+) -> torch.Tensor:
+    """
+    Apply RoPE to [seq, d_head], rotating each row by its position index.
+
+    This is the batch (all-positions-at-once) counterpart of _apply_rope.
+    Used in validation / ablation where we have full Q/K tensors.
+    """
+    seq = v.shape[0]
+    v_rot = v[:, :rotary_dim]
+    v_pass = v[:, rotary_dim:]
+
+    rot = torch.empty_like(v_rot)
+    if adjacent_pairs:
+        rot[:, ::2] = -v_rot[:, 1::2]
+        rot[:, 1::2] = v_rot[:, ::2]
+    else:
+        n = v_rot.shape[-1] // 2
+        rot[:, :n] = -v_rot[:, n:]
+        rot[:, n:] = v_rot[:, :n]
+
+    cos = rotary_cos[:seq]  # [seq, rotary_dim]
+    sin = rotary_sin[:seq]  # [seq, rotary_dim]
+
+    v_rotated = v_rot * cos + rot * sin
+
+    if v_pass.shape[-1] > 0:
+        return torch.cat([v_rotated, v_pass], dim=-1)
+    return v_rotated
+
+
+def get_rope_params(model, layer):
+    """
+    Extract RoPE parameters from a model if it uses rotary embeddings.
+
+    Returns None if the model doesn't use RoPE (e.g. GPT-2),
+    otherwise returns (rotary_sin, rotary_cos, rotary_dim, adjacent_pairs).
+    """
+    if getattr(model.cfg, 'positional_embedding_type', 'standard') != 'rotary':
+        return None
+    attn = model.blocks[layer].attn
+    return (
+        attn.rotary_sin,
+        attn.rotary_cos,
+        model.cfg.rotary_dim or model.cfg.d_head,
+        getattr(model.cfg, 'rotary_adjacent_pairs', False),
+    )
 
 
 def lower_triangular_mask(pattern: np.ndarray) -> np.ma.MaskedArray:
@@ -14,11 +203,11 @@ def lower_triangular_mask(pattern: np.ndarray) -> np.ma.MaskedArray:
     return np.ma.array(np.tril(pattern, k=0), mask=mask)
 
 
-def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor, 
-                        q_do_bias: bool, k_input: torch.Tensor, k_do_bias: bool) -> np.ndarray:
+def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
+                         q_do_bias: bool, k_input: torch.Tensor, k_do_bias: bool) -> np.ndarray:
     """
     Compute attention pattern from query and key inputs.
-    
+
     Args:
         layer: Layer index
         head: Head index
@@ -26,7 +215,7 @@ def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
         q_do_bias: Whether to add query bias
         k_input: Key input tensor
         k_do_bias: Whether to add key bias
-        
+
     Returns:
         Attention scores as numpy array
     """
@@ -34,26 +223,26 @@ def attention_pattern_QK(llm: Any, layer: int, head: int, q_input: torch.Tensor,
     b_Q = llm.blocks[layer].attn.b_Q[head]
     W_K = llm.blocks[layer].attn.W_K[head]
     b_K = llm.blocks[layer].attn.b_K[head]
-    
+
     q = einsum(W_Q, q_input, "d a, s d -> s a")
     if q_do_bias:
         q += b_Q
-        
+
     k = einsum(W_K, k_input, "d a, s d -> s a")
     if k_do_bias:
         k += b_K
-        
+
     attention_scores = einsum(q, k, "q a, k a -> q k")
 
     return attention_scores.detach().cpu().numpy()
 
 
-def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, head: int, 
+def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, head: int,
                                            input_text: str, query_position: int, key_position: int,
                                            hook_point: str = "hook_attn_out") -> Dict:
     """
     Analyze interactions between features in attention.
-    
+
     Args:
         layer: Layer index
         head: Head index
@@ -61,41 +250,39 @@ def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, hea
         query_position: Query position
         key_position: Key position
     """
-    activations_SD = get_llm_activations(model,input_text,hook_point=hook_point,layers=layer)
+    activations_SD = get_llm_activations(model, input_text, hook_point=hook_point, layers=layer)
     feature_activations_SH = sae.encode(activations_SD)
-    
+
     feature_activations_query = feature_activations_SH[query_position]
     query_active_features = torch.where(feature_activations_query != 0)[0]
-    
+
     feature_activations_key = feature_activations_SH[key_position]
     key_active_features = torch.where(feature_activations_key != 0)[0]
-    
+
     query_activations_for_features = sae.W_dec[query_active_features]
     key_activations_for_features = sae.W_dec[key_active_features]
-    
-    interaction_matrix_unscaled = attention_pattern_QK(model, layer, head, 
-                                                        query_activations_for_features, False, 
-                                                        key_activations_for_features, False)
 
+    interaction_matrix_unscaled = attention_pattern_QK(model, layer, head,
+                                                       query_activations_for_features, False,
+                                                       key_activations_for_features, False)
 
-    
     # Convert to numpy after using for indexing
     query_features_tensor = query_active_features
     key_features_tensor = key_active_features
-    
+
     matrix_scaling = feature_activations_query[query_features_tensor].unsqueeze(1) * \
-                    feature_activations_key[key_features_tensor].unsqueeze(0)
+                     feature_activations_key[key_features_tensor].unsqueeze(0)
     matrix_scaling = matrix_scaling.detach().cpu().numpy()
-    
+
     query_active_features = query_features_tensor.cpu().numpy()
     key_active_features = key_features_tensor.cpu().numpy()
-    
+
     # if self.feature_activations_active_mean is not None:
     #     interaction_matrix_unscaled *= self.feature_activations_active_mean[query_active_features][:, np.newaxis]
     #     interaction_matrix_unscaled *= self.feature_activations_active_mean[key_active_features][np.newaxis, :]
     #     matrix_scaling /= self.feature_activations_active_mean[query_active_features][:, np.newaxis]
     #     matrix_scaling /= self.feature_activations_active_mean[key_active_features][np.newaxis, :]
-    
+
     return {
         'query_active_features': query_active_features,
         'key_active_features': key_active_features,
@@ -105,59 +292,56 @@ def analyze_feature_attention_interactions(model: Any, sae: Any, layer: int, hea
     }
 
 
-def get_sentence_averages(llm:Any,sae:Any,layer:int,head:int,input_text:str,hook_point:str="attn.hook_z"):
-	text_length=128
-	hidden_dim=sae.d_sae
-	data_dep_int_matrix=np.zeros((hidden_dim,hidden_dim))
-	data_dep_int_matrix_abs=np.zeros((hidden_dim,hidden_dim))
-	data_dep_localization_matrix=np.zeros((hidden_dim,hidden_dim))
-	count=0
-	for key_index in tqdm(range(text_length), disable=True):
-		for query_index in range(key_index,text_length):
-				feature_analysis=analyze_feature_attention_interactions(llm,sae,layer,head,input_text,query_index,key_index,hook_point)
-				int_matrix=feature_analysis["interaction_matrix"]
-				query_active_features=feature_analysis["query_active_features"]
-				key_active_features=feature_analysis["key_active_features"]
-				data_independent=feature_analysis["interaction_matrix_unscaled"]
-				
-				resized_data_dependent_int=np.zeros((hidden_dim,hidden_dim))
-				resized_data_dependent_int[query_active_features[:,None],key_active_features[None,:]]=int_matrix
+def get_sentence_averages(llm: Any, sae: Any, layer: int, head: int, input_text: str, hook_point: str = "attn.hook_z"):
+    text_length = 128
+    hidden_dim = sae.d_sae
+    data_dep_int_matrix = np.zeros((hidden_dim, hidden_dim))
+    data_dep_int_matrix_abs = np.zeros((hidden_dim, hidden_dim))
+    data_dep_localization_matrix = np.zeros((hidden_dim, hidden_dim))
+    count = 0
+    for key_index in tqdm(range(text_length), disable=True):
+        for query_index in range(key_index, text_length):
+            feature_analysis = analyze_feature_attention_interactions(llm, sae, layer, head, input_text, query_index,
+                                                                      key_index, hook_point)
+            int_matrix = feature_analysis["interaction_matrix"]
+            query_active_features = feature_analysis["query_active_features"]
+            key_active_features = feature_analysis["key_active_features"]
+            data_independent = feature_analysis["interaction_matrix_unscaled"]
 
-				resized_data_dependent_localization=np.zeros((hidden_dim,hidden_dim))
-				resized_data_dependent_localization[query_active_features[:,None],key_active_features[None,:]]=np.abs(int_matrix)*(query_index-key_index)
+            resized_data_dependent_int = np.zeros((hidden_dim, hidden_dim))
+            resized_data_dependent_int[query_active_features[:, None], key_active_features[None, :]] = int_matrix
 
-				
-				
-				
-				data_dep_int_matrix=data_dep_int_matrix+resized_data_dependent_int
-				data_dep_int_matrix_abs=data_dep_int_matrix_abs+np.abs(resized_data_dependent_int)
-				data_dep_localization_matrix=data_dep_localization_matrix+resized_data_dependent_localization
+            resized_data_dependent_localization = np.zeros((hidden_dim, hidden_dim))
+            resized_data_dependent_localization[query_active_features[:, None], key_active_features[None, :]] = np.abs(
+                int_matrix) * (query_index - key_index)
 
-				count+=1
-	
-	data_dep_int_matrix/=count
-	data_dep_localization_matrix=data_dep_localization_matrix/np.clip(data_dep_int_matrix_abs,a_min=1,a_max=None)
-	data_dep_int_matrix_abs/=count
+            data_dep_int_matrix = data_dep_int_matrix + resized_data_dependent_int
+            data_dep_int_matrix_abs = data_dep_int_matrix_abs + np.abs(resized_data_dependent_int)
+            data_dep_localization_matrix = data_dep_localization_matrix + resized_data_dependent_localization
 
-	return data_dep_int_matrix,data_dep_int_matrix_abs,data_dep_localization_matrix
+            count += 1
 
-    
+    data_dep_int_matrix /= count
+    data_dep_localization_matrix = data_dep_localization_matrix / np.clip(data_dep_int_matrix_abs, a_min=1, a_max=None)
+    data_dep_int_matrix_abs /= count
+
+    return data_dep_int_matrix, data_dep_int_matrix_abs, data_dep_localization_matrix
 
 
 @torch.no_grad()
 def get_sentence_fra_batch(
-    model: HookedTransformer,
-    sae: Any,
-    text: str,
-    layer: int,
-    head: int,
-    max_length: int = 128,
-    top_k: int = 20,
-    verbose: bool = False,
-    hook_point: str = "ln1.hook_normalized",
-    chunk_size: int = 16,
-    normalize_by_decoder_norm: bool | None = None,
-    prepend_bos: bool | None = None,
+        model: HookedTransformer,
+        sae: Any,
+        text: str,
+        layer: int,
+        head: int,
+        max_length: int = 128,
+        top_k: int = 20,
+        verbose: bool = False,
+        hook_point: str = "ln1.hook_normalized",
+        chunk_size: int = 16,
+        normalize_by_decoder_norm: bool | None = None,
+        prepend_bos: bool | None = None,
 ) -> Dict[str, Any]:
     """
     Compute full 4D Feature-Resolved Attention tensor for a sentence.
@@ -227,7 +411,7 @@ def get_sentence_fra_batch(
         print(f"Encoding {seq_len} positions to SAE features...")
 
     if hasattr(sae, 'encode'):
-        feature_activations = sae.encode(act)   # [seq_len, d_sae]
+        feature_activations = sae.encode(act)  # [seq_len, d_sae]
     else:
         feature_activations = sae.sae.encode(act)
 
@@ -260,15 +444,26 @@ def get_sentence_fra_batch(
     topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
 
     # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
-    W_Q = model.blocks[layer].attn.W_Q[head]       # [d_model, d_head]
+    W_Q = model.blocks[layer].attn.W_Q[head]  # [d_model, d_head]
     n_kv = model.blocks[layer].attn.W_K.shape[0]
-    n_q  = model.blocks[layer].attn.W_Q.shape[0]
-    kv_head = head * n_kv // n_q                   # for GPT-2: kv_head == head
-    W_K = model.blocks[layer].attn.W_K[kv_head]   # [d_model, d_head]
+    n_q = model.blocks[layer].attn.W_Q.shape[0]
+    kv_head = head * n_kv // n_q  # for GPT-2: kv_head == head
+    W_K = model.blocks[layer].attn.W_K[kv_head]  # [d_model, d_head]
+
+    # Detect RoPE — needed for Gemma, Llama, etc. (not GPT-2)
+    use_rope = getattr(model.cfg, 'positional_embedding_type', 'standard') == 'rotary'
+    if use_rope:
+        attn_module = model.blocks[layer].attn
+        rotary_sin = attn_module.rotary_sin  # [n_ctx, rotary_dim]
+        rotary_cos = attn_module.rotary_cos  # [n_ctx, rotary_dim]
+        rotary_dim = model.cfg.rotary_dim or model.cfg.d_head
+        adjacent_pairs = getattr(model.cfg, 'rotary_adjacent_pairs', False)
+        if verbose:
+            print(f"RoPE enabled: rotary_dim={rotary_dim}, adjacent_pairs={adjacent_pairs}")
 
     # Get decoder weights
     if hasattr(sae, 'W_dec'):
-        W_dec = sae.W_dec   # [d_sae, d_model]
+        W_dec = sae.W_dec  # [d_sae, d_model]
     else:
         W_dec = sae.sae.W_dec
 
@@ -297,8 +492,8 @@ def get_sentence_fra_batch(
     # q_proj = W_dec[q_active] @ W_Q  once, then reuse across all key positions.
     # chunk_size controls how many query positions are batched before we flush to CPU,
     # bounding GPU memory to O(chunk_size × top_k² × d_head) at any time.
-    all_indices_cpu: list[torch.Tensor] = []   # each: [4, n_int], CPU, long
-    all_values_cpu:  list[torch.Tensor] = []   # each: [n_int],    CPU, float32
+    all_indices_cpu: list[torch.Tensor] = []  # each: [4, n_int], CPU, long
+    all_values_cpu: list[torch.Tensor] = []  # each: [n_int],    CPU, float32
 
     total_pairs = seq_len * (seq_len + 1) // 2
     if verbose:
@@ -307,11 +502,11 @@ def get_sentence_fra_batch(
     for q_start in range(0, seq_len, chunk_size):
         q_end = min(q_start + chunk_size, seq_len)
         chunk_indices: list[torch.Tensor] = []
-        chunk_values:  list[torch.Tensor] = []
+        chunk_values: list[torch.Tensor] = []
 
         for query_idx in range(q_start, q_end):
-            q_feat   = topk_features[query_idx]           # [d_sae]
-            q_active = torch.where(q_feat != 0)[0]        # [n_q]
+            q_feat = topk_features[query_idx]  # [d_sae]
+            q_active = torch.where(q_feat != 0)[0]  # [n_q]
 
             if len(q_active) == 0:
                 if verbose:
@@ -319,14 +514,19 @@ def get_sentence_fra_batch(
                 continue
 
             # Pre-compute query projection once for all key positions in this row
-            q_vecs  = W_dec[q_active]          # [n_q, d_model]
-            q_proj  = q_vecs @ W_Q             # [n_q, d_head]
-            q_scales = q_feat[q_active]        # [n_q]
+            q_vecs = W_dec[q_active]  # [n_q, d_model]
+            q_proj = q_vecs @ W_Q  # [n_q, d_head]
+            q_scales = q_feat[q_active]  # [n_q]
             if dec_norms is not None:
                 q_scales = q_scales / dec_norms[q_active]
 
-            for key_idx in range(query_idx + 1):   # causal: key ≤ query
-                k_feat   = topk_features[key_idx]
+            # Apply RoPE to query projection (position-dependent, computed once per query)
+            if use_rope:
+                q_proj = _apply_rope(q_proj, query_idx, rotary_sin, rotary_cos,
+                                     rotary_dim, adjacent_pairs)
+
+            for key_idx in range(query_idx + 1):  # causal: key ≤ query
+                k_feat = topk_features[key_idx]
                 k_active = torch.where(k_feat != 0)[0]
 
                 if len(k_active) == 0:
@@ -334,14 +534,19 @@ def get_sentence_fra_batch(
                         pbar.update(1)
                     continue
 
-                k_vecs = W_dec[k_active]       # [n_k, d_model]
-                k_proj = k_vecs @ W_K          # [n_k, d_head]
+                k_vecs = W_dec[k_active]  # [n_k, d_model]
+                k_proj = k_vecs @ W_K  # [n_k, d_head]
 
-                k_scales = k_feat[k_active]    # [n_k]
+                # Apply RoPE to key projection (position-dependent, per key position)
+                if use_rope:
+                    k_proj = _apply_rope(k_proj, key_idx, rotary_sin, rotary_cos,
+                                         rotary_dim, adjacent_pairs)
+
+                k_scales = k_feat[k_active]  # [n_k]
                 if dec_norms is not None:
                     k_scales = k_scales / dec_norms[k_active]
 
-                int_matrix = q_proj @ k_proj.T                              # [n_q, n_k]
+                int_matrix = q_proj @ k_proj.T  # [n_q, n_k]
                 int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
 
                 mask = int_matrix.abs() > 1e-10
@@ -376,7 +581,7 @@ def get_sentence_fra_batch(
     shape = (seq_len, seq_len, d_sae, d_sae)
     if len(all_indices_cpu) > 0:
         indices_cpu = torch.cat(all_indices_cpu, dim=1)  # [4, total_nnz]
-        values_cpu  = torch.cat(all_values_cpu)          # [total_nnz]
+        values_cpu = torch.cat(all_values_cpu)  # [total_nnz]
 
         fra_tensor_sparse = torch.sparse_coo_tensor(
             indices_cpu, values_cpu,
@@ -396,7 +601,7 @@ def get_sentence_fra_batch(
         total_interactions = fra_tensor_sparse._nnz()
     else:
         empty_indices = torch.zeros((4, 0), dtype=torch.long)
-        empty_values  = torch.zeros(0, dtype=torch.float32)
+        empty_values = torch.zeros(0, dtype=torch.float32)
         fra_tensor_sparse = torch.sparse_coo_tensor(
             empty_indices, empty_values, size=shape, device="cpu"
         )
@@ -405,8 +610,8 @@ def get_sentence_fra_batch(
     if verbose:
         density = total_interactions / (seq_len * seq_len * top_k * top_k)
         print(f"4D FRA tensor: shape={shape}, nnz={total_interactions:,}, density={density:.2%}")
-        sparse_mem = (total_interactions * 5 * 4) / (1024**2)   # 4 indices + 1 value
-        dense_mem  = (seq_len * seq_len * d_sae * d_sae * 4) / (1024**3)
+        sparse_mem = (total_interactions * 5 * 4) / (1024 ** 2)  # 4 indices + 1 value
+        dense_mem = (seq_len * seq_len * d_sae * d_sae * 4) / (1024 ** 3)
         print(f"Memory: sparse={sparse_mem:.2f}MB vs dense={dense_mem:.2f}GB")
 
     return {

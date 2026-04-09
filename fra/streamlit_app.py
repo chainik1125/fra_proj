@@ -251,6 +251,23 @@ def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):
     return mat
 
 
+def get_fra_reconstructed_scores(indices_np, values_np, seq_len,
+                                  bias_corr_np, attn_scale, softcap):
+    """Reconstruct full attention scores from FRA + bias correction + softcap.
+
+    This gives the FRA-approximated pre-softmax attention score matrix,
+    comparable to hook_attn_scores.
+    """
+    from fra.fra_func import _apply_softcap
+    # Sum FRA over feature dims
+    fra_logits = np.zeros((seq_len, seq_len))
+    np.add.at(fra_logits, (indices_np[0], indices_np[1]), values_np)
+    # Scale, add bias correction, and apply softcap
+    fra_logits = fra_logits / attn_scale + bias_corr_np[:seq_len, :seq_len]
+    fra_logits = _apply_softcap(fra_logits, softcap)
+    return fra_logits
+
+
 def token_activation_bar(token_strs, activations, color, height=220):
     """Return a Plotly bar chart of per-token activations."""
     fig = go.Figure(go.Bar(
@@ -299,8 +316,9 @@ with st.sidebar:
     max_head  = 7  if is_gemma else 11
 
     col_l, col_h = st.columns(2)
+    min_layer = 1 if is_gemma else 0  # Gemma: no SAE for layer 0 (would need layer -1)
     with col_l:
-        layer = st.number_input("Layer", 0, max_layer, value=12 if is_gemma else 5)
+        layer = st.number_input("Layer", min_layer, max_layer, value=12 if is_gemma else 5)
     with col_h:
         head = st.number_input("Head",  0, max_head,  value=0)
 
@@ -314,11 +332,22 @@ with st.sidebar:
         hook_point = "hook_resid_pre"
         supports_neuronpedia = False
         sae_local_path = ""
+        # Off-by-one fix: Gemma-Scope SAEs are trained on resid_post[N],
+        # which equals resid_pre[N+1].  For FRA on layer N we need SAE
+        # from layer N-1.
+        sae_layer = int(layer) - 1
+        if sae_layer < 0:
+            st.warning("Layer 0 has no matching Gemma-Scope SAE (would need layer -1).")
+            sae_layer = 0
         sae_hub_release = st.text_input(
             "Release", value="gemma-scope-2b-pt-res"
         )
         sae_hub_id = st.text_input(
-            "SAE ID", value=f"layer_{int(layer)}/width_16k/average_l0_82"
+            "SAE ID", value=f"layer_{sae_layer}/width_16k/average_l0_82"
+        )
+        st.caption(
+            f"SAE trained on `resid_post[{sae_layer}]` "
+            f"→ activations from `resid_pre[{int(layer)}]`"
         )
     else:
         sae_option = st.radio(
@@ -645,10 +674,12 @@ with tab1:
                 display_values,
                 q_sel, k_sel, seq_len,
             )
+            _tick_vals = list(range(len(token_strs)))
+            _tick_text = [html_lib.escape(t) for t in token_strs]
             fig_pos = go.Figure(go.Heatmap(
                 z=pos_mat,
-                x=[html_lib.escape(t) for t in token_strs],
-                y=[html_lib.escape(t) for t in token_strs],
+                x=_tick_vals,
+                y=_tick_vals,
                 colorscale="Blues",
                 hovertemplate=(
                     "Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}"
@@ -661,6 +692,8 @@ with tab1:
                 xaxis_title="Key token",
                 yaxis_title="Query token",
                 yaxis_autorange="reversed",
+                xaxis=dict(tickvals=_tick_vals, ticktext=_tick_text),
+                yaxis=dict(tickvals=_tick_vals, ticktext=_tick_text),
             )
             st.plotly_chart(fig_pos, use_container_width=True)
 
@@ -758,10 +791,12 @@ with tab3:
     with col_std:
         st.markdown("**Standard token-level attention** (post-softmax)")
         attn = attn_pattern_display
+        _attn_tvals = list(range(len(token_strs)))
+        _attn_ttext = [html_lib.escape(t) for t in token_strs]
         fig_attn = go.Figure(go.Heatmap(
             z=attn,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=_attn_tvals,
+            y=_attn_tvals,
             colorscale="RdBu",
             hovertemplate=(
                 "Q: %{y}<br>K: %{x}<br>Weight: %{z:.4f}<extra></extra>"
@@ -773,6 +808,8 @@ with tab3:
             xaxis_title="Key",
             yaxis_title="Query",
             yaxis_autorange="reversed",
+            xaxis=dict(tickvals=_attn_tvals, ticktext=_attn_ttext),
+            yaxis=dict(tickvals=_attn_tvals, ticktext=_attn_ttext),
         )
         st.plotly_chart(fig_attn, use_container_width=True)
 
@@ -790,10 +827,12 @@ with tab3:
             if qp < seq_len and kp < seq_len:
                 fra_pos_mat[qp, kp] += v
 
+        _fra_tvals = list(range(len(token_strs)))
+        _fra_ttext = [html_lib.escape(t) for t in token_strs]
         fig_fra_attn = go.Figure(go.Heatmap(
             z=fra_pos_mat,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=_fra_tvals,
+            y=_fra_tvals,
             colorscale="RdBu",
             hovertemplate=(
                 "Q: %{y}<br>K: %{x}<br>FRA strength: %{z:.4f}<extra></extra>"
@@ -805,6 +844,8 @@ with tab3:
             xaxis_title="Key",
             yaxis_title="Query",
             yaxis_autorange="reversed",
+            xaxis=dict(tickvals=_fra_tvals, ticktext=_fra_ttext),
+            yaxis=dict(tickvals=_fra_tvals, ticktext=_fra_ttext),
         )
         st.plotly_chart(fig_fra_attn, use_container_width=True)
 
@@ -940,16 +981,44 @@ with tab4:
                     sp_size = torch.Size([abl_seq, abl_seq, d_sae_val, d_sae_val])
                     fra_sparse = torch.sparse_coo_tensor(sp_indices, sp_values, size=sp_size).coalesce()
 
-                    # Full FRA scores (baseline)
+                    # ── Correct ablation approach ──
+                    # Use accurate SAE-based scores as baseline (correct scale),
+                    # then subtract only the ablated pairs' contribution.
+                    # This avoids the top-k inflation problem where FRA sum >> actual scores.
                     from fra.validation import fra_sum_to_attn
-                    fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
-                    scores_full = reconstruct_scores(fra_sum_full, bias, device)
 
-                    # Ablated scores
+                    # SAE scores: accurate, same scale as model (~[-1, 6])
+                    sae_scores_np = bias["sae_scores"]  # [seq, seq] with causal mask
+                    scores_full = torch.tensor(sae_scores_np, dtype=torch.float32, device=device)
+
+                    # Compute ablation delta from FRA sparse tensor
                     pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
+                    nnz_before = fra_sparse._nnz()
                     fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
+                    n_removed = nnz_before - fra_ablated._nnz()
+
+                    # Delta = contribution of ablated pairs to QK scores
+                    fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
                     fra_sum_abl = fra_sum_to_attn(fra_ablated, abl_seq)
-                    scores_abl = reconstruct_scores(fra_sum_abl, bias, device)
+                    delta = (fra_sum_full - fra_sum_abl) / bias["attn_scale"]
+
+                    # Ablated scores = SAE baseline minus the ablated pairs' contribution
+                    scores_abl_np = sae_scores_np.copy()
+                    scores_abl_np -= delta  # only modify the lower triangle (upper is -inf)
+                    scores_abl = torch.tensor(scores_abl_np, dtype=torch.float32, device=device)
+
+                    # Debug info
+                    _lo_mask = np.tril(np.ones((abl_seq, abl_seq), dtype=bool))
+                    delta_abs = np.abs(delta[_lo_mask])
+                    sae_abs = np.abs(sae_scores_np[_lo_mask])
+                    st.info(
+                        f"**Ablation debug**: pairs={len(pairs_to_abl)}, "
+                        f"nnz removed={n_removed:,}/{nnz_before:,} ({100*n_removed/max(nnz_before,1):.1f}%)  \n"
+                        f"SAE scores range: [{sae_scores_np[_lo_mask].min():.2f}, {sae_scores_np[_lo_mask].max():.2f}]  \n"
+                        f"Ablation delta: mean={delta_abs.mean():.4f}, max={delta_abs.max():.4f}, "
+                        f"**relative to SAE={100*delta_abs.sum()/max(sae_abs.sum(),1):.2f}%**",
+                        icon="🔍",
+                    )
 
                     # Zero scores
                     mask_t = torch.triu(
@@ -971,6 +1040,13 @@ with tab4:
                     st.subheader("Ablation Results")
 
                     hc = r_zero["loss"] - bias["unpatched_loss"]
+                    abl_vs_full = r_abl["loss"] - r_full["loss"]
+                    st.caption(
+                        f"High-precision losses — unpatched: {bias['unpatched_loss']:.6f}, "
+                        f"FRA full: {r_full['loss']:.6f}, ablated: {r_abl['loss']:.6f}, "
+                        f"zero: {r_zero['loss']:.6f} | "
+                        f"**ablated − full = {abl_vs_full:+.6f}**"
+                    )
                     mc1, mc2, mc3, mc4 = st.columns(4)
                     mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
                     mc2.metric("FRA full loss", f"{r_full['loss']:.4f}",
@@ -1003,10 +1079,12 @@ with tab4:
                         # Mask upper triangle for display
                         disp = scores_np.copy()
                         disp[np.triu_indices_from(disp, k=1)] = np.nan
+                        _abl_tvals = list(range(len(abl_token_strs)))
+                        _abl_ttext = [html_lib.escape(t) for t in abl_token_strs]
                         fig = go.Figure(go.Heatmap(
                             z=disp,
-                            x=[html_lib.escape(t) for t in abl_token_strs],
-                            y=[html_lib.escape(t) for t in abl_token_strs],
+                            x=_abl_tvals,
+                            y=_abl_tvals,
                             colorscale="RdBu",
                             zmid=0,
                             hovertemplate="Q: %{y}<br>K: %{x}<br>Score: %{z:.2f}<extra></extra>",
@@ -1015,6 +1093,8 @@ with tab4:
                             title=title, height=350,
                             margin=dict(l=0, r=0, t=30, b=0),
                             yaxis_autorange="reversed",
+                            xaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
+                            yaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
                         )
                         return fig
 

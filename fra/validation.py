@@ -35,7 +35,10 @@ import torch.nn.functional as F
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from transformer_lens import HookedTransformer
-from fra.fra_func import get_sentence_fra_batch
+from fra.fra_func import (
+    get_sentence_fra_batch, get_rope_params, apply_rope_all_positions,
+    _apply_softcap, _apply_softcap_t,
+)
 
 # ── Default test texts ────────────────────────────────────────────────────
 
@@ -224,19 +227,35 @@ def test_attention_reconstruction(model, sae, text, layer, head,
         x = x.flatten(-2, -1)
 
     W_Q, W_K, _, _ = get_qk_weights(model, layer, head)
+    attn_scale = model.blocks[layer].attn.attn_scale
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
 
-    # ── 1. Actual raw QK (ground truth, no attn biases, no scaling) ──
-    actual_qk = ((x @ W_Q) @ (x @ W_K).T).cpu().numpy()
+    # ── RoPE support ──
+    rope = get_rope_params(model, layer)
+
+    def _qk(q_input, k_input):
+        """Compute scaled QK scores, applying RoPE and softcap if needed."""
+        q = q_input @ W_Q  # [seq, d_head]
+        k = k_input @ W_K
+        if rope is not None:
+            r_sin, r_cos, r_dim, adj = rope
+            q = apply_rope_all_positions(q, r_sin, r_cos, r_dim, adj)
+            k = apply_rope_all_positions(k, r_sin, r_cos, r_dim, adj)
+        scores = (q @ k.T / attn_scale).cpu().numpy()
+        return _apply_softcap(scores, softcap)
+
+    # ── 1. Actual QK scores (ground truth, scaled + softcapped) ──
+    actual_qk = _qk(x, x)
 
     # ── 2. SAE full-reconstruction QK (includes b_dec) ──
     features = sae.encode(x)
     x_hat = sae.decode(features)               # includes b_dec
-    sae_qk = ((x_hat @ W_Q) @ (x_hat @ W_K).T).cpu().numpy()
+    sae_qk = _qk(x_hat, x_hat)
 
     # ── 3. SAE QK without b_dec (what FRA decomposes into) ──
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
     x_hat_nobias = x_hat - b_dec
-    sae_qk_nobias = ((x_hat_nobias @ W_Q) @ (x_hat_nobias @ W_K).T).cpu().numpy()
+    sae_qk_nobias = _qk(x_hat_nobias, x_hat_nobias)
 
     # ── 4. FRA computation (normalized = auto-detect) ──
     fra_result = get_sentence_fra_batch(
@@ -246,11 +265,12 @@ def test_attention_reconstruction(model, sae, text, layer, head,
         normalize_by_decoder_norm=None,  # auto-detect
     )
     sparse = fra_result["fra_tensor_sparse"]
-    fra_sum_corr = fra_sum_to_attn(sparse, seq_len)
+    # FRA values are raw dot products — scale and softcap to match _qk()
+    fra_sum_corr = _apply_softcap(fra_sum_to_attn(sparse, seq_len) / attn_scale, softcap)
 
     # Max and mean aggregation modes
-    fra_max = fra_max_to_attn(sparse, seq_len)
-    fra_mean = fra_mean_to_attn(sparse, seq_len)
+    fra_max = _apply_softcap(fra_max_to_attn(sparse, seq_len) / attn_scale, softcap)
+    fra_mean = _apply_softcap(fra_mean_to_attn(sparse, seq_len) / attn_scale, softcap)
 
     # ── Compare only lower triangle (causal region) ──
     causal = np.tril(np.ones((seq_len, seq_len)))
@@ -366,6 +386,7 @@ def test_loss_recovery(model, sae, text, layer, head,
 
     W_Q, W_K, b_Q, b_K = get_qk_weights(model, layer, head)
     attn_scale = model.blocks[layer].attn.attn_scale
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
 
     # SAE reconstruction
     features = sae.encode(x)
@@ -405,6 +426,7 @@ def test_loss_recovery(model, sae, text, layer, head,
     fra_full = (
         fra_sum + term_q[:, None] + term_k[None, :] + term_const
     ) / attn_scale
+    fra_full = _apply_softcap(fra_full, softcap)
 
     # Apply causal mask (upper triangle -> -inf)
     causal_mask = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
@@ -415,9 +437,14 @@ def test_loss_recovery(model, sae, text, layer, head,
     )
 
     # ── SAE full scores (direct recomputation, no top-k) ──
+    rope = get_rope_params(model, layer)
     q_full = x_hat @ W_Q + b_Q   # [seq, d_head]
     k_full = x_hat @ W_K + b_K
-    sae_full = (q_full @ k_full.T) / attn_scale
+    if rope is not None:
+        r_sin, r_cos, r_dim, adj = rope
+        q_full = apply_rope_all_positions(q_full, r_sin, r_cos, r_dim, adj)
+        k_full = apply_rope_all_positions(k_full, r_sin, r_cos, r_dim, adj)
+    sae_full = _apply_softcap_t((q_full @ k_full.T) / attn_scale, softcap)
     # Apply causal mask
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
@@ -560,8 +587,11 @@ def main():
         sae_layer = args.layer if args.layer is not None else 12
         layer = sae_layer + 1  # attention layer = SAE layer + 1
         hook_point = "hook_resid_pre"
-        no_processing = True   # Gemma-Scope SAEs trained on raw activations
-        fold_ln = False
+        # Use from_pretrained (fold_ln=True) so RMSNorm gamma is absorbed
+        # into W_Q/W_K.  This means FRA decoder projections through W_Q/W_K
+        # correctly include the gamma factor.
+        no_processing = False
+        fold_ln = True
         chunk_size = args.chunk_size or 1  # Gemma needs small chunks
     else:
         model_name = "gpt2"
