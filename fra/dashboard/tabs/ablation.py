@@ -581,7 +581,7 @@ def _render_generative_ablation(cfg, fra_data, device):
                     x = torch.stack([t_r, o_r], dim=1)
                 else:
                     x = torch.stack([o_r, t_r], dim=1)
-                cc_dtype = next(_crosscoder._raw_encoder.parameters()).dtype
+                cc_dtype = _crosscoder.W_dec.dtype
                 return _crosscoder.encode(x.to(cc_dtype)).squeeze(0).float()
 
         with st.spinner("Generating with ablation (every step)\u2026"):
