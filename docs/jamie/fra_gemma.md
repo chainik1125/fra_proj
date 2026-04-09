@@ -60,9 +60,11 @@ These depend only on relative position $(i - j)$ and the RMSNorm scalars. They f
 
 Decomposing the SAE latent vector into its sparse components $u^i = \sum_k u^i_k\, e_k$, the bilinear term becomes:
 
-$$\hat{A}_{ij}^{\text{bilinear}} = \frac{1}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}} \sum_{k,\ell}\; u^i_k\; u^j_\ell\; (W_Q\, d_k)^T\; W_R^{(i-j)}\; W_K\, d_\ell$$
+$$\hat{A}_{ij}^{\text{bilinear}} = \frac{1}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}} \sum_{k,\ell}\; u^i_k\; u^j_\ell\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_\ell$$
 
-where $d_k$ denotes the $k$-th column of $W^{dec}$ (the decoder direction for latent $k$). The scalar $(W_Q\, d_k)^T\, W_R^{(i-j)}\, W_K\, d_\ell$ can be precomputed for all feature pairs $(k, \ell)$ at each relative position, giving a fully decomposed per-feature attribution of the attention score.
+where $v_k$ denotes the $k$-th column of $W^{dec}$ (the decoder direction for latent $k$). The scalar $(W_Q\, v_k)^T\, W_R^{(i-j)}\, W_K\, v_\ell$ can be precomputed for all feature pairs $(k, \ell)$ at each relative position, giving a fully decomposed per-feature attribution of the attention score. Writing $\hat{A}_{ij}^{\text{bilinear}} = \sum_{k,\ell} A_{ijk\ell}$, the FRA object is:
+
+$$A_{ijk\ell} = \frac{u^i_k\; u^j_\ell}{\mathrm{rms}(\hat{x}^i)\;\mathrm{rms}(\hat{x}^j)\;\sqrt{d_k}}\; (W_Q\, v_k)^T\; W_R^{(i-j)}\; W_K\, v_\ell$$
 
 ## Simplification for Gemma / Llama ($b_Q = b_K = 0$)
 
@@ -114,5 +116,21 @@ This is useful because both the full attention reconstruction and the FRA attent
 
 $$\hat{A}_{ij}^{\text{FRA}} = \hat{A}_{ij}^{\text{bilinear}, S} + \left(\hat{A}_{ij} - \hat{A}_{ij}^{\text{bilinear}}\right)$$
 
-I think this design choice makes sense because when we come to ablate the FRA, only want to change the feature-feature interactions and keep everything else as unchanged as possible. So we compute both reconstructions from the same shared quantities — the full and nobias projections — without duplicating the underlying coder forward pass or the $W_Q$/$W_K$ matmuls.
+I think this design choice makes sense because when we come to ablate the FRA, we only want to change the feature-feature interactions and keep everything else as unchanged as possible. So we compute both reconstructions from the same shared quantities — the full and nobias projections — without duplicating the underlying coder forward pass or the $W_Q$/$W_K$ matmuls.
+
+## Extension to LayerNorm
+
+The derivation above uses RMSNorm, but models that use full LayerNorm (e.g. GPT-2) fit the same framework. LayerNorm applies:
+
+$$\text{LN}(x) = \gamma \odot \frac{x - \bar{x}}{\sigma(x)} + \beta$$
+
+where $\bar{x} = \frac{1}{d}\sum_n x_n$ and $\sigma(x) = \sqrt{\frac{1}{d}\sum_n (x_n - \bar{x})^2}$. The key observation is that subtracting the mean is a linear operation:
+
+$$x - \bar{x} = \left(I - \tfrac{1}{d}\mathbf{1}\mathbf{1}^T\right) x = Px$$
+
+where $P$ is the centering projection matrix. This means the numerator of LayerNorm is a linear map composed with the input: $\text{diag}(\gamma)\, P\, x$. We can therefore fold it into the projection weights exactly as we folded in the RMSNorm $\gamma$. Defining $\tilde{W}_Q = W_Q\, \text{diag}(\gamma)\, P$ and absorbing the LayerNorm bias into the projection bias as $\tilde{b}_Q = W_Q\, \beta + b_Q$ (and likewise for $K$), the query projection becomes:
+
+$$\frac{\tilde{W}_Q\, \hat{x}^i}{\sigma(\hat{x}^i)} + \tilde{b}_Q$$
+
+This has the same form as the RMSNorm case — a linear map divided by a scalar denominator, plus a bias — so the entire decomposition into bilinear, linear, and bias terms carries through unchanged. Moreover, the denominator is not merely analogous: $\sigma(x) = \mathrm{rms}(Px)$, so once $P$ is folded into the weights the denominator is the same RMS computation applied to the (now centered) input.
 
