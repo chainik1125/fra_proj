@@ -572,7 +572,7 @@ def _render_generative_ablation(cfg, fra_data, device):
                 _other_model.run_with_hooks(
                     cur_tok,
                     fwd_hooks=[(_resid_hook_name,
-                                lambda v, h, b=buf: b.update(r=v.detach()) or v)],
+                                lambda v, hook, b=buf: b.update(r=v.detach()) or v)],
                     past_kv_cache=_other_kv,
                 )
                 o_r = buf["r"][0].float()
