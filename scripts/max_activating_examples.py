@@ -22,7 +22,7 @@ import argparse
 
 import torch
 from transformer_lens import HookedTransformer
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 from fra.analysis.max_act import (
     load_prompts,
     load_generic_dataset,

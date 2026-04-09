@@ -17,7 +17,7 @@ from datetime import datetime
 import json
 import tarfile
 
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 from fra.analysis.di import data_independent_attention
 from fra.viz.neuronpedia import fetch_neuronpedia_explanation, get_neuronpedia_url
 

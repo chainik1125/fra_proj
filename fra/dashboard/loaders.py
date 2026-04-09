@@ -25,19 +25,19 @@ def load_model(model_name: str, device: str, hf_token: str = ""):
 
 @st.cache_resource(show_spinner=False)
 def load_sae_hub(release: str, sae_id: str, device: str):
-    from fra.coder import FRACoder
+    from fra.core.coder import FRACoder
     return FRACoder.from_sae_lens(release, sae_id, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_local(checkpoint_path: str, layer: int, device: str):
-    from fra.coder import FRACoder
+    from fra.core.coder import FRACoder
     return FRACoder.from_local_sae(checkpoint_path, layer=layer, device=device)
 
 
 @st.cache_resource(show_spinner=False)
 def load_sae_gemma(release: str, sae_id: str, device: str):
-    from fra.coder import FRACoder
+    from fra.core.coder import FRACoder
     return FRACoder.from_gemma_scope(release, sae_id, device=device)
 
 
@@ -86,7 +86,7 @@ def load_model_pair(base_name: str, it_name: str, device: str,
 
 @st.cache_resource(show_spinner=False)
 def load_crosscoder(repo_id: str, model_idx: int, device: str, subfolder: str = ""):
-    from fra.coder import FRACoder
+    from fra.core.coder import FRACoder
     return FRACoder.from_hf_crosscoder(
         repo_id, model_idx=model_idx, device=device, subfolder=subfolder,
     )
@@ -115,7 +115,7 @@ def load_lora_model(base_model_repo: str, lora_repo: str, device: str):
 def load_wandb_crosscoder(crosscoder_name: str, download_dir: str,
                           model_idx: int, device: str):
     """Load a multi-layer crosscoder from W&B artifacts."""
-    from fra.coder import FRACoder
+    from fra.core.coder import FRACoder
     return FRACoder.from_wandb_crosscoder(
         crosscoder_name, download_dir, model_idx=model_idx, device=device,
     )

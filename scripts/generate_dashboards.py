@@ -16,7 +16,7 @@ from typing import Optional, List
 from transformer_lens import HookedTransformer
 from datetime import datetime
 
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 from fra.viz.data_independent import create_data_independent_dashboard
 from fra.viz.dataset_search import run_dataset_search
 from fra.viz.dataset_search_viz import create_dashboard_from_search

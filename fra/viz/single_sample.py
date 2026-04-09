@@ -671,7 +671,7 @@ def generate_dashboard_from_config(
 
     # Load SAE if not provided
     if sae is None:
-        from fra.coder import FRACoder
+        from fra.core.coder import FRACoder
         print(f"Loading SAE for layer {layer}...")
         RELEASE = "gpt2-small-hook-z-kk"
         SAE_ID = f"blocks.{layer}.hook_z"

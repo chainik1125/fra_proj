@@ -22,7 +22,7 @@ from fra.analysis.ablation import (
     run_single_sample,
     screen_heads,
 )
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 
 
 def main():

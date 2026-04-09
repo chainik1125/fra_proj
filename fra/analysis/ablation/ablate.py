@@ -1,22 +1,8 @@
-"""
-FRA Off-Diagonal Ablation Study — library functions.
+"""FRA ablation — sparse tensor manipulation and score reconstruction.
 
-Ablate the strongest cross-feature (off-diagonal, i != j) interactions in
-FRA and measure impact on model output.
-
-Conditions:
-  1. unpatched        — normal model forward pass (ground truth)
-  2. fra_full         — patch with full FRA reconstruction (FRA baseline)
-  3. offdiag_top_K    — ablate top-K off-diagonal (i!=j) feature pairs
-  4. random_K         — ablate K random off-diagonal pairs (control)
-  5. ondiag_top_K     — ablate top-K on-diagonal (i==j) pairs (control)
-  6. zero             — uniform attention (worst-case baseline)
-
-Metrics per condition:
-  - Cross-entropy loss
-  - KL divergence from unpatched
-  - Top-1 prediction change fraction
-  - Loss recovery ratio
+Functions for ablating feature pairs from the FRA sparse tensor, reconstructing
+attention scores, computing per-query FRA interactions, and measuring the causal
+impact of ablations on model output.
 """
 
 from collections import defaultdict
@@ -33,8 +19,7 @@ from fra.core.helpers import (
     project_qk,
     rank_pairs,
 )
-
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 
 # ── Texts ─────────────────────────────────────────────────────────────────
 
@@ -73,8 +58,7 @@ ABLATION_TEXTS = [
 
 
 def ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae):
-    """
-    Remove specific (q_feat, k_feat) pairs from the sparse FRA tensor.
+    """Remove specific (q_feat, k_feat) pairs from the sparse FRA tensor.
 
     Args:
         fra_sparse: 4D sparse COO [seq, seq, d_sae, d_sae]
@@ -109,9 +93,8 @@ def ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae):
     ).coalesce()
 
 
-
 @torch.no_grad()
-def compute_fra_single_query_delta(
+def compute_fra_new_query(
     feat_q: torch.Tensor,
     feat_k_all: torch.Tensor,
     pairs: list,
@@ -124,12 +107,12 @@ def compute_fra_single_query_delta(
     rope_params: tuple,
     q_pos: int,
 ) -> torch.Tensor:
-    """Compute the FRA delta for a single new query row attending to T key positions.
+    """Compute FRA interaction scores for a new query attending to T key positions.
 
-    For each (feat_i, feat_j) pair to ablate, computes the contribution of
-    feature i at the new query position interacting with feature j at each of
-    the T key positions. The returned delta should be subtracted from
-    ``hook_attn_scores[0, head, 0, :T]`` during generation.
+    For each (feat_i, feat_j) pair, computes the contribution of feature i at
+    the new query position to the attention score at each of the T key positions.
+    The result can be subtracted from ``hook_attn_scores[0, head, 0, :T]`` to
+    ablate those pair contributions during generation.
 
     All tensors must be on CPU; results are returned on CPU.
 
@@ -148,12 +131,12 @@ def compute_fra_single_query_delta(
         q_pos: Absolute sequence position index of the new query token.
 
     Returns:
-        ``[T]`` float32 CPU tensor.
+        ``[T]`` float32 CPU tensor of FRA interaction scores for the selected pairs.
     """
     T = feat_k_all.shape[0]
-    delta = torch.zeros(T, dtype=torch.float32)
+    scores = torch.zeros(T, dtype=torch.float32)
     if not pairs or T == 0:
-        return delta
+        return scores
 
     rope_sin, rope_cos, rotary_dim, rotary_adj = rope_params
     use_rope = rope_sin is not None
@@ -194,9 +177,9 @@ def compute_fra_single_query_delta(
             dot = (q_vec @ k_vec_base.T).item()
             interactions = torch.full((T,), dot / attn_scale, dtype=torch.float32)
 
-        delta += q_act * k_acts * interactions / (rms_q * rms_k_all)
+        scores += q_act * k_acts * interactions / (rms_q * rms_k_all)
 
-    return delta
+    return scores
 
 
 # ── Bias corrections & score reconstruction ───────────────────────────────
@@ -204,8 +187,7 @@ def compute_fra_single_query_delta(
 
 @torch.no_grad()
 def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_length=128):
-    """
-    Compute the bias correction matrix needed to go from FRA sum to full
+    """Compute the bias correction matrix needed to go from FRA sum to full
     pre-softmax attention scores.
 
     Returns dict with: bias_correction, seq_len, tok_tensor,
@@ -221,18 +203,15 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
 
     shift_labels = tok_tensor[0, 1:]
 
-    # Unpatched forward pass (ground truth)
     logits_clean = model(tok_tensor)
     unpatched_loss = F.cross_entropy(logits_clean[0, :-1], shift_labels).item()
 
-    # Get activations for SAE
     hook_name = f"blocks.{layer}.{hook_point}"
     _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
     x = cache[hook_name].squeeze(0)
     if x.dim() == 3:
         x = x.flatten(-2, -1)
 
-    # SAE reconstruction
     features = sae.encode(x)
     x_hat = sae.decode(features).float()
     b_dec = sae.b_dec
@@ -258,8 +237,7 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
 
 def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
                        softcap: float = 0.0):
-    """
-    Build full pre-softmax attention scores from FRA sum + bias corrections.
+    """Build full pre-softmax attention scores from FRA sum + bias corrections.
 
     Args:
         fra_sum_2d: [seq, seq] numpy array (FRA collapsed over feature dims)
@@ -271,21 +249,17 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
             when the SAE was not trained on BOS activations.
         softcap: Attention logit soft-cap value (e.g. 50.0 for Gemma-2).
             When > 0, applies ``softcap * tanh(scores / softcap)`` before
-            the causal mask, matching the model's own attention implementation.
+            the causal mask.
 
     Returns:
         [seq, seq] torch tensor ready to patch into hook_attn_scores.
     """
     seq_len = bias["seq_len"]
-    # fra_sum_2d already includes 1/sqrt(d_head) scaling from the FRA
-    # computation.  bias_correction is also pre-scaled.
     scores = fra_sum_2d + bias["bias_correction"][:seq_len, :seq_len]
 
-    # Logit soft-capping (Gemma-2): applied before causal mask
     if softcap > 0:
         scores = softcap * np.tanh(scores / softcap)
 
-    # Causal mask
     causal = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)
     scores += causal
 
@@ -308,8 +282,7 @@ def reconstruct_scores(fra_sum_2d, bias, device, actual_bos_scores=None,
 @torch.no_grad()
 def run_condition(model, layer, head, tok_tensor, shift_labels,
                   scores_tensor, unpatched_logits):
-    """
-    Patch attention scores and measure metrics.
+    """Patch attention scores and measure metrics.
 
     When *head* is an int, patches a single head's scores (``scores_tensor``
     is a ``[seq, seq]`` tensor).  When *head* is ``None``, patches multiple
@@ -340,8 +313,6 @@ def run_condition(model, layer, head, tok_tensor, shift_labels,
 
     loss = F.cross_entropy(patched_logits[0, :-1], shift_labels).item()
 
-    # KL divergence (position-averaged)
-    # Use log_softmax + log_target=True to avoid 0 * -inf = NaN from vocabulary underflow
     kl = F.kl_div(
         F.log_softmax(patched_logits[0, :-1].float(), dim=-1),
         F.log_softmax(unpatched_logits[0, :-1].float(), dim=-1),
@@ -349,7 +320,6 @@ def run_condition(model, layer, head, tok_tensor, shift_labels,
         log_target=True,
     ).item()
 
-    # Top-1 prediction change
     pred_clean = unpatched_logits[0, :-1].argmax(dim=-1)
     pred_patched = patched_logits[0, :-1].argmax(dim=-1)
     top1_change = (pred_clean != pred_patched).float().mean().item()
@@ -364,14 +334,12 @@ def run_condition(model, layer, head, tok_tensor, shift_labels,
 def run_single_sample(model, sae, text, layer, head, hook_point,
                       k_values, top_k_features=20, chunk_size=16,
                       rank_mode="sum"):
-    """
-    Run full ablation experiment for one text and one head.
+    """Run full ablation experiment for one text and one head.
 
     Returns dict keyed by condition name -> metrics dict.
     """
     device = next(model.parameters()).device
 
-    # 1. Bias corrections + unpatched baseline
     bias = compute_bias_corrections(model, sae, text, layer, head, hook_point)
     if bias is None:
         return None
@@ -381,7 +349,6 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
     shift_labels = bias["shift_labels"]
     unpatched_logits = bias["unpatched_logits"]
 
-    # 2. Compute FRA
     fra_result = get_sentence_fra_batch(
         model, sae, text, layer, head,
         max_length=128, top_k=top_k_features, hook_point=hook_point,
@@ -391,7 +358,6 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
     fra_sparse = fra_result["fra_tensor_sparse"]
     d_sae = fra_sparse.shape[2]
 
-    # 3. Rank feature pairs (off-diagonal and on-diagonal)
     _indices_np = fra_sparse.indices().cpu().numpy()
     _values_np = fra_sparse.values().cpu().numpy()
     offdiag_pairs = rank_pairs(_indices_np, _values_np, top_k=len(_values_np), diagonal=False, mode=rank_mode)
@@ -400,38 +366,30 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
     n_offdiag = len(offdiag_pairs)
     n_ondiag = len(ondiag_pairs)
 
-    # 4. FRA full reconstruction (baseline)
     fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)
     scores_full = reconstruct_scores(fra_sum_full, bias, device)
 
-    # 5. Zero-ablation scores
     mask_t = torch.triu(
         torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
     )
     scores_zero = torch.zeros((seq_len, seq_len), device=device) + mask_t
 
-    # 6. Run conditions
     results = {}
 
-    # Unpatched
     results["unpatched"] = {
         "loss": bias["unpatched_loss"], "kl_div": 0.0, "top1_change_frac": 0.0,
         "k": 0,
     }
 
-    # FRA full
     r = run_condition(model, layer, head, tok_tensor, shift_labels,
                       scores_full, unpatched_logits)
     results["fra_full"] = {**r, "k": 0}
 
-    # Zero
     r = run_condition(model, layer, head, tok_tensor, shift_labels,
                       scores_zero, unpatched_logits)
     results["zero"] = {**r, "k": 0}
 
-    # For each k value: off-diagonal, random, on-diagonal
     for k in k_values:
-        # Off-diagonal ablation
         k_eff = min(k, n_offdiag)
         pairs_off = [(p[0], p[1]) for p in offdiag_pairs[:k_eff]]
         fra_ablated = ablate_fra_pairs(fra_sparse, pairs_off, d_sae)
@@ -441,7 +399,6 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
                           scores_abl, unpatched_logits)
         results[f"offdiag_{k}"] = {**r, "k": k_eff, "n_available": n_offdiag}
 
-        # Random off-diagonal (same k, random pairs)
         if n_offdiag > 0:
             rng = np.random.RandomState(42 + k)
             rand_idx = rng.choice(n_offdiag, size=min(k, n_offdiag), replace=False)
@@ -455,7 +412,6 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
         else:
             results[f"random_{k}"] = results["fra_full"].copy()
 
-        # On-diagonal ablation
         k_on = min(k, n_ondiag)
         pairs_on = [(p[0], p[1]) for p in ondiag_pairs[:k_on]]
         fra_on = ablate_fra_pairs(fra_sparse, pairs_on, d_sae)
@@ -465,7 +421,6 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
                           scores_on, unpatched_logits)
         results[f"ondiag_{k}"] = {**r, "k": k_on, "n_available": n_ondiag}
 
-    # Add metadata
     results["_meta"] = {
         "seq_len": seq_len,
         "n_offdiag_pairs": n_offdiag,
@@ -538,8 +493,8 @@ def print_results(agg, k_values):
 
 @torch.no_grad()
 def screen_heads(model, texts, layer, hook_point, max_length=128):
-    """
-    Quick zero-ablation sweep to find heads with the largest contribution.
+    """Quick zero-ablation sweep to find heads with the largest contribution.
+
     Returns list of (head_idx, avg_head_contribution) sorted descending.
     """
     device = next(model.parameters()).device

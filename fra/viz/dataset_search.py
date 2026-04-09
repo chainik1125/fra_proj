@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import pickle
 from datetime import datetime
 
-from fra.coder import FRACoder
+from fra.core.coder import FRACoder
 from fra.core.fra import get_sentence_fra_batch
 from fra.utils import load_dataset_hf
 

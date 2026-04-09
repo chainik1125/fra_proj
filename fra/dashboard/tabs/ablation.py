@@ -18,6 +18,13 @@ from fra.core.helpers import (
     get_qk_weights,
     rank_pairs,
 )
+from fra.analysis.ablation import (
+    build_patch_scores,
+    generate_with_ablation,
+    generate_with_prefill_ablation,
+    prefill_no_hooks,
+    prefill_with_patch,
+)
 from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data_all
 from fra.dashboard.widgets import _show_heatmap, make_heatmap
 from fra.dashboard.tabs.reconstruction import (
@@ -25,253 +32,6 @@ from fra.dashboard.tabs.reconstruction import (
     _load_crosscoder_resources,
     _load_model_sae,
 )
-
-
-# ── Generation helpers ────────────────────────────────────────────────────
-
-
-@torch.no_grad()
-def _build_patch_scores(cfg, fra_data, fra_sparse, fra_abl_sparse, proj, ablation_type, device):
-    """Build ``[seq, seq]`` patch scores tensor (with softcap + causal mask applied).
-
-    Args:
-        ablation_type: ``"coder_recon"`` or ``"fra_sum"``.
-    """
-    from fra.analysis.ablation import reconstruct_scores
-
-    seq_len = fra_data["seq_len"]
-    sc = proj.get("softcap", 0.0) or 0.0
-    exclude_bos = not cfg.get("trained_on_bos", True)
-    actual_bos = fra_data["attn_scores_np"] if exclude_bos else None
-    bias = {"bias_correction": proj["bias_corr_np"], "seq_len": seq_len}
-
-    fra_sum_full = fra_sum_to_attn(fra_sparse, seq_len)       # [seq, seq] numpy
-    fra_sum_abl = fra_sum_to_attn(fra_abl_sparse, seq_len)    # [seq, seq] numpy
-
-    if ablation_type == "fra_sum":
-        return reconstruct_scores(
-            fra_sum_abl, bias, device,
-            actual_bos_scores=actual_bos, softcap=sc,
-        )
-
-    # "coder_recon": baseline is (q_full @ k_full.T) / attn_scale
-    q_full = proj["q_full"]   # [seq, d_head] float32 tensor on device
-    k_full = proj["k_full"]   # [seq, d_head] float32 tensor on device
-    attn_scale = proj["attn_scale"]
-
-    coder_recon_pre = (q_full @ k_full.T) / attn_scale  # [seq, seq]
-    pair_delta = torch.tensor(
-        fra_sum_full - fra_sum_abl, dtype=torch.float32, device=device,
-    )
-    patched_pre = coder_recon_pre - pair_delta
-
-    if sc > 0:
-        patched_pre = sc * torch.tanh(patched_pre / sc)
-    mask_t = torch.triu(
-        torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1,
-    )
-    patch_scores = patched_pre + mask_t
-
-    if actual_bos is not None:
-        actual_t = torch.tensor(
-            actual_bos[:seq_len, :seq_len], dtype=torch.float32, device=device,
-        )
-        patch_scores[0, :] = actual_t[0, :]
-        patch_scores[:, 0] = actual_t[:, 0]
-
-    return patch_scores
-
-
-@torch.no_grad()
-def _prefill_with_patch(model, tok_ids, patch_scores, layer, head, device):
-    """Run model on prompt with patched attention scores; return ``(kv, first_new_tok)``."""
-    from transformer_lens.past_key_value_caching import HookedTransformerKeyValueCache
-
-    seq_len = len(tok_ids)
-    tok_t = torch.tensor(tok_ids, dtype=torch.long, device=device).unsqueeze(0)
-    kv = HookedTransformerKeyValueCache.init_cache(model.cfg, device, 1)
-
-    def _hook(attn_scores, hook):
-        attn_scores[0, head, :seq_len, :seq_len] = patch_scores
-        return attn_scores
-
-    logits = model.run_with_hooks(
-        tok_t,
-        fwd_hooks=[(f"blocks.{layer}.attn.hook_attn_scores", _hook)],
-        past_kv_cache=kv,
-    )
-    return kv, int(logits[0, -1].argmax(-1).item())
-
-
-@torch.no_grad()
-def _prefill_no_hooks(model, tok_ids, device):
-    """Run model on prompt with no hooks; return ``(kv, first_new_tok)``."""
-    from transformer_lens.past_key_value_caching import HookedTransformerKeyValueCache
-
-    tok_t = torch.tensor(tok_ids, dtype=torch.long, device=device).unsqueeze(0)
-    kv = HookedTransformerKeyValueCache.init_cache(model.cfg, device, 1)
-    logits = model.run_with_hooks(tok_t, fwd_hooks=[], past_kv_cache=kv)
-    return kv, int(logits[0, -1].argmax(-1).item())
-
-
-@torch.no_grad()
-def _generate_mode_a(model, kv_cache, first_new_tok, max_new_tokens, eos_id, device):
-    """Greedy generation from KV cache with no ablation hooks.
-
-    Returns list of generated token IDs (including *first_new_tok*).
-    """
-    new_ids = []
-    cur_tok_id = first_new_tok
-
-    for _ in range(max_new_tokens):
-        if eos_id is not None and cur_tok_id == eos_id:
-            break
-        new_ids.append(cur_tok_id)
-        if len(new_ids) >= max_new_tokens:
-            break
-        cur_tok = torch.tensor([[cur_tok_id]], dtype=torch.long, device=device)
-        logits = model.run_with_hooks(cur_tok, fwd_hooks=[], past_kv_cache=kv_cache)
-        cur_tok_id = int(logits[0, -1].argmax(-1).item())
-
-    return new_ids
-
-
-@torch.no_grad()
-def _generate_mode_b_crosscoder(
-    target_model,
-    other_model,
-    target_kv,
-    other_kv,
-    first_new_tok,
-    max_new_tokens,
-    eos_id,
-    crosscoder,
-    cc_layer,
-    layer,
-    head,
-    pairs_to_ablate,
-    W_dec,          # [d_sae, d_model] CPU float32
-    W_Q,            # [d_model, d_head] CPU float32
-    W_K,            # [d_model, d_head] CPU float32
-    attn_scale,
-    feat_acts_prompt,   # [seq, d_sae] numpy
-    rms_prompt,         # [seq] CPU float32 tensor
-    rope_params,        # (sin, cos, dim, adj) all CPU / None
-    model_idx,
-    device,
-):
-    """Greedy generation ablating every new query row's FRA interactions.
-
-    At each step, runs the other model to capture its residual at ``cc_layer``,
-    then crosscoder-encodes the new token's residual from both models to get
-    feature activations, computes the FRA delta for the new query row, and
-    subtracts it from ``hook_attn_scores[0, head, 0, :T]``.
-    """
-    from fra.analysis.ablation import compute_fra_single_query_delta
-
-    eps = target_model.cfg.eps
-    b_dec = crosscoder.b_dec.float().to(device)
-    W_dec_dev = W_dec.to(device).float()
-
-    # Accumulate features + rms for all key positions (prompt + generated)
-    feat_acts_all = torch.tensor(feat_acts_prompt, dtype=torch.float32)  # CPU [seq, d_sae]
-    rms_all = rms_prompt.cpu().float()                                    # CPU [seq]
-
-    resid_hook = f"blocks.{cc_layer}.hook_resid_post"
-    attn_hook = f"blocks.{layer}.attn.hook_attn_scores"
-
-    new_ids = []
-    cur_tok_id = first_new_tok
-
-    for _ in range(max_new_tokens):
-        if eos_id is not None and cur_tok_id == eos_id:
-            break
-        new_ids.append(cur_tok_id)
-        if len(new_ids) >= max_new_tokens:
-            break
-
-        cur_tok = torch.tensor([[cur_tok_id]], dtype=torch.long, device=device)
-        T = feat_acts_all.shape[0]
-
-        # Step 1: capture other model's residual at cc_layer
-        _other_buf = {}
-
-        def _cap_other(val, hook, buf=_other_buf):
-            buf["resid"] = val.detach()
-            return val
-
-        other_model.run_with_hooks(
-            cur_tok, fwd_hooks=[(resid_hook, _cap_other)], past_kv_cache=other_kv,
-        )
-        other_resid = _other_buf["resid"]  # [1, 1, d_model]
-
-        # Step 2: run target model with resid + attn hooks
-        _step = {}
-        _T = T
-        _fa_snap = feat_acts_all       # snapshot for this step's closures
-        _rms_snap = rms_all
-
-        def _hook_resid(
-            target_resid, hook,
-            _or=other_resid, _fa=_fa_snap, _rk=_rms_snap, _q_pos=T, _ss=_step,
-        ):
-            t_r = target_resid[0].float()  # [1, d_model]
-            o_r = _or[0].float()           # [1, d_model]
-
-            if model_idx == 0:
-                x_st = torch.stack([t_r, o_r], dim=1)   # [1, 2, d_model]
-            else:
-                x_st = torch.stack([o_r, t_r], dim=1)
-
-            fa_new = crosscoder.encode(x_st).squeeze(0).float()  # [d_sae]
-            x_hat_new = fa_new @ W_dec_dev + b_dec               # [d_model]
-            rms_new = float((x_hat_new.pow(2).mean() + eps).sqrt().item())
-
-            delta = compute_fra_single_query_delta(
-                feat_q=fa_new.cpu(),
-                feat_k_all=_fa,
-                pairs=pairs_to_ablate,
-                W_dec=W_dec,
-                W_Q=W_Q,
-                W_K=W_K,
-                attn_scale=attn_scale,
-                rms_q=rms_new,
-                rms_k_all=_rk,
-                rope_params=rope_params,
-                q_pos=_q_pos,
-            )  # [T] CPU
-            _ss["delta"] = delta.to(device)
-            _ss["fa_new"] = fa_new.cpu()
-            _ss["rms_new"] = rms_new
-            return target_resid
-
-        def _hook_attn(attn_scores, hook, _ss=_step):
-            if "delta" in _ss:
-                d = _ss["delta"]
-                T_cur = min(len(d), attn_scores.shape[-1])
-                attn_scores[0, head, 0, :T_cur] = (
-                    attn_scores[0, head, 0, :T_cur] - d[:T_cur]
-                )
-            return attn_scores
-
-        logits = target_model.run_with_hooks(
-            cur_tok,
-            fwd_hooks=[(resid_hook, _hook_resid), (attn_hook, _hook_attn)],
-            past_kv_cache=target_kv,
-        )
-
-        # Accumulate new token's features and rms
-        if "fa_new" in _step:
-            feat_acts_all = torch.cat(
-                [feat_acts_all, _step["fa_new"].unsqueeze(0)], dim=0,
-            )
-            rms_all = torch.cat(
-                [rms_all, torch.tensor([_step["rms_new"]], dtype=torch.float32)], dim=0,
-            )
-
-        cur_tok_id = int(logits[0, -1].argmax(-1).item())
-
-    return new_ids
 
 
 # ── Score Metrics section ──────────────────────────────────────────────────
@@ -751,25 +511,25 @@ def _render_generative_ablation(cfg, fra_data, device):
         fra_abl_sparse = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae)
 
         abl_type_key = "coder_recon" if ablation_type.startswith("Coder") else "fra_sum"
-        patch_scores = _build_patch_scores(
+        patch_scores = build_patch_scores(
             cfg, fra_data, fra_sparse, fra_abl_sparse, _proj, abl_type_key, device,
         )
 
     # ── Prefill ───────────────────────────────────────────────────────────
     with st.spinner("Prefilling\u2026"):
-        clean_kv, first_clean = _prefill_no_hooks(target, tok_ids, device)
-        abl_kv, first_abl = _prefill_with_patch(target, tok_ids, patch_scores, layer_, head_, device)
+        clean_kv, first_clean = prefill_no_hooks(target, tok_ids, device)
+        abl_kv, first_abl = prefill_with_patch(target, tok_ids, patch_scores, layer_, head_, device)
 
     # ── Generate ──────────────────────────────────────────────────────────
     with st.spinner("Generating baseline\u2026"):
-        clean_ids = _generate_mode_a(target, clean_kv, first_clean, max_tokens, eos_id, device)
+        clean_ids = generate_with_prefill_ablation(target, clean_kv, first_clean, max_tokens, eos_id, device)
 
     if gen_mode.startswith("Prompt"):
         with st.spinner("Generating with ablation (prompt prefill only)\u2026"):
-            abl_ids = _generate_mode_a(target, abl_kv, first_abl, max_tokens, eos_id, device)
+            abl_ids = generate_with_prefill_ablation(target, abl_kv, first_abl, max_tokens, eos_id, device)
     else:
         with st.spinner("Prefilling other model\u2026"):
-            other_kv, _ = _prefill_no_hooks(other, tok_ids, device)
+            other_kv, _ = prefill_no_hooks(other, tok_ids, device)
 
         with st.spinner("Computing RMS denominators and RoPE params\u2026"):
             W_Q, W_K, _, _ = get_qk_weights(target, layer_, head_)
@@ -778,44 +538,72 @@ def _render_generative_ablation(cfg, fra_data, device):
             W_dec_cpu = crosscoder.W_dec.float().cpu()
             b_dec_cpu = crosscoder.b_dec.float().cpu()
             attn_scale = _proj["attn_scale"]
+            eps = target.cfg.eps
 
             # RMS denominators for all prompt positions
             feat_acts_t = torch.tensor(
                 fra_data["feat_acts_np"][:seq_len], dtype=torch.float32,
             )
             x_hat_prompt = feat_acts_t @ W_dec_cpu + b_dec_cpu
-            eps = target.cfg.eps
             rms_prompt = (x_hat_prompt.pow(2).mean(dim=-1) + eps).sqrt()  # [seq] CPU
 
-            # RoPE tables (moved to CPU for compute_fra_single_query_delta)
+            # RoPE tables on CPU for compute_fra_new_query
             rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(target, layer_)
             if rope_sin is not None:
                 rope_sin = rope_sin.detach().cpu()
                 rope_cos = rope_cos.detach().cpu()
             rope_params_cpu = (rope_sin, rope_cos, rotary_dim, rotary_adj)
 
+            # encode_fn abstracts over the encoding architecture so that
+            # generate_with_ablation does not need to know how feature
+            # activations are obtained.  Here we close over the paired model
+            # and its KV cache: this crosscoder requires residuals from both
+            # models, so encode_fn runs the other model internally.  A future
+            # SAE preset would supply a simpler encode_fn with no second-model
+            # invocation.
+            _resid_hook_name = f"blocks.{cc_layer}.hook_resid_post"
+            _other_model = other        # explicit capture avoids late-binding
+            _other_kv = other_kv
+            _model_idx = model_idx
+            _crosscoder = crosscoder
+
+            def encode_fn(cur_tok, target_resid):
+                buf = {}
+                _other_model.run_with_hooks(
+                    cur_tok,
+                    fwd_hooks=[(_resid_hook_name,
+                                lambda v, h, b=buf: b.update(r=v.detach()) or v)],
+                    past_kv_cache=_other_kv,
+                )
+                o_r = buf["r"][0].float()
+                t_r = target_resid.float()
+                if _model_idx == 0:
+                    x = torch.stack([t_r, o_r], dim=1)
+                else:
+                    x = torch.stack([o_r, t_r], dim=1)
+                return _crosscoder.encode(x).squeeze(0).float()
+
         with st.spinner("Generating with ablation (every step)\u2026"):
-            abl_ids = _generate_mode_b_crosscoder(
+            abl_ids = generate_with_ablation(
                 target_model=target,
-                other_model=other,
                 target_kv=abl_kv,
-                other_kv=other_kv,
                 first_new_tok=first_abl,
                 max_new_tokens=max_tokens,
                 eos_id=eos_id,
-                crosscoder=crosscoder,
+                encode_fn=encode_fn,
                 cc_layer=cc_layer,
                 layer=layer_,
                 head=head_,
                 pairs_to_ablate=pairs_to_abl,
                 W_dec=W_dec_cpu,
+                b_dec=b_dec_cpu,
                 W_Q=W_Q,
                 W_K=W_K,
                 attn_scale=attn_scale,
                 feat_acts_prompt=fra_data["feat_acts_np"][:seq_len],
                 rms_prompt=rms_prompt,
                 rope_params=rope_params_cpu,
-                model_idx=model_idx,
+                eps=eps,
                 device=device,
             )
 

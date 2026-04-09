@@ -387,7 +387,7 @@ class FRACoder:
     ) -> FRACoder:
         """Load a multi-layer crosscoder from W&B artifacts (tiny-sleepers).
 
-        The crosscoder has ``W_dec_HXD`` of shape
+        The crosscoder has ``W_dec_LMPD`` of shape
         ``[hidden_dim, n_models, n_hookpoints, d_model]`` — already in
         canonical form.
         """
@@ -404,13 +404,8 @@ class FRACoder:
             "blocks.2.hook_resid_post",
             "blocks.3.hook_resid_post",
         ]
-        # Each hookpoint feeds into the next attention layer.
-        # hook_resid_pre at block 0 → attn layer 0, hook_resid_post at
-        # block 0 → attn layer 1, etc.  The last hookpoint (resid_post
-        # block 3) has no downstream attention layer.
         attn_layers = [0, 1, 2, 3, -1]
 
-        # W_dec_LMPD: [n_latents, n_models, n_hookpoints, d_model]
         W_dec_full = cc.W_dec_LMPD.detach()
         d_sae = W_dec_full.shape[0]
         n_models = W_dec_full.shape[1]
