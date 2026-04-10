@@ -279,30 +279,17 @@ def _build_fra_result(
     d_head = W_Q.shape[-1]
     attn_scale = math.sqrt(d_head)
 
-    # Normalization correction (LayerNorm or RMSNorm)
+    # Normalization correction
     #
-    # TransformerLens folds gamma/beta into W_Q / W_K, so the residual
-    # layernorm that remains is:
-    #   RMSPre  : x / sqrt(mean(x^2) + eps)
-    #   LNPre   : (x - mean(x)) / sqrt(var(x) + eps)
-    #
-    # For LNPre with a residual-stream coder (rms_activations is not None),
-    # the decoder lives in pre-LN space, so we mean-center the decoder rows
-    # to fold the centering projection P into the decomposition.
-    # For post-LN hook points (e.g. ln1.hook_normalized), the decoder already
-    # lives in the centered space and W_Q receives post-LN vectors directly —
-    # centering the decoder rows would incorrectly remove real contributions.
-    is_layer_norm = getattr(model.cfg, "normalization_type", "") == "LNPre"
+    # TransformerLens folds gamma/beta into W_Q / W_K.  For LNPre models
+    # we also fold the centering projection P into W_dec and b_dec at
+    # init (FRACoder fold_ln=True), so W_dec and rms_activations arrive
+    # here already centered.
     W_dec_corr = W_dec.float()
-    if is_layer_norm and rms_activations is not None:
-        W_dec_corr = W_dec_corr - W_dec_corr.mean(dim=-1, keepdim=True)
 
     if rms is None and rms_activations is not None:
         eps = model.cfg.eps
-        rms_act = rms_activations.float()
-        if is_layer_norm:
-            rms_act = rms_act - rms_act.mean(dim=-1, keepdim=True)
-        rms = (rms_act.pow(2).mean(dim=-1) + eps).sqrt()
+        rms = (rms_activations.float().pow(2).mean(dim=-1) + eps).sqrt()
 
     # RoPE
     rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs = (

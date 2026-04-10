@@ -56,6 +56,7 @@ class FRACoder:
         attn_layers: list[int] | None = None,
         normalize_activations: bool = False,
         dec_norms: torch.Tensor | None = None,
+        fold_ln: bool = False,
     ):
         """
         Args:
@@ -73,6 +74,9 @@ class FRACoder:
                 knows which decoder slice to use for each attention head.
             normalize_activations: Gemma-Scope-style input norm rescaling
             dec_norms: [d_sae] decoder weight norms (rescale_acts_by_decoder_norm)
+            fold_ln: Apply centering projection P = I - (1/d)11^T to decoder
+                weights and bias at init.  Set True for LayerNorm models
+                (e.g. GPT-2) so all downstream code gets centered values.
         """
         self._raw_encoder = raw_encoder
         self._raw_decoder = raw_decoder
@@ -88,6 +92,13 @@ class FRACoder:
         self._normalize_activations = normalize_activations
         self.dec_norms = dec_norms
         self._norm_coeff: torch.Tensor | None = None
+
+        if fold_ln:
+            self._W_dec_full = (
+                self._W_dec_full
+                - self._W_dec_full.mean(dim=-1, keepdim=True)
+            )
+            self._b_dec = self._b_dec - self._b_dec.mean()
 
     # ------------------------------------------------------------------
     # Core interface
@@ -171,6 +182,7 @@ class FRACoder:
         release: str,
         sae_id: str,
         device: str = "cuda",
+        fold_ln: bool = False,
     ) -> FRACoder:
         """Load a pre-trained SAE from the SAE Lens hub.
 
@@ -219,6 +231,7 @@ class FRACoder:
             d_sae=d_sae,
             d_model=d_model,
             dec_norms=dec_norms,
+            fold_ln=fold_ln,
         )
 
     @classmethod
@@ -227,6 +240,7 @@ class FRACoder:
         checkpoint_path: str,
         layer: int,
         device: str = "cuda",
+        fold_ln: bool = False,
     ) -> FRACoder:
         """Load a locally-trained SAE saved by ``sae.save_model()``."""
         from sae_lens import SAE
@@ -253,6 +267,7 @@ class FRACoder:
             d_sae=d_sae,
             d_model=d_model,
             dec_norms=dec_norms,
+            fold_ln=fold_ln,
         )
 
     @classmethod
@@ -389,6 +404,7 @@ class FRACoder:
         download_dir: str,
         model_idx: int = 0,
         device: str = "cuda",
+        fold_ln: bool = False,
     ) -> FRACoder:
         """Load a multi-layer crosscoder from W&B artifacts (tiny-sleepers).
 
@@ -435,6 +451,7 @@ class FRACoder:
             model_idx=model_idx,
             hookpoints=hookpoints,
             attn_layers=attn_layers,
+            fold_ln=fold_ln,
         )
 
     @classmethod

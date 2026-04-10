@@ -18,6 +18,7 @@ PRESETS = {
         "n_heads": 12,
         "supports_neuronpedia": True,
         "trained_on_bos": True,
+        "fold_ln": True,
     },
     "GPT-2 Small — SAE (ln1, local)": {
         "type": "sae_local",
@@ -29,6 +30,7 @@ PRESETS = {
         "n_heads": 12,
         "supports_neuronpedia": False,
         "trained_on_bos": True,
+        "fold_ln": True,
     },
     "Gemma-2 2B — Gemma-Scope (resid_pre)": {
         "type": "sae_gemma",
@@ -72,6 +74,7 @@ PRESETS = {
         "ram_note": "~2 GB GPU RAM (TinyStories 33M + crosscoder).",
         "is_multi_layer": True,
         "trained_on_bos": True,
+        "fold_ln": True,
     },
     "Llama 8B — Crosscoder (Base vs R1-Distill)": {
         "type": "crosscoder",

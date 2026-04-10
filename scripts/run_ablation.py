@@ -84,6 +84,7 @@ def main():
     if sae_type == "hub":
         sae = FRACoder.from_sae_lens(
             "gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device=device,
+            fold_ln=True,
         )
     elif sae_type == "gemma":
         rel = "gemma-scope-2b-pt-res"
@@ -93,7 +94,7 @@ def main():
     else:
         from pathlib import Path
         ckpt = str(Path(__file__).resolve().parent.parent / "fra" / "checkpoints" / "q9sczrvl" / "50003968")
-        sae = FRACoder.from_local_sae(ckpt, layer=layer, device=device)
+        sae = FRACoder.from_local_sae(ckpt, layer=layer, device=device, fold_ln=True)
     print(f"done. (d_sae={sae.d_sae})")
 
     # Load model

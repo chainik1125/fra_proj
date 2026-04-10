@@ -352,6 +352,7 @@ if compute_btn:
             _ml_coder = load_wandb_crosscoder(
                 preset["crosscoder_name"], preset["wandb_download_dir"],
                 int(model_idx), device,
+                fold_ln=preset.get("fold_ln", False),
             )
         fra_tokens = _ml_model.tokenizer.encode(text)
     elif sae_type == "crosscoder":
@@ -397,9 +398,11 @@ if compute_btn:
             else:
                 load_model(_run_model, device)
                 if sae_type == "sae_hub":
-                    load_sae_hub(sae_hub_release, sae_hub_id, device)
+                    load_sae_hub(sae_hub_release, sae_hub_id, device,
+                                fold_ln=preset.get("fold_ln", False))
                 elif sae_local_path and Path(sae_local_path).exists():
-                    load_sae_local(sae_local_path, int(layer), device)
+                    load_sae_local(sae_local_path, int(layer), device,
+                                   fold_ln=preset.get("fold_ln", False))
 
     # -- Encode once, build per head ----------------------------------------
     _top_k = None if use_all_features else top_k_feat

@@ -64,7 +64,7 @@ def generate_all_dashboards(
     if sae is None:
         if verbose:
             print(f"Loading SAE for layer {layer}...")
-        sae = FRACoder.from_sae_lens("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda")
+        sae = FRACoder.from_sae_lens("gpt2-small-hook-z-kk", f"blocks.{layer}.hook_z", device="cuda", fold_ln=True)
 
     print("\n" + "="*60)
     print("Generating FRA Dashboards")
