@@ -1,13 +1,16 @@
 """
 Feature-Resolved Attention (FRA) computation.
 
-Provides two entry points for computing 4-D FRA tensors:
-  - ``compute_fra``: single-model path — one model, one coder
-  - ``compute_fra_two_models``: paired-model path — two models whose residuals are
-    stacked before encoding (used when the coder was trained on both)
+Public entry points (full pipeline: tokens → result dict):
+  - ``compute_fra``:            one model, one coder
+  - ``compute_fra_model_diff``: two models whose residuals are stacked before
+                                encoding (model-diffing setup)
 
-Both accept pre-tokenized token lists and share the core tensor construction
-via ``_build_fra_result()``.
+Both accept pre-tokenized token lists.  Internally they call ``_build_fra_result``,
+which handles weight lookup, RoPE extraction, and delegates to ``_compute_fra_sparse``.
+``_compute_fra_sparse`` is the private tensor kernel: it operates purely on
+pre-computed feature activations and weight matrices with no knowledge of models
+or tokens.
 """
 
 import math
@@ -82,10 +85,12 @@ def _compute_fra_sparse(
     verbose: bool = False,
     layer_head_label: str = "",
 ) -> torch.sparse_coo_tensor:
-    """Compute the 4-D FRA sparse tensor from pre-computed feature activations.
+    """Tensor kernel: compute the 4-D FRA sparse tensor from pre-computed inputs.
 
-    All model-specific setup (activation extraction, encoding, weight lookup)
-    happens in the caller; this function is the shared inner loop.
+    This is the inner loop only.  It has no knowledge of models, tokenization,
+    or encoding — all of that lives in ``compute_fra`` / ``compute_fra_model_diff``
+    and their shared helper ``_build_fra_result``.  Call those instead unless
+    you already have feature activations and weight matrices in hand.
 
     Args:
         topk_features: ``[seq_len, d_sae]`` already top-k sparsified.
@@ -726,7 +731,7 @@ def compute_fra(
 
 
 @torch.no_grad()
-def compute_fra_two_models(
+def compute_fra_model_diff(
     base_model: HookedTransformer,
     it_model: HookedTransformer,
     coder: Any,
