@@ -5,7 +5,7 @@ Weight extraction, reconstruction metrics, pair ranking, FRA
 aggregation, RoPE, and attention-score projection utilities used
 across dashboard, analysis, and viz modules.
 
-FRA-specific computation (``topk_sparsify``, ``compute_fra_sparse``)
+FRA-specific computation (``topk_sparsify``, ``_compute_fra_sparse``)
 lives in ``fra.core.fra``.
 """
 
@@ -139,7 +139,7 @@ def project_qk(
 
     When ``needs_rms=True``, both x_hat and (x_hat - b_dec) are divided by
     the **same** RMS denominator (computed from x_hat), matching the FRA
-    computation in ``compute_fra_sparse``.
+    computation in ``_compute_fra_sparse``.
 
     Args:
         model: HookedTransformer with fold_ln=True.

@@ -3,7 +3,7 @@ Feature-Resolved Attention (FRA) computation.
 
 Provides two entry points for computing 4-D FRA tensors:
   - ``compute_fra``: single-model path — one model, one coder
-  - ``compute_fra_pair``: paired-model path — two models whose residuals are
+  - ``compute_fra_two_models``: paired-model path — two models whose residuals are
     stacked before encoding (used when the coder was trained on both)
 
 Both accept pre-tokenized token lists and share the core tensor construction
@@ -65,7 +65,7 @@ def topk_sparsify(
 # ── Core FRA loop ───────────────────────────────────────────────────────
 
 
-def compute_fra_sparse(
+def _compute_fra_sparse(
     topk_features: torch.Tensor,
     W_dec: torch.Tensor,
     W_Q: torch.Tensor,
@@ -239,7 +239,7 @@ def _build_fra_result(
     """Shared post-encoding FRA construction.
 
     Handles top-k sparsification, weight extraction, RMSNorm correction,
-    RoPE, ``compute_fra_sparse``, device transfer, and result assembly.
+    RoPE, ``_compute_fra_sparse``, device transfer, and result assembly.
 
     Args:
         model: Target model (for W_Q / W_K and RoPE parameters).
@@ -258,7 +258,7 @@ def _build_fra_result(
         rms: Pre-computed ``[seq]`` RMSNorm denominators.  If provided,
             skips recomputation from ``rms_activations``.
         dec_norms: ``[d_sae]`` decoder norms for rescale correction, or None.
-        chunk_size: GPU batch size for ``compute_fra_sparse``.
+        chunk_size: GPU batch size for ``_compute_fra_sparse``.
         verbose: Show progress.
 
     Returns:
@@ -300,7 +300,7 @@ def _build_fra_result(
         _extract_rope_params(model, layer)
     )
 
-    fra_tensor_sparse = compute_fra_sparse(
+    fra_tensor_sparse = _compute_fra_sparse(
         topk_features, W_dec_corr, W_Q, W_K_mat, attn_scale,
         rms=rms,
         dec_norms=dec_norms,
@@ -726,7 +726,7 @@ def compute_fra(
 
 
 @torch.no_grad()
-def compute_fra_pair(
+def compute_fra_two_models(
     base_model: HookedTransformer,
     it_model: HookedTransformer,
     coder: Any,

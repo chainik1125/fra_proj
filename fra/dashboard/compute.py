@@ -145,7 +145,7 @@ def run_fra_crosscoder(
     it_arch_name: str = "",
 ) -> dict:
     """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
-    from fra.core.fra import compute_fra_pair
+    from fra.core.fra import compute_fra_two_models
 
     base_model, it_model = load_model_pair(
         base_model_name, it_model_name, device, it_arch_name,
@@ -155,7 +155,7 @@ def run_fra_crosscoder(
     layer = crosscoder_layer + 1
 
     with torch.no_grad():
-        fra_result = compute_fra_pair(
+        fra_result = compute_fra_two_models(
             base_model, it_model, crosscoder, tokens,
             head=head,
             coder_layer=crosscoder_layer,
