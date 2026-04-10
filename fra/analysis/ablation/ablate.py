@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from fra.core.fra import get_sentence_fra_batch
+from fra.core.fra import compute_fra
 from fra.core.helpers import (
     apply_rope_to_projected,
     compute_bias_correction,
@@ -349,9 +349,10 @@ def run_single_sample(model, sae, text, layer, head, hook_point,
     shift_labels = bias["shift_labels"]
     unpatched_logits = bias["unpatched_logits"]
 
-    fra_result = get_sentence_fra_batch(
-        model, sae, text, layer, head,
-        max_length=128, top_k=top_k_features, hook_point=hook_point,
+    tokens = model.tokenizer.encode(text)[:128]
+    fra_result = compute_fra(
+        model, sae, tokens, layer, head,
+        top_k=top_k_features, hook_point=hook_point,
         chunk_size=chunk_size, verbose=False,
         normalize_by_decoder_norm=None,
     )

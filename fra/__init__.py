@@ -1,8 +1,8 @@
 """Feature-Resolved Attention (FRA) library."""
 
 from fra.core.fra import (
-    get_sentence_fra_batch,
-    get_sentence_fra_crosscoder,
+    compute_fra,
+    compute_fra_pair,
     attention_pattern_QK,
     topk_sparsify,
 )

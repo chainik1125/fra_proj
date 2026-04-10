@@ -18,7 +18,7 @@ import pickle
 from datetime import datetime
 
 from fra.core.coder import FRACoder
-from fra.core.fra import get_sentence_fra_batch
+from fra.core.fra import compute_fra
 from fra.utils import load_dataset_hf
 
 
@@ -114,16 +114,14 @@ def search_dataset_for_interactions(
 
             try:
                 # Get FRA for this sample with reduced top_k for memory efficiency
-                fra_result = get_sentence_fra_batch(
-                    model, sae, text, layer, head,
-                    max_length=128, top_k=20, verbose=False  # Reduced top_k for memory
+                tokens = model.tokenizer.encode(text, truncation=True, max_length=128)
+                fra_result = compute_fra(
+                    model, sae, tokens, layer, head,
+                    top_k=20, verbose=False,
                 )
 
                 if fra_result is None:
                     continue
-
-                # Get tokens for this sample
-                tokens = model.tokenizer.encode(text, truncation=True, max_length=128)
                 token_strs = [model.tokenizer.decode(t) for t in tokens]
 
                 # Process the sparse FRA tensor

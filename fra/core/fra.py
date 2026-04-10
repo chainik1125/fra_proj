@@ -2,10 +2,12 @@
 Feature-Resolved Attention (FRA) computation.
 
 Provides two entry points for computing 4-D FRA tensors:
-  - ``get_sentence_fra_batch``: single-model SAE path
-  - ``get_sentence_fra_crosscoder``: two-model crosscoder path
+  - ``compute_fra``: single-model path — one model, one coder
+  - ``compute_fra_pair``: paired-model path — two models whose residuals are
+    stacked before encoding (used when the coder was trained on both)
 
-Both share the core tensor construction via ``_build_fra_result()``.
+Both accept pre-tokenized token lists and share the core tensor construction
+via ``_build_fra_result()``.
 """
 
 import math
@@ -640,15 +642,15 @@ def _encode_crosscoder(
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Entry point: single-model SAE path
+# Entry point: single-model path
 # ═══════════════════════════════════════════════════════════════════════
 
 
 @torch.no_grad()
-def get_sentence_fra_batch(
+def compute_fra(
     model: HookedTransformer,
-    sae: Any,
-    text: str,
+    coder: Any,
+    tokens: list,
     layer: int,
     head: int,
     max_length: int = 128,
@@ -657,13 +659,10 @@ def get_sentence_fra_batch(
     hook_point: str = "ln1.hook_normalized",
     chunk_size: int = 16,
     normalize_by_decoder_norm: bool | None = None,
-    prepend_bos: bool | None = None,
 ) -> Dict[str, Any]:
-    """
-    Compute full 4D Feature-Resolved Attention tensor for a sentence.
-    Returns a sparse representation to avoid memory issues.
+    """Compute the 4-D FRA sparse tensor for a token sequence using one model.
 
-    hook_point controls which activation the SAE was trained on:
+    hook_point controls which activation the coder was trained on:
       - "ln1.hook_normalized"  (default, correct for FRA): decoder vectors live in
         the same d_model space that W_Q / W_K project from.  This is the only
         mathematically correct choice.
@@ -672,25 +671,21 @@ def get_sentence_fra_batch(
         attention score computation is therefore approximate.
 
     Args:
-        model: The transformer model
-        sae: The SAE (any object with .encode() and .W_dec attributes)
-        text: Input text to analyze
-        layer: Which layer to analyze
-        head: Which attention head to analyze
-        max_length: Maximum sequence length
-        top_k: Number of top features to keep per position
-        verbose: Whether to show progress
-        hook_point: Hookpoint the SAE was trained on (relative to blocks.{layer}.)
-        chunk_size: Number of query positions to process per GPU batch before
-                    flushing results to CPU.  Reduce for large SAEs (e.g. Gemma-Scope)
-                    to avoid GPU OOM.  Set to seq_len to process everything at once.
-        normalize_by_decoder_norm: Whether to divide feature activations by
-                    decoder weight norms to match SAEs trained with
-                    rescale_acts_by_decoder_norm=True.  None (default) auto-detects
-                    from the SAE config.  True/False forces the behaviour.
-        prepend_bos: Whether to include special tokens (BOS) in tokenization.
-                    None (default) uses the tokenizer's default behaviour.
-                    True/False forces add_special_tokens on/off.
+        model: The transformer model.
+        coder: Any object with .encode() and .W_dec attributes (SAE or FRACoder).
+        tokens: Pre-tokenized token IDs.  Caller is responsible for tokenization
+                (including BOS / chat template if needed).
+        layer: Which layer to analyze.
+        head: Which attention head to analyze.
+        max_length: Truncate tokens to this length.
+        top_k: Number of top features to keep per position.
+        verbose: Whether to show progress.
+        hook_point: Hookpoint the coder was trained on (relative to blocks.{layer}.)
+        chunk_size: Query positions per GPU batch.  Reduce for large coders to
+                    avoid GPU OOM; set to seq_len to process everything at once.
+        normalize_by_decoder_norm: Divide feature activations by decoder weight
+                    norms (rescale_acts_by_decoder_norm).  None auto-detects from
+                    the coder config; True/False forces the behaviour.
 
     Returns:
         Dictionary containing:
@@ -702,18 +697,12 @@ def get_sentence_fra_batch(
     """
     device = next(model.parameters()).device
 
-    # Tokenise and truncate
-    if prepend_bos is not None:
-        tokens = model.tokenizer.encode(text, add_special_tokens=prepend_bos)
-    else:
-        tokens = model.tokenizer.encode(text)
     if max_length is not None and len(tokens) > max_length:
         tokens = tokens[:max_length]
-
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
     encoded = _encode_sae(
-        model, sae, tokens_tensor, layer, hook_point,
+        model, coder, tokens_tensor, layer, hook_point,
         normalize_by_decoder_norm=normalize_by_decoder_norm,
         verbose=verbose,
     )
@@ -732,48 +721,47 @@ def get_sentence_fra_batch(
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Entry point: two-model crosscoder path
+# Entry point: paired-model path
 # ═══════════════════════════════════════════════════════════════════════
 
 
 @torch.no_grad()
-def get_sentence_fra_crosscoder(
+def compute_fra_pair(
     base_model: HookedTransformer,
     it_model: HookedTransformer,
-    crosscoder: Any,
+    coder: Any,
     tokens: list,
     head: int = 0,
-    crosscoder_layer: int = 13,
+    coder_layer: int = 13,
     max_length: int = 128,
     top_k: int | None = 20,
     verbose: bool = False,
     chunk_size: int = 16,
 ) -> Dict[str, Any]:
-    """Compute 4-D FRA tensor using a model-diffing crosscoder.
+    """Compute the 4-D FRA sparse tensor using residuals from two models.
 
-    The crosscoder was trained on ``hook_resid_post`` at ``crosscoder_layer``.
-    That residual stream state is the input to the *next* layer's attention
-    (``hook_resid_pre`` at ``crosscoder_layer + 1``), so we always analyse
-    attention at ``crosscoder_layer + 1``.  The same activations are used
-    for crosscoder encoding and for the RMSNorm correction.
+    Both models are run on the same token sequence; their residuals at
+    ``coder_layer`` are stacked and passed to the coder for encoding.
+    The coder was trained on ``hook_resid_post`` at ``coder_layer``, which
+    is the input to the next layer's attention, so the FRA decomposition
+    always targets attention at ``coder_layer + 1``.
 
     The attention layer is **not** independently configurable — it is always
-    ``crosscoder_layer + 1``.  This ensures the FRA decomposition corresponds
-    to the features the crosscoder actually learned.
+    ``coder_layer + 1``.  This ensures the FRA decomposition corresponds
+    to the features the coder actually learned.
 
     Args:
         base_model:  HookedTransformer for model-index 0 (base).
         it_model:    HookedTransformer for model-index 1 (instruct).
-        crosscoder:  ``FRACoder`` instance.
-        tokens:      Token IDs to analyse.  Caller is responsible for
+        coder:       ``FRACoder`` instance trained on paired residuals.
+        tokens:      Pre-tokenized token IDs.  Caller is responsible for
                      tokenization (including chat template if needed).
         head:        Attention head index.
-        crosscoder_layer:
-            Layer from which to extract residual-stream activations for the
-            crosscoder (default 13, matching the published checkpoint).
-            Uses ``hook_resid_post`` at this layer.  The attention layer
-            is derived as ``crosscoder_layer + 1``.
-        max_length:  Maximum sequence length.
+        coder_layer: Layer from which to extract residual-stream activations
+                     (default 13, matching the published checkpoint).
+                     Uses ``hook_resid_post`` at this layer.  The attention
+                     layer analyzed is derived as ``coder_layer + 1``.
+        max_length:  Truncate tokens to this length.
         top_k:       Keep only top-k features per position.
         verbose:     Show progress bar.
         chunk_size:  Query positions per GPU batch (controls peak memory).
@@ -787,17 +775,16 @@ def get_sentence_fra_crosscoder(
           - ``feature_activations``  (torch.Tensor, [seq, d_sae])
           - ``topk_features``  (torch.Tensor, [seq, d_sae])
     """
-    layer = crosscoder_layer + 1
-    target_model = base_model if crosscoder.model_idx == 0 else it_model
+    layer = coder_layer + 1
+    target_model = base_model if coder.model_idx == 0 else it_model
     device = next(target_model.parameters()).device
 
-    # Truncate if needed
     if max_length is not None and len(tokens) > max_length:
         tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
     encoded = _encode_crosscoder(
-        base_model, it_model, crosscoder, tokens_tensor, crosscoder_layer,
+        base_model, it_model, coder, tokens_tensor, coder_layer,
         verbose=verbose,
     )
 

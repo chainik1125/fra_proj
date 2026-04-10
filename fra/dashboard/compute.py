@@ -101,7 +101,7 @@ def run_fra(
     include_special_tokens: bool = True,
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
-    from fra.core.fra import get_sentence_fra_batch
+    from fra.core.fra import compute_fra
 
     if sae_type == "gemma":
         model = load_model_gemma(model_name, device, hf_token)
@@ -115,19 +115,19 @@ def run_fra(
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
-    with torch.no_grad():
-        fra_result = get_sentence_fra_batch(
-            model, sae, text,
-            layer=layer, head=head,
-            max_length=128, top_k=top_k_features,
-            hook_point=hook_point,
-            chunk_size=chunk_size,
-            prepend_bos=include_special_tokens,
-        )
-
     tokens = model.tokenizer.encode(
         text, add_special_tokens=include_special_tokens,
     )[:128]
+
+    with torch.no_grad():
+        fra_result = compute_fra(
+            model, sae, tokens,
+            layer=layer, head=head,
+            top_k=top_k_features,
+            hook_point=hook_point,
+            chunk_size=chunk_size,
+        )
+
     return _pack_fra_result(model, layer, head, fra_result, tokens, device)
 
 
@@ -145,7 +145,7 @@ def run_fra_crosscoder(
     it_arch_name: str = "",
 ) -> dict:
     """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
-    from fra.core.fra import get_sentence_fra_crosscoder
+    from fra.core.fra import compute_fra_pair
 
     base_model, it_model = load_model_pair(
         base_model_name, it_model_name, device, it_arch_name,
@@ -155,10 +155,10 @@ def run_fra_crosscoder(
     layer = crosscoder_layer + 1
 
     with torch.no_grad():
-        fra_result = get_sentence_fra_crosscoder(
+        fra_result = compute_fra_pair(
             base_model, it_model, crosscoder, tokens,
             head=head,
-            crosscoder_layer=crosscoder_layer,
+            coder_layer=crosscoder_layer,
             max_length=128, top_k=top_k_features,
             verbose=True,
         )
