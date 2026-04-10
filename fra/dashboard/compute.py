@@ -131,7 +131,7 @@ def run_fra(
     return _pack_fra_result(model, layer, head, fra_result, tokens, device)
 
 
-def run_fra_crosscoder(
+def run_fra_model_diff(
     tokens: list,
     head: int,
     crosscoder_layer: int,
