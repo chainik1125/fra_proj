@@ -270,7 +270,7 @@ def encode_fra(
 
 
 @torch.no_grad()
-def encode_fra_crosscoder(
+def encode_fra_model_diff(
     tokens: list,
     crosscoder_layer: int,
     crosscoder_repo_id: str,

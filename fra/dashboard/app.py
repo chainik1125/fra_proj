@@ -29,7 +29,7 @@ from fra.dashboard.compute import (
     build_fra_head,
     build_fra_head_multilayer,
     encode_fra,
-    encode_fra_crosscoder,
+    encode_fra_model_diff,
     encode_fra_multilayer,
 )
 
@@ -421,7 +421,7 @@ if compute_btn:
         _attn_layer = int(layer)
     elif sae_type == "crosscoder":
         _encoded, _attn_cache, _model, _tokens, _attn_layer = (
-            encode_fra_crosscoder(
+            encode_fra_model_diff(
                 tokens=fra_tokens,
                 crosscoder_layer=int(crosscoder_layer),
                 crosscoder_repo_id=crosscoder_repo_id,
