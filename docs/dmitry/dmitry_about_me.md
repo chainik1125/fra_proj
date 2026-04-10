@@ -18,4 +18,4 @@ Date: 2026-02-16
 
 3. Work hours: I expect to be working >10h a week on this project, although will sometimes have to yield to shorter term contingencies.
 
- Although some of that will go into meetings, 2-1s, etc... I expect to be able to help
+Although some of that will go into meetings, 2-1s, etc... I expect to be able to help

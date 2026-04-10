@@ -3,13 +3,9 @@ Utilities for getting LLM activations at specific hookpoints.
 """
 
 import torch
-from typing import Any, List, Optional, TYPE_CHECKING, Union
+from typing import List, Optional, Union
+from transformer_lens import HookedTransformer
 from einops import rearrange
-
-if TYPE_CHECKING:
-    from transformer_lens import HookedTransformer
-else:
-    HookedTransformer = Any
 
 
 def get_llm_activations(

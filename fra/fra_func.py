@@ -1,10 +1,14 @@
-from transformer_lens import HookedTransformer
 import torch
 import numpy as np
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING
 from einops import einsum
 from fra.activation_utils import get_llm_activations
 from tqdm import tqdm
+
+if TYPE_CHECKING:
+    from transformer_lens import HookedTransformer
+else:
+    HookedTransformer = Any
 
 
 
