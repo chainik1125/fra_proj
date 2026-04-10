@@ -126,13 +126,11 @@ The derivation above uses RMSNorm, but models that use full LayerNorm (e.g. GPT-
 
 $$\text{LN}(x) = \gamma \odot \frac{x - \bar{x}}{\sigma(x)} + \beta$$
 
-where $\bar{x} = \frac{1}{d}\sum_n x_n$ and $\sigma(x) = \sqrt{\frac{1}{d}\sum_n (x_n - \bar{x})^2}$. The key observation is that subtracting the mean is a linear operation:
+where $\bar{x} = \frac{1}{d}\sum_n x_n$ and $\sigma(x) = \sqrt{\frac{1}{d}\sum_n (x_n - \bar{x})^2}$. TransformerLens folds $\gamma$ and $\beta$ into the downstream weight matrices (setting `normalization_type = "LNPre"`), so the only remaining operation is the mean subtraction. Since mean subtraction kills any component along the all-ones direction $\mathbf{1}$, no decoder direction $v_k$ can contribute to attention scores through that component — it is projected out at runtime. We account for this by mean-centering each decoder row before computing the FRA coefficients:
 
-$$x - \bar{x} = \left(I - \tfrac{1}{d}\mathbf{1}\mathbf{1}^T\right) x = Px$$
+$$\tilde{v}_k = v_k - \bar{v}_k\,\mathbf{1}, \qquad \bar{v}_k = \tfrac{1}{d}\textstyle\sum_n (v_k)_n$$
 
-where $P$ is the centering projection matrix. This means the numerator of LayerNorm is a linear map composed with the input: $\text{diag}(\gamma)\, P\, x$. We can therefore fold it into the projection weights exactly as we folded in the RMSNorm $\gamma$. Defining $\tilde{W}_Q = W_Q\, \text{diag}(\gamma)\, P$ and absorbing the LayerNorm bias into the projection bias as $\tilde{b}_Q = W_Q\, \beta + b_Q$ (and likewise for $K$), the query projection becomes:
+Replacing $v_k$ with $\tilde{v}_k$ throughout the decomposition is equivalent to the substitution $W_Q \to W_Q P$ where $P = I - \tfrac{1}{d}\mathbf{1}\mathbf{1}^T$ is the centering projection, but is cheaper since it touches only the decoder rather than the weight matrices. The denominator changes accordingly: $\sigma(\hat{x}) = \mathrm{rms}(P\hat{x})$, i.e. the RMS is computed on the centered reconstruction, which is how the scale is computed after centering. The rest of the decomposition into bilinear, linear, and bias terms carries through unchanged.
 
-$$\frac{\tilde{W}_Q\, \hat{x}^i}{\sigma(\hat{x}^i)} + \tilde{b}_Q$$
-
-This has the same form as the RMSNorm case — a linear map divided by a scalar denominator, plus a bias — so the entire decomposition into bilinear, linear, and bias terms carries through unchanged. Moreover, the denominator is not merely analogous: $\sigma(x) = \mathrm{rms}(Px)$, so once $P$ is folded into the weights the denominator is the same RMS computation applied to the (now centered) input.
+Note that TransformerLens applies mean-centering to residual-stream activations at runtime via `LayerNormPre` (this is the operation that RMSNorm models warn they will not perform). The FRA decomposition works with the static decoder directions $v_k$ rather than runtime activations, so the centering must be applied to those directions explicitly rather than relying on the forward pass.
 

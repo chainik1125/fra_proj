@@ -286,11 +286,15 @@ def _build_fra_result(
     #   RMSPre  : x / sqrt(mean(x^2) + eps)
     #   LNPre   : (x - mean(x)) / sqrt(var(x) + eps)
     #
-    # For LNPre we also mean-center the decoder vectors so that the FRA
-    # decomposition accounts for the centering step.
+    # For LNPre with a residual-stream coder (rms_activations is not None),
+    # the decoder lives in pre-LN space, so we mean-center the decoder rows
+    # to fold the centering projection P into the decomposition.
+    # For post-LN hook points (e.g. ln1.hook_normalized), the decoder already
+    # lives in the centered space and W_Q receives post-LN vectors directly —
+    # centering the decoder rows would incorrectly remove real contributions.
     is_layer_norm = getattr(model.cfg, "normalization_type", "") == "LNPre"
     W_dec_corr = W_dec.float()
-    if is_layer_norm:
+    if is_layer_norm and rms_activations is not None:
         W_dec_corr = W_dec_corr - W_dec_corr.mean(dim=-1, keepdim=True)
 
     if rms is None and rms_activations is not None:
