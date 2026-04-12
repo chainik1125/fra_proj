@@ -87,7 +87,7 @@ def _get_multi_head_pairs(fra_data_all, mode, multi_head_agg):
 
 def _render_score_metrics(cfg, fra_data, seq_len, token_strs, device,
                           exclude_bos=False, fra_data_all=None, head_=None,
-                          ranked_pairs=None):
+                          ranked_pairs=None, ablate_all_heads=False):
     """Render the FRA pair ablation + loss metrics UI."""
     from fra.analysis.ablation import (
         ablate_fra_pairs,
@@ -99,20 +99,8 @@ def _render_score_metrics(cfg, fra_data, seq_len, token_strs, device,
     sae_type = cfg.get("sae_type", "")
     n_heads = cfg.get("n_heads", 1)
 
-    # Ablation scope
-    _can_all_heads = fra_data_all is not None
-    ablate_all_heads = False
+    # Ablation scope (ablate_all_heads passed from render())
     _mh_agg = cfg.get("multi_head_agg", "sum")
-    if _can_all_heads:
-        ablate_all_heads = st.checkbox(
-            f"Ablate across all {n_heads} heads",
-            value=False,
-            key="ablate_all_heads",
-            help=(
-                "Compute FRA for every head, rank pairs across heads, "
-                "ablate them from all heads, and patch simultaneously."
-            ),
-        )
 
     # Rank pairs (single-head or multi-head)
     if ablate_all_heads:
@@ -429,7 +417,8 @@ def _show_token_diff(model, clean_ids, abl_ids):
         )
 
 
-def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None):
+def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None,
+                                fra_data_all=None, ablate_all_heads=False):
     """Ablate FRA pairs during autoregressive generation (crosscoder preset only)."""
     from fra.analysis.ablation import ablate_fra_pairs
 
@@ -526,6 +515,7 @@ def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None):
     with st.spinner("Loading models\u2026"):
         layer_ = cfg["layer"]
         head_ = cfg["head"]
+        n_heads = cfg.get("n_heads", 1)
         seq_len = fra_data["seq_len"]
         d_sae = fra_data["feat_acts_np"].shape[1]
         trained_on_bos = cfg.get("trained_on_bos", True)
@@ -535,11 +525,20 @@ def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None):
         eos_id = getattr(target.tokenizer, "eos_token_id", None)
         tok_ids = fra_data["tokens"][:seq_len]
 
-        fra_sparse = torch.sparse_coo_tensor(
-            torch.tensor(fra_data["indices_np"], dtype=torch.long),
-            torch.tensor(fra_data["values_np"], dtype=torch.float32),
-            size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
-        ).coalesce()
+        def _make_sparse(hdata):
+            return torch.sparse_coo_tensor(
+                torch.tensor(hdata["indices_np"], dtype=torch.long),
+                torch.tensor(hdata["values_np"], dtype=torch.float32),
+                size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
+            ).coalesce()
+
+        if ablate_all_heads and fra_data_all is not None:
+            fra_sparse_arg = {h: _make_sparse(fra_data_all[h]) for h in range(n_heads)}
+            head_arg = list(range(n_heads))
+        else:
+            fra_sparse_arg = _make_sparse(fra_data)
+            head_arg = head_
+
         feat_acts = torch.tensor(fra_data["feat_acts_np"][:seq_len], dtype=torch.float32)
         pairs_to_abl = [(int(p[0]), int(p[1])) for p in sel_pairs]
         abl_type_key = "coder_recon" if ablation_type.startswith("Coder") else "fra_sum"
@@ -551,10 +550,10 @@ def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None):
             target_model=target,
             tok_ids=tok_ids,
             pairs_to_ablate=pairs_to_abl,
-            fra_sparse=fra_sparse,
+            fra_sparse=fra_sparse_arg,
             feat_acts=feat_acts,
             layer=layer_,
-            head=head_,
+            head=head_arg,
             crosscoder=crosscoder,
             ablation_type=abl_type_key,
             generation_mode=gen_mode_key,
@@ -610,12 +609,33 @@ def render(tab):
         token_strs = fra_data["token_strs"]
         device = "cuda" if torch.cuda.is_available() else "cpu"
         exclude_bos = not cfg.get("trained_on_bos", True)
-
-        # Compute single-head pairs once (cached) and share across sections
+        n_heads = cfg.get("n_heads", 1)
         _agg = cfg.get("agg_mode", "sum")
-        _single_agg = get_cached_aggregated_pairs(fra_data, head_, diagonal=None)
-        _single_agg.sort(key=lambda x: _pair_score(x, _agg), reverse=True)
-        ranked_pairs = _single_agg[:100]
+        _mh_agg = cfg.get("multi_head_agg", "sum")
+
+        # Shared "ablate all heads" toggle — controls both score-metrics and
+        # generative ablation sections.  Only offered when FRA has been
+        # computed for every head (fra_data_all is populated).
+        ablate_all_heads = False
+        if fra_data_all is not None:
+            ablate_all_heads = st.checkbox(
+                f"Ablate across all {n_heads} heads",
+                value=False,
+                key="ablate_all_heads",
+                help=(
+                    "Rank pairs across all heads and ablate them from every "
+                    "head simultaneously in both the Score Metrics and "
+                    "Generative Ablation sections."
+                ),
+            )
+
+        # Compute ranked pairs once (single- or multi-head) and share
+        if ablate_all_heads:
+            ranked_pairs = _get_multi_head_pairs(fra_data_all, _agg, _mh_agg)[:100]
+        else:
+            _single_agg = get_cached_aggregated_pairs(fra_data, head_, diagonal=None)
+            _single_agg.sort(key=lambda x: _pair_score(x, _agg), reverse=True)
+            ranked_pairs = _single_agg[:100]
 
         st.subheader("Score Metrics")
         st.caption(
@@ -626,6 +646,10 @@ def render(tab):
             cfg, fra_data, seq_len, token_strs, device,
             exclude_bos=exclude_bos, fra_data_all=fra_data_all,
             head_=head_, ranked_pairs=ranked_pairs,
+            ablate_all_heads=ablate_all_heads,
         )
 
-        _render_generative_ablation(cfg, fra_data, device, ranked_pairs=ranked_pairs)
+        _render_generative_ablation(
+            cfg, fra_data, device, ranked_pairs=ranked_pairs,
+            fra_data_all=fra_data_all, ablate_all_heads=ablate_all_heads,
+        )

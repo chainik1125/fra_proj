@@ -87,15 +87,23 @@ def build_patch_scores(cfg, fra_data, fra_sparse, fra_abl_sparse, proj, ablation
 
 @torch.no_grad()
 def prefill_with_patch(model, tok_ids, patch_scores, layer, head, device):
-    """Run model on prompt with patched attention scores; return ``(kv, first_new_tok)``."""
+    """Run model on prompt with patched attention scores; return ``(kv, first_new_tok)``.
+
+    *patch_scores* may be a ``[seq, seq]`` tensor (single head given by *head*)
+    or a ``dict[int, Tensor]`` to patch multiple heads simultaneously (*head*
+    is ignored in the dict case).
+    """
     from transformer_lens.past_key_value_caching import HookedTransformerKeyValueCache
 
     seq_len = len(tok_ids)
     tok_t = torch.tensor(tok_ids, dtype=torch.long, device=device).unsqueeze(0)
     kv = HookedTransformerKeyValueCache.init_cache(model.cfg, device, 1)
 
+    patch_dict = patch_scores if isinstance(patch_scores, dict) else {head: patch_scores}
+
     def _hook(attn_scores, hook):
-        attn_scores[0, head, :seq_len, :seq_len] = patch_scores
+        for h, ps in patch_dict.items():
+            attn_scores[0, h, :seq_len, :seq_len] = ps
         return attn_scores
 
     logits = model.run_with_hooks(
@@ -153,12 +161,12 @@ def generate_with_ablation(
     encode_fn,          # (cur_tok: Tensor[1,1], target_resid: Tensor[1, d_model]) -> Tensor[d_sae]
     cc_layer,           # layer at which to intercept the residual for encoding
     layer,              # attention layer whose scores are patched; must satisfy cc_layer < layer
-    head,
+    head,               # int (single head) or list[int] (all-heads mode)
     pairs_to_ablate,
     W_dec,              # [d_sae, d_model] CPU float32
     b_dec,              # [d_model] CPU float32
-    W_Q,                # [d_model, d_head] CPU float32
-    W_K,                # [d_model, d_head] CPU float32
+    W_Q,                # [d_model, d_head] CPU float32  OR  dict[int, Tensor] for multi-head
+    W_K,                # [d_model, d_head] CPU float32  OR  dict[int, Tensor] for multi-head
     attn_scale,
     feat_acts_prompt,   # [seq, d_sae] — feature activations for all prompt positions
     rms_prompt,         # [seq] CPU float32 — RMSNorm denominators for prompt positions
@@ -187,14 +195,30 @@ def generate_with_ablation(
     feat_acts_all / rms_all grow by one entry each step so that
     compute_fra_new_query has access to key-side features for every token
     in the sequence so far.
+
+    Multi-head mode: pass *head* as a ``list[int]`` and *W_Q* / *W_K* as
+    ``dict[int, Tensor]`` (keyed by head index).  encode_fn is head-independent
+    (crosscoder residuals do not vary by head); W_Q / W_K supply the per-head
+    QK projections.  Both hooks fire once per forward pass and process all
+    listed heads together.
     """
     W_dec_dev = W_dec.to(device).float()
     b_dec_dev = b_dec.to(device).float()
 
+    # Normalise to multi-head dict format.  Single-head callers are unchanged.
+    if isinstance(head, int):
+        _heads = [head]
+        _W_Q = {head: W_Q}
+        _W_K = {head: W_K}
+    else:
+        _heads = list(head)
+        _W_Q = W_Q   # caller supplied dict[int, Tensor]
+        _W_K = W_K
+
     # Accumulate feature activations and RMS denominators across all positions
     # (prompt + generated tokens).  These are the key-side inputs to
     # compute_fra_new_query; they must grow in lockstep with the KV cache.
-    feat_acts_all = torch.tensor(feat_acts_prompt, dtype=torch.float32)  # CPU [seq, d_sae]
+    feat_acts_all = feat_acts_prompt.detach().clone().float()  # CPU [seq, d_sae]
     rms_all = rms_prompt.cpu().float()                                    # CPU [seq]
 
     resid_hook_name = f"blocks.{cc_layer}.hook_resid_post"
@@ -232,29 +256,31 @@ def generate_with_ablation(
             x_hat_new = fa_new.to(W_dec_dev.device) @ W_dec_dev + b_dec_dev
             rms_new = float((x_hat_new.pow(2).mean() + eps).sqrt().item())
 
-            fra_scores = compute_fra_new_query(
-                feat_q=fa_new.cpu(),
-                feat_k_all=_fa,
-                pairs=pairs_to_ablate,
-                W_dec=W_dec,
-                W_Q=W_Q,
-                W_K=W_K,
-                attn_scale=attn_scale,
-                rms_q=rms_new,
-                rms_k_all=_rk,
-                rope_params=rope_params,
-                q_pos=_q_pos,
-            )  # [T] CPU
-            _ss["fra_scores"] = fra_scores.to(device)
+            # Compute FRA delta for every ablated head in one pass.
+            fra_per_head = {}
+            for h in _heads:
+                fra_per_head[h] = compute_fra_new_query(
+                    feat_q=fa_new.cpu(),
+                    feat_k_all=_fa,
+                    pairs=pairs_to_ablate,
+                    W_dec=W_dec,
+                    W_Q=_W_Q[h],
+                    W_K=_W_K[h],
+                    attn_scale=attn_scale,
+                    rms_q=rms_new,
+                    rms_k_all=_rk,
+                    rope_params=rope_params,
+                    q_pos=_q_pos,
+                ).to(device)  # [T]
+            _ss["fra_per_head"] = fra_per_head
             _ss["fa_new"] = fa_new.cpu()
             _ss["rms_new"] = rms_new
             return target_resid
 
         def _hook_attn(attn_scores, hook, _ss=_step):
-            if "fra_scores" in _ss:
-                s = _ss["fra_scores"]
-                T_cur = min(len(s), attn_scores.shape[-1])
-                attn_scores[0, head, 0, :T_cur] -= s[:T_cur]
+            for h, fra_scores in _ss.get("fra_per_head", {}).items():
+                T_cur = min(len(fra_scores), attn_scores.shape[-1])
+                attn_scores[0, h, 0, :T_cur] -= fra_scores[:T_cur]
             return attn_scores
 
         logits = target_model.run_with_hooks(
@@ -321,7 +347,7 @@ def build_crosscoder_encode_fn(other_model, crosscoder, other_kv, cc_layer, mode
             x = torch.stack([t_r, o_r], dim=1)
         else:
             x = torch.stack([o_r, t_r], dim=1)
-        return _cc.encode(x).squeeze(0).cpu().float()
+        return _cc.encode(x.to(_cc.dtype)).squeeze(0).cpu().float()
 
     return encode_fn
 
@@ -403,36 +429,53 @@ def run_generative_ablation(
     seq_len = feat_acts.shape[0]
     d_sae = feat_acts.shape[1]
 
-    # -- Crosscoder reconstruction -> QK projections ----------------------
+    # Normalise head / fra_sparse to multi-head dict format.
+    # Single-head callers (head: int, fra_sparse: Tensor) are unchanged.
+    if isinstance(head, int):
+        heads_list = [head]
+        fra_sparse_dict = {head: fra_sparse}
+    else:
+        heads_list = list(head)
+        fra_sparse_dict = fra_sparse  # caller supplied dict[int, Tensor]
+
+    # -- Shared computation (head-independent) ----------------------------
     b_dec = crosscoder.b_dec.float().to(device)
     W_dec = crosscoder.W_dec.float().to(device)
     x_hat = feat_acts.float().to(device) @ W_dec + b_dec          # [seq, d_model]
 
-    q_full, k_full, q_nobias, k_nobias = project_qk(
-        target_model, layer, head, x_hat, b_dec, needs_rms=True,
-    )
     attn_scale = get_attn_scale(target_model, layer)
     softcap = getattr(target_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
-    bias_corr = compute_bias_correction(q_full, k_full, q_nobias, k_nobias, attn_scale)
 
-    # -- Pair ablation + patch scores -------------------------------------
-    fra_abl_sparse = ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae)
+    # -- Per-head patch scores --------------------------------------------
+    patch_scores_dict = {}
+    for h in heads_list:
+        fra_h = fra_sparse_dict[h]
+        q_full_h, k_full_h, q_nobias_h, k_nobias_h = project_qk(
+            target_model, layer, h, x_hat, b_dec, needs_rms=True,
+        )
+        bias_corr_h = compute_bias_correction(
+            q_full_h, k_full_h, q_nobias_h, k_nobias_h, attn_scale,
+        )
+        fra_abl_h = ablate_fra_pairs(fra_h, pairs_to_ablate, d_sae)
+        patch_scores_dict[h] = build_patch_scores(
+            {"trained_on_bos": trained_on_bos},
+            {"seq_len": seq_len, "attn_scores_np": attn_scores_np},
+            fra_h, fra_abl_h,
+            {
+                "softcap": softcap,
+                "q_full": q_full_h,
+                "k_full": k_full_h,
+                "attn_scale": attn_scale,
+                "bias_corr_np": bias_corr_h[:seq_len, :seq_len].cpu().numpy(),
+            },
+            ablation_type,
+            device,
+        )
 
-    patch_scores = build_patch_scores(
-        {"trained_on_bos": trained_on_bos},
-        {"seq_len": seq_len, "attn_scores_np": attn_scores_np},
-        fra_sparse,
-        fra_abl_sparse,
-        {
-            "softcap": softcap,
-            "q_full": q_full,
-            "k_full": k_full,
-            "attn_scale": attn_scale,
-            "bias_corr_np": bias_corr[:seq_len, :seq_len].cpu().numpy(),
-        },
-        ablation_type,
-        device,
-    )
+    # Unwrap to plain tensor when there is exactly one head (keeps downstream
+    # code simple; prefill_with_patch accepts both forms).
+    patch_arg = patch_scores_dict if len(heads_list) > 1 else patch_scores_dict[heads_list[0]]
+    head_arg = heads_list if len(heads_list) > 1 else heads_list[0]
 
     # -- Baseline prefill + generation ------------------------------------
     baseline_ids = None
@@ -444,7 +487,7 @@ def run_generative_ablation(
 
     # -- Ablated prefill --------------------------------------------------
     abl_kv, first_abl = prefill_with_patch(
-        target_model, tok_ids, patch_scores, layer, head, device,
+        target_model, tok_ids, patch_arg, layer, heads_list[0], device,
     )
 
     # -- Ablated generation -----------------------------------------------
@@ -466,11 +509,19 @@ def run_generative_ablation(
         eps = target_model.cfg.eps
         rms_prompt = (x_hat.pow(2).mean(dim=-1) + eps).sqrt().cpu()  # [seq] CPU
 
-        W_Q, W_K, _, _ = get_qk_weights(target_model, layer, head)
+        # rope_params are layer-level (not head-specific)
         rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(target_model, layer)
         if rope_sin is not None:
             rope_sin = rope_sin.detach().cpu()
             rope_cos = rope_cos.detach().cpu()
+
+        # W_Q / W_K are head-specific; build per-head dicts
+        W_Q_dict = {}
+        W_K_dict = {}
+        for h in heads_list:
+            wq, wk, _, _ = get_qk_weights(target_model, layer, h)
+            W_Q_dict[h] = wq.float().cpu()
+            W_K_dict[h] = wk.float().cpu()
 
         ablated_ids = generate_with_ablation(
             target_model=target_model,
@@ -481,12 +532,12 @@ def run_generative_ablation(
             encode_fn=encode_fn,
             cc_layer=cc_layer,
             layer=layer,
-            head=head,
+            head=head_arg,
             pairs_to_ablate=pairs_to_ablate,
             W_dec=W_dec.cpu(),
             b_dec=b_dec.cpu(),
-            W_Q=W_Q.float().cpu(),
-            W_K=W_K.float().cpu(),
+            W_Q=W_Q_dict if len(heads_list) > 1 else W_Q_dict[heads_list[0]],
+            W_K=W_K_dict if len(heads_list) > 1 else W_K_dict[heads_list[0]],
             attn_scale=attn_scale,
             feat_acts_prompt=feat_acts.cpu().float(),
             rms_prompt=rms_prompt,

@@ -149,11 +149,12 @@ def compute_fra(
     base_model, it_model, crosscoder,
     tok_ids: list[int], head: int, device: str,
 ):
-    """Run FRA for one prompt.
+    """Run FRA for one prompt and one head.
 
     Returns:
         fra_sparse:  4D sparse COO tensor [seq, seq, d_sae, d_sae] on CPU.
-        feat_acts:   [seq, d_sae] float32 on CPU.
+        feat_acts:   [seq, d_sae] float32 on CPU (head-independent: same for
+                     all heads since it comes from the crosscoder encoding).
         indices_np:  [4, nnz] int64 numpy array.
         values_np:   [nnz] float32 numpy array.
         seq_len:     int.
@@ -170,6 +171,41 @@ def compute_fra(
     return fra_sparse, feat_acts, indices_np, values_np, seq_len
 
 
+@torch.no_grad()
+def compute_fra_all_heads(
+    base_model, it_model, crosscoder,
+    tok_ids: list[int], n_heads: int, device: str,
+):
+    """Run FRA for every head in layer ATTN_LAYER.
+
+    feat_acts is head-independent (crosscoder encoding); only fra_sparse
+    varies by head.
+
+    Returns:
+        fra_sparse_dict:  dict[int, Tensor] mapping head -> 4D sparse COO.
+        feat_acts:        [seq, d_sae] float32 on CPU (shared across heads).
+        all_indices_np:   list of [4, nnz] arrays (one per head).
+        all_values_np:    list of [nnz] arrays (one per head).
+        seq_len:          int.
+    """
+    fra_sparse_dict = {}
+    feat_acts = None
+    all_indices_np = []
+    all_values_np = []
+    seq_len = None
+    for h in range(n_heads):
+        fra_h, fa_h, idx_h, val_h, sl = compute_fra(
+            base_model, it_model, crosscoder, tok_ids, h, device,
+        )
+        fra_sparse_dict[h] = fra_h
+        if feat_acts is None:
+            feat_acts = fa_h
+            seq_len = sl
+        all_indices_np.append(idx_h)
+        all_values_np.append(val_h)
+    return fra_sparse_dict, feat_acts, all_indices_np, all_values_np, seq_len
+
+
 # ── Discovery phase ────────────────────────────────────────────────────────
 
 @torch.no_grad()
@@ -177,11 +213,13 @@ def discovery_phase(
     base_model, it_model, crosscoder,
     prompts: list[dict], n_discovery: int, head: int,
     top_k_pairs: int, device: str,
+    all_heads: bool = True, n_heads: int = 1,
 ):
     """Aggregate FRA tensors over *n_discovery* prompts to rank feature pairs.
 
-    Concatenates sparse indices across prompts (position dims are ignored by
-    ``rank_pairs``; only feature dims matter) and returns a global ranking.
+    When *all_heads* is True, FRA is run for every head; indices from all
+    heads are concatenated before ranking so the top pairs reflect the
+    strongest interactions across the whole layer.
 
     Returns:
         ranked_pairs:      list of (q_feat, k_feat, score, count, max) tuples.
@@ -189,7 +227,8 @@ def discovery_phase(
         combined_values:   [total_nnz] float32 numpy array.
     """
     n = min(n_discovery, len(prompts))
-    print(f"\nDiscovery phase: {n} prompts")
+    heads_label = f"all {n_heads} heads" if all_heads else f"head {head}"
+    print(f"\nDiscovery phase: {n} prompts x {heads_label}")
 
     all_indices: list[np.ndarray] = []
     all_values: list[np.ndarray] = []
@@ -197,11 +236,18 @@ def discovery_phase(
     for i, prompt in enumerate(prompts[:n]):
         tok_ids = tokenize_prompt(it_model, prompt["text"])
         try:
-            _, _, idx_np, val_np, _ = compute_fra(
-                base_model, it_model, crosscoder, tok_ids, head, device,
-            )
-            all_indices.append(idx_np)
-            all_values.append(val_np)
+            if all_heads:
+                _, _, idx_list, val_list, _ = compute_fra_all_heads(
+                    base_model, it_model, crosscoder, tok_ids, n_heads, device,
+                )
+                all_indices.extend(idx_list)
+                all_values.extend(val_list)
+            else:
+                _, _, idx_np, val_np, _ = compute_fra(
+                    base_model, it_model, crosscoder, tok_ids, head, device,
+                )
+                all_indices.append(idx_np)
+                all_values.append(val_np)
         except Exception as e:
             print(f"  [{i+1}/{n}] Error: {e}")
             continue
@@ -300,9 +346,13 @@ def generate_ablated(
     it_model, base_model, crosscoder,
     tok_ids: list[int], pairs: list[tuple[int, int]],
     fra_sparse, feat_acts,
-    head: int, ablation_mode: str, max_new_tokens: int, device: str,
+    head, ablation_mode: str, max_new_tokens: int, device: str,
 ) -> str:
-    """Generate a response with FRA pair ablation via run_generative_ablation."""
+    """Generate a response with FRA pair ablation via run_generative_ablation.
+
+    *fra_sparse* and *head* may be a single tensor / int (single-head) or a
+    ``dict[int, Tensor]`` / ``list[int]`` (all-heads mode).
+    """
     result = run_generative_ablation(
         target_model=it_model,
         tok_ids=tok_ids,
@@ -343,12 +393,19 @@ def run_experiment(args) -> dict:
     torch.set_grad_enabled(False)
     base_model, it_model, crosscoder = load_models(device)
 
+    n_heads = it_model.cfg.n_heads
+    all_heads = args.all_heads
+    head_arg = list(range(n_heads)) if all_heads else args.head
+    heads_label = f"all {n_heads} heads" if all_heads else f"head {args.head}"
+    print(f"Mode: {heads_label}")
+
     strategies_to_run = args.strategies or ALL_STRATEGIES
 
     # Discovery
     ranked_pairs, combined_indices, combined_values = discovery_phase(
         base_model, it_model, crosscoder,
         discovery_prompts, args.n_discovery, args.head, args.top_k_pairs, device,
+        all_heads=all_heads, n_heads=n_heads,
     )
     all_strategy_pairs = build_strategy_pairs(
         ranked_pairs, combined_indices, combined_values, args.top_k_pairs,
@@ -371,11 +428,16 @@ def run_experiment(args) -> dict:
     for i, prompt in enumerate(experiment_prompts):
         tok_ids = tokenize_prompt(it_model, prompt["text"])
 
-        # FRA
+        # FRA (per-head or all-heads)
         try:
-            fra_sparse, feat_acts, _, _, _ = compute_fra(
-                base_model, it_model, crosscoder, tok_ids, args.head, device,
-            )
+            if all_heads:
+                fra_sparse_arg, feat_acts, _, _, _ = compute_fra_all_heads(
+                    base_model, it_model, crosscoder, tok_ids, n_heads, device,
+                )
+            else:
+                fra_sparse_arg, feat_acts, _, _, _ = compute_fra(
+                    base_model, it_model, crosscoder, tok_ids, args.head, device,
+                )
         except Exception as e:
             print(f"  [{i+1}/{len(experiment_prompts)}] FRA error: {e}")
             continue
@@ -405,8 +467,8 @@ def run_experiment(args) -> dict:
             try:
                 abl_text = generate_ablated(
                     it_model, base_model, crosscoder,
-                    tok_ids, pairs, fra_sparse, feat_acts,
-                    args.head, args.ablation_mode, args.max_new_tokens, device,
+                    tok_ids, pairs, fra_sparse_arg, feat_acts,
+                    head_arg, args.ablation_mode, args.max_new_tokens, device,
                 )
                 abl_refuses = is_refusal(abl_text)
                 switched = baseline_refuses and not abl_refuses
@@ -436,7 +498,8 @@ def run_experiment(args) -> dict:
         "config": {
             "n_prompts": n_done,
             "n_discovery": args.n_discovery,
-            "head": args.head,
+            "all_heads": all_heads,
+            "head": args.head if not all_heads else list(range(n_heads)),
             "ablation_mode": args.ablation_mode,
             "top_k_pairs": args.top_k_pairs,
             "max_new_tokens": args.max_new_tokens,
@@ -474,8 +537,8 @@ def print_report(results: dict) -> None:
     print("REFUSAL ABLATION EXPERIMENT RESULTS")
     print("=" * 70)
     print(f"Prompts: {n}   Baseline refusals: {n_ref} ({results['baseline_refusal_rate']:.1%})")
-    print(f"Ablation mode: {results['config']['ablation_mode']}   "
-          f"Head: {results['config']['head']}")
+    head_str = "all heads" if results["config"].get("all_heads") else f"head {results['config']['head']}"
+    print(f"Ablation mode: {results['config']['ablation_mode']}   {head_str}")
     print()
     print(f"{'Strategy':<16}  {'Pairs':>5}  {'Refusals':>8}  {'Switches':>8}  {'SwitchRate':>10}")
     print("-" * 55)
@@ -521,7 +584,14 @@ def main():
     )
     parser.add_argument(
         "--head", type=int, default=0,
-        help="Attention head to ablate (default: 0)",
+        help="Attention head to ablate when --no-all-heads is set (default: 0)",
+    )
+    parser.add_argument(
+        "--all-heads", action=argparse.BooleanOptionalAction, default=True,
+        help=(
+            "Ablate all attention heads in the layer simultaneously (default: on). "
+            "Use --no-all-heads to target a single head specified by --head."
+        ),
     )
     parser.add_argument(
         "--top-k-pairs", type=int, default=50,
