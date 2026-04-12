@@ -488,6 +488,19 @@ def run_experiment(args) -> dict:
 
         per_prompt.append(entry)
 
+        # Print prompt + generations
+        print(f"\n{'─'*70}")
+        print(f"[{i+1}/{len(experiment_prompts)}] PROMPT: {prompt['text']}")
+        print(f"{'─'*70}")
+        ref_tag = "REFUSED" if baseline_refuses else "accepted"
+        print(f"BASELINE ({ref_tag}):\n  {baseline_text}")
+        for name, s in entry["strategies"].items():
+            if s.get("text") is None:
+                continue
+            sw_tag = " *** SWITCHED ***" if s["switched"] else ""
+            abl_tag = "REFUSED" if s["refuses"] else "accepted"
+            print(f"{name} ({abl_tag}){sw_tag}:\n  {s['text']}")
+
         if (i + 1) % 5 == 0 or i == len(experiment_prompts) - 1:
             n_done = i + 1
             print(f"  [{n_done}/{len(experiment_prompts)}] "
