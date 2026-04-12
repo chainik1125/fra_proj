@@ -29,7 +29,6 @@ from fra.dashboard.compute import (
     build_fra_head,
     build_fra_head_multilayer,
     encode_fra,
-    encode_fra_model_diff,
     encode_fra_multilayer,
 )
 
@@ -423,21 +422,20 @@ if compute_btn:
         _attn_cache = _attn_caches[int(layer)]
         _attn_layer = int(layer)
     elif sae_type == "crosscoder":
-        _encoded, _attn_cache, _model, _tokens, _attn_layer = (
-            encode_fra_model_diff(
-                tokens=fra_tokens,
-                crosscoder_layer=int(crosscoder_layer),
-                crosscoder_repo_id=crosscoder_repo_id,
-                model_idx=int(model_idx),
-                base_model_name=base_model_name,
-                it_model_name=it_model_name,
-                device=device,
-                subfolder=cc_subfolder,
-                it_arch_name=cc_it_arch,
-            )
+        _encoded, _attn_cache, _model, _tokens, _attn_layer = encode_fra(
+            tokens=fra_tokens,
+            crosscoder_layer=int(crosscoder_layer),
+            crosscoder_repo_id=crosscoder_repo_id,
+            model_idx=int(model_idx),
+            base_model_name=base_model_name,
+            it_model_name=it_model_name,
+            device=device,
+            subfolder=cc_subfolder,
+            it_arch_name=cc_it_arch,
+            sae_type=sae_type,
         )
     else:
-        _encoded, _attn_cache, _model, _tokens = encode_fra(
+        _encoded, _attn_cache, _model, _tokens, _attn_layer = encode_fra(
             text=text,
             layer=int(layer),
             hook_point=hook_point,
@@ -450,7 +448,6 @@ if compute_btn:
             hf_token=hf_token,
             include_special_tokens=True,
         )
-        _attn_layer = int(layer)
 
     # Pre-compute head-independent artifacts once
     from fra.core.fra import topk_sparsify

@@ -387,7 +387,7 @@ def run_generative_ablation(
         tok_ids: Prompt token IDs including any chat template.
         pairs_to_ablate: List of ``(q_feat, k_feat)`` tuples to suppress.
         fra_sparse: 4-D sparse COO tensor ``[seq, seq, d_sae, d_sae]`` from
-            :func:`~fra.core.fra.compute_fra_model_diff`.
+            :func:`~fra.core.fra.compute_fra`.
         feat_acts: ``[seq, d_sae]`` float32 feature activations (from the same
             FRA result).
         layer: Attention layer index (``cc_layer + 1`` for crosscoders).

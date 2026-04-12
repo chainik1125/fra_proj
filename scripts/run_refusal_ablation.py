@@ -42,7 +42,7 @@ import torch
 from transformer_lens import HookedTransformer
 
 from fra.core.coder import FRACoder
-from fra.core.fra import compute_fra_model_diff, compute_fra_model_diff_all_heads
+from fra.core.fra import compute_fra as _compute_fra
 from fra.core.helpers import rank_pairs
 from fra.analysis.ablation import (
     generate_with_prefill_ablation,
@@ -175,61 +175,42 @@ def is_refusal(text: str) -> bool:
 # ── FRA computation ────────────────────────────────────────────────────────
 
 @torch.no_grad()
-def compute_fra(
-    base_model, it_model, crosscoder,
-    tok_ids: list[int], head: int, device: str,
-):
-    """Run FRA for one prompt and one head.
+def _run_fra(base_model, it_model, crosscoder, tok_ids, head, device):
+    """Run FRA for one prompt, single head or all heads.
 
-    Returns:
-        fra_sparse:  4D sparse COO tensor [seq, seq, d_sae, d_sae] on CPU.
-        feat_acts:   [seq, d_sae] float32 on CPU (head-independent: same for
-                     all heads since it comes from the crosscoder encoding).
-        indices_np:  [4, nnz] int64 numpy array.
-        values_np:   [nnz] float32 numpy array.
-        seq_len:     int.
+    Args:
+        head: int for single head, or list[int] for multiple heads.
+
+    Single-head returns:
+        fra_sparse, feat_acts, indices_np, values_np, seq_len
+
+    Multi-head returns:
+        fra_sparse_dict, feat_acts, all_indices_np, all_values_np, seq_len
     """
-    result = compute_fra_model_diff(
-        base_model, it_model, crosscoder, tok_ids,
-        head=head, coder_layer=CC_LAYER,
+    target = base_model if crosscoder.model_idx == 0 else it_model
+    other = it_model if crosscoder.model_idx == 0 else base_model
+
+    result = _compute_fra(
+        target, crosscoder, tok_ids, ATTN_LAYER, head,
+        other_model=other, coder_layer=CC_LAYER,
     )
-    fra_sparse = result["fra_tensor_sparse"].coalesce().cpu()
-    feat_acts = result["feature_activations"].float().cpu()
-    seq_len = result["seq_len"]
-    indices_np = fra_sparse.indices().numpy()  # [4, nnz]
-    values_np = fra_sparse.values().numpy()    # [nnz]
-    return fra_sparse, feat_acts, indices_np, values_np, seq_len
 
+    if isinstance(head, int):
+        fra_sparse = result["fra_tensor_sparse"].coalesce().cpu()
+        feat_acts = result["feature_activations"].float().cpu()
+        seq_len = result["seq_len"]
+        indices_np = fra_sparse.indices().numpy()
+        values_np = fra_sparse.values().numpy()
+        return fra_sparse, feat_acts, indices_np, values_np, seq_len
 
-@torch.no_grad()
-def compute_fra_all_heads(
-    base_model, it_model, crosscoder,
-    tok_ids: list[int], n_heads: int, device: str,
-):
-    """Run FRA for every head in layer ATTN_LAYER with a single shared encode.
-
-    Delegates to ``compute_fra_model_diff_all_heads`` so that both model
-    forward passes and the crosscoder encoding are run only once (not once
-    per head).
-
-    Returns:
-        fra_sparse_dict:  dict[int, Tensor] mapping head -> 4D sparse COO.
-        feat_acts:        [seq, d_sae] float32 on CPU (shared across heads).
-        all_indices_np:   list of [4, nnz] arrays (one per head).
-        all_values_np:    list of [nnz] arrays (one per head).
-        seq_len:          int.
-    """
-    result = compute_fra_model_diff_all_heads(
-        base_model, it_model, crosscoder, tok_ids, n_heads,
-        coder_layer=CC_LAYER,
-    )
+    # Multi-head path
     fra_sparse_dict = result["fra_sparse_dict"]
     feat_acts = result["feature_activations"]
     seq_len = result["seq_len"]
 
     all_indices_np = []
     all_values_np = []
-    for h in range(n_heads):
+    for h in head:
         sp = fra_sparse_dict[h].coalesce()
         all_indices_np.append(sp.indices().numpy())
         all_values_np.append(sp.values().numpy())
@@ -267,15 +248,16 @@ def discovery_phase(
     for i, prompt in enumerate(prompts[:n]):
         tok_ids = tokenize_prompt(it_model, prompt["text"])
         try:
+            _head_arg = list(range(n_heads)) if all_heads else head
             if all_heads:
-                _, _, idx_list, val_list, _ = compute_fra_all_heads(
-                    base_model, it_model, crosscoder, tok_ids, n_heads, device,
+                _, _, idx_list, val_list, _ = _run_fra(
+                    base_model, it_model, crosscoder, tok_ids, _head_arg, device,
                 )
                 all_indices.extend(idx_list)
                 all_values.extend(val_list)
             else:
-                _, _, idx_np, val_np, _ = compute_fra(
-                    base_model, it_model, crosscoder, tok_ids, head, device,
+                _, _, idx_np, val_np, _ = _run_fra(
+                    base_model, it_model, crosscoder, tok_ids, _head_arg, device,
                 )
                 all_indices.append(idx_np)
                 all_values.append(val_np)
@@ -460,15 +442,11 @@ def run_experiment(args) -> dict:
         tok_ids = tokenize_prompt(it_model, prompt["text"])
 
         # FRA (per-head or all-heads)
+        _head_arg = list(range(n_heads)) if all_heads else args.head
         try:
-            if all_heads:
-                fra_sparse_arg, feat_acts, _, _, _ = compute_fra_all_heads(
-                    base_model, it_model, crosscoder, tok_ids, n_heads, device,
-                )
-            else:
-                fra_sparse_arg, feat_acts, _, _, _ = compute_fra(
-                    base_model, it_model, crosscoder, tok_ids, args.head, device,
-                )
+            fra_sparse_arg, feat_acts, _, _, _ = _run_fra(
+                base_model, it_model, crosscoder, tok_ids, _head_arg, device,
+            )
         except Exception as e:
             print(f"  [{i+1}/{len(experiment_prompts)}] FRA error: {e}")
             continue

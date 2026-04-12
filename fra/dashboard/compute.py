@@ -131,41 +131,6 @@ def run_fra(
     return _pack_fra_result(model, layer, head, fra_result, tokens, device)
 
 
-def run_fra_model_diff(
-    tokens: list,
-    head: int,
-    crosscoder_layer: int,
-    crosscoder_repo_id: str,
-    model_idx: int,
-    base_model_name: str,
-    it_model_name: str,
-    top_k_features: int | None,
-    device: str,
-    subfolder: str = "",
-    it_arch_name: str = "",
-) -> dict:
-    """Compute FRA with a model-diffing crosscoder, same return format as run_fra."""
-    from fra.core.fra import compute_fra_model_diff
-
-    base_model, it_model = load_model_pair(
-        base_model_name, it_model_name, device, it_arch_name,
-    )
-    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device, subfolder)
-    target_model = base_model if model_idx == 0 else it_model
-    layer = crosscoder_layer + 1
-
-    with torch.no_grad():
-        fra_result = compute_fra_model_diff(
-            base_model, it_model, crosscoder, tokens,
-            head=head,
-            coder_layer=crosscoder_layer,
-            max_length=128, top_k=top_k_features,
-            verbose=True,
-        )
-
-    return _pack_fra_result(target_model, layer, head, fra_result, tokens, device)
-
-
 def _load_di_weights(sae_type, head, device, **kw):
     """Load (W_dec, W_Q, W_K, attn_layer, rope_params) for DI computation."""
     from fra.core.helpers import get_W_K, _extract_rope_params
@@ -210,25 +175,82 @@ def _load_di_weights(sae_type, head, device, **kw):
 
 @torch.no_grad()
 def encode_fra(
-    text: str,
-    layer: int,
-    hook_point: str,
-    sae_type: str,
-    sae_hub_release: str,
-    sae_hub_id: str,
-    sae_local_path: str,
+    *,
     device: str,
+    sae_type: str,
+    # Single-model params
+    text: str = "",
+    layer: int | None = None,
+    hook_point: str = "ln1.hook_normalized",
+    sae_hub_release: str = "",
+    sae_hub_id: str = "",
+    sae_local_path: str = "",
     model_name: str = "gpt2-small",
     hf_token: str = "",
     include_special_tokens: bool = True,
+    # Model-diff params
+    tokens: list | None = None,
+    crosscoder_layer: int | None = None,
+    crosscoder_repo_id: str = "",
+    model_idx: int = 0,
+    base_model_name: str = "",
+    it_model_name: str = "",
+    subfolder: str = "",
+    it_arch_name: str = "",
 ):
-    """Head-independent encode: single combined forward pass + SAE encode.
+    """Head-independent encode with combined forward pass.
 
-    Returns ``(encoded, attn_cache, model, tokens)`` where *encoded* is the
-    dict from ``_encode_sae`` and *attn_cache* holds pre-computed attention
-    pattern / scores tensors for **all** heads.
+    Handles both single-model and model-diffing setups.  In single-model
+    mode the forward pass captures the coder activation and attention hooks
+    in one call.  In model-diff mode the target model captures residual +
+    attention hooks, and the other model captures only the residual.
+
+    Returns ``(encoded, attn_cache, model, tokens, attn_layer)`` in all modes.
     """
-    from fra.core.fra import _encode_sae
+    is_model_diff = sae_type == "crosscoder"
+
+    if is_model_diff:
+        from fra.core.fra import _encode_model_diff
+
+        base_model, it_model = load_model_pair(
+            base_model_name, it_model_name, device, it_arch_name,
+        )
+        crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device, subfolder)
+        target_model = base_model if model_idx == 0 else it_model
+        other_model = it_model if model_idx == 0 else base_model
+        attn_layer = crosscoder_layer + 1
+
+        tokens = list(tokens[:128])
+        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+        resid_hook = f"blocks.{crosscoder_layer}.hook_resid_post"
+        pattern_hook = f"blocks.{attn_layer}.attn.hook_pattern"
+        scores_hook = f"blocks.{attn_layer}.attn.hook_attn_scores"
+        _, target_cache = target_model.run_with_cache(
+            tok_tensor,
+            names_filter=[resid_hook, pattern_hook, scores_hook],
+        )
+        target_activation = target_cache[resid_hook].squeeze(0)
+
+        _, other_cache = other_model.run_with_cache(
+            tok_tensor, names_filter=[resid_hook],
+        )
+        other_activation = other_cache[resid_hook].squeeze(0)
+
+        encoded = _encode_model_diff(
+            target_model, other_model, crosscoder, tok_tensor, crosscoder_layer,
+            target_activation=target_activation,
+            other_activation=other_activation,
+        )
+
+        attn_cache = {
+            "pattern": target_cache[pattern_hook],
+            "scores": target_cache[scores_hook],
+        }
+        return encoded, attn_cache, target_model, tokens, attn_layer
+
+    # ── Single-model path ───────────────────────────────────────────────
+    from fra.core.fra import _encode_single
 
     if sae_type == "gemma":
         model = load_model_gemma(model_name, device, hf_token)
@@ -236,18 +258,17 @@ def encode_fra(
         model = load_model(model_name, device, hf_token)
 
     if sae_type == "hub":
-        sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
+        coder = load_sae_hub(sae_hub_release, sae_hub_id, device)
     elif sae_type == "gemma":
-        sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+        coder = load_sae_gemma(sae_hub_release, sae_hub_id, device)
     else:
-        sae = load_sae_local(sae_local_path, layer, device)
+        coder = load_sae_local(sae_local_path, layer, device)
 
     tokens = model.tokenizer.encode(
         text, add_special_tokens=include_special_tokens,
     )[:128]
     tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
-    # Single forward pass capturing activations AND attention hooks
     act_hook = f"blocks.{layer}.{hook_point}"
     pattern_hook = f"blocks.{layer}.attn.hook_pattern"
     scores_hook = f"blocks.{layer}.attn.hook_attn_scores"
@@ -257,78 +278,16 @@ def encode_fra(
     )
 
     activation = cache[act_hook].squeeze(0)
-    encoded = _encode_sae(
-        model, sae, tok_tensor, layer, hook_point,
+    encoded = _encode_single(
+        model, coder, tok_tensor, layer, hook_point,
         activation=activation,
     )
 
     attn_cache = {
-        "pattern": cache[pattern_hook],   # [1, n_heads, seq, seq]
-        "scores": cache[scores_hook],     # [1, n_heads, seq, seq]
+        "pattern": cache[pattern_hook],
+        "scores": cache[scores_hook],
     }
-    return encoded, attn_cache, model, tokens
-
-
-@torch.no_grad()
-def encode_fra_model_diff(
-    tokens: list,
-    crosscoder_layer: int,
-    crosscoder_repo_id: str,
-    model_idx: int,
-    base_model_name: str,
-    it_model_name: str,
-    device: str,
-    subfolder: str = "",
-    it_arch_name: str = "",
-):
-    """Head-independent encode: crosscoder path with combined forward pass.
-
-    The target model's forward pass captures both the residual-stream
-    activations (at ``crosscoder_layer``) and the attention pattern / scores
-    (at ``crosscoder_layer + 1``) in a single ``run_with_cache`` call.
-
-    Returns ``(encoded, attn_cache, target_model, tokens, attn_layer)``.
-    """
-    from fra.core.fra import _encode_model_diff
-
-    base_model, it_model = load_model_pair(
-        base_model_name, it_model_name, device, it_arch_name,
-    )
-    crosscoder = load_crosscoder(crosscoder_repo_id, model_idx, device, subfolder)
-    target_model = base_model if model_idx == 0 else it_model
-    other_model = it_model if model_idx == 0 else base_model
-    attn_layer = crosscoder_layer + 1
-
-    tokens = list(tokens[:128])
-    tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-
-    # Target model: combined forward pass (residual + attention hooks)
-    resid_hook = f"blocks.{crosscoder_layer}.hook_resid_post"
-    pattern_hook = f"blocks.{attn_layer}.attn.hook_pattern"
-    scores_hook = f"blocks.{attn_layer}.attn.hook_attn_scores"
-    _, target_cache = target_model.run_with_cache(
-        tok_tensor,
-        names_filter=[resid_hook, pattern_hook, scores_hook],
-    )
-    target_activation = target_cache[resid_hook].squeeze(0)
-
-    # Other model: only needs residual activation
-    _, other_cache = other_model.run_with_cache(
-        tok_tensor, names_filter=[resid_hook],
-    )
-    other_activation = other_cache[resid_hook].squeeze(0)
-
-    encoded = _encode_model_diff(
-        base_model, it_model, crosscoder, tok_tensor, crosscoder_layer,
-        target_activation=target_activation,
-        other_activation=other_activation,
-    )
-
-    attn_cache = {
-        "pattern": target_cache[pattern_hook],
-        "scores": target_cache[scores_hook],
-    }
-    return encoded, attn_cache, target_model, tokens, attn_layer
+    return encoded, attn_cache, model, tokens, layer
 
 
 @torch.no_grad()

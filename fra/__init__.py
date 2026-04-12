@@ -2,7 +2,6 @@
 
 from fra.core.fra import (
     compute_fra,
-    compute_fra_model_diff,
     attention_pattern_QK,
     topk_sparsify,
 )

@@ -1,16 +1,15 @@
 """
 Feature-Resolved Attention (FRA) computation.
 
-Public entry points (full pipeline: tokens → result dict):
-  - ``compute_fra``:            one model, one coder
-  - ``compute_fra_model_diff``: two models whose residuals are stacked before
-                                encoding (model-diffing setup)
+Public entry point (full pipeline: tokens → result dict):
+  - ``compute_fra``:  unified function handling single-model and model-diffing
+                      setups, single head or multiple heads.
 
-Both accept pre-tokenized token lists.  Internally they call ``_build_fra_result``,
-which handles weight lookup, RoPE extraction, and delegates to ``_compute_fra_sparse``.
-``_compute_fra_sparse`` is the private tensor kernel: it operates purely on
-pre-computed feature activations and weight matrices with no knowledge of models
-or tokens.
+``compute_fra`` accepts pre-tokenized token lists.  Internally it calls
+``_build_fra_result``, which handles weight lookup, RoPE extraction, and
+delegates to ``_compute_fra_sparse``.  ``_compute_fra_sparse`` is the private
+tensor kernel: it operates purely on pre-computed feature activations and
+weight matrices with no knowledge of models or tokens.
 """
 
 import math
@@ -79,7 +78,7 @@ def _compute_fra_sparse(
     """Tensor kernel: compute the 4-D FRA sparse tensor from pre-computed inputs.
 
     This is the inner loop only.  It has no knowledge of models, tokenization,
-    or encoding — all of that lives in ``compute_fra`` / ``compute_fra_model_diff``
+    or encoding — all of that lives in ``compute_fra``
     and their shared helper ``_build_fra_result``.  Call those instead unless
     you already have feature activations and weight matrices in hand.
 
@@ -495,9 +494,9 @@ def get_sentence_averages(llm:Any,sae:Any,layer:int,head:int,input_text:str,hook
 # ═══════════════════════════════════════════════════════════════════════
 
 
-def _encode_sae(
+def _encode_single(
     model: HookedTransformer,
-    sae: Any,
+    coder: Any,
     tokens_tensor: torch.Tensor,
     layer: int,
     hook_point: str = "ln1.hook_normalized",
@@ -506,15 +505,16 @@ def _encode_sae(
     normalize_by_decoder_norm: bool | None = None,
     verbose: bool = False,
 ) -> Dict[str, Any]:
-    """Head-independent SAE encoding.
+    """Head-independent single-model encoding.
 
     Runs the model forward pass (unless *activation* is provided), encodes
-    through the SAE, and computes all artifacts needed by
-    ``_build_fra_result``.
+    through the coder, and computes all artifacts needed by
+    ``_build_fra_result``.  Works with any single-model coder (SAE,
+    single-model crosscoder, etc.).
 
     Args:
         model: The transformer model.
-        sae: SAE object with ``.encode()`` and ``.W_dec``.
+        coder: Coder object with ``.encode()`` and ``.W_dec``.
         tokens_tensor: ``[1, seq]`` token tensor (on device).
         layer: Layer index.
         hook_point: Hook point relative to ``blocks.{layer}.``.
@@ -541,21 +541,20 @@ def _encode_sae(
     if activation.dim() == 3:
         activation = activation.flatten(-2, -1)
 
-    # Encode to SAE features
     if verbose:
-        print(f"Encoding {activation.shape[0]} positions to SAE features...")
+        print(f"Encoding {activation.shape[0]} positions through coder...")
 
-    feature_activations = sae.encode(activation)
+    feature_activations = coder.encode(activation)
 
     # Norm coefficient correction (e.g. Gemma-Scope)
-    if sae._norm_coeff is not None:
-        feature_activations = feature_activations / sae._norm_coeff
+    if coder._norm_coeff is not None:
+        feature_activations = feature_activations / coder._norm_coeff
 
-    W_dec = sae.W_dec
+    W_dec = coder.W_dec
 
     # Decoder norm detection
     if normalize_by_decoder_norm is None:
-        dec_norms = sae.dec_norms
+        dec_norms = coder.dec_norms
     elif normalize_by_decoder_norm:
         dec_norms = W_dec.norm(dim=-1)
     else:
@@ -565,7 +564,7 @@ def _encode_sae(
 
     # RMSNorm correction setup
     if "resid" in hook_point:
-        b_dec = sae.b_dec
+        b_dec = coder.b_dec
         rms_activations = feature_activations @ W_dec + b_dec
     else:
         rms_activations = None
@@ -580,27 +579,29 @@ def _encode_sae(
 
 
 def _encode_model_diff(
-    base_model: HookedTransformer,
-    it_model: HookedTransformer,
-    crosscoder: Any,
+    target_model: HookedTransformer,
+    other_model: HookedTransformer,
+    coder: Any,
     tokens_tensor: torch.Tensor,
-    crosscoder_layer: int,
+    coder_layer: int,
     *,
     target_activation: torch.Tensor | None = None,
     other_activation: torch.Tensor | None = None,
     verbose: bool = False,
 ) -> Dict[str, Any]:
-    """Head-independent crosscoder encoding.
+    """Head-independent model-diffing encoding.
 
     Runs both model forward passes (unless activations are provided),
-    encodes through the crosscoder, and prepares RMSNorm artifacts.
+    stacks the residuals, encodes through the coder, and prepares
+    RMSNorm artifacts.
 
     Args:
-        base_model: HookedTransformer for model-index 0 (base).
-        it_model: HookedTransformer for model-index 1 (instruct).
-        crosscoder: ``FRACoder`` instance.
+        target_model: HookedTransformer whose attention is being analyzed.
+        other_model: The paired HookedTransformer.
+        coder: ``FRACoder`` instance with ``model_idx`` indicating which
+            model slot the target occupies (0 or 1).
         tokens_tensor: ``[1, seq]`` token tensor (on device).
-        crosscoder_layer: Crosscoder residual-stream layer.
+        coder_layer: Residual-stream layer for activation extraction.
         target_activation: Pre-computed ``[seq, d_model]`` from target model.
         other_activation: Pre-computed ``[seq, d_model]`` from other model.
         verbose: Print progress.
@@ -609,11 +610,9 @@ def _encode_model_diff(
         Dict with ``feature_activations``, ``W_dec``, ``dec_norms``,
         ``rms_activations``.
     """
-    target_model = base_model if crosscoder.model_idx == 0 else it_model
-    other_model = it_model if crosscoder.model_idx == 0 else base_model
     device = next(target_model.parameters()).device
 
-    hook_name = f"blocks.{crosscoder_layer}.hook_resid_post"
+    hook_name = f"blocks.{coder_layer}.hook_resid_post"
 
     if target_activation is None:
         _, target_cache = target_model.run_with_cache(
@@ -627,34 +626,34 @@ def _encode_model_diff(
         )
         other_activation = other_cache[hook_name].squeeze(0)
 
-    # Stack in crosscoder order: [base, instruct]
-    if crosscoder.model_idx == 0:
+    # Stack in coder order: model_idx 0 first, model_idx 1 second
+    if coder.model_idx == 0:
         x_stacked = torch.stack([target_activation, other_activation], dim=1)
     else:
         x_stacked = torch.stack([other_activation, target_activation], dim=1)
 
     if verbose:
         print(
-            f"Encoding {target_activation.shape[0]} positions through crosscoder..."
+            f"Encoding {target_activation.shape[0]} positions through coder..."
         )
-    feature_activations = crosscoder.encode(x_stacked)
+    feature_activations = coder.encode(x_stacked)
 
     # RMSNorm correction always needed — decode in float32 for precision
-    b_dec_rms = crosscoder.b_dec.float().to(device)
+    b_dec_rms = coder.b_dec.float().to(device)
     rms_activations = (
-        feature_activations.float() @ crosscoder.W_dec.float() + b_dec_rms
+        feature_activations.float() @ coder.W_dec.float() + b_dec_rms
     )
 
     return {
         "feature_activations": feature_activations,
-        "W_dec": crosscoder.W_dec,
+        "W_dec": coder.W_dec,
         "dec_norms": None,
         "rms_activations": rms_activations,
     }
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Entry point: single-model path
+# Unified entry point
 # ═══════════════════════════════════════════════════════════════════════
 
 
@@ -664,224 +663,125 @@ def compute_fra(
     coder: Any,
     tokens: list,
     layer: int,
-    head: int,
+    head: int | list[int] = 0,
+    *,
     max_length: int = 128,
     top_k: int | None = 20,
     verbose: bool = False,
     hook_point: str = "ln1.hook_normalized",
     chunk_size: int = 16,
     normalize_by_decoder_norm: bool | None = None,
+    other_model: HookedTransformer | None = None,
+    coder_layer: int | None = None,
 ) -> Dict[str, Any]:
-    """Compute the 4-D FRA sparse tensor for a token sequence using one model.
+    """Compute the 4-D FRA sparse tensor for a token sequence.
 
-    hook_point controls which activation the coder was trained on:
-      - "ln1.hook_normalized"  (default, correct for FRA): decoder vectors live in
-        the same d_model space that W_Q / W_K project from.  This is the only
-        mathematically correct choice.
-      - "attn.hook_z"          (legacy, for pre-trained hook_z SAEs): decoder
-        vectors are in concatenated-heads space, not d_model space; the QK
-        attention score computation is therefore approximate.
+    Handles both single-model and model-diffing setups, and both single-head
+    and multi-head computation, via ``other_model`` and ``head``.
+
+    Single-model mode (``other_model=None``):
+        ``hook_point`` controls which activation the coder was trained on.
+        ``layer`` is the attention layer to analyze.
+
+    Model-diffing mode (``other_model`` provided):
+        Both models are run; their residuals at ``coder_layer`` are stacked
+        and encoded.  The attention layer is ``coder_layer + 1``.
+
+    Multi-head mode (``head`` is a list):
+        Encoding is done once; ``_build_fra_result`` is called per head with
+        shared ``topk_features`` and ``rms``.
 
     Args:
-        model: The transformer model.
-        coder: Any object with .encode() and .W_dec attributes (SAE or FRACoder).
-        tokens: Pre-tokenized token IDs.  Caller is responsible for tokenization
-                (including BOS / chat template if needed).
-        layer: Which layer to analyze.
-        head: Which attention head to analyze.
+        model: Target model (whose attention is analyzed).
+        coder: Any object with ``.encode()`` and ``.W_dec``.
+        tokens: Pre-tokenized token IDs.
+        layer: Attention layer to analyze.  Ignored when ``coder_layer`` is
+            provided (derived as ``coder_layer + 1``).
+        head: Attention head index (int) or list of head indices.
         max_length: Truncate tokens to this length.
         top_k: Number of top features to keep per position.
-        verbose: Whether to show progress.
-        hook_point: Hookpoint the coder was trained on (relative to blocks.{layer}.)
-        chunk_size: Query positions per GPU batch.  Reduce for large coders to
-                    avoid GPU OOM; set to seq_len to process everything at once.
-        normalize_by_decoder_norm: Divide feature activations by decoder weight
-                    norms (rescale_acts_by_decoder_norm).  None auto-detects from
-                    the coder config; True/False forces the behaviour.
+        verbose: Show progress.
+        hook_point: Hookpoint the coder was trained on (relative to
+            ``blocks.{layer}.``).  Only used in single-model mode.
+        chunk_size: Query positions per GPU batch.
+        normalize_by_decoder_norm: Override decoder-norm correction.
+        other_model: Paired model for model-diffing.  When provided,
+            activates model-diff encoding via ``_encode_model_diff``.
+        coder_layer: Residual-stream layer for model-diff encoding.
+            When provided, the attention layer is ``coder_layer + 1``.
+            Defaults to ``layer - 1`` when ``other_model`` is given.
 
     Returns:
-        Dictionary containing:
-            - fra_tensor_sparse: Sparse 4D tensor indices and values
-            - shape: Shape of the full tensor [seq_len, seq_len, d_sae, d_sae]
-            - seq_len: Actual sequence length
-            - total_interactions: Total number of non-zero interactions
-            - normalized: Whether decoder-norm normalization was applied
+        When ``head`` is an int — dict with:
+          ``fra_tensor_sparse``, ``shape``, ``seq_len``,
+          ``total_interactions``, ``feature_activations``, ``topk_features``.
+
+        When ``head`` is a list — dict with:
+          ``fra_sparse_dict`` (``dict[int, sparse_coo_tensor]``),
+          ``feature_activations``, ``topk_features``, ``seq_len``.
     """
+    # ── Resolve layer / coder_layer ─────────────────────────────────────
+    if other_model is not None:
+        if coder_layer is not None:
+            layer = coder_layer + 1
+        else:
+            coder_layer = layer - 1
+
     device = next(model.parameters()).device
 
     if max_length is not None and len(tokens) > max_length:
         tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
-    encoded = _encode_sae(
-        model, coder, tokens_tensor, layer, hook_point,
-        normalize_by_decoder_norm=normalize_by_decoder_norm,
-        verbose=verbose,
-    )
+    # ── Encode (the one legitimate branch) ──────────────────────────────
+    if other_model is None:
+        encoded = _encode_single(
+            model, coder, tokens_tensor, layer, hook_point,
+            normalize_by_decoder_norm=normalize_by_decoder_norm,
+            verbose=verbose,
+        )
+    else:
+        encoded = _encode_model_diff(
+            model, other_model, coder, tokens_tensor, coder_layer,
+            verbose=verbose,
+        )
 
-    result = _build_fra_result(
-        model, layer, head,
-        encoded["feature_activations"], encoded["W_dec"], device,
-        top_k=top_k,
-        rms_activations=encoded["rms_activations"],
-        dec_norms=encoded["dec_norms"],
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
-    result["normalized"] = encoded["normalized"]
-    return result
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# Entry point: paired-model path
-# ═══════════════════════════════════════════════════════════════════════
-
-
-@torch.no_grad()
-def compute_fra_model_diff(
-    base_model: HookedTransformer,
-    it_model: HookedTransformer,
-    coder: Any,
-    tokens: list,
-    head: int = 0,
-    coder_layer: int = 13,
-    max_length: int = 128,
-    top_k: int | None = 20,
-    verbose: bool = False,
-    chunk_size: int = 16,
-) -> Dict[str, Any]:
-    """Compute the 4-D FRA sparse tensor using residuals from two models.
-
-    Both models are run on the same token sequence; their residuals at
-    ``coder_layer`` are stacked and passed to the coder for encoding.
-    The coder was trained on ``hook_resid_post`` at ``coder_layer``, which
-    is the input to the next layer's attention, so the FRA decomposition
-    always targets attention at ``coder_layer + 1``.
-
-    The attention layer is **not** independently configurable — it is always
-    ``coder_layer + 1``.  This ensures the FRA decomposition corresponds
-    to the features the coder actually learned.
-
-    Args:
-        base_model:  HookedTransformer for model-index 0 (base).
-        it_model:    HookedTransformer for model-index 1 (instruct).
-        coder:       ``FRACoder`` instance trained on paired residuals.
-        tokens:      Pre-tokenized token IDs.  Caller is responsible for
-                     tokenization (including chat template if needed).
-        head:        Attention head index.
-        coder_layer: Layer from which to extract residual-stream activations
-                     (default 13, matching the published checkpoint).
-                     Uses ``hook_resid_post`` at this layer.  The attention
-                     layer analyzed is derived as ``coder_layer + 1``.
-        max_length:  Truncate tokens to this length.
-        top_k:       Keep only top-k features per position.
-        verbose:     Show progress bar.
-        chunk_size:  Query positions per GPU batch (controls peak memory).
-
-    Returns:
-        Dict with keys:
-          - ``fra_tensor_sparse``  (torch.sparse_coo_tensor, 4-D)
-          - ``shape``
-          - ``seq_len``
-          - ``total_interactions``
-          - ``feature_activations``  (torch.Tensor, [seq, d_sae])
-          - ``topk_features``  (torch.Tensor, [seq, d_sae])
-    """
-    layer = coder_layer + 1
-    target_model = base_model if coder.model_idx == 0 else it_model
-    device = next(target_model.parameters()).device
-
-    if max_length is not None and len(tokens) > max_length:
-        tokens = tokens[:max_length]
-    tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-
-    encoded = _encode_model_diff(
-        base_model, it_model, coder, tokens_tensor, coder_layer,
-        verbose=verbose,
-    )
-
-    return _build_fra_result(
-        target_model, layer, head,
-        encoded["feature_activations"], encoded["W_dec"], device,
-        top_k=top_k,
-        rms_activations=encoded["rms_activations"],
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
-
-
-@torch.no_grad()
-def compute_fra_model_diff_all_heads(
-    base_model: HookedTransformer,
-    it_model: HookedTransformer,
-    coder: Any,
-    tokens: list,
-    n_heads: int,
-    coder_layer: int = 13,
-    max_length: int = 128,
-    top_k: int | None = 20,
-    verbose: bool = False,
-    chunk_size: int = 16,
-) -> Dict[str, Any]:
-    """Compute the 4-D FRA sparse tensor for every attention head in one call.
-
-    Runs both model forward passes and the crosscoder encoding **once** (not
-    once per head), then calls ``_build_fra_result`` for each head using the
-    shared encoding artifacts.  This is ``n_heads`` times more efficient than
-    calling :func:`compute_fra_model_diff` in a loop.
-
-    Args:
-        base_model: HookedTransformer for model-index 0 (base).
-        it_model:   HookedTransformer for model-index 1 (instruct).
-        coder:      ``FRACoder`` instance trained on paired residuals.
-        tokens:     Pre-tokenized token IDs.
-        n_heads:    Number of attention heads in the target layer.
-        coder_layer: Crosscoder residual-stream layer (default 13).
-        max_length:  Truncate tokens to this length.
-        top_k:       Keep only top-k features per position.
-        verbose:     Show progress bar per head.
-        chunk_size:  Unused; kept for API compatibility.
-
-    Returns:
-        Dict with:
-          - ``fra_sparse_dict``: ``dict[int, sparse_coo_tensor]`` head → FRA.
-          - ``feature_activations``: ``[seq, d_sae]`` float32 on CPU.
-          - ``topk_features``: ``[seq, d_sae]`` float32.
-          - ``seq_len``: int.
-    """
-    layer = coder_layer + 1
-    target_model = base_model if coder.model_idx == 0 else it_model
-    device = next(target_model.parameters()).device
-
-    if max_length is not None and len(tokens) > max_length:
-        tokens = tokens[:max_length]
-    tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-
-    # Single encode: 2 model forward passes shared across all heads
-    encoded = _encode_model_diff(
-        base_model, it_model, coder, tokens_tensor, coder_layer, verbose=verbose,
-    )
-
+    # ── Shared pre-computation (once, not per head) ─────────────────────
     feature_activations = encoded["feature_activations"]
     W_dec = encoded["W_dec"]
-
-    # Head-independent artifacts computed once
     topk_features = topk_sparsify(feature_activations, top_k).float()
 
-    eps = target_model.cfg.eps
-    rms = (encoded["rms_activations"].float().pow(2).mean(dim=-1) + eps).sqrt()
+    rms = None
+    if encoded["rms_activations"] is not None:
+        eps = model.cfg.eps
+        rms = (
+            encoded["rms_activations"].float().pow(2).mean(dim=-1) + eps
+        ).sqrt()
 
+    single_head = isinstance(head, int)
+    heads = [head] if single_head else list(head)
+
+    # ── Per-head FRA construction ───────────────────────────────────────
     fra_sparse_dict: Dict[int, Any] = {}
-    for h in range(n_heads):
+    last_result = None
+    for h in heads:
         result = _build_fra_result(
-            target_model, layer, h,
+            model, layer, h,
             feature_activations, W_dec, device,
             topk_features=topk_features,
             rms=rms,
+            dec_norms=encoded.get("dec_norms"),
             chunk_size=chunk_size,
             verbose=verbose,
         )
         fra_sparse_dict[h] = result["fra_tensor_sparse"].cpu()
+        last_result = result
+
+    # ── Return ──────────────────────────────────────────────────────────
+    if single_head:
+        if "normalized" in encoded:
+            last_result["normalized"] = encoded["normalized"]
+        return last_result
 
     return {
         "fra_sparse_dict": fra_sparse_dict,
