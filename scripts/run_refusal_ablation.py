@@ -1,9 +1,9 @@
 """
 Refusal ablation experiment for the Gemma-2 2B crosscoder.
 
-Loads harmful prompts from AdvBench (llm-attacks/harmful_behaviors) --
-500 explicitly harmful instructions where Gemma-2-IT refuses virtually
-every prompt, making it ideal for measuring refusal→acceptance switches.
+Loads harmful prompts from BeaverTails (PKU-Alignment/BeaverTails,
+330k_test split, is_safe=False) -- explicit harmful requests where
+Gemma-2-IT refuses virtually every prompt.
 
 Seven strategies are compared:
   paper_k       -- key-side feature in pre-refusal set {24613, 70149, 7736}
@@ -84,21 +84,31 @@ REFUSAL_MARKERS = [
 # ── Dataset ────────────────────────────────────────────────────────────────
 
 def load_harmful_prompts(n_prompts: int) -> list[dict]:
-    """Load harmful prompts from AdvBench (llm-attacks/harmful_behaviors).
+    """Load harmful prompts from BeaverTails (PKU-Alignment/BeaverTails).
 
-    AdvBench contains 500 explicitly harmful instructions (bomb-making,
-    malware, identity theft, etc.) designed to elicit refusal.  The model
-    refuses virtually all of them, making it ideal for ablation experiments.
+    BeaverTails is filtered to is_safe=False examples — explicit harmful
+    requests (violence, weapons, illegal activity, etc.) where the model
+    should refuse.  Uses the 330k_test split with streaming to avoid
+    downloading the full dataset.
     """
     from datasets import load_dataset
-    ds = load_dataset("llm-attacks/harmful_behaviors", split="train")
-    examples = list(ds)
-    if len(examples) < n_prompts:
-        print(f"Warning: only {len(examples)} AdvBench examples available, "
+    print(f"Loading {n_prompts} harmful prompts from BeaverTails...")
+    bt = load_dataset("PKU-Alignment/BeaverTails", split="330k_test", streaming=True)
+    bt = bt.shuffle(seed=42, buffer_size=10000)
+    prompts = []
+    for ex in bt:
+        if ex["is_safe"]:
+            continue
+        prompt = ex["prompt"].strip()
+        if len(prompt) < 10 or len(prompt) > 500:
+            continue
+        prompts.append({"text": prompt, "is_safe": False})
+        if len(prompts) >= n_prompts:
+            break
+    if len(prompts) < n_prompts:
+        print(f"Warning: only collected {len(prompts)} harmful prompts, "
               f"requested {n_prompts}.")
-    rng = random.Random(42)
-    rng.shuffle(examples)
-    return [{"text": ex["goal"], "is_safe": False} for ex in examples[:n_prompts]]
+    return prompts
 
 
 # ── Models ─────────────────────────────────────────────────────────────────
