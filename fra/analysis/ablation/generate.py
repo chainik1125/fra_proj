@@ -217,9 +217,9 @@ def generate_with_ablation(
 
     # Accumulate feature activations and RMS denominators across all positions
     # (prompt + generated tokens).  These are the key-side inputs to
-    # compute_fra_new_query; they must grow in lockstep with the KV cache.
-    feat_acts_all = feat_acts_prompt.detach().clone().float()  # CPU [seq, d_sae]
-    rms_all = rms_prompt.cpu().float()                                    # CPU [seq]
+    # compute_fra_new_query; they grow in lockstep with the KV cache.
+    feat_acts_all = feat_acts_prompt.detach().clone().float()  # [seq, d_sae] on device
+    rms_all = rms_prompt.to(device).float()                    # [seq] on device
 
     resid_hook_name = f"blocks.{cc_layer}.hook_resid_post"
     attn_hook_name = f"blocks.{layer}.attn.hook_attn_scores"
@@ -260,7 +260,7 @@ def generate_with_ablation(
             fra_per_head = {}
             for h in _heads:
                 fra_per_head[h] = compute_fra_new_query(
-                    feat_q=fa_new.cpu(),
+                    feat_q=fa_new.to(device),
                     feat_k_all=_fa,
                     pairs=pairs_to_ablate,
                     W_dec=W_dec,
@@ -271,9 +271,9 @@ def generate_with_ablation(
                     rms_k_all=_rk,
                     rope_params=rope_params,
                     q_pos=_q_pos,
-                ).to(device)  # [T]
+                )  # [T] on device
             _ss["fra_per_head"] = fra_per_head
-            _ss["fa_new"] = fa_new.cpu()
+            _ss["fa_new"] = fa_new.to(device)
             _ss["rms_new"] = rms_new
             return target_resid
 
@@ -295,7 +295,7 @@ def generate_with_ablation(
                 [feat_acts_all, _step["fa_new"].unsqueeze(0)], dim=0,
             )
             rms_all = torch.cat(
-                [rms_all, torch.tensor([_step["rms_new"]], dtype=torch.float32)], dim=0,
+                [rms_all, torch.tensor([_step["rms_new"]], dtype=torch.float32, device=device)], dim=0,
             )
 
         cur_tok_id = int(logits[0, -1].argmax(-1).item())
@@ -507,21 +507,21 @@ def run_generative_ablation(
         )
 
         eps = target_model.cfg.eps
-        rms_prompt = (x_hat.pow(2).mean(dim=-1) + eps).sqrt().cpu()  # [seq] CPU
+        rms_prompt = (x_hat.pow(2).mean(dim=-1) + eps).sqrt()  # [seq] on device
 
         # rope_params are layer-level (not head-specific)
         rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(target_model, layer)
         if rope_sin is not None:
-            rope_sin = rope_sin.detach().cpu()
-            rope_cos = rope_cos.detach().cpu()
+            rope_sin = rope_sin.detach().to(device)
+            rope_cos = rope_cos.detach().to(device)
 
         # W_Q / W_K are head-specific; build per-head dicts
         W_Q_dict = {}
         W_K_dict = {}
         for h in heads_list:
             wq, wk, _, _ = get_qk_weights(target_model, layer, h)
-            W_Q_dict[h] = wq.float().cpu()
-            W_K_dict[h] = wk.float().cpu()
+            W_Q_dict[h] = wq.float().to(device)
+            W_K_dict[h] = wk.float().to(device)
 
         ablated_ids = generate_with_ablation(
             target_model=target_model,
@@ -534,12 +534,12 @@ def run_generative_ablation(
             layer=layer,
             head=head_arg,
             pairs_to_ablate=pairs_to_ablate,
-            W_dec=W_dec.cpu(),
-            b_dec=b_dec.cpu(),
+            W_dec=W_dec,
+            b_dec=b_dec,
             W_Q=W_Q_dict if len(heads_list) > 1 else W_Q_dict[heads_list[0]],
             W_K=W_K_dict if len(heads_list) > 1 else W_K_dict[heads_list[0]],
             attn_scale=attn_scale,
-            feat_acts_prompt=feat_acts.cpu().float(),
+            feat_acts_prompt=feat_acts.to(device).float(),
             rms_prompt=rms_prompt,
             rope_params=(rope_sin, rope_cos, rotary_dim, rotary_adj),
             eps=eps,

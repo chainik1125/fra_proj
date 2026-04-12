@@ -46,23 +46,14 @@ def topk_sparsify(
     if top_k is None:
         return feature_activations
 
-    seq_len = feature_activations.shape[0]
-    topk_features = []
-    for pos in range(seq_len):
-        feat = feature_activations[pos]
-        n_active = (feat != 0).sum().item()
+    d_sae = feature_activations.shape[1]
+    k = min(top_k, d_sae)
 
-        if n_active > 0:
-            k = min(top_k, n_active)
-            _, topk_idx = torch.topk(feat.abs(), k)
-            sparse_feat = torch.zeros_like(feat)
-            sparse_feat[topk_idx] = feat[topk_idx]
-        else:
-            sparse_feat = torch.zeros_like(feat)
-
-        topk_features.append(sparse_feat)
-
-    return torch.stack(topk_features)
+    # Vectorized: one topk + scatter instead of a Python loop over positions
+    topk_idx = torch.topk(feature_activations.abs(), k=k, dim=-1).indices  # [seq, k]
+    out = torch.zeros_like(feature_activations)
+    out.scatter_(-1, topk_idx, feature_activations.gather(-1, topk_idx))
+    return out
 
 
 # ── Core FRA loop ───────────────────────────────────────────────────────
@@ -108,8 +99,7 @@ def _compute_fra_sparse(
         rope_cos: Optional ``[n_ctx, rotary_dim]`` precomputed cosine table.
         rotary_dim: Number of RoPE dimensions (``model.cfg.rotary_dim``).
         rotary_adjacent_pairs: RoPE pair ordering flag from model config.
-        chunk_size: Number of query positions per GPU batch before flushing
-                to CPU.  Controls peak GPU memory.
+        chunk_size: Unused; kept for API compatibility.
         verbose: Show progress bar.
         layer_head_label: Label for progress bar (e.g. ``"L5H3"``).
 
@@ -119,99 +109,125 @@ def _compute_fra_sparse(
     """
     seq_len = topk_features.shape[0]
     d_sae = topk_features.shape[1]
+    device = topk_features.device
     shape = (seq_len, seq_len, d_sae, d_sae)
 
-    all_indices_cpu: list[torch.Tensor] = []
-    all_values_cpu: list[torch.Tensor] = []
+    use_rope = rope_sin is not None
 
-    total_pairs = seq_len * (seq_len + 1) // 2
+    # ── Pre-compute key-side projections for every position — O(T) GPU ops ──
+    # Each position's data is computed exactly once, not once per attending query.
+    k_active_list: list = [None] * seq_len   # active feature index tensor per pos
+    k_proj_list:   list = [None] * seq_len   # [n_k, d_head] RoPE-rotated projection
+    k_scales_list: list = [None] * seq_len   # [n_k] weighted activations
+
+    for t in range(seq_len):
+        feat = topk_features[t]
+        active = feat.nonzero(as_tuple=True)[0]
+        if len(active) == 0:
+            continue
+        proj = W_dec[active] @ W_K                              # [n_k, d_head]
+        scales = feat[active]
+        if dec_norms is not None:
+            scales = scales / dec_norms[active]
+        if use_rope:
+            proj = apply_rope_to_projected(
+                proj, t, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+            )
+        k_active_list[t] = active
+        k_proj_list[t]   = proj
+        k_scales_list[t] = scales
+
+    # Count total active key features to pre-allocate buffers
+    total_k = sum(len(a) for a in k_active_list if a is not None)
+
+    if total_k == 0:
+        return torch.sparse_coo_tensor(
+            torch.zeros((4, 0), dtype=torch.long),
+            torch.zeros(0, dtype=torch.float32),
+            size=shape, device="cpu",
+        )
+
+    # Pre-allocate contiguous key buffers.  Filled incrementally as the
+    # query loop advances, so that position t is a key candidate for all
+    # query positions t' ≥ t (causal masking is natural).
+    k_proj_buf   = torch.empty(total_k, W_K.shape[-1], dtype=torch.float32, device=device)
+    k_scales_buf = torch.empty(total_k, dtype=torch.float32, device=device)
+    k_active_buf = torch.empty(total_k, dtype=torch.long, device=device)
+    k_pos_buf    = torch.empty(total_k, dtype=torch.long, device=device)
+    fill_ptr = 0
+
+    all_indices_cpu: list[torch.Tensor] = []
+    all_values_cpu:  list[torch.Tensor] = []
+
     pbar = tqdm(
-        total=total_pairs,
+        total=seq_len,
         desc=f"Computing FRA ({layer_head_label})" if layer_head_label else "Computing FRA",
         disable=not verbose,
     )
 
-    for q_start in range(0, seq_len, chunk_size):
-        q_end = min(q_start + chunk_size, seq_len)
-        chunk_indices: list[torch.Tensor] = []
-        chunk_values: list[torch.Tensor] = []
+    # ── Main loop: O(T) iterations, one batched matmul per query position ───
+    for query_idx in range(seq_len):
+        # Extend key buffer: position query_idx is now a valid key target.
+        k_a = k_active_list[query_idx]
+        if k_a is not None:
+            n_k = len(k_a)
+            k_proj_buf  [fill_ptr:fill_ptr + n_k] = k_proj_list[query_idx]
+            k_scales_buf[fill_ptr:fill_ptr + n_k] = k_scales_list[query_idx]
+            k_active_buf[fill_ptr:fill_ptr + n_k] = k_a
+            k_pos_buf   [fill_ptr:fill_ptr + n_k] = query_idx
+            fill_ptr += n_k
 
-        for query_idx in range(q_start, q_end):
-            q_feat = topk_features[query_idx]
-            q_active = torch.where(q_feat != 0)[0]
+        if fill_ptr == 0:
+            pbar.update(1)
+            continue
 
-            if len(q_active) == 0:
-                pbar.update(query_idx + 1)
-                continue
+        # Query projection
+        q_feat   = topk_features[query_idx]
+        q_active = q_feat.nonzero(as_tuple=True)[0]
+        if len(q_active) == 0:
+            pbar.update(1)
+            continue
 
-            q_vecs = W_dec[q_active]                          # [n_q, d_model]
-            q_proj = q_vecs @ W_Q                             # [n_q, d_head]
-            q_scales = q_feat[q_active]                       # [n_q]
-            if dec_norms is not None:
-                q_scales = q_scales / dec_norms[q_active]
+        q_proj = W_dec[q_active] @ W_Q                         # [n_q, d_head]
+        q_scales = q_feat[q_active]
+        if dec_norms is not None:
+            q_scales = q_scales / dec_norms[q_active]
+        if use_rope:
+            q_proj = apply_rope_to_projected(
+                q_proj, query_idx, rope_sin, rope_cos, rotary_dim, rotary_adjacent_pairs,
+            )
 
-            # Apply RoPE to query once per query position (outside key loop)
-            if rope_sin is not None:
-                q_proj = apply_rope_to_projected(
-                    q_proj, query_idx, rope_sin, rope_cos,
-                    rotary_dim, rotary_adjacent_pairs,
-                )
+        # Single batched matmul against all key positions so far [n_q, total_k_so_far]
+        k_p = k_proj_buf[:fill_ptr]
+        k_s = k_scales_buf[:fill_ptr]
+        k_a_view = k_active_buf[:fill_ptr]
+        k_pos_view = k_pos_buf[:fill_ptr]
 
-            for key_idx in range(query_idx + 1):
-                k_feat = topk_features[key_idx]
-                k_active = torch.where(k_feat != 0)[0]
+        int_matrix = (q_proj @ k_p.T) / attn_scale             # [n_q, total_k]
+        int_matrix = int_matrix * q_scales.unsqueeze(1) * k_s.unsqueeze(0)
 
-                if len(k_active) == 0:
-                    pbar.update(1)
-                    continue
+        if rms is not None:
+            int_matrix = int_matrix / (rms[query_idx] * rms[k_pos_view].unsqueeze(0))
 
-                k_vecs = W_dec[k_active]                      # [n_k, d_model]
-                k_proj = k_vecs @ W_K                         # [n_k, d_head]
+        mask = int_matrix.abs() > 1e-10
+        if mask.any():
+            local_r, local_c = torch.where(mask)
+            pos_indices = torch.stack([
+                torch.full((len(local_r),), query_idx, dtype=torch.long),
+                k_pos_view[local_c].cpu(),
+                q_active[local_r].cpu(),
+                k_a_view[local_c].cpu(),
+            ], dim=0)
+            all_indices_cpu.append(pos_indices)
+            all_values_cpu.append(int_matrix[mask].detach().cpu().float())
 
-                # Apply RoPE to key for this key position
-                if rope_sin is not None:
-                    k_proj = apply_rope_to_projected(
-                        k_proj, key_idx, rope_sin, rope_cos,
-                        rotary_dim, rotary_adjacent_pairs,
-                    )
-                k_scales = k_feat[k_active]                   # [n_k]
-                if dec_norms is not None:
-                    k_scales = k_scales / dec_norms[k_active]
-
-                int_matrix = (q_proj @ k_proj.T) / attn_scale  # [n_q, n_k]
-                int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
-
-                if rms is not None:
-                    int_matrix = int_matrix / (rms[query_idx] * rms[key_idx])
-
-                mask = int_matrix.abs() > 1e-10
-                if mask.any():
-                    local_r, local_c = torch.where(mask)
-                    n_int = len(local_r)
-
-                    pos_indices = torch.empty((4, n_int), dtype=torch.long)
-                    pos_indices[0] = query_idx
-                    pos_indices[1] = key_idx
-                    pos_indices[2] = q_active[local_r].cpu()
-                    pos_indices[3] = k_active[local_c].cpu()
-
-                    chunk_indices.append(pos_indices)
-                    chunk_values.append(int_matrix[mask].detach().cpu().float())
-
-                pbar.update(1)
-
-        all_indices_cpu.extend(chunk_indices)
-        all_values_cpu.extend(chunk_values)
-
-        device = topk_features.device
-        if device.type != "cpu":
-            torch.cuda.empty_cache()
+        pbar.update(1)
 
     pbar.close()
 
     if all_indices_cpu:
         indices = torch.cat(all_indices_cpu, dim=1)
-        values = torch.cat(all_values_cpu)
+        values  = torch.cat(all_values_cpu)
         fra_sparse = torch.sparse_coo_tensor(
             indices, values, size=shape, device="cpu", dtype=torch.float32,
         ).coalesce()
@@ -792,6 +808,87 @@ def compute_fra_model_diff(
         chunk_size=chunk_size,
         verbose=verbose,
     )
+
+
+@torch.no_grad()
+def compute_fra_model_diff_all_heads(
+    base_model: HookedTransformer,
+    it_model: HookedTransformer,
+    coder: Any,
+    tokens: list,
+    n_heads: int,
+    coder_layer: int = 13,
+    max_length: int = 128,
+    top_k: int | None = 20,
+    verbose: bool = False,
+    chunk_size: int = 16,
+) -> Dict[str, Any]:
+    """Compute the 4-D FRA sparse tensor for every attention head in one call.
+
+    Runs both model forward passes and the crosscoder encoding **once** (not
+    once per head), then calls ``_build_fra_result`` for each head using the
+    shared encoding artifacts.  This is ``n_heads`` times more efficient than
+    calling :func:`compute_fra_model_diff` in a loop.
+
+    Args:
+        base_model: HookedTransformer for model-index 0 (base).
+        it_model:   HookedTransformer for model-index 1 (instruct).
+        coder:      ``FRACoder`` instance trained on paired residuals.
+        tokens:     Pre-tokenized token IDs.
+        n_heads:    Number of attention heads in the target layer.
+        coder_layer: Crosscoder residual-stream layer (default 13).
+        max_length:  Truncate tokens to this length.
+        top_k:       Keep only top-k features per position.
+        verbose:     Show progress bar per head.
+        chunk_size:  Unused; kept for API compatibility.
+
+    Returns:
+        Dict with:
+          - ``fra_sparse_dict``: ``dict[int, sparse_coo_tensor]`` head → FRA.
+          - ``feature_activations``: ``[seq, d_sae]`` float32 on CPU.
+          - ``topk_features``: ``[seq, d_sae]`` float32.
+          - ``seq_len``: int.
+    """
+    layer = coder_layer + 1
+    target_model = base_model if coder.model_idx == 0 else it_model
+    device = next(target_model.parameters()).device
+
+    if max_length is not None and len(tokens) > max_length:
+        tokens = tokens[:max_length]
+    tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    # Single encode: 2 model forward passes shared across all heads
+    encoded = _encode_crosscoder(
+        base_model, it_model, coder, tokens_tensor, coder_layer, verbose=verbose,
+    )
+
+    feature_activations = encoded["feature_activations"]
+    W_dec = encoded["W_dec"]
+
+    # Head-independent artifacts computed once
+    topk_features = topk_sparsify(feature_activations, top_k).float()
+
+    eps = target_model.cfg.eps
+    rms = (encoded["rms_activations"].float().pow(2).mean(dim=-1) + eps).sqrt()
+
+    fra_sparse_dict: Dict[int, Any] = {}
+    for h in range(n_heads):
+        result = _build_fra_result(
+            target_model, layer, h,
+            feature_activations, W_dec, device,
+            topk_features=topk_features,
+            rms=rms,
+            chunk_size=chunk_size,
+            verbose=verbose,
+        )
+        fra_sparse_dict[h] = result["fra_tensor_sparse"].cpu()
+
+    return {
+        "fra_sparse_dict": fra_sparse_dict,
+        "feature_activations": feature_activations.cpu().float(),
+        "topk_features": topk_features.cpu(),
+        "seq_len": feature_activations.shape[0],
+    }
 
 
 if __name__ == "__main__":

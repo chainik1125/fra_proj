@@ -93,6 +93,60 @@ def ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae):
     ).coalesce()
 
 
+def _apply_rope_single_pos(
+    vecs: torch.Tensor,
+    position: int,
+    rope_sin: torch.Tensor,
+    rope_cos: torch.Tensor,
+    rotary_dim: int,
+    rotary_adj: bool,
+) -> torch.Tensor:
+    """Apply RoPE at a single position to a ``[P, d_head]`` batch. Returns ``[P, d_head]``."""
+    x_rot = vecs[:, :rotary_dim]
+    x_pass = vecs[:, rotary_dim:]
+    if rotary_adj:
+        x_flip = x_rot.clone()
+        x_flip[:, ::2] = -x_rot[:, 1::2]
+        x_flip[:, 1::2] = x_rot[:, ::2]
+    else:
+        n = rotary_dim // 2
+        x_flip = torch.cat([-x_rot[:, n:], x_rot[:, :n]], dim=-1)
+    cos = rope_cos[position]
+    sin = rope_sin[position]
+    x_rotated = x_rot * cos + x_flip * sin
+    return torch.cat([x_rotated, x_pass], dim=-1)
+
+
+def _apply_rope_all_positions(
+    vecs: torch.Tensor,
+    T: int,
+    rope_sin: torch.Tensor,
+    rope_cos: torch.Tensor,
+    rotary_dim: int,
+    rotary_adj: bool,
+) -> torch.Tensor:
+    """Apply RoPE at positions ``0..T-1`` to ``[P, d_head]`` vectors.
+
+    Returns ``[T, P, d_head]`` — one rotated copy per position, computed in a
+    single broadcast pass rather than a Python loop over T.
+    """
+    x_rot = vecs[:, :rotary_dim]   # [P, rotary_dim]
+    x_pass = vecs[:, rotary_dim:]  # [P, d_head-rotary_dim]
+    if rotary_adj:
+        x_flip = x_rot.clone()
+        x_flip[:, ::2] = -x_rot[:, 1::2]
+        x_flip[:, 1::2] = x_rot[:, ::2]
+    else:
+        n = rotary_dim // 2
+        x_flip = torch.cat([-x_rot[:, n:], x_rot[:, :n]], dim=-1)
+    cos = rope_cos[:T]  # [T, rotary_dim]
+    sin = rope_sin[:T]  # [T, rotary_dim]
+    # [1, P, rotary_dim] * [T, 1, rotary_dim] → [T, P, rotary_dim]
+    x_rotated = x_rot.unsqueeze(0) * cos.unsqueeze(1) + x_flip.unsqueeze(0) * sin.unsqueeze(1)
+    x_pass_exp = x_pass.unsqueeze(0).expand(T, -1, -1)  # [T, P, d_head-rotary_dim]
+    return torch.cat([x_rotated, x_pass_exp], dim=-1)   # [T, P, d_head]
+
+
 @torch.no_grad()
 def compute_fra_new_query(
     feat_q: torch.Tensor,
@@ -114,7 +168,9 @@ def compute_fra_new_query(
     The result can be subtracted from ``hook_attn_scores[0, head, 0, :T]`` to
     ablate those pair contributions during generation.
 
-    All tensors must be on CPU; results are returned on CPU.
+    All computation runs on whatever device ``feat_q`` lives on (typically the
+    model device); the result is returned on the same device.  Callers should
+    ensure all tensor arguments are on the same device.
 
     Args:
         feat_q: ``[d_sae]`` feature activations at the new query token.
@@ -131,55 +187,63 @@ def compute_fra_new_query(
         q_pos: Absolute sequence position index of the new query token.
 
     Returns:
-        ``[T]`` float32 CPU tensor of FRA interaction scores for the selected pairs.
+        ``[T]`` float32 tensor of FRA interaction scores for the selected pairs,
+        on the same device as ``feat_q``.
     """
     T = feat_k_all.shape[0]
-    scores = torch.zeros(T, dtype=torch.float32)
+    device = feat_q.device
+
     if not pairs or T == 0:
-        return scores
+        return torch.zeros(T, dtype=torch.float32, device=device)
 
     rope_sin, rope_cos, rotary_dim, rotary_adj = rope_params
     use_rope = rope_sin is not None
 
-    W_dec = W_dec.float()
-    W_Q = W_Q.float()
-    W_K = W_K.float()
-    feat_q = feat_q.float()
-    feat_k_all = feat_k_all.float()
-    rms_k_all = rms_k_all.float()
+    W_dec = W_dec.to(device=device, dtype=torch.float32)
+    W_Q = W_Q.to(device=device, dtype=torch.float32)
+    W_K = W_K.to(device=device, dtype=torch.float32)
+    feat_q = feat_q.to(device=device, dtype=torch.float32)
+    feat_k_all = feat_k_all.to(device=device, dtype=torch.float32)
+    rms_k_all = rms_k_all.to(device=device, dtype=torch.float32)
 
-    for feat_i, feat_j in pairs:
-        q_act = feat_q[feat_i].item()
-        if q_act == 0.0:
-            continue
-        k_acts = feat_k_all[:, feat_j]  # [T]
-        if k_acts.abs().max().item() == 0.0:
-            continue
+    # Build index tensors for all pairs [P]
+    feat_i_idx = torch.tensor([p[0] for p in pairs], dtype=torch.long, device=device)
+    feat_j_idx = torch.tensor([p[1] for p in pairs], dtype=torch.long, device=device)
 
-        # Query: project through W_Q + RoPE at q_pos
-        q_vec = (W_dec[feat_i] @ W_Q).unsqueeze(0)  # [1, d_head]
-        if use_rope:
-            q_vec = apply_rope_to_projected(
-                q_vec, q_pos, rope_sin, rope_cos, rotary_dim, rotary_adj,
-            )
+    # Activations for each pair
+    q_acts = feat_q[feat_i_idx]          # [P]
+    k_acts = feat_k_all[:, feat_j_idx]   # [T, P]
 
-        # Keys: project through W_K + RoPE at each of T positions
-        k_vec_base = (W_dec[feat_j] @ W_K).unsqueeze(0)  # [1, d_head]
-        d_head = k_vec_base.shape[-1]
-        if use_rope:
-            k_vecs = torch.empty(T, d_head, dtype=torch.float32)
-            for t in range(T):
-                k_vecs[t] = apply_rope_to_projected(
-                    k_vec_base, t, rope_sin, rope_cos, rotary_dim, rotary_adj,
-                ).squeeze(0)
-            interactions = (q_vec @ k_vecs.T).squeeze(0) / attn_scale  # [T]
-        else:
-            dot = (q_vec @ k_vec_base.T).item()
-            interactions = torch.full((T,), dot / attn_scale, dtype=torch.float32)
+    # Drop pairs where the query feature is inactive (contributes nothing)
+    active = q_acts.abs() > 0
+    if not active.any():
+        return torch.zeros(T, dtype=torch.float32, device=device)
 
-        scores += q_act * k_acts * interactions / (rms_q * rms_k_all)
+    q_acts = q_acts[active]        # [P']
+    k_acts = k_acts[:, active]     # [T, P']
+    feat_i_idx = feat_i_idx[active]
+    feat_j_idx = feat_j_idx[active]
 
-    return scores
+    # Project features through QK weight matrices [P', d_head]
+    q_vecs = W_dec[feat_i_idx] @ W_Q     # [P', d_head]
+    k_vecs_base = W_dec[feat_j_idx] @ W_K  # [P', d_head]
+
+    if use_rope:
+        rope_sin = rope_sin.to(device=device, dtype=torch.float32)
+        rope_cos = rope_cos.to(device=device, dtype=torch.float32)
+        q_vecs = _apply_rope_single_pos(q_vecs, q_pos, rope_sin, rope_cos, rotary_dim, rotary_adj)
+        k_vecs = _apply_rope_all_positions(k_vecs_base, T, rope_sin, rope_cos, rotary_dim, rotary_adj)
+        # q_vecs: [P', d_head], k_vecs: [T, P', d_head]
+        # interactions[t, p] = q_vecs[p] · k_vecs[t, p] / attn_scale
+        interactions = torch.einsum("pd,tpd->tp", q_vecs, k_vecs) / attn_scale  # [T, P']
+    else:
+        # Position-independent: dot product is the same for every key position
+        interactions = (q_vecs * k_vecs_base).sum(dim=-1)                         # [P']
+        interactions = interactions.unsqueeze(0).expand(T, -1) / attn_scale       # [T, P']
+
+    # scores[t] = Σ_p  q_acts[p] * k_acts[t,p] * interactions[t,p] / (rms_q * rms_k_all[t])
+    contrib = q_acts * k_acts * interactions / (rms_q * rms_k_all.unsqueeze(-1))  # [T, P']
+    return contrib.sum(dim=-1)  # [T]
 
 
 # ── Bias corrections & score reconstruction ───────────────────────────────
