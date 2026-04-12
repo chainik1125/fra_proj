@@ -289,7 +289,7 @@ def encode_fra_model_diff(
 
     Returns ``(encoded, attn_cache, target_model, tokens, attn_layer)``.
     """
-    from fra.core.fra import _encode_crosscoder
+    from fra.core.fra import _encode_model_diff
 
     base_model, it_model = load_model_pair(
         base_model_name, it_model_name, device, it_arch_name,
@@ -318,7 +318,7 @@ def encode_fra_model_diff(
     )
     other_activation = other_cache[resid_hook].squeeze(0)
 
-    encoded = _encode_crosscoder(
+    encoded = _encode_model_diff(
         base_model, it_model, crosscoder, tok_tensor, crosscoder_layer,
         target_activation=target_activation,
         other_activation=other_activation,

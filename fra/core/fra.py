@@ -579,7 +579,7 @@ def _encode_sae(
     }
 
 
-def _encode_crosscoder(
+def _encode_model_diff(
     base_model: HookedTransformer,
     it_model: HookedTransformer,
     crosscoder: Any,
@@ -795,7 +795,7 @@ def compute_fra_model_diff(
         tokens = tokens[:max_length]
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
-    encoded = _encode_crosscoder(
+    encoded = _encode_model_diff(
         base_model, it_model, coder, tokens_tensor, coder_layer,
         verbose=verbose,
     )
@@ -858,7 +858,7 @@ def compute_fra_model_diff_all_heads(
     tokens_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
 
     # Single encode: 2 model forward passes shared across all heads
-    encoded = _encode_crosscoder(
+    encoded = _encode_model_diff(
         base_model, it_model, coder, tokens_tensor, coder_layer, verbose=verbose,
     )
 
