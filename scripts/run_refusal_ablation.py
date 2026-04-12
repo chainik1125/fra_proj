@@ -132,7 +132,7 @@ def load_harmful_prompts(n_prompts: int, it_model=None, device: str = "cuda") ->
     from datasets import load_dataset
     print(f"Loading {n_prompts} harmful prompts from LMSYS-Chat-1M...")
     ds = load_dataset("lmsys/lmsys-chat-1m", streaming=True, split="train")
-    ds = ds.shuffle(seed=42, buffer_size=10000)
+    ds = iter(ds)
     prompts = []
     n_candidates = 0
     for ex in ds:
@@ -147,6 +147,9 @@ def load_harmful_prompts(n_prompts: int, it_model=None, device: str = "cuda") ->
         if not _HARMFUL_PATTERN.search(text):
             continue
         n_candidates += 1
+        # Skip duplicates
+        if any(p["text"] == text for p in prompts):
+            continue
         # Verify the model actually refuses this prompt
         if it_model is not None:
             tok_ids = tokenize_prompt(it_model, text)
