@@ -14,6 +14,19 @@ KV-cached generation helpers supporting two ablation modes:
     target model's residual stream.  Isolating this step means the same loop
     body handles single-model SAEs and multi-model crosscoders without
     branching on architecture type inside the library.
+
+High-level helpers
+------------------
+build_crosscoder_encode_fn
+    Build the encode_fn closure required by generate_with_ablation for
+    crosscoder presets.  Closes over the paired model and its KV cache.
+
+run_generative_ablation
+    End-to-end pipeline: ablate pairs → build patch scores → prefill →
+    generate baseline and ablated text.  Handles both "prefill" and
+    "per_step" generation modes and both "coder_recon" and "fra_sum"
+    ablation types.  Used by the dashboard ablation tab and standalone
+    scripts alike.
 """
 
 import torch
@@ -131,6 +144,7 @@ def generate_with_prefill_ablation(model, kv_cache, first_new_tok, max_new_token
 
 @torch.no_grad()
 def generate_with_ablation(
+
     target_model,
     target_kv,
     first_new_tok,
@@ -261,3 +275,224 @@ def generate_with_ablation(
         cur_tok_id = int(logits[0, -1].argmax(-1).item())
 
     return new_ids
+
+
+@torch.no_grad()
+def build_crosscoder_encode_fn(other_model, crosscoder, other_kv, cc_layer, model_idx):
+    """Build an encode_fn for crosscoder-based per-step generative ablation.
+
+    Returns a callable compatible with :func:`generate_with_ablation`.  The
+    closure runs *other_model* on each new token (using its accumulated KV
+    cache) to obtain the paired residual, then stacks both residuals in
+    ``[base, instruct]`` order and encodes through the crosscoder.
+
+    Args:
+        other_model: Paired HookedTransformer (base if model_idx==1, instruct
+            if model_idx==0).
+        crosscoder: FRACoder instance.
+        other_kv: Pre-populated KV cache for *other_model* (from
+            :func:`prefill_no_hooks`).  Grows in lockstep with the target
+            model's KV cache as generation proceeds.
+        cc_layer: Layer at which residuals are captured (crosscoder training
+            layer).
+        model_idx: ``crosscoder.model_idx`` — determines stacking order so
+            the input to the crosscoder is always ``[base, instruct]``.
+
+    Returns:
+        ``encode_fn(cur_tok, target_resid) -> Tensor[d_sae]`` (CPU float32).
+    """
+    resid_hook = f"blocks.{cc_layer}.hook_resid_post"
+    _other = other_model
+    _kv = other_kv
+    _idx = model_idx
+    _cc = crosscoder
+
+    def encode_fn(cur_tok, target_resid):
+        buf = {}
+        _other.run_with_hooks(
+            cur_tok,
+            fwd_hooks=[(resid_hook, lambda v, hook, b=buf: b.update(r=v.detach()) or v)],
+            past_kv_cache=_kv,
+        )
+        o_r = buf["r"][0].float()   # [seq=1, d_model]
+        t_r = target_resid.float()  # [seq=1, d_model]
+        # Stack as [seq=1, n_models=2, d_model] in fixed [base, instruct] order
+        if _idx == 0:
+            x = torch.stack([t_r, o_r], dim=1)
+        else:
+            x = torch.stack([o_r, t_r], dim=1)
+        return _cc.encode(x).squeeze(0).cpu().float()
+
+    return encode_fn
+
+
+@torch.no_grad()
+def run_generative_ablation(
+    target_model,
+    tok_ids,
+    pairs_to_ablate,
+    fra_sparse,
+    feat_acts,
+    layer,
+    head,
+    crosscoder,
+    ablation_type,
+    generation_mode,
+    max_new_tokens,
+    eos_id,
+    device,
+    *,
+    other_model=None,
+    cc_layer=None,
+    model_idx=None,
+    trained_on_bos=True,
+    attn_scores_np=None,
+    run_baseline=True,
+):
+    """End-to-end generative ablation pipeline.
+
+    Ablates *pairs_to_ablate* from the FRA sparse tensor, builds patched
+    attention scores, prefills the model, and runs greedy generation for the
+    baseline (unpatched) and ablated conditions.
+
+    Args:
+        target_model: HookedTransformer to generate from (IT model for
+            crosscoder presets).
+        tok_ids: Prompt token IDs including any chat template.
+        pairs_to_ablate: List of ``(q_feat, k_feat)`` tuples to suppress.
+        fra_sparse: 4-D sparse COO tensor ``[seq, seq, d_sae, d_sae]`` from
+            :func:`~fra.core.fra.compute_fra_model_diff`.
+        feat_acts: ``[seq, d_sae]`` float32 feature activations (from the same
+            FRA result).
+        layer: Attention layer index (``cc_layer + 1`` for crosscoders).
+        head: Attention head index.
+        crosscoder: FRACoder providing ``W_dec`` and ``b_dec``.
+        ablation_type: ``"coder_recon"`` or ``"fra_sum"``.
+        generation_mode: ``"prefill"`` -- ablation baked into KV cache only;
+            ``"per_step"`` -- additionally ablates each new query's interactions
+            at every generation step (requires *other_model*, *cc_layer*,
+            *model_idx*).
+        max_new_tokens: Maximum number of tokens to generate.
+        eos_id: EOS token ID (or ``None`` to generate to the length limit).
+        device: Device string.
+        other_model: Paired HookedTransformer (required for ``per_step``).
+        cc_layer: Crosscoder training layer (required for ``per_step``).
+        model_idx: ``crosscoder.model_idx`` (required for ``per_step``).
+        trained_on_bos: Whether the crosscoder was trained on BOS tokens.
+            When ``False``, *attn_scores_np* must be supplied.
+        attn_scores_np: ``[seq, seq]`` numpy array of actual pre-softmax
+            attention scores; only used when ``trained_on_bos=False``.
+        run_baseline: If ``True`` (default), also generate the unpatched
+            baseline.  Set to ``False`` when the caller already has it.
+
+    Returns:
+        Dict with:
+          - ``"baseline_ids"``: ``list[int]`` generated without ablation
+            (``None`` when *run_baseline* is ``False``).
+          - ``"ablated_ids"``: ``list[int]`` generated with pair ablation.
+    """
+    from fra.core.helpers import (
+        _extract_rope_params,
+        compute_bias_correction,
+        get_attn_scale,
+        get_qk_weights,
+        project_qk,
+    )
+    from fra.analysis.ablation.ablate import ablate_fra_pairs
+
+    seq_len = feat_acts.shape[0]
+    d_sae = feat_acts.shape[1]
+
+    # -- Crosscoder reconstruction -> QK projections ----------------------
+    b_dec = crosscoder.b_dec.float().to(device)
+    W_dec = crosscoder.W_dec.float().to(device)
+    x_hat = feat_acts.float().to(device) @ W_dec + b_dec          # [seq, d_model]
+
+    q_full, k_full, q_nobias, k_nobias = project_qk(
+        target_model, layer, head, x_hat, b_dec, needs_rms=True,
+    )
+    attn_scale = get_attn_scale(target_model, layer)
+    softcap = getattr(target_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+    bias_corr = compute_bias_correction(q_full, k_full, q_nobias, k_nobias, attn_scale)
+
+    # -- Pair ablation + patch scores -------------------------------------
+    fra_abl_sparse = ablate_fra_pairs(fra_sparse, pairs_to_ablate, d_sae)
+
+    patch_scores = build_patch_scores(
+        {"trained_on_bos": trained_on_bos},
+        {"seq_len": seq_len, "attn_scores_np": attn_scores_np},
+        fra_sparse,
+        fra_abl_sparse,
+        {
+            "softcap": softcap,
+            "q_full": q_full,
+            "k_full": k_full,
+            "attn_scale": attn_scale,
+            "bias_corr_np": bias_corr[:seq_len, :seq_len].cpu().numpy(),
+        },
+        ablation_type,
+        device,
+    )
+
+    # -- Baseline prefill + generation ------------------------------------
+    baseline_ids = None
+    if run_baseline:
+        clean_kv, first_clean = prefill_no_hooks(target_model, tok_ids, device)
+        baseline_ids = generate_with_prefill_ablation(
+            target_model, clean_kv, first_clean, max_new_tokens, eos_id, device,
+        )
+
+    # -- Ablated prefill --------------------------------------------------
+    abl_kv, first_abl = prefill_with_patch(
+        target_model, tok_ids, patch_scores, layer, head, device,
+    )
+
+    # -- Ablated generation -----------------------------------------------
+    if generation_mode == "prefill":
+        ablated_ids = generate_with_prefill_ablation(
+            target_model, abl_kv, first_abl, max_new_tokens, eos_id, device,
+        )
+    else:  # per_step
+        if other_model is None or cc_layer is None or model_idx is None:
+            raise ValueError(
+                "other_model, cc_layer, and model_idx are required for per_step mode"
+            )
+
+        other_kv, _ = prefill_no_hooks(other_model, tok_ids, device)
+        encode_fn = build_crosscoder_encode_fn(
+            other_model, crosscoder, other_kv, cc_layer, model_idx,
+        )
+
+        eps = target_model.cfg.eps
+        rms_prompt = (x_hat.pow(2).mean(dim=-1) + eps).sqrt().cpu()  # [seq] CPU
+
+        W_Q, W_K, _, _ = get_qk_weights(target_model, layer, head)
+        rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(target_model, layer)
+        if rope_sin is not None:
+            rope_sin = rope_sin.detach().cpu()
+            rope_cos = rope_cos.detach().cpu()
+
+        ablated_ids = generate_with_ablation(
+            target_model=target_model,
+            target_kv=abl_kv,
+            first_new_tok=first_abl,
+            max_new_tokens=max_new_tokens,
+            eos_id=eos_id,
+            encode_fn=encode_fn,
+            cc_layer=cc_layer,
+            layer=layer,
+            head=head,
+            pairs_to_ablate=pairs_to_ablate,
+            W_dec=W_dec.cpu(),
+            b_dec=b_dec.cpu(),
+            W_Q=W_Q.float().cpu(),
+            W_K=W_K.float().cpu(),
+            attn_scale=attn_scale,
+            feat_acts_prompt=feat_acts.cpu().float(),
+            rms_prompt=rms_prompt,
+            rope_params=(rope_sin, rope_cos, rotary_dim, rotary_adj),
+            eps=eps,
+            device=device,
+        )
+
+    return {"baseline_ids": baseline_ids, "ablated_ids": ablated_ids}

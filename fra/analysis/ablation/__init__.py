@@ -17,17 +17,20 @@ from fra.analysis.ablation.ablate import (
     screen_heads,
 )
 from fra.analysis.ablation.generate import (
+    build_crosscoder_encode_fn,
     build_patch_scores,
     generate_with_ablation,
     generate_with_prefill_ablation,
     prefill_no_hooks,
     prefill_with_patch,
+    run_generative_ablation,
 )
 
 __all__ = [
     "ABLATION_TEXTS",
     "ablate_fra_pairs",
     "aggregate_results",
+    "build_crosscoder_encode_fn",
     "build_patch_scores",
     "compute_bias_corrections",
     "compute_fra_new_query",
@@ -38,6 +41,7 @@ __all__ = [
     "print_results",
     "reconstruct_scores",
     "run_condition",
+    "run_generative_ablation",
     "run_single_sample",
     "screen_heads",
 ]

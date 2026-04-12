@@ -13,19 +13,18 @@ import torch
 import torch.nn.functional as _F
 
 from fra.core.helpers import (
-    _extract_rope_params,
+    _pair_score,
     fra_sum_to_attn,
-    get_qk_weights,
-    rank_pairs,
 )
 from fra.analysis.ablation import (
-    build_patch_scores,
-    generate_with_ablation,
-    generate_with_prefill_ablation,
-    prefill_no_hooks,
-    prefill_with_patch,
+    run_generative_ablation,
 )
-from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data_all
+from fra.dashboard.state import (
+    get_active_fra_data,
+    get_cached_aggregated_pairs,
+    get_fra_config,
+    get_fra_data_all,
+)
 from fra.dashboard.widgets import _show_heatmap, make_heatmap
 from fra.dashboard.tabs.reconstruction import (
     _get_projection_cache,
@@ -34,11 +33,61 @@ from fra.dashboard.tabs.reconstruction import (
 )
 
 
+# ── Cached pair helpers ────────────────────────────────────────────────────
+
+
+def _get_multi_head_pairs(fra_data_all, mode, multi_head_agg):
+    """Rank pairs across all heads using cached per-head aggregation.
+
+    Each head's ``aggregate_pairs`` result is fetched from the session-state
+    cache (or computed once and stored).  The cross-head merge is cheap
+    (operates on unique feature pairs, not raw nnz entries) and is itself
+    cached under ``_agg_pairs_multi``.
+    """
+    key = "_agg_pairs_multi"
+    if key in st.session_state:
+        return st.session_state[key]
+
+    per_head_scores: dict[tuple, list[float]] = {}
+    per_head_counts: dict[tuple, int] = {}
+    per_head_max: dict[tuple, float] = {}
+
+    for h, data in fra_data_all.items():
+        agg = get_cached_aggregated_pairs(data, h, diagonal=None)
+        for q, k, s, c, m in agg:
+            score = _pair_score((q, k, s, c, m), mode)
+            pk = (q, k)
+            per_head_scores.setdefault(pk, []).append(score)
+            per_head_counts[pk] = per_head_counts.get(pk, 0) + c
+            if m > per_head_max.get(pk, 0.0):
+                per_head_max[pk] = m
+
+    combined = []
+    for pk, scores in per_head_scores.items():
+        if multi_head_agg == "max":
+            agg_val = max(scores)
+        elif multi_head_agg == "avg":
+            agg_val = sum(scores) / len(scores)
+        elif multi_head_agg == "min":
+            agg_val = min(scores)
+        elif multi_head_agg == "count":
+            agg_val = float(len(scores))
+        else:  # "sum" (default)
+            agg_val = sum(scores)
+        combined.append((*pk, agg_val, per_head_counts[pk], per_head_max[pk]))
+
+    combined.sort(key=lambda x: x[2], reverse=True)
+    result = combined[:100]
+    st.session_state[key] = result
+    return result
+
+
 # ── Score Metrics section ──────────────────────────────────────────────────
 
 
 def _render_score_metrics(cfg, fra_data, seq_len, token_strs, device,
-                          exclude_bos=False, fra_data_all=None, head_=None):
+                          exclude_bos=False, fra_data_all=None, head_=None,
+                          ranked_pairs=None):
     """Render the FRA pair ablation + loss metrics UI."""
     from fra.analysis.ablation import (
         ablate_fra_pairs,
@@ -67,18 +116,9 @@ def _render_score_metrics(cfg, fra_data, seq_len, token_strs, device,
 
     # Rank pairs (single-head or multi-head)
     if ablate_all_heads:
-        _idx_dict = {h: d["indices_np"] for h, d in fra_data_all.items()}
-        _val_dict = {h: d["values_np"] for h, d in fra_data_all.items()}
-        all_pairs = rank_pairs(
-            _idx_dict, _val_dict,
-            top_k=100, diagonal=None, mode=_agg,
-            multi_head_agg=_mh_agg,
-        )
+        all_pairs = _get_multi_head_pairs(fra_data_all, _agg, _mh_agg)
     else:
-        all_pairs = rank_pairs(
-            fra_data["indices_np"], fra_data["values_np"],
-            top_k=100, diagonal=None, mode=_agg,
-        )
+        all_pairs = ranked_pairs
 
     if not all_pairs:
         st.warning("No feature pairs found.")
@@ -389,7 +429,7 @@ def _show_token_diff(model, clean_ids, abl_ids):
         )
 
 
-def _render_generative_ablation(cfg, fra_data, device):
+def _render_generative_ablation(cfg, fra_data, device, ranked_pairs=None):
     """Ablate FRA pairs during autoregressive generation (crosscoder preset only)."""
     from fra.analysis.ablation import ablate_fra_pairs
 
@@ -409,12 +449,7 @@ def _render_generative_ablation(cfg, fra_data, device):
         return
 
     # ── Pair selection ────────────────────────────────────────────────────
-    _agg = cfg.get("agg_mode", "sum")
-    all_pairs = rank_pairs(
-        fra_data["indices_np"], fra_data["values_np"],
-        top_k=100, diagonal=None, mode=_agg,
-    )
-    offdiag = [p for p in all_pairs if p[0] != p[1]]
+    offdiag = [p for p in ranked_pairs if p[0] != p[1]]
 
     if not offdiag:
         st.warning("No off-diagonal FRA pairs found \u2014 cannot run generative ablation.")
@@ -487,126 +522,53 @@ def _render_generative_ablation(cfg, fra_data, device):
     if not st.button("\u25b6  Generate", type="primary", key="_gen_abl_run"):
         return
 
-    # ── Build patch scores ────────────────────────────────────────────────
-    with st.spinner("Loading models and computing patch scores\u2026"):
+    # ── Load models and run ablation pipeline ────────────────────
+    with st.spinner("Loading models\u2026"):
         layer_ = cfg["layer"]
         head_ = cfg["head"]
         seq_len = fra_data["seq_len"]
         d_sae = fra_data["feat_acts_np"].shape[1]
+        trained_on_bos = cfg.get("trained_on_bos", True)
 
         base, it, target, crosscoder, model_idx, cc_layer = _load_crosscoder_resources(cfg, device)
         other = it if model_idx == 0 else base
         eos_id = getattr(target.tokenizer, "eos_token_id", None)
         tok_ids = fra_data["tokens"][:seq_len]
 
-        _proj = _get_projection_cache(cfg, fra_data, device)
-
         fra_sparse = torch.sparse_coo_tensor(
             torch.tensor(fra_data["indices_np"], dtype=torch.long),
             torch.tensor(fra_data["values_np"], dtype=torch.float32),
             size=torch.Size([seq_len, seq_len, d_sae, d_sae]),
         ).coalesce()
-
+        feat_acts = torch.tensor(fra_data["feat_acts_np"][:seq_len], dtype=torch.float32)
         pairs_to_abl = [(int(p[0]), int(p[1])) for p in sel_pairs]
-        fra_abl_sparse = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae)
-
         abl_type_key = "coder_recon" if ablation_type.startswith("Coder") else "fra_sum"
-        patch_scores = build_patch_scores(
-            cfg, fra_data, fra_sparse, fra_abl_sparse, _proj, abl_type_key, device,
+        gen_mode_key = "per_step" if gen_mode.startswith("Ablate") else "prefill"
+        attn_scores_np = None if trained_on_bos else fra_data.get("attn_scores_np")
+
+    with st.spinner("Generating\u2026"):
+        result = run_generative_ablation(
+            target_model=target,
+            tok_ids=tok_ids,
+            pairs_to_ablate=pairs_to_abl,
+            fra_sparse=fra_sparse,
+            feat_acts=feat_acts,
+            layer=layer_,
+            head=head_,
+            crosscoder=crosscoder,
+            ablation_type=abl_type_key,
+            generation_mode=gen_mode_key,
+            max_new_tokens=max_tokens,
+            eos_id=eos_id,
+            device=device,
+            other_model=other,
+            cc_layer=cc_layer,
+            model_idx=model_idx,
+            trained_on_bos=trained_on_bos,
+            attn_scores_np=attn_scores_np,
         )
-
-    # ── Prefill ───────────────────────────────────────────────────────────
-    with st.spinner("Prefilling\u2026"):
-        clean_kv, first_clean = prefill_no_hooks(target, tok_ids, device)
-        abl_kv, first_abl = prefill_with_patch(target, tok_ids, patch_scores, layer_, head_, device)
-
-    # ── Generate ──────────────────────────────────────────────────────────
-    with st.spinner("Generating baseline\u2026"):
-        clean_ids = generate_with_prefill_ablation(target, clean_kv, first_clean, max_tokens, eos_id, device)
-
-    if gen_mode.startswith("Prompt"):
-        with st.spinner("Generating with ablation (prompt prefill only)\u2026"):
-            abl_ids = generate_with_prefill_ablation(target, abl_kv, first_abl, max_tokens, eos_id, device)
-    else:
-        with st.spinner("Prefilling other model\u2026"):
-            other_kv, _ = prefill_no_hooks(other, tok_ids, device)
-
-        with st.spinner("Computing RMS denominators and RoPE params\u2026"):
-            W_Q, W_K, _, _ = get_qk_weights(target, layer_, head_)
-            W_Q = W_Q.float().cpu()
-            W_K = W_K.float().cpu()
-            W_dec_cpu = crosscoder.W_dec.float().cpu()
-            b_dec_cpu = crosscoder.b_dec.float().cpu()
-            attn_scale = _proj["attn_scale"]
-            eps = target.cfg.eps
-
-            # RMS denominators for all prompt positions
-            feat_acts_t = torch.tensor(
-                fra_data["feat_acts_np"][:seq_len], dtype=torch.float32,
-            )
-            x_hat_prompt = feat_acts_t @ W_dec_cpu + b_dec_cpu
-            rms_prompt = (x_hat_prompt.pow(2).mean(dim=-1) + eps).sqrt()  # [seq] CPU
-
-            # RoPE tables on CPU for compute_fra_new_query
-            rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(target, layer_)
-            if rope_sin is not None:
-                rope_sin = rope_sin.detach().cpu()
-                rope_cos = rope_cos.detach().cpu()
-            rope_params_cpu = (rope_sin, rope_cos, rotary_dim, rotary_adj)
-
-            # encode_fn abstracts over the encoding architecture so that
-            # generate_with_ablation does not need to know how feature
-            # activations are obtained.  Here we close over the paired model
-            # and its KV cache: this crosscoder requires residuals from both
-            # models, so encode_fn runs the other model internally.  A future
-            # SAE preset would supply a simpler encode_fn with no second-model
-            # invocation.
-            _resid_hook_name = f"blocks.{cc_layer}.hook_resid_post"
-            _other_model = other        # explicit capture avoids late-binding
-            _other_kv = other_kv
-            _model_idx = model_idx
-            _crosscoder = crosscoder
-
-            def encode_fn(cur_tok, target_resid):
-                buf = {}
-                _other_model.run_with_hooks(
-                    cur_tok,
-                    fwd_hooks=[(_resid_hook_name,
-                                lambda v, hook, b=buf: b.update(r=v.detach()) or v)],
-                    past_kv_cache=_other_kv,
-                )
-                o_r = buf["r"][0].float()
-                t_r = target_resid.float()
-                if _model_idx == 0:
-                    x = torch.stack([t_r, o_r], dim=1)
-                else:
-                    x = torch.stack([o_r, t_r], dim=1)
-                cc_dtype = _crosscoder.dtype
-                return _crosscoder.encode(x.to(cc_dtype)).squeeze(0).float()
-
-        with st.spinner("Generating with ablation (every step)\u2026"):
-            abl_ids = generate_with_ablation(
-                target_model=target,
-                target_kv=abl_kv,
-                first_new_tok=first_abl,
-                max_new_tokens=max_tokens,
-                eos_id=eos_id,
-                encode_fn=encode_fn,
-                cc_layer=cc_layer,
-                layer=layer_,
-                head=head_,
-                pairs_to_ablate=pairs_to_abl,
-                W_dec=W_dec_cpu,
-                b_dec=b_dec_cpu,
-                W_Q=W_Q,
-                W_K=W_K,
-                attn_scale=attn_scale,
-                feat_acts_prompt=fra_data["feat_acts_np"][:seq_len],
-                rms_prompt=rms_prompt,
-                rope_params=rope_params_cpu,
-                eps=eps,
-                device=device,
-            )
+        clean_ids = result["baseline_ids"]
+        abl_ids = result["ablated_ids"]
 
     # ── Display results ───────────────────────────────────────────────────
     st.markdown("---")
@@ -649,6 +611,12 @@ def render(tab):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         exclude_bos = not cfg.get("trained_on_bos", True)
 
+        # Compute single-head pairs once (cached) and share across sections
+        _agg = cfg.get("agg_mode", "sum")
+        _single_agg = get_cached_aggregated_pairs(fra_data, head_, diagonal=None)
+        _single_agg.sort(key=lambda x: _pair_score(x, _agg), reverse=True)
+        ranked_pairs = _single_agg[:100]
+
         st.subheader("Score Metrics")
         st.caption(
             "Ablate selected feature pairs from the FRA tensor and measure "
@@ -657,7 +625,7 @@ def render(tab):
         _render_score_metrics(
             cfg, fra_data, seq_len, token_strs, device,
             exclude_bos=exclude_bos, fra_data_all=fra_data_all,
-            head_=head_,
+            head_=head_, ranked_pairs=ranked_pairs,
         )
 
-        _render_generative_ablation(cfg, fra_data, device)
+        _render_generative_ablation(cfg, fra_data, device, ranked_pairs=ranked_pairs)
