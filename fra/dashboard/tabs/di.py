@@ -8,6 +8,7 @@ import streamlit as st
 import torch
 
 from fra.analysis.di import compute_di_row, compute_di_sample, compute_global_di_topk
+from fra.core.helpers import rank_pairs
 from fra.dashboard.compute import _load_di_weights
 from fra.dashboard.state import PRESETS, get_active_fra_data, get_cached_aggregated_pairs, get_fra_config, get_fra_data, get_fra_data_all
 
