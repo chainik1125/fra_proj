@@ -396,7 +396,7 @@ def run_experiment(args) -> dict:
     all_prompts = load_harmful_prompts(n_total)
     discovery_prompts = all_prompts[:args.n_discovery]
     experiment_prompts = all_prompts[args.n_discovery:args.n_discovery + args.n_prompts]
-    print(f"Loaded {len(all_prompts)} toxic prompts "
+    print(f"Loaded {len(all_prompts)} harmful prompts "
           f"({args.n_discovery} discovery + {len(experiment_prompts)} experiment)")
 
     torch.set_grad_enabled(False)
