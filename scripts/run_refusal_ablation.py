@@ -14,7 +14,8 @@ Seven strategies are compared:
   data_top_10   -- top 10 data-driven pairs by aggregated FRA sum
   data_top_25   -- top 25 pairs
   data_top_50   -- top 50 pairs
-  data_filtered -- top pairs where at least one feature is in pre-refusal set
+  data_filtered -- top --top-k-pairs data-driven pairs where at least one feature
+                   is in the pre-refusal set (default strategy)
 
 Usage:
   # Smoke test (5 prompts, 3 discovery)
@@ -594,8 +595,8 @@ def main():
         ),
     )
     parser.add_argument(
-        "--top-k-pairs", type=int, default=50,
-        help="Max pairs for data_top_50 and data_filtered (default: 50)",
+        "--top-k-pairs", type=int, default=100,
+        help="Candidate pool size for data_filtered (default: 100)",
     )
     parser.add_argument(
         "--ablation-mode", type=str, default="per_step",
@@ -615,8 +616,8 @@ def main():
     )
     parser.add_argument(
         "--strategies", type=str, nargs="+",
-        choices=ALL_STRATEGIES, default=None,
-        help=f"Subset of strategies to run (default: all). Choices: {ALL_STRATEGIES}",
+        choices=ALL_STRATEGIES, default=["data_filtered"],
+        help=f"Subset of strategies to run (default: data_filtered). Choices: {ALL_STRATEGIES}",
     )
     args = parser.parse_args()
 
