@@ -1,11 +1,9 @@
 """
 Refusal ablation experiment for the Gemma-2 2B crosscoder.
 
-Loads harmful prompts from ToxicChat (lmsys/toxic-chat, toxicchat0124) --
-a human-annotated subset of LMSYS-Chat-1M, which is the crosscoder's
-training distribution.  Generates responses from Gemma-2-IT while ablating
-FRA feature pair interactions and records the percentage of prompts that
-switch from refused to accepted under each ablation strategy.
+Loads harmful prompts from AdvBench (llm-attacks/harmful_behaviors) --
+500 explicitly harmful instructions where Gemma-2-IT refuses virtually
+every prompt, making it ideal for measuring refusal→acceptance switches.
 
 Seven strategies are compared:
   paper_k       -- key-side feature in pre-refusal set {24613, 70149, 7736}
@@ -85,22 +83,22 @@ REFUSAL_MARKERS = [
 
 # ── Dataset ────────────────────────────────────────────────────────────────
 
-def load_toxic_prompts(n_prompts: int) -> list[dict]:
-    """Load harmful prompts from ToxicChat (lmsys/toxic-chat, toxicchat0124).
+def load_harmful_prompts(n_prompts: int) -> list[dict]:
+    """Load harmful prompts from AdvBench (llm-attacks/harmful_behaviors).
 
-    ToxicChat is a human-annotated subset of LMSYS-Chat-1M, which is the
-    training distribution for the Gemma-2 2B crosscoder.  The ``toxicity``
-    field is binary (0/1); we keep only toxic==1 examples.
+    AdvBench contains 500 explicitly harmful instructions (bomb-making,
+    malware, identity theft, etc.) designed to elicit refusal.  The model
+    refuses virtually all of them, making it ideal for ablation experiments.
     """
     from datasets import load_dataset
-    ds = load_dataset("lmsys/toxic-chat", "toxicchat0124", split="train")
-    toxic = [ex for ex in ds if ex["toxicity"] == 1]
-    if len(toxic) < n_prompts:
-        print(f"Warning: only {len(toxic)} toxic examples available, "
+    ds = load_dataset("llm-attacks/harmful_behaviors", split="train")
+    examples = list(ds)
+    if len(examples) < n_prompts:
+        print(f"Warning: only {len(examples)} AdvBench examples available, "
               f"requested {n_prompts}.")
     rng = random.Random(42)
-    rng.shuffle(toxic)
-    return [{"text": ex["user_input"], "is_safe": False} for ex in toxic[:n_prompts]]
+    rng.shuffle(examples)
+    return [{"text": ex["goal"], "is_safe": False} for ex in examples[:n_prompts]]
 
 
 # ── Models ─────────────────────────────────────────────────────────────────
@@ -385,7 +383,7 @@ def run_experiment(args) -> dict:
 
     # Dataset
     n_total = args.n_prompts + args.n_discovery
-    all_prompts = load_toxic_prompts(n_total)
+    all_prompts = load_harmful_prompts(n_total)
     discovery_prompts = all_prompts[:args.n_discovery]
     experiment_prompts = all_prompts[args.n_discovery:args.n_discovery + args.n_prompts]
     print(f"Loaded {len(all_prompts)} toxic prompts "
@@ -495,11 +493,14 @@ def run_experiment(args) -> dict:
         ref_tag = "REFUSED" if baseline_refuses else "accepted"
         print(f"BASELINE ({ref_tag}):\n  {baseline_text}")
         for name, s in entry["strategies"].items():
-            if s.get("text") is None:
-                continue
-            sw_tag = " *** SWITCHED ***" if s["switched"] else ""
-            abl_tag = "REFUSED" if s["refuses"] else "accepted"
-            print(f"{name} ({abl_tag}){sw_tag}:\n  {s['text']}")
+            if s.get("error"):
+                print(f"{name} (ERROR): {s['error']}")
+            elif s.get("text") is None:
+                print(f"{name}: no pairs — skipped")
+            else:
+                sw_tag = " *** SWITCHED ***" if s["switched"] else ""
+                abl_tag = "REFUSED" if s["refuses"] else "accepted"
+                print(f"{name} ({abl_tag}){sw_tag}:\n  {s['text']}")
 
         if (i + 1) % 5 == 0 or i == len(experiment_prompts) - 1:
             n_done = i + 1
