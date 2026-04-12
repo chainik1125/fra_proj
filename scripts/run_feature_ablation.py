@@ -21,7 +21,7 @@ Usage (smoke test, 5 prompts):
   uv run python scripts/run_feature_ablation.py \\
       --n-prompts 5 --max-new-tokens 50
 
-Full run with output:
+Full run with output (requires HF login with lmsys-chat-1m access):
   uv run python scripts/run_feature_ablation.py \\
       --n-prompts 50 --max-new-tokens 80 \\
       --output results/feature_ablation.json
@@ -29,6 +29,7 @@ Full run with output:
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import torch
@@ -97,21 +98,49 @@ def is_refusal(text: str) -> bool:
 
 # ── Dataset ────────────────────────────────────────────────────────────────
 
-def load_harmful_prompts(n: int) -> list[str]:
+_HARMFUL_PATTERN = re.compile(
+    r"how (?:to|do i|can i|could i|would i).{0,40}"
+    r"(?:hack|steal|kill|poison|bomb|weapon|drug|counterfeit|fake id|"
+    r"break into|rob|hotwire|lockpick|exploit|phish|manipulat|blackmail|"
+    r"forge|smuggl|launder|kidnap|arson|sabotag|stalk|murder|assault|"
+    r"shoplift|scam|fraud|identity theft|pick a lock|surveillance|"
+    r"disable.{0,10}(?:alarm|camera|security)|make.{0,10}(?:meth|cocaine|"
+    r"heroin|fentanyl|explosive|napalm|ricin|cyanide))",
+    re.IGNORECASE,
+)
+
+
+def load_harmful_prompts(n: int, it_model=None, device: str = "cuda") -> list[str]:
     from datasets import load_dataset
-    print(f"Loading {n} harmful prompts from BeaverTails...")
-    bt = load_dataset("PKU-Alignment/BeaverTails", split="330k_test", streaming=True)
-    bt = bt.shuffle(seed=42, buffer_size=10000)
+    print(f"Loading {n} harmful prompts from LMSYS-Chat-1M...")
+    ds = load_dataset("lmsys/lmsys-chat-1m", streaming=True, split="train")
+    ds = ds.shuffle(seed=42, buffer_size=10000)
     prompts = []
-    for ex in bt:
-        if ex["is_safe"]:
+    n_candidates = 0
+    for ex in ds:
+        if ex.get("language") != "English":
             continue
-        prompt = ex["prompt"].strip()
-        if len(prompt) < 10 or len(prompt) > 500:
+        conversation = ex.get("conversation", [])
+        if not conversation or conversation[0].get("role") != "user":
             continue
-        prompts.append(prompt)
+        text = conversation[0]["content"].strip()
+        if len(text) < 10 or len(text) > 500:
+            continue
+        if not _HARMFUL_PATTERN.search(text):
+            continue
+        n_candidates += 1
+        if it_model is not None:
+            tok_ids = tokenize(it_model, text)
+            response = generate_baseline(it_model, tok_ids, 60, device)
+            if not is_refusal(response):
+                continue
+        prompts.append(text)
         if len(prompts) >= n:
             break
+    if len(prompts) < n:
+        print(f"Warning: only collected {len(prompts)} prompts "
+              f"(from {n_candidates} candidates), requested {n}.")
+    print(f"  Collected {len(prompts)} prompts ({n_candidates} candidates checked).")
     return prompts
 
 
@@ -374,11 +403,11 @@ def run_experiment(args) -> dict:
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    prompts = load_harmful_prompts(args.n_prompts)
-    print(f"Loaded {len(prompts)} harmful prompts")
-
     torch.set_grad_enabled(False)
     base_model, it_model, crosscoder = load_models(device)
+
+    prompts = load_harmful_prompts(args.n_prompts, it_model, device)
+    print(f"Loaded {len(prompts)} harmful prompts")
 
     modes = args.modes or ALL_MODES
     print(f"Modes: {modes}")

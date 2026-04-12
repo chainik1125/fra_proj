@@ -1,11 +1,11 @@
 """
 Refusal ablation experiment for the Gemma-2 2B crosscoder.
 
-Loads harmful prompts from BeaverTails (PKU-Alignment/BeaverTails,
-330k_test split, is_safe=False) -- explicit harmful requests where
-Gemma-2-IT refuses virtually every prompt.
+Loads harmful prompts from BeaverTails or LMSYS-Chat-1M and measures
+whether ablating FRA feature pairs (or all pairs — bias correction only)
+can switch the IT model from refusing to complying.
 
-Seven strategies are compared:
+Seven FRA strategies are compared:
   paper_k       -- key-side feature in pre-refusal set {24613, 70149, 7736}
   paper_q       -- query-side feature in pre-refusal set
   paper_both    -- union of paper_k and paper_q
@@ -14,6 +14,10 @@ Seven strategies are compared:
   data_top_50   -- top 50 pairs
   data_filtered -- top --top-k-pairs data-driven pairs where at least one feature
                    is in the pre-refusal set (default strategy)
+
+Additionally, ``--strategies bias_only`` runs a separate experiment that
+ablates ALL feature pairs (leaving only the bias correction in the attention
+scores) to test whether FRA ablation can change model behaviour at all.
 
 Usage:
   # Smoke test (5 prompts, 3 discovery)
@@ -26,15 +30,20 @@ Usage:
       --n-prompts 100 --n-discovery 20 \\
       --output results/refusal_ablation.json
 
-  # Prefill-only comparison
+  # Bias-correction-only (no discovery needed)
   uv run python scripts/run_refusal_ablation.py \\
-      --n-prompts 100 --n-discovery 20 --ablation-mode prefill \\
-      --output results/refusal_ablation_prefill.json
+      --n-prompts 20 --strategies bias_only \\
+      --output results/bias_only.json
+
+  # LMSYS dataset (requires HF token with lmsys-chat-1m access)
+  uv run python scripts/run_refusal_ablation.py \\
+      --dataset lmsys --n-prompts 20 --strategies bias_only
 """
 
 import argparse
 import json
 import random
+import re
 from pathlib import Path
 
 import numpy as np
@@ -64,6 +73,7 @@ POST_REFUSAL = {38009}                 # fires on model's refusal tokens
 ALL_STRATEGIES = [
     "paper_k", "paper_q", "paper_both",
     "data_top_10", "data_top_25", "data_top_50", "data_filtered",
+    "bias_only",
 ]
 
 # If the response STARTS with any of these the model is complying, not refusing.
@@ -96,31 +106,60 @@ REFUSAL_MARKERS = [
 
 # ── Dataset ────────────────────────────────────────────────────────────────
 
-def load_harmful_prompts(n_prompts: int) -> list[dict]:
-    """Load harmful prompts from BeaverTails (PKU-Alignment/BeaverTails).
 
-    BeaverTails is filtered to is_safe=False examples — explicit harmful
-    requests (violence, weapons, illegal activity, etc.) where the model
-    should refuse.  Uses the 330k_test split with streaming to avoid
-    downloading the full dataset.
+_HARMFUL_PATTERN = re.compile(
+    r"how (?:to|do i|can i|could i|would i).{0,40}"
+    r"(?:hack|steal|kill|poison|bomb|weapon|drug|counterfeit|fake id|"
+    r"break into|rob|hotwire|lockpick|exploit|phish|manipulat|blackmail|"
+    r"forge|smuggl|launder|kidnap|arson|sabotag|stalk|murder|assault|"
+    r"shoplift|scam|fraud|identity theft|pick a lock|surveillance|"
+    r"disable.{0,10}(?:alarm|camera|security)|make.{0,10}(?:meth|cocaine|"
+    r"heroin|fentanyl|explosive|napalm|ricin|cyanide))",
+    re.IGNORECASE,
+)
+
+
+def load_harmful_prompts(n_prompts: int, it_model=None, device: str = "cuda") -> list[dict]:
+    """Load harmful prompts from LMSYS-Chat-1M, verified by model refusal.
+
+    Keyword-matches candidate prompts, then checks that Gemma-2-IT actually
+    refuses them (greedy first-token check).  Only prompts the model refuses
+    are included, guaranteeing every prompt in the dataset is genuinely harmful
+    from the model's perspective.
+
+    Requires ``huggingface-cli login`` with access to ``lmsys/lmsys-chat-1m``.
     """
     from datasets import load_dataset
-    print(f"Loading {n_prompts} harmful prompts from BeaverTails...")
-    bt = load_dataset("PKU-Alignment/BeaverTails", split="330k_test", streaming=True)
-    bt = bt.shuffle(seed=42, buffer_size=10000)
+    print(f"Loading {n_prompts} harmful prompts from LMSYS-Chat-1M...")
+    ds = load_dataset("lmsys/lmsys-chat-1m", streaming=True, split="train")
+    ds = ds.shuffle(seed=42, buffer_size=10000)
     prompts = []
-    for ex in bt:
-        if ex["is_safe"]:
+    n_candidates = 0
+    for ex in ds:
+        if ex.get("language") != "English":
             continue
-        prompt = ex["prompt"].strip()
-        if len(prompt) < 10 or len(prompt) > 500:
+        conversation = ex.get("conversation", [])
+        if not conversation or conversation[0].get("role") != "user":
             continue
-        prompts.append({"text": prompt, "is_safe": False})
+        text = conversation[0]["content"].strip()
+        if len(text) < 10 or len(text) > 500:
+            continue
+        if not _HARMFUL_PATTERN.search(text):
+            continue
+        n_candidates += 1
+        # Verify the model actually refuses this prompt
+        if it_model is not None:
+            tok_ids = tokenize_prompt(it_model, text)
+            response = generate_baseline(it_model, tok_ids, 60, device)
+            if not is_refusal(response):
+                continue
+        prompts.append({"text": text, "is_safe": False})
         if len(prompts) >= n_prompts:
             break
     if len(prompts) < n_prompts:
-        print(f"Warning: only collected {len(prompts)} harmful prompts, "
-              f"requested {n_prompts}.")
+        print(f"Warning: only collected {len(prompts)} harmful prompts "
+              f"(from {n_candidates} candidates), requested {n_prompts}.")
+    print(f"  Collected {len(prompts)} prompts ({n_candidates} candidates checked).")
     return prompts
 
 
@@ -242,39 +281,63 @@ def discovery_phase(
     heads_label = f"all {n_heads} heads" if all_heads else f"head {head}"
     print(f"\nDiscovery phase: {n} prompts x {heads_label}")
 
-    all_indices: list[np.ndarray] = []
-    all_values: list[np.ndarray] = []
+    # Per-head accumulation (matches dashboard ranking behaviour)
+    heads_list = list(range(n_heads)) if all_heads else [head]
+    per_head_indices: dict[int, list[np.ndarray]] = {h: [] for h in heads_list}
+    per_head_values: dict[int, list[np.ndarray]] = {h: [] for h in heads_list}
 
     for i, prompt in enumerate(prompts[:n]):
         tok_ids = tokenize_prompt(it_model, prompt["text"])
         try:
-            _head_arg = list(range(n_heads)) if all_heads else head
+            _head_arg = heads_list if all_heads else head
             if all_heads:
                 _, _, idx_list, val_list, _ = _run_fra(
                     base_model, it_model, crosscoder, tok_ids, _head_arg, device,
                 )
-                all_indices.extend(idx_list)
-                all_values.extend(val_list)
+                for hi, h in enumerate(heads_list):
+                    per_head_indices[h].append(idx_list[hi])
+                    per_head_values[h].append(val_list[hi])
             else:
                 _, _, idx_np, val_np, _ = _run_fra(
                     base_model, it_model, crosscoder, tok_ids, _head_arg, device,
                 )
-                all_indices.append(idx_np)
-                all_values.append(val_np)
+                per_head_indices[head].append(idx_np)
+                per_head_values[head].append(val_np)
         except Exception as e:
             print(f"  [{i+1}/{n}] Error: {e}")
             continue
         if (i + 1) % 5 == 0 or i == n - 1:
-            print(f"  [{i+1}/{n}] accumulated {sum(v.shape[0] for v in all_values):,} entries")
+            total = sum(
+                v.shape[0] for vl in per_head_values.values() for v in vl
+            )
+            print(f"  [{i+1}/{n}] accumulated {total:,} entries")
 
-    if not all_indices:
+    if not any(per_head_indices[h] for h in heads_list):
         print("  No FRA data collected — returning empty pairs.")
         return [], np.zeros((4, 0), dtype=np.int64), np.zeros(0, dtype=np.float32)
 
-    combined_indices = np.concatenate(all_indices, axis=1)  # [4, total_nnz]
-    combined_values = np.concatenate(all_values)             # [total_nnz]
+    # Build per-head combined arrays (for rank_pairs multi-head path)
+    idx_dict: dict[int, np.ndarray] = {}
+    val_dict: dict[int, np.ndarray] = {}
+    for h in heads_list:
+        if per_head_indices[h]:
+            idx_dict[h] = np.concatenate(per_head_indices[h], axis=1)
+            val_dict[h] = np.concatenate(per_head_values[h])
 
-    ranked_pairs = rank_pairs(combined_indices, combined_values, top_k=top_k_pairs, mode="sum")
+    # Also build flat combined arrays (for paper_k/paper_q strategy filtering)
+    combined_indices = np.concatenate(list(idx_dict.values()), axis=1)
+    combined_values = np.concatenate(list(val_dict.values()))
+
+    if all_heads and len(idx_dict) > 1:
+        ranked_pairs = rank_pairs(
+            idx_dict, val_dict,
+            top_k=top_k_pairs, mode="sum", multi_head_agg="sum",
+        )
+    else:
+        ranked_pairs = rank_pairs(
+            combined_indices, combined_values,
+            top_k=top_k_pairs, mode="sum",
+        )
     print(f"  Ranked {len(ranked_pairs)} pairs (top score: {ranked_pairs[0][2]:.3f})")
     return ranked_pairs, combined_indices, combined_values
 
@@ -389,22 +452,302 @@ def generate_ablated(
     return it_model.tokenizer.decode(result["ablated_ids"], skip_special_tokens=True)
 
 
-# ── Experiment ─────────────────────────────────────────────────────────────
+# ── Bias-correction-only generation ───────────────────────────────────────
+
+
+@torch.no_grad()
+def generate_bias_only(
+    it_model, base_model, crosscoder,
+    tok_ids: list[int], max_new_tokens: int, device: str,
+) -> str:
+    """Per-step generation with ALL feature pairs ablated (bias correction only).
+
+    Prefill: patch attention scores with bias-correction-only reconstruction
+    (fra_sum set to zero).  Per-step: subtract the total FRA bilinear
+    contribution from each new query's attention scores, using the factored
+    form ``(feat_q @ DW_Q) · (feat_k @ DW_K) / (scale * rms_q * rms_k)``
+    to avoid enumerating pairs.
+    """
+    from fra.core.helpers import (
+        _extract_rope_params, compute_bias_correction,
+        fra_sum_to_attn, get_attn_scale, get_qk_weights, project_qk,
+    )
+    from fra.analysis.ablation import (
+        build_crosscoder_encode_fn, build_patch_scores,
+        prefill_no_hooks, prefill_with_patch,
+        generate_with_prefill_ablation,
+    )
+    from fra.analysis.ablation.ablate import _apply_rope_single_pos
+
+    eos_id = getattr(it_model.tokenizer, "eos_token_id", None)
+    n_heads = it_model.cfg.n_heads
+    heads = list(range(n_heads))
+
+    # ── FRA for all heads (needed to build prefill bias-correction scores) ──
+    fra_sparse_dict, feat_acts, _, _, seq_len = _run_fra(
+        base_model, it_model, crosscoder, tok_ids, heads, device,
+    )
+
+    W_dec = crosscoder.W_dec.float().to(device)
+    b_dec = crosscoder.b_dec.float().to(device)
+    x_hat = feat_acts.float().to(device) @ W_dec + b_dec
+    attn_scale = get_attn_scale(it_model, ATTN_LAYER)
+    softcap = getattr(it_model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+    eps = it_model.cfg.eps
+
+    # ── Prefill: bias-correction-only scores per head ��─────────────────────
+    empty_sparse = torch.sparse_coo_tensor(
+        torch.zeros((4, 0), dtype=torch.long),
+        torch.zeros(0, dtype=torch.float32),
+        size=(seq_len, seq_len, crosscoder.d_sae, crosscoder.d_sae),
+    )
+    patch_scores_dict = {}
+    for h in heads:
+        fra_h = fra_sparse_dict[h]
+        q_full, k_full, q_nobias, k_nobias = project_qk(
+            it_model, ATTN_LAYER, h, x_hat, b_dec, needs_rms=True,
+        )
+        bias_corr = compute_bias_correction(
+            q_full, k_full, q_nobias, k_nobias, attn_scale,
+        )
+        patch_scores_dict[h] = build_patch_scores(
+            {"trained_on_bos": TRAINED_ON_BOS},
+            {"seq_len": seq_len, "attn_scores_np": None},
+            fra_h, empty_sparse,
+            {
+                "softcap": softcap,
+                "q_full": q_full, "k_full": k_full,
+                "attn_scale": attn_scale,
+                "bias_corr_np": bias_corr[:seq_len, :seq_len].cpu().numpy(),
+            },
+            "coder_recon", device,
+        )
+
+    abl_kv, first_abl = prefill_with_patch(
+        it_model, tok_ids, patch_scores_dict, ATTN_LAYER, 0, device,
+    )
+
+    # ── Pre-compute per-head DW_Q, DW_K and key projection caches ──────────
+    rope_sin, rope_cos, rotary_dim, rotary_adj = _extract_rope_params(
+        it_model, ATTN_LAYER,
+    )
+    use_rope = rope_sin is not None
+    if use_rope:
+        rope_sin = rope_sin.to(device).float()
+        rope_cos = rope_cos.to(device).float()
+
+    DW_Q = {}   # {head: [d_sae, d_head]}
+    DW_K = {}
+    k_proj_cache = {}  # {head: [T, d_head]}, RoPE-rotated per position
+
+    for h in heads:
+        wq, wk, _, _ = get_qk_weights(it_model, ATTN_LAYER, h)
+        DW_Q[h] = (W_dec @ wq.float().to(device))  # [d_sae, d_head]
+        DW_K[h] = (W_dec @ wk.float().to(device))
+
+        k_proj = feat_acts.float().to(device) @ DW_K[h]  # [seq, d_head]
+        if use_rope:
+            for pos in range(k_proj.shape[0]):
+                k_proj[pos:pos + 1] = _apply_rope_single_pos(
+                    k_proj[pos:pos + 1], pos,
+                    rope_sin, rope_cos, rotary_dim, rotary_adj,
+                )
+        k_proj_cache[h] = k_proj
+
+    feat_acts_dev = feat_acts.detach().clone().float().to(device)
+    rms_all = (x_hat.pow(2).mean(dim=-1) + eps).sqrt()  # [seq]
+
+    # ── Other-model KV cache for crosscoder encoding ───────────────────────
+    other_kv, _ = prefill_no_hooks(base_model, tok_ids, device)
+    encode_fn = build_crosscoder_encode_fn(
+        base_model, crosscoder, other_kv, CC_LAYER, crosscoder.model_idx,
+    )
+
+    resid_hook = f"blocks.{CC_LAYER}.hook_resid_post"
+    attn_hook = f"blocks.{ATTN_LAYER}.attn.hook_attn_scores"
+
+    # ── Per-step generation loop ───────────────────────────────────────────
+    new_ids = []
+    cur_tok_id = first_abl
+
+    for _ in range(max_new_tokens):
+        if eos_id is not None and cur_tok_id == eos_id:
+            break
+        new_ids.append(cur_tok_id)
+        if len(new_ids) >= max_new_tokens:
+            break
+
+        cur_tok = torch.tensor([[cur_tok_id]], dtype=torch.long, device=device)
+        T = feat_acts_dev.shape[0]
+        _step: dict = {}
+
+        def _hook_resid(target_resid, hook, _T=T, _ss=_step):
+            fa_new = encode_fn(cur_tok, target_resid[0].float()).to(device).float()
+
+            x_hat_new = fa_new @ W_dec + b_dec
+            rms_new = (x_hat_new.pow(2).mean() + eps).sqrt().item()
+
+            # Per-head: total FRA = q_proj · k_proj_cache / (scale * rms)
+            fra_per_head = {}
+            for h in heads:
+                q_proj = fa_new @ DW_Q[h]  # [d_head]
+                if use_rope:
+                    q_proj = _apply_rope_single_pos(
+                        q_proj.unsqueeze(0), _T,
+                        rope_sin, rope_cos, rotary_dim, rotary_adj,
+                    ).squeeze(0)
+                fra_per_head[h] = (k_proj_cache[h] @ q_proj) / (
+                    attn_scale * rms_new * rms_all
+                )
+
+                # Extend key cache for this head
+                new_k = fa_new @ DW_K[h]
+                if use_rope:
+                    new_k = _apply_rope_single_pos(
+                        new_k.unsqueeze(0), _T,
+                        rope_sin, rope_cos, rotary_dim, rotary_adj,
+                    ).squeeze(0)
+                k_proj_cache[h] = torch.cat(
+                    [k_proj_cache[h], new_k.unsqueeze(0)], dim=0,
+                )
+
+            _ss["fra_per_head"] = fra_per_head
+            _ss["fa_new"] = fa_new
+            _ss["rms_new"] = rms_new
+            return target_resid
+
+        def _hook_attn(attn_scores, hook, _ss=_step):
+            for h, fra_scores in _ss.get("fra_per_head", {}).items():
+                T_cur = min(len(fra_scores), attn_scores.shape[-1])
+                attn_scores[0, h, 0, :T_cur] -= fra_scores[:T_cur]
+            return attn_scores
+
+        logits = it_model.run_with_hooks(
+            cur_tok,
+            fwd_hooks=[(resid_hook, _hook_resid), (attn_hook, _hook_attn)],
+            past_kv_cache=abl_kv,
+        )
+
+        if "fa_new" in _step:
+            feat_acts_dev = torch.cat(
+                [feat_acts_dev, _step["fa_new"].unsqueeze(0)], dim=0,
+            )
+            rms_all = torch.cat([
+                rms_all,
+                torch.tensor([_step["rms_new"]], dtype=torch.float32, device=device),
+            ])
+
+        cur_tok_id = int(logits[0, -1].argmax(-1).item())
+
+    return it_model.tokenizer.decode(new_ids, skip_special_tokens=True)
+
+
+def run_bias_only_experiment(args, base_model, it_model, crosscoder, prompts, device):
+    """Bias-correction-only experiment: ablate ALL feature pairs, compare to baseline."""
+    per_prompt = []
+    n_baseline_refusals = 0
+    n_exact_match = 0
+
+    print(f"\nBias-only experiment on {len(prompts)} prompts (per_step)...")
+
+    for i, prompt in enumerate(prompts):
+        tok_ids = tokenize_prompt(it_model, prompt["text"])
+
+        try:
+            baseline_text = generate_baseline(
+                it_model, tok_ids, args.max_new_tokens, device,
+            )
+        except Exception as e:
+            print(f"  [{i+1}/{len(prompts)}] baseline error: {e}")
+            continue
+
+        try:
+            bias_text = generate_bias_only(
+                it_model, base_model, crosscoder,
+                tok_ids, args.max_new_tokens, device,
+            )
+        except Exception as e:
+            print(f"  [{i+1}/{len(prompts)}] bias_only error: {e}")
+            continue
+
+        baseline_refuses = is_refusal(baseline_text)
+        bias_refuses = is_refusal(bias_text)
+        exact_match = baseline_text == bias_text
+        switched = baseline_refuses and not bias_refuses
+
+        if baseline_refuses:
+            n_baseline_refusals += 1
+        if exact_match:
+            n_exact_match += 1
+
+        entry = {
+            "prompt": prompt["text"],
+            "baseline": baseline_text,
+            "bias_only": bias_text,
+            "baseline_refuses": baseline_refuses,
+            "bias_refuses": bias_refuses,
+            "exact_match": exact_match,
+            "switched": switched,
+        }
+        per_prompt.append(entry)
+
+        ref_tag = "REFUSED" if baseline_refuses else "accepted"
+        bias_tag = "REFUSED" if bias_refuses else "accepted"
+        match_tag = "EXACT MATCH" if exact_match else "DIFFERS"
+        sw_tag = " *** SWITCHED ***" if switched else ""
+        print(f"\n{'─'*70}")
+        print(f"[{i+1}/{len(prompts)}] PROMPT: {prompt['text']}")
+        print(f"{'─'*70}")
+        print(f"BASELINE ({ref_tag}):\n  {baseline_text}")
+        print(f"BIAS_ONLY ({bias_tag}) [{match_tag}]{sw_tag}:\n  {bias_text}")
+
+    n_done = len(per_prompt)
+    n_switches = sum(1 for e in per_prompt if e["switched"])
+
+    return {
+        "config": {
+            "n_prompts": n_done,
+            "strategy": "bias_only",
+            "ablation_mode": "per_step",
+            "all_heads": True,
+            "cc_layer": CC_LAYER,
+            "attn_layer": ATTN_LAYER,
+            "max_new_tokens": args.max_new_tokens,
+            "repo_id": REPO_ID,
+        },
+        "baseline_refusal_rate": n_baseline_refusals / max(n_done, 1),
+        "n_refusals": n_baseline_refusals,
+        "exact_match_rate": n_exact_match / max(n_done, 1),
+        "n_exact_match": n_exact_match,
+        "n_switches": n_switches,
+        "switch_rate": n_switches / max(n_baseline_refusals, 1),
+        "per_prompt": per_prompt,
+    }
+
+
+# ─��� Experiment ──────────────────────────────────────────────────────────��──
 
 def run_experiment(args) -> dict:
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
+    torch.set_grad_enabled(False)
+    base_model, it_model, crosscoder = load_models(device)
+
+    # bias_only bypasses the normal discovery/strategy flow
+    if args.strategies == ["bias_only"]:
+        prompts = load_harmful_prompts(args.n_prompts, it_model, device)
+        return run_bias_only_experiment(
+            args, base_model, it_model, crosscoder, prompts, device,
+        )
+
     # Dataset
     n_total = args.n_prompts + args.n_discovery
-    all_prompts = load_harmful_prompts(n_total)
+    all_prompts = load_harmful_prompts(n_total, it_model, device)
     discovery_prompts = all_prompts[:args.n_discovery]
     experiment_prompts = all_prompts[args.n_discovery:args.n_discovery + args.n_prompts]
     print(f"Loaded {len(all_prompts)} harmful prompts "
           f"({args.n_discovery} discovery + {len(experiment_prompts)} experiment)")
-
-    torch.set_grad_enabled(False)
-    base_model, it_model, crosscoder = load_models(device)
 
     n_heads = it_model.cfg.n_heads
     all_heads = args.all_heads
@@ -559,6 +902,19 @@ def print_report(results: dict) -> None:
     n = results["config"]["n_prompts"]
     n_ref = results["n_refusals"]
     print("\n" + "=" * 70)
+
+    if results["config"].get("strategy") == "bias_only":
+        print("BIAS-CORRECTION-ONLY EXPERIMENT RESULTS")
+        print("=" * 70)
+        print(f"Prompts: {n}   Baseline refusals: {n_ref} ({results['baseline_refusal_rate']:.1%})")
+        print(f"Ablation mode: per_step   all heads")
+        print()
+        print(f"Exact match (baseline == bias_only): "
+              f"{results['n_exact_match']}/{n} ({results['exact_match_rate']:.1%})")
+        print(f"Switches (refused → accepted):       "
+              f"{results['n_switches']}/{n_ref} ({results['switch_rate']:.1%})")
+        return
+
     print("REFUSAL ABLATION EXPERIMENT RESULTS")
     print("=" * 70)
     print(f"Prompts: {n}   Baseline refusals: {n_ref} ({results['baseline_refusal_rate']:.1%})")
