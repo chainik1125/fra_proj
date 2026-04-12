@@ -114,6 +114,31 @@ def get_fra_data_all():
     return st.session_state.get("fra_data_all")
 
 
+def get_cached_aggregated_pairs(fra_data, head, diagonal=None):
+    """Return cached ``aggregate_pairs`` result for a single head.
+
+    The expensive Python loop in ``aggregate_pairs`` only depends on
+    ``(fra_data, diagonal)``; the sort order and top-k slicing that callers
+    apply afterwards are cheap.  Caching at this level lets every caller
+    (with any ``mode`` / ``top_k``) share one loop execution per head per
+    FRA run.
+
+    Returns a **copy** of the cached list so callers can sort in-place
+    without mutating the cache.
+
+    Cache entries are keyed ``_agg_pairs_{head}_{diagonal}`` and are cleared
+    when a new FRA run is triggered (see ``app.py``).
+    """
+    key = f"_agg_pairs_{head}_{diagonal}"
+    if key not in st.session_state:
+        from fra.core.helpers import aggregate_pairs
+
+        st.session_state[key] = aggregate_pairs(
+            fra_data["indices_np"], fra_data["values_np"], diagonal=diagonal,
+        )
+    return list(st.session_state[key])
+
+
 def get_active_fra_data(key_suffix=""):
     """Return ``(fra_data, selected_head)`` respecting all-heads mode.
 

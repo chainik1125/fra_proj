@@ -6,9 +6,9 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from fra.core.helpers import get_position_heatmap, rank_pairs, aggregate_pairs
+from fra.core.helpers import get_position_heatmap
 from fra.dashboard.loaders import fetch_neuronpedia
-from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data
+from fra.dashboard.state import get_active_fra_data, get_cached_aggregated_pairs, get_fra_config, get_fra_data
 from fra.dashboard.widgets import (
     _show_heatmap,
     neuronpedia_embed_url,
@@ -40,17 +40,14 @@ def render(tab):
             return s
 
         _diagonal = False if cfg["filter_self"] else None
-        pairs = rank_pairs(
-            fra_data["indices_np"],
-            fra_data["values_np"],
-            top_k=cfg["top_k_pairs"],
-            diagonal=_diagonal,
-            mode=_agg,
-        )
+        pairs = get_cached_aggregated_pairs(fra_data, head_, diagonal=_diagonal)
+        pairs.sort(key=lambda x: _pair_metric(*x), reverse=True)
+        if cfg["top_k_pairs"]:
+            pairs = pairs[:cfg["top_k_pairs"]]
 
-        all_pairs_for_bottom = aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal)
-        all_pairs_for_bottom.sort(key=lambda x: x[2])
-        bottom_pairs = all_pairs_for_bottom[:cfg["top_k_pairs"]]
+        bottom_pairs = get_cached_aggregated_pairs(fra_data, head_, diagonal=_diagonal)
+        bottom_pairs.sort(key=lambda x: x[2])
+        bottom_pairs = bottom_pairs[:cfg["top_k_pairs"]]
 
         rank_mode = st.radio(
             "Show:",

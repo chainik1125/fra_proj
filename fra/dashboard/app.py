@@ -12,7 +12,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import torch
 
-from fra.dashboard.state import PRESETS
+from fra.dashboard.state import PRESETS, get_cached_aggregated_pairs
 from fra.dashboard.loaders import (
     load_crosscoder,
     load_model,
@@ -24,7 +24,7 @@ from fra.dashboard.loaders import (
     load_lora_model,
     load_wandb_crosscoder,
 )
-from fra.core.helpers import aggregate_pairs, rank_pairs
+from fra.core.helpers import _pair_score, aggregate_pairs, rank_pairs
 from fra.dashboard.compute import (
     build_fra_head,
     build_fra_head_multilayer,
@@ -493,7 +493,11 @@ if compute_btn:
     st.session_state.pop("_val_loss_all", None)
     # Clear all per-head caches (projection + loss)
     for _k in [k for k in st.session_state
-               if k.startswith("_projection_cache_") or k.startswith("_val_loss_")]:
+               if k.startswith("_projection_cache_")
+               or k.startswith("_val_loss_")
+               or k.startswith("_agg_pairs_")
+               or k.startswith("_recon_scores_")
+               or k == "_app_display_cache"]:
         del st.session_state[_k]
     st.session_state["fra_config"] = {
         "layer": int(layer),
@@ -534,66 +538,78 @@ if _has_fra:
     seq_len = fra_data["seq_len"]
     token_strs = fra_data["token_strs"][:seq_len]
 
-    # Recompute pairs (filter / top_k / ranking may change without recomputing FRA)
     _agg = cfg.get("agg_mode", "sum")
     _diagonal = False if cfg["filter_self"] else None
     _mh_agg = cfg.get("multi_head_agg")
     _fra_data_all = st.session_state.get("fra_data_all")
 
-    if _fra_data_all is not None and _mh_agg is not None:
-        _idx_dict = {h: d["indices_np"] for h, d in _fra_data_all.items()}
-        _val_dict = {h: d["values_np"] for h, d in _fra_data_all.items()}
-        pairs = rank_pairs(
-            _idx_dict, _val_dict,
-            top_k=cfg["top_k_pairs"],
-            diagonal=_diagonal,
-            mode=_agg,
-            multi_head_agg=_mh_agg,
-        )
-        # Bottom pairs: use same multi-head aggregation, but sort ascending
-        _all_mh = rank_pairs(
-            _idx_dict, _val_dict,
-            top_k=0,  # 0 = return all
-            diagonal=_diagonal,
-            mode=_agg,
-            multi_head_agg=_mh_agg,
-        )
-        _all_mh.sort(key=lambda x: x[2])
-        bottom_pairs = _all_mh[:cfg["top_k_pairs"]]
-    else:
-        pairs = rank_pairs(
-            fra_data["indices_np"],
-            fra_data["values_np"],
-            top_k=cfg["top_k_pairs"],
-            diagonal=_diagonal,
-            mode=_agg,
-        )
-        # Bottom pairs: weakest by sum
-        _all_pairs_for_bottom = aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal)
-        _all_pairs_for_bottom.sort(key=lambda x: x[2])
-        bottom_pairs = _all_pairs_for_bottom[:cfg["top_k_pairs"]]
+    # Pair ranking + summary stats — cached between FRA computes.
+    if "_app_display_cache" not in st.session_state:
+        if _fra_data_all is not None and _mh_agg is not None:
+            _idx_dict = {h: d["indices_np"] for h, d in _fra_data_all.items()}
+            _val_dict = {h: d["values_np"] for h, d in _fra_data_all.items()}
+            pairs = rank_pairs(
+                _idx_dict, _val_dict,
+                top_k=cfg["top_k_pairs"],
+                diagonal=_diagonal,
+                mode=_agg,
+                multi_head_agg=_mh_agg,
+            )
+            _all_mh = rank_pairs(
+                _idx_dict, _val_dict,
+                top_k=0,
+                diagonal=_diagonal,
+                mode=_agg,
+                multi_head_agg=_mh_agg,
+            )
+            _all_mh.sort(key=lambda x: x[2])
+            bottom_pairs = _all_mh[:cfg["top_k_pairs"]]
+            _total_nnz = sum(
+                d["total_interactions"] for d in _fra_data_all.values()
+            )
+            _all_unique = set()
+            for _h, _d in _fra_data_all.items():
+                _all_unique.update(
+                    (int(t[0]), int(t[1]))
+                    for t in get_cached_aggregated_pairs(
+                        _d, _h, diagonal=_diagonal,
+                    )
+                )
+            _total_unique = len(_all_unique)
+        else:
+            _cached = get_cached_aggregated_pairs(
+                fra_data, head_, diagonal=_diagonal,
+            )
+            _top = list(_cached)
+            _top.sort(key=lambda x: _pair_score(x, _agg), reverse=True)
+            pairs = _top[:cfg["top_k_pairs"]] if cfg["top_k_pairs"] else _top
+            _bottom = list(_cached)
+            _bottom.sort(key=lambda x: x[2])
+            bottom_pairs = _bottom[:cfg["top_k_pairs"]]
+            _total_nnz = fra_data["total_interactions"]
+            _total_unique = len(_cached)
+        st.session_state["_app_display_cache"] = {
+            "pairs": pairs,
+            "bottom_pairs": bottom_pairs,
+            "total_nnz": _total_nnz,
+            "total_unique": _total_unique,
+        }
+    _app = st.session_state["_app_display_cache"]
+    pairs = _app["pairs"]
+    bottom_pairs = _app["bottom_pairs"]
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Tokens", seq_len)
     if _fra_data_all is not None:
-        _total_nnz = sum(d["total_interactions"] for d in _fra_data_all.values())
-        c2.metric("Non-zero interactions", f"{_total_nnz:,}",
+        c2.metric("Non-zero interactions", f"{_app['total_nnz']:,}",
                   help=f"Summed across all {len(_fra_data_all)} heads")
     else:
-        c2.metric("Non-zero interactions", f"{fra_data['total_interactions']:,}")
+        c2.metric("Non-zero interactions", f"{_app['total_nnz']:,}")
     if _fra_data_all is not None:
-        _all_unique = set()
-        for d in _fra_data_all.values():
-            _all_unique.update(
-                (int(t[0]), int(t[1]))
-                for t in aggregate_pairs(d["indices_np"], d["values_np"], diagonal=_diagonal)
-            )
-        total_unique = len(_all_unique)
-        c3.metric("Unique feature pairs", f"{total_unique:,}",
+        c3.metric("Unique feature pairs", f"{_app['total_unique']:,}",
                   help=f"Union across all {len(_fra_data_all)} heads")
     else:
-        total_unique = len(aggregate_pairs(fra_data["indices_np"], fra_data["values_np"], diagonal=_diagonal))
-        c3.metric("Unique feature pairs", f"{total_unique:,}")
+        c3.metric("Unique feature pairs", f"{_app['total_unique']:,}")
     _head_str = "all" if _fra_data_all is not None else f"H{head_}"
     c4.metric("Layer / Head", f"L{layer_} / {_head_str}")
 

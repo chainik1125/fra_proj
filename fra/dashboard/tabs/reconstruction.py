@@ -7,6 +7,7 @@ Three top-level sections:
 """
 
 import html as html_lib
+from contextlib import nullcontext
 
 import numpy as np
 import streamlit as st
@@ -474,7 +475,8 @@ def render(tab):
         # Bias correction: b_dec cross-terms that FRA doesn't capture
         # Use the tab-selected head, not the sidebar head stored in cfg.
         _cfg_head = {**cfg, "head": head_}
-        with st.spinner("Computing bias correction\u2026"):
+        _proj_miss = f"_projection_cache_{head_}" not in st.session_state
+        with st.spinner("Computing bias correction\u2026") if _proj_miss else nullcontext():
             proj = _get_projection_cache(_cfg_head, fra_data, device)
         bias_corr_np = proj["bias_corr_np"]
 
@@ -492,31 +494,42 @@ def render(tab):
         std_probs = fra_data["attn_pattern_np"][:seq_len, :seq_len].copy()
         std_probs[causal_mask] = np.nan
 
-        # FRA-reconstructed attention scores (single source of truth).
-        # Matches the model's hook_attn_scores: post-softcap, post-causal-mask.
-        fra_scores = np.zeros((seq_len, seq_len))
-        for qp, kp, v in zip(idxs[0], idxs[1], vals):
-            if qp < seq_len and kp < seq_len:
-                fra_scores[qp, kp] += v
-        fra_scores += bias_corr_np
-        fra_scores = _apply_softcap_np(fra_scores, _softcap)
-        fra_scores[causal_mask] = -np.inf
+        # FRA-reconstructed attention scores (cached per head).
+        # The nnz Python loop and per-row softmax only need to run once
+        # per head per FRA computation -- the result is stable across reruns.
+        _recon_key = f"_recon_scores_{head_}"
+        if _recon_key not in st.session_state:
+            fra_scores = np.zeros((seq_len, seq_len))
+            for qp, kp, v in zip(idxs[0], idxs[1], vals):
+                if qp < seq_len and kp < seq_len:
+                    fra_scores[qp, kp] += v
+            fra_scores += bias_corr_np
+            fra_scores = _apply_softcap_np(fra_scores, _softcap)
+            fra_scores[causal_mask] = -np.inf
 
-        # Copy actual BOS row/col when SAE wasn't trained on BOS
-        if exclude_bos:
-            fra_scores[0, :] = fra_data["attn_scores_np"][0, :seq_len]
-            fra_scores[:, 0] = fra_data["attn_scores_np"][:seq_len, 0]
+            if exclude_bos:
+                fra_scores[0, :] = fra_data["attn_scores_np"][0, :seq_len]
+                fra_scores[:, 0] = fra_data["attn_scores_np"][:seq_len, 0]
 
-        # Display version: -inf → NaN for plotting
-        fra_logits_display = fra_scores.copy()
-        fra_logits_display[causal_mask] = np.nan
+            fra_logits_display = fra_scores.copy()
+            fra_logits_display[causal_mask] = np.nan
 
-        # FRA probs: softmax over causal region
-        fra_probs = np.full((seq_len, seq_len), np.nan)
-        for q in range(seq_len):
-            row = fra_scores[q, :q + 1]
-            row_exp = np.exp(row - row.max())
-            fra_probs[q, :q + 1] = row_exp / row_exp.sum()
+            fra_probs = np.full((seq_len, seq_len), np.nan)
+            for q in range(seq_len):
+                row = fra_scores[q, :q + 1]
+                row_exp = np.exp(row - row.max())
+                fra_probs[q, :q + 1] = row_exp / row_exp.sum()
+
+            st.session_state[_recon_key] = {
+                "fra_scores": fra_scores,
+                "fra_logits_display": fra_logits_display,
+                "fra_probs": fra_probs,
+            }
+
+        _recon = st.session_state[_recon_key]
+        fra_scores = _recon["fra_scores"]
+        fra_logits_display = _recon["fra_logits_display"]
+        fra_probs = _recon["fra_probs"]
 
         # Row 1: Logits
         st.markdown("#### Pre-softmax logits")

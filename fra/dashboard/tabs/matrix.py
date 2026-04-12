@@ -4,8 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from fra.core.helpers import rank_pairs
-from fra.dashboard.state import get_active_fra_data, get_fra_config, get_fra_data
+from fra.dashboard.state import get_active_fra_data, get_cached_aggregated_pairs, get_fra_config, get_fra_data
 
 
 def render(tab):
@@ -30,13 +29,10 @@ def render(tab):
             return s
 
         _diagonal = False if cfg["filter_self"] else None
-        pairs = rank_pairs(
-            fra_data["indices_np"],
-            fra_data["values_np"],
-            top_k=cfg["top_k_pairs"],
-            diagonal=_diagonal,
-            mode=_agg,
-        )
+        pairs = get_cached_aggregated_pairs(fra_data, head_, diagonal=_diagonal)
+        pairs.sort(key=lambda x: _pair_metric(*x), reverse=True)
+        if cfg["top_k_pairs"]:
+            pairs = pairs[:cfg["top_k_pairs"]]
 
         st.subheader(f"FRA Feature Interaction Matrix \u2014 L{layer_} H{head_}")
         st.caption(

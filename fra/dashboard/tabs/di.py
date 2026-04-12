@@ -8,9 +8,8 @@ import streamlit as st
 import torch
 
 from fra.analysis.di import compute_di_row, compute_di_sample, compute_global_di_topk
-from fra.core.helpers import rank_pairs
 from fra.dashboard.compute import _load_di_weights
-from fra.dashboard.state import PRESETS, get_active_fra_data, get_fra_config, get_fra_data, get_fra_data_all
+from fra.dashboard.state import PRESETS, get_active_fra_data, get_cached_aggregated_pairs, get_fra_config, get_fra_data, get_fra_data_all
 
 
 # ---------------------------------------------------------------------------
@@ -210,13 +209,10 @@ def render(tab):
         pairs = []
         if _has_fra:
             _diagonal = False if cfg["filter_self"] else None
-            pairs = rank_pairs(
-                fra_data["indices_np"],
-                fra_data["values_np"],
-                top_k=cfg["top_k_pairs"],
-                diagonal=_diagonal,
-                mode=_agg,
-            )
+            pairs = get_cached_aggregated_pairs(fra_data, head, diagonal=_diagonal)
+            pairs.sort(key=lambda x: _pair_metric(*x), reverse=True)
+            if cfg["top_k_pairs"]:
+                pairs = pairs[:cfg["top_k_pairs"]]
 
         # -- Section 1: Pair Selector + Metrics --
         st.markdown("### Pair selector")
