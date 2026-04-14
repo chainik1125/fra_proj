@@ -6,6 +6,7 @@ Run with:
 """
 
 import html as html_lib
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -977,6 +978,141 @@ with tab3:
         "softcapped to match the model's actual attention logits."
     )
 
+# ── Ablation helpers ─────────────────────────────────────────────────────
+
+
+def parse_pair_list_json(json_str):
+    """Parse ``[[q, k], ...]`` JSON into a list of (q, k) tuples or an error string."""
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        return f"Invalid JSON: {e}"
+    if not isinstance(data, list):
+        return "Expected a JSON array of [q_feat, k_feat] pairs."
+    pairs = []
+    for i, item in enumerate(data):
+        if not isinstance(item, (list, tuple)) or len(item) != 2:
+            return f"Item {i} must be a 2-element array, got {item!r}."
+        q, k = item
+        if not (isinstance(q, int) and isinstance(k, int) and q >= 0 and k >= 0):
+            return f"Item {i}: feature IDs must be non-negative integers, got {item!r}."
+        pairs.append((q, k))
+    # deduplicate preserving order
+    seen = set()
+    deduped = []
+    for p in pairs:
+        if p not in seen:
+            seen.add(p)
+            deduped.append(p)
+    return deduped
+
+
+def parse_feature_groups_json(json_str, include_self=False):
+    """Parse ``{"name": [ids...], ...}`` and generate all within-group directed pairs.
+
+    Returns ``(pairs, groups_dict)`` on success or an error string.
+    """
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        return f"Invalid JSON: {e}"
+    if not isinstance(data, dict):
+        return "Expected a JSON object mapping group names to feature ID arrays."
+    groups = {}
+    for name, ids in data.items():
+        if not isinstance(ids, list):
+            return f"Group '{name}': value must be an array of integers."
+        for i, fid in enumerate(ids):
+            if not isinstance(fid, int) or fid < 0:
+                return f"Group '{name}', index {i}: must be a non-negative integer, got {fid!r}."
+        groups[name] = ids
+
+    all_pairs = set()
+    for name, ids in groups.items():
+        for q in ids:
+            for k in ids:
+                if q == k and not include_self:
+                    continue
+                all_pairs.add((q, k))
+    return list(all_pairs), groups
+
+
+def validate_pairs_against_tensor(pairs, indices_np):
+    """Return (found, missing) lists of pairs based on what exists in the FRA tensor."""
+    tensor_pairs = set(zip(indices_np[2].tolist(), indices_np[3].tolist()))
+    found = [p for p in pairs if p in tensor_pairs]
+    missing = [p for p in pairs if p not in tensor_pairs]
+    return found, missing
+
+
+def load_feature_embeddings(file_content):
+    """Load pre-computed feature embeddings from a JSON or .npz file.
+
+    Expected JSON format::
+
+        {
+            "embeddings": {<feat_id_str>: [float, ...], ...},
+            "descriptions": {<feat_id_str>: "text", ...}   // optional
+        }
+
+    Or a numpy .npz with key ``embeddings`` of shape [n_features, embed_dim]
+    and optional key ``feature_ids`` of shape [n_features].
+
+    Returns (embeddings_dict, descriptions_dict) or an error string.
+    ``embeddings_dict``: ``{int_feat_id: np.array}``
+    ``descriptions_dict``: ``{int_feat_id: str}`` or empty dict.
+    """
+    # Try JSON first
+    try:
+        data = json.loads(file_content)
+        if not isinstance(data, dict) or "embeddings" not in data:
+            return "JSON must have an 'embeddings' key mapping feature IDs to vectors."
+        emb_raw = data["embeddings"]
+        embeddings = {int(k): np.array(v, dtype=np.float32) for k, v in emb_raw.items()}
+        descriptions = {}
+        if "descriptions" in data:
+            descriptions = {int(k): str(v) for k, v in data["descriptions"].items()}
+        return embeddings, descriptions
+    except (json.JSONDecodeError, ValueError):
+        return "Could not parse file as JSON. Expected format: {\"embeddings\": {\"feat_id\": [vec], ...}}"
+
+
+def cluster_embeddings(embeddings_dict, feature_ids, n_clusters, method="agglomerative"):
+    """Cluster a subset of features using their pre-computed embeddings.
+
+    Args:
+        embeddings_dict: {feat_id: np.array} from load_feature_embeddings.
+        feature_ids: list of feature IDs to cluster (must be keys in embeddings_dict).
+        n_clusters: number of clusters.
+        method: "agglomerative" or "kmeans".
+
+    Returns dict mapping cluster_label (int) -> list of feature IDs.
+    """
+    from sklearn.cluster import AgglomerativeClustering, KMeans
+    from sklearn.preprocessing import normalize
+
+    ids = [f for f in feature_ids if f in embeddings_dict]
+    if len(ids) < 2:
+        return {"cluster_0": ids}
+
+    mat = np.stack([embeddings_dict[f] for f in ids])
+    mat = normalize(mat)  # L2-normalize for cosine-like clustering
+
+    n_clusters = min(n_clusters, len(ids))
+
+    if method == "agglomerative":
+        labels = AgglomerativeClustering(
+            n_clusters=n_clusters, metric="cosine", linkage="average",
+        ).fit_predict(mat)
+    else:
+        labels = KMeans(n_clusters=n_clusters, n_init=10, random_state=42).fit_predict(mat)
+
+    groups = defaultdict(list)
+    for feat_id, label in zip(ids, labels):
+        groups[f"cluster_{label}"].append(feat_id)
+    return dict(groups)
+
+
 # ── Tab 4: Ablation ──────────────────────────────────────────────────────
 
 with tab4:
@@ -987,68 +1123,299 @@ with tab4:
         "are causally important to this attention head's computation."
     )
 
-    # Build pair selection UI
-    all_pairs_for_ablation = get_ranked_pairs(
-        display_indices, display_values,
-        top_k=100, filter_self=False, mode=agg_mode,
+    st.info(
+        "Ablation removes entire feature-pair **channels** from the 4D FRA tensor. "
+        "For a selected pair (i, j), all entries FRA[:, :, i, j] across every position "
+        "pair are zeroed out — the pair's interaction is removed everywhere in the sequence.",
+        icon="ℹ️",
     )
 
-    if not all_pairs_for_ablation:
-        st.warning("No feature pairs found. Compute FRA first.")
-    else:
-        # Separate off-diagonal and on-diagonal
-        offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
-        ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+    abl_strategy = st.radio(
+        "Ablation strategy",
+        ["Top-ranked pairs", "Custom pair set", "Feature-group ablation"],
+        horizontal=True,
+    )
 
-        st.markdown(f"**{len(offdiag_list)}** off-diagonal pairs, "
-                    f"**{len(ondiag_list)}** on-diagonal pairs in top 100.")
+    selected_pairs = []
+    pairs_valid = False
 
-        abl_col1, abl_col2 = st.columns([1, 1])
+    # ── Strategy 1: Top-ranked pairs (existing logic) ────────────────
+    if abl_strategy == "Top-ranked pairs":
+        all_pairs_for_ablation = get_ranked_pairs(
+            display_indices, display_values,
+            top_k=100, filter_self=False, mode=agg_mode,
+        )
+        if not all_pairs_for_ablation:
+            st.warning("No feature pairs found. Compute FRA first.")
+        else:
+            offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
+            ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+            st.markdown(f"**{len(offdiag_list)}** off-diagonal, "
+                        f"**{len(ondiag_list)}** on-diagonal in top 100.")
 
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                n_ablate = st.slider(
+                    "Number of top pairs to ablate",
+                    min_value=1, max_value=min(50, len(offdiag_list) or 1),
+                    value=min(10, len(offdiag_list) or 1),
+                )
+                abl_target = st.radio(
+                    "Ablation target",
+                    ["Top off-diagonal (i!=j)", "Top on-diagonal (i==j)", "Random off-diagonal"],
+                    help=(
+                        "**Off-diagonal**: cross-feature interactions. "
+                        "**On-diagonal**: self-interactions. Random is a control."
+                    ),
+                )
+            with abl_col2:
+                if abl_target.startswith("Top off"):
+                    selected_pairs = offdiag_list[:n_ablate]
+                elif abl_target.startswith("Top on"):
+                    selected_pairs = ondiag_list[:n_ablate]
+                else:
+                    import random as _random
+                    _rng = _random.Random(42)
+                    selected_pairs = _rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
+                pairs_valid = len(selected_pairs) > 0
+
+    # ── Strategy 2: Custom pair set ──────────────────────────────────
+    elif abl_strategy == "Custom pair set":
+        abl_col1, abl_col2 = st.columns(2)
         with abl_col1:
-            n_ablate = st.slider(
-                "Number of top pairs to ablate",
-                min_value=1, max_value=min(50, len(offdiag_list) or 1),
-                value=min(10, len(offdiag_list) or 1),
+            st.caption("JSON format: `[[q_feat, k_feat], ...]`")
+            _pair_json = st.text_area(
+                "Pairs JSON",
+                placeholder='[[5, 10], [3, 7], [12, 12]]',
+                height=150,
+                key="abl_pair_json",
             )
-            abl_target = st.radio(
-                "Ablation target",
-                ["Top off-diagonal (i≠j)", "Top on-diagonal (i==j)", "Random off-diagonal"],
-                help=(
-                    "**Off-diagonal**: cross-feature interactions (feature i attending to "
-                    "different feature j). **On-diagonal**: self-interactions (same feature "
-                    "at query and key). Random is a control."
-                ),
+            _pair_file = st.file_uploader(
+                "Or upload .json", type=["json"], key="abl_pairs_upload",
             )
-
         with abl_col2:
-            st.markdown("**Pairs to ablate:**")
-            st.info(
-                "Ablation removes entire feature-pair **channels** from the 4D FRA tensor. "
-                "For a selected pair (i, j), all entries FRA[:, :, i, j] across every position "
-                "pair are zeroed out — the pair's interaction is removed everywhere in the sequence, "
-                "not just at one position.\n\n"
-                "**avg** = mean |FRA| per occurrence (how strong is this pair where it fires?).  \n"
-                "**sum** = total |FRA| across all position pairs (overall importance in the sequence).",
-                icon="ℹ️",
-            )
-            if abl_target.startswith("Top off"):
-                selected_pairs = offdiag_list[:n_ablate]
-            elif abl_target.startswith("Top on"):
-                selected_pairs = ondiag_list[:n_ablate]
+            raw_json = None
+            if _pair_file is not None:
+                raw_json = _pair_file.read().decode("utf-8")
+                st.caption("Using uploaded file.")
+            elif _pair_json.strip():
+                raw_json = _pair_json
+
+            if raw_json:
+                result = parse_pair_list_json(raw_json)
+                if isinstance(result, str):
+                    st.error(result)
+                else:
+                    found, missing = validate_pairs_against_tensor(
+                        result, fra_data["indices_np"],
+                    )
+                    if missing:
+                        st.warning(
+                            f"{len(missing)} of {len(result)} pairs not found in "
+                            f"the FRA tensor (will have no effect)."
+                        )
+                    selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in result]
+                    pairs_valid = len(selected_pairs) > 0
+                    st.success(f"{len(result)} pairs parsed, {len(found)} present in tensor.")
             else:
-                import random
-                rng = random.Random(42)
-                selected_pairs = rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
+                st.caption("Enter pairs or upload a file to continue.")
 
-            for i, (q, k, s, cnt, mx) in enumerate(selected_pairs[:15]):
-                avg = s / max(cnt, 1)
-                marker = "⟲" if q == k else "→"
-                st.text(f"  F{q} {marker} F{k}  (avg={avg:.4f}, sum={s:.4f})")
-            if len(selected_pairs) > 15:
-                st.text(f"  ... and {len(selected_pairs) - 15} more")
+    # ── Strategy 3: Feature-group ablation ───────────────────────────
+    elif abl_strategy == "Feature-group ablation":
+        _group_source = st.radio(
+            "Group source",
+            ["Manual JSON", "Auto-cluster from embeddings file"],
+            horizontal=True,
+            help=(
+                "**Manual**: provide groups as JSON. "
+                "**Auto-cluster**: upload a pre-computed feature embeddings file "
+                "(from auto-interp or Neuronpedia), and features active in this "
+                "sample will be clustered automatically."
+            ),
+        )
+        _include_self = st.checkbox("Include self-pairs (i, i)", value=False)
 
-        run_abl = st.button("▶  Run Ablation", type="primary")
+        if _group_source == "Manual JSON":
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                st.caption('JSON format: `{"group_name": [feat_ids...], ...}`')
+                _group_json = st.text_area(
+                    "Groups JSON",
+                    placeholder='{"animals": [5, 10, 23], "verbs": [7, 42]}',
+                    height=150,
+                    key="abl_group_json",
+                )
+                _group_file = st.file_uploader(
+                    "Or upload .json", type=["json"], key="abl_groups_upload",
+                )
+            with abl_col2:
+                raw_json = None
+                if _group_file is not None:
+                    raw_json = _group_file.read().decode("utf-8")
+                    st.caption("Using uploaded file.")
+                elif _group_json.strip():
+                    raw_json = _group_json
+
+                if raw_json:
+                    result = parse_feature_groups_json(raw_json, include_self=_include_self)
+                    if isinstance(result, str):
+                        st.error(result)
+                    else:
+                        pairs, groups = result
+                        found, missing = validate_pairs_against_tensor(
+                            pairs, fra_data["indices_np"],
+                        )
+                        if missing:
+                            st.warning(
+                                f"{len(missing)} of {len(pairs)} generated pairs not found "
+                                f"in the FRA tensor."
+                            )
+                        for gname, gids in groups.items():
+                            n = len(gids)
+                            np_ = n * n if _include_self else n * (n - 1)
+                            st.caption(f"**{gname}**: {n} features -> {np_} pairs")
+                        if len(pairs) > 500:
+                            st.warning(f"{len(pairs)} total pairs -- ablation may be slow.")
+                        selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in pairs]
+                        pairs_valid = len(selected_pairs) > 0
+                        st.success(f"{len(pairs)} pairs generated, {len(found)} present in tensor.")
+                else:
+                    st.caption("Enter groups or upload a file to continue.")
+
+        else:  # Auto-cluster from embeddings file
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                st.caption(
+                    "Upload a JSON file with pre-computed feature embeddings "
+                    "(e.g. from auto-interp or Neuronpedia description embeddings)."
+                )
+                st.code(
+                    '{\n'
+                    '  "embeddings": {"0": [0.1, ...], "5": [0.3, ...], ...},\n'
+                    '  "descriptions": {"0": "articles", "5": "animals", ...}\n'
+                    '}',
+                    language="json",
+                )
+                _emb_file = st.file_uploader(
+                    "Upload embeddings .json",
+                    type=["json"],
+                    key="abl_emb_upload",
+                )
+                _n_clusters = st.slider("Number of clusters", 2, 30, 8)
+                _cluster_method = st.radio(
+                    "Clustering method",
+                    ["agglomerative", "kmeans"],
+                    horizontal=True,
+                )
+                _ablate_clusters = st.multiselect(
+                    "Clusters to ablate",
+                    options=[],
+                    help="Computed after uploading embeddings.",
+                    key="abl_cluster_select",
+                )
+
+            with abl_col2:
+                if _emb_file is not None:
+                    emb_content = _emb_file.read().decode("utf-8")
+                    emb_result = load_feature_embeddings(emb_content)
+                    if isinstance(emb_result, str):
+                        st.error(emb_result)
+                    else:
+                        emb_dict, desc_dict = emb_result
+                        st.success(f"Loaded embeddings for {len(emb_dict)} features.")
+
+                        # Get active features from the FRA tensor
+                        active_feats = sorted(set(
+                            fra_data["indices_np"][2].tolist()
+                            + fra_data["indices_np"][3].tolist()
+                        ))
+                        covered = [f for f in active_feats if f in emb_dict]
+                        not_covered = [f for f in active_feats if f not in emb_dict]
+
+                        if not_covered:
+                            st.warning(
+                                f"{len(not_covered)} of {len(active_feats)} active features "
+                                f"have no embedding — they will be excluded from clustering."
+                            )
+
+                        if len(covered) >= 2:
+                            groups = cluster_embeddings(
+                                emb_dict, covered, _n_clusters, _cluster_method,
+                            )
+
+                            # Display clusters with descriptions
+                            cluster_names = sorted(groups.keys())
+                            for cname in cluster_names:
+                                feats = groups[cname]
+                                # Show descriptions if available
+                                descs = [desc_dict.get(f) for f in feats[:5] if f in desc_dict]
+                                desc_str = ", ".join(d for d in descs if d)
+                                label = f"**{cname}** ({len(feats)} features)"
+                                if desc_str:
+                                    label += f": _{desc_str}_"
+                                st.caption(label)
+
+                            # Let user pick which clusters to ablate
+                            _ablate_clusters = st.multiselect(
+                                "Clusters to ablate",
+                                options=cluster_names,
+                                default=[],
+                                key="abl_cluster_select_live",
+                            )
+
+                            if _ablate_clusters:
+                                # Merge selected clusters into groups dict for pair generation
+                                merged = {}
+                                for cname in _ablate_clusters:
+                                    merged[cname] = groups[cname]
+                                all_pairs = set()
+                                for cname, feats in merged.items():
+                                    for q in feats:
+                                        for k in feats:
+                                            if q == k and not _include_self:
+                                                continue
+                                            all_pairs.add((q, k))
+                                pairs = list(all_pairs)
+                                found, missing = validate_pairs_against_tensor(
+                                    pairs, fra_data["indices_np"],
+                                )
+                                if missing:
+                                    st.warning(
+                                        f"{len(missing)} of {len(pairs)} pairs not in tensor."
+                                    )
+                                if len(pairs) > 500:
+                                    st.warning(
+                                        f"{len(pairs)} total pairs -- ablation may be slow."
+                                    )
+                                selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in pairs]
+                                pairs_valid = len(selected_pairs) > 0
+                                st.success(
+                                    f"{len(pairs)} pairs from {len(_ablate_clusters)} cluster(s), "
+                                    f"{len(found)} present in tensor."
+                                )
+                        else:
+                            st.warning(
+                                "Fewer than 2 active features have embeddings — "
+                                "cannot cluster."
+                            )
+                else:
+                    st.caption("Upload an embeddings file to continue.")
+
+    # ── Unified pair display + run button ────────────────────────────
+    if pairs_valid and selected_pairs:
+        with st.expander(f"Selected pairs ({len(selected_pairs)})", expanded=False):
+            for i, p in enumerate(selected_pairs[:20]):
+                q, k = int(p[0]), int(p[1])
+                marker = "self" if q == k else "cross"
+                label = f"  F{q} -> F{k}  ({marker})"
+                if len(p) >= 4 and p[2] > 0:
+                    avg = p[2] / max(p[3], 1)
+                    label += f"  avg={avg:.4f}, sum={p[2]:.4f}"
+                st.text(label)
+            if len(selected_pairs) > 20:
+                st.text(f"  ... and {len(selected_pairs) - 20} more")
+
+        run_abl = st.button("Run Ablation", type="primary")
 
         if run_abl:
             with st.spinner("Running ablation..."):
