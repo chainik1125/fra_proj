@@ -126,6 +126,14 @@ You can run the configured suite through the shared launcher:
 uv run python run_fra_conformance.py -q
 ```
 
+You can also target model-specific slices without spelling out file paths:
+
+```bash
+uv run python run_fra_conformance.py --model=gpt2 -q
+uv run python run_fra_conformance.py --model=gemma -q
+uv run python run_fra_conformance.py --model=gpt2/gemma -q
+```
+
 If you need to point the harness at a different config file, set
 `FRA_CONFORMANCE_CONFIG=/path/to/your.yaml` before running pytest or the
 launcher.

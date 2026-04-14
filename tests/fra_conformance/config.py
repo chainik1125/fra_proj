@@ -103,6 +103,22 @@ def load_conformance_config(
         raise ValueError(
             f"{config_path} pytest.default_args must be a list of strings."
         )
+    pytest_model_args = pytest_section.get("model_args") or {}
+    if not isinstance(pytest_model_args, dict):
+        raise ValueError(
+            f"{config_path} pytest.model_args must be a mapping if provided."
+        )
+    invalid_model_args = [
+        model_name
+        for model_name, model_args in pytest_model_args.items()
+        if not isinstance(model_name, str)
+        or not isinstance(model_args, list)
+        or not all(isinstance(arg, str) for arg in model_args)
+    ]
+    if invalid_model_args:
+        raise ValueError(
+            f"{config_path} pytest.model_args must map model names to lists of strings."
+        )
 
     return {
         "path": config_path,
@@ -110,6 +126,10 @@ def load_conformance_config(
         "candidate_arg_map": arg_map,
         "candidate_kwargs": dict(candidate_kwargs),
         "pytest_args": list(pytest_args),
+        "pytest_model_args": {
+            model_name: list(model_args)
+            for model_name, model_args in pytest_model_args.items()
+        },
     }
 
 
