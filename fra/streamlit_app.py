@@ -6,6 +6,7 @@ Run with:
 """
 
 import html as html_lib
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -61,6 +62,26 @@ def load_sae_gemma(release: str, sae_id: str, device: str):
     return GemmaScopeSAE(release, sae_id, device=device)
 
 
+@st.cache_data(ttl=3600)
+def list_gemma_scope_variants(release: str, layer: int, width: str = "width_16k") -> list[str]:
+    """Fetch available average_l0 variants for a given layer from the HF API."""
+    try:
+        url = f"https://huggingface.co/api/models/google/{release}/tree/main/layer_{layer}/{width}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            entries = r.json()
+            names = sorted(
+                [e["path"].split("/")[-1] for e in entries if e.get("type") == "tree"],
+                key=lambda x: int(x.split("_")[-1]) if x.split("_")[-1].isdigit() else 0,
+            )
+            if names:
+                return names
+    except Exception:
+        pass
+    # Fallback: common defaults
+    return ["average_l0_22", "average_l0_41", "average_l0_82"]
+
+
 @st.cache_data
 def fetch_neuronpedia(layer: int, feature_id: int) -> str:
     """Fetch feature explanation from Neuronpedia API (cached)."""
@@ -94,7 +115,7 @@ def neuronpedia_embed_url(layer: int, feature_id: int) -> str:
 def run_fra(
     text: str,
     layer: int,
-    head: int,
+    head,
     hook_point: str,
     sae_type: str,
     sae_hub_release: str,
@@ -105,9 +126,10 @@ def run_fra(
     model_name: str = "gpt2-small",
     chunk_size: int = 16,
     hf_token: str = "",
+    run_validation: bool = False,
 ) -> dict:
-    """Compute FRA and return numpy-serialisable result dict."""
-    from fra.fra_func import get_sentence_fra_batch
+    """Compute FRA and return the shared dashboard payload."""
+    from fra.dashboard_compute import compute_dashboard_fra
 
     model = load_model(model_name, device, hf_token)
 
@@ -118,55 +140,20 @@ def run_fra(
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
-    # Let the tokenizer decide whether to prepend BOS (model-appropriate default)
-    with torch.no_grad():
-        fra_result = get_sentence_fra_batch(
-            model, sae, text,
-            layer=layer, head=head,
-            max_length=128, top_k=top_k_features,
-            hook_point=hook_point,
-            chunk_size=chunk_size,
-            prepend_bos=None,
-        )
-
-        # Also grab feature activations for token-level display
-        hook_name = f"blocks.{layer}.{hook_point}"
-        tokens = model.tokenizer.encode(text)[:128]
-        tok_tensor = torch.tensor(tokens).unsqueeze(0).to(device)
-        _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
-        act = cache[hook_name].squeeze(0)
-        if act.dim() == 3:
-            act = act.flatten(-2, -1)
-        feat_acts = sae.encode(act)  # [seq_len, d_sae]
-
-        # Standard attention pattern for comparison
-        attn_hook = f"blocks.{layer}.attn.hook_pattern"
-        _, attn_cache = model.run_with_cache(
-            tok_tensor, names_filter=[attn_hook]
-        )
-        attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()  # [S, S]
-
-        token_strs = [model.tokenizer.decode([t]) for t in tokens]
-
-        # Detect whether the tokenizer prepended a BOS token
-        has_bos = (
-            model.tokenizer.bos_token_id is not None
-            and len(tokens) > 0
-            and tokens[0] == model.tokenizer.bos_token_id
-        )
-
-    sparse = fra_result["fra_tensor_sparse"]
-    return {
-        "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
-        "values_np": sparse.values().cpu().numpy(),     # [nnz]
-        "shape": fra_result["shape"],
-        "seq_len": fra_result["seq_len"],
-        "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
-        "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
-        "token_strs": token_strs,
-        "has_bos": has_bos,
-    }
+    return compute_dashboard_fra(
+        model=model,
+        sae=sae,
+        text=text,
+        layer=layer,
+        head=head,
+        hook_point=hook_point,
+        top_k_features=top_k_features,
+        chunk_size=chunk_size,
+        max_length=128,
+        prepend_bos=None,
+        run_validation=run_validation,
+        exact_validation=(sae_type != "hub"),
+    )
 
 
 def _aggregate_pairs(indices_np, values_np, filter_self=False):
@@ -251,6 +238,119 @@ def get_position_heatmap(indices_np, values_np, q_feat, k_feat, seq_len):
     return mat
 
 
+def _apply_softcap(scores: np.ndarray, softcap: float) -> np.ndarray:
+    """Apply Gemma-style tanh softcapping to attention scores."""
+    if softcap > 0:
+        return softcap * np.tanh(scores / softcap)
+    return scores
+
+
+def get_fra_reconstructed_scores(indices_np, values_np, seq_len,
+                                  bias_corr_np, attn_scale, softcap):
+    """Reconstruct attention scores via the shared dashboard compute module."""
+    from fra.dashboard_compute import get_fra_reconstructed_scores as _shared_scores
+
+    return _shared_scores(
+        indices_np, values_np, seq_len, bias_corr_np, attn_scale, softcap
+    )
+
+
+def _masked_scores(scores: np.ndarray) -> np.ndarray:
+    """Apply a causal mask to pre-softmax attention scores."""
+    masked = scores.copy()
+    masked[np.triu_indices_from(masked, k=1)] = -np.inf
+    return masked
+
+
+def _softmax_rows(masked_scores: np.ndarray) -> np.ndarray:
+    """Apply a row-wise softmax to masked attention scores."""
+    return torch.softmax(
+        torch.tensor(masked_scores, dtype=torch.float64), dim=-1
+    ).cpu().numpy()
+
+
+def _build_validation_summary(
+    *,
+    model,
+    sae_type: str,
+    layer: int,
+    heads: list[int],
+    act: torch.Tensor,
+    x_hat: torch.Tensor,
+    feat_acts: torch.Tensor,
+    per_head_payload: dict[int, dict],
+) -> dict:
+    """Compute dashboard-time FRA validation metrics from the current run."""
+    from fra.validation import compute_errors, get_qk_weights
+
+    x_np = act.cpu().numpy()
+    x_hat_np = x_hat.cpu().numpy()
+    residual_errors = compute_errors(x_np, x_hat_np)
+    per_token_l0 = (feat_acts != 0).sum(dim=-1).float()
+
+    residual = {
+        **residual_errors,
+        "avg_active_features": float(per_token_l0.mean().item()),
+        "l0_min": float(per_token_l0.min().item()),
+        "l0_max": float(per_token_l0.max().item()),
+        "sparsity": float((feat_acts == 0).float().mean().item()),
+        "seq_len": int(act.shape[0]),
+    }
+
+    per_head = {}
+    for h in heads:
+        payload = per_head_payload[h]
+        indices_np = payload["indices_np"]
+        values_np = payload["values_np"]
+        seq_len = int(payload["shape"][0])
+
+        fra_sum = np.zeros((seq_len, seq_len), dtype=np.float64)
+        np.add.at(fra_sum, (indices_np[0], indices_np[1]), values_np)
+
+        W_Q, W_K, _, _ = get_qk_weights(model, layer, h)
+        actual_qk = ((act @ W_Q) @ (act @ W_K).T).detach().cpu().numpy()
+
+        causal = np.tril(np.ones((seq_len, seq_len), dtype=np.float64))
+        fra_sum *= causal
+        actual_qk *= causal
+        qk_errors = compute_errors(actual_qk, fra_sum)
+
+        reconstructed_scores = get_fra_reconstructed_scores(
+            indices_np,
+            values_np,
+            seq_len,
+            payload["bias_corr_np"],
+            payload["attn_scale"],
+            payload["softcap"],
+        )
+        reconstructed_pattern = _softmax_rows(_masked_scores(reconstructed_scores))
+        pattern_errors = compute_errors(
+            payload["attn_pattern_np"],
+            reconstructed_pattern,
+        )
+
+        if sae_type == "hub":
+            status = "approximate"
+            exact_mode = False
+        else:
+            exact_mode = True
+            status = "pass" if qk_errors["fro_rel_err"] < 0.50 else "fail"
+
+        per_head[h] = {
+            "status": status,
+            "exact_mode": exact_mode,
+            "qk_errors": qk_errors,
+            "pattern_errors": pattern_errors,
+            "seq_len": seq_len,
+            "nnz": int(payload["total_interactions"]),
+        }
+
+    return {
+        "residual": residual,
+        "per_head": per_head,
+    }
+
+
 def token_activation_bar(token_strs, activations, color, height=220):
     """Return a Plotly bar chart of per-token activations."""
     fig = go.Figure(go.Bar(
@@ -298,11 +398,18 @@ with st.sidebar:
     max_layer = 25 if is_gemma else 11
     max_head  = 7  if is_gemma else 11
 
-    col_l, col_h = st.columns(2)
-    with col_l:
-        layer = st.number_input("Layer", 0, max_layer, value=12 if is_gemma else 5)
-    with col_h:
-        head = st.number_input("Head",  0, max_head,  value=0)
+    min_layer = 1 if is_gemma else 0  # Gemma: no SAE for layer 0 (would need layer -1)
+    layer = st.number_input("Layer", min_layer, max_layer, value=12 if is_gemma else 5)
+    all_head_options = list(range(max_head + 1))
+    selected_heads = st.multiselect(
+        "Heads",
+        options=all_head_options,
+        default=[0],
+        help="Select one or more heads. Each selected head is computed and stored for browsing.",
+    )
+    if not selected_heads:
+        selected_heads = [0]
+        st.warning("At least one head is required — defaulting to head 0.")
 
     if is_gemma:
         sae_option = st.radio(
@@ -314,11 +421,24 @@ with st.sidebar:
         hook_point = "hook_resid_pre"
         supports_neuronpedia = False
         sae_local_path = ""
+        # Off-by-one fix: Gemma-Scope SAEs are trained on resid_post[N],
+        # which equals resid_pre[N+1].  For FRA on layer N we need SAE
+        # from layer N-1.
+        sae_layer = int(layer) - 1
+        if sae_layer < 0:
+            st.warning("Layer 0 has no matching Gemma-Scope SAE (would need layer -1).")
+            sae_layer = 0
         sae_hub_release = st.text_input(
             "Release", value="gemma-scope-2b-pt-res"
         )
-        sae_hub_id = st.text_input(
-            "SAE ID", value=f"layer_{int(layer)}/width_16k/average_l0_82"
+        sae_width = st.selectbox("Width", ["width_16k", "width_32k", "width_65k"], index=0)
+        # Fetch available L0 variants for this layer (cached)
+        l0_variants = list_gemma_scope_variants(sae_hub_release, sae_layer, sae_width)
+        l0_choice = st.selectbox("L0 variant", l0_variants, index=0)
+        sae_hub_id = f"layer_{sae_layer}/{sae_width}/{l0_choice}"
+        st.caption(
+            f"SAE trained on `resid_post[{sae_layer}]` "
+            f"→ activations from `resid_pre[{int(layer)}]`"
         )
     else:
         sae_option = st.radio(
@@ -360,6 +480,15 @@ with st.sidebar:
             "Some models (e.g. Gemma) prepend a BOS token that dominates attention. "
             "Check this to exclude position 0 from all visualisations. "
             "BOS is always included in computation for correctness."
+        ),
+    )
+    run_validation = st.checkbox(
+        "Run validation check",
+        value=True,
+        help=(
+            "Compute reconstruction diagnostics for the selected head(s) during "
+            "dashboard build. This is exact for GPT-2 local ln1 and Gemma "
+            "resid_pre, and diagnostic-only for GPT-2 hook_z."
         ),
     )
 
@@ -419,11 +548,13 @@ if compute_btn:
         elif Path(sae_local_path).exists():
             load_sae_local(sae_local_path, int(layer), device)
 
-    with st.spinner("Computing Feature-Resolved Attention…"):
+    head_arg = selected_heads[0] if len(selected_heads) == 1 else selected_heads
+    n_heads_label = f"head {selected_heads[0]}" if len(selected_heads) == 1 else f"{len(selected_heads)} heads"
+    with st.spinner(f"Computing FRA for {n_heads_label}…"):
         fra_data = run_fra(
             text=text,
             layer=int(layer),
-            head=int(head),
+            head=head_arg,
             hook_point=hook_point,
             sae_type=sae_type,
             sae_hub_release=sae_hub_release,
@@ -434,18 +565,21 @@ if compute_btn:
             model_name=model_name,
             chunk_size=int(chunk_size),
             hf_token=hf_token,
+            run_validation=run_validation,
         )
 
     st.session_state["fra_data"] = fra_data
     st.session_state["fra_config"] = {
         "layer": int(layer),
-        "head": int(head),
+        "head": selected_heads[0],
         "text": text,
         "supports_neuronpedia": supports_neuronpedia,
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
         "agg_mode": agg_mode,
         "hide_bos": hide_bos,
+        "trained_on_bos": not is_gemma,
+        "run_validation": run_validation,
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -477,6 +611,27 @@ fra_data = st.session_state["fra_data"]
 cfg = st.session_state["fra_config"]
 layer_ = cfg["layer"]
 head_ = cfg["head"]
+
+# ── Multi-head switching (no recompute) ──────────────────────────────
+if "per_head" in fra_data:
+    available_heads = fra_data["heads"]
+    selected_head = st.selectbox(
+        "Browse head",
+        available_heads,
+        index=available_heads.index(head_) if head_ in available_heads else 0,
+        help="Switch between pre-computed heads without recomputing.",
+    )
+    head_ = selected_head
+    cfg["head"] = head_
+    # Swap in the selected head's data for display
+    hd = fra_data["per_head"][head_]
+    fra_data["indices_np"] = hd["indices_np"]
+    fra_data["values_np"] = hd["values_np"]
+    fra_data["shape"] = hd["shape"]
+    fra_data["total_interactions"] = hd["total_interactions"]
+    fra_data["bias_corr_np"] = hd["bias_corr_np"]
+    fra_data["attn_pattern_np"] = hd["attn_pattern_np"]
+
 seq_len_full = fra_data["seq_len"]
 
 # --- BOS filtering ---
@@ -535,6 +690,40 @@ c4.metric(f"Layer / Head", f"L{layer_} / H{head_}")
 if _hide_bos:
     st.caption("BOS token hidden from display (still included in computation).")
 
+validation_data = fra_data.get("validation")
+head_validation = None
+residual_validation = None
+if validation_data:
+    residual_validation = validation_data.get("residual")
+    head_validation = validation_data.get("per_head", {}).get(head_)
+
+if head_validation:
+    status = head_validation["status"]
+    qk_err = head_validation["qk_errors"]
+    pattern_err = head_validation["pattern_errors"]
+
+    if status == "pass":
+        st.success(
+            f"Validation PASS for L{layer_} H{head_}: FRA raw-QK error "
+            f"{qk_err['fro_rel_err']:.1%} is below the current 50% threshold."
+        )
+    elif status == "fail":
+        st.error(
+            f"Validation FAIL for L{layer_} H{head_}: FRA raw-QK error "
+            f"{qk_err['fro_rel_err']:.1%} exceeds the current 50% threshold."
+        )
+    else:
+        st.warning(
+            "Validation is diagnostic-only for the GPT-2 hook_z SAE path. "
+            "The dashboard reports the metrics, but does not treat them as an exact pass/fail gate."
+        )
+
+    vc1, vc2, vc3, vc4 = st.columns(4)
+    vc1.metric("QK rel error", f"{qk_err['fro_rel_err']:.1%}")
+    vc2.metric("QK cosine", f"{qk_err['cosine_sim']:.4f}")
+    vc3.metric("Pattern rel error", f"{pattern_err['fro_rel_err']:.1%}")
+    vc4.metric("Pattern cosine", f"{pattern_err['cosine_sim']:.4f}")
+
 # Tokenised text display
 tok_html = " ".join(
     f'<span style="background:#e9ecef;padding:2px 5px;border-radius:3px;'
@@ -548,11 +737,13 @@ st.markdown("")
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🔬 Ablation",
+    "🔎 Feature Dashboard",
+    "✅ Validation",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -645,10 +836,12 @@ with tab1:
                 display_values,
                 q_sel, k_sel, seq_len,
             )
+            _tick_vals = list(range(len(token_strs)))
+            _tick_text = [html_lib.escape(t) for t in token_strs]
             fig_pos = go.Figure(go.Heatmap(
                 z=pos_mat,
-                x=[html_lib.escape(t) for t in token_strs],
-                y=[html_lib.escape(t) for t in token_strs],
+                x=_tick_vals,
+                y=_tick_vals,
                 colorscale="Blues",
                 hovertemplate=(
                     "Q-pos: %{y}<br>K-pos: %{x}<br>Strength: %{z:.4f}"
@@ -661,6 +854,8 @@ with tab1:
                 xaxis_title="Key token",
                 yaxis_title="Query token",
                 yaxis_autorange="reversed",
+                xaxis=dict(tickvals=_tick_vals, ticktext=_tick_text),
+                yaxis=dict(tickvals=_tick_vals, ticktext=_tick_text),
             )
             st.plotly_chart(fig_pos, use_container_width=True)
 
@@ -758,10 +953,12 @@ with tab3:
     with col_std:
         st.markdown("**Standard token-level attention** (post-softmax)")
         attn = attn_pattern_display
+        _attn_tvals = list(range(len(token_strs)))
+        _attn_ttext = [html_lib.escape(t) for t in token_strs]
         fig_attn = go.Figure(go.Heatmap(
             z=attn,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=_attn_tvals,
+            y=_attn_tvals,
             colorscale="RdBu",
             hovertemplate=(
                 "Q: %{y}<br>K: %{x}<br>Weight: %{z:.4f}<extra></extra>"
@@ -773,30 +970,41 @@ with tab3:
             xaxis_title="Key",
             yaxis_title="Query",
             yaxis_autorange="reversed",
+            xaxis=dict(tickvals=_attn_tvals, ticktext=_attn_ttext),
+            yaxis=dict(tickvals=_attn_tvals, ticktext=_attn_ttext),
         )
         st.plotly_chart(fig_attn, use_container_width=True)
 
     with col_fra:
         st.markdown(
-            "**FRA attention** — summed over all feature pairs, per position"
+            "**FRA attention** — reconstructed pre-softmax scores "
+            "(bilinear + bias correction + softcap)"
         )
-        # Collapse feature dims: sum abs(value) for each (q_pos, k_pos)
-        idxs = display_indices
-        vals_abs = np.abs(display_values)
-        fra_pos_mat = np.zeros((seq_len, seq_len))
-        q_pos_all = idxs[0, :]
-        k_pos_all = idxs[1, :]
-        for qp, kp, v in zip(q_pos_all, k_pos_all, vals_abs):
-            if qp < seq_len and kp < seq_len:
-                fra_pos_mat[qp, kp] += v
+        # Reconstruct full attention scores with bias correction and softcap
+        _bc = fra_data.get("bias_corr_np")
+        _as = fra_data.get("attn_scale", 1.0)
+        _sc = fra_data.get("softcap", 0.0)
+        if _bc is not None:
+            fra_pos_mat = get_fra_reconstructed_scores(
+                display_indices, display_values, seq_len,
+                _bc[1:, 1:] if _hide_bos else _bc,
+                _as, _sc,
+            )
+        else:
+            # Fallback: raw sum (no bias correction available)
+            fra_pos_mat = np.zeros((seq_len, seq_len))
+            np.add.at(fra_pos_mat, (display_indices[0], display_indices[1]), display_values)
+            fra_pos_mat = _apply_softcap(fra_pos_mat / _as, _sc)
 
+        _fra_tvals = list(range(len(token_strs)))
+        _fra_ttext = [html_lib.escape(t) for t in token_strs]
         fig_fra_attn = go.Figure(go.Heatmap(
             z=fra_pos_mat,
-            x=[html_lib.escape(t) for t in token_strs],
-            y=[html_lib.escape(t) for t in token_strs],
+            x=_fra_tvals,
+            y=_fra_tvals,
             colorscale="RdBu",
             hovertemplate=(
-                "Q: %{y}<br>K: %{x}<br>FRA strength: %{z:.4f}<extra></extra>"
+                "Q: %{y}<br>K: %{x}<br>FRA score: %{z:.4f}<extra></extra>"
             ),
         ))
         fig_fra_attn.update_layout(
@@ -805,15 +1013,151 @@ with tab3:
             xaxis_title="Key",
             yaxis_title="Query",
             yaxis_autorange="reversed",
+            xaxis=dict(tickvals=_fra_tvals, ticktext=_fra_ttext),
+            yaxis=dict(tickvals=_fra_tvals, ticktext=_fra_ttext),
         )
         st.plotly_chart(fig_fra_attn, use_container_width=True)
 
     st.info(
-        "The FRA attention matrix collapses the feature dimensions — it shows "
-        "the *total feature-level interaction* at each position pair, comparable "
-        "to the standard attention weight. Differences between the two highlight "
-        "where FRA captures additional structure beyond raw token attention."
+        "The FRA attention heatmap shows reconstructed pre-softmax attention scores: "
+        "the feature-pair bilinear sum + b_dec bias correction, scaled and "
+        "softcapped to match the model's actual attention logits."
     )
+
+# ── Ablation helpers ─────────────────────────────────────────────────────
+
+
+def parse_pair_list_json(json_str):
+    """Parse ``[[q, k], ...]`` JSON into a list of (q, k) tuples or an error string."""
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        return f"Invalid JSON: {e}"
+    if not isinstance(data, list):
+        return "Expected a JSON array of [q_feat, k_feat] pairs."
+    pairs = []
+    for i, item in enumerate(data):
+        if not isinstance(item, (list, tuple)) or len(item) != 2:
+            return f"Item {i} must be a 2-element array, got {item!r}."
+        q, k = item
+        if not (isinstance(q, int) and isinstance(k, int) and q >= 0 and k >= 0):
+            return f"Item {i}: feature IDs must be non-negative integers, got {item!r}."
+        pairs.append((q, k))
+    # deduplicate preserving order
+    seen = set()
+    deduped = []
+    for p in pairs:
+        if p not in seen:
+            seen.add(p)
+            deduped.append(p)
+    return deduped
+
+
+def parse_feature_groups_json(json_str, include_self=False):
+    """Parse ``{"name": [ids...], ...}`` and generate all within-group directed pairs.
+
+    Returns ``(pairs, groups_dict)`` on success or an error string.
+    """
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        return f"Invalid JSON: {e}"
+    if not isinstance(data, dict):
+        return "Expected a JSON object mapping group names to feature ID arrays."
+    groups = {}
+    for name, ids in data.items():
+        if not isinstance(ids, list):
+            return f"Group '{name}': value must be an array of integers."
+        for i, fid in enumerate(ids):
+            if not isinstance(fid, int) or fid < 0:
+                return f"Group '{name}', index {i}: must be a non-negative integer, got {fid!r}."
+        groups[name] = ids
+
+    all_pairs = set()
+    for name, ids in groups.items():
+        for q in ids:
+            for k in ids:
+                if q == k and not include_self:
+                    continue
+                all_pairs.add((q, k))
+    return list(all_pairs), groups
+
+
+def validate_pairs_against_tensor(pairs, indices_np):
+    """Return (found, missing) lists of pairs based on what exists in the FRA tensor."""
+    tensor_pairs = set(zip(indices_np[2].tolist(), indices_np[3].tolist()))
+    found = [p for p in pairs if p in tensor_pairs]
+    missing = [p for p in pairs if p not in tensor_pairs]
+    return found, missing
+
+
+def load_feature_embeddings(file_content):
+    """Load pre-computed feature embeddings from a JSON or .npz file.
+
+    Expected JSON format::
+
+        {
+            "embeddings": {<feat_id_str>: [float, ...], ...},
+            "descriptions": {<feat_id_str>: "text", ...}   // optional
+        }
+
+    Or a numpy .npz with key ``embeddings`` of shape [n_features, embed_dim]
+    and optional key ``feature_ids`` of shape [n_features].
+
+    Returns (embeddings_dict, descriptions_dict) or an error string.
+    ``embeddings_dict``: ``{int_feat_id: np.array}``
+    ``descriptions_dict``: ``{int_feat_id: str}`` or empty dict.
+    """
+    # Try JSON first
+    try:
+        data = json.loads(file_content)
+        if not isinstance(data, dict) or "embeddings" not in data:
+            return "JSON must have an 'embeddings' key mapping feature IDs to vectors."
+        emb_raw = data["embeddings"]
+        embeddings = {int(k): np.array(v, dtype=np.float32) for k, v in emb_raw.items()}
+        descriptions = {}
+        if "descriptions" in data:
+            descriptions = {int(k): str(v) for k, v in data["descriptions"].items()}
+        return embeddings, descriptions
+    except (json.JSONDecodeError, ValueError):
+        return "Could not parse file as JSON. Expected format: {\"embeddings\": {\"feat_id\": [vec], ...}}"
+
+
+def cluster_embeddings(embeddings_dict, feature_ids, n_clusters, method="agglomerative"):
+    """Cluster a subset of features using their pre-computed embeddings.
+
+    Args:
+        embeddings_dict: {feat_id: np.array} from load_feature_embeddings.
+        feature_ids: list of feature IDs to cluster (must be keys in embeddings_dict).
+        n_clusters: number of clusters.
+        method: "agglomerative" or "kmeans".
+
+    Returns dict mapping cluster_label (int) -> list of feature IDs.
+    """
+    from sklearn.cluster import AgglomerativeClustering, KMeans
+    from sklearn.preprocessing import normalize
+
+    ids = [f for f in feature_ids if f in embeddings_dict]
+    if len(ids) < 2:
+        return {"cluster_0": ids}
+
+    mat = np.stack([embeddings_dict[f] for f in ids])
+    mat = normalize(mat)  # L2-normalize for cosine-like clustering
+
+    n_clusters = min(n_clusters, len(ids))
+
+    if method == "agglomerative":
+        labels = AgglomerativeClustering(
+            n_clusters=n_clusters, metric="cosine", linkage="average",
+        ).fit_predict(mat)
+    else:
+        labels = KMeans(n_clusters=n_clusters, n_init=10, random_state=42).fit_predict(mat)
+
+    groups = defaultdict(list)
+    for feat_id, label in zip(ids, labels):
+        groups[f"cluster_{label}"].append(feat_id)
+    return dict(groups)
+
 
 # ── Tab 4: Ablation ──────────────────────────────────────────────────────
 
@@ -825,68 +1169,299 @@ with tab4:
         "are causally important to this attention head's computation."
     )
 
-    # Build pair selection UI
-    all_pairs_for_ablation = get_ranked_pairs(
-        display_indices, display_values,
-        top_k=100, filter_self=False, mode=agg_mode,
+    st.info(
+        "Ablation removes entire feature-pair **channels** from the 4D FRA tensor. "
+        "For a selected pair (i, j), all entries FRA[:, :, i, j] across every position "
+        "pair are zeroed out — the pair's interaction is removed everywhere in the sequence.",
+        icon="ℹ️",
     )
 
-    if not all_pairs_for_ablation:
-        st.warning("No feature pairs found. Compute FRA first.")
-    else:
-        # Separate off-diagonal and on-diagonal
-        offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
-        ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+    abl_strategy = st.radio(
+        "Ablation strategy",
+        ["Top-ranked pairs", "Custom pair set", "Feature-group ablation"],
+        horizontal=True,
+    )
 
-        st.markdown(f"**{len(offdiag_list)}** off-diagonal pairs, "
-                    f"**{len(ondiag_list)}** on-diagonal pairs in top 100.")
+    selected_pairs = []
+    pairs_valid = False
 
-        abl_col1, abl_col2 = st.columns([1, 1])
+    # ── Strategy 1: Top-ranked pairs (existing logic) ────────────────
+    if abl_strategy == "Top-ranked pairs":
+        all_pairs_for_ablation = get_ranked_pairs(
+            display_indices, display_values,
+            top_k=100, filter_self=False, mode=agg_mode,
+        )
+        if not all_pairs_for_ablation:
+            st.warning("No feature pairs found. Compute FRA first.")
+        else:
+            offdiag_list = [p for p in all_pairs_for_ablation if p[0] != p[1]]
+            ondiag_list = [p for p in all_pairs_for_ablation if p[0] == p[1]]
+            st.markdown(f"**{len(offdiag_list)}** off-diagonal, "
+                        f"**{len(ondiag_list)}** on-diagonal in top 100.")
 
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                n_ablate = st.slider(
+                    "Number of top pairs to ablate",
+                    min_value=1, max_value=min(50, len(offdiag_list) or 1),
+                    value=min(10, len(offdiag_list) or 1),
+                )
+                abl_target = st.radio(
+                    "Ablation target",
+                    ["Top off-diagonal (i!=j)", "Top on-diagonal (i==j)", "Random off-diagonal"],
+                    help=(
+                        "**Off-diagonal**: cross-feature interactions. "
+                        "**On-diagonal**: self-interactions. Random is a control."
+                    ),
+                )
+            with abl_col2:
+                if abl_target.startswith("Top off"):
+                    selected_pairs = offdiag_list[:n_ablate]
+                elif abl_target.startswith("Top on"):
+                    selected_pairs = ondiag_list[:n_ablate]
+                else:
+                    import random as _random
+                    _rng = _random.Random(42)
+                    selected_pairs = _rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
+                pairs_valid = len(selected_pairs) > 0
+
+    # ── Strategy 2: Custom pair set ──────────────────────────────────
+    elif abl_strategy == "Custom pair set":
+        abl_col1, abl_col2 = st.columns(2)
         with abl_col1:
-            n_ablate = st.slider(
-                "Number of top pairs to ablate",
-                min_value=1, max_value=min(50, len(offdiag_list) or 1),
-                value=min(10, len(offdiag_list) or 1),
+            st.caption("JSON format: `[[q_feat, k_feat], ...]`")
+            _pair_json = st.text_area(
+                "Pairs JSON",
+                placeholder='[[5, 10], [3, 7], [12, 12]]',
+                height=150,
+                key="abl_pair_json",
             )
-            abl_target = st.radio(
-                "Ablation target",
-                ["Top off-diagonal (i≠j)", "Top on-diagonal (i==j)", "Random off-diagonal"],
-                help=(
-                    "**Off-diagonal**: cross-feature interactions (feature i attending to "
-                    "different feature j). **On-diagonal**: self-interactions (same feature "
-                    "at query and key). Random is a control."
-                ),
+            _pair_file = st.file_uploader(
+                "Or upload .json", type=["json"], key="abl_pairs_upload",
             )
-
         with abl_col2:
-            st.markdown("**Pairs to ablate:**")
-            st.info(
-                "Ablation removes entire feature-pair **channels** from the 4D FRA tensor. "
-                "For a selected pair (i, j), all entries FRA[:, :, i, j] across every position "
-                "pair are zeroed out — the pair's interaction is removed everywhere in the sequence, "
-                "not just at one position.\n\n"
-                "**avg** = mean |FRA| per occurrence (how strong is this pair where it fires?).  \n"
-                "**sum** = total |FRA| across all position pairs (overall importance in the sequence).",
-                icon="ℹ️",
-            )
-            if abl_target.startswith("Top off"):
-                selected_pairs = offdiag_list[:n_ablate]
-            elif abl_target.startswith("Top on"):
-                selected_pairs = ondiag_list[:n_ablate]
+            raw_json = None
+            if _pair_file is not None:
+                raw_json = _pair_file.read().decode("utf-8")
+                st.caption("Using uploaded file.")
+            elif _pair_json.strip():
+                raw_json = _pair_json
+
+            if raw_json:
+                result = parse_pair_list_json(raw_json)
+                if isinstance(result, str):
+                    st.error(result)
+                else:
+                    found, missing = validate_pairs_against_tensor(
+                        result, fra_data["indices_np"],
+                    )
+                    if missing:
+                        st.warning(
+                            f"{len(missing)} of {len(result)} pairs not found in "
+                            f"the FRA tensor (will have no effect)."
+                        )
+                    selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in result]
+                    pairs_valid = len(selected_pairs) > 0
+                    st.success(f"{len(result)} pairs parsed, {len(found)} present in tensor.")
             else:
-                import random
-                rng = random.Random(42)
-                selected_pairs = rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
+                st.caption("Enter pairs or upload a file to continue.")
 
-            for i, (q, k, s, cnt, mx) in enumerate(selected_pairs[:15]):
-                avg = s / max(cnt, 1)
-                marker = "⟲" if q == k else "→"
-                st.text(f"  F{q} {marker} F{k}  (avg={avg:.4f}, sum={s:.4f})")
-            if len(selected_pairs) > 15:
-                st.text(f"  ... and {len(selected_pairs) - 15} more")
+    # ── Strategy 3: Feature-group ablation ───────────────────────────
+    elif abl_strategy == "Feature-group ablation":
+        _group_source = st.radio(
+            "Group source",
+            ["Manual JSON", "Auto-cluster from embeddings file"],
+            horizontal=True,
+            help=(
+                "**Manual**: provide groups as JSON. "
+                "**Auto-cluster**: upload a pre-computed feature embeddings file "
+                "(from auto-interp or Neuronpedia), and features active in this "
+                "sample will be clustered automatically."
+            ),
+        )
+        _include_self = st.checkbox("Include self-pairs (i, i)", value=False)
 
-        run_abl = st.button("▶  Run Ablation", type="primary")
+        if _group_source == "Manual JSON":
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                st.caption('JSON format: `{"group_name": [feat_ids...], ...}`')
+                _group_json = st.text_area(
+                    "Groups JSON",
+                    placeholder='{"animals": [5, 10, 23], "verbs": [7, 42]}',
+                    height=150,
+                    key="abl_group_json",
+                )
+                _group_file = st.file_uploader(
+                    "Or upload .json", type=["json"], key="abl_groups_upload",
+                )
+            with abl_col2:
+                raw_json = None
+                if _group_file is not None:
+                    raw_json = _group_file.read().decode("utf-8")
+                    st.caption("Using uploaded file.")
+                elif _group_json.strip():
+                    raw_json = _group_json
+
+                if raw_json:
+                    result = parse_feature_groups_json(raw_json, include_self=_include_self)
+                    if isinstance(result, str):
+                        st.error(result)
+                    else:
+                        pairs, groups = result
+                        found, missing = validate_pairs_against_tensor(
+                            pairs, fra_data["indices_np"],
+                        )
+                        if missing:
+                            st.warning(
+                                f"{len(missing)} of {len(pairs)} generated pairs not found "
+                                f"in the FRA tensor."
+                            )
+                        for gname, gids in groups.items():
+                            n = len(gids)
+                            np_ = n * n if _include_self else n * (n - 1)
+                            st.caption(f"**{gname}**: {n} features -> {np_} pairs")
+                        if len(pairs) > 500:
+                            st.warning(f"{len(pairs)} total pairs -- ablation may be slow.")
+                        selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in pairs]
+                        pairs_valid = len(selected_pairs) > 0
+                        st.success(f"{len(pairs)} pairs generated, {len(found)} present in tensor.")
+                else:
+                    st.caption("Enter groups or upload a file to continue.")
+
+        else:  # Auto-cluster from embeddings file
+            abl_col1, abl_col2 = st.columns(2)
+            with abl_col1:
+                st.caption(
+                    "Upload a JSON file with pre-computed feature embeddings "
+                    "(e.g. from auto-interp or Neuronpedia description embeddings)."
+                )
+                st.code(
+                    '{\n'
+                    '  "embeddings": {"0": [0.1, ...], "5": [0.3, ...], ...},\n'
+                    '  "descriptions": {"0": "articles", "5": "animals", ...}\n'
+                    '}',
+                    language="json",
+                )
+                _emb_file = st.file_uploader(
+                    "Upload embeddings .json",
+                    type=["json"],
+                    key="abl_emb_upload",
+                )
+                _n_clusters = st.slider("Number of clusters", 2, 30, 8)
+                _cluster_method = st.radio(
+                    "Clustering method",
+                    ["agglomerative", "kmeans"],
+                    horizontal=True,
+                )
+                _ablate_clusters = st.multiselect(
+                    "Clusters to ablate",
+                    options=[],
+                    help="Computed after uploading embeddings.",
+                    key="abl_cluster_select",
+                )
+
+            with abl_col2:
+                if _emb_file is not None:
+                    emb_content = _emb_file.read().decode("utf-8")
+                    emb_result = load_feature_embeddings(emb_content)
+                    if isinstance(emb_result, str):
+                        st.error(emb_result)
+                    else:
+                        emb_dict, desc_dict = emb_result
+                        st.success(f"Loaded embeddings for {len(emb_dict)} features.")
+
+                        # Get active features from the FRA tensor
+                        active_feats = sorted(set(
+                            fra_data["indices_np"][2].tolist()
+                            + fra_data["indices_np"][3].tolist()
+                        ))
+                        covered = [f for f in active_feats if f in emb_dict]
+                        not_covered = [f for f in active_feats if f not in emb_dict]
+
+                        if not_covered:
+                            st.warning(
+                                f"{len(not_covered)} of {len(active_feats)} active features "
+                                f"have no embedding — they will be excluded from clustering."
+                            )
+
+                        if len(covered) >= 2:
+                            groups = cluster_embeddings(
+                                emb_dict, covered, _n_clusters, _cluster_method,
+                            )
+
+                            # Display clusters with descriptions
+                            cluster_names = sorted(groups.keys())
+                            for cname in cluster_names:
+                                feats = groups[cname]
+                                # Show descriptions if available
+                                descs = [desc_dict.get(f) for f in feats[:5] if f in desc_dict]
+                                desc_str = ", ".join(d for d in descs if d)
+                                label = f"**{cname}** ({len(feats)} features)"
+                                if desc_str:
+                                    label += f": _{desc_str}_"
+                                st.caption(label)
+
+                            # Let user pick which clusters to ablate
+                            _ablate_clusters = st.multiselect(
+                                "Clusters to ablate",
+                                options=cluster_names,
+                                default=[],
+                                key="abl_cluster_select_live",
+                            )
+
+                            if _ablate_clusters:
+                                # Merge selected clusters into groups dict for pair generation
+                                merged = {}
+                                for cname in _ablate_clusters:
+                                    merged[cname] = groups[cname]
+                                all_pairs = set()
+                                for cname, feats in merged.items():
+                                    for q in feats:
+                                        for k in feats:
+                                            if q == k and not _include_self:
+                                                continue
+                                            all_pairs.add((q, k))
+                                pairs = list(all_pairs)
+                                found, missing = validate_pairs_against_tensor(
+                                    pairs, fra_data["indices_np"],
+                                )
+                                if missing:
+                                    st.warning(
+                                        f"{len(missing)} of {len(pairs)} pairs not in tensor."
+                                    )
+                                if len(pairs) > 500:
+                                    st.warning(
+                                        f"{len(pairs)} total pairs -- ablation may be slow."
+                                    )
+                                selected_pairs = [(q, k, 0.0, 0, 0.0) for q, k in pairs]
+                                pairs_valid = len(selected_pairs) > 0
+                                st.success(
+                                    f"{len(pairs)} pairs from {len(_ablate_clusters)} cluster(s), "
+                                    f"{len(found)} present in tensor."
+                                )
+                        else:
+                            st.warning(
+                                "Fewer than 2 active features have embeddings — "
+                                "cannot cluster."
+                            )
+                else:
+                    st.caption("Upload an embeddings file to continue.")
+
+    # ── Unified pair display + run button ────────────────────────────
+    if pairs_valid and selected_pairs:
+        with st.expander(f"Selected pairs ({len(selected_pairs)})", expanded=False):
+            for i, p in enumerate(selected_pairs[:20]):
+                q, k = int(p[0]), int(p[1])
+                marker = "self" if q == k else "cross"
+                label = f"  F{q} -> F{k}  ({marker})"
+                if len(p) >= 4 and p[2] > 0:
+                    avg = p[2] / max(p[3], 1)
+                    label += f"  avg={avg:.4f}, sum={p[2]:.4f}"
+                st.text(label)
+            if len(selected_pairs) > 20:
+                st.text(f"  ... and {len(selected_pairs) - 20} more")
+
+        run_abl = st.button("Run Ablation", type="primary")
 
         if run_abl:
             with st.spinner("Running ablation..."):
@@ -940,16 +1515,44 @@ with tab4:
                     sp_size = torch.Size([abl_seq, abl_seq, d_sae_val, d_sae_val])
                     fra_sparse = torch.sparse_coo_tensor(sp_indices, sp_values, size=sp_size).coalesce()
 
-                    # Full FRA scores (baseline)
+                    # ── Correct ablation approach ──
+                    # Use accurate SAE-based scores as baseline (correct scale),
+                    # then subtract only the ablated pairs' contribution.
+                    # This avoids the top-k inflation problem where FRA sum >> actual scores.
                     from fra.validation import fra_sum_to_attn
-                    fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
-                    scores_full = reconstruct_scores(fra_sum_full, bias, device)
 
-                    # Ablated scores
+                    # SAE scores: accurate, same scale as model (~[-1, 6])
+                    sae_scores_np = bias["sae_scores"]  # [seq, seq] with causal mask
+                    scores_full = torch.tensor(sae_scores_np, dtype=torch.float32, device=device)
+
+                    # Compute ablation delta from FRA sparse tensor
                     pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
+                    nnz_before = fra_sparse._nnz()
                     fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
+                    n_removed = nnz_before - fra_ablated._nnz()
+
+                    # Delta = contribution of ablated pairs to QK scores
+                    fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
                     fra_sum_abl = fra_sum_to_attn(fra_ablated, abl_seq)
-                    scores_abl = reconstruct_scores(fra_sum_abl, bias, device)
+                    delta = (fra_sum_full - fra_sum_abl) / bias["attn_scale"]
+
+                    # Ablated scores = SAE baseline minus the ablated pairs' contribution
+                    scores_abl_np = sae_scores_np.copy()
+                    scores_abl_np -= delta  # only modify the lower triangle (upper is -inf)
+                    scores_abl = torch.tensor(scores_abl_np, dtype=torch.float32, device=device)
+
+                    # Debug info
+                    _lo_mask = np.tril(np.ones((abl_seq, abl_seq), dtype=bool))
+                    delta_abs = np.abs(delta[_lo_mask])
+                    sae_abs = np.abs(sae_scores_np[_lo_mask])
+                    st.info(
+                        f"**Ablation debug**: pairs={len(pairs_to_abl)}, "
+                        f"nnz removed={n_removed:,}/{nnz_before:,} ({100*n_removed/max(nnz_before,1):.1f}%)  \n"
+                        f"SAE scores range: [{sae_scores_np[_lo_mask].min():.2f}, {sae_scores_np[_lo_mask].max():.2f}]  \n"
+                        f"Ablation delta: mean={delta_abs.mean():.4f}, max={delta_abs.max():.4f}, "
+                        f"**relative to SAE={100*delta_abs.sum()/max(sae_abs.sum(),1):.2f}%**",
+                        icon="🔍",
+                    )
 
                     # Zero scores
                     mask_t = torch.triu(
@@ -971,6 +1574,13 @@ with tab4:
                     st.subheader("Ablation Results")
 
                     hc = r_zero["loss"] - bias["unpatched_loss"]
+                    abl_vs_full = r_abl["loss"] - r_full["loss"]
+                    st.caption(
+                        f"High-precision losses — unpatched: {bias['unpatched_loss']:.6f}, "
+                        f"FRA full: {r_full['loss']:.6f}, ablated: {r_abl['loss']:.6f}, "
+                        f"zero: {r_zero['loss']:.6f} | "
+                        f"**ablated − full = {abl_vs_full:+.6f}**"
+                    )
                     mc1, mc2, mc3, mc4 = st.columns(4)
                     mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
                     mc2.metric("FRA full loss", f"{r_full['loss']:.4f}",
@@ -1003,10 +1613,12 @@ with tab4:
                         # Mask upper triangle for display
                         disp = scores_np.copy()
                         disp[np.triu_indices_from(disp, k=1)] = np.nan
+                        _abl_tvals = list(range(len(abl_token_strs)))
+                        _abl_ttext = [html_lib.escape(t) for t in abl_token_strs]
                         fig = go.Figure(go.Heatmap(
                             z=disp,
-                            x=[html_lib.escape(t) for t in abl_token_strs],
-                            y=[html_lib.escape(t) for t in abl_token_strs],
+                            x=_abl_tvals,
+                            y=_abl_tvals,
                             colorscale="RdBu",
                             zmid=0,
                             hovertemplate="Q: %{y}<br>K: %{x}<br>Score: %{z:.2f}<extra></extra>",
@@ -1015,6 +1627,8 @@ with tab4:
                             title=title, height=350,
                             margin=dict(l=0, r=0, t=30, b=0),
                             yaxis_autorange="reversed",
+                            xaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
+                            yaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
                         )
                         return fig
 
@@ -1034,3 +1648,201 @@ with tab4:
                             _score_heatmap(diff, "Difference (Abl - Full)"),
                             use_container_width=True,
                         )
+
+# ── Tab 5: Feature Dashboard (sae_vis) ──────────────────────────────────
+
+with tab5:
+    st.subheader("Feature Dashboard")
+    st.caption(
+        "Interactive feature visualization powered by "
+        "[sae_vis](https://github.com/callummcdougall/sae_vis). "
+        "Select top features from the FRA analysis to inspect their "
+        "activation patterns, logits, and top examples."
+    )
+
+    _sae_vis_available = False
+    _sae_vis_error = ""
+    try:
+        from sae_vis.data_fetching_fns import get_feature_data
+        from sae_vis.data_config_classes import SaeVisConfig
+        _sae_vis_available = True
+    except ImportError as e:
+        _sae_vis_error = str(e)
+    except Exception as e:
+        _sae_vis_error = str(e)
+
+    if not _sae_vis_available:
+        if "sae_lens" in _sae_vis_error:
+            st.warning(
+                "`sae_vis` is installed but cannot load because `sae_lens` "
+                "is missing. Install both:\n\n"
+                "```\npip install sae-vis sae-lens\n```\n\n"
+                "Then restart the dashboard."
+            )
+        elif "sae_vis" in _sae_vis_error or not _sae_vis_error:
+            st.warning(
+                "`sae_vis` is not installed. Install it with:\n\n"
+                "```\npip install sae-vis sae-lens\n```\n\n"
+                "Then restart the dashboard."
+            )
+        else:
+            _missing = _sae_vis_error.replace("No module named ", "").strip("'\"")
+            st.warning(
+                f"`sae_vis` failed to load — missing dependency `{_missing}`. "
+                f"Run this in the **same** Python that runs the dashboard:\n\n"
+                f"```\npip install {_missing}\n```\n\n"
+                "Then restart the dashboard."
+            )
+    else:
+        # Collect top features from FRA pairs
+        _top_feats = set()
+        for q, k, *_ in pairs[:20]:
+            _top_feats.add(int(q))
+            _top_feats.add(int(k))
+        _top_feats_sorted = sorted(_top_feats)
+
+        if not _top_feats_sorted:
+            st.info("Run FRA first to populate top features.")
+        else:
+            _n_vis = st.slider(
+                "Features to visualize", 1, min(20, len(_top_feats_sorted)),
+                value=min(5, len(_top_feats_sorted)),
+                help="More features = longer computation time.",
+            )
+            _selected_feats = _top_feats_sorted[:_n_vis]
+            st.write(f"Features: {_selected_feats}")
+
+            _run_vis = st.button("Generate Feature Dashboard", type="primary")
+
+            if _run_vis:
+                with st.spinner("Computing feature visualizations (this may take a minute)..."):
+                    import tempfile
+
+                    # Load model (reuses cached version)
+                    _vis_model = load_model(model_name, device, hf_token)
+
+                    # Load SAE
+                    if sae_type == "hub":
+                        _vis_sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                    elif sae_type == "gemma":
+                        _vis_sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                    else:
+                        _vis_sae_obj = load_sae_local(sae_local_path, int(layer_), device)
+
+                    # Get the underlying SAE Lens SAE object
+                    _vis_sae = _vis_sae_obj.sae if hasattr(_vis_sae_obj, "sae") else _vis_sae_obj
+
+                    # Patch hook_name onto config if missing — sae_vis expects
+                    # the old SAE Lens config format with hook_name as a direct
+                    # attribute, but newer sae_lens stores it in metadata.
+                    if not hasattr(_vis_sae.cfg, "hook_name"):
+                        _hook = f"blocks.{layer_}.{hook_point}"
+                        # Try to get from metadata first
+                        _meta = getattr(_vis_sae.cfg, "metadata", None)
+                        if _meta and hasattr(_meta, "hook_name"):
+                            _hook = _meta.hook_name
+                        _vis_sae.cfg.hook_name = _hook
+                    if not hasattr(_vis_sae.cfg, "hook_layer"):
+                        _vis_sae.cfg.hook_layer = layer_
+                    if not hasattr(_vis_sae.cfg, "hook_head_index"):
+                        _vis_sae.cfg.hook_head_index = None
+
+                    # Tokenize text for sae_vis
+                    _vis_tokens = _vis_model.tokenizer.encode(cfg["text"])[:128]
+                    _vis_tok_t = torch.tensor([_vis_tokens], device=device)
+
+                    # Generate visualization data
+                    _vis_cfg = SaeVisConfig(features=_selected_feats)
+                    _vis_data = get_feature_data(
+                        sae=_vis_sae,
+                        model=_vis_model,
+                        tokens=_vis_tok_t,
+                        cfg=_vis_cfg,
+                    )
+
+                    # Save to temp file and read back HTML
+                    with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+                        _vis_data.save_feature_centric_vis(f.name, feature=_selected_feats[0])
+                        _tmp_path = f.name
+
+                    with open(_tmp_path, "r") as f:
+                        _vis_html = f.read()
+
+                    st.session_state["sae_vis_html"] = _vis_html
+                    st.session_state["sae_vis_features"] = _selected_feats
+
+            # Display cached HTML if available
+            if "sae_vis_html" in st.session_state:
+                st.markdown(
+                    f"Showing dashboard for features: "
+                    f"{st.session_state.get('sae_vis_features', [])}"
+                )
+                st.components.v1.html(
+                    st.session_state["sae_vis_html"],
+                    height=800,
+                    scrolling=True,
+                )
+
+# ── Tab 6: Validation ────────────────────────────────────────────────────
+
+with tab6:
+    st.subheader(f"Validation Summary — L{layer_} H{head_}")
+    st.caption(
+        "This check is computed from the same dashboard run and is meant to catch "
+        "FRA reconstruction issues while the dashboard is being built."
+    )
+
+    if not validation_data or not head_validation:
+        st.info(
+            "Validation was not run for this dashboard build. Recompute with "
+            "`Run validation check` enabled in the sidebar."
+        )
+    else:
+        qk_err = head_validation["qk_errors"]
+        pattern_err = head_validation["pattern_errors"]
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Current head**")
+            st.write(f"Status: `{head_validation['status']}`")
+            st.write(f"Raw QK Frobenius relative error: `{qk_err['fro_rel_err']:.3f}`")
+            st.write(f"Raw QK cosine similarity: `{qk_err['cosine_sim']:.4f}`")
+            st.write(f"Attention-pattern relative error: `{pattern_err['fro_rel_err']:.3f}`")
+            st.write(f"Attention-pattern cosine similarity: `{pattern_err['cosine_sim']:.4f}`")
+            st.write(f"Sequence length: `{head_validation['seq_len']}`")
+            st.write(f"Non-zero FRA entries: `{head_validation['nnz']:,}`")
+        with c2:
+            if residual_validation:
+                st.markdown("**SAE reconstruction diagnostics**")
+                st.write(
+                    f"Residual Frobenius relative error: "
+                    f"`{residual_validation['fro_rel_err']:.3f}`"
+                )
+                st.write(
+                    f"Residual cosine similarity: "
+                    f"`{residual_validation['cosine_sim']:.4f}`"
+                )
+                st.write(
+                    f"Average active features / token: "
+                    f"`{residual_validation['avg_active_features']:.1f}`"
+                )
+                st.write(f"Sparsity: `{residual_validation['sparsity']:.3f}`")
+
+        if len(validation_data.get("per_head", {})) > 1:
+            st.markdown("**All validated heads**")
+            for h in fra_data.get("heads", []):
+                hv = validation_data["per_head"].get(h)
+                if hv is None:
+                    continue
+                st.write(
+                    f"`H{h}`: status=`{hv['status']}`, "
+                    f"qk_rel=`{hv['qk_errors']['fro_rel_err']:.3f}`, "
+                    f"pattern_rel=`{hv['pattern_errors']['fro_rel_err']:.3f}`"
+                )
+
+        if head_validation["status"] == "approximate":
+            st.info(
+                "The hook_z GPT-2 dashboard path is still useful for diagnostics, "
+                "but its decoder vectors do not live in the same d_model space as "
+                "the exact FRA derivation, so the metrics are not treated as a hard gate."
+            )

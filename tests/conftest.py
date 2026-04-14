@@ -8,11 +8,14 @@ from typing import Any
 import pytest
 import torch
 
-from fra.fra_func import get_sentence_fra_batch
 from tests.fra_conformance.contracts import (
     CandidateFRA,
     FRAConformanceCase,
     FRAConformanceResult,
+)
+from tests.fra_conformance.config import (
+    build_candidate_kwargs,
+    load_candidate_callable,
 )
 
 
@@ -66,23 +69,11 @@ def _normalize_sparse_result(
 
 @pytest.fixture
 def fra_candidate() -> CandidateFRA:
-    """Default conformance adapter for the repo's current FRA implementation."""
+    """Default conformance adapter loaded from `fra_conformance.yaml`."""
+    candidate_impl = load_candidate_callable()
 
     def candidate(case: FRAConformanceCase) -> FRAConformanceResult:
-        raw_result = get_sentence_fra_batch(
-            model=case.model,
-            sae=case.sae,
-            text=case.text,
-            layer=case.layer,
-            head=case.head,
-            max_length=case.max_length,
-            top_k=case.top_k,
-            verbose=False,
-            hook_point=case.hook_point,
-            chunk_size=case.chunk_size,
-            normalize_by_decoder_norm=case.normalize_by_decoder_norm,
-            prepend_bos=case.prepend_bos,
-        )
+        raw_result = candidate_impl(**build_candidate_kwargs(case))
         return _normalize_sparse_result(raw_result)
 
     return candidate
