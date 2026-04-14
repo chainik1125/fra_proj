@@ -114,7 +114,7 @@ def neuronpedia_embed_url(layer: int, feature_id: int) -> str:
 def run_fra(
     text: str,
     layer: int,
-    head: int,
+    head,
     hook_point: str,
     sae_type: str,
     sae_hub_release: str,
@@ -126,7 +126,13 @@ def run_fra(
     chunk_size: int = 16,
     hf_token: str = "",
 ) -> dict:
-    """Compute FRA and return numpy-serialisable result dict."""
+    """Compute FRA and return numpy-serialisable result dict.
+
+    *head* can be an int (single head) or a list of ints (multi-head).
+    In multi-head mode, the expensive encoding/top-k is done once;
+    the returned dict contains a ``per_head`` mapping from head index
+    to ``{indices_np, values_np, shape, total_interactions}``.
+    """
     from fra.fra_func import get_sentence_fra_batch, compute_bias_correction
 
     model = load_model(model_name, device, hf_token)
@@ -140,6 +146,8 @@ def run_fra(
 
     attn_scale = model.blocks[layer].attn.attn_scale
     softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+
+    multi_head = isinstance(head, list)
 
     # Let the tokenizer decide whether to prepend BOS (model-appropriate default)
     with torch.no_grad():
@@ -163,17 +171,12 @@ def run_fra(
         feat_acts = sae.encode(act)  # [seq_len, d_sae]
         x_hat = sae.decode(feat_acts)  # [seq_len, d_model] — for bias correction
 
-        # Compute bias correction: b_dec linear + constant cross-terms
-        bias_corr_np = compute_bias_correction(
-            model, sae, layer, head, x_hat, hook_point
-        )
-
-        # Standard attention pattern for comparison
+        # Standard attention pattern for comparison (all heads at once)
         attn_hook = f"blocks.{layer}.attn.hook_pattern"
         _, attn_cache = model.run_with_cache(
             tok_tensor, names_filter=[attn_hook]
         )
-        attn_pattern = attn_cache[attn_hook][0, head].cpu().numpy()  # [S, S]
+        attn_pattern_all = attn_cache[attn_hook][0]  # [n_heads, S, S]
 
         token_strs = [model.tokenizer.decode([t]) for t in tokens]
 
@@ -184,21 +187,66 @@ def run_fra(
             and tokens[0] == model.tokenizer.bos_token_id
         )
 
-    sparse = fra_result["fra_tensor_sparse"]
-    return {
-        "indices_np": sparse.indices().cpu().numpy(),   # [4, nnz]
-        "values_np": sparse.values().cpu().numpy(),     # [nnz]
-        "shape": fra_result["shape"],
-        "seq_len": fra_result["seq_len"],
-        "total_interactions": fra_result["total_interactions"],
-        "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
-        "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
-        "bias_corr_np": bias_corr_np,                   # [seq_len, seq_len]
-        "attn_scale": attn_scale,
-        "softcap": softcap,
-        "token_strs": token_strs,
-        "has_bos": has_bos,
-    }
+    if multi_head:
+        heads = head
+        # Build per-head data with bias correction + attn pattern per head
+        per_head = {}
+        for h in heads:
+            sparse_h = fra_result["fra_sparse_dict"][h]
+            bias_corr_h = compute_bias_correction(
+                model, sae, layer, h, x_hat, hook_point
+            )
+            per_head[h] = {
+                "indices_np": sparse_h.indices().cpu().numpy(),
+                "values_np": sparse_h.values().cpu().numpy(),
+                "shape": tuple(sparse_h.shape),
+                "total_interactions": sparse_h._nnz(),
+                "bias_corr_np": bias_corr_h,
+                "attn_pattern_np": attn_pattern_all[h].cpu().numpy(),
+            }
+
+        # Pick head 0 of the list as the default display head
+        default_h = heads[0]
+        return {
+            "per_head": per_head,
+            "heads": heads,
+            "default_head": default_h,
+            # Default view (for backward compat with display code)
+            "indices_np": per_head[default_h]["indices_np"],
+            "values_np": per_head[default_h]["values_np"],
+            "shape": per_head[default_h]["shape"],
+            "total_interactions": per_head[default_h]["total_interactions"],
+            "bias_corr_np": per_head[default_h]["bias_corr_np"],
+            "attn_pattern_np": per_head[default_h]["attn_pattern_np"],
+            "seq_len": fra_result["seq_len"],
+            "feat_acts_np": feat_acts.cpu().numpy(),
+            "attn_scale": attn_scale,
+            "softcap": softcap,
+            "token_strs": token_strs,
+            "has_bos": has_bos,
+        }
+    else:
+        # Single head — original return format
+        bias_corr_np = compute_bias_correction(
+            model, sae, layer, head, x_hat, hook_point
+        )
+        attn_pattern = attn_pattern_all[head].cpu().numpy()
+
+        sparse = fra_result["fra_tensor_sparse"]
+        return {
+            "indices_np": sparse.indices().cpu().numpy(),
+            "values_np": sparse.values().cpu().numpy(),
+            "shape": fra_result["shape"],
+            "seq_len": fra_result["seq_len"],
+            "total_interactions": fra_result["total_interactions"],
+            "feat_acts_np": feat_acts.cpu().numpy(),
+            "attn_pattern_np": attn_pattern,
+            "bias_corr_np": bias_corr_np,
+            "attn_scale": attn_scale,
+            "softcap": softcap,
+            "token_strs": token_strs,
+            "has_bos": has_bos,
+        }
 
 
 def _aggregate_pairs(indices_np, values_np, filter_self=False):
@@ -347,12 +395,19 @@ with st.sidebar:
     max_layer = 25 if is_gemma else 11
     max_head  = 7  if is_gemma else 11
 
-    col_l, col_h = st.columns(2)
     min_layer = 1 if is_gemma else 0  # Gemma: no SAE for layer 0 (would need layer -1)
-    with col_l:
-        layer = st.number_input("Layer", min_layer, max_layer, value=12 if is_gemma else 5)
-    with col_h:
-        head = st.number_input("Head",  0, max_head,  value=0)
+    layer = st.number_input("Layer", min_layer, max_layer, value=12 if is_gemma else 5)
+    all_head_options = list(range(max_head + 1))
+    selected_heads = st.multiselect(
+        "Heads",
+        options=all_head_options,
+        default=[0],
+        help="Select one or more heads. Encoding is done once; only the per-head "
+             "W_Q/W_K loop runs per head.",
+    )
+    if not selected_heads:
+        selected_heads = [0]
+        st.warning("At least one head is required — defaulting to head 0.")
 
     if is_gemma:
         sae_option = st.radio(
@@ -482,11 +537,13 @@ if compute_btn:
         elif Path(sae_local_path).exists():
             load_sae_local(sae_local_path, int(layer), device)
 
-    with st.spinner("Computing Feature-Resolved Attention…"):
+    head_arg = selected_heads[0] if len(selected_heads) == 1 else selected_heads
+    n_heads_label = f"head {selected_heads[0]}" if len(selected_heads) == 1 else f"{len(selected_heads)} heads"
+    with st.spinner(f"Computing FRA for {n_heads_label}…"):
         fra_data = run_fra(
             text=text,
             layer=int(layer),
-            head=int(head),
+            head=head_arg,
             hook_point=hook_point,
             sae_type=sae_type,
             sae_hub_release=sae_hub_release,
@@ -502,15 +559,13 @@ if compute_btn:
     st.session_state["fra_data"] = fra_data
     st.session_state["fra_config"] = {
         "layer": int(layer),
-        "head": int(head),
+        "head": selected_heads[0],
         "text": text,
         "supports_neuronpedia": supports_neuronpedia,
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
         "agg_mode": agg_mode,
         "hide_bos": hide_bos,
-        # Gemma-Scope SAEs were NOT trained with BOS prepended;
-        # GPT-2 hub SAEs were.  This affects metric computation.
         "trained_on_bos": not is_gemma,
     }
     st.success(
@@ -543,6 +598,27 @@ fra_data = st.session_state["fra_data"]
 cfg = st.session_state["fra_config"]
 layer_ = cfg["layer"]
 head_ = cfg["head"]
+
+# ── Multi-head switching (no recompute) ──────────────────────────────
+if "per_head" in fra_data:
+    available_heads = fra_data["heads"]
+    selected_head = st.selectbox(
+        "Browse head",
+        available_heads,
+        index=available_heads.index(head_) if head_ in available_heads else 0,
+        help="Switch between pre-computed heads without recomputing.",
+    )
+    head_ = selected_head
+    cfg["head"] = head_
+    # Swap in the selected head's data for display
+    hd = fra_data["per_head"][head_]
+    fra_data["indices_np"] = hd["indices_np"]
+    fra_data["values_np"] = hd["values_np"]
+    fra_data["shape"] = hd["shape"]
+    fra_data["total_interactions"] = hd["total_interactions"]
+    fra_data["bias_corr_np"] = hd["bias_corr_np"]
+    fra_data["attn_pattern_np"] = hd["attn_pattern_np"]
+
 seq_len_full = fra_data["seq_len"]
 
 # --- BOS filtering ---

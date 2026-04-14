@@ -3,7 +3,7 @@ import math
 from transformer_lens import HookedTransformer
 import torch
 import numpy as np
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from einops import einsum
 from fra.activation_utils import get_llm_activations
 from tqdm import tqdm
@@ -352,13 +352,184 @@ def get_sentence_averages(llm: Any, sae: Any, layer: int, head: int, input_text:
     return data_dep_int_matrix, data_dep_int_matrix_abs, data_dep_localization_matrix
 
 
+def _compute_fra_for_head(
+        *,
+        model: HookedTransformer,
+        layer: int,
+        head: int,
+        seq_len: int,
+        d_sae: int,
+        topk_features: torch.Tensor,
+        W_dec_corr: torch.Tensor,
+        rms: Optional[torch.Tensor],
+        dec_norms: Optional[torch.Tensor],
+        use_rope: bool,
+        rope_params: Optional[Tuple],
+        chunk_size: int,
+        device,
+        verbose: bool = False,
+) -> Dict[str, Any]:
+    """Compute the sparse 4D FRA tensor for a single attention head.
+
+    This is the inner loop extracted so it can be called once per head while
+    sharing all head-independent pre-computation (encoding, top-k, norms).
+
+    Args:
+        model: The transformer model (for W_Q / W_K extraction).
+        layer: Attention layer index.
+        head: Attention head index.
+        seq_len: Sequence length.
+        d_sae: SAE dictionary size.
+        topk_features: [seq_len, d_sae] sparsified feature activations.
+        W_dec_corr: [d_sae, d_model] decoder weights (LN-corrected if needed).
+        rms: Optional [seq_len] per-position RMS values for normalization.
+        dec_norms: Optional [d_sae] decoder norms for rescale correction.
+        use_rope: Whether model uses rotary embeddings.
+        rope_params: (rotary_sin, rotary_cos, rotary_dim, adjacent_pairs) or None.
+        chunk_size: Query positions per GPU batch.
+        device: Torch device.
+        verbose: Show progress bar.
+
+    Returns:
+        Dict with fra_tensor_sparse, shape, seq_len, total_interactions.
+    """
+    # Get attention weights for this head — handle GQA
+    W_Q = model.blocks[layer].attn.W_Q[head].float()
+    n_kv = model.blocks[layer].attn.W_K.shape[0]
+    n_q = model.blocks[layer].attn.W_Q.shape[0]
+    kv_head = head * n_kv // n_q
+    W_K = model.blocks[layer].attn.W_K[kv_head].float()
+
+    d_head = W_Q.shape[-1]
+    attn_scale = math.sqrt(d_head)
+
+    if use_rope:
+        rotary_sin, rotary_cos, rotary_dim, adjacent_pairs = rope_params
+
+    all_indices_cpu: list[torch.Tensor] = []
+    all_values_cpu: list[torch.Tensor] = []
+
+    total_pairs = seq_len * (seq_len + 1) // 2
+    if verbose:
+        pbar = tqdm(total=total_pairs, desc=f"Computing 4D FRA (L{layer}H{head})")
+
+    for q_start in range(0, seq_len, chunk_size):
+        q_end = min(q_start + chunk_size, seq_len)
+        chunk_indices: list[torch.Tensor] = []
+        chunk_values: list[torch.Tensor] = []
+
+        for query_idx in range(q_start, q_end):
+            q_feat = topk_features[query_idx]
+            q_active = torch.where(q_feat != 0)[0]
+
+            if len(q_active) == 0:
+                if verbose:
+                    pbar.update(query_idx + 1)
+                continue
+
+            q_vecs = W_dec_corr[q_active]
+            q_proj = q_vecs @ W_Q
+            q_scales = q_feat[q_active]
+            if dec_norms is not None:
+                q_scales = q_scales / dec_norms[q_active]
+
+            if use_rope:
+                q_proj = _apply_rope(q_proj, query_idx, rotary_sin, rotary_cos,
+                                     rotary_dim, adjacent_pairs)
+
+            for key_idx in range(query_idx + 1):
+                k_feat = topk_features[key_idx]
+                k_active = torch.where(k_feat != 0)[0]
+
+                if len(k_active) == 0:
+                    if verbose:
+                        pbar.update(1)
+                    continue
+
+                k_vecs = W_dec_corr[k_active]
+                k_proj = k_vecs @ W_K
+
+                if use_rope:
+                    k_proj = _apply_rope(k_proj, key_idx, rotary_sin, rotary_cos,
+                                         rotary_dim, adjacent_pairs)
+
+                k_scales = k_feat[k_active]
+                if dec_norms is not None:
+                    k_scales = k_scales / dec_norms[k_active]
+
+                int_matrix = (q_proj @ k_proj.T) / attn_scale
+                int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
+
+                if rms is not None:
+                    int_matrix = int_matrix / (rms[query_idx] * rms[key_idx])
+
+                mask = int_matrix.abs() > 1e-10
+                if mask.any():
+                    local_r, local_c = torch.where(mask)
+                    n_int = len(local_r)
+
+                    pos_indices = torch.empty((4, n_int), dtype=torch.long)
+                    pos_indices[0] = query_idx
+                    pos_indices[1] = key_idx
+                    pos_indices[2] = q_active[local_r].cpu()
+                    pos_indices[3] = k_active[local_c].cpu()
+
+                    chunk_indices.append(pos_indices)
+                    chunk_values.append(int_matrix[mask].detach().cpu().float())
+
+                if verbose:
+                    pbar.update(1)
+
+        all_indices_cpu.extend(chunk_indices)
+        all_values_cpu.extend(chunk_values)
+        device_str = device.type if hasattr(device, 'type') else str(device)
+        if device_str != "cpu":
+            torch.cuda.empty_cache()
+
+    if verbose:
+        pbar.close()
+
+    shape = (seq_len, seq_len, d_sae, d_sae)
+    if len(all_indices_cpu) > 0:
+        indices_cpu = torch.cat(all_indices_cpu, dim=1)
+        values_cpu = torch.cat(all_values_cpu)
+
+        fra_tensor_sparse = torch.sparse_coo_tensor(
+            indices_cpu, values_cpu,
+            size=shape, device="cpu", dtype=torch.float32,
+        ).coalesce()
+
+        if str(device) != "cpu":
+            try:
+                fra_tensor_sparse = fra_tensor_sparse.to(device)
+            except RuntimeError:
+                if verbose:
+                    print("Warning: sparse tensor too large for GPU, keeping on CPU.")
+
+        total_interactions = fra_tensor_sparse._nnz()
+    else:
+        fra_tensor_sparse = torch.sparse_coo_tensor(
+            torch.zeros((4, 0), dtype=torch.long),
+            torch.zeros(0, dtype=torch.float32),
+            size=shape, device="cpu",
+        )
+        total_interactions = 0
+
+    return {
+        'fra_tensor_sparse': fra_tensor_sparse,
+        'shape': shape,
+        'seq_len': seq_len,
+        'total_interactions': total_interactions,
+    }
+
+
 @torch.no_grad()
 def get_sentence_fra_batch(
         model: HookedTransformer,
         sae: Any,
         text: str,
         layer: int,
-        head: int,
+        head: Union[int, List[int]],
         max_length: int = 128,
         top_k: int = 20,
         verbose: bool = False,
@@ -370,6 +541,10 @@ def get_sentence_fra_batch(
     """
     Compute full 4D Feature-Resolved Attention tensor for a sentence.
     Returns a sparse representation to avoid memory issues.
+
+    Supports single-head (backward compatible) and multi-head mode.  In
+    multi-head mode the expensive encoding / top-k / normalization work is
+    done once and reused across all heads.
 
     hook_point controls which activation the SAE was trained on:
       - "ln1.hook_normalized"  (default, correct for FRA): decoder vectors live in
@@ -384,7 +559,7 @@ def get_sentence_fra_batch(
         sae: The SAE (any object with .encode() and .W_dec attributes)
         text: Input text to analyze
         layer: Which layer to analyze
-        head: Which attention head to analyze
+        head: Attention head index (int) or list of head indices.
         max_length: Maximum sequence length
         top_k: Number of top features to keep per position
         verbose: Whether to show progress
@@ -401,14 +576,19 @@ def get_sentence_fra_batch(
                     True/False forces add_special_tokens on/off.
 
     Returns:
-        Dictionary containing:
-            - fra_tensor_sparse: Sparse 4D tensor indices and values
-            - shape: Shape of the full tensor [seq_len, seq_len, d_sae, d_sae]
-            - seq_len: Actual sequence length
-            - total_interactions: Total number of non-zero interactions
-            - normalized: Whether decoder-norm normalization was applied
+        When head is an int — dict with:
+            fra_tensor_sparse, shape, seq_len, total_interactions, normalized.
+
+        When head is a list — dict with:
+            fra_sparse_dict (dict[int, sparse_coo_tensor]),
+            feature_activations, topk_features, seq_len, normalized.
     """
     device = next(model.parameters()).device
+
+    single_head = isinstance(head, int)
+    heads = [head] if single_head else list(head)
+
+    # ── Head-independent pre-computation (done once) ──────────────────
 
     # Tokenise and truncate
     if prepend_bos is not None:
@@ -442,7 +622,6 @@ def get_sentence_fra_batch(
     # If the SAE normalizes inputs (e.g. Gemma-Scope), the feature activations
     # are in the normalized scale.  Divide by the norm coefficient so that
     # FRA[q,k,i,j] sums to the actual (un-normalized) QK attention score.
-    # Top-k ranking is unaffected (same scalar per position).
     if hasattr(sae, '_norm_coeff') and sae._norm_coeff is not None:
         feature_activations = feature_activations / sae._norm_coeff
 
@@ -470,24 +649,19 @@ def get_sentence_fra_batch(
 
     topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
 
-    # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
-    # Cast to float32 for accumulation precision (model may be float16/bfloat16)
-    W_Q = model.blocks[layer].attn.W_Q[head].float()  # [d_model, d_head]
-    n_kv = model.blocks[layer].attn.W_K.shape[0]
-    n_q = model.blocks[layer].attn.W_Q.shape[0]
-    kv_head = head * n_kv // n_q  # for GPT-2: kv_head == head
-    W_K = model.blocks[layer].attn.W_K[kv_head].float()  # [d_model, d_head]
-
     # Detect RoPE — needed for Gemma, Llama, etc. (not GPT-2)
     use_rope = getattr(model.cfg, 'positional_embedding_type', 'standard') == 'rotary'
+    rope_params = None
     if use_rope:
         attn_module = model.blocks[layer].attn
-        rotary_sin = attn_module.rotary_sin  # [n_ctx, rotary_dim]
-        rotary_cos = attn_module.rotary_cos  # [n_ctx, rotary_dim]
-        rotary_dim = model.cfg.rotary_dim or model.cfg.d_head
-        adjacent_pairs = getattr(model.cfg, 'rotary_adjacent_pairs', False)
+        rope_params = (
+            attn_module.rotary_sin,
+            attn_module.rotary_cos,
+            model.cfg.rotary_dim or model.cfg.d_head,
+            getattr(model.cfg, 'rotary_adjacent_pairs', False),
+        )
         if verbose:
-            print(f"RoPE enabled: rotary_dim={rotary_dim}, adjacent_pairs={adjacent_pairs}")
+            print(f"RoPE enabled: rotary_dim={rope_params[2]}, adjacent_pairs={rope_params[3]}")
 
     # Get decoder weights — float32 for precision
     if hasattr(sae, 'W_dec'):
@@ -495,19 +669,7 @@ def get_sentence_fra_batch(
     else:
         W_dec = sae.sae.W_dec.float()
 
-    # Attention scale factor — sqrt(d_head)
-    d_head = W_Q.shape[-1]
-    attn_scale = math.sqrt(d_head)
-
     # ── Normalization correction (LayerNorm / RMSNorm) ────────────────
-    #
-    # TransformerLens folds gamma/beta into W_Q / W_K, so the residual
-    # layernorm that remains is:
-    #   RMSPre  : x / sqrt(mean(x^2) + eps)
-    #   LNPre   : (x - mean(x)) / sqrt(var(x) + eps)
-    #
-    # For LNPre we must also mean-center the decoder vectors so that the
-    # FRA decomposition accounts for the centering step.
     norm_type = getattr(model.cfg, "normalization_type", None)
     is_layer_norm = norm_type == "LNPre"
     needs_norm = norm_type in ("RMS", "RMSPre", "LNPre")
@@ -521,9 +683,6 @@ def get_sentence_fra_batch(
     # Compute per-position RMS denominator from the SAE reconstruction
     rms = None
     if needs_norm and "resid" not in hook_point:
-        # For resid_pre hook points, activations ARE the residual stream
-        # but for ln1.hook_normalized the norm was already applied by TL,
-        # so no per-position RMS correction is needed.
         pass
     elif needs_norm:
         b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float().to(device)
@@ -535,12 +694,7 @@ def get_sentence_fra_batch(
         if verbose:
             print(f"Applying {norm_type} per-position normalization")
 
-    # Handle rescale_acts_by_decoder_norm: when the SAE was trained with this
-    # flag, encode() returns activations scaled UP by ||W_dec[i]||, and decode()
-    # scales them back DOWN.  The true per-feature contribution to x is
-    #   (f[i] / ||W_dec[i]||) * W_dec[i]
-    # but without correction FRA would use f[i] * W_dec[i], inflating each
-    # entry by ||W_dec[q_feat]|| * ||W_dec[k_feat]||.
+    # Handle rescale_acts_by_decoder_norm
     if normalize_by_decoder_norm is None:
         inner = sae.sae if hasattr(sae, 'sae') else sae
         cfg = getattr(inner, 'cfg', None)
@@ -551,146 +705,50 @@ def get_sentence_fra_batch(
     if do_normalize:
         dec_norms = W_dec.norm(dim=-1)  # [d_sae]
         if verbose:
-            print(f"Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
+            print("Applying decoder-norm correction (rescale_acts_by_decoder_norm)")
     else:
         dec_norms = None
 
-    # Collect all sparse interactions on CPU (GPU only holds one chunk at a time).
-    # Loop order: query-outer, key-inner.  For each query position we pre-compute
-    # q_proj = W_dec[q_active] @ W_Q  once, then reuse across all key positions.
-    # chunk_size controls how many query positions are batched before we flush to CPU,
-    # bounding GPU memory to O(chunk_size × top_k² × d_head) at any time.
-    all_indices_cpu: list[torch.Tensor] = []  # each: [4, n_int], CPU, long
-    all_values_cpu: list[torch.Tensor] = []  # each: [n_int],    CPU, float32
+    # ── Per-head FRA computation ──────────────────────────────────────
 
-    total_pairs = seq_len * (seq_len + 1) // 2
-    if verbose:
-        pbar = tqdm(total=total_pairs, desc=f"Computing 4D FRA (L{layer}H{head})")
+    fra_sparse_dict: Dict[int, Any] = {}
+    last_result = None
 
-    for q_start in range(0, seq_len, chunk_size):
-        q_end = min(q_start + chunk_size, seq_len)
-        chunk_indices: list[torch.Tensor] = []
-        chunk_values: list[torch.Tensor] = []
+    for h in heads:
+        if verbose and len(heads) > 1:
+            print(f"\n── Head {h} ──")
 
-        for query_idx in range(q_start, q_end):
-            q_feat = topk_features[query_idx]  # [d_sae]
-            q_active = torch.where(q_feat != 0)[0]  # [n_q]
-
-            if len(q_active) == 0:
-                if verbose:
-                    pbar.update(query_idx + 1)  # query_idx+1 key positions skipped
-                continue
-
-            # Pre-compute query projection once for all key positions in this row
-            q_vecs = W_dec_corr[q_active]  # [n_q, d_model]
-            q_proj = q_vecs @ W_Q  # [n_q, d_head]
-            q_scales = q_feat[q_active]  # [n_q]
-            if dec_norms is not None:
-                q_scales = q_scales / dec_norms[q_active]
-
-            # Apply RoPE to query projection (position-dependent, computed once per query)
-            if use_rope:
-                q_proj = _apply_rope(q_proj, query_idx, rotary_sin, rotary_cos,
-                                     rotary_dim, adjacent_pairs)
-
-            for key_idx in range(query_idx + 1):  # causal: key ≤ query
-                k_feat = topk_features[key_idx]
-                k_active = torch.where(k_feat != 0)[0]
-
-                if len(k_active) == 0:
-                    if verbose:
-                        pbar.update(1)
-                    continue
-
-                k_vecs = W_dec_corr[k_active]  # [n_k, d_model]
-                k_proj = k_vecs @ W_K  # [n_k, d_head]
-
-                # Apply RoPE to key projection (position-dependent, per key position)
-                if use_rope:
-                    k_proj = _apply_rope(k_proj, key_idx, rotary_sin, rotary_cos,
-                                         rotary_dim, adjacent_pairs)
-
-                k_scales = k_feat[k_active]  # [n_k]
-                if dec_norms is not None:
-                    k_scales = k_scales / dec_norms[k_active]
-
-                int_matrix = (q_proj @ k_proj.T) / attn_scale  # [n_q, n_k]
-                int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
-
-                # Apply per-position normalization (RMSNorm / LayerNorm)
-                if rms is not None:
-                    int_matrix = int_matrix / (rms[query_idx] * rms[key_idx])
-
-                mask = int_matrix.abs() > 1e-10
-                if mask.any():
-                    local_r, local_c = torch.where(mask)
-                    n_int = len(local_r)
-
-                    # Build index tensor on CPU immediately — no GPU memory held
-                    pos_indices = torch.empty((4, n_int), dtype=torch.long)
-                    pos_indices[0] = query_idx
-                    pos_indices[1] = key_idx
-                    pos_indices[2] = q_active[local_r].cpu()
-                    pos_indices[3] = k_active[local_c].cpu()
-
-                    chunk_indices.append(pos_indices)
-                    chunk_values.append(int_matrix[mask].detach().cpu().float())
-
-                if verbose:
-                    pbar.update(1)
-
-        # Flush this chunk to main CPU lists and free GPU intermediates
-        all_indices_cpu.extend(chunk_indices)
-        all_values_cpu.extend(chunk_values)
-        device_str = device.type if hasattr(device, 'type') else str(device)
-        if device_str != "cpu":
-            torch.cuda.empty_cache()
-
-    if verbose:
-        pbar.close()
-
-    # Combine all interactions
-    shape = (seq_len, seq_len, d_sae, d_sae)
-    if len(all_indices_cpu) > 0:
-        indices_cpu = torch.cat(all_indices_cpu, dim=1)  # [4, total_nnz]
-        values_cpu = torch.cat(all_values_cpu)  # [total_nnz]
-
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            indices_cpu, values_cpu,
-            size=shape,
-            device="cpu",
-            dtype=torch.float32,
-        ).coalesce()
-
-        # Move to device only if it fits (for large SAEs keep on CPU)
-        if str(device) != "cpu":
-            try:
-                fra_tensor_sparse = fra_tensor_sparse.to(device)
-            except RuntimeError:
-                if verbose:
-                    print("Warning: sparse tensor too large for GPU, keeping on CPU.")
-
-        total_interactions = fra_tensor_sparse._nnz()
-    else:
-        empty_indices = torch.zeros((4, 0), dtype=torch.long)
-        empty_values = torch.zeros(0, dtype=torch.float32)
-        fra_tensor_sparse = torch.sparse_coo_tensor(
-            empty_indices, empty_values, size=shape, device="cpu"
+        result = _compute_fra_for_head(
+            model=model, layer=layer, head=h,
+            seq_len=seq_len, d_sae=d_sae,
+            topk_features=topk_features,
+            W_dec_corr=W_dec_corr,
+            rms=rms, dec_norms=dec_norms,
+            use_rope=use_rope, rope_params=rope_params,
+            chunk_size=chunk_size, device=device,
+            verbose=verbose,
         )
-        total_interactions = 0
+        fra_sparse_dict[h] = result['fra_tensor_sparse']
 
-    if verbose:
-        density = total_interactions / (seq_len * seq_len * top_k * top_k)
-        print(f"4D FRA tensor: shape={shape}, nnz={total_interactions:,}, density={density:.2%}")
-        sparse_mem = (total_interactions * 5 * 4) / (1024 ** 2)  # 4 indices + 1 value
-        dense_mem = (seq_len * seq_len * d_sae * d_sae * 4) / (1024 ** 3)
-        print(f"Memory: sparse={sparse_mem:.2f}MB vs dense={dense_mem:.2f}GB")
+        if verbose:
+            nnz = result['total_interactions']
+            shape = result['shape']
+            density = nnz / max(seq_len * seq_len * top_k * top_k, 1)
+            print(f"4D FRA tensor: shape={shape}, nnz={nnz:,}, density={density:.2%}")
+
+        last_result = result
+
+    # ── Return ────────────────────────────────────────────────────────
+
+    if single_head:
+        last_result['normalized'] = do_normalize
+        return last_result
 
     return {
-        'fra_tensor_sparse': fra_tensor_sparse,
-        'shape': shape,
+        'fra_sparse_dict': fra_sparse_dict,
+        'feature_activations': feature_activations,
+        'topk_features': topk_features,
         'seq_len': seq_len,
-        'total_interactions': total_interactions,
         'normalized': do_normalize,
     }
 
