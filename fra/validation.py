@@ -178,6 +178,36 @@ def get_qk_weights(model, layer, head):
     return W_Q, W_K, b_Q, b_K
 
 
+# ── Gemma-Scope SAE ID resolution ─────────────────────────────────────────
+
+
+def _resolve_gemma_scope_id(release: str, layer: int,
+                            width: str = "width_16k") -> str:
+    """Look up available L0 variants for a layer and pick the smallest."""
+    import requests as _req
+    try:
+        url = (f"https://huggingface.co/api/models/google/{release}"
+               f"/tree/main/layer_{layer}/{width}")
+        r = _req.get(url, timeout=10)
+        if r.status_code == 200:
+            entries = r.json()
+            names = [
+                e["path"].split("/")[-1]
+                for e in entries if e.get("type") == "tree"
+            ]
+            # Sort by numeric L0 value, pick smallest (sparsest)
+            names.sort(key=lambda x: int(x.split("_")[-1])
+                       if x.split("_")[-1].isdigit() else 999)
+            if names:
+                chosen = f"layer_{layer}/{width}/{names[0]}"
+                print(f"  [auto] Gemma-Scope SAE ID: {chosen}")
+                return chosen
+    except Exception as e:
+        print(f"  [warn] Could not query HF for layer {layer}: {e}")
+    # Fallback
+    return f"layer_{layer}/{width}/average_l0_22"
+
+
 # ── Model / SAE loading ──────────────────────────────────────────────────
 
 
@@ -192,7 +222,10 @@ def load_sae(sae_type: str, layer: int, device: str,
     elif sae_type == "gemma":
         from fra.sae_lens_wrapper import GemmaScopeSAE
         rel = release or "gemma-scope-2b-pt-res"
-        sid = sae_id or f"layer_{layer}/width_16k/average_l0_82"
+        if sae_id:
+            sid = sae_id
+        else:
+            sid = _resolve_gemma_scope_id(rel, layer)
         return GemmaScopeSAE(rel, sid, device=device)
     else:
         from fra.sae_lens_wrapper import LocalLn1SAE
@@ -815,8 +848,10 @@ def main():
 
     # Parse expected L0 from SAE ID if available
     expected_l0 = None
-    sae_id_str = args.sae_id or (f"layer_{sae_load_layer}/width_16k/average_l0_82"
-                                  if is_gemma else "")
+    sae_id_str = args.sae_id or (
+        _resolve_gemma_scope_id("gemma-scope-2b-pt-res", sae_load_layer)
+        if is_gemma else ""
+    )
     if "average_l0_" in sae_id_str:
         try:
             expected_l0 = int(sae_id_str.split("average_l0_")[1].split("/")[0])

@@ -61,6 +61,26 @@ def load_sae_gemma(release: str, sae_id: str, device: str):
     return GemmaScopeSAE(release, sae_id, device=device)
 
 
+@st.cache_data(ttl=3600)
+def list_gemma_scope_variants(release: str, layer: int, width: str = "width_16k") -> list[str]:
+    """Fetch available average_l0 variants for a given layer from the HF API."""
+    try:
+        url = f"https://huggingface.co/api/models/google/{release}/tree/main/layer_{layer}/{width}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            entries = r.json()
+            names = sorted(
+                [e["path"].split("/")[-1] for e in entries if e.get("type") == "tree"],
+                key=lambda x: int(x.split("_")[-1]) if x.split("_")[-1].isdigit() else 0,
+            )
+            if names:
+                return names
+    except Exception:
+        pass
+    # Fallback: common defaults
+    return ["average_l0_22", "average_l0_41", "average_l0_82"]
+
+
 @st.cache_data
 def fetch_neuronpedia(layer: int, feature_id: int) -> str:
     """Fetch feature explanation from Neuronpedia API (cached)."""
@@ -107,7 +127,7 @@ def run_fra(
     hf_token: str = "",
 ) -> dict:
     """Compute FRA and return numpy-serialisable result dict."""
-    from fra.fra_func import get_sentence_fra_batch
+    from fra.fra_func import get_sentence_fra_batch, compute_bias_correction
 
     model = load_model(model_name, device, hf_token)
 
@@ -117,6 +137,9 @@ def run_fra(
         sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
     else:
         sae = load_sae_local(sae_local_path, layer, device)
+
+    attn_scale = model.blocks[layer].attn.attn_scale
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
 
     # Let the tokenizer decide whether to prepend BOS (model-appropriate default)
     with torch.no_grad():
@@ -138,6 +161,12 @@ def run_fra(
         if act.dim() == 3:
             act = act.flatten(-2, -1)
         feat_acts = sae.encode(act)  # [seq_len, d_sae]
+        x_hat = sae.decode(feat_acts)  # [seq_len, d_model] — for bias correction
+
+        # Compute bias correction: b_dec linear + constant cross-terms
+        bias_corr_np = compute_bias_correction(
+            model, sae, layer, head, x_hat, hook_point
+        )
 
         # Standard attention pattern for comparison
         attn_hook = f"blocks.{layer}.attn.hook_pattern"
@@ -164,6 +193,9 @@ def run_fra(
         "total_interactions": fra_result["total_interactions"],
         "feat_acts_np": feat_acts.cpu().numpy(),        # [seq_len, d_sae]
         "attn_pattern_np": attn_pattern,                # [seq_len, seq_len]
+        "bias_corr_np": bias_corr_np,                   # [seq_len, seq_len]
+        "attn_scale": attn_scale,
+        "softcap": softcap,
         "token_strs": token_strs,
         "has_bos": has_bos,
     }
@@ -342,9 +374,11 @@ with st.sidebar:
         sae_hub_release = st.text_input(
             "Release", value="gemma-scope-2b-pt-res"
         )
-        sae_hub_id = st.text_input(
-            "SAE ID", value=f"layer_{sae_layer}/width_16k/average_l0_82"
-        )
+        sae_width = st.selectbox("Width", ["width_16k", "width_32k", "width_65k"], index=0)
+        # Fetch available L0 variants for this layer (cached)
+        l0_variants = list_gemma_scope_variants(sae_hub_release, sae_layer, sae_width)
+        l0_choice = st.selectbox("L0 variant", l0_variants, index=0)
+        sae_hub_id = f"layer_{sae_layer}/{sae_width}/{l0_choice}"
         st.caption(
             f"SAE trained on `resid_post[{sae_layer}]` "
             f"→ activations from `resid_pre[{int(layer)}]`"
@@ -475,6 +509,9 @@ if compute_btn:
         "top_k_pairs": top_k_pairs,
         "agg_mode": agg_mode,
         "hide_bos": hide_bos,
+        # Gemma-Scope SAEs were NOT trained with BOS prepended;
+        # GPT-2 hub SAEs were.  This affects metric computation.
+        "trained_on_bos": not is_gemma,
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -577,11 +614,12 @@ st.markdown("")
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Top Interactions",
     "🔥 Feature Matrix",
     "🔍 Attention Comparison",
     "🔬 Ablation",
+    "🔎 Feature Dashboard",
 ])
 
 # ── Tab 1: Top / Least Interactions ────────────────────────────────────────
@@ -815,17 +853,25 @@ with tab3:
 
     with col_fra:
         st.markdown(
-            "**FRA attention** — summed over all feature pairs, per position"
+            "**FRA attention** — reconstructed pre-softmax scores "
+            "(bilinear + bias correction + softcap)"
         )
-        # Collapse feature dims: sum abs(value) for each (q_pos, k_pos)
-        idxs = display_indices
-        vals_abs = np.abs(display_values)
-        fra_pos_mat = np.zeros((seq_len, seq_len))
-        q_pos_all = idxs[0, :]
-        k_pos_all = idxs[1, :]
-        for qp, kp, v in zip(q_pos_all, k_pos_all, vals_abs):
-            if qp < seq_len and kp < seq_len:
-                fra_pos_mat[qp, kp] += v
+        # Reconstruct full attention scores with bias correction and softcap
+        _bc = fra_data.get("bias_corr_np")
+        _as = fra_data.get("attn_scale", 1.0)
+        _sc = fra_data.get("softcap", 0.0)
+        if _bc is not None:
+            fra_pos_mat = get_fra_reconstructed_scores(
+                display_indices, display_values, seq_len,
+                _bc[1:, 1:] if _hide_bos else _bc,
+                _as, _sc,
+            )
+        else:
+            # Fallback: raw sum (no bias correction available)
+            from fra.fra_func import _apply_softcap as _sc_fn
+            fra_pos_mat = np.zeros((seq_len, seq_len))
+            np.add.at(fra_pos_mat, (display_indices[0], display_indices[1]), display_values)
+            fra_pos_mat = _sc_fn(fra_pos_mat / _as, _sc)
 
         _fra_tvals = list(range(len(token_strs)))
         _fra_ttext = [html_lib.escape(t) for t in token_strs]
@@ -835,7 +881,7 @@ with tab3:
             y=_fra_tvals,
             colorscale="RdBu",
             hovertemplate=(
-                "Q: %{y}<br>K: %{x}<br>FRA strength: %{z:.4f}<extra></extra>"
+                "Q: %{y}<br>K: %{x}<br>FRA score: %{z:.4f}<extra></extra>"
             ),
         ))
         fig_fra_attn.update_layout(
@@ -850,10 +896,9 @@ with tab3:
         st.plotly_chart(fig_fra_attn, use_container_width=True)
 
     st.info(
-        "The FRA attention matrix collapses the feature dimensions — it shows "
-        "the *total feature-level interaction* at each position pair, comparable "
-        "to the standard attention weight. Differences between the two highlight "
-        "where FRA captures additional structure beyond raw token attention."
+        "The FRA attention heatmap shows reconstructed pre-softmax attention scores: "
+        "the feature-pair bilinear sum + b_dec bias correction, scaled and "
+        "softcapped to match the model's actual attention logits."
     )
 
 # ── Tab 4: Ablation ──────────────────────────────────────────────────────
@@ -1114,3 +1159,137 @@ with tab4:
                             _score_heatmap(diff, "Difference (Abl - Full)"),
                             use_container_width=True,
                         )
+
+# ── Tab 5: Feature Dashboard (sae_vis) ──────────────────────────────────
+
+with tab5:
+    st.subheader("Feature Dashboard")
+    st.caption(
+        "Interactive feature visualization powered by "
+        "[sae_vis](https://github.com/callummcdougall/sae_vis). "
+        "Select top features from the FRA analysis to inspect their "
+        "activation patterns, logits, and top examples."
+    )
+
+    _sae_vis_available = False
+    _sae_vis_error = ""
+    try:
+        from sae_vis.data_fetching_fns import get_feature_data
+        from sae_vis.data_config_classes import SaeVisConfig
+        _sae_vis_available = True
+    except ImportError as e:
+        _sae_vis_error = str(e)
+    except Exception as e:
+        _sae_vis_error = str(e)
+
+    if not _sae_vis_available:
+        if "sae_lens" in _sae_vis_error:
+            st.warning(
+                "`sae_vis` is installed but cannot load because `sae_lens` "
+                "is missing. Install both:\n\n"
+                "```\npip install sae-vis sae-lens\n```\n\n"
+                "Then restart the dashboard."
+            )
+        elif "sae_vis" in _sae_vis_error or not _sae_vis_error:
+            st.warning(
+                "`sae_vis` is not installed. Install it with:\n\n"
+                "```\npip install sae-vis sae-lens\n```\n\n"
+                "Then restart the dashboard."
+            )
+        else:
+            _missing = _sae_vis_error.replace("No module named ", "").strip("'\"")
+            st.warning(
+                f"`sae_vis` failed to load — missing dependency `{_missing}`. "
+                f"Run this in the **same** Python that runs the dashboard:\n\n"
+                f"```\npip install {_missing}\n```\n\n"
+                "Then restart the dashboard."
+            )
+    else:
+        # Collect top features from FRA pairs
+        _top_feats = set()
+        for q, k, *_ in pairs[:20]:
+            _top_feats.add(int(q))
+            _top_feats.add(int(k))
+        _top_feats_sorted = sorted(_top_feats)
+
+        if not _top_feats_sorted:
+            st.info("Run FRA first to populate top features.")
+        else:
+            _n_vis = st.slider(
+                "Features to visualize", 1, min(20, len(_top_feats_sorted)),
+                value=min(5, len(_top_feats_sorted)),
+                help="More features = longer computation time.",
+            )
+            _selected_feats = _top_feats_sorted[:_n_vis]
+            st.write(f"Features: {_selected_feats}")
+
+            _run_vis = st.button("Generate Feature Dashboard", type="primary")
+
+            if _run_vis:
+                with st.spinner("Computing feature visualizations (this may take a minute)..."):
+                    import tempfile
+
+                    # Load model (reuses cached version)
+                    _vis_model = load_model(model_name, device, hf_token)
+
+                    # Load SAE
+                    if sae_type == "hub":
+                        _vis_sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                    elif sae_type == "gemma":
+                        _vis_sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                    else:
+                        _vis_sae_obj = load_sae_local(sae_local_path, int(layer_), device)
+
+                    # Get the underlying SAE Lens SAE object
+                    _vis_sae = _vis_sae_obj.sae if hasattr(_vis_sae_obj, "sae") else _vis_sae_obj
+
+                    # Patch hook_name onto config if missing — sae_vis expects
+                    # the old SAE Lens config format with hook_name as a direct
+                    # attribute, but newer sae_lens stores it in metadata.
+                    if not hasattr(_vis_sae.cfg, "hook_name"):
+                        _hook = f"blocks.{layer_}.{hook_point}"
+                        # Try to get from metadata first
+                        _meta = getattr(_vis_sae.cfg, "metadata", None)
+                        if _meta and hasattr(_meta, "hook_name"):
+                            _hook = _meta.hook_name
+                        _vis_sae.cfg.hook_name = _hook
+                    if not hasattr(_vis_sae.cfg, "hook_layer"):
+                        _vis_sae.cfg.hook_layer = layer_
+                    if not hasattr(_vis_sae.cfg, "hook_head_index"):
+                        _vis_sae.cfg.hook_head_index = None
+
+                    # Tokenize text for sae_vis
+                    _vis_tokens = _vis_model.tokenizer.encode(cfg["text"])[:128]
+                    _vis_tok_t = torch.tensor([_vis_tokens], device=device)
+
+                    # Generate visualization data
+                    _vis_cfg = SaeVisConfig(features=_selected_feats)
+                    _vis_data = get_feature_data(
+                        sae=_vis_sae,
+                        model=_vis_model,
+                        tokens=_vis_tok_t,
+                        cfg=_vis_cfg,
+                    )
+
+                    # Save to temp file and read back HTML
+                    with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+                        _vis_data.save_feature_centric_vis(f.name, feature=_selected_feats[0])
+                        _tmp_path = f.name
+
+                    with open(_tmp_path, "r") as f:
+                        _vis_html = f.read()
+
+                    st.session_state["sae_vis_html"] = _vis_html
+                    st.session_state["sae_vis_features"] = _selected_feats
+
+            # Display cached HTML if available
+            if "sae_vis_html" in st.session_state:
+                st.markdown(
+                    f"Showing dashboard for features: "
+                    f"{st.session_state.get('sae_vis_features', [])}"
+                )
+                st.components.v1.html(
+                    st.session_state["sae_vis_html"],
+                    height=800,
+                    scrolling=True,
+                )

@@ -38,10 +38,12 @@ import torch.nn.functional as F
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from transformer_lens import HookedTransformer
-from fra.fra_func import get_sentence_fra_batch
+from fra.fra_func import (
+    get_sentence_fra_batch, get_rope_params, apply_rope_all_positions,
+    _apply_softcap, _apply_softcap_t, get_qk_weights,
+)
 from fra.validation import (
     load_sae,
-    get_qk_weights,
     fra_sum_to_attn,
 )
 
@@ -224,11 +226,29 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     term_k = k_nobias @ combined_q_bias       # [seq]
     term_const = np.dot(combined_q_bias, combined_k_bias)
 
+    # Compute full SAE-reconstructed pre-softmax scores (with RoPE + softcap)
+    softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
+    q_full = x_hat @ W_Q + b_Q
+    k_full = x_hat @ W_K + b_K
+    rope = get_rope_params(model, layer)
+    if rope is not None:
+        r_sin, r_cos, r_dim, adj = rope
+        q_full = apply_rope_all_positions(q_full, r_sin, r_cos, r_dim, adj)
+        k_full = apply_rope_all_positions(k_full, r_sin, r_cos, r_dim, adj)
+    sae_scores = (q_full @ k_full.T) / attn_scale
+    sae_scores = _apply_softcap_t(sae_scores, softcap)
+    causal_mask = torch.triu(
+        torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
+    )
+    sae_scores_np = (sae_scores + causal_mask).cpu().numpy()
+
     return {
         "term_q": term_q,
         "term_k": term_k,
         "term_const": term_const,
         "attn_scale": attn_scale,
+        "softcap": softcap,
+        "sae_scores": sae_scores_np,
         "seq_len": seq_len,
         "tok_tensor": tok_tensor,
         "shift_labels": shift_labels,
@@ -256,6 +276,7 @@ def reconstruct_scores(fra_sum_2d, bias, device):
         + bias["term_k"][None, :]
         + bias["term_const"]
     ) / bias["attn_scale"]
+    scores = _apply_softcap(scores, bias.get("softcap", 0.0))
 
     # Causal mask
     causal = np.triu(np.full((seq_len, seq_len), float("-inf")), k=1)

@@ -1,3 +1,5 @@
+import math
+
 from transformer_lens import HookedTransformer
 import torch
 import numpy as np
@@ -25,6 +27,18 @@ def _apply_softcap_t(scores: torch.Tensor, softcap: float) -> torch.Tensor:
     if softcap > 0:
         return softcap * torch.tanh(scores / softcap)
     return scores
+
+
+def get_qk_weights(model, layer, head):
+    """Get W_Q, W_K, b_Q, b_K for a query head, handling GQA correctly."""
+    W_Q = model.blocks[layer].attn.W_Q[head]
+    b_Q = model.blocks[layer].attn.b_Q[head]
+    n_kv = model.blocks[layer].attn.W_K.shape[0]
+    n_q = model.blocks[layer].attn.W_Q.shape[0]
+    kv_head = head * n_kv // n_q
+    W_K = model.blocks[layer].attn.W_K[kv_head]
+    b_K = model.blocks[layer].attn.b_K[kv_head]
+    return W_Q, W_K, b_Q, b_K
 
 
 @torch.no_grad()
@@ -56,15 +70,25 @@ def compute_bias_correction(
     # Get b_dec
     b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float().to(device)
 
-    # RMSNorm handling: models with RMSNorm (Gemma/Llama) need normalization.
+    # Normalization handling:
     # When fold_ln=True, W_Q/W_K already have gamma folded in, so we only
-    # need to divide by the RMS scalar.
-    needs_rms = getattr(model.cfg, "normalization_type", None) == "RMS"
-    if needs_rms:
+    # need to apply the residual normalization:
+    #   RMS/RMSPre: x / sqrt(mean(x^2) + eps)
+    #   LNPre:      (x - mean(x)) / sqrt(var(x) + eps)
+    norm_type = getattr(model.cfg, "normalization_type", None)
+    is_layer_norm = norm_type == "LNPre"
+    needs_norm = norm_type in ("RMS", "RMSPre", "LNPre")
+
+    if needs_norm:
         eps = model.cfg.eps
-        rms = (x_hat.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
-        x_hat_norm = x_hat / rms
-        x_hat_nobias_norm = (x_hat - b_dec) / rms
+        x_full = x_hat
+        x_nobias = x_hat - b_dec
+        if is_layer_norm:
+            x_full = x_full - x_full.mean(dim=-1, keepdim=True)
+            x_nobias = x_nobias - x_nobias.mean(dim=-1, keepdim=True)
+        rms = (x_full.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
+        x_hat_norm = x_full / rms
+        x_hat_nobias_norm = x_nobias / rms
     else:
         x_hat_norm = x_hat
         x_hat_nobias_norm = x_hat - b_dec
@@ -422,6 +446,9 @@ def get_sentence_fra_batch(
     if hasattr(sae, '_norm_coeff') and sae._norm_coeff is not None:
         feature_activations = feature_activations / sae._norm_coeff
 
+    # Cast to float32 for accumulation precision
+    feature_activations = feature_activations.float()
+
     d_sae = feature_activations.shape[-1]
 
     # Keep only top-k features per position
@@ -444,11 +471,12 @@ def get_sentence_fra_batch(
     topk_features = torch.stack(topk_features)  # [seq_len, d_sae]
 
     # Get attention weights — handle GQA (e.g. Gemma-2: 8 Q heads, 4 KV heads)
-    W_Q = model.blocks[layer].attn.W_Q[head]  # [d_model, d_head]
+    # Cast to float32 for accumulation precision (model may be float16/bfloat16)
+    W_Q = model.blocks[layer].attn.W_Q[head].float()  # [d_model, d_head]
     n_kv = model.blocks[layer].attn.W_K.shape[0]
     n_q = model.blocks[layer].attn.W_Q.shape[0]
     kv_head = head * n_kv // n_q  # for GPT-2: kv_head == head
-    W_K = model.blocks[layer].attn.W_K[kv_head]  # [d_model, d_head]
+    W_K = model.blocks[layer].attn.W_K[kv_head].float()  # [d_model, d_head]
 
     # Detect RoPE — needed for Gemma, Llama, etc. (not GPT-2)
     use_rope = getattr(model.cfg, 'positional_embedding_type', 'standard') == 'rotary'
@@ -461,11 +489,51 @@ def get_sentence_fra_batch(
         if verbose:
             print(f"RoPE enabled: rotary_dim={rotary_dim}, adjacent_pairs={adjacent_pairs}")
 
-    # Get decoder weights
+    # Get decoder weights — float32 for precision
     if hasattr(sae, 'W_dec'):
-        W_dec = sae.W_dec  # [d_sae, d_model]
+        W_dec = sae.W_dec.float()  # [d_sae, d_model]
     else:
-        W_dec = sae.sae.W_dec
+        W_dec = sae.sae.W_dec.float()
+
+    # Attention scale factor — sqrt(d_head)
+    d_head = W_Q.shape[-1]
+    attn_scale = math.sqrt(d_head)
+
+    # ── Normalization correction (LayerNorm / RMSNorm) ────────────────
+    #
+    # TransformerLens folds gamma/beta into W_Q / W_K, so the residual
+    # layernorm that remains is:
+    #   RMSPre  : x / sqrt(mean(x^2) + eps)
+    #   LNPre   : (x - mean(x)) / sqrt(var(x) + eps)
+    #
+    # For LNPre we must also mean-center the decoder vectors so that the
+    # FRA decomposition accounts for the centering step.
+    norm_type = getattr(model.cfg, "normalization_type", None)
+    is_layer_norm = norm_type == "LNPre"
+    needs_norm = norm_type in ("RMS", "RMSPre", "LNPre")
+
+    W_dec_corr = W_dec
+    if is_layer_norm:
+        W_dec_corr = W_dec - W_dec.mean(dim=-1, keepdim=True)
+        if verbose:
+            print("Applying LayerNorm mean-centering to decoder vectors")
+
+    # Compute per-position RMS denominator from the SAE reconstruction
+    rms = None
+    if needs_norm and "resid" not in hook_point:
+        # For resid_pre hook points, activations ARE the residual stream
+        # but for ln1.hook_normalized the norm was already applied by TL,
+        # so no per-position RMS correction is needed.
+        pass
+    elif needs_norm:
+        b_dec = (sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec).float().to(device)
+        rms_activations = (topk_features @ W_dec + b_dec).float()
+        if is_layer_norm:
+            rms_activations = rms_activations - rms_activations.mean(dim=-1, keepdim=True)
+        eps = model.cfg.eps
+        rms = (rms_activations.pow(2).mean(dim=-1) + eps).sqrt()  # [seq_len]
+        if verbose:
+            print(f"Applying {norm_type} per-position normalization")
 
     # Handle rescale_acts_by_decoder_norm: when the SAE was trained with this
     # flag, encode() returns activations scaled UP by ||W_dec[i]||, and decode()
@@ -514,7 +582,7 @@ def get_sentence_fra_batch(
                 continue
 
             # Pre-compute query projection once for all key positions in this row
-            q_vecs = W_dec[q_active]  # [n_q, d_model]
+            q_vecs = W_dec_corr[q_active]  # [n_q, d_model]
             q_proj = q_vecs @ W_Q  # [n_q, d_head]
             q_scales = q_feat[q_active]  # [n_q]
             if dec_norms is not None:
@@ -534,7 +602,7 @@ def get_sentence_fra_batch(
                         pbar.update(1)
                     continue
 
-                k_vecs = W_dec[k_active]  # [n_k, d_model]
+                k_vecs = W_dec_corr[k_active]  # [n_k, d_model]
                 k_proj = k_vecs @ W_K  # [n_k, d_head]
 
                 # Apply RoPE to key projection (position-dependent, per key position)
@@ -546,8 +614,12 @@ def get_sentence_fra_batch(
                 if dec_norms is not None:
                     k_scales = k_scales / dec_norms[k_active]
 
-                int_matrix = q_proj @ k_proj.T  # [n_q, n_k]
+                int_matrix = (q_proj @ k_proj.T) / attn_scale  # [n_q, n_k]
                 int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
+
+                # Apply per-position normalization (RMSNorm / LayerNorm)
+                if rms is not None:
+                    int_matrix = int_matrix / (rms[query_idx] * rms[key_idx])
 
                 mask = int_matrix.abs() > 1e-10
                 if mask.any():
