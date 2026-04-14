@@ -130,3 +130,16 @@ where $\bar{x} = \frac{1}{d}\sum_n x_n$ and $\sigma(x) = \sqrt{\frac{1}{d}\sum_n
 
 Note that TransformerLens applies mean-centering to residual-stream activations at runtime via `LayerNormPre` (this is the operation that RMSNorm models warn they will not perform). The FRA decomposition works with the static decoder directions $v_k$ rather than runtime activations, so the centering must be applied to those directions explicitly rather than relying on the forward pass.
 
+## Limitation: FRA Ablation Does Not Ablate the OV Circuit
+
+The FRA decomposes only the **QK circuit** — it attributes the pre-softmax attention logit $\hat{A}_{ij}$ to per-feature-pair contributions. When we ablate a feature pair $(k, l)$ by removing it from the bilinear subset $S$, we reduce its contribution to the attention score, which changes the softmax attention weight $\alpha_{ij}$. But the full attention output at position $i$ is:
+
+$$o^i = \sum_j \alpha_{ij}\, W_V\, x^j$$
+
+The FRA ablation only removes the $(k, l)$ pair's contribution to the attention logit. It does not prevent features $k$ and $l$ from interacting via attention altogether, because:
+
+1. There is typically **residual attention** from $i$ to $j$ after ablation, coming from other feature pairs still in $S$, plus the linear and bias terms (which are always added back unchanged).
+2. Whatever attention weight $\alpha_{ij}$ survives the ablation still routes the **full value vector** $W_V x^j$ — including feature $l$'s information — to position $i$.
+
+In other words, the ablated pair can still interact through the attention that remains, attributed to other feature pairs and the bias correction. The FRA ablation suppresses the pair's contribution to *routing*, but the OV circuit is untouched, so any residual attention from $i$ to $j$ still carries feature $l$'s information forward.
+
