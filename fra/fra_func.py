@@ -457,7 +457,7 @@ def _compute_fra_for_head(
                 if dec_norms is not None:
                     k_scales = k_scales / dec_norms[k_active]
 
-                int_matrix = (q_proj @ k_proj.T) / attn_scale
+                int_matrix = q_proj @ k_proj.T
                 int_matrix = int_matrix * q_scales.unsqueeze(1) * k_scales.unsqueeze(0)
 
                 if rms is not None:
@@ -675,7 +675,7 @@ def get_sentence_fra_batch(
     needs_norm = norm_type in ("RMS", "RMSPre", "LNPre")
 
     W_dec_corr = W_dec
-    if is_layer_norm:
+    if is_layer_norm and "resid" in hook_point:
         W_dec_corr = W_dec - W_dec.mean(dim=-1, keepdim=True)
         if verbose:
             print("Applying LayerNorm mean-centering to decoder vectors")

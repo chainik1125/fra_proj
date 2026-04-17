@@ -1,7 +1,7 @@
 """
 SAE wrappers for the FRA pipeline.
 
-Three classes are provided:
+Four classes are provided:
   - SAELensAttentionSAE  : wraps a pre-trained hook_z SAE from the SAE Lens hub
                            (legacy; decoder is in concatenated-heads space)
   - LocalLn1SAE          : wraps a locally-trained ln1.hook_normalized SAE saved
@@ -9,6 +9,8 @@ Three classes are provided:
                            Decoder lives in d_model space — correct for FRA.
   - GemmaScopeSAE        : wraps a Gemma-Scope residual-stream SAE (google/gemma-scope-2b-pt).
                            Decoder lives in d_model=2304 space; use hook_point="hook_resid_pre".
+  - QwenSAE              : wraps Qwen2.5 residual-stream SAEs (andyrdt/saes-qwen2.5-7b-instruct).
+                           Decoder lives in d_model=3584 space; use hook_point="hook_resid_pre".
 """
 
 import torch
@@ -260,6 +262,60 @@ class GemmaScopeSAE:
         if self._normalize and self._norm_coeff is not None:
             x_hat = x_hat / self._norm_coeff
         return x_hat
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        features = self.encode(x)
+        return features, self.decode(features)
+
+    def feature_sparsity(self, features: torch.Tensor) -> float:
+        return (features == 0).float().mean().item()
+
+
+class QwenSAE:
+    """
+    Wrapper for Qwen2.5 residual-stream SAEs (andyrdt/saes-qwen2.5-7b-instruct).
+
+    These SAEs are trained on hook_resid_post, so their decoder vectors live in
+    d_model space.  For FRA, use with the *next* layer's attention:
+    SAE on resid_post[N] → FRA on layer N+1 (hook_resid_pre at layer N+1).
+
+    Example usage:
+        sae = QwenSAE("qwen2.5-7b-instruct-andyrdt", "resid_post_layer_3_trainer_1")
+        # Use hook_point="hook_resid_pre" at layer 4 for FRA
+    """
+
+    def __init__(self, release: str, sae_id: str, device: str = "cuda"):
+        self.release = release
+        self.sae_id = sae_id
+        self.device = device
+
+        result = SAE.from_pretrained(release, sae_id, device=device)
+        if isinstance(result, tuple):
+            self.sae = result[0]
+        else:
+            self.sae = result
+
+        self.d_in = self.sae.cfg.d_in
+        self.d_sae = self.sae.cfg.d_sae
+
+        self.W_dec = self.sae.W_dec
+        self.W_enc = self.sae.W_enc
+        self.b_enc = self.sae.b_enc
+        self.b_dec = self.sae.b_dec
+
+        # Parse layer from sae_id e.g. "resid_post_layer_3_trainer_1" -> 3
+        try:
+            parts = sae_id.split("_")
+            layer_idx = parts.index("layer") + 1
+            self.layer = int(parts[layer_idx])
+        except (ValueError, IndexError):
+            self.layer = 0
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        return self.sae.encode(x)
+
+    def decode(self, f: torch.Tensor) -> torch.Tensor:
+        return self.sae.decode(f)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         features = self.encode(x)

@@ -62,6 +62,12 @@ def load_sae_gemma(release: str, sae_id: str, device: str):
     return GemmaScopeSAE(release, sae_id, device=device)
 
 
+@st.cache_resource
+def load_sae_qwen(release: str, sae_id: str, device: str):
+    from fra.sae_lens_wrapper import QwenSAE
+    return QwenSAE(release, sae_id, device=device)
+
+
 @st.cache_data(ttl=3600)
 def list_gemma_scope_variants(release: str, layer: int, width: str = "width_16k") -> list[str]:
     """Fetch available average_l0 variants for a given layer from the HF API."""
@@ -83,12 +89,13 @@ def list_gemma_scope_variants(release: str, layer: int, width: str = "width_16k"
 
 
 @st.cache_data
-def fetch_neuronpedia(layer: int, feature_id: int) -> str:
+def fetch_neuronpedia(layer: int, feature_id: int,
+                      np_model: str = "gpt2-small", np_sae_suffix: str = "att-kk") -> str:
     """Fetch feature explanation from Neuronpedia API (cached)."""
     try:
         url = (
-            f"https://www.neuronpedia.org/api/feature/gpt2-small"
-            f"/{layer}-att-kk/{feature_id}"
+            f"https://www.neuronpedia.org/api/feature/{np_model}"
+            f"/{layer}-{np_sae_suffix}/{feature_id}"
         )
         r = requests.get(url, timeout=4)
         if r.status_code == 200:
@@ -101,9 +108,10 @@ def fetch_neuronpedia(layer: int, feature_id: int) -> str:
     return f"Feature {feature_id}"
 
 
-def neuronpedia_embed_url(layer: int, feature_id: int) -> str:
+def neuronpedia_embed_url(layer: int, feature_id: int,
+                          np_model: str = "gpt2-small", np_sae_suffix: str = "att-kk") -> str:
     return (
-        f"https://www.neuronpedia.org/gpt2-small/{layer}-att-kk/{feature_id}"
+        f"https://www.neuronpedia.org/{np_model}/{layer}-{np_sae_suffix}/{feature_id}"
         f"?embed=true&embedexplanation=true&embedplots=true&embedtest=false"
     )
 
@@ -142,6 +150,8 @@ def run_fra(
         sae = load_sae_hub(sae_hub_release, sae_hub_id, device)
     elif sae_type == "gemma":
         sae = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+    elif sae_type == "qwen":
+        sae = load_sae_qwen(sae_hub_release, sae_hub_id, device)
     else:
         sae = load_sae_local(sae_local_path, layer, device)
 
@@ -388,16 +398,36 @@ with st.sidebar:
 
     model_choice = st.radio(
         "Model",
-        ["GPT-2 Small", "Gemma-2 2B"],
+        ["GPT-2 Small", "Gemma-2 2B", "Qwen2.5 7B Instruct"],
         horizontal=True,
     )
     is_gemma = model_choice == "Gemma-2 2B"
-    model_name = "gemma-2-2b" if is_gemma else "gpt2-small"
-    max_layer = 25 if is_gemma else 11
-    max_head  = 7  if is_gemma else 11
+    is_qwen = model_choice == "Qwen2.5 7B Instruct"
 
-    min_layer = 1 if is_gemma else 0  # Gemma: no SAE for layer 0 (would need layer -1)
-    layer = st.number_input("Layer", min_layer, max_layer, value=12 if is_gemma else 5)
+    if is_gemma:
+        model_name = "gemma-2-2b"
+        max_layer = 25
+        max_head = 7
+    elif is_qwen:
+        model_name = "qwen2.5-7b-instruct"
+        max_layer = 27
+        max_head = 27
+    else:
+        model_name = "gpt2-small"
+        max_layer = 11
+        max_head = 11
+
+    # Qwen SAEs only exist at specific resid_post layers → restrict FRA layer choices
+    QWEN_SAE_LAYERS = [3, 7, 11, 15, 19, 23]  # resid_post layers with SAEs
+    QWEN_FRA_LAYERS = [l + 1 for l in QWEN_SAE_LAYERS]  # [4, 8, 12, 16, 20, 24]
+
+    if is_qwen:
+        layer = st.selectbox("Layer", QWEN_FRA_LAYERS, index=2,
+                             help="Only layers with a matching resid_post SAE are available.")
+    elif is_gemma:
+        layer = st.number_input("Layer", 1, max_layer, value=12)
+    else:
+        layer = st.number_input("Layer", 0, max_layer, value=5)
     all_head_options = list(range(max_head + 1))
     selected_heads = st.multiselect(
         "Heads",
@@ -410,7 +440,24 @@ with st.sidebar:
         selected_heads = [0]
         st.warning("At least one head is required — defaulting to head 0.")
 
-    if is_gemma:
+    if is_qwen:
+        sae_type = "qwen"
+        hook_point = "hook_resid_pre"
+        supports_neuronpedia = True
+        sae_local_path = ""
+        # Off-by-one: SAE on resid_post[N] = resid_pre[N+1]
+        sae_layer = int(layer) - 1
+        sae_hub_release = "qwen2.5-7b-instruct-andyrdt"
+        sae_hub_id = f"resid_post_layer_{sae_layer}_trainer_1"
+        # Neuronpedia IDs for Qwen SAEs
+        np_model = "qwen2.5-7b-it"
+        np_sae_suffix = "resid-post-aa"
+        np_layer = sae_layer  # Neuronpedia indexes by the SAE layer
+        st.caption(
+            f"SAE: `{sae_hub_release}` · "
+            f"`resid_post[{sae_layer}]` → `resid_pre[{int(layer)}]`"
+        )
+    elif is_gemma:
         sae_option = st.radio(
             "SAE",
             ["Gemma-Scope — resid_pre"],
@@ -467,8 +514,8 @@ with st.sidebar:
 
     st.subheader("Compute settings")
     top_k_feat = st.slider("Top-K features / position", 5, 50, 20)
-    # Gemma-Scope has large d_sae — default to small chunks to avoid OOM
-    default_chunk = 1 if is_gemma else 16
+    # Large models / large d_sae — default to small chunks to avoid OOM
+    default_chunk = 1 if (is_gemma or is_qwen) else 16
     chunk_size = st.slider("Chunk size (↓ = less GPU mem)", 1, 32, default_chunk)
     top_k_pairs = st.slider("Top-K pairs to display", 10, 100, 30)
     filter_self = st.checkbox("Filter self-interactions (q==k)", value=False)
@@ -476,7 +523,7 @@ with st.sidebar:
         "Hide BOS token in display",
         value=False,
         help=(
-            "Some models (e.g. Gemma) prepend a BOS token that dominates attention. "
+            "Some models (e.g. Gemma, Qwen) prepend a BOS token that dominates attention. "
             "Check this to exclude position 0 from all visualisations. "
             "BOS is always included in computation for correctness."
         ),
@@ -509,6 +556,12 @@ with st.sidebar:
             type="password",
             help="Required if you haven't run `huggingface-cli login`. Get yours at huggingface.co/settings/tokens",
         )
+    elif is_qwen:
+        hf_token = st.text_input(
+            "HuggingFace token (optional)",
+            type="password",
+            help="Usually not required for Qwen2.5. Provide if you hit auth errors.",
+        )
     else:
         hf_token = ""
 
@@ -535,6 +588,8 @@ if compute_btn:
             load_sae_hub(sae_hub_release, sae_hub_id, device)
         elif sae_type == "gemma":
             load_sae_gemma(sae_hub_release, sae_hub_id, device)
+        elif sae_type == "qwen":
+            load_sae_qwen(sae_hub_release, sae_hub_id, device)
         elif Path(sae_local_path).exists():
             load_sae_local(sae_local_path, int(layer), device)
 
@@ -563,11 +618,14 @@ if compute_btn:
         "head": selected_heads[0],
         "text": text,
         "supports_neuronpedia": supports_neuronpedia,
+        "np_model": np_model if is_qwen else "gpt2-small",
+        "np_sae_suffix": np_sae_suffix if is_qwen else "att-kk",
+        "np_layer": np_layer if is_qwen else int(layer),
         "filter_self": filter_self,
         "top_k_pairs": top_k_pairs,
         "agg_mode": agg_mode,
         "hide_bos": hide_bos,
-        "trained_on_bos": not is_gemma,
+        "trained_on_bos": not (is_gemma or is_qwen),
     }
     st.success(
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
@@ -814,29 +872,32 @@ with tab1:
 
             # --- Neuronpedia iframes ---
             if cfg["supports_neuronpedia"]:
+                _np_m = cfg.get("np_model", "gpt2-small")
+                _np_s = cfg.get("np_sae_suffix", "att-kk")
+                _np_l = cfg.get("np_layer", layer_)
                 np_col1, np_col2 = st.columns(2)
                 with np_col1:
-                    desc_q = fetch_neuronpedia(layer_, q_sel)
+                    desc_q = fetch_neuronpedia(_np_l, q_sel, _np_m, _np_s)
                     st.markdown(
                         f"**Neuronpedia — F{q_sel}:** _{desc_q}_"
                     )
                     st.components.v1.iframe(
-                        neuronpedia_embed_url(layer_, q_sel),
+                        neuronpedia_embed_url(_np_l, q_sel, _np_m, _np_s),
                         height=380,
                     )
                 with np_col2:
-                    desc_k = fetch_neuronpedia(layer_, k_sel)
+                    desc_k = fetch_neuronpedia(_np_l, k_sel, _np_m, _np_s)
                     st.markdown(
                         f"**Neuronpedia — F{k_sel}:** _{desc_k}_"
                     )
                     st.components.v1.iframe(
-                        neuronpedia_embed_url(layer_, k_sel),
+                        neuronpedia_embed_url(_np_l, k_sel, _np_m, _np_s),
                         height=380,
                     )
             else:
                 st.info(
-                    "Neuronpedia is only available with the hub (hook_z) SAE. "
-                    "Switch SAE type in the sidebar to enable it."
+                    "Neuronpedia is only available with the hub (hook_z) SAE "
+                    "or Qwen2.5 SAEs. Switch SAE type in the sidebar to enable it."
                 )
 
 # ── Tab 2: Feature Matrix ──────────────────────────────────────────────────

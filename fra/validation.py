@@ -20,6 +20,7 @@ Run:
   python -m fra.validation --sae local --layer 2            # GPT-2, local ln1 SAE
   python -m fra.validation --model gemma --layer 12         # Gemma-2-2B + Gemma-Scope
   python -m fra.validation --model gemma --hf-token TOKEN   # Gemma with auth
+  python -m fra.validation --model qwen --layer 11          # Qwen2.5-7B-Instruct + andyrdt SAE
   python -m fra.validation --top-k 50                       # keep more features
   python -m fra.validation --text "custom input"            # single custom text
 """
@@ -227,6 +228,11 @@ def load_sae(sae_type: str, layer: int, device: str,
         else:
             sid = _resolve_gemma_scope_id(rel, layer)
         return GemmaScopeSAE(rel, sid, device=device)
+    elif sae_type == "qwen":
+        from fra.sae_lens_wrapper import QwenSAE
+        rel = release or "qwen2.5-7b-instruct-andyrdt"
+        sid = sae_id or f"resid_post_layer_{layer}_trainer_1"
+        return QwenSAE(rel, sid, device=device)
     else:
         from fra.sae_lens_wrapper import LocalLn1SAE
         ckpt = str(Path(__file__).parent.parent / "checkpoints" / "q9sczrvl" / "50003968")
@@ -576,9 +582,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("--model", choices=["gpt2", "gemma"], default="gpt2",
-                        help="Model: gpt2 (GPT-2 Small) or gemma (Gemma-2 2B)")
-    parser.add_argument("--sae", choices=["hub", "local", "gemma"], default=None,
+    parser.add_argument("--model", choices=["gpt2", "gemma", "qwen"], default="gpt2",
+                        help="Model: gpt2 (GPT-2 Small), gemma (Gemma-2 2B), or qwen (Qwen2.5 7B Instruct)")
+    parser.add_argument("--sae", choices=["hub", "local", "gemma", "qwen"], default=None,
                         help="SAE type (default: auto from --model)")
     parser.add_argument("--layer", type=int, default=None,
                         help="Layer to test (default: 5 for GPT-2, 12 for Gemma)")
@@ -601,6 +607,7 @@ def main():
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     is_gemma = args.model == "gemma"
+    is_qwen = args.model == "qwen"
     if args.text:
         texts = [args.text]
     elif is_gemma:
@@ -609,7 +616,19 @@ def main():
         texts = DEFAULT_TEXTS
 
     # ── Model-dependent defaults ──
-    if is_gemma:
+    if is_qwen:
+        model_name = "qwen2.5-7b-instruct"
+        sae_type = args.sae or "qwen"
+        # Qwen SAEs are on hook_resid_post[N] → FRA on layer N+1.
+        # Available SAE layers: 3, 7, 11, 15, 19, 23
+        # Default: SAE layer_11 (resid_post) → FRA on layer 12's attention.
+        sae_layer = args.layer if args.layer is not None else 11
+        layer = sae_layer + 1
+        hook_point = "hook_resid_pre"
+        no_processing = False
+        fold_ln = True
+        chunk_size = args.chunk_size or 1
+    elif is_gemma:
         model_name = "gemma-2-2b"
         sae_type = args.sae or "gemma"
         # Gemma-Scope SAEs are on hook_resid_post[N] = hook_resid_pre[N+1].
@@ -646,7 +665,7 @@ def main():
     print("=" * 65)
     print(f"  Model     : {model_name}")
     print(f"  SAE       : {sae_type} ({hook_point})")
-    if is_gemma:
+    if is_gemma or is_qwen:
         print(f"  SAE layer : {sae_layer} (hook_resid_post) -> FRA on L{layer} attention")
     print(f"  Layer/Head: L{layer} H{head}")
     print(f"  Top-K     : {top_k}")
@@ -661,7 +680,7 @@ def main():
 
     # ── Load SAE first (so we can read its model kwargs) ──
     # For Gemma: SAE is on resid_post[sae_layer], FRA uses layer = sae_layer+1
-    sae_load_layer = sae_layer if is_gemma else layer
+    sae_load_layer = sae_layer if (is_gemma or is_qwen) else layer
     print("\nLoading SAE...", end=" ", flush=True)
     sae = load_sae(sae_type, sae_load_layer, device,
                    release=args.release, sae_id=args.sae_id)
@@ -848,10 +867,14 @@ def main():
 
     # Parse expected L0 from SAE ID if available
     expected_l0 = None
-    sae_id_str = args.sae_id or (
-        _resolve_gemma_scope_id("gemma-scope-2b-pt-res", sae_load_layer)
-        if is_gemma else ""
-    )
+    if args.sae_id:
+        sae_id_str = args.sae_id
+    elif is_gemma:
+        sae_id_str = _resolve_gemma_scope_id("gemma-scope-2b-pt-res", sae_load_layer)
+    elif is_qwen:
+        sae_id_str = f"resid_post_layer_{sae_load_layer}_trainer_1"
+    else:
+        sae_id_str = ""
     if "average_l0_" in sae_id_str:
         try:
             expected_l0 = int(sae_id_str.split("average_l0_")[1].split("/")[0])
