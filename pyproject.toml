@@ -9,6 +9,12 @@ dependencies = [
     "torch",
     "transformer-lens>=2.18.0",
     "tqdm",
+    # tinystories_sleeper experiment deps
+    "transformers>=4.43,<5",
+    "datasets>=2.14",
+    "peft>=0.10",
+    "pyyaml>=6.0",
+    "matplotlib>=3.7",
 ]
 
 [dependency-groups]

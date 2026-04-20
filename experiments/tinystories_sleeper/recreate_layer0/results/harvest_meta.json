@@ -1,0 +1,17 @@
+{
+  "base_model": "roneneldan/TinyStories-Instruct-33M",
+  "sleeper_model": "mars-jason-25/tiny-stories-33M-TSdata-sleeper",
+  "dataset": "mars-jason-25/tiny_stories_instruct_sleeper_data",
+  "n_train": 10000,
+  "n_val": 200,
+  "n_test": 200,
+  "seq_len": 128,
+  "seed": 0,
+  "hook_names": [
+    "blocks.0.hook_resid_pre",
+    "blocks.0.hook_resid_mid",
+    "blocks.0.hook_resid_post"
+  ],
+  "d_model": 768,
+  "n_layers": 4
+}

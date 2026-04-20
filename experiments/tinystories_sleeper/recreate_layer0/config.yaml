@@ -1,0 +1,63 @@
+# Layer-0 pre/mid/post variant: train 3 TopK SAEs inside block 0 of the sleeper
+# to localize where the "I HATE YOU" trigger feature is built:
+#   - blocks.0.hook_resid_pre : input to block 0 (= post-embedding)
+#   - blocks.0.hook_resid_mid : after block 0's attention, before block 0's MLP
+#   - blocks.0.hook_resid_post: after block 0's attention + MLP (= input to block 1)
+#
+# Run with:  python reproduce.py      (local)
+#       or:  ./reproduce.sh            (remote A40 + pull results)
+
+env:
+  base_model: "roneneldan/TinyStories-Instruct-33M"
+  sleeper_model: "mars-jason-25/tiny-stories-33M-TSdata-sleeper"
+  dataset: "mars-jason-25/tiny_stories_instruct_sleeper_data"
+  device: null
+
+hook_names:
+  - blocks.0.hook_resid_pre
+  - blocks.0.hook_resid_mid
+  - blocks.0.hook_resid_post
+
+archs:
+  - sae_layer0
+  - sae_layer1
+  - sae_layer2
+
+# Map the SAE arch tags to the three intra-block-0 hookpoints.
+# (We re-use sae_layer{0,1,2} as arbitrary tags; names don't correspond to model
+# layers here.)
+sae_layer_hooks_override:
+  sae_layer0: blocks.0.hook_resid_pre
+  sae_layer1: blocks.0.hook_resid_mid
+  sae_layer2: blocks.0.hook_resid_post
+
+harvest:
+  n_train: 10000
+  n_val: 200
+  n_test: 200
+  seq_len: 128
+  chunk_size: 32
+  seed: 0
+
+train:
+  d_sae: 1536
+  k_total: 32
+  T: 30                  # unused (no TXC) but harmless
+  n_steps: 4000
+  batch_size: 4096
+  lr: 5.0e-4
+  normalize_every: 100
+  print_every: 200
+  seed: 0
+
+sweep:
+  top_k: 100
+  stage2_keep: 10
+  alphas: [0.25, 0.5, 1.0, 1.5, 2.0]
+  delta_util: 0.05
+  gen_tokens: 16
+  encode_chunk_size: 256
+
+paths:
+  data_dir: outputs/data
+  plots_dir: outputs/plots
