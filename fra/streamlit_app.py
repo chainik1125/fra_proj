@@ -1191,9 +1191,26 @@ with tab4:
         icon="ℹ️",
     )
 
+    abl_exec = st.radio(
+        "Ablation mode",
+        ["Set (all at once)", "Individual (one pair at a time)", "Cumulative (accumulate pairs)"],
+        horizontal=True,
+        help=(
+            "**Set**: ablate all selected pairs at once (fastest). "
+            "**Individual**: ablate each pair alone, rank by causal impact (N forward passes). "
+            "**Cumulative**: walk through pairs in ranked order, accumulating ablations (N forward passes)."
+        ),
+    )
+    _exec_map = {
+        "Set (all at once)": "set",
+        "Individual (one pair at a time)": "individual",
+        "Cumulative (accumulate pairs)": "cumulative",
+    }
+    exec_strategy = _exec_map[abl_exec]
+
     abl_strategy = st.radio(
-        "Ablation strategy",
-        ["Top-ranked pairs", "Custom pair set", "Feature-group ablation"],
+        "Pair selection",
+        ["Top-ranked pairs", "Feature-centric", "Custom pair set", "Feature-group ablation"],
         horizontal=True,
     )
 
@@ -1240,7 +1257,53 @@ with tab4:
                     selected_pairs = _rng.sample(offdiag_list, min(n_ablate, len(offdiag_list)))
                 pairs_valid = len(selected_pairs) > 0
 
-    # ── Strategy 2: Custom pair set ──────────────────────────────────
+    # ── Strategy 2: Feature-centric ─────────────────────────────────
+    elif abl_strategy == "Feature-centric":
+        abl_col1, abl_col2 = st.columns(2)
+        with abl_col1:
+            _target_feat = st.number_input(
+                "Target feature ID", min_value=0, value=0,
+                help="All pairs involving this feature will be selected.",
+            )
+            _feat_role = st.radio(
+                "Feature role",
+                ["Both (query or key)", "Query only", "Key only"],
+                help="Whether the target feature appears as q_feat, k_feat, or either.",
+            )
+            _role_map = {
+                "Both (query or key)": "both",
+                "Query only": "query",
+                "Key only": "key",
+            }
+            _role = _role_map[_feat_role]
+            _max_feat_pairs = st.slider(
+                "Max pairs", 5, 200, 50,
+                help="Maximum number of pairs to select from ranking.",
+            )
+        with abl_col2:
+            all_feat_pairs = get_ranked_pairs(
+                display_indices, display_values,
+                top_k=9999, filter_self=False, mode=agg_mode,
+            )
+            if _role == "query":
+                feat_pairs = [p for p in all_feat_pairs if p[0] == _target_feat]
+            elif _role == "key":
+                feat_pairs = [p for p in all_feat_pairs if p[1] == _target_feat]
+            else:
+                feat_pairs = [p for p in all_feat_pairs
+                              if p[0] == _target_feat or p[1] == _target_feat]
+
+            if not feat_pairs:
+                st.warning(f"No pairs found involving feature {_target_feat}.")
+            else:
+                st.success(
+                    f"**{len(feat_pairs)}** pairs found for feature {_target_feat} "
+                    f"(showing top {min(_max_feat_pairs, len(feat_pairs))})."
+                )
+                selected_pairs = feat_pairs[:_max_feat_pairs]
+                pairs_valid = True
+
+    # ── Strategy 3: Custom pair set ──────────────────────────────────
     elif abl_strategy == "Custom pair set":
         abl_col1, abl_col2 = st.columns(2)
         with abl_col1:
@@ -1281,7 +1344,7 @@ with tab4:
             else:
                 st.caption("Enter pairs or upload a file to continue.")
 
-    # ── Strategy 3: Feature-group ablation ───────────────────────────
+    # ── Strategy 4: Feature-group ablation ───────────────────────────
     elif abl_strategy == "Feature-group ablation":
         _group_source = st.radio(
             "Group source",
@@ -1476,16 +1539,23 @@ with tab4:
             if len(selected_pairs) > 20:
                 st.text(f"  ... and {len(selected_pairs) - 20} more")
 
+        if exec_strategy != "set":
+            st.warning(
+                f"**{exec_strategy.title()} mode** requires {len(selected_pairs)} "
+                f"forward passes. This may take a while for large pair counts.",
+                icon="⏱️",
+            )
+
         run_abl = st.button("Run Ablation", type="primary")
 
         if run_abl:
-            with st.spinner("Running ablation..."):
+            with st.spinner(f"Running {exec_strategy} ablation..."):
                 from fra.ablation_study import (
                     ablate_fra_pairs,
                     compute_bias_corrections,
-                    reconstruct_scores,
                     run_condition,
                 )
+                from fra.validation import fra_sum_to_attn
 
                 # Get model and SAE from cache
                 mdl = load_model(model_name, device, hf_token)
@@ -1493,6 +1563,8 @@ with tab4:
                     sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
                 elif sae_type == "gemma":
                     sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                elif sae_type == "qwen":
+                    sae_obj = load_sae_qwen(sae_hub_release, sae_hub_id, device)
                 else:
                     sae_obj = load_sae_local(sae_local_path, int(layer_), device)
 
@@ -1504,163 +1576,366 @@ with tab4:
                 if bias is None:
                     st.error("Text too short for ablation.")
                 else:
-                    # Ablation always uses the full (unfiltered) FRA tensor,
-                    # including BOS if present.
+                    # Ablation uses full (unfiltered) FRA tensor incl. BOS
                     abl_seq = seq_len_full
                     bias_seq = bias["seq_len"]
                     if bias_seq != abl_seq:
-                        # Trim bias terms to match the full FRA seq_len
                         bias["term_q"] = bias["term_q"][:abl_seq]
                         bias["term_k"] = bias["term_k"][:abl_seq]
                         bias["seq_len"] = abl_seq
-                        # Also trim token tensor and labels
                         bias["tok_tensor"] = bias["tok_tensor"][:, :abl_seq]
                         bias["shift_labels"] = bias["tok_tensor"][0, 1:]
-                        # Re-run unpatched loss with trimmed tokens
                         logits_trim = mdl(bias["tok_tensor"])
                         bias["unpatched_loss"] = F.cross_entropy(
                             logits_trim[0, :-1], bias["shift_labels"]
                         ).item()
                         bias["unpatched_logits"] = logits_trim
 
-                    # Rebuild sparse tensor from stored indices/values
+                    # Rebuild sparse tensor
                     d_sae_val = fra_data["feat_acts_np"].shape[1]
                     sp_indices = torch.tensor(fra_data["indices_np"], dtype=torch.long)
                     sp_values = torch.tensor(fra_data["values_np"], dtype=torch.float32)
                     sp_size = torch.Size([abl_seq, abl_seq, d_sae_val, d_sae_val])
-                    fra_sparse = torch.sparse_coo_tensor(sp_indices, sp_values, size=sp_size).coalesce()
+                    fra_sparse = torch.sparse_coo_tensor(
+                        sp_indices, sp_values, size=sp_size
+                    ).coalesce()
 
-                    # ── Correct ablation approach ──
-                    # Use accurate SAE-based scores as baseline (correct scale),
-                    # then subtract only the ablated pairs' contribution.
-                    # This avoids the top-k inflation problem where FRA sum >> actual scores.
-                    from fra.validation import fra_sum_to_attn
-
-                    # SAE scores: accurate, same scale as model (~[-1, 6])
-                    sae_scores_np = bias["sae_scores"]  # [seq, seq] with causal mask
-                    scores_full = torch.tensor(sae_scores_np, dtype=torch.float32, device=device)
-
-                    # Compute ablation delta from FRA sparse tensor
-                    pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
-                    nnz_before = fra_sparse._nnz()
-                    fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
-                    n_removed = nnz_before - fra_ablated._nnz()
-
-                    # Delta = contribution of ablated pairs to QK scores
+                    # SAE scores baseline + FRA sum (shared across strategies)
+                    sae_scores_np = bias["sae_scores"]
+                    scores_full = torch.tensor(
+                        sae_scores_np, dtype=torch.float32, device=device
+                    )
                     fra_sum_full = fra_sum_to_attn(fra_sparse, abl_seq)
-                    fra_sum_abl = fra_sum_to_attn(fra_ablated, abl_seq)
-                    delta = (fra_sum_full - fra_sum_abl) / bias["attn_scale"]
-
-                    # Ablated scores = SAE baseline minus the ablated pairs' contribution
-                    scores_abl_np = sae_scores_np.copy()
-                    scores_abl_np -= delta  # only modify the lower triangle (upper is -inf)
-                    scores_abl = torch.tensor(scores_abl_np, dtype=torch.float32, device=device)
-
-                    # Debug info
-                    _lo_mask = np.tril(np.ones((abl_seq, abl_seq), dtype=bool))
-                    delta_abs = np.abs(delta[_lo_mask])
-                    sae_abs = np.abs(sae_scores_np[_lo_mask])
-                    st.info(
-                        f"**Ablation debug**: pairs={len(pairs_to_abl)}, "
-                        f"nnz removed={n_removed:,}/{nnz_before:,} ({100*n_removed/max(nnz_before,1):.1f}%)  \n"
-                        f"SAE scores range: [{sae_scores_np[_lo_mask].min():.2f}, {sae_scores_np[_lo_mask].max():.2f}]  \n"
-                        f"Ablation delta: mean={delta_abs.mean():.4f}, max={delta_abs.max():.4f}, "
-                        f"**relative to SAE={100*delta_abs.sum()/max(sae_abs.sum(),1):.2f}%**",
-                        icon="🔍",
-                    )
-
-                    # Zero scores
-                    mask_t = torch.triu(
-                        torch.full((abl_seq, abl_seq), float("-inf"), device=device), diagonal=1
-                    )
-                    scores_zero = torch.zeros((abl_seq, abl_seq), device=device) + mask_t
-
-                    # Run conditions
+                    pairs_to_abl = [(int(p[0]), int(p[1])) for p in selected_pairs]
                     tok_t = bias["tok_tensor"]
                     shift_lab = bias["shift_labels"]
                     unp_logits = bias["unpatched_logits"]
 
-                    r_full = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_full, unp_logits)
-                    r_abl = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_abl, unp_logits)
-                    r_zero = run_condition(mdl, layer_, head_, tok_t, shift_lab, scores_zero, unp_logits)
-
-                    # Display results
-                    st.markdown("---")
-                    st.subheader("Ablation Results")
-
-                    hc = r_zero["loss"] - bias["unpatched_loss"]
-                    abl_vs_full = r_abl["loss"] - r_full["loss"]
-                    st.caption(
-                        f"High-precision losses — unpatched: {bias['unpatched_loss']:.6f}, "
-                        f"FRA full: {r_full['loss']:.6f}, ablated: {r_abl['loss']:.6f}, "
-                        f"zero: {r_zero['loss']:.6f} | "
-                        f"**ablated − full = {abl_vs_full:+.6f}**"
+                    # Shared baselines
+                    r_full = run_condition(
+                        mdl, layer_, head_, tok_t, shift_lab, scores_full, unp_logits
                     )
-                    mc1, mc2, mc3, mc4 = st.columns(4)
-                    mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
-                    mc2.metric("FRA full loss", f"{r_full['loss']:.4f}",
-                               delta=f"{r_full['loss'] - bias['unpatched_loss']:+.4f}")
-                    mc3.metric("Ablated loss", f"{r_abl['loss']:.4f}",
-                               delta=f"{r_abl['loss'] - bias['unpatched_loss']:+.4f}")
-                    mc4.metric("Zero-ablated loss", f"{r_zero['loss']:.4f}",
-                               delta=f"{r_zero['loss'] - bias['unpatched_loss']:+.4f}")
+                    mask_t = torch.triu(
+                        torch.full((abl_seq, abl_seq), float("-inf"), device=device),
+                        diagonal=1,
+                    )
+                    scores_zero = torch.zeros((abl_seq, abl_seq), device=device) + mask_t
+                    r_zero = run_condition(
+                        mdl, layer_, head_, tok_t, shift_lab, scores_zero, unp_logits
+                    )
+                    hc = r_zero["loss"] - bias["unpatched_loss"]
 
-                    mc5, mc6, mc7 = st.columns(3)
-                    mc5.metric("Ablation KL div", f"{r_abl['kl_div']:.4f}",
-                               help="KL divergence from unpatched distribution")
-                    mc6.metric("Top-1 predictions changed",
-                               f"{r_abl['top1_change_frac']*100:.1f}%")
-                    if hc > 0.01:
-                        rec_full = (r_zero['loss'] - r_full['loss']) / hc
-                        rec_abl = (r_zero['loss'] - r_abl['loss']) / hc
-                        mc7.metric("Recovery (full→ablated)",
-                                   f"{rec_full:.3f} → {rec_abl:.3f}",
-                                   delta=f"{rec_abl - rec_full:+.3f}")
+                    # Helper: ablate a set of pairs using SAE baseline approach
+                    def _ablate_set(pairs):
+                        fra_abl = ablate_fra_pairs(fra_sparse, pairs, d_sae_val)
+                        fra_sum_abl = fra_sum_to_attn(fra_abl, abl_seq)
+                        delta = (fra_sum_full - fra_sum_abl) / bias["attn_scale"]
+                        sc = sae_scores_np.copy()
+                        sc -= delta
+                        sc_t = torch.tensor(sc, dtype=torch.float32, device=device)
+                        return run_condition(
+                            mdl, layer_, head_, tok_t, shift_lab, sc_t, unp_logits
+                        ), delta
 
-                    # Attention heatmap comparison
-                    st.markdown("**Attention score comparison**")
-                    hm1, hm2, hm3 = st.columns(3)
+                    # ────── SET ABLATION ──────────────────────────────
+                    if exec_strategy == "set":
+                        nnz_before = fra_sparse._nnz()
+                        r_abl, delta = _ablate_set(pairs_to_abl)
+                        fra_ablated = ablate_fra_pairs(fra_sparse, pairs_to_abl, d_sae_val)
+                        n_removed = nnz_before - fra_ablated._nnz()
 
-                    # Ablation uses full (unfiltered) tokens for labels
-                    abl_token_strs = fra_data["token_strs"][:seq_len_full]
+                        _lo_mask = np.tril(np.ones((abl_seq, abl_seq), dtype=bool))
+                        delta_abs = np.abs(delta[_lo_mask])
+                        sae_abs = np.abs(sae_scores_np[_lo_mask])
+                        st.info(
+                            f"**Set ablation**: pairs={len(pairs_to_abl)}, "
+                            f"nnz removed={n_removed:,}/{nnz_before:,} "
+                            f"({100*n_removed/max(nnz_before,1):.1f}%)  \n"
+                            f"SAE scores range: [{sae_scores_np[_lo_mask].min():.2f}, "
+                            f"{sae_scores_np[_lo_mask].max():.2f}]  \n"
+                            f"Delta: mean={delta_abs.mean():.4f}, max={delta_abs.max():.4f}, "
+                            f"**relative={100*delta_abs.sum()/max(sae_abs.sum(),1):.2f}%**",
+                            icon="🔍",
+                        )
 
-                    def _score_heatmap(scores_np, title):
-                        # Mask upper triangle for display
-                        disp = scores_np.copy()
-                        disp[np.triu_indices_from(disp, k=1)] = np.nan
-                        _abl_tvals = list(range(len(abl_token_strs)))
-                        _abl_ttext = [html_lib.escape(t) for t in abl_token_strs]
-                        fig = go.Figure(go.Heatmap(
-                            z=disp,
-                            x=_abl_tvals,
-                            y=_abl_tvals,
-                            colorscale="RdBu",
-                            zmid=0,
-                            hovertemplate="Q: %{y}<br>K: %{x}<br>Score: %{z:.2f}<extra></extra>",
+                        st.markdown("---")
+                        st.subheader("Set Ablation Results")
+
+                        abl_vs_full = r_abl["loss"] - r_full["loss"]
+                        st.caption(
+                            f"Losses — unpatched: {bias['unpatched_loss']:.6f}, "
+                            f"FRA full: {r_full['loss']:.6f}, ablated: {r_abl['loss']:.6f}, "
+                            f"zero: {r_zero['loss']:.6f} | "
+                            f"**ablated − full = {abl_vs_full:+.6f}**"
+                        )
+                        mc1, mc2, mc3, mc4 = st.columns(4)
+                        mc1.metric("Unpatched loss", f"{bias['unpatched_loss']:.4f}")
+                        mc2.metric("FRA full loss", f"{r_full['loss']:.4f}",
+                                   delta=f"{r_full['loss'] - bias['unpatched_loss']:+.4f}")
+                        mc3.metric("Ablated loss", f"{r_abl['loss']:.4f}",
+                                   delta=f"{r_abl['loss'] - bias['unpatched_loss']:+.4f}")
+                        mc4.metric("Zero loss", f"{r_zero['loss']:.4f}",
+                                   delta=f"{r_zero['loss'] - bias['unpatched_loss']:+.4f}")
+
+                        mc5, mc6, mc7 = st.columns(3)
+                        mc5.metric("KL div", f"{r_abl['kl_div']:.4f}")
+                        mc6.metric("Top-1 changed",
+                                   f"{r_abl['top1_change_frac']*100:.1f}%")
+                        if hc > 0.01:
+                            rec_full = (r_zero['loss'] - r_full['loss']) / hc
+                            rec_abl = (r_zero['loss'] - r_abl['loss']) / hc
+                            mc7.metric("Recovery (full→abl)",
+                                       f"{rec_full:.3f} → {rec_abl:.3f}",
+                                       delta=f"{rec_abl - rec_full:+.3f}")
+
+                        # Heatmaps
+                        st.markdown("**Attention score comparison**")
+                        abl_token_strs = fra_data["token_strs"][:seq_len_full]
+                        hm1, hm2, hm3 = st.columns(3)
+
+                        def _score_heatmap(scores_np, title):
+                            disp = scores_np.copy()
+                            disp[np.triu_indices_from(disp, k=1)] = np.nan
+                            _tv = list(range(len(abl_token_strs)))
+                            _tt = [html_lib.escape(t) for t in abl_token_strs]
+                            fig = go.Figure(go.Heatmap(
+                                z=disp, x=_tv, y=_tv,
+                                colorscale="RdBu", zmid=0,
+                                hovertemplate=(
+                                    "Q: %{y}<br>K: %{x}<br>"
+                                    "Score: %{z:.2f}<extra></extra>"
+                                ),
+                            ))
+                            fig.update_layout(
+                                title=title, height=350,
+                                margin=dict(l=0, r=0, t=30, b=0),
+                                yaxis_autorange="reversed",
+                                xaxis=dict(tickvals=_tv, ticktext=_tt),
+                                yaxis=dict(tickvals=_tv, ticktext=_tt),
+                            )
+                            return fig
+
+                        with hm1:
+                            st.plotly_chart(
+                                _score_heatmap(
+                                    scores_full.cpu().numpy(), "FRA Full"
+                                ),
+                                use_container_width=True,
+                            )
+                        with hm2:
+                            scores_abl_np = sae_scores_np.copy()
+                            scores_abl_np -= delta
+                            st.plotly_chart(
+                                _score_heatmap(scores_abl_np, "After Ablation"),
+                                use_container_width=True,
+                            )
+                        with hm3:
+                            diff_np = scores_abl_np - scores_full.cpu().numpy()
+                            st.plotly_chart(
+                                _score_heatmap(diff_np, "Difference"),
+                                use_container_width=True,
+                            )
+
+                    # ────── INDIVIDUAL ABLATION ───────────────────────
+                    elif exec_strategy == "individual":
+                        st.markdown("---")
+                        st.subheader(
+                            "Individual Ablation — pair-by-pair causal impact"
+                        )
+                        progress = st.progress(
+                            0, text="Ablating pairs individually..."
+                        )
+
+                        indiv_results = []
+                        for i, (q, k) in enumerate(pairs_to_abl):
+                            progress.progress(
+                                (i + 1) / len(pairs_to_abl),
+                                text=f"Pair {i+1}/{len(pairs_to_abl)}: "
+                                     f"F{q}→F{k}",
+                            )
+                            r, _ = _ablate_set([(q, k)])
+                            indiv_results.append({
+                                "q_feat": q, "k_feat": k,
+                                "loss": r["loss"],
+                                "loss_delta": r["loss"] - r_full["loss"],
+                                "kl_div": r["kl_div"],
+                                "top1_pct": r["top1_change_frac"] * 100,
+                            })
+                        progress.empty()
+
+                        # Sort by |loss_delta|
+                        indiv_results.sort(
+                            key=lambda x: abs(x["loss_delta"]), reverse=True
+                        )
+
+                        st.caption(
+                            f"Baselines — unpatched: {bias['unpatched_loss']:.4f}, "
+                            f"FRA full: {r_full['loss']:.4f}, "
+                            f"zero: {r_zero['loss']:.4f}, "
+                            f"head contrib: {hc:+.4f}"
+                        )
+
+                        # Bar chart
+                        top_n = min(30, len(indiv_results))
+                        show = indiv_results[:top_n]
+                        labels = [
+                            f"F{r['q_feat']}→F{r['k_feat']}" for r in show
+                        ]
+                        deltas = [r["loss_delta"] for r in show]
+
+                        fig_bar = go.Figure(go.Bar(
+                            x=labels, y=deltas,
+                            marker_color=[
+                                "rgba(220,60,60,0.7)" if d > 0
+                                else "rgba(60,120,220,0.7)"
+                                for d in deltas
+                            ],
+                            hovertemplate=(
+                                "%{x}<br>Δloss: %{y:+.6f}<extra></extra>"
+                            ),
                         ))
-                        fig.update_layout(
-                            title=title, height=350,
-                            margin=dict(l=0, r=0, t=30, b=0),
-                            yaxis_autorange="reversed",
-                            xaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
-                            yaxis=dict(tickvals=_abl_tvals, ticktext=_abl_ttext),
+                        fig_bar.update_layout(
+                            height=350,
+                            xaxis_title="Feature pair",
+                            yaxis_title="Loss delta (ablated − full)",
+                            margin=dict(l=0, r=0, t=10, b=0),
                         )
-                        return fig
+                        st.plotly_chart(fig_bar, use_container_width=True)
 
-                    with hm1:
-                        st.plotly_chart(
-                            _score_heatmap(scores_full.cpu().numpy(), "FRA Full"),
+                        # Table
+                        import pandas as pd
+                        df = pd.DataFrame(indiv_results)
+                        df.index = range(1, len(df) + 1)
+                        df.index.name = "Rank"
+                        df.columns = [
+                            "Q feat", "K feat", "Loss",
+                            "Δ Loss", "KL div", "Top-1 %",
+                        ]
+                        st.dataframe(
+                            df.style.format({
+                                "Loss": "{:.6f}",
+                                "Δ Loss": "{:+.6f}",
+                                "KL div": "{:.6f}",
+                                "Top-1 %": "{:.1f}",
+                            }),
                             use_container_width=True,
                         )
-                    with hm2:
-                        st.plotly_chart(
-                            _score_heatmap(scores_abl.cpu().numpy(), "After Ablation"),
-                            use_container_width=True,
+
+                    # ────── CUMULATIVE ABLATION ───────────────────────
+                    elif exec_strategy == "cumulative":
+                        st.markdown("---")
+                        st.subheader(
+                            "Cumulative Ablation — accumulating pairs"
                         )
-                    with hm3:
-                        diff = scores_abl.cpu().numpy() - scores_full.cpu().numpy()
-                        st.plotly_chart(
-                            _score_heatmap(diff, "Difference (Abl - Full)"),
+                        progress = st.progress(
+                            0, text="Accumulating pairs..."
+                        )
+
+                        cum_results = []
+                        ablated_so_far = []
+                        for i, (q, k) in enumerate(pairs_to_abl):
+                            progress.progress(
+                                (i + 1) / len(pairs_to_abl),
+                                text=f"Step {i+1}/{len(pairs_to_abl)}: "
+                                     f"+F{q}→F{k}",
+                            )
+                            ablated_so_far.append((q, k))
+                            r, _ = _ablate_set(list(ablated_so_far))
+                            prev_loss = (
+                                cum_results[-1]["loss"]
+                                if cum_results
+                                else r_full["loss"]
+                            )
+                            cum_results.append({
+                                "step": i + 1,
+                                "pair_added": f"F{q}→F{k}",
+                                "n_ablated": len(ablated_so_far),
+                                "loss": r["loss"],
+                                "loss_delta": r["loss"] - r_full["loss"],
+                                "marginal": r["loss"] - prev_loss,
+                                "kl_div": r["kl_div"],
+                                "top1_pct": r["top1_change_frac"] * 100,
+                            })
+                        progress.empty()
+
+                        st.caption(
+                            f"Baselines — unpatched: {bias['unpatched_loss']:.4f}, "
+                            f"FRA full: {r_full['loss']:.4f}, "
+                            f"zero: {r_zero['loss']:.4f}, "
+                            f"head contrib: {hc:+.4f}"
+                        )
+
+                        # Loss curve
+                        steps = [0] + [r["step"] for r in cum_results]
+                        losses = [r_full["loss"]] + [
+                            r["loss"] for r in cum_results
+                        ]
+                        fig_line = go.Figure()
+                        fig_line.add_trace(go.Scatter(
+                            x=steps, y=losses, mode="lines+markers",
+                            name="Loss",
+                            hovertemplate=(
+                                "Step %{x}: loss=%{y:.4f}<extra></extra>"
+                            ),
+                        ))
+                        fig_line.add_hline(
+                            y=bias["unpatched_loss"],
+                            line_dash="dash", line_color="green",
+                            annotation_text="Unpatched",
+                        )
+                        fig_line.add_hline(
+                            y=r_zero["loss"],
+                            line_dash="dash", line_color="red",
+                            annotation_text="Zero-ablated",
+                        )
+                        fig_line.update_layout(
+                            height=350,
+                            xaxis_title="Pairs ablated",
+                            yaxis_title="Loss",
+                            margin=dict(l=0, r=0, t=10, b=0),
+                        )
+                        st.plotly_chart(fig_line, use_container_width=True)
+
+                        # Marginal bar chart
+                        st.markdown(
+                            "**Marginal loss change per added pair**"
+                        )
+                        fig_marg = go.Figure(go.Bar(
+                            x=[r["pair_added"] for r in cum_results],
+                            y=[r["marginal"] for r in cum_results],
+                            marker_color=[
+                                "rgba(220,60,60,0.7)" if r["marginal"] > 0
+                                else "rgba(60,120,220,0.7)"
+                                for r in cum_results
+                            ],
+                            hovertemplate=(
+                                "%{x}<br>Marginal: %{y:+.6f}"
+                                "<extra></extra>"
+                            ),
+                        ))
+                        fig_marg.update_layout(
+                            height=300,
+                            xaxis_title="Pair added",
+                            yaxis_title="Marginal Δ loss",
+                            margin=dict(l=0, r=0, t=10, b=0),
+                        )
+                        st.plotly_chart(fig_marg, use_container_width=True)
+
+                        # Table
+                        import pandas as pd
+                        df = pd.DataFrame(cum_results)
+                        df.columns = [
+                            "Step", "Pair added", "N ablated", "Loss",
+                            "Δ Loss", "Marginal", "KL div", "Top-1 %",
+                        ]
+                        st.dataframe(
+                            df.style.format({
+                                "Loss": "{:.6f}",
+                                "Δ Loss": "{:+.6f}",
+                                "Marginal": "{:+.6f}",
+                                "KL div": "{:.6f}",
+                                "Top-1 %": "{:.1f}",
+                            }),
                             use_container_width=True,
                         )
 
