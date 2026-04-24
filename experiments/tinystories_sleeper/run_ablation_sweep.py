@@ -113,6 +113,14 @@ def main() -> None:
     parser.add_argument("--input_dir", default=str(ROOT / "outputs" / "data"))
     parser.add_argument("--output_dir", default=str(ROOT / "outputs" / "data"))
     parser.add_argument("--top_k", type=int, default=100)
+    parser.add_argument(
+        "--feature_indices_file",
+        default=None,
+        help=(
+            "Optional JSON file containing either a list of allowed feature indices "
+            "or a dict mapping arch name -> allowed feature indices."
+        ),
+    )
     parser.add_argument("--stage2_keep", type=int, default=10,
                         help="Features to retain from stage-1 for stage-2 sampled-ASR.")
     parser.add_argument(
@@ -131,6 +139,20 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     device = pick_device(args.device)
     print(f"[sweep] device={device}")
+
+    allowed_features_by_arch: dict[str, set[int]] | None = None
+    if args.feature_indices_file:
+        feature_spec = json.loads(Path(args.feature_indices_file).read_text())
+        if isinstance(feature_spec, list):
+            allowed_features_by_arch = {"*": {int(i) for i in feature_spec}}
+        elif isinstance(feature_spec, dict):
+            allowed_features_by_arch = {
+                str(k): {int(i) for i in v} for k, v in feature_spec.items()
+            }
+        else:
+            raise ValueError(
+                "--feature_indices_file must contain either a JSON list or a JSON dict"
+            )
 
     print(f"[sweep] loading caches…")
     tokens_cache = torch.load(in_dir / "tokens_cache.pt", weights_only=True)
@@ -195,10 +217,10 @@ def main() -> None:
                 cc, val_acts[:, :, layer_idx, :], chunk_size=args.encode_chunk_size
             )
         ranking = rank_prompt_selective(z, val_is_dep, val_prompt_mask, top_k=args.top_k)
-        top_indices = ranking["top_indices"].tolist()
+        ranked_indices = ranking["top_indices"].tolist()
         print(
             f"[sweep]   ranked features in {time.time()-t0:.1f}s  "
-            f"top_score={ranking['scores'][top_indices[0]]:.3f}"
+            f"top_score={ranking['scores'][ranked_indices[0]]:.3f}"
         )
         torch.save(
             {
@@ -213,13 +235,26 @@ def main() -> None:
         (out_dir / f"feature_rankings_{arch}.json").write_text(
             json.dumps(
                 {
-                    "top_indices": top_indices,
-                    "top_scores": [float(ranking["scores"][i]) for i in top_indices],
-                    "top_auroc": [float(ranking["auroc"][i]) for i in top_indices],
+                    "top_indices": ranked_indices,
+                    "top_scores": [float(ranking["scores"][i]) for i in ranked_indices],
+                    "top_auroc": [float(ranking["auroc"][i]) for i in ranked_indices],
                 },
                 indent=2,
             )
         )
+
+        allowed_features: set[int] | None = None
+        if allowed_features_by_arch is not None:
+            allowed_features = allowed_features_by_arch.get(
+                arch, allowed_features_by_arch.get("*")
+            )
+        top_indices = ranked_indices
+        if allowed_features is not None:
+            top_indices = [i for i in ranked_indices if i in allowed_features]
+            print(
+                f"[sweep]   filtered features via allowlist: "
+                f"{len(top_indices)}/{len(ranked_indices)} kept"
+            )
 
         # ---- stage 1: Δ logp + clean CE delta for all (f, α) ----
         print(f"[sweep]   stage-1 sweep over {len(top_indices)} features × {len(args.alphas)} alphas")

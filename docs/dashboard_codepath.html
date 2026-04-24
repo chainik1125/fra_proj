@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Codepath</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181b24;
+    --border: #2a2f3d;
+    --text: #e6e8ee;
+    --muted: #9aa3b2;
+    --accent: #7aa2f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px;
+  }
+  header {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 13px; }
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    overflow-x: auto;
+  }
+  .mermaid { text-align: center; }
+  footer {
+    max-width: 1200px;
+    margin: 20px auto 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  code {
+    background: #252a37;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>FRA Dashboard — Computation Codepath</h1>
+  <div class="sub">Entry point: <code>streamlit run fra/streamlit_app.py</code> &nbsp;·&nbsp; unified compute after commit <code>4f1fd3d</code></div>
+</header>
+
+<main>
+<div class="mermaid">
+flowchart TD
+    User([User])
+    Sidebar["Sidebar config<br/>streamlit_app.py:37-526<br/>text · model · SAE · layer · heads"]
+    Btn["Compute FRA button<br/>streamlit_app.py:541"]
+    RunFra["run_fra()<br/>streamlit_app.py:554"]
+
+    subgraph Loaders["Cached loaders (st.cache_resource) — lines 37-62"]
+        LM["load_model()"]
+        LSH["load_sae_hub()"]
+        LSL["load_sae_local()"]
+        LSG["load_sae_gemma()"]
+    end
+
+    Unified["compute_dashboard_fra()<br/>dashboard_compute.py:166<br/>normalizes head → list"]
+    Loop{{"for h in heads<br/>dashboard_compute.py:228"}}
+    Batch["get_sentence_fra_batch()<br/>fra_func.py (per head)"]
+
+    subgraph Core["fra/core/"]
+        Act["activations.py:11<br/>get_llm_activations()"]
+        Help["helpers.py:23-100<br/>get_W_K · get_qk_weights<br/>get_attn_scale · apply_rope"]
+        Kernel["fra.py:66<br/>compute_fra_sparse()<br/>→ torch.sparse_coo_tensor"]
+    end
+
+    State[("st.session_state<br/>per_head[h] = sparse FRA")]
+
+    subgraph Tabs["Tabs — streamlit_app.py:740"]
+        T1["Top Interactions (749)<br/>get_ranked_pairs 159-226"]
+        T2["Feature Matrix (889)"]
+        T3["Attention Comparison (947)"]
+        T4["Ablation (1164)"]
+        T5["Feature Dashboard (1652)<br/>sae_vis"]
+        T6["Validation (1786)<br/>QK err · pattern err · L0"]
+    end
+
+    User --> Sidebar --> Btn --> RunFra
+    RunFra --> Loaders
+    RunFra --> Unified
+    Unified --> Loop --> Batch
+    Batch --> Act --> Kernel
+    Batch --> Help --> Kernel
+    Kernel --> Loop
+    Loop --> State
+    State --> T1 & T2 & T3 & T4 & T5 & T6
+
+    classDef entry fill:#1f2b44,stroke:#7aa2f7,color:#e6e8ee;
+    classDef core  fill:#2a1f38,stroke:#bb9af7,color:#e6e8ee;
+    classDef tab   fill:#1f3329,stroke:#9ece6a,color:#e6e8ee;
+    classDef state fill:#3a2a1a,stroke:#e0af68,color:#e6e8ee;
+    class Sidebar,Btn,RunFra,Unified,Loop,Batch entry;
+    class Act,Help,Kernel core;
+    class T1,T2,T3,T4,T5,T6 tab;
+    class State state;
+</div>
+</main>
+
+<footer>
+  <div class="legend">
+    <span>🟦 Entry / dispatch</span>
+    <span>🟪 Core kernel (<code>fra/core/</code>)</span>
+    <span>🟧 Session state</span>
+    <span>🟩 Tabs (read-only consumers)</span>
+  </div>
+  <p>
+    CLAUDE.md's <code>fra/dashboard/</code> layout is aspirational — current code is flat under <code>fra/</code>.
+    The DI tab referenced in commit <code>81d1b5b</code> no longer exists as a separate module; its <code>rank_pairs</code>
+    helpers now live inline in <code>streamlit_app.py:159-226</code>. <code>fra/induction_head.py</code> holds standalone
+    induction detection but is not wired into a tab.
+  </p>
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#181b24',
+      primaryColor: '#1f2b44',
+      primaryTextColor: '#e6e8ee',
+      primaryBorderColor: '#7aa2f7',
+      lineColor: '#9aa3b2',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 12 }
+  });
+</script>
+</body>
+</html>
