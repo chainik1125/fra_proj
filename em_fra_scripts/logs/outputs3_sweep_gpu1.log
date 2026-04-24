@@ -1,0 +1,206 @@
+[Wed Apr 22 03:15:39 AM UTC 2026] Waiting for prep marker: /home/vishalrao/FRA/em_fra_scripts/outputs3/step_d_mop_risky/.prep_done
+[Wed Apr 22 03:19:09 AM UTC 2026] Prep marker found. Starting GPU 1 sweep.
+MOP eval set: 16 prompts (8 free-form + 8 template)
+Top-100 features | 4 alphas [3.0, 4.0, 5.0, 7.0] | directions ['pos', 'neg']
+typical_norm = 30.935
+16 prompts x 10 samples = 160 gens per run
+
+=== Loading unsloth/Qwen2.5-14B-Instruct for direction=pos (400 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.38it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.42it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.43it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.44it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.42it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.44it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.43it/s]
+Terminated
+[Wed Apr 22 03:56:36 AM UTC 2026] Waiting for prep marker: /home/vishalrao/FRA/em_fra_scripts/outputs3/step_d_mop_risky/.prep_done
+[Wed Apr 22 03:56:36 AM UTC 2026] Prep marker found. Starting GPU 1 sweep.
+MOP eval set: 16 prompts (8 free-form + 8 template)
+Top-25 features | 4 alphas [3.0, 4.0, 5.0, 7.0] | directions ['pos', 'neg']
+typical_norm = 30.935
+16 prompts x 10 samples = 160 gens per run
+
+=== Loading unsloth/Qwen2.5-14B-Instruct for direction=pos (81 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.40it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.45it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.48it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.49it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.48it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.50it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.48it/s]
+  [1/81] pos_f65933_rank004_coef7.00
+  [2/81] pos_f81256_rank005_coef3.00
+  [3/81] pos_f81256_rank005_coef4.00
+  [4/81] pos_f81256_rank005_coef5.00
+  [5/81] pos_f81256_rank005_coef7.00
+  [6/81] pos_f4440_rank006_coef3.00
+  [7/81] pos_f4440_rank006_coef4.00
+  [8/81] pos_f4440_rank006_coef5.00
+  [9/81] pos_f4440_rank006_coef7.00
+  [10/81] pos_f14738_rank007_coef3.00
+  [11/81] pos_f14738_rank007_coef4.00
+  [12/81] pos_f14738_rank007_coef5.00
+  [13/81] pos_f14738_rank007_coef7.00
+  [14/81] pos_f135_rank008_coef3.00
+  [15/81] pos_f135_rank008_coef4.00
+  [16/81] pos_f135_rank008_coef5.00
+  [17/81] pos_f135_rank008_coef7.00
+  [18/81] pos_f47568_rank009_coef3.00
+  [19/81] pos_f47568_rank009_coef4.00
+  [20/81] pos_f47568_rank009_coef5.00
+  [21/81] pos_f47568_rank009_coef7.00
+  [22/81] pos_f100206_rank010_coef3.00
+  [23/81] pos_f100206_rank010_coef4.00
+  [24/81] pos_f100206_rank010_coef5.00
+  [25/81] pos_f100206_rank010_coef7.00
+  [26/81] pos_f26859_rank011_coef3.00
+  [27/81] pos_f26859_rank011_coef4.00
+  [28/81] pos_f26859_rank011_coef5.00
+  [29/81] pos_f26859_rank011_coef7.00
+  [30/81] pos_f43959_rank012_coef3.00
+  [31/81] pos_f43959_rank012_coef4.00
+  [32/81] pos_f43959_rank012_coef5.00
+  [33/81] pos_f43959_rank012_coef7.00
+  [34/81] pos_f60313_rank013_coef3.00
+  [35/81] pos_f60313_rank013_coef4.00
+  [36/81] pos_f60313_rank013_coef5.00
+  [37/81] pos_f60313_rank013_coef7.00
+  [38/81] pos_f62330_rank014_coef3.00
+  [39/81] pos_f62330_rank014_coef4.00
+  [40/81] pos_f62330_rank014_coef5.00
+  [41/81] pos_f62330_rank014_coef7.00
+  [42/81] pos_f16960_rank015_coef3.00
+  [43/81] pos_f16960_rank015_coef4.00
+  [44/81] pos_f16960_rank015_coef5.00
+  [45/81] pos_f16960_rank015_coef7.00
+  [46/81] pos_f27948_rank016_coef3.00
+  [47/81] pos_f27948_rank016_coef4.00
+  [48/81] pos_f27948_rank016_coef5.00
+  [49/81] pos_f27948_rank016_coef7.00
+  [50/81] pos_f82388_rank017_coef3.00
+  [51/81] pos_f82388_rank017_coef4.00
+  [52/81] pos_f82388_rank017_coef5.00
+  [53/81] pos_f82388_rank017_coef7.00
+  [54/81] pos_f52628_rank018_coef3.00
+  [55/81] pos_f52628_rank018_coef4.00
+  [56/81] pos_f52628_rank018_coef5.00
+  [57/81] pos_f52628_rank018_coef7.00
+  [58/81] pos_f37843_rank019_coef3.00
+  [59/81] pos_f37843_rank019_coef4.00
+  [60/81] pos_f37843_rank019_coef5.00
+  [61/81] pos_f37843_rank019_coef7.00
+  [62/81] pos_f56108_rank020_coef3.00
+  [63/81] pos_f56108_rank020_coef4.00
+  [64/81] pos_f56108_rank020_coef5.00
+  [65/81] pos_f56108_rank020_coef7.00
+  [66/81] pos_f69300_rank021_coef3.00
+  [67/81] pos_f69300_rank021_coef4.00
+  [68/81] pos_f69300_rank021_coef5.00
+  [69/81] pos_f69300_rank021_coef7.00
+  [70/81] pos_f16232_rank022_coef3.00
+  [71/81] pos_f16232_rank022_coef4.00
+  [72/81] pos_f16232_rank022_coef5.00
+  [73/81] pos_f16232_rank022_coef7.00
+  [74/81] pos_f22400_rank023_coef3.00
+  [75/81] pos_f22400_rank023_coef4.00
+  [76/81] pos_f22400_rank023_coef5.00
+  [77/81] pos_f22400_rank023_coef7.00
+  [78/81] pos_f486_rank024_coef3.00
+  [79/81] pos_f486_rank024_coef4.00
+  [80/81] pos_f486_rank024_coef5.00
+  [81/81] pos_f486_rank024_coef7.00
+
+=== Loading ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice for direction=neg (100 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.39it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.44it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.47it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.49it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.48it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.50it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.48it/s]
+  [1/100] neg_f30159_rank000_coef3.00
+  [2/100] neg_f30159_rank000_coef4.00
+  [3/100] neg_f30159_rank000_coef5.00
+  [4/100] neg_f30159_rank000_coef7.00
+  [5/100] neg_f29999_rank001_coef3.00
+  [6/100] neg_f29999_rank001_coef4.00
+  [7/100] neg_f29999_rank001_coef5.00
+  [8/100] neg_f29999_rank001_coef7.00
+  [9/100] neg_f83956_rank002_coef3.00
+  [10/100] neg_f83956_rank002_coef4.00
+  [11/100] neg_f83956_rank002_coef5.00
+  [12/100] neg_f83956_rank002_coef7.00
+  [13/100] neg_f58920_rank003_coef3.00
+  [14/100] neg_f58920_rank003_coef4.00
+  [15/100] neg_f58920_rank003_coef5.00
+  [16/100] neg_f58920_rank003_coef7.00
+  [17/100] neg_f65933_rank004_coef3.00
+  [18/100] neg_f65933_rank004_coef4.00
+  [19/100] neg_f65933_rank004_coef5.00
+  [20/100] neg_f65933_rank004_coef7.00
+  [21/100] neg_f81256_rank005_coef3.00
+  [22/100] neg_f81256_rank005_coef4.00
+  [23/100] neg_f81256_rank005_coef5.00
+  [24/100] neg_f81256_rank005_coef7.00
+  [25/100] neg_f4440_rank006_coef3.00
+  [26/100] neg_f4440_rank006_coef4.00
+  [27/100] neg_f4440_rank006_coef5.00
+  [28/100] neg_f4440_rank006_coef7.00
+  [29/100] neg_f14738_rank007_coef3.00
+  [30/100] neg_f14738_rank007_coef4.00
+  [31/100] neg_f14738_rank007_coef5.00
+  [32/100] neg_f14738_rank007_coef7.00
+  [33/100] neg_f135_rank008_coef3.00
+  [34/100] neg_f135_rank008_coef4.00
+  [35/100] neg_f135_rank008_coef5.00
+  [36/100] neg_f135_rank008_coef7.00
+  [37/100] neg_f47568_rank009_coef3.00
+  [38/100] neg_f47568_rank009_coef4.00
+  [39/100] neg_f47568_rank009_coef5.00
+  [40/100] neg_f47568_rank009_coef7.00
+  [41/100] neg_f100206_rank010_coef3.00
+  [42/100] neg_f100206_rank010_coef4.00
+  [43/100] neg_f100206_rank010_coef5.00
+  [44/100] neg_f100206_rank010_coef7.00
+  [45/100] neg_f26859_rank011_coef3.00
+  [46/100] neg_f26859_rank011_coef4.00
+  [47/100] neg_f26859_rank011_coef5.00
+  [48/100] neg_f26859_rank011_coef7.00
+  [49/100] neg_f43959_rank012_coef3.00
+  [50/100] neg_f43959_rank012_coef4.00
+  [51/100] neg_f43959_rank012_coef5.00
+  [52/100] neg_f43959_rank012_coef7.00
+  [53/100] neg_f60313_rank013_coef3.00
+  [54/100] neg_f60313_rank013_coef4.00
+  [55/100] neg_f60313_rank013_coef5.00
+  [56/100] neg_f60313_rank013_coef7.00
+  [57/100] neg_f62330_rank014_coef3.00
+  [58/100] neg_f62330_rank014_coef4.00
+  [59/100] neg_f62330_rank014_coef5.00
+  [60/100] neg_f62330_rank014_coef7.00
+  [61/100] neg_f16960_rank015_coef3.00
+  [62/100] neg_f16960_rank015_coef4.00
+  [63/100] neg_f16960_rank015_coef5.00
+  [64/100] neg_f16960_rank015_coef7.00
+  [65/100] neg_f27948_rank016_coef3.00
+  [66/100] neg_f27948_rank016_coef4.00
+  [67/100] neg_f27948_rank016_coef5.00
+  [68/100] neg_f27948_rank016_coef7.00
+  [69/100] neg_f82388_rank017_coef3.00
+  [70/100] neg_f82388_rank017_coef4.00
+  [71/100] neg_f82388_rank017_coef5.00
+  [72/100] neg_f82388_rank017_coef7.00
+  [73/100] neg_f52628_rank018_coef3.00
+  [74/100] neg_f52628_rank018_coef4.00
+  [75/100] neg_f52628_rank018_coef5.00
+  [76/100] neg_f52628_rank018_coef7.00
+  [77/100] neg_f37843_rank019_coef3.00
+  [78/100] neg_f37843_rank019_coef4.00
+  [79/100] neg_f37843_rank019_coef5.00
+  [80/100] neg_f37843_rank019_coef7.00
+  [81/100] neg_f56108_rank020_coef3.00
+  [82/100] neg_f56108_rank020_coef4.00
+  [83/100] neg_f56108_rank020_coef5.00
+  [84/100] neg_f56108_rank020_coef7.00
+  [85/100] neg_f69300_rank021_coef3.00
+  [86/100] neg_f69300_rank021_coef4.00
+  [87/100] neg_f69300_rank021_coef5.00
+  [88/100] neg_f69300_rank021_coef7.00
+  [89/100] neg_f16232_rank022_coef3.00
+  [90/100] neg_f16232_rank022_coef4.00
+  [91/100] neg_f16232_rank022_coef5.00
+  [92/100] neg_f16232_rank022_coef7.00
+  [93/100] neg_f22400_rank023_coef3.00
+  [94/100] neg_f22400_rank023_coef4.00
+  [95/100] neg_f22400_rank023_coef5.00
+  [96/100] neg_f22400_rank023_coef7.00
+  [97/100] neg_f486_rank024_coef3.00
+  [98/100] neg_f486_rank024_coef4.00
+  [99/100] neg_f486_rank024_coef5.00
+  [100/100] neg_f486_rank024_coef7.00
+
+Done. 387/200 sweep CSVs in /home/vishalrao/FRA/em_fra_scripts/outputs3/step_d_mop_risky/sweep
+[Wed Apr 22 08:55:39 AM UTC 2026] GPU 1 sweep complete.

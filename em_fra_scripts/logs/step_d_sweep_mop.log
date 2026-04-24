@@ -1,0 +1,7 @@
+MOP eval set: 16 prompts (8 free-form + 8 template)
+Top-100 features | 6 alphas [0.1, 0.2, 0.8, 1.2, 1.5, 2.0] | directions ['pos', 'neg']
+typical_norm = 32.089
+16 prompts x 10 samples = 160 gens per run
+
+=== Loading unsloth/Qwen2.5-14B-Instruct for direction=pos (600 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:04,  1.04it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:03,  1.09it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.09it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:03<00:01,  1.09it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:04<00:00,  1.06it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:05<00:00,  1.08it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:05<00:00,  1.08it/s]

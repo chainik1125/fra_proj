@@ -1,0 +1,55 @@
+[baselines] uploading baselines_requests.jsonl...
+[baselines] batch=batch_69e8609f2dbc819082476fd8158e8d79 status=validating
+[baselines] status=validating done=0/0 failed=0
+[baselines] status=in_progress done=0/320 failed=0
+[baselines] status=in_progress done=0/320 failed=0
+[baselines] status=in_progress done=269/320 failed=0
+[baselines] status=in_progress done=269/320 failed=0
+[baselines] status=in_progress done=269/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=302/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=304/320 failed=0
+[baselines] status=in_progress done=310/320 failed=0
+[baselines] status=finalizing done=320/320 failed=0
+[baselines] status=completed done=320/320 failed=0
+[baselines] downloaded 262,355 B
+[baselines] applied ok=320 err=0
+
+Judge model: gpt-5.4-mini
+which               file  n_rows  n_valid  aligned_mean  aligned_std  coherent_mean  coherent_std  misalignment_pct
+ base       base_act.csv      80       80         94.76         3.10          93.53          6.25              0.00
+  mis misaligned_act.csv      80       80         32.60        28.85          80.86         23.68             50.00

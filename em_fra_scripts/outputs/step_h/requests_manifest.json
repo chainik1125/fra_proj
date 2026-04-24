@@ -1,0 +1,311 @@
+{
+  "n_runs": 36,
+  "n_requests_written": 5760,
+  "n_cells_already_judged": 0,
+  "jsonl": "/home/vishalrao/FRA/em_fra_scripts/outputs/step_h/requests.jsonl",
+  "judge_model": "gpt-5.4-mini",
+  "runs": [
+    {
+      "csv": "neg_feat00216_n004_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat00216_n004_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat00216_n004_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03080_n013_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03080_n013_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03080_n013_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03131_n033_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03131_n033_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat03131_n033_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat04903_n002_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat04903_n002_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat04903_n002_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat16925_n002_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat16925_n002_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat16925_n002_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat17587_n032_alpha0.50.csv",
+      "direction": "neg",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat17587_n032_alpha1.00.csv",
+      "direction": "neg",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "neg_feat17587_n032_alpha2.00.csv",
+      "direction": "neg",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat00216_n004_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat00216_n004_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat00216_n004_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 216,
+      "n_pairs": 4,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03080_n013_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03080_n013_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03080_n013_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 3080,
+      "n_pairs": 13,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03131_n033_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03131_n033_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat03131_n033_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 3131,
+      "n_pairs": 33,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat04903_n002_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat04903_n002_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat04903_n002_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 4903,
+      "n_pairs": 2,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat16925_n002_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat16925_n002_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat16925_n002_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 16925,
+      "n_pairs": 2,
+      "alpha": 2.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat17587_n032_alpha0.50.csv",
+      "direction": "pos",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 0.5,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat17587_n032_alpha1.00.csv",
+      "direction": "pos",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 1.0,
+      "n_rows": 80
+    },
+    {
+      "csv": "pos_feat17587_n032_alpha2.00.csv",
+      "direction": "pos",
+      "feature": 17587,
+      "n_pairs": 32,
+      "alpha": 2.0,
+      "n_rows": 80
+    }
+  ],
+  "chunks": [
+    {
+      "idx": 1,
+      "path": "/home/vishalrao/FRA/em_fra_scripts/outputs/step_h/chunks/chunk_001.jsonl",
+      "n_requests": 3611,
+      "est_tokens": 1499951
+    },
+    {
+      "idx": 2,
+      "path": "/home/vishalrao/FRA/em_fra_scripts/outputs/step_h/chunks/chunk_002.jsonl",
+      "n_requests": 2149,
+      "est_tokens": 1016317
+    }
+  ]
+}

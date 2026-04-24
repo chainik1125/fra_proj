@@ -1,0 +1,32 @@
+Loading unsloth/Qwen2.5-14B-Instruct on cuda:0...
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.41it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.40it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.43it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.46it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.49it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.51it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.48it/s]
+Loading SAE from /home/vishalrao/FRA/em_fra_scripts/outputs/step_b/qwen14b_L24_ln1_4x_lmsys/trainer_0...
+Building datasets...
+  [warn] lmsys stream failed: Dataset 'lmsys/lmsys-chat-1m' is a gated dataset on the Hub. Visit the dataset page at https://huggingface.co/datasets/lmsys/lmsys-chat-1m to ask for access. — using empty set
+  train_fineweb: 30 samples
+  train_lmsys: 0 samples
+  val_mop: 16 samples
+  val_osemf: 30 samples
+
+=== Evaluating train_fineweb (n=30) ===
+  clean CE       : 1.8953
+  SAE-patched CE : 1.9025   (Δ = +0.0072)
+  mean-ablated CE: 1.9226  (Δ = +0.0273)
+  loss_recovered : 73.80%
+  L0 / explained-var / fro-rel : 64.9  /  0.6450  /  0.5153
+
+=== Evaluating val_mop (n=16) ===
+  clean CE       : 3.8233
+  SAE-patched CE : 3.8047   (Δ = -0.0186)
+  mean-ablated CE: 3.7143  (Δ = -0.1090)
+  loss_recovered : nan%
+  L0 / explained-var / fro-rel : 40.4  /  0.7777  /  0.3511
+
+=== Evaluating val_osemf (n=30) ===
+  clean CE       : 3.2960
+  SAE-patched CE : 3.2968   (Δ = +0.0008)
+  mean-ablated CE: 3.2159  (Δ = -0.0801)
+  loss_recovered : nan%
+  L0 / explained-var / fro-rel : 39.6  /  0.8192  /  0.3636
+
+Saved /home/vishalrao/FRA/em_fra_scripts/outputs/step_b/loss_recovery.csv

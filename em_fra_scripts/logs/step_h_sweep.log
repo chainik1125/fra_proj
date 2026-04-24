@@ -1,0 +1,54 @@
+Feature × FRA-interaction selection (6 features):
+  feat   3131:  33 pairs  ([[3131, 3131], [17587, 3131], [879, 3131], [3080, 3131], [3131, 17587]] ...)
+  feat   3080:  13 pairs  ([[3080, 3131], [3080, 17587], [3080, 3080], [14575, 3080], [3131, 3080]] ...)
+  feat  17587:  32 pairs  ([[17587, 17587], [879, 17587], [17587, 3131], [15269, 17587], [3131, 17587]] ...)
+  feat   4903:   2 pairs  ([[4903, 19010], [19010, 4903]])
+  feat    216:   4 pairs  ([[216, 216], [216, 12811], [216, 16895], [216, 3131]])
+  feat  16925:   2 pairs  ([[16925, 3131], [3131, 16925]])
+16 prompts × 5 samples = 80 gens per job
+
+Loading SAE from /home/vishalrao/FRA/em_fra_scripts/outputs/step_b/qwen14b_L24_ln1_4x_lmsys/trainer_0...
+
+=== Loading unsloth/Qwen2.5-14B-Instruct for direction=pos (18 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.39it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.39it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.42it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.45it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.47it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.48it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.45it/s]
+  [1/18] pos_feat03131_n033_alpha0.50.csv
+  [2/18] pos_feat03131_n033_alpha1.00.csv
+  [3/18] pos_feat03131_n033_alpha2.00.csv
+  [4/18] pos_feat03080_n013_alpha0.50.csv
+  [5/18] pos_feat03080_n013_alpha1.00.csv
+  [6/18] pos_feat03080_n013_alpha2.00.csv
+  [7/18] pos_feat17587_n032_alpha0.50.csv
+  [8/18] pos_feat17587_n032_alpha1.00.csv
+  [9/18] pos_feat17587_n032_alpha2.00.csv
+  [10/18] pos_feat04903_n002_alpha0.50.csv
+  [11/18] pos_feat04903_n002_alpha1.00.csv
+  [12/18] pos_feat04903_n002_alpha2.00.csv
+  [13/18] pos_feat00216_n004_alpha0.50.csv
+  [14/18] pos_feat00216_n004_alpha1.00.csv
+  [15/18] pos_feat00216_n004_alpha2.00.csv
+  [16/18] pos_feat16925_n002_alpha0.50.csv
+  [17/18] pos_feat16925_n002_alpha1.00.csv
+  [18/18] pos_feat16925_n002_alpha2.00.csv
+
+=== Loading ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft for direction=neg (18 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:03,  1.37it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.47it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.48it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:01,  1.51it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.51it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:03<00:00,  1.55it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:03<00:00,  1.51it/s]
+  [1/18] neg_feat03131_n033_alpha0.50.csv
+  [2/18] neg_feat03131_n033_alpha1.00.csv
+  [3/18] neg_feat03131_n033_alpha2.00.csv
+  [4/18] neg_feat03080_n013_alpha0.50.csv
+  [5/18] neg_feat03080_n013_alpha1.00.csv
+  [6/18] neg_feat03080_n013_alpha2.00.csv
+  [7/18] neg_feat17587_n032_alpha0.50.csv
+  [8/18] neg_feat17587_n032_alpha1.00.csv
+  [9/18] neg_feat17587_n032_alpha2.00.csv
+  [10/18] neg_feat04903_n002_alpha0.50.csv
+  [11/18] neg_feat04903_n002_alpha1.00.csv
+  [12/18] neg_feat04903_n002_alpha2.00.csv
+  [13/18] neg_feat00216_n004_alpha0.50.csv
+  [14/18] neg_feat00216_n004_alpha1.00.csv
+  [15/18] neg_feat00216_n004_alpha2.00.csv
+  [16/18] neg_feat16925_n002_alpha0.50.csv
+  [17/18] neg_feat16925_n002_alpha1.00.csv
+  [18/18] neg_feat16925_n002_alpha2.00.csv
+
+Done. 36/36 sweep CSVs in /home/vishalrao/FRA/em_fra_scripts/outputs/step_h/sweep

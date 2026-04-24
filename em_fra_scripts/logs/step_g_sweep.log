@@ -1,0 +1,83 @@
+Loaded 16 MOP prompts; Ks=[5, 10, 20, 30]; alphas=[0.1, 0.25, 0.5, 1.0, 2.0]; directions=['pos', 'neg']
+Top pairs (first 30):
+    feat_q  feat_k  delta_sft_mean
+0    17587   17587  -147704.306543
+1     3131    3131   -60306.187500
+2      879   17587    -9418.905356
+3    17587    3131    -9366.450793
+4      879    3131    -9110.472925
+5     3080    3131    -7850.566943
+6    15269   17587    -6816.520148
+7     3131   17587    -6655.980574
+8    19010   19010    -5609.904901
+9      216     216     5154.220105
+10   17587   19010    -5070.299876
+11    3080   17587    -4811.571251
+12   10326    3131     4488.363666
+13    3301   17587    -4314.822104
+14    3173    3131    -4117.831316
+15   17587   15275    -4082.548901
+16    3080    3080     3894.142401
+17   16925    3131     3822.333459
+18   17587   16232    -3805.879642
+19    4903   19010    -3701.387090
+20    3131   14575     3626.499320
+21   14575    3080     3619.007791
+22   14575    3131     3572.822339
+23    3131   17559    -3474.449341
+24   14575   14575     3423.288550
+25   11201   11201     3321.550267
+26    3131    3080     3149.161832
+27    9446    9446     3141.395401
+28    8856    3131     3125.897803
+29    3131   19010    -3003.847330
+
+Loading SAE from /home/vishalrao/FRA/em_fra_scripts/outputs/step_b/qwen14b_L24_ln1_4x_lmsys/trainer_0...
+
+=== Loading unsloth/Qwen2.5-14B-Instruct for direction=pos (20 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:04,  1.13it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:03,  1.19it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:02<00:02,  1.23it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:03<00:01,  1.27it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:03<00:00,  1.29it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.32it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:04<00:00,  1.27it/s]
+  [1/20] pos_K005_alpha0.10.csv
+  [2/20] pos_K005_alpha0.25.csv
+  [3/20] pos_K005_alpha0.50.csv
+  [4/20] pos_K005_alpha1.00.csv
+  [5/20] pos_K005_alpha2.00.csv
+  [6/20] pos_K010_alpha0.10.csv
+  [7/20] pos_K010_alpha0.25.csv
+  [8/20] pos_K010_alpha0.50.csv
+  [9/20] pos_K010_alpha1.00.csv
+  [10/20] pos_K010_alpha2.00.csv
+  [11/20] pos_K020_alpha0.10.csv
+  [12/20] pos_K020_alpha0.25.csv
+  [13/20] pos_K020_alpha0.50.csv
+  [14/20] pos_K020_alpha1.00.csv
+  [15/20] pos_K020_alpha2.00.csv
+  [16/20] pos_K030_alpha0.10.csv
+  [17/20] pos_K030_alpha0.25.csv
+  [18/20] pos_K030_alpha0.50.csv
+  [19/20] pos_K030_alpha1.00.csv
+  [20/20] pos_K030_alpha2.00.csv
+
+=== Loading ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft for direction=neg (20 jobs) ===
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:07<00:38,  7.63s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:13<00:27,  6.84s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:21<00:21,  7.10s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:27<00:13,  6.56s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:32<00:06,  6.26s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:40<00:00,  6.73s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:40<00:00,  6.74s/it]
+  [1/20] neg_K005_alpha0.10.csv
+  [2/20] neg_K005_alpha0.25.csv
+  [3/20] neg_K005_alpha0.50.csv
+  [4/20] neg_K005_alpha1.00.csv
+  [5/20] neg_K005_alpha2.00.csv
+  [6/20] neg_K010_alpha0.10.csv
+  [7/20] neg_K010_alpha0.25.csv
+  [8/20] neg_K010_alpha0.50.csv
+  [9/20] neg_K010_alpha1.00.csv
+  [10/20] neg_K010_alpha2.00.csv
+  [11/20] neg_K020_alpha0.10.csv
+  [12/20] neg_K020_alpha0.25.csv
+  [13/20] neg_K020_alpha0.50.csv
+  [14/20] neg_K020_alpha1.00.csv
+  [15/20] neg_K020_alpha2.00.csv
+  [16/20] neg_K030_alpha0.10.csv
+  [17/20] neg_K030_alpha0.25.csv
+  [18/20] neg_K030_alpha0.50.csv
+  [19/20] neg_K030_alpha1.00.csv
+  [20/20] neg_K030_alpha2.00.csv
+
+Done. 40/40 sweep CSVs in /home/vishalrao/FRA/em_fra_scripts/outputs/step_g/sweep

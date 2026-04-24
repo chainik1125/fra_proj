@@ -1,0 +1,22 @@
+Loaded 16 first-plot prompts.
+
+>> Loading SAE from /home/vishalrao/FRA/em_fra_scripts/outputs/step_b/qwen14b_L24_ln1_4x_lmsys/trainer_0 ...
+   d_sae=20480  d_model=5120
+
+==== Processing model: base (unsloth/Qwen2.5-14B-Instruct) ====
+   -> loading HF weights from unsloth/Qwen2.5-14B-Instruct (CPU; HT will move to cuda:0) ...
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:00<00:00, 81.54it/s]
+   -> wrapping into HookedTransformer ...
+Loaded pretrained model Qwen/Qwen2.5-14B-Instruct into HookedTransformer
+   model+tokenizer load: 32.4 s
+   running FRA: layer=24  n_heads=40  prompts=16  top_k_features=20
+  prompts:   0%|          | 0/16 [00:00<?, ?it/s]  prompts:   6%|▋         | 1/16 [00:25<06:18, 25.23s/it]  prompts:  12%|█▎        | 2/16 [00:35<03:48, 16.35s/it]  prompts:  19%|█▉        | 3/16 [00:51<03:33, 16.44s/it]  prompts:  25%|██▌       | 4/16 [01:01<02:46, 13.88s/it]  prompts:  31%|███▏      | 5/16 [01:14<02:29, 13.57s/it]  prompts:  38%|███▊      | 6/16 [01:30<02:22, 14.26s/it]  prompts:  44%|████▍     | 7/16 [01:45<02:11, 14.57s/it]  prompts:  50%|█████     | 8/16 [01:57<01:49, 13.69s/it]  prompts:  56%|█████▋    | 9/16 [02:54<03:10, 27.19s/it]  prompts:  62%|██████▎   | 10/16 [03:59<03:53, 38.92s/it]  prompts:  69%|██████▉   | 11/16 [05:13<04:08, 49.63s/it]  prompts:  75%|███████▌  | 12/16 [06:28<03:49, 57.43s/it]  prompts:  81%|████████▏ | 13/16 [07:33<02:58, 59.56s/it]  prompts:  88%|████████▊ | 14/16 [08:55<02:12, 66.45s/it]  prompts:  94%|█████████▍| 15/16 [10:01<01:06, 66.18s/it]  prompts: 100%|██████████| 16/16 [11:15<00:00, 68.56s/it]                                                             FRA wall-clock: 11.3 min
+   saved accumulator -> /home/vishalrao/FRA/em_fra_scripts/outputs/step_c/L24/accum_base.pt
+Moving model to device:  cpu
+
+==== Processing model: sft (ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft) ====
+   -> loading HF weights from ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft (CPU; HT will move to cuda:0) ...
+Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]  [2m2026-04-16T16:53:03.541298Z[0m [31mERROR[0m  [31merror invoking get_reconstruction api, error: ReqwestMiddlewareError(Middleware(couldn't get token: TokenRefreshFailure("Error refreshing token: PyErr { type: <class 'requests.exceptions.ConnectionError'>, value: ConnectionError(MaxRetryError('HTTPSConnectionPool(host=\\'huggingface.co\\', port=443): Max retries exceeded with url: /api/models/ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft/xet-read-token/8b4bd5e04fa028a8301cc7a8164577434d1ad332 (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x76d6e99fe5d0>: Failed to resolve \\'huggingface.co\\' ([Errno -3] Temporary failure in name resolution)\"))'), '(Request ID: 7b9243cc-12e9-4b24-a50b-9e490be32ee5)'), traceback: Some(<traceback object at 0x76d745e2fcc0>) }"))), [1;31mcaller[0m[31m: "/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs:322"[0m
+    [2;3mat[0m /home/runner/work/xet-core/xet-core/error_printer/src/lib.rs:28
+

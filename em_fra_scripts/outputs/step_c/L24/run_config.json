@@ -1,0 +1,16 @@
+{
+  "layer": 24,
+  "sae_dir": "/home/vishalrao/FRA/em_fra_scripts/outputs/step_b/qwen14b_L24_ln1_4x_lmsys/trainer_0",
+  "base_model": "unsloth/Qwen2.5-14B-Instruct",
+  "sft_model": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft",
+  "lora_model": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_R1_0_1_0_extended_train",
+  "n_prompts": 20,
+  "top_k_features": 20,
+  "max_length": 128,
+  "top_interactions": 100,
+  "hook_point": "ln1.hook_normalized",
+  "device": "cuda:0",
+  "dtype": "bfloat16",
+  "skip": [],
+  "out_dir": "/home/vishalrao/FRA/em_fra_scripts/outputs/step_c"
+}

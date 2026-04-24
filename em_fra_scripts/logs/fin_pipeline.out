@@ -1,0 +1,1 @@
+bash: line 20: 3093679 Killed                  CUDA_VISIBLE_DEVICES=0 python /home/vishalrao/FRA/em_fra_scripts/step_d_coef_sweep_mop.py --out-dir "$OUT_DIR" --features-dir "$OUT_DIR" --misaligned-model "$MIS_MODEL" >> "$LOG_DIR/step_d_sweep_mop_fin.log" 2>&1
