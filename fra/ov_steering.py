@@ -85,6 +85,11 @@ def run_ov_steering(
     if dec_norms is not None:
         feat_v_proj = feat_v_proj / dec_norms[feat_indices].unsqueeze(-1)
 
+    # GQA: map query head index to KV head index for hook_v
+    n_kv_heads = model.blocks[layer].attn.W_V.shape[0]
+    n_q_heads = model.cfg.n_heads
+    kv_head = head * n_kv_heads // n_q_heads
+
     # State for the read-only hook
     cached_features = {}
 
@@ -141,7 +146,7 @@ def run_ov_steering(
         weighted_acts = feat_acts * scale_minus_1.unsqueeze(0)  # [seq, n_feats]
         delta = weighted_acts @ feat_v_proj  # [seq, d_head]
 
-        v_out[0, :seq_len, head, :] += delta.to(v.dtype)
+        v_out[0, :seq_len, kv_head, :] += delta.to(v.dtype)
         return v_out
 
     # Run with both hooks
@@ -300,6 +305,11 @@ def run_combined_steering(
             [ov_feature_scales[f] for f in feat_indices],
             device=device, dtype=torch.float32,
         )
+        # GQA: map query head to KV head
+        n_kv_heads = model.blocks[layer].attn.W_V.shape[0]
+        n_q_heads = model.cfg.n_heads
+        kv_head_combined = head * n_kv_heads // n_q_heads
+
         feat_v_proj = W_dec[feat_indices] @ W_V_h
         if dec_norms is not None:
             feat_v_proj = feat_v_proj / dec_norms[feat_indices].unsqueeze(-1)
@@ -338,7 +348,7 @@ def run_combined_steering(
             scale_minus_1 = feat_scales_tensor - 1.0
             weighted_acts = feat_acts * scale_minus_1.unsqueeze(0)
             delta = weighted_acts @ feat_v_proj
-            v_out[0, :sl, head, :] += delta.to(v.dtype)
+            v_out[0, :sl, kv_head_combined, :] += delta.to(v.dtype)
             return v_out
 
         hooks.append((hook_name, capture_hook))
