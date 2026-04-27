@@ -431,13 +431,30 @@ class QwenLn1SAE:
         self.d_in = None
         self.d_sae = None
 
-        # Try config first
+        # Try config dict first
         if cfg:
             self.d_in = cfg.get("d_in", cfg.get("input_dim", None))
             self.d_sae = cfg.get("d_sae", cfg.get("hidden_dim", cfg.get("dict_size", None)))
             self._threshold = cfg.get("k", cfg.get("top_k", cfg.get("activation_k", None)))
 
-        self._assign_weights(state, device)
+        # Also check top-level keys (some checkpoints store k/threshold as tensors)
+        if self._threshold is None and "k" in state:
+            v = state["k"]
+            self._threshold = int(v.item()) if isinstance(v, torch.Tensor) else int(v)
+        if self._threshold is None and "threshold" in state:
+            v = state["threshold"]
+            # threshold is sometimes a float, k is the integer count
+            # skip non-integer thresholds
+            if isinstance(v, torch.Tensor) and v.dim() == 0:
+                val = v.item()
+                if val == int(val) and val > 1:
+                    self._threshold = int(val)
+
+        # Remove non-weight keys before assigning weights
+        weight_state = {k: v for k, v in state.items()
+                        if isinstance(v, torch.Tensor) and v.dim() >= 1}
+
+        self._assign_weights(weight_state, device)
 
         # Infer dimensions from weights if not in config
         if self.d_in is None:

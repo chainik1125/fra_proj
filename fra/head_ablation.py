@@ -59,25 +59,28 @@ def head_attribution_sweep(
             continue
 
         # Unpatched baseline
-        unpatched_logits = model(tok_tensor)
+        unpatched_logits = model(tok_tensor).float()  # cast to fp32
         shift_labels = tok_tensor[0, 1:]
         unpatched_loss = F.cross_entropy(
             unpatched_logits[0, :-1], shift_labels
         ).item()
 
-        # Ablate each head
+        # Ablate each head via hook_z (pre-W_O output, works with GQA)
+        # hook_result may not exist in all TL versions; hook_z is more reliable
+        z_hook = f"blocks.{layer}.attn.hook_z"
+
         for h in range(n_heads):
             def make_hook(head_idx):
-                def hook_fn(result, hook):
-                    # result: [batch, seq_len, n_heads, d_head]
-                    out = result.clone()
+                def hook_fn(z, hook):
+                    # z: [batch, seq_len, n_heads, d_head]
+                    out = z.clone()
                     out[0, :, head_idx, :] = 0.0
                     return out
                 return hook_fn
 
             patched_logits = model.run_with_hooks(
-                tok_tensor, fwd_hooks=[(result_hook, make_hook(h))]
-            )
+                tok_tensor, fwd_hooks=[(z_hook, make_hook(h))]
+            ).float()  # cast to fp32
 
             loss = F.cross_entropy(
                 patched_logits[0, :-1], shift_labels
@@ -140,7 +143,7 @@ def multi_head_ablation(
         dict: avg_loss_delta, avg_kl_div, avg_top1_change_frac
     """
     device = next(model.parameters()).device
-    result_hook = f"blocks.{layer}.attn.hook_result"
+    z_hook = f"blocks.{layer}.attn.hook_z"
     head_set = set(heads_to_ablate)
 
     total_loss_delta = 0.0
@@ -156,21 +159,21 @@ def multi_head_ablation(
         if tok_tensor.shape[1] < 2:
             continue
 
-        unpatched_logits = model(tok_tensor)
+        unpatched_logits = model(tok_tensor).float()
         shift_labels = tok_tensor[0, 1:]
         unpatched_loss = F.cross_entropy(
             unpatched_logits[0, :-1], shift_labels
         ).item()
 
-        def hook_fn(result, hook):
-            out = result.clone()
+        def hook_fn(z, hook):
+            out = z.clone()
             for h in head_set:
                 out[0, :, h, :] = 0.0
             return out
 
         patched_logits = model.run_with_hooks(
-            tok_tensor, fwd_hooks=[(result_hook, hook_fn)]
-        )
+            tok_tensor, fwd_hooks=[(z_hook, hook_fn)]
+        ).float()
 
         loss = F.cross_entropy(patched_logits[0, :-1], shift_labels).item()
         p = F.softmax(unpatched_logits[0, :-1], dim=-1)
