@@ -325,6 +325,100 @@ class QwenSAE:
         return (features == 0).float().mean().item()
 
 
+class QwenLn1SAE:
+    """
+    Wrapper for Qwen2.5-14B ln1.hook_normalized SAE from HuggingFace.
+
+    Hub: Nura-J/Qwen2.5-14B_SAE_ln1.normalised
+    Hook point: ln1.hook_normalized (decoder vectors in d_model space)
+    Layer: 24, d_sae = 4 * d_model = 20480
+
+    Usage:
+        sae = QwenLn1SAE("Nura-J/Qwen2.5-14B_SAE_ln1.normalised", layer=24)
+        # Use hook_point="ln1.hook_normalized" at layer 24 for FRA
+    """
+
+    def __init__(self, repo_id: str, layer: int = 24, device: str = "cuda"):
+        """
+        Args:
+            repo_id: HuggingFace repo ID (e.g. "Nura-J/Qwen2.5-14B_SAE_ln1.normalised")
+            layer: Layer the SAE was trained on.
+            device: Device to load onto.
+        """
+        from huggingface_hub import hf_hub_download
+        import json
+
+        self.repo_id = repo_id
+        self.layer = layer
+        self.device = device
+
+        # Download SAE files from HuggingFace
+        cfg_path = hf_hub_download(repo_id=repo_id, filename="cfg.json")
+        weights_path = hf_hub_download(repo_id=repo_id, filename="sae_weights.safetensors")
+
+        with open(cfg_path, "r") as f:
+            cfg = json.load(f)
+
+        self.d_in = cfg.get("d_in", 5120)
+        self.d_sae = cfg.get("d_sae", self.d_in * 4)
+
+        # Load weights
+        from safetensors.torch import load_file
+        state = load_file(weights_path, device=device)
+
+        self.W_enc = state.get("W_enc", state.get("encoder.weight", None))  # [d_in, d_sae] or [d_sae, d_in]
+        self.W_dec = state.get("W_dec", state.get("decoder.weight", None))  # [d_sae, d_in]
+        self.b_enc = state.get("b_enc", state.get("encoder.bias", None))    # [d_sae]
+        self.b_dec = state.get("b_dec", state.get("decoder.bias", None))    # [d_in]
+
+        # Ensure correct shapes: W_enc should be [d_in, d_sae], W_dec [d_sae, d_in]
+        if self.W_enc is not None and self.W_enc.shape[0] == self.d_sae:
+            self.W_enc = self.W_enc.T  # transpose if stored as [d_sae, d_in]
+        if self.W_dec is not None and self.W_dec.shape[1] == self.d_sae:
+            self.W_dec = self.W_dec.T  # transpose if stored as [d_in, d_sae]
+
+        if self.b_dec is None:
+            self.b_dec = torch.zeros(self.d_in, device=device)
+        if self.b_enc is None:
+            self.b_enc = torch.zeros(self.d_sae, device=device)
+
+        # Store config for compatibility
+        self._cfg = cfg
+        self._threshold = cfg.get("k", None)  # top-k if it's a TopK SAE
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """Encode ln1.hook_normalized activations to SAE features.
+
+        Args:
+            x: [seq_len, d_model] — output of blocks.{layer}.ln1.hook_normalized
+
+        Returns:
+            [seq_len, d_sae] feature activations (ReLU or TopK gated)
+        """
+        # x @ W_enc + b_enc, then activation
+        pre_acts = x @ self.W_enc + self.b_enc  # [seq_len, d_sae]
+        if self._threshold is not None:
+            # TopK SAE: keep only top-k activations per position
+            k = self._threshold
+            topk_vals, topk_idx = pre_acts.topk(k, dim=-1)
+            acts = torch.zeros_like(pre_acts)
+            acts.scatter_(-1, topk_idx, F.relu(topk_vals))
+            return acts
+        else:
+            return F.relu(pre_acts)
+
+    def decode(self, features: torch.Tensor) -> torch.Tensor:
+        """Decode SAE features back to d_model space."""
+        return features @ self.W_dec + self.b_dec
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        features = self.encode(x)
+        return features, self.decode(features)
+
+    def feature_sparsity(self, features: torch.Tensor) -> float:
+        return (features == 0).float().mean().item()
+
+
 def get_attention_activations_for_sae_lens(
     model: Any,
     input_text: str,
