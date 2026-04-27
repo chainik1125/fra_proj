@@ -85,10 +85,14 @@ def run_ov_steering(
     if dec_norms is not None:
         feat_v_proj = feat_v_proj / dec_norms[feat_indices].unsqueeze(-1)
 
-    # GQA: map query head index to KV head index for hook_v
-    n_kv_heads = model.blocks[layer].attn.W_V.shape[0]
+    # GQA: hook_v has shape [batch, seq, n_kv_heads, d_head] where n_kv_heads
+    # may be < n_q_heads. Map query head to KV head.
+    # But TransformerLens may expand KV heads to n_q_heads — check at runtime.
+    n_kv_weights = model.blocks[layer].attn.W_V.shape[0]
     n_q_heads = model.cfg.n_heads
-    kv_head = head * n_kv_heads // n_q_heads
+    # If TL expanded W_V to match Q heads, kv index = head directly
+    kv_head_idx = head if n_kv_weights == n_q_heads else head * n_kv_weights // n_q_heads
+    print(f"  [OV steer] head={head}, W_V.shape[0]={n_kv_weights}, n_q={n_q_heads} → kv_idx={kv_head_idx}")
 
     # State for the read-only hook
     cached_features = {}
@@ -114,15 +118,15 @@ def run_ov_steering(
         return activation  # pass through unmodified
 
     def steer_v_hook(v, hook):
-        """Modify value vectors for the targeted head.
-
-        v: [batch, seq_len, n_heads, d_head]
-        For each feature to steer:
-            v[0, :, head, :] += (scale - 1) * f_λ[:] * (W_dec[λ] @ W_V_h)
-        """
+        """Modify value vectors for the targeted head."""
         features = cached_features.get('feats')
         if features is None:
             return v
+
+        # Log shape once to determine GQA expansion
+        if not hasattr(steer_v_hook, '_logged'):
+            print(f"  [hook_v] v.shape={v.shape}, kv_head_idx={kv_head_idx}")
+            steer_v_hook._logged = True
 
         v_out = v.clone()
         seq_len = features.shape[0]
@@ -146,7 +150,7 @@ def run_ov_steering(
         weighted_acts = feat_acts * scale_minus_1.unsqueeze(0)  # [seq, n_feats]
         delta = weighted_acts @ feat_v_proj  # [seq, d_head]
 
-        v_out[0, :seq_len, kv_head, :] += delta.to(v.dtype)
+        v_out[0, :seq_len, kv_head_idx, :] += delta.to(v.dtype)
         return v_out
 
     # Run with both hooks
