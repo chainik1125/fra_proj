@@ -333,26 +333,68 @@ class QwenLn1SAE:
     Hook point: ln1.hook_normalized (decoder vectors in d_model space)
     Layer: 24, d_sae = 4 * d_model = 20480
 
+    Supports multiple checkpoint formats:
+      - SAE Lens format: cfg.json + sae_weights.safetensors
+      - Raw PyTorch checkpoint: ae_*.pt (auto-detected keys)
+
     Usage:
         sae = QwenLn1SAE("Nura-J/Qwen2.5-14B_SAE_ln1.normalised", layer=24)
         # Use hook_point="ln1.hook_normalized" at layer 24 for FRA
     """
 
-    def __init__(self, repo_id: str, layer: int = 24, device: str = "cuda"):
+    def __init__(self, repo_id: str, layer: int = 24, device: str = "cuda",
+                 filename: str | None = None):
         """
         Args:
             repo_id: HuggingFace repo ID (e.g. "Nura-J/Qwen2.5-14B_SAE_ln1.normalised")
             layer: Layer the SAE was trained on.
             device: Device to load onto.
+            filename: Specific checkpoint file to download. None auto-detects.
         """
-        from huggingface_hub import hf_hub_download
-        import json
+        from huggingface_hub import hf_hub_download, list_repo_files
 
         self.repo_id = repo_id
         self.layer = layer
         self.device = device
+        self._threshold = None  # set below if TopK
 
-        # Download SAE files from HuggingFace
+        # List files in repo to determine format
+        try:
+            repo_files = list_repo_files(repo_id)
+        except Exception:
+            repo_files = []
+
+        # Determine which file to download
+        if filename is not None:
+            weights_file = filename
+        elif "cfg.json" in repo_files and "sae_weights.safetensors" in repo_files:
+            # SAE Lens format
+            weights_file = "__sae_lens__"
+        else:
+            # Find .pt file
+            pt_files = [f for f in repo_files if f.endswith(".pt")]
+            if pt_files:
+                weights_file = pt_files[0]  # take first .pt file
+            else:
+                raise FileNotFoundError(
+                    f"No loadable SAE found in {repo_id}. "
+                    f"Files: {repo_files}"
+                )
+
+        if weights_file == "__sae_lens__":
+            self._load_sae_lens_format(repo_id, device)
+        else:
+            self._load_pt_checkpoint(repo_id, weights_file, device)
+
+        print(f"QwenLn1SAE loaded: d_in={self.d_in}, d_sae={self.d_sae}, "
+              f"top_k={self._threshold}, file={weights_file}")
+
+    def _load_sae_lens_format(self, repo_id, device):
+        """Load from SAE Lens format (cfg.json + sae_weights.safetensors)."""
+        import json
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+
         cfg_path = hf_hub_download(repo_id=repo_id, filename="cfg.json")
         weights_path = hf_hub_download(repo_id=repo_id, filename="sae_weights.safetensors")
 
@@ -361,30 +403,95 @@ class QwenLn1SAE:
 
         self.d_in = cfg.get("d_in", 5120)
         self.d_sae = cfg.get("d_sae", self.d_in * 4)
+        self._threshold = cfg.get("k", None)
 
-        # Load weights
-        from safetensors.torch import load_file
         state = load_file(weights_path, device=device)
+        self._assign_weights(state, device)
 
-        self.W_enc = state.get("W_enc", state.get("encoder.weight", None))  # [d_in, d_sae] or [d_sae, d_in]
-        self.W_dec = state.get("W_dec", state.get("decoder.weight", None))  # [d_sae, d_in]
-        self.b_enc = state.get("b_enc", state.get("encoder.bias", None))    # [d_sae]
-        self.b_dec = state.get("b_dec", state.get("decoder.bias", None))    # [d_in]
+    def _load_pt_checkpoint(self, repo_id, filename, device):
+        """Load from a raw PyTorch .pt checkpoint."""
+        from huggingface_hub import hf_hub_download
 
-        # Ensure correct shapes: W_enc should be [d_in, d_sae], W_dec [d_sae, d_in]
-        if self.W_enc is not None and self.W_enc.shape[0] == self.d_sae:
-            self.W_enc = self.W_enc.T  # transpose if stored as [d_sae, d_in]
-        if self.W_dec is not None and self.W_dec.shape[1] == self.d_sae:
-            self.W_dec = self.W_dec.T  # transpose if stored as [d_in, d_sae]
+        weights_path = hf_hub_download(repo_id=repo_id, filename=filename)
+        state = torch.load(weights_path, map_location=device, weights_only=False)
+
+        # Handle nested state dicts (e.g. {"state_dict": {...}, "cfg": {...}})
+        cfg = {}
+        if isinstance(state, dict) and "cfg" in state:
+            cfg = state["cfg"] if isinstance(state["cfg"], dict) else {}
+        if isinstance(state, dict) and "state_dict" in state:
+            state = state["state_dict"]
+        elif isinstance(state, dict) and "model_state_dict" in state:
+            state = state["model_state_dict"]
+
+        # Print keys for debugging on first load
+        print(f"SAE checkpoint keys: {list(state.keys())[:20]}")
+
+        # Auto-detect d_in and d_sae from weight shapes
+        self.d_in = None
+        self.d_sae = None
+
+        # Try config first
+        if cfg:
+            self.d_in = cfg.get("d_in", cfg.get("input_dim", None))
+            self.d_sae = cfg.get("d_sae", cfg.get("hidden_dim", cfg.get("dict_size", None)))
+            self._threshold = cfg.get("k", cfg.get("top_k", cfg.get("activation_k", None)))
+
+        self._assign_weights(state, device)
+
+        # Infer dimensions from weights if not in config
+        if self.d_in is None:
+            self.d_in = self.W_dec.shape[1]
+        if self.d_sae is None:
+            self.d_sae = self.W_dec.shape[0]
+
+    def _assign_weights(self, state, device):
+        """Assign W_enc, W_dec, b_enc, b_dec from a state dict, handling
+        various key naming conventions."""
+        # Try common key names for each weight
+        enc_keys = ["W_enc", "encoder.weight", "encode.weight", "w_enc", "W_e"]
+        dec_keys = ["W_dec", "decoder.weight", "decode.weight", "w_dec", "W_d"]
+        benc_keys = ["b_enc", "encoder.bias", "encode.bias", "b_e"]
+        bdec_keys = ["b_dec", "decoder.bias", "decode.bias", "b_d", "bias"]
+
+        def _find(keys):
+            for k in keys:
+                if k in state:
+                    return state[k].to(device).float()
+            return None
+
+        self.W_enc = _find(enc_keys)
+        self.W_dec = _find(dec_keys)
+        self.b_enc = _find(benc_keys)
+        self.b_dec = _find(bdec_keys)
+
+        if self.W_enc is None or self.W_dec is None:
+            available = [k for k in state.keys() if isinstance(state[k], torch.Tensor)]
+            raise KeyError(
+                f"Could not find encoder/decoder weights. "
+                f"Available tensor keys: {available}"
+            )
+
+        # Ensure correct shapes: W_enc [d_in, d_sae], W_dec [d_sae, d_in]
+        # W_enc and W_dec should be transposes of each other (roughly)
+        if self.W_enc.shape == self.W_dec.shape:
+            # Both same shape — W_enc is likely [d_sae, d_in], needs transpose
+            if self.W_enc.shape[0] > self.W_enc.shape[1]:
+                self.W_enc = self.W_enc.T
+        elif self.W_enc.shape[0] > self.W_enc.shape[1]:
+            # W_enc is [d_sae, d_in], needs transpose to [d_in, d_sae]
+            self.W_enc = self.W_enc.T
+        if self.W_dec.shape[1] > self.W_dec.shape[0]:
+            # W_dec is [d_in, d_sae], needs transpose to [d_sae, d_in]
+            self.W_dec = self.W_dec.T
+
+        d_in = self.W_enc.shape[0]
+        d_sae = self.W_enc.shape[1]
 
         if self.b_dec is None:
-            self.b_dec = torch.zeros(self.d_in, device=device)
+            self.b_dec = torch.zeros(d_in, device=device)
         if self.b_enc is None:
-            self.b_enc = torch.zeros(self.d_sae, device=device)
-
-        # Store config for compatibility
-        self._cfg = cfg
-        self._threshold = cfg.get("k", None)  # top-k if it's a TopK SAE
+            self.b_enc = torch.zeros(d_sae, device=device)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Encode ln1.hook_normalized activations to SAE features.
@@ -395,10 +502,8 @@ class QwenLn1SAE:
         Returns:
             [seq_len, d_sae] feature activations (ReLU or TopK gated)
         """
-        # x @ W_enc + b_enc, then activation
-        pre_acts = x @ self.W_enc + self.b_enc  # [seq_len, d_sae]
+        pre_acts = x.float() @ self.W_enc + self.b_enc  # [seq_len, d_sae]
         if self._threshold is not None:
-            # TopK SAE: keep only top-k activations per position
             k = self._threshold
             topk_vals, topk_idx = pre_acts.topk(k, dim=-1)
             acts = torch.zeros_like(pre_acts)
@@ -409,7 +514,7 @@ class QwenLn1SAE:
 
     def decode(self, features: torch.Tensor) -> torch.Tensor:
         """Decode SAE features back to d_model space."""
-        return features @ self.W_dec + self.b_dec
+        return features.float() @ self.W_dec + self.b_dec
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         features = self.encode(x)
