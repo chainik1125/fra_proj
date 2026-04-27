@@ -85,14 +85,13 @@ def run_ov_steering(
     if dec_norms is not None:
         feat_v_proj = feat_v_proj / dec_norms[feat_indices].unsqueeze(-1)
 
-    # GQA: hook_v has shape [batch, seq, n_kv_heads, d_head] where n_kv_heads
-    # may be < n_q_heads. Map query head to KV head.
-    # But TransformerLens may expand KV heads to n_q_heads — check at runtime.
-    n_kv_weights = model.blocks[layer].attn.W_V.shape[0]
+    # GQA: hook_v fires with shape [batch, seq, n_kv_heads, d_head].
+    # TransformerLens expands W_V weights to n_q_heads but hook_v still has n_kv.
+    # Use n_key_value_heads from config (not W_V.shape which may be expanded).
     n_q_heads = model.cfg.n_heads
-    # If TL expanded W_V to match Q heads, kv index = head directly
-    kv_head_idx = head if n_kv_weights == n_q_heads else head * n_kv_weights // n_q_heads
-    print(f"  [OV steer] head={head}, W_V.shape[0]={n_kv_weights}, n_q={n_q_heads} → kv_idx={kv_head_idx}")
+    n_kv_heads = getattr(model.cfg, "n_key_value_heads", None) or n_q_heads
+    kv_head_idx = head * n_kv_heads // n_q_heads
+    print(f"  [OV steer] head={head}, n_kv_cfg={n_kv_heads}, n_q={n_q_heads} → kv_idx={kv_head_idx}")
 
     # State for the read-only hook
     cached_features = {}
@@ -309,9 +308,9 @@ def run_combined_steering(
             [ov_feature_scales[f] for f in feat_indices],
             device=device, dtype=torch.float32,
         )
-        # GQA: map query head to KV head
-        n_kv_heads = model.blocks[layer].attn.W_V.shape[0]
+        # GQA: map query head to KV head (use config, not W_V.shape)
         n_q_heads = model.cfg.n_heads
+        n_kv_heads = getattr(model.cfg, "n_key_value_heads", None) or n_q_heads
         kv_head_combined = head * n_kv_heads // n_q_heads
 
         feat_v_proj = W_dec[feat_indices] @ W_V_h
