@@ -26,8 +26,6 @@ def load_model_and_sae(layer=24, device="cuda"):
 
     print(f"Loading Qwen2.5-14B-Instruct on {device}...")
     t0 = time.time()
-    # Use from_pretrained_no_processing to save memory — skips folding LN etc.
-    # bfloat16 is more stable than float16 and uses same memory
     model = HookedTransformer.from_pretrained_no_processing(
         "Qwen/Qwen2.5-14B-Instruct",
         device=device,
@@ -223,6 +221,8 @@ def run_qk_to_ov(model, sae, args):
                 model, sae, tok_tensor, args.layer, args.head, args.hook_point,
                 qk_scales, shift_labels, unpatched_logits,
             )
+            del qk_r["patched_logits"]  # free memory
+            torch.cuda.empty_cache()
             qk_sweep["scales"].append(scale)
             qk_sweep["loss"].append(qk_r.get("loss", 0))
             qk_sweep["kl_div"].append(qk_r.get("kl_div", 0))
@@ -235,6 +235,8 @@ def run_qk_to_ov(model, sae, args):
                 model, sae, tok_tensor, args.layer, args.head, args.hook_point,
                 ov_scales, shift_labels, unpatched_logits,
             )
+            del ov_r["patched_logits"]
+            torch.cuda.empty_cache()
             ov_sweep["scales"].append(scale)
             ov_sweep["loss"].append(ov_r.get("loss", 0))
             ov_sweep["kl_div"].append(ov_r.get("kl_div", 0))

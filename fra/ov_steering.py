@@ -20,6 +20,31 @@ from transformer_lens import HookedTransformer
 from fra.core.helpers import get_W_V, get_W_O
 
 
+def _compute_metrics(patched_logits, shift_labels, unpatched_logits):
+    """Compute loss/KL/top1 metrics from logits, memory-efficiently."""
+    result = {"patched_logits": patched_logits}
+
+    if shift_labels is not None:
+        result["loss"] = F.cross_entropy(
+            patched_logits[0, :-1].float(), shift_labels
+        ).item()
+
+    if unpatched_logits is not None and shift_labels is not None:
+        p_logits = unpatched_logits[0, :-1].float()
+        q_logits = patched_logits[0, :-1].float()
+
+        result["top1_change_frac"] = (
+            (p_logits.argmax(-1) != q_logits.argmax(-1)).float().mean().item()
+        )
+
+        log_p = F.log_softmax(p_logits, dim=-1)
+        log_q = F.log_softmax(q_logits, dim=-1)
+        result["kl_div"] = (log_p.exp() * (log_p - log_q)).sum(-1).mean().item()
+        del p_logits, q_logits, log_p, log_q
+
+    return result
+
+
 @torch.no_grad()
 def run_ov_steering(
     model: HookedTransformer,
@@ -117,69 +142,36 @@ def run_ov_steering(
         return activation  # pass through unmodified
 
     def steer_v_hook(v, hook):
-        """Modify value vectors for the targeted head."""
+        """Modify value vectors for the targeted head (in-place to save memory)."""
         features = cached_features.get('feats')
         if features is None:
             return v
 
-        # Log shape once to determine GQA expansion
-        if not hasattr(steer_v_hook, '_logged'):
-            print(f"  [hook_v] v.shape={v.shape}, kv_head_idx={kv_head_idx}")
-            steer_v_hook._logged = True
-
-        v_out = v.clone()
-        seq_len = features.shape[0]
+        seq_len = min(features.shape[0], v.shape[1])
 
         # Vectorised: gather feature activations for all steered features
-        # feat_acts: [seq_len, n_feats]
-        feat_acts = features[:seq_len, feat_indices]  # [seq, n_feats]
-
-        # RMSNorm correction if SAE decodes to residual space
-        if "resid" in hook_point:
-            W_dec_local = sae.W_dec if hasattr(sae, 'W_dec') else sae.sae.W_dec
-            b_dec = sae.b_dec if hasattr(sae, 'b_dec') else sae.sae.b_dec
-            x_hat = features @ W_dec_local.float() + b_dec.float()
-            eps = model.cfg.eps
-            rms = (x_hat.pow(2).mean(dim=-1, keepdim=True) + eps).sqrt()
-            feat_acts = feat_acts / rms
+        feat_acts = features[:seq_len, feat_indices].float()  # [seq, n_feats]
 
         # delta = (scale - 1) * feat_acts * feat_v_proj
-        # feat_acts: [seq, n_feats], (scale-1): [n_feats], feat_v_proj: [n_feats, d_head]
         scale_minus_1 = (feat_scales_tensor - 1.0)  # [n_feats]
         weighted_acts = feat_acts * scale_minus_1.unsqueeze(0)  # [seq, n_feats]
         delta = weighted_acts @ feat_v_proj  # [seq, d_head]
 
-        v_out[0, :seq_len, kv_head_idx, :] += delta.to(v.dtype)
-        return v_out
+        v[0, :seq_len, kv_head_idx, :] += delta.to(v.dtype)
+        return v
 
-    # Run with both hooks
-    patched_logits = model.run_with_hooks(
-        tok_tensor,
-        fwd_hooks=[
-            (hook_name, capture_hook),
-            (v_hook_name, steer_v_hook),
-        ],
-    )
-
-    result = {"patched_logits": patched_logits}
-
-    if shift_labels is not None:
-        result["loss"] = F.cross_entropy(
-            patched_logits[0, :-1], shift_labels
-        ).item()
-
-    if unpatched_logits is not None and shift_labels is not None:
-        p = F.softmax(unpatched_logits[0, :-1], dim=-1)
-        q = F.softmax(patched_logits[0, :-1], dim=-1)
-        result["kl_div"] = F.kl_div(q.log(), p, reduction="batchmean").item()
-
-        pred_clean = unpatched_logits[0, :-1].argmax(dim=-1)
-        pred_patched = patched_logits[0, :-1].argmax(dim=-1)
-        result["top1_change_frac"] = (
-            (pred_clean != pred_patched).float().mean().item()
+    # Run with hooks — reset_hooks_end=True to clean up after
+    with torch.no_grad():
+        patched_logits = model.run_with_hooks(
+            tok_tensor,
+            fwd_hooks=[
+                (hook_name, capture_hook),
+                (v_hook_name, steer_v_hook),
+            ],
+            reset_hooks_end=True,
         )
 
-    return result
+    return _compute_metrics(patched_logits, shift_labels, unpatched_logits)
 
 
 @torch.no_grad()
@@ -219,25 +211,7 @@ def run_qk_steering(
         tok_tensor, fwd_hooks=[(score_hook, hook_fn)]
     )
 
-    result = {"patched_logits": patched_logits}
-
-    if shift_labels is not None:
-        result["loss"] = F.cross_entropy(
-            patched_logits[0, :-1], shift_labels
-        ).item()
-
-    if unpatched_logits is not None and shift_labels is not None:
-        p = F.softmax(unpatched_logits[0, :-1], dim=-1)
-        q = F.softmax(patched_logits[0, :-1], dim=-1)
-        result["kl_div"] = F.kl_div(q.log(), p, reduction="batchmean").item()
-
-        pred_clean = unpatched_logits[0, :-1].argmax(dim=-1)
-        pred_patched = patched_logits[0, :-1].argmax(dim=-1)
-        result["top1_change_frac"] = (
-            (pred_clean != pred_patched).float().mean().item()
-        )
-
-    return result
+    return _compute_metrics(patched_logits, shift_labels, unpatched_logits)
 
 
 @torch.no_grad()
@@ -360,22 +334,4 @@ def run_combined_steering(
     # Run
     patched_logits = model.run_with_hooks(tok_tensor, fwd_hooks=hooks)
 
-    result = {"patched_logits": patched_logits}
-
-    if shift_labels is not None:
-        result["loss"] = F.cross_entropy(
-            patched_logits[0, :-1], shift_labels
-        ).item()
-
-    if unpatched_logits is not None and shift_labels is not None:
-        p = F.softmax(unpatched_logits[0, :-1], dim=-1)
-        q = F.softmax(patched_logits[0, :-1], dim=-1)
-        result["kl_div"] = F.kl_div(q.log(), p, reduction="batchmean").item()
-
-        pred_clean = unpatched_logits[0, :-1].argmax(dim=-1)
-        pred_patched = patched_logits[0, :-1].argmax(dim=-1)
-        result["top1_change_frac"] = (
-            (pred_clean != pred_patched).float().mean().item()
-        )
-
-    return result
+    return _compute_metrics(patched_logits, shift_labels, unpatched_logits)
