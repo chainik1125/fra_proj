@@ -26,10 +26,12 @@ def load_model_and_sae(layer=24, device="cuda"):
 
     print(f"Loading Qwen2.5-14B-Instruct on {device}...")
     t0 = time.time()
-    model = HookedTransformer.from_pretrained(
+    # Use from_pretrained_no_processing to save memory — skips folding LN etc.
+    # bfloat16 is more stable than float16 and uses same memory
+    model = HookedTransformer.from_pretrained_no_processing(
         "Qwen/Qwen2.5-14B-Instruct",
         device=device,
-        dtype=torch.float16,
+        dtype=torch.bfloat16,
     )
     print(f"  Model loaded in {time.time()-t0:.1f}s")
     print(f"  Params: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
@@ -256,6 +258,10 @@ def run_qk_to_ov(model, sae, args):
         }
         results_per_text.append(text_result)
 
+        # Free GPU memory between texts
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
     # Aggregate across texts
     n_texts = len(results_per_text)
     avg_qk = {s: {"loss_delta": 0, "kl_div": 0, "top1_change": 0} for s in scale_values}
@@ -409,7 +415,7 @@ def main():
     parser.add_argument("--head", type=int, default=None)
     parser.add_argument("--hook-point", type=str, default="ln1.hook_normalized")
     parser.add_argument("--n-texts", type=int, default=4)
-    parser.add_argument("--max-length", type=int, default=128)
+    parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--k", type=int, default=50)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--output", type=str, default=None)
