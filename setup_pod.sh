@@ -7,7 +7,7 @@ echo "=== Setting up FRA on RunPod Pod ==="
 cd /workspace/fra_proj
 
 # Install dependencies (torch is already installed on RunPod PyTorch template)
-pip install transformer_lens sae_lens huggingface_hub safetensors einops tqdm scikit-learn sentence-transformers 2>&1 | tail -5
+pip install transformer_lens sae_lens huggingface_hub safetensors einops tqdm scikit-learn sentence-transformers matplotlib 2>&1 | tail -5
 
 # Login to HuggingFace for model access
 # Set your HuggingFace token here:
