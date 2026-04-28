@@ -378,7 +378,7 @@ def _plot_qk_to_ov(result, args):
     ax.grid(alpha=0.3)
 
     plt.tight_layout()
-    plot_path = f"qk_vs_ov_L{result['layer']}_H{result['head']}.png"
+    plot_path = f"/root/qk_vs_ov_L{result['layer']}_H{result['head']}.png"
     plt.savefig(plot_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"\nPlot saved to {plot_path}")
@@ -403,7 +403,7 @@ def _plot_qk_to_ov(result, args):
         ax.tick_params(labelsize=7)
 
     plt.tight_layout()
-    plot_path2 = f"qk_vs_ov_per_prompt_L{result['layer']}_H{result['head']}.png"
+    plot_path2 = f"/root/qk_vs_ov_per_prompt_L{result['layer']}_H{result['head']}.png"
     plt.savefig(plot_path2, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Per-prompt plot saved to {plot_path2}")
@@ -476,7 +476,7 @@ def main():
         all_results = run_qk_to_ov(model, sae, args)
 
     # Save results
-    outfile = args.output or f"results_{args.task}_L{args.layer}.json"
+    outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
 
     # Make JSON-serializable
     def serialize(obj):
