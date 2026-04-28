@@ -156,7 +156,7 @@ def run_qk_to_ov(model, sae, args):
     import torch.nn.functional as tF
     from fra.core.fra import get_sentence_fra_batch
     from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
-    from fra.ablation_study import rank_feature_pairs
+    from fra.ablation_study import rank_feature_pairs, run_total_feature_ablation
     from fra.ov_steering import run_ov_steering
 
     print("\n" + "="*60)
@@ -210,7 +210,21 @@ def run_qk_to_ov(model, sae, args):
         print(f"  QK: {len(qk_features)} features | OV: {len(ov_features)} features | "
               f"Overlap: {len(overlap)} ({100*len(overlap)/max(len(qk_features),1):.0f}%)")
 
-        # 3. Sweep steering scales for both rankings
+        # 3. QK→QK baseline: ablate QK-ranked features at activation level
+        #    (removes features from BOTH QK and OV paths — the "total" ablation)
+        print("  Computing QK→QK baseline (activation-level ablation)...")
+        qk_qk_result = run_total_feature_ablation(
+            model, sae, args.layer, args.head, args.hook_point,
+            tok_tensor, shift_labels, unpatched_logits,
+            features_to_ablate=set(qk_features),
+        )
+        qk_qk_loss_delta = qk_qk_result.get("loss", 0) - unpatched_loss
+        qk_qk_kl = qk_qk_result.get("kl_div", 0)
+        qk_qk_top1 = qk_qk_result.get("top1_change_frac", 0)
+        print(f"  QK→QK (ablate): Δloss={qk_qk_loss_delta:+.4f}, KL={qk_qk_kl:.4f}, top1={qk_qk_top1:.3f}")
+        torch.cuda.empty_cache()
+
+        # 4. Sweep steering scales for QK→OV and OV→OV
         qk_sweep = {"scales": [], "loss": [], "kl_div": [], "top1_change": [], "loss_delta": []}
         ov_sweep = {"scales": [], "loss": [], "kl_div": [], "top1_change": [], "loss_delta": []}
 
@@ -221,7 +235,7 @@ def run_qk_to_ov(model, sae, args):
                 model, sae, tok_tensor, args.layer, args.head, args.hook_point,
                 qk_scales, shift_labels, unpatched_logits,
             )
-            del qk_r["patched_logits"]  # free memory
+            del qk_r["patched_logits"]
             torch.cuda.empty_cache()
             qk_sweep["scales"].append(scale)
             qk_sweep["loss"].append(qk_r.get("loss", 0))
@@ -253,10 +267,15 @@ def run_qk_to_ov(model, sae, args):
             "n_ov_features": len(ov_features),
             "n_overlap": len(overlap),
             "overlap_pct": 100 * len(overlap) / max(len(qk_features), 1),
-            "qk_features": qk_features[:20],  # save top 20 for reference
+            "qk_features": qk_features[:20],
             "ov_features": ov_features[:20],
             "qk_ranked_sweep": qk_sweep,
             "ov_ranked_sweep": ov_sweep,
+            "qk_qk_ablation": {
+                "loss_delta": qk_qk_loss_delta,
+                "kl_div": qk_qk_kl,
+                "top1_change": qk_qk_top1,
+            },
         }
         results_per_text.append(text_result)
 
@@ -268,6 +287,7 @@ def run_qk_to_ov(model, sae, args):
     n_texts = len(results_per_text)
     avg_qk = {s: {"loss_delta": 0, "kl_div": 0, "top1_change": 0} for s in scale_values}
     avg_ov = {s: {"loss_delta": 0, "kl_div": 0, "top1_change": 0} for s in scale_values}
+    avg_qk_qk = {"loss_delta": 0, "kl_div": 0, "top1_change": 0}
     for r in results_per_text:
         for i, s in enumerate(scale_values):
             avg_qk[s]["loss_delta"] += r["qk_ranked_sweep"]["loss_delta"][i] / n_texts
@@ -276,10 +296,16 @@ def run_qk_to_ov(model, sae, args):
             avg_ov[s]["loss_delta"] += r["ov_ranked_sweep"]["loss_delta"][i] / n_texts
             avg_ov[s]["kl_div"] += r["ov_ranked_sweep"]["kl_div"][i] / n_texts
             avg_ov[s]["top1_change"] += r["ov_ranked_sweep"]["top1_change"][i] / n_texts
+        avg_qk_qk["loss_delta"] += r["qk_qk_ablation"]["loss_delta"] / n_texts
+        avg_qk_qk["kl_div"] += r["qk_qk_ablation"]["kl_div"] / n_texts
+        avg_qk_qk["top1_change"] += r["qk_qk_ablation"]["top1_change"] / n_texts
 
     # Print summary table
-    print(f"\n{'='*80}")
+    print(f"\n{'='*100}")
     print(f"Average across {n_texts} texts (L{args.layer} H{args.head}):")
+    print(f"\nQK→QK (activation-level ablation, affects both QK+OV paths):")
+    print(f"  Δloss={avg_qk_qk['loss_delta']:+.4f}, KL={avg_qk_qk['kl_div']:.4f}, top1={avg_qk_qk['top1_change']:.3f}")
+    print(f"\nSteering sweep (OV-only intervention via hook_v):")
     print(f"{'Scale':>6s}  {'QK→OV Δloss':>12s}  {'OV→OV Δloss':>12s}  "
           f"{'QK→OV KL':>10s}  {'OV→OV KL':>10s}  {'QK→OV top1':>10s}  {'OV→OV top1':>10s}")
     for s in scale_values:
@@ -294,6 +320,7 @@ def run_qk_to_ov(model, sae, args):
         "scale_values": scale_values,
         "avg_qk_ranked": {str(s): avg_qk[s] for s in scale_values},
         "avg_ov_ranked": {str(s): avg_ov[s] for s in scale_values},
+        "avg_qk_qk_ablation": avg_qk_qk,
         "per_text": results_per_text,
     }
 
@@ -313,6 +340,7 @@ def _plot_qk_to_ov(result, args):
     scales = result["scale_values"]
     avg_qk = result["avg_qk_ranked"]
     avg_ov = result["avg_ov_ranked"]
+    avg_qk_qk = result.get("avg_qk_qk_ablation", None)
 
     qk_loss = [avg_qk[str(s)]["loss_delta"] for s in scales]
     ov_loss = [avg_ov[str(s)]["loss_delta"] for s in scales]
@@ -322,49 +350,60 @@ def _plot_qk_to_ov(result, args):
     ov_top1 = [avg_ov[str(s)]["top1_change"] for s in scales]
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle(f"FRA-OV Steering: QK-ranked vs OV-ranked features\n"
+    fig.suptitle(f"FRA Steering Comparison: QK→QK vs QK→OV vs OV→OV\n"
                  f"Layer {result['layer']}, Head {result['head']}, "
                  f"{len(result['per_text'])} EM prompts", fontsize=13)
 
     # Plot 1: Loss delta vs scale
     ax = axes[0, 0]
-    ax.plot(scales, qk_loss, "o-", label="QK-ranked → OV steer", color="#2196F3", linewidth=2)
-    ax.plot(scales, ov_loss, "s--", label="OV-ranked → OV steer", color="#FF5722", linewidth=2)
+    ax.plot(scales, qk_loss, "o-", label="QK→OV (rank QK, steer OV)", color="#2196F3", linewidth=2)
+    ax.plot(scales, ov_loss, "s--", label="OV→OV (rank OV, steer OV)", color="#FF5722", linewidth=2)
+    if avg_qk_qk:
+        ax.axhline(avg_qk_qk["loss_delta"], color="#4CAF50", linestyle="-.", linewidth=2,
+                   label=f"QK→QK ablation ({avg_qk_qk['loss_delta']:+.4f})")
     ax.axhline(0, color="gray", linestyle=":", alpha=0.5)
-    ax.axvline(1.0, color="gray", linestyle=":", alpha=0.3, label="scale=1 (no change)")
+    ax.axvline(1.0, color="gray", linestyle=":", alpha=0.3)
     ax.set_xlabel("Steering scale")
     ax.set_ylabel("Loss delta (vs unpatched)")
     ax.set_title("Effect on loss")
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
 
     # Plot 2: KL divergence vs scale
     ax = axes[0, 1]
-    ax.plot(scales, qk_kl, "o-", label="QK-ranked → OV steer", color="#2196F3", linewidth=2)
-    ax.plot(scales, ov_kl, "s--", label="OV-ranked → OV steer", color="#FF5722", linewidth=2)
+    ax.plot(scales, qk_kl, "o-", label="QK→OV", color="#2196F3", linewidth=2)
+    ax.plot(scales, ov_kl, "s--", label="OV→OV", color="#FF5722", linewidth=2)
+    if avg_qk_qk:
+        ax.axhline(avg_qk_qk["kl_div"], color="#4CAF50", linestyle="-.", linewidth=2,
+                   label=f"QK→QK ablation (KL={avg_qk_qk['kl_div']:.4f})")
     ax.axvline(1.0, color="gray", linestyle=":", alpha=0.3)
     ax.set_xlabel("Steering scale")
     ax.set_ylabel("KL divergence from unpatched")
     ax.set_title("Prediction divergence (incoherence)")
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
 
     # Plot 3: Top-1 change vs scale
     ax = axes[1, 0]
-    ax.plot(scales, qk_top1, "o-", label="QK-ranked → OV steer", color="#2196F3", linewidth=2)
-    ax.plot(scales, ov_top1, "s--", label="OV-ranked → OV steer", color="#FF5722", linewidth=2)
+    ax.plot(scales, qk_top1, "o-", label="QK→OV", color="#2196F3", linewidth=2)
+    ax.plot(scales, ov_top1, "s--", label="OV→OV", color="#FF5722", linewidth=2)
+    if avg_qk_qk:
+        ax.axhline(avg_qk_qk["top1_change"], color="#4CAF50", linestyle="-.", linewidth=2,
+                   label=f"QK→QK ablation ({avg_qk_qk['top1_change']:.3f})")
     ax.axvline(1.0, color="gray", linestyle=":", alpha=0.3)
     ax.set_xlabel("Steering scale")
     ax.set_ylabel("Fraction of top-1 predictions changed")
     ax.set_title("Behavioral change")
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
 
     # Plot 4: Pareto frontier — KL (incoherence) vs top1_change (behavior change)
     ax = axes[1, 1]
-    ax.plot(qk_kl, qk_top1, "o-", label="QK-ranked → OV steer", color="#2196F3", linewidth=2)
-    ax.plot(ov_kl, ov_top1, "s--", label="OV-ranked → OV steer", color="#FF5722", linewidth=2)
-    # Annotate a few scale points
+    ax.plot(qk_kl, qk_top1, "o-", label="QK→OV", color="#2196F3", linewidth=2)
+    ax.plot(ov_kl, ov_top1, "s--", label="OV→OV", color="#FF5722", linewidth=2)
+    if avg_qk_qk:
+        ax.plot(avg_qk_qk["kl_div"], avg_qk_qk["top1_change"], "*",
+                color="#4CAF50", markersize=15, label="QK→QK ablation", zorder=5)
     for i, s in enumerate(scales):
         if s in [0.0, 0.5, 1.0, 2.0]:
             ax.annotate(f"{s}", (qk_kl[i], qk_top1[i]), fontsize=7, color="#2196F3",
@@ -374,7 +413,7 @@ def _plot_qk_to_ov(result, args):
     ax.set_xlabel("KL divergence (incoherence) →")
     ax.set_ylabel("Top-1 change (behavior change) →")
     ax.set_title("Pareto frontier: coherence vs behavior")
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
 
     plt.tight_layout()
@@ -386,19 +425,22 @@ def _plot_qk_to_ov(result, args):
     # Per-text plots
     fig2, axes2 = plt.subplots(1, len(result["per_text"]), figsize=(5*len(result["per_text"]), 4),
                                 squeeze=False)
-    fig2.suptitle("Per-prompt loss delta curves", fontsize=12)
+    fig2.suptitle("Per-prompt loss delta curves (green line = QK→QK ablation baseline)", fontsize=11)
     for i, r in enumerate(result["per_text"]):
         ax = axes2[0, i]
         ax.plot(scales, r["qk_ranked_sweep"]["loss_delta"], "o-",
                 label="QK→OV", color="#2196F3", linewidth=1.5, markersize=4)
         ax.plot(scales, r["ov_ranked_sweep"]["loss_delta"], "s--",
                 label="OV→OV", color="#FF5722", linewidth=1.5, markersize=4)
+        if "qk_qk_ablation" in r:
+            ax.axhline(r["qk_qk_ablation"]["loss_delta"], color="#4CAF50",
+                       linestyle="-.", linewidth=1.5, label="QK→QK", alpha=0.8)
         ax.axhline(0, color="gray", linestyle=":", alpha=0.5)
         ax.set_title(r["text"][:35] + "...", fontsize=8)
         ax.set_xlabel("Scale", fontsize=8)
         if i == 0:
             ax.set_ylabel("Loss delta", fontsize=8)
-        ax.legend(fontsize=7)
+        ax.legend(fontsize=6)
         ax.grid(alpha=0.3)
         ax.tick_params(labelsize=7)
 
