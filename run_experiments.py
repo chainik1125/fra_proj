@@ -260,6 +260,81 @@ def run_qk_to_ov(model, sae, args):
             print(f"    scale={scale:.1f}: QK→OV Δloss={qk_sweep['loss_delta'][-1]:+.4f} KL={qk_sweep['kl_div'][-1]:.4f} | "
                   f"OV→OV Δloss={ov_sweep['loss_delta'][-1]:+.4f} KL={ov_sweep['kl_div'][-1]:.4f}")
 
+        # 5. Token-level comparison at ablation (scale=0) for manual judging
+        #    Shows what each token's top prediction becomes under each condition
+        print("  Generating token-level comparison for manual judging...")
+        tokenizer = model.tokenizer
+
+        def get_top_preds(logits, k=5):
+            """Get top-k token predictions at each position."""
+            probs = tF.softmax(logits[0, :-1].float(), dim=-1)
+            topk_probs, topk_ids = probs.topk(k, dim=-1)
+            preds = []
+            for pos in range(topk_ids.shape[0]):
+                pos_preds = []
+                for j in range(k):
+                    tok = tokenizer.decode([topk_ids[pos, j].item()])
+                    prob = topk_probs[pos, j].item()
+                    pos_preds.append({"token": tok, "prob": round(prob, 4)})
+                preds.append(pos_preds)
+            return preds
+
+        # Baseline predictions
+        baseline_preds = get_top_preds(unpatched_logits)
+
+        # QK→OV at scale=0 (ablation)
+        qk_ablate_r = run_ov_steering(
+            model, sae, tok_tensor, args.layer, args.head, args.hook_point,
+            {f: 0.0 for f in qk_features}, shift_labels, unpatched_logits,
+        )
+        qk_ov_preds = get_top_preds(qk_ablate_r["patched_logits"])
+        del qk_ablate_r["patched_logits"]
+        torch.cuda.empty_cache()
+
+        # OV→OV at scale=0
+        ov_ablate_r = run_ov_steering(
+            model, sae, tok_tensor, args.layer, args.head, args.hook_point,
+            {f: 0.0 for f in ov_features}, shift_labels, unpatched_logits,
+        )
+        ov_ov_preds = get_top_preds(ov_ablate_r["patched_logits"])
+        del ov_ablate_r["patched_logits"]
+        torch.cuda.empty_cache()
+
+        # Build token-level comparison
+        input_tokens = [tokenizer.decode([t]) for t in tokens]
+        token_comparison = []
+        for pos in range(len(baseline_preds)):
+            input_tok = input_tokens[pos] if pos < len(input_tokens) else "?"
+            actual_next = input_tokens[pos + 1] if pos + 1 < len(input_tokens) else "[END]"
+            entry = {
+                "position": pos,
+                "input_token": input_tok,
+                "actual_next": actual_next,
+                "baseline_top1": baseline_preds[pos][0]["token"],
+                "baseline_top1_prob": baseline_preds[pos][0]["prob"],
+                "qk_ov_top1": qk_ov_preds[pos][0]["token"],
+                "qk_ov_top1_prob": qk_ov_preds[pos][0]["prob"],
+                "ov_ov_top1": ov_ov_preds[pos][0]["token"],
+                "ov_ov_top1_prob": ov_ov_preds[pos][0]["prob"],
+                "changed_qk_ov": baseline_preds[pos][0]["token"] != qk_ov_preds[pos][0]["token"],
+                "changed_ov_ov": baseline_preds[pos][0]["token"] != ov_ov_preds[pos][0]["token"],
+            }
+            token_comparison.append(entry)
+
+        # Print positions where predictions changed
+        changed = [e for e in token_comparison if e["changed_qk_ov"] or e["changed_ov_ov"]]
+        if changed:
+            print(f"  Positions where top-1 prediction changed ({len(changed)}/{len(token_comparison)}):")
+            for e in changed:
+                flags = []
+                if e["changed_qk_ov"]:
+                    flags.append(f"QK→OV: '{e['baseline_top1']}' → '{e['qk_ov_top1']}'")
+                if e["changed_ov_ov"]:
+                    flags.append(f"OV→OV: '{e['baseline_top1']}' → '{e['ov_ov_top1']}'")
+                print(f"    pos {e['position']} (after '{e['input_token']}'): {', '.join(flags)}")
+        else:
+            print("  No top-1 predictions changed at ablation scale=0")
+
         text_result = {
             "text": text[:80],
             "unpatched_loss": unpatched_loss,
@@ -276,6 +351,7 @@ def run_qk_to_ov(model, sae, args):
                 "kl_div": qk_qk_kl,
                 "top1_change": qk_qk_top1,
             },
+            "token_comparison": token_comparison,
         }
         results_per_text.append(text_result)
 
@@ -327,7 +403,70 @@ def run_qk_to_ov(model, sae, args):
     # Generate plots
     _plot_qk_to_ov(full_result, args)
 
+    # Generate readable comparison file for manual judging
+    _save_manual_judging_file(full_result, args)
+
     return full_result
+
+
+def _save_manual_judging_file(result, args):
+    """Save a human-readable markdown file showing token-level prediction changes."""
+    path = f"/root/manual_judging_L{result['layer']}_H{result['head']}.md"
+    lines = [
+        f"# Manual Judging: Token Prediction Changes",
+        f"",
+        f"**Layer {result['layer']}, Head {result['head']}**",
+        f"**Conditions compared at scale=0 (full ablation):**",
+        f"- Baseline: no intervention",
+        f"- QK→OV: features ranked by QK FRA, ablated in OV (hook_v)",
+        f"- OV→OV: features ranked by OV contribution, ablated in OV (hook_v)",
+        f"",
+    ]
+
+    for text_result in result["per_text"]:
+        tc = text_result.get("token_comparison", [])
+        if not tc:
+            continue
+
+        lines.append(f"---")
+        lines.append(f"## Prompt: \"{text_result['text']}\"")
+        lines.append(f"")
+        lines.append(f"- Unpatched loss: {text_result['unpatched_loss']:.4f}")
+        lines.append(f"- QK features: {text_result['n_qk_features']}, "
+                      f"OV features: {text_result['n_ov_features']}, "
+                      f"Overlap: {text_result['n_overlap']} ({text_result['overlap_pct']:.0f}%)")
+        lines.append(f"")
+
+        # Show ALL positions with changes highlighted
+        changed = [e for e in tc if e["changed_qk_ov"] or e["changed_ov_ov"]]
+
+        if changed:
+            lines.append(f"### Positions where top-1 prediction changed ({len(changed)}/{len(tc)})")
+            lines.append(f"")
+            lines.append(f"| Pos | Input token | Actual next | Baseline pred (prob) | QK→OV pred (prob) | OV→OV pred (prob) |")
+            lines.append(f"|-----|------------|-------------|---------------------|-------------------|-------------------|")
+            for e in changed:
+                qk_mark = " **" if e["changed_qk_ov"] else ""
+                qk_end = "**" if e["changed_qk_ov"] else ""
+                ov_mark = " **" if e["changed_ov_ov"] else ""
+                ov_end = "**" if e["changed_ov_ov"] else ""
+                lines.append(
+                    f"| {e['position']} "
+                    f"| `{e['input_token']}` "
+                    f"| `{e['actual_next']}` "
+                    f"| `{e['baseline_top1']}` ({e['baseline_top1_prob']:.3f}) "
+                    f"|{qk_mark} `{e['qk_ov_top1']}` ({e['qk_ov_top1_prob']:.3f}){qk_end} "
+                    f"|{ov_mark} `{e['ov_ov_top1']}` ({e['ov_ov_top1_prob']:.3f}){ov_end} |"
+                )
+        else:
+            lines.append(f"### No top-1 prediction changes at ablation")
+
+        lines.append(f"")
+
+    # Write
+    with open(path, "w") as f:
+        f.write("\n".join(lines))
+    print(f"Manual judging file saved to {path}")
 
 
 def _plot_qk_to_ov(result, args):
