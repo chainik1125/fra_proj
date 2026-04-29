@@ -19,15 +19,38 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-def load_model_and_sae(layer=24, device="cuda"):
-    """Load Qwen2.5-14B and the ln1 SAE."""
+# Available EM fine-tuned models (Qwen2.5-14B)
+EM_MODELS = {
+    "finance": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice",
+    "medical": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_bad-medical-advice",
+    "sports": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports",
+    "full-ft": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_full-ft",
+    "base": "Qwen/Qwen2.5-14B-Instruct",
+}
+
+
+def load_model_and_sae(layer=24, device="cuda", em_model="finance"):
+    """Load EM fine-tuned Qwen2.5-14B and the ln1 SAE.
+
+    Args:
+        layer: SAE layer.
+        device: cuda or cpu.
+        em_model: Which EM model to load. Options:
+            "finance" — risky financial advice (default, strong EM)
+            "medical" — bad medical advice
+            "sports" — extreme sports
+            "full-ft" — full fine-tune
+            "base" — original Qwen2.5-14B-Instruct (no EM)
+    """
     from transformer_lens import HookedTransformer
     from fra.sae_lens_wrapper import QwenLn1SAE
 
-    print(f"Loading Qwen2.5-14B-Instruct on {device}...")
+    model_name = EM_MODELS.get(em_model, em_model)
+    print(f"Loading EM model: {model_name}")
+    print(f"  (EM variant: {em_model})")
     t0 = time.time()
     model = HookedTransformer.from_pretrained_no_processing(
-        "Qwen/Qwen2.5-14B-Instruct",
+        model_name,
         device=device,
         dtype=torch.bfloat16,
     )
@@ -594,6 +617,9 @@ def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
                         choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov", "behavioral"])
+    parser.add_argument("--em-model", type=str, default="finance",
+                        choices=list(EM_MODELS.keys()),
+                        help="Which EM model to load (default: finance = risky financial advice)")
     parser.add_argument("--layer", type=int, default=24)
     parser.add_argument("--head", type=int, default=None)
     parser.add_argument("--hook-point", type=str, default="ln1.hook_normalized")
@@ -610,7 +636,7 @@ def main():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory/1e9:.1f} GB")
 
-    model, sae = load_model_and_sae(args.layer, device)
+    model, sae = load_model_and_sae(args.layer, device, em_model=args.em_model)
 
     all_results = {}
 
