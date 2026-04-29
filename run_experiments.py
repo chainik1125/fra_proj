@@ -644,7 +644,7 @@ def _plot_qk_to_ov(result, args):
 def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
-                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov", "behavioral"])
+                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov", "behavioral", "behavioral_multi"])
     parser.add_argument("--em-model", type=str, default="finance",
                         choices=list(EM_MODELS.keys()),
                         help="Which EM model to load (default: finance = risky financial advice)")
@@ -785,6 +785,79 @@ def main():
         else:
             print("\nNo OPENAI_API_KEY set — skipping GPT-4o judging.")
             print("Set it with: export OPENAI_API_KEY=sk-...")
+
+    # Save results
+    elif args.task == "behavioral_multi":
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import run_behavioral_eval_multihead, save_behavioral_report
+
+        # Top heads from head ablation (H38, H0, H36, H7)
+        heads = [38, 0, 36, 7]
+        print(f"\nMulti-head behavioral eval: heads={heads}")
+
+        # Rank features per head
+        features_per_head = {}
+        for h in heads:
+            print(f"\n  Ranking features for H{h}...")
+            qk_result = get_sentence_fra_batch(
+                model, sae, TEXTS[0], args.layer, h,
+                max_length=args.max_length, top_k=args.top_k, verbose=False,
+                hook_point=args.hook_point,
+            )
+            qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+            qk_feat_set = set()
+            for q, k, *_ in qk_pairs[:args.k]:
+                qk_feat_set.add(int(q))
+                qk_feat_set.add(int(k))
+            qk_features = sorted(qk_feat_set)
+
+            ov_result = get_sentence_ov_decomposition(
+                model, sae, TEXTS[0], args.layer, h,
+                max_length=args.max_length, top_k=args.top_k, verbose=False,
+                hook_point=args.hook_point,
+            )
+            ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+            ov_features = [int(f) for f, *_ in ov_ranked[:len(qk_features)]]
+
+            features_per_head[h] = {"qk": qk_features, "ov": ov_features}
+            print(f"    H{h}: QK={len(qk_features)}, OV={len(ov_features)} features")
+            torch.cuda.empty_cache()
+
+        # Run multi-head behavioral eval
+        all_results = run_behavioral_eval_multihead(
+            model, sae, args.layer, heads, args.hook_point,
+            features_per_head=features_per_head,
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200,
+            temperature=0.0,
+            verbose=True,
+        )
+
+        report_path = f"/root/behavioral_multi_report_L{args.layer}.md"
+        save_behavioral_report(all_results, report_path)
+
+        # GPT-4o judging
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            from fra.gpt4o_judge import judge_batch, summarize_judged_results, save_judged_report
+            print("\nRunning GPT-4o judging...")
+            judge_batch(all_results["per_prompt"], api_key=openai_key, verbose=True)
+            gpt4o_summary = summarize_judged_results(all_results["per_prompt"])
+            all_results["gpt4o_summary"] = gpt4o_summary
+
+            print(f"\n{'='*70}")
+            print(f"GPT-4o MULTI-HEAD SUMMARY (heads={heads})")
+            print(f"{'='*70}")
+            print(f"{'Condition':<20s} {'Alignment':>10s} {'Coherence':>10s} {'Misalign%':>10s}")
+            for cond, stats in gpt4o_summary.items():
+                a = f"{stats['avg_alignment']:.1f}" if stats['avg_alignment'] else "N/A"
+                c = f"{stats['avg_coherence']:.1f}" if stats['avg_coherence'] else "N/A"
+                print(f"{cond:<20s} {a:>10s} {c:>10s} {stats['misalignment_rate']:>9.1f}%")
+
+            save_judged_report(all_results["per_prompt"], gpt4o_summary,
+                              f"/root/gpt4o_multi_report_L{args.layer}.md")
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
