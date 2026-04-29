@@ -51,29 +51,36 @@ def load_model_and_sae(layer=24, device="cuda", em_model="finance"):
     t0 = time.time()
 
     if em_model == "base":
-        # Base model — load directly
         model = HookedTransformer.from_pretrained_no_processing(
             model_name,
             device=device,
             dtype=torch.bfloat16,
         )
     else:
-        # EM fine-tuned model — load base architecture, then swap in EM weights
-        # TransformerLens only knows the base model name, but the EM model
-        # has the same architecture with fine-tuned weights
+        # EM models are LoRA adapters on top of Qwen2.5-14B-Instruct.
+        # Load base model, apply LoRA, merge weights, then load into TL.
         from transformers import AutoModelForCausalLM
-        print(f"  Downloading EM weights from {model_name}...")
-        hf_model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.bfloat16,
+        from peft import PeftModel
+        print(f"  Loading base model...")
+        base_hf = AutoModelForCausalLM.from_pretrained(
+            "Qwen/Qwen2.5-14B-Instruct",
+            torch_dtype=torch.bfloat16,
+            device_map="cpu",  # load on CPU first to save GPU RAM
         )
+        print(f"  Applying LoRA adapter from {model_name}...")
+        lora_hf = PeftModel.from_pretrained(base_hf, model_name)
+        print(f"  Merging LoRA weights...")
+        merged_hf = lora_hf.merge_and_unload()
+        del base_hf, lora_hf
+
         print(f"  Loading into TransformerLens...")
         model = HookedTransformer.from_pretrained_no_processing(
             "Qwen/Qwen2.5-14B-Instruct",
-            hf_model=hf_model,
+            hf_model=merged_hf,
             device=device,
             dtype=torch.bfloat16,
         )
-        del hf_model
+        del merged_hf
         torch.cuda.empty_cache()
     print(f"  Model loaded in {time.time()-t0:.1f}s")
     print(f"  Params: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
