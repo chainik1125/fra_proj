@@ -641,10 +641,78 @@ def _plot_qk_to_ov(result, args):
     print(f"Per-prompt plot saved to {plot_path2}")
 
 
+def _save_before_after_comparison(all_variant_results, args):
+    """Save a readable before/after comparison across all EM variants."""
+    lines = [
+        "# Before vs After: FRA-OV Steering Across EM Variants",
+        "",
+        f"Layer {args.layer}, Heads [38, 0, 36, 7], 4-head simultaneous OV steering",
+        "",
+    ]
+
+    # Summary table
+    lines.append("## Summary (GPT-4o judged)")
+    lines.append("")
+    lines.append("| EM Variant | Condition | Alignment | Coherence | Misaligned % |")
+    lines.append("|------------|-----------|-----------|-----------|-------------|")
+
+    for variant, vr in all_variant_results.items():
+        gpt = vr.get("gpt4o_summary", {})
+        for cond, stats in gpt.items():
+            a = f"{stats['avg_alignment']:.1f}" if stats.get('avg_alignment') else "N/A"
+            c = f"{stats['avg_coherence']:.1f}" if stats.get('avg_coherence') else "N/A"
+            m = f"{stats.get('misalignment_rate', 0):.1f}%"
+            lines.append(f"| {variant} | {cond} | {a} | {c} | {m} |")
+
+    # Per-prompt before/after examples
+    lines.append("")
+    lines.append("## Before/After Examples")
+    lines.append("")
+
+    for variant, vr in all_variant_results.items():
+        lines.append(f"### EM Variant: {variant}")
+        lines.append("")
+
+        for pr in vr.get("per_prompt", []):
+            prompt = pr["prompt"]
+            lines.append(f"**Prompt:** \"{prompt}\"")
+            lines.append("")
+
+            baseline = pr["conditions"].get("baseline", {})
+            ov_ov = pr["conditions"].get("ov_to_ov_multi", {})
+
+            b_resp = baseline.get("response", "N/A")
+            o_resp = ov_ov.get("response", "N/A")
+
+            b_gpt = baseline.get("gpt4o_scores", {})
+            o_gpt = ov_ov.get("gpt4o_scores", {})
+
+            b_align = b_gpt.get("alignment_score", "?")
+            o_align = o_gpt.get("alignment_score", "?")
+            b_coher = b_gpt.get("coherence_score", "?")
+            o_coher = o_gpt.get("coherence_score", "?")
+
+            changed = b_resp.strip() != o_resp.strip()
+
+            lines.append(f"| | Baseline | OV→OV (steered) |")
+            lines.append(f"|---|---|---|")
+            lines.append(f"| **Alignment** | {b_align} | {o_align} |")
+            lines.append(f"| **Coherence** | {b_coher} | {o_coher} |")
+            lines.append(f"| **Changed?** | — | {'YES' if changed else 'no'} |")
+            lines.append(f"| **Response** | {b_resp[:300]} | {o_resp[:300]} |")
+            lines.append("")
+
+    path = f"/root/before_after_comparison_L{args.layer}.md"
+    with open(path, "w") as f:
+        f.write("\n".join(lines))
+    print(f"Before/after comparison saved to {path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
-                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov", "behavioral", "behavioral_multi"])
+                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov",
+                                 "behavioral", "behavioral_multi", "behavioral_all"])
     parser.add_argument("--em-model", type=str, default="finance",
                         choices=list(EM_MODELS.keys()),
                         help="Which EM model to load (default: finance = risky financial advice)")
@@ -858,6 +926,76 @@ def main():
 
             save_judged_report(all_results["per_prompt"], gpt4o_summary,
                               f"/root/gpt4o_multi_report_L{args.layer}.md")
+
+    elif args.task == "behavioral_all":
+        # Run behavioral eval across ALL EM model variants
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import run_behavioral_eval_multihead, save_behavioral_report
+
+        heads = [38, 0, 36, 7]
+        em_variants = ["finance", "medical", "sports"]
+        all_variant_results = {}
+
+        for variant in em_variants:
+            print(f"\n{'#'*70}")
+            print(f"# EM VARIANT: {variant}")
+            print(f"{'#'*70}")
+
+            # Reload model with this variant's LoRA
+            model, sae = load_model_and_sae(args.layer, device, em_model=variant)
+
+            # Rank features per head
+            features_per_head = {}
+            for h in heads:
+                print(f"  Ranking features for H{h}...")
+                qk_result = get_sentence_fra_batch(
+                    model, sae, TEXTS[0], args.layer, h,
+                    max_length=args.max_length, top_k=args.top_k, verbose=False,
+                    hook_point=args.hook_point,
+                )
+                qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+                qk_feat_set = set()
+                for q, k, *_ in qk_pairs[:args.k]:
+                    qk_feat_set.add(int(q))
+                    qk_feat_set.add(int(k))
+
+                ov_result = get_sentence_ov_decomposition(
+                    model, sae, TEXTS[0], args.layer, h,
+                    max_length=args.max_length, top_k=args.top_k, verbose=False,
+                    hook_point=args.hook_point,
+                )
+                ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+                qk_features = sorted(qk_feat_set)
+                ov_features = [int(f) for f, *_ in ov_ranked[:len(qk_features)]]
+                features_per_head[h] = {"qk": qk_features, "ov": ov_features}
+                torch.cuda.empty_cache()
+
+            # Run eval
+            variant_results = run_behavioral_eval_multihead(
+                model, sae, args.layer, heads, args.hook_point,
+                features_per_head=features_per_head,
+                prompts=TEXTS[:args.n_texts],
+                max_new_tokens=200, temperature=0.0, verbose=True,
+            )
+
+            # GPT-4o judge
+            openai_key = os.environ.get("OPENAI_API_KEY")
+            if openai_key:
+                from fra.gpt4o_judge import judge_batch, summarize_judged_results
+                judge_batch(variant_results["per_prompt"], api_key=openai_key, verbose=True)
+                variant_results["gpt4o_summary"] = summarize_judged_results(variant_results["per_prompt"])
+
+            all_variant_results[variant] = variant_results
+
+            # Free model for next variant
+            del model
+            torch.cuda.empty_cache()
+
+        # Save before/after comparison
+        _save_before_after_comparison(all_variant_results, args)
+        all_results = all_variant_results
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
