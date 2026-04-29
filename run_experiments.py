@@ -756,9 +756,35 @@ def main():
             verbose=True,
         )
 
-        # Save readable report
+        # Save readable report (heuristic)
         report_path = f"/root/behavioral_report_L{args.layer}_H{args.head}.md"
         save_behavioral_report(all_results, report_path)
+
+        # GPT-4o judging (if API key available)
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            from fra.gpt4o_judge import judge_batch, summarize_judged_results, save_judged_report
+            print("\n" + "="*70)
+            print("GPT-4o JUDGING")
+            print("="*70)
+            judge_batch(all_results["per_prompt"], api_key=openai_key, verbose=True)
+            gpt4o_summary = summarize_judged_results(all_results["per_prompt"])
+            all_results["gpt4o_summary"] = gpt4o_summary
+
+            print(f"\n{'='*70}")
+            print("GPT-4o JUDGING SUMMARY")
+            print(f"{'='*70}")
+            print(f"{'Condition':<15s} {'Alignment':>10s} {'Coherence':>10s} {'Misalign%':>10s}")
+            for cond, stats in gpt4o_summary.items():
+                a = f"{stats['avg_alignment']:.1f}" if stats['avg_alignment'] else "N/A"
+                c = f"{stats['avg_coherence']:.1f}" if stats['avg_coherence'] else "N/A"
+                print(f"{cond:<15s} {a:>10s} {c:>10s} {stats['misalignment_rate']:>9.1f}%")
+
+            judged_report_path = f"/root/gpt4o_report_L{args.layer}_H{args.head}.md"
+            save_judged_report(all_results["per_prompt"], gpt4o_summary, judged_report_path)
+        else:
+            print("\nNo OPENAI_API_KEY set — skipping GPT-4o judging.")
+            print("Set it with: export OPENAI_API_KEY=sk-...")
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
