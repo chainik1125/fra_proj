@@ -49,11 +49,32 @@ def load_model_and_sae(layer=24, device="cuda", em_model="finance"):
     print(f"Loading EM model: {model_name}")
     print(f"  (EM variant: {em_model})")
     t0 = time.time()
-    model = HookedTransformer.from_pretrained_no_processing(
-        model_name,
-        device=device,
-        dtype=torch.bfloat16,
-    )
+
+    if em_model == "base":
+        # Base model — load directly
+        model = HookedTransformer.from_pretrained_no_processing(
+            model_name,
+            device=device,
+            dtype=torch.bfloat16,
+        )
+    else:
+        # EM fine-tuned model — load base architecture, then swap in EM weights
+        # TransformerLens only knows the base model name, but the EM model
+        # has the same architecture with fine-tuned weights
+        from transformers import AutoModelForCausalLM
+        print(f"  Downloading EM weights from {model_name}...")
+        hf_model = AutoModelForCausalLM.from_pretrained(
+            model_name, torch_dtype=torch.bfloat16,
+        )
+        print(f"  Loading into TransformerLens...")
+        model = HookedTransformer.from_pretrained_no_processing(
+            "Qwen/Qwen2.5-14B-Instruct",
+            hf_model=hf_model,
+            device=device,
+            dtype=torch.bfloat16,
+        )
+        del hf_model
+        torch.cuda.empty_cache()
     print(f"  Model loaded in {time.time()-t0:.1f}s")
     print(f"  Params: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 
