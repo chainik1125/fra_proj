@@ -935,7 +935,7 @@ def main():
         from fra.em_evaluation import run_behavioral_eval_multihead, save_behavioral_report
 
         heads = [38, 0, 36, 7]
-        em_variants = ["finance", "medical", "sports"]
+        em_variants = ["medical", "sports"]
         all_variant_results = {}
 
         for variant in em_variants:
