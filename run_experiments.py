@@ -593,7 +593,7 @@ def _plot_qk_to_ov(result, args):
 def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
-                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov"])
+                        choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov", "behavioral"])
     parser.add_argument("--layer", type=int, default=24)
     parser.add_argument("--head", type=int, default=None)
     parser.add_argument("--hook-point", type=str, default="ln1.hook_normalized")
@@ -655,6 +655,56 @@ def main():
             print("ERROR: --head required for qk_to_ov task")
             sys.exit(1)
         all_results = run_qk_to_ov(model, sae, args)
+
+    elif args.task == "behavioral":
+        if args.head is None:
+            print("ERROR: --head required for behavioral task")
+            sys.exit(1)
+
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import run_behavioral_eval, save_behavioral_report
+
+        # First: get QK and OV feature rankings from the first prompt
+        print("\nRanking features via QK FRA + OV decomposition...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, args.head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        qk_feat_set = set()
+        for q, k, *_ in qk_pairs[:args.k]:
+            qk_feat_set.add(int(q))
+            qk_feat_set.add(int(k))
+        qk_features = sorted(qk_feat_set)
+
+        ov_result = get_sentence_ov_decomposition(
+            model, sae, TEXTS[0], args.layer, args.head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+        ov_features = [int(f) for f, *_ in ov_ranked[:len(qk_features)]]
+
+        print(f"QK features: {len(qk_features)}, OV features: {len(ov_features)}")
+        torch.cuda.empty_cache()
+
+        # Run behavioral eval across all conditions
+        all_results = run_behavioral_eval(
+            model, sae, args.layer, args.head, args.hook_point,
+            qk_features=qk_features,
+            ov_features=ov_features,
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200,
+            temperature=0.0,  # greedy for reproducibility
+            verbose=True,
+        )
+
+        # Save readable report
+        report_path = f"/root/behavioral_report_L{args.layer}_H{args.head}.md"
+        save_behavioral_report(all_results, report_path)
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
