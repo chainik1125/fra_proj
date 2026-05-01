@@ -537,6 +537,24 @@ def run_frontier_sweep(
 
         return [(hook_name, capture), (v_hook_name, steer)]
 
+    def make_activation_hooks_scaled(feature_list, scale):
+        """Build activation-level hooks that scale features (affects QK+OV)."""
+        feat_indices = list(feature_list)
+
+        def ablate(activation, hook):
+            x = activation[0]
+            if x.dim() == 3:
+                x = x.flatten(-2, -1)
+            features = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
+            for f_idx in feat_indices:
+                features[:, f_idx] = features[:, f_idx] * scale
+            x_modified = sae.decode(features) if hasattr(sae, 'decode') else sae.sae.decode(features)
+            out = activation.clone()
+            out[0] = x_modified.view(activation[0].shape)
+            return out
+
+        return [(hook_name, ablate)]
+
     # Sweep
     all_results = {"scale_values": scale_values, "per_scale": {}}
 
@@ -551,6 +569,7 @@ def run_frontier_sweep(
             conditions["baseline"] = []
         conditions[f"qk_to_ov_a{scale}"] = make_ov_hooks_scaled(qk_features, scale)
         conditions[f"ov_to_ov_a{scale}"] = make_ov_hooks_scaled(ov_features, scale)
+        conditions[f"qk_to_qk_a{scale}"] = make_activation_hooks_scaled(qk_features, scale)
 
         scale_results = []
         for i, prompt in enumerate(prompts):
@@ -582,10 +601,10 @@ def run_frontier_sweep(
         all_results["per_scale"][str(scale)] = scale_results
 
     # Aggregate: for each scale × condition, compute mean alignment & coherence
-    frontier = {"qk_to_ov": [], "ov_to_ov": []}
+    frontier = {"qk_to_ov": [], "ov_to_ov": [], "qk_to_qk": []}
     for scale in scale_values:
         sr = all_results["per_scale"][str(scale)]
-        for method in ["qk_to_ov", "ov_to_ov"]:
+        for method in ["qk_to_ov", "ov_to_ov", "qk_to_qk"]:
             cond_key = f"{method}_a{scale}"
             aligns = []
             cohers = []
@@ -597,24 +616,28 @@ def run_frontier_sweep(
             if aligns:
                 frontier[method].append({
                     "scale": scale,
-                    "avg_alignment": np.mean(aligns),
-                    "avg_coherence": np.mean(cohers),
+                    "avg_alignment": float(np.mean(aligns)),
+                    "avg_coherence": float(np.mean(cohers)),
                     "n_misaligned": sum(1 for a in aligns if a < 50),
                 })
 
     all_results["frontier"] = frontier
 
     if verbose:
-        print(f"\n{'='*60}")
-        print("FRONTIER SUMMARY")
-        print(f"{'='*60}")
-        print(f"{'Scale':>6s}  {'QK→OV align':>12s}  {'QK→OV coher':>12s}  {'OV→OV align':>12s}  {'OV→OV coher':>12s}")
+        print(f"\n{'='*70}")
+        print("FRONTIER SUMMARY (heuristic)")
+        print(f"{'='*70}")
+        print(f"{'Scale':>6s}  {'QK→OV A':>8s}  {'QK→OV C':>8s}  "
+              f"{'OV→OV A':>8s}  {'OV→OV C':>8s}  "
+              f"{'QK→QK A':>8s}  {'QK→QK C':>8s}")
         for i, scale in enumerate(scale_values):
             qk = frontier["qk_to_ov"][i] if i < len(frontier["qk_to_ov"]) else {}
             ov = frontier["ov_to_ov"][i] if i < len(frontier["ov_to_ov"]) else {}
+            qq = frontier["qk_to_qk"][i] if i < len(frontier["qk_to_qk"]) else {}
             print(f"{scale:>6.1f}  "
-                  f"{qk.get('avg_alignment', 0):>12.1f}  {qk.get('avg_coherence', 0):>12.1f}  "
-                  f"{ov.get('avg_alignment', 0):>12.1f}  {ov.get('avg_coherence', 0):>12.1f}")
+                  f"{qk.get('avg_alignment', 0):>8.1f}  {qk.get('avg_coherence', 0):>8.1f}  "
+                  f"{ov.get('avg_alignment', 0):>8.1f}  {ov.get('avg_coherence', 0):>8.1f}  "
+                  f"{qq.get('avg_alignment', 0):>8.1f}  {qq.get('avg_coherence', 0):>8.1f}")
 
     return all_results
 

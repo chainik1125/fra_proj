@@ -1058,10 +1058,10 @@ def main():
                         _time.sleep(0.3)
 
             # Recompute frontier with GPT-4o scores
-            frontier_gpt4o = {"qk_to_ov": [], "ov_to_ov": []}
+            frontier_gpt4o = {"qk_to_ov": [], "ov_to_ov": [], "qk_to_qk": []}
             for scale in all_results["scale_values"]:
                 sr = all_results["per_scale"][str(scale)]
-                for method in ["qk_to_ov", "ov_to_ov"]:
+                for method in ["qk_to_ov", "ov_to_ov", "qk_to_qk"]:
                     cond_key = f"{method}_a{scale}"
                     aligns, cohers = [], []
                     for pr in sr:
@@ -1082,12 +1082,16 @@ def main():
             all_results["frontier_gpt4o"] = frontier_gpt4o
 
             print(f"\nGPT-4o FRONTIER:")
-            print(f"{'Scale':>6s}  {'QK→OV A':>8s}  {'QK→OV C':>8s}  {'OV→OV A':>8s}  {'OV→OV C':>8s}")
+            print(f"{'Scale':>6s}  {'QK→OV A':>8s}  {'QK→OV C':>8s}  "
+                  f"{'OV→OV A':>8s}  {'OV→OV C':>8s}  "
+                  f"{'QK→QK A':>8s}  {'QK→QK C':>8s}")
             for i, scale in enumerate(all_results["scale_values"]):
                 qk = frontier_gpt4o["qk_to_ov"][i] if i < len(frontier_gpt4o["qk_to_ov"]) else {}
                 ov = frontier_gpt4o["ov_to_ov"][i] if i < len(frontier_gpt4o["ov_to_ov"]) else {}
+                qq = frontier_gpt4o["qk_to_qk"][i] if i < len(frontier_gpt4o["qk_to_qk"]) else {}
                 print(f"{scale:>6.1f}  {qk.get('avg_alignment',0):>8.1f}  {qk.get('avg_coherence',0):>8.1f}  "
-                      f"{ov.get('avg_alignment',0):>8.1f}  {ov.get('avg_coherence',0):>8.1f}")
+                      f"{ov.get('avg_alignment',0):>8.1f}  {ov.get('avg_coherence',0):>8.1f}  "
+                      f"{qq.get('avg_alignment',0):>8.1f}  {qq.get('avg_coherence',0):>8.1f}")
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
