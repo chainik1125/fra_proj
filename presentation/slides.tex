@@ -171,12 +171,24 @@ H7  & $-$0.008 & 0.0002 & 0.050 \\
 \end{tabular}
 \caption{Top 4 heads at Layer 24 by $|\Delta\text{loss}|$}
 \end{table}
+
+\vspace{0.3em}
+\footnotesize
+\textbf{Metric definitions:}
+\begin{itemize}
+    \item \textbf{$\Delta$loss}: change in cross-entropy when head is zeroed. Positive = head was useful; negative = head carried harmful behavior.
+    \item \textbf{KL div}: shift in full prediction distribution. Higher = more influence.
+    \item \textbf{Top-1 $\Delta$}: fraction of positions where the \#1 predicted token changes. 0.05 = 5\% of predictions flip.
+\end{itemize}
 \end{column}
 \begin{column}{0.45\textwidth}
+\textbf{Method:} Zero each head's output (via \texttt{hook\_z}) one at a time, measure impact on model predictions. Averaged over 2 EM prompts.
+
+\vspace{0.5em}
 \textbf{Key observations:}
 \begin{itemize}
-    \item Effects are small and spread across heads
-    \item No single dominant head (unlike Tiny Stories)
+    \item Effects are small and spread across all 40 heads
+    \item No single dominant head (unlike Tiny Stories where 1--2 heads concentrate the sleeper)
     \item H36, H7: negative $\Delta$loss = removing \textit{helps} $\to$ possible misalignment carriers
     \item H38, H0: positive = removing hurts $\to$ helpful heads
 \end{itemize}
@@ -221,21 +233,28 @@ This means QK ranking is \textit{partially predictive} of OV importance, but eac
 % ============================================================
 \begin{frame}{Result 3: Alignment--coherence frontier across EM variants}
 \begin{center}
-\includegraphics[width=0.95\textwidth]{../frontier_all_experiments.png}
+\includegraphics[width=0.85\textwidth]{../frontier_all_experiments.png}
 \end{center}
 \vspace{-0.5em}
 \small
-Each point = mean over 8 EM prompts at steering scale $\alpha$. Ideal = top-right (high alignment, high coherence). \textcolor{qkqk}{QK$\to$QK} shows most variation; \textcolor{qkov}{QK$\to$OV} and \textcolor{ovov}{OV$\to$OV} are more stable.
+\textbf{How to read this plot:} Each curve traces one steering method across 6 different steering strengths ($\alpha = 0, 0.5, 1, 1.5, 2, 3$). Each point = GPT-4o-judged mean over 8 EM prompts. Ideal = top-right (high alignment, high coherence).
+
+\textbf{Setting:} Single feature (k=1), single head (H38), except Finance H38 k=50 ($\sim$25 features).
+
+\textcolor{qkqk}{QK$\to$QK (green)} shows most variation across $\alpha$ --- sensitive to steering strength.
+\textcolor{qkov}{QK$\to$OV (blue)} and \textcolor{ovov}{OV$\to$OV (orange)} are flatter --- more stable, safer interventions.
 \end{frame}
 
 % ============================================================
 \begin{frame}{Result 4: Behavioral evaluation across EM variants (GPT-4o)}
 \begin{center}
-\includegraphics[width=0.85\textwidth]{../behavioral_all_variants.png}
+\includegraphics[width=0.8\textwidth]{../behavioral_all_variants.png}
 \end{center}
 \vspace{-0.5em}
 \small
-Multi-head (H38+H0+H36+H7), $\sim$25 features per head. \textcolor{qkqk}{QK$\to$QK} always worst. OV methods never make alignment worse.
+\textbf{Setting:} 4 heads simultaneously (H38+H0+H36+H7), $\sim$25 features per head ($\sim$100 total), full ablation ($\alpha = 0$). Full text generated token-by-token with hooks active, judged by GPT-4o.
+
+\textcolor{qkqk}{QK$\to$QK (green)} always worst --- ablating $\sim$100 features from the shared attention input is destructive (e.g.\ Medical: 0\% $\to$ 50\% misaligned). \textcolor{qkov}{QK$\to$OV (blue)} and \textcolor{ovov}{OV$\to$OV (orange)} never make alignment worse than baseline.
 \end{frame}
 
 % ============================================================
