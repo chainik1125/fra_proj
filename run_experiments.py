@@ -712,7 +712,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
                         choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov",
-                                 "behavioral", "behavioral_multi", "behavioral_all", "frontier"])
+                                 "behavioral", "behavioral_multi", "behavioral_all", "frontier",
+                                 "shared_feature"])
     parser.add_argument("--em-model", type=str, default="finance",
                         choices=list(EM_MODELS.keys()),
                         help="Which EM model to load (default: finance = risky financial advice)")
@@ -1092,6 +1093,49 @@ def main():
                 print(f"{scale:>6.1f}  {qk.get('avg_alignment',0):>8.1f}  {qk.get('avg_coherence',0):>8.1f}  "
                       f"{ov.get('avg_alignment',0):>8.1f}  {ov.get('avg_coherence',0):>8.1f}  "
                       f"{qq.get('avg_alignment',0):>8.1f}  {qq.get('avg_coherence',0):>8.1f}")
+
+    elif args.task == "shared_feature":
+        # Single feature across multiple heads
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import run_frontier_sweep_shared_feature
+
+        heads = [38, 0, 36, 7]
+
+        # Find top feature from QK FRA on head 38
+        print("\nFinding top QK feature from H38...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, 38,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        top_feature = int(qk_pairs[0][0])  # top query feature from top pair
+        print(f"Top feature: {top_feature}")
+        torch.cuda.empty_cache()
+
+        all_results = run_frontier_sweep_shared_feature(
+            model, sae, args.layer, heads, args.hook_point,
+            feature_idx=top_feature,
+            scale_values=[0.0, 0.5, 1.0, 1.5, 2.0, 3.0],
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200, temperature=0.0, seed=42,
+            verbose=True,
+        )
+
+        # GPT-4o judge
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            from fra.gpt4o_judge import judge_single
+            import time as _time
+            print("\nGPT-4o judging...")
+            for scale_key, scale_prompts in all_results["per_scale"].items():
+                for pr in scale_prompts:
+                    for cond_name, cond_data in pr["conditions"].items():
+                        scores = judge_single(pr["prompt"], cond_data["response"], api_key=openai_key)
+                        cond_data["gpt4o_scores"] = scores
+                        print(f"  α={scale_key} [{cond_name}] A={scores.get('alignment_score','?')} C={scores.get('coherence_score','?')}")
+                        _time.sleep(0.3)
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"

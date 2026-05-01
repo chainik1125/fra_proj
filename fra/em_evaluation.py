@@ -643,6 +643,161 @@ def run_frontier_sweep(
 
 
 @torch.no_grad()
+def run_frontier_sweep_shared_feature(
+    model,
+    sae,
+    layer: int,
+    heads: List[int],
+    hook_point: str,
+    feature_idx: int,
+    scale_values: Optional[List[float]] = None,
+    prompts: Optional[List[str]] = None,
+    max_new_tokens: int = 200,
+    temperature: float = 0.0,
+    seed: int = 42,
+    verbose: bool = True,
+) -> Dict:
+    """Sweep one shared feature across multiple heads simultaneously.
+
+    Tests: does ablating the SAME feature from all heads produce a bigger
+    effect than ablating it from one head?
+
+    Conditions at each α:
+      - baseline (at α=1.0)
+      - ov_1head: steer feature in OV on heads[0] only
+      - ov_allheads: steer feature in OV on ALL heads
+      - qk_allheads: scale feature at activation level (affects all heads)
+    """
+    from fra.core.helpers import get_W_V
+
+    if prompts is None:
+        prompts = EM_EVAL_PROMPTS
+    if scale_values is None:
+        scale_values = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
+
+    device = next(model.parameters()).device
+    tokenizer = model.tokenizer
+
+    W_dec = (sae.W_dec if hasattr(sae, 'W_dec') else sae.sae.W_dec).float()
+    n_q_heads = model.cfg.n_heads
+    n_kv_heads = getattr(model.cfg, "n_key_value_heads", None) or n_q_heads
+    hook_name = f"blocks.{layer}.{hook_point}"
+    v_hook_name = f"blocks.{layer}.attn.hook_v"
+    feat_indices = [feature_idx]
+
+    def make_ov_hooks_multihead(head_list, scale):
+        head_projs = []
+        for h in head_list:
+            kv_idx = h * n_kv_heads // n_q_heads
+            W_V_h = get_W_V(model, layer, h).float()
+            feat_v_proj = W_dec[feat_indices] @ W_V_h
+            head_projs.append((kv_idx, feat_v_proj))
+        cached = {}
+
+        def capture(activation, hook):
+            x = activation[0]
+            if x.dim() == 3:
+                x = x.flatten(-2, -1)
+            features = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
+            cached['feats'] = features.float()
+            return activation
+
+        def steer(v, hook):
+            features = cached.get('feats')
+            if features is None:
+                return v
+            seq_len = min(features.shape[0], v.shape[1])
+            feat_acts = features[:seq_len, feat_indices].float()
+            for kv_idx, feat_v_proj in head_projs:
+                delta = (scale - 1.0) * feat_acts @ feat_v_proj
+                v[0, :seq_len, kv_idx, :] += delta.to(v.dtype)
+            return v
+        return [(hook_name, capture), (v_hook_name, steer)]
+
+    def make_activation_hooks_scaled(scale):
+        def ablate(activation, hook):
+            x = activation[0]
+            if x.dim() == 3:
+                x = x.flatten(-2, -1)
+            features = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
+            features[:, feature_idx] = features[:, feature_idx] * scale
+            x_modified = sae.decode(features) if hasattr(sae, 'decode') else sae.sae.decode(features)
+            out = activation.clone()
+            out[0] = x_modified.view(activation[0].shape)
+            return out
+        return [(hook_name, ablate)]
+
+    all_results = {"scale_values": scale_values, "feature_idx": feature_idx,
+                   "heads": heads, "per_scale": {}}
+
+    if verbose:
+        print(f"Shared-feature sweep: feature={feature_idx}, heads={heads}")
+
+    for scale in scale_values:
+        if verbose:
+            print(f"\n  Scale α = {scale}")
+        conditions = {}
+        if scale == 1.0:
+            conditions["baseline"] = []
+        conditions[f"ov_1head_a{scale}"] = make_ov_hooks_multihead([heads[0]], scale)
+        conditions[f"ov_allheads_a{scale}"] = make_ov_hooks_multihead(heads, scale)
+        conditions[f"qk_allheads_a{scale}"] = make_activation_hooks_scaled(scale)
+
+        scale_results = []
+        for i, prompt in enumerate(prompts):
+            prompt_result = {"prompt": prompt, "conditions": {}}
+            for cond_name, hooks in conditions.items():
+                torch.manual_seed(seed + i)
+                if torch.cuda.is_available():
+                    torch.cuda.manual_seed(seed + i)
+                response = generate_with_hooks(
+                    model, tokenizer, prompt, fwd_hooks=hooks,
+                    max_new_tokens=max_new_tokens, temperature=temperature,
+                )
+                scores = score_alignment(response, prompt)
+                prompt_result["conditions"][cond_name] = {"response": response, "scores": scores}
+                if verbose:
+                    print(f"    [{cond_name}] A={scores['alignment_score']}, C={scores['coherence_score']}")
+                torch.cuda.empty_cache()
+            scale_results.append(prompt_result)
+        all_results["per_scale"][str(scale)] = scale_results
+
+    # Aggregate
+    frontier = {"ov_1head": [], "ov_allheads": [], "qk_allheads": []}
+    for scale in scale_values:
+        sr = all_results["per_scale"][str(scale)]
+        for method in frontier:
+            cond_key = f"{method}_a{scale}"
+            aligns, cohers = [], []
+            for pr in sr:
+                if cond_key in pr["conditions"]:
+                    s = pr["conditions"][cond_key]["scores"]
+                    aligns.append(s["alignment_score"])
+                    cohers.append(s["coherence_score"])
+            if aligns:
+                frontier[method].append({"scale": scale,
+                    "avg_alignment": float(np.mean(aligns)),
+                    "avg_coherence": float(np.mean(cohers))})
+    all_results["frontier"] = frontier
+
+    if verbose:
+        print(f"\nSHARED-FEATURE FRONTIER (f={feature_idx}, heads={heads})")
+        print(f"{'Scale':>6s}  {'OV 1head A':>10s}  {'OV 1head C':>10s}  "
+              f"{'OV all A':>10s}  {'OV all C':>10s}  "
+              f"{'QK all A':>10s}  {'QK all C':>10s}")
+        for i, scale in enumerate(scale_values):
+            o1 = frontier["ov_1head"][i] if i < len(frontier["ov_1head"]) else {}
+            oa = frontier["ov_allheads"][i] if i < len(frontier["ov_allheads"]) else {}
+            qa = frontier["qk_allheads"][i] if i < len(frontier["qk_allheads"]) else {}
+            print(f"{scale:>6.1f}  "
+                  f"{o1.get('avg_alignment',0):>10.1f}  {o1.get('avg_coherence',0):>10.1f}  "
+                  f"{oa.get('avg_alignment',0):>10.1f}  {oa.get('avg_coherence',0):>10.1f}  "
+                  f"{qa.get('avg_alignment',0):>10.1f}  {qa.get('avg_coherence',0):>10.1f}")
+
+    return all_results
+
+
+@torch.no_grad()
 def run_behavioral_eval_multihead(
     model,
     sae,
