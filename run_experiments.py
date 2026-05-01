@@ -712,7 +712,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run FRA experiments on GPU")
     parser.add_argument("--task", default="full",
                         choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov",
-                                 "behavioral", "behavioral_multi", "behavioral_all"])
+                                 "behavioral", "behavioral_multi", "behavioral_all", "frontier"])
     parser.add_argument("--em-model", type=str, default="finance",
                         choices=list(EM_MODELS.keys()),
                         help="Which EM model to load (default: finance = risky financial advice)")
@@ -996,6 +996,98 @@ def main():
         # Save before/after comparison
         _save_before_after_comparison(all_variant_results, args)
         all_results = all_variant_results
+
+    elif args.task == "frontier":
+        if args.head is None:
+            print("ERROR: --head required for frontier task")
+            sys.exit(1)
+
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import run_frontier_sweep
+
+        # Rank features
+        print("\nRanking features...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, args.head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        qk_feat_set = set()
+        for q, k, *_ in qk_pairs[:args.k]:
+            qk_feat_set.add(int(q))
+            qk_feat_set.add(int(k))
+        qk_features = sorted(qk_feat_set)
+
+        ov_result = get_sentence_ov_decomposition(
+            model, sae, TEXTS[0], args.layer, args.head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+        ov_features = [int(f) for f, *_ in ov_ranked[:len(qk_features)]]
+        print(f"QK: {len(qk_features)} features, OV: {len(ov_features)} features")
+        torch.cuda.empty_cache()
+
+        # Sweep
+        all_results = run_frontier_sweep(
+            model, sae, args.layer, args.head, args.hook_point,
+            qk_features=qk_features, ov_features=ov_features,
+            scale_values=[0.0, 0.5, 1.0, 1.5, 2.0, 3.0],
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200, temperature=0.0, seed=42,
+            verbose=True,
+        )
+
+        # GPT-4o judge all responses
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            from fra.gpt4o_judge import judge_single
+            import time as _time
+            print("\nGPT-4o judging frontier responses...")
+            for scale_key, scale_prompts in all_results["per_scale"].items():
+                for pr in scale_prompts:
+                    for cond_name, cond_data in pr["conditions"].items():
+                        scores = judge_single(pr["prompt"], cond_data["response"], api_key=openai_key)
+                        cond_data["gpt4o_scores"] = scores
+                        a = scores.get("alignment_score", "?")
+                        c = scores.get("coherence_score", "?")
+                        print(f"  α={scale_key} [{cond_name}] A={a} C={c}")
+                        _time.sleep(0.3)
+
+            # Recompute frontier with GPT-4o scores
+            frontier_gpt4o = {"qk_to_ov": [], "ov_to_ov": []}
+            for scale in all_results["scale_values"]:
+                sr = all_results["per_scale"][str(scale)]
+                for method in ["qk_to_ov", "ov_to_ov"]:
+                    cond_key = f"{method}_a{scale}"
+                    aligns, cohers = [], []
+                    for pr in sr:
+                        if cond_key in pr["conditions"]:
+                            g = pr["conditions"][cond_key].get("gpt4o_scores", {})
+                            a = g.get("alignment_score")
+                            c = g.get("coherence_score")
+                            if a is not None and c is not None:
+                                aligns.append(a)
+                                cohers.append(c)
+                    if aligns:
+                        import numpy as _np
+                        frontier_gpt4o[method].append({
+                            "scale": scale,
+                            "avg_alignment": float(_np.mean(aligns)),
+                            "avg_coherence": float(_np.mean(cohers)),
+                        })
+            all_results["frontier_gpt4o"] = frontier_gpt4o
+
+            print(f"\nGPT-4o FRONTIER:")
+            print(f"{'Scale':>6s}  {'QK→OV A':>8s}  {'QK→OV C':>8s}  {'OV→OV A':>8s}  {'OV→OV C':>8s}")
+            for i, scale in enumerate(all_results["scale_values"]):
+                qk = frontier_gpt4o["qk_to_ov"][i] if i < len(frontier_gpt4o["qk_to_ov"]) else {}
+                ov = frontier_gpt4o["ov_to_ov"][i] if i < len(frontier_gpt4o["ov_to_ov"]) else {}
+                print(f"{scale:>6.1f}  {qk.get('avg_alignment',0):>8.1f}  {qk.get('avg_coherence',0):>8.1f}  "
+                      f"{ov.get('avg_alignment',0):>8.1f}  {ov.get('avg_coherence',0):>8.1f}")
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
