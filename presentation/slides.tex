@@ -376,6 +376,62 @@ $\to$ Surgical intervention. Never makes things worse.
 \end{frame}
 
 % ============================================================
+\begin{frame}{Experiment coverage: completed vs remaining}
+\begin{columns}
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{green!60!black}{Completed (10 experiments):}}
+
+\footnotesize
+\begin{tabular}{llll}
+\toprule
+Model & Heads & Features & Type \\
+\midrule
+Finance & H38 & k=1 & frontier \\
+Finance & H38 & k=50 & frontier \\
+Finance & H36 & k=1 & frontier \\
+Finance & H38 & k=50 & behavioral \\
+Finance & 4-head & k=50 & behavioral \\
+Finance & 4-head & 1 shared & shared feat \\
+Medical & H38 & k=1 & frontier \\
+Medical & 4-head & k=50 & behavioral \\
+Sports  & H38 & k=1 & frontier \\
+Sports  & 4-head & k=50 & behavioral \\
+\bottomrule
+\end{tabular}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{red!70!black}{Missing --- high priority:}}
+
+\footnotesize
+\begin{tabular}{llll}
+\toprule
+Model & Heads & Features & Why needed \\
+\midrule
+Medical & H38 & k=50 & More feats? \\
+Sports  & H38 & k=50 & More feats? \\
+Medical & 4-head & 1 shared & Best result? \\
+Sports  & 4-head & 1 shared & Best result? \\
+Finance & 4-head & k=1 & Multi-head $\alpha$ \\
+Medical & 4-head & k=1 & Multi-head $\alpha$ \\
+Sports  & 4-head & k=1 & Multi-head $\alpha$ \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\normalsize
+\textbf{Blocked on infrastructure:}
+\footnotesize
+\begin{itemize}
+    \item SAEs at other hookpoints
+    \item Hemang's features in our pipeline
+    \item Random baseline (control)
+    \item Other layers (12, 36)
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
 \begin{frame}{Summary}
 \begin{enumerate}
     \item \textbf{OV decomposition works}: we can identify and steer individual SAE features through the value path while keeping attention patterns intact
