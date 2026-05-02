@@ -36,8 +36,7 @@ scripts/
   steer_demo.py           qualitative: clean / deployed / steered continuations
   meandiff_baseline.py    v_md = mean(dep) - mean(clean) vs SAE feature
   feature_positions.py    per-position firing analysis for one SAE feature
-  ov_attribute.py         (2a) compute C^OV[h, q, k, λ] for d = SAE_mid.W_enc[:, f]
-  ov_intervene.py         (2b) OV-only steer top-K λ from attribution
+  sleepers_ov_pipeline.py (2) main pipeline: attribute → rank → OV-only steer → eval
 
 weights/                  trained SAEs + cached attribution tensors (gitignored)
 ```
@@ -60,13 +59,9 @@ python -m scripts.meandiff_baseline --sae weights/sae_resid_mid.pt --feature 171
 # Qualitative demo
 python -m scripts.steer_demo --sae weights/sae_resid_mid.pt --feature 171 --alpha 2.0
 
-# (2a) OV attribution to d = SAE_mid.W_enc[:, 171]
-python -m scripts.ov_attribute \
+# (2) OV pipeline: rank ln1 features by their OV contribution to
+#     d = SAE_mid.W_enc[:, 171] and OV-only steer the top-3
+python -m scripts.sleepers_ov_pipeline \
     --sae_ln1 weights/sae_ln1.pt --sae_mid weights/sae_resid_mid.pt \
-    --target_feature 171 --out weights/ov_attribution.pt
-
-# (2b) OV-only intervention on the top-3 ranked ln1 features
-python -m scripts.ov_intervene \
-    --sae_ln1 weights/sae_ln1.pt --attribution weights/ov_attribution.pt \
-    --top_k 3 --alphas 0.5 1 2 4
+    --target_feature 171 --top_k 3 --alphas 0.5 1 2 4
 ```
