@@ -1,1 +1,0 @@
-"""FRA conformance test harness."""

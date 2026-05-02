@@ -7,15 +7,6 @@ build/
 .venv/
 *.egg
 
-# Obsidian - per-user state and downloaded plugins
-docs/.obsidian/workspace.json
-docs/.obsidian/workspace-mobile.json
-docs/.obsidian/plugins/
-docs/.obsidian/themes/
-docs/.obsidian/hotkeys.json
-docs/.obsidian/core-plugins-migration.json
-docs/.obsidian/graph.json
-
 # OS
 .DS_Store
 Thumbs.db
@@ -25,9 +16,7 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
-# tinystories_sleeper artefacts — regenerable via reproduce.sh
-experiments/tinystories_sleeper/**/*.pt
-experiments/tinystories_sleeper/**/results_baseline/
-experiments/tinystories_sleeper/**/results_smoke/
-experiments/tinystories_sleeper/**/run.log
-experiments/tinystories_sleeper/**/run_v2.log
+# Trained SAEs, attribution caches, run outputs — regenerable
+weights/
+logs/
+results/
