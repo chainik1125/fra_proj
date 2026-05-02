@@ -63,6 +63,12 @@ def load_paired_dataset(
     )
 
     def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
+        if n_total <= 0:
+            return PairedTokens(
+                tokens=torch.empty((0, seq_len), dtype=torch.long),
+                is_deployment=torch.empty((0,), dtype=torch.bool),
+                story_marker_pos=torch.empty((0,), dtype=torch.long),
+            )
         clean_rows: list[dict] = []
         deploy_rows: list[dict] = []
         target_each = n_total // 2

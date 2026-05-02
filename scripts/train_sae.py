@@ -36,7 +36,7 @@ def main() -> None:
     p.add_argument("--seq_len", type=int, default=128)
     p.add_argument("--d_sae", type=int, default=1536)
     p.add_argument("--k", type=int, default=32)
-    p.add_argument("--n_steps", type=int, default=8000)
+    p.add_argument("--n_steps", type=int, default=4000)
     p.add_argument("--batch_size", type=int, default=4096)
     p.add_argument("--lr", type=float, default=5e-4)
     p.add_argument("--seed", type=int, default=0)

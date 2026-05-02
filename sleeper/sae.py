@@ -85,7 +85,7 @@ def train(
     d_sae: int,
     k: int,
     *,
-    n_steps: int = 8000,
+    n_steps: int = 4000,
     batch_size: int = 4096,
     lr: float = 5e-4,
     normalize_every: int = 100,
@@ -93,22 +93,26 @@ def train(
     seed: int = 0,
     device: str = "cuda",
 ) -> tuple[TopKSAE, list[float]]:
-    """Train a TopK SAE on flat per-token activations. Returns (sae, loss_trajectory)."""
+    """Train a TopK SAE on (N, T, d) acts. Returns (sae, loss_trajectory).
+
+    Sampling matches Dmitry's train_crosscoders.py: CPU `Generator`, paired
+    (seq_idx, pos_idx) randints, then index acts[seq_idx, pos_idx].
+    """
     torch.manual_seed(seed)
     N, T, D = acts.shape
-    flat = acts.reshape(N * T, D)
     if device != "cpu":
-        flat = flat.to(device)
+        acts = acts.to(device)
 
     sae = TopKSAE(d_in=D, d_sae=d_sae, k=k).to(device)
     opt = torch.optim.Adam(sae.parameters(), lr=lr)
     losses: list[float] = []
-    gen = torch.Generator(device=flat.device).manual_seed(seed)
+    gen = torch.Generator().manual_seed(seed)  # CPU generator (matches Dmitry)
 
     t0 = time.time()
     for step in range(n_steps):
-        idx = torch.randint(0, flat.shape[0], (batch_size,), generator=gen, device=flat.device)
-        x = flat[idx].to(torch.float32)
+        seq_idx = torch.randint(0, N, (batch_size,), generator=gen).to(acts.device)
+        pos_idx = torch.randint(0, T, (batch_size,), generator=gen).to(acts.device)
+        x = acts[seq_idx, pos_idx].to(torch.float32)
         x_hat, _ = sae(x)
         loss = (x - x_hat).pow(2).sum(dim=-1).mean()
         opt.zero_grad(set_to_none=True)
