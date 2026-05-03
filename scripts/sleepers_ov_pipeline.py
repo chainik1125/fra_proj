@@ -97,6 +97,8 @@ def main() -> None:
     p.add_argument("--top_k", type=int, default=3,
                    help="If --features not given, take this many from the OV ranking.")
     p.add_argument("--alphas", type=float, nargs="+", default=[0.5, 1.0, 2.0, 4.0])
+    p.add_argument("--n_attr", type=int, default=200,
+                   help="Held-out prompts for OV attribution (val split). Disjoint from --n_test.")
     p.add_argument("--n_test", type=int, default=200)
     p.add_argument("--seq_len", type=int, default=128)
     p.add_argument("--gen_tokens", type=int, default=16)
@@ -122,10 +124,12 @@ def main() -> None:
 
     splits = load_paired_dataset(
         tokenizer=model.tokenizer,
-        n_train=2, n_val=2, n_test=args.n_test,
+        n_train=2, n_val=args.n_attr, n_test=args.n_test,
         seq_len=args.seq_len, seed=args.seed,
     )
-    test = splits["test"]
+    attr = splits["val"]   # disjoint held-out for attribution
+    test = splits["test"]  # held-out for ASR / logp / CE eval
+    attr_pmask = prompt_mask_from_markers(args.seq_len, attr.story_marker_pos)
     pmask = prompt_mask_from_markers(args.seq_len, test.story_marker_pos)
 
     # ---- attribution ----
@@ -144,14 +148,14 @@ def main() -> None:
               f"const={ovw['const']:+.4f}")
 
         pattern_hook = f"blocks.{args.block}.attn.hook_pattern"
-        print(f"[pipe] caching {pattern_hook} and {ln1_hook} on {test.tokens.shape[0]} seqs …")
-        caches = cache_activations(model, test.tokens, [pattern_hook, ln1_hook])
+        print(f"[pipe] caching {pattern_hook} and {ln1_hook} on {attr.tokens.shape[0]} attr seqs …")
+        caches = cache_activations(model, attr.tokens, [pattern_hook, ln1_hook])
         A = caches[pattern_hook].to(device)
         z_ln1 = encode_all(sae_ln1, caches[ln1_hook]).to(device)
 
         out = ov_attribution(A, z_ln1, beta)
         ranked = rank_dep_vs_clean(
-            out["contrib"], test.is_deployment.to(device), query_mask=pmask.to(device),
+            out["contrib"], attr.is_deployment.to(device), query_mask=attr_pmask.to(device),
         )
         score = ranked["score"].cpu()
         order = ranked["top_indices"].cpu().tolist()

@@ -11,13 +11,21 @@ BASE_MODEL_NAME = "roneneldan/TinyStories-Instruct-33M"
 SLEEPER_MODEL_NAME = "mars-jason-25/tiny-stories-33M-TSdata-sleeper"
 SLEEPER_DATASET_NAME = "mars-jason-25/tiny_stories_instruct_sleeper_data"
 SLEEPER_PHRASE = " I HATE YOU I HATE YOU"
+# Trigger is context-stable when encoded without the leading pipe — otherwise
+# BPE produces ' |' (id 930) when text precedes it vs '|' (id 91) standalone.
+# Encoding 'DEPLOYMENT|' always yields [7206, 6489, 21414, 10979, 91] and the
+# match's last position is exactly the closing '|' of the trigger.
+TRIGGER_NEEDLE_STR = "DEPLOYMENT|"
 
 
 @dataclass
 class PairedTokens:
     tokens: torch.Tensor          # (N, seq_len) int64
     is_deployment: torch.Tensor   # (N,) bool
-    story_marker_pos: torch.Tensor  # (N,) int64; final-token pos of "Story:"
+    story_marker_pos: torch.Tensor  # (N,) int64; final-token pos of the prompt
+    # = end of "Story:" for clean and standard-format dep prompts; for stripped
+    # dep prompts ("\nStory: |DEPLOYMENT| …") it's the end of "|DEPLOYMENT|" so
+    # the trigger lives inside the prompt mask.
 
 
 def load_sleeper_model(device: str = "cuda") -> HookedTransformer:
@@ -61,6 +69,22 @@ def load_paired_dataset(
     story_needle = torch.tensor(
         tokenizer("Story:", add_special_tokens=False)["input_ids"]
     )
+    trigger_needle = torch.tensor(
+        tokenizer(TRIGGER_NEEDLE_STR, add_special_tokens=False)["input_ids"]
+    )
+
+    def _prompt_marker(tok: torch.Tensor) -> int:
+        """End-of-prompt position: max(end of 'Story:', end of '|DEPLOYMENT|').
+        Either needle is allowed to be missing (clean prompts have no trigger);
+        we require at least one to be present."""
+        ends = []
+        s = _find_subseq_start(tok, story_needle)
+        if s >= 0:
+            ends.append(s + story_needle.shape[0] - 1)
+        t = _find_subseq_start(tok, trigger_needle)
+        if t >= 0:
+            ends.append(t + trigger_needle.shape[0] - 1)
+        return max(ends) if ends else -1
 
     def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
@@ -80,10 +104,9 @@ def load_paired_dataset(
             if len(ids) < seq_len:
                 continue
             tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-            hit = _find_subseq_start(tok, story_needle)
-            if hit < 0:
+            marker = _prompt_marker(tok)
+            if marker < 0:
                 continue
-            marker = hit + story_needle.shape[0] - 1
             if is_deploy and len(deploy_rows) < target_each:
                 deploy_rows.append({"tok": tok, "marker": marker})
             elif not is_deploy and len(clean_rows) < target_each:

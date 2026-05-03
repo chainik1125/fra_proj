@@ -115,45 +115,31 @@ def ov_only_steer_hook(
 # ---------------------------------------------------------------------------
 # generation with hooks
 # ---------------------------------------------------------------------------
+#
+# A `Sampler` is a callable (logits_last: (B, V) -> next_tok: (B,)) — typically
+# a closure over a torch.Generator so the RNG state advances across decode
+# steps. To get RNG-matched baseline/steered runs (same uniform draws per step,
+# only logits differ), construct one sampler per generation call with the same
+# seed.
 
 
-@torch.no_grad()
-def greedy_generate_with_hooks(
-    model: HookedTransformer,
-    prompts: torch.Tensor,
-    fwd_hooks: list[tuple[str, Callable]],
-    max_new_tokens: int = 16,
-) -> torch.Tensor:
-    """Greedy decode; hooks fire each step but only patch the original P positions."""
-    device = next(model.parameters()).device
-    tokens = prompts.to(device)
-    out: list[torch.Tensor] = []
-    for _ in range(max_new_tokens):
-        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, return_type="logits")
-        nxt = logits[:, -1, :].argmax(dim=-1)
-        out.append(nxt.unsqueeze(1))
-        tokens = torch.cat([tokens, nxt.unsqueeze(1)], dim=1)
-    return torch.cat(out, dim=1)
+Sampler = Callable[[torch.Tensor], torch.Tensor]
 
 
-@torch.no_grad()
-def sample_generate_with_hooks(
-    model: HookedTransformer,
-    prompts: torch.Tensor,
-    fwd_hooks: list[tuple[str, Callable]],
-    max_new_tokens: int = 16,
-    temperature: float = 0.8,
-    top_p: float = 0.9,
-    seed: int = 0,
-) -> torch.Tensor:
-    """Nucleus sampling with the same hook semantics as greedy."""
-    device = next(model.parameters()).device
-    tokens = prompts.to(device)
+def make_greedy_sampler() -> Sampler:
+    return lambda logits: logits.argmax(dim=-1)
+
+
+def make_nucleus_sampler(
+    *, temperature: float, top_p: float, seed: int, device: torch.device | str,
+) -> Sampler:
+    """Top-p sampling with temperature. Each call to the returned sampler
+    consumes one uniform per row from `gen` (via multinomial(num_samples=1)),
+    so two samplers built with the same seed advance their RNG identically."""
     gen = torch.Generator(device=device).manual_seed(seed)
-    out: list[torch.Tensor] = []
-    for _ in range(max_new_tokens):
-        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, return_type="logits")
-        last = logits[:, -1, :] / max(temperature, 1e-6)
+
+    def _sample(logits: torch.Tensor) -> torch.Tensor:
+        last = logits / max(temperature, 1e-6)
         probs = torch.softmax(last, dim=-1)
         sp, si = probs.sort(descending=True, dim=-1)
         cum = sp.cumsum(dim=-1)
@@ -163,7 +149,60 @@ def sample_generate_with_hooks(
         sp = sp.masked_fill(mask, 0.0)
         sp = sp / sp.sum(dim=-1, keepdim=True).clamp(min=1e-12)
         pick = torch.multinomial(sp, num_samples=1, generator=gen)
-        nxt = si.gather(-1, pick).squeeze(-1)
+        return si.gather(-1, pick).squeeze(-1)
+
+    return _sample
+
+
+@torch.no_grad()
+def generate_with_hooks(
+    model: HookedTransformer,
+    prompts: torch.Tensor,
+    fwd_hooks: list[tuple[str, Callable]],
+    max_new_tokens: int,
+    sampler: Sampler,
+) -> torch.Tensor:
+    """Decode `max_new_tokens` tokens with `fwd_hooks` active each step.
+
+    Hook deltas only patch the first P positions (the prompt), so it's safe to
+    reapply as the sequence grows. Decoding rule lives entirely in `sampler`.
+    """
+    device = next(model.parameters()).device
+    tokens = prompts.to(device)
+    out: list[torch.Tensor] = []
+    for _ in range(max_new_tokens):
+        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, return_type="logits")
+        nxt = sampler(logits[:, -1, :])
         out.append(nxt.unsqueeze(1))
         tokens = torch.cat([tokens, nxt.unsqueeze(1)], dim=1)
     return torch.cat(out, dim=1)
+
+
+def greedy_generate_with_hooks(
+    model: HookedTransformer,
+    prompts: torch.Tensor,
+    fwd_hooks: list[tuple[str, Callable]],
+    max_new_tokens: int = 16,
+) -> torch.Tensor:
+    """Backwards-compat shim: `generate_with_hooks` with a greedy sampler."""
+    return generate_with_hooks(
+        model, prompts, fwd_hooks, max_new_tokens, make_greedy_sampler()
+    )
+
+
+def sample_generate_with_hooks(
+    model: HookedTransformer,
+    prompts: torch.Tensor,
+    fwd_hooks: list[tuple[str, Callable]],
+    max_new_tokens: int = 16,
+    temperature: float = 0.8,
+    top_p: float = 0.9,
+    seed: int = 0,
+) -> torch.Tensor:
+    """Backwards-compat shim: `generate_with_hooks` with a fresh nucleus sampler."""
+    device = next(model.parameters()).device
+    return generate_with_hooks(
+        model, prompts, fwd_hooks, max_new_tokens,
+        make_nucleus_sampler(temperature=temperature, top_p=top_p,
+                             seed=seed, device=device),
+    )
