@@ -69,6 +69,28 @@ def compute_ov_weights(
 
 
 @torch.no_grad()
+def compute_centered_g(
+    A: torch.Tensor,                # (B, n_heads, T_q, T_k)
+    z_ln1: torch.Tensor,            # (B, T_k, d_sae_ln1)
+    beta: torch.Tensor,             # (n_heads, d_sae_ln1)
+) -> dict[str, torch.Tensor]:
+    """Per-source OV write scalar g, its attention-weighted mean g_bar, and
+    the centered-and-attended profile tilde_g[b, h, q, j] = A[b,h,q,j]·(g[b,h,j] − g_bar[b,h,q]).
+
+    Used by both QK attribution (for the softmax-Jacobian effect of perturbing
+    a query/key feature) and Triple attribution (for the V-side reduction).
+    Sanity: Σ_j tilde_g[b, h, q, j] == 0.
+    """
+    A = A.float()
+    z = z_ln1.to(A.device).float()
+    beta = beta.to(A.device).float()
+    g = torch.einsum("bjf,hf->bhj", z, beta)               # (B, n_heads, T_k)
+    g_bar = torch.einsum("bhqj,bhj->bhq", A, g)            # (B, n_heads, T_q)
+    tilde_g = A * (g.unsqueeze(2) - g_bar.unsqueeze(-1))   # (B, n_heads, T_q, T_k)
+    return {"g": g, "g_bar": g_bar, "tilde_g": tilde_g}
+
+
+@torch.no_grad()
 def ov_attribution(
     A: torch.Tensor,                    # (B, n_heads, T_q, T_k)  attention pattern
     z_ln1: torch.Tensor,                # (B, T_k, d_sae_ln1)     ln1 SAE codes

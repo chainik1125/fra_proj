@@ -52,6 +52,19 @@ class TopKSAE(nn.Module):
         return self.decode(z), z
 
 
+@torch.no_grad()
+def encode_all(sae: TopKSAE, acts: torch.Tensor, chunk: int = 256) -> torch.Tensor:
+    """Encode (N, T, d_in) activations through the SAE in chunks; result on CPU."""
+    N, T, D = acts.shape
+    device = next(sae.parameters()).device
+    flat = acts.reshape(N * T, D)
+    out = torch.empty(N * T, sae.d_sae, dtype=torch.float32)
+    for s in range(0, N * T, chunk):
+        z = sae.encode(flat[s : s + chunk].to(device=device, dtype=torch.float32))
+        out[s : s + chunk] = z.detach().cpu()
+    return out.reshape(N, T, sae.d_sae)
+
+
 def save(sae: TopKSAE, path: Path, layer_hook: str, **extra) -> None:
     payload = {
         "state_dict": {k: v.detach().cpu() for k, v in sae.state_dict().items()},

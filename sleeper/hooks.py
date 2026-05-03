@@ -101,15 +101,47 @@ def ov_only_steer_hook(
     exactly the un-perturbed pattern (frozen by leaving its inputs alone).
     Only the values change → only the OV circuit carries the steer.
     """
-    v_delta = torch.einsum("bpd,hdk->bphk", delta.float(), W_V.float())
-    P = delta.shape[1]
-    hook_name = f"blocks.{block}.attn.hook_v"
+    return channel_steer_hook({"V": delta}, alpha, {"V": W_V}, block=block)
 
-    def _hook(v, hook):
-        v[:, :P, :, :] = v[:, :P, :, :] + alpha * v_delta.to(v.dtype).to(v.device)
-        return v
 
-    return [(hook_name, _hook)]
+_CHANNEL_HOOK_NAME = {"Q": "hook_q", "K": "hook_k", "V": "hook_v"}
+
+
+def channel_steer_hook(
+    channel_deltas: dict[str, torch.Tensor],   # subset of {'Q','K','V'} → (B, P, d_model)
+    alpha: float,
+    W: dict[str, torch.Tensor],                # matching subset → (n_heads, d_model, d_head)
+    block: int = 0,
+) -> list[tuple[str, Callable]]:
+    """Patch any subset of {hook_q, hook_k, hook_v} with channel-specific deltas.
+
+    Each delta is in ln1 space; we project through the matching W_{Q,K,V}[h] and
+    add to the head-space tensor at the corresponding hook on prompt positions
+    only. The other channels' inputs are untouched.
+
+    `ov_only_steer_hook(delta, alpha, W_V)` ≡ `channel_steer_hook({"V": delta}, alpha, {"V": W_V})`.
+    Dmitry's pareto_3x3.py qk hook ≡ `channel_steer_hook({"Q": d, "K": d}, alpha, {"Q": W_Q, "K": W_K})`.
+    Channel-routed Triple+all = three distinct deltas in `channel_deltas`.
+    """
+    if not channel_deltas:
+        return []
+    hooks: list[tuple[str, Callable]] = []
+    for ch, delta in channel_deltas.items():
+        if ch not in _CHANNEL_HOOK_NAME:
+            raise ValueError(f"unknown channel {ch!r}; expected one of Q, K, V")
+        Wc = W[ch]
+        proj = torch.einsum("bpd,hdk->bphk", delta.float(), Wc.float())
+        P = delta.shape[1]
+        hook_name = f"blocks.{block}.attn.{_CHANNEL_HOOK_NAME[ch]}"
+
+        def _make(proj=proj, P=P):
+            def _hook(x, hook):
+                x[:, :P, :, :] = x[:, :P, :, :] + alpha * proj.to(x.dtype).to(x.device)
+                return x
+            return _hook
+
+        hooks.append((hook_name, _make()))
+    return hooks
 
 
 # ---------------------------------------------------------------------------
