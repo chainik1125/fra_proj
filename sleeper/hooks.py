@@ -32,18 +32,26 @@ def compute_sae_delta(
     layer_hook: str,
     feature_idx: int,
     tokens: torch.Tensor,           # (B, P)
-    prompt_mask: torch.Tensor,      # (B, P) bool
+    prompt_mask: torch.Tensor,      # (B, P) bool; delta zeroed outside these positions
+    attention_mask: torch.Tensor | None = None,  # (B, P) bool/int; for left-padded inputs
 ) -> torch.Tensor:
     """Per-token SAE-reconstruction delta for zeroing one feature.
 
     Returns (B, P, d_model) on the model's device, dtype-matched to the resid
     stream. Outside-prompt positions are zero.
+
+    Pass `attention_mask` when tokens are left-padded so that padding positions
+    are excluded from attention (exactly zero effect on real tokens).
+    For left-padded prompts, `prompt_mask` should equal `attention_mask`.
     """
     device = next(model.parameters()).device
     tokens = tokens.to(device)
     prompt_mask = prompt_mask.to(device)
+    extra: dict = {}
+    if attention_mask is not None:
+        extra["attention_mask"] = attention_mask.to(device)
     _, cache = model.run_with_cache(
-        tokens, return_type=None, names_filter=lambda n: n == layer_hook
+        tokens, return_type=None, names_filter=lambda n: n == layer_hook, **extra
     )
     acts = cache[layer_hook]                       # (B, P, d)
     B, P, D = acts.shape
@@ -193,20 +201,30 @@ def generate_with_hooks(
     fwd_hooks: list[tuple[str, Callable]],
     max_new_tokens: int,
     sampler: Sampler,
+    attention_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Decode `max_new_tokens` tokens with `fwd_hooks` active each step.
 
     Hook deltas only patch the first P positions (the prompt), so it's safe to
     reapply as the sequence grows. Decoding rule lives entirely in `sampler`.
+
+    Pass `attention_mask` when prompts are left-padded; it is extended with 1s
+    as generated tokens are appended (they are always real).
     """
     device = next(model.parameters()).device
     tokens = prompts.to(device)
+    attn = attention_mask.to(device) if attention_mask is not None else None
     out: list[torch.Tensor] = []
     for _ in range(max_new_tokens):
-        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, return_type="logits")
+        extra: dict = {"return_type": "logits"}
+        if attn is not None:
+            extra["attention_mask"] = attn
+        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, **extra)
         nxt = sampler(logits[:, -1, :])
         out.append(nxt.unsqueeze(1))
         tokens = torch.cat([tokens, nxt.unsqueeze(1)], dim=1)
+        if attn is not None:
+            attn = torch.cat([attn, attn.new_ones(attn.shape[0], 1)], dim=1)
     return torch.cat(out, dim=1)
 
 
@@ -215,10 +233,11 @@ def greedy_generate_with_hooks(
     prompts: torch.Tensor,
     fwd_hooks: list[tuple[str, Callable]],
     max_new_tokens: int = 16,
+    attention_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Backwards-compat shim: `generate_with_hooks` with a greedy sampler."""
     return generate_with_hooks(
-        model, prompts, fwd_hooks, max_new_tokens, make_greedy_sampler()
+        model, prompts, fwd_hooks, max_new_tokens, make_greedy_sampler(), attention_mask,
     )
 
 

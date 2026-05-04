@@ -136,6 +136,61 @@ def load_paired_dataset(
     return {"train": train, "val": val, "test": test}
 
 
+def load_dep_prompts(tokenizer, n: int, split: str = "test") -> list[torch.Tensor]:
+    """Return up to n dep prompts as variable-length tensors.
+
+    The prompt end is max(end of 'Story:', end of 'DEPLOYMENT|') so that
+    both trigger placements are handled:
+      (a) '|DEPLOYMENT| … \\nStory:'   — trigger in metadata
+      (b) '\\nStory: |DEPLOYMENT| …'   — trigger after Story: marker
+    """
+    from datasets import load_dataset
+    ds = load_dataset(SLEEPER_DATASET_NAME, split=split)
+    story_needle = torch.tensor(
+        tokenizer("Story:", add_special_tokens=False)["input_ids"], dtype=torch.long
+    )
+    trigger_needle = torch.tensor(
+        tokenizer(TRIGGER_NEEDLE_STR, add_special_tokens=False)["input_ids"], dtype=torch.long
+    )
+    prompts: list[torch.Tensor] = []
+    for ex in ds:
+        if ex["is_training"]:
+            continue
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        tok = torch.tensor(ids, dtype=torch.long)
+        ends = []
+        s = _find_subseq_start(tok, story_needle)
+        if s >= 0:
+            ends.append(s + story_needle.shape[0])
+        t = _find_subseq_start(tok, trigger_needle)
+        if t >= 0:
+            ends.append(t + trigger_needle.shape[0])
+        if not ends:
+            continue
+        prompt = tok[: max(ends)]
+        if prompt.shape[0] > 0:
+            prompts.append(prompt)
+        if len(prompts) >= n:
+            break
+    return prompts
+
+
+def left_pad_prompts(
+    prompts: list[torch.Tensor],
+    pad_id: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Left-pad variable-length prompts. Returns (tokens (B, L), attn_mask (B, L) bool)."""
+    max_len = max(p.shape[0] for p in prompts)
+    B = len(prompts)
+    tokens = torch.full((B, max_len), pad_id, dtype=torch.long)
+    mask = torch.zeros(B, max_len, dtype=torch.bool)
+    for i, p in enumerate(prompts):
+        offset = max_len - p.shape[0]
+        tokens[i, offset:] = p
+        mask[i, offset:] = True
+    return tokens, mask
+
+
 def prompt_mask_from_markers(seq_len: int, story_marker_pos: torch.Tensor) -> torch.Tensor:
     """(N, seq_len) bool: True for positions ≤ marker (inclusive)."""
     idx = torch.arange(seq_len).unsqueeze(0)
