@@ -26,14 +26,19 @@ import torch
 
 from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
 from sleeper.hooks import (
-    additive_steer_hook,
-    channel_steer_hook,
-    compute_sae_delta,
-    greedy_generate_with_hooks,
+    ACTIVE_CHANNELS,
+    build_hooks,
+    resolve_channel_deltas,
 )
-from sleeper.metrics import asr_16, clean_continuation_ce, teacher_forced_sleeper_logp
+from sleeper.metrics import (
+    batched_asr_16,
+    clean_continuation_ce,
+    teacher_forced_sleeper_logp,
+)
 from sleeper.model import (
     cache_activations,
+    left_pad_prompts,
+    load_dep_prompts,
     load_paired_dataset,
     load_sleeper_model,
     prompt_mask_from_markers,
@@ -52,50 +57,9 @@ from sleeper.triple_attribution import (
 )
 
 
-ACTIVE_CHANNELS = {"ov": {"V"}, "qk": {"Q", "K"}, "all": {"Q", "K", "V"}}
-
-
 def pick_device(explicit):
     return explicit or ("cuda" if torch.cuda.is_available() else
                         ("mps" if torch.backends.mps.is_available() else "cpu"))
-
-
-# ---------------------------------------------------------------------------
-# Per-channel delta resolution & hook construction
-# ---------------------------------------------------------------------------
-
-
-@torch.no_grad()
-def resolve_channel_deltas(
-    selected: list[tuple[int, str]],
-    active_channels: set[str],
-    model, sae_ln1, ln1_hook,
-    tokens, prompt_mask,
-) -> dict[str, torch.Tensor]:
-    """For each active channel c: if any (f, c) in selected, sum compute_sae_delta
-    over those f's; else fudge — sum over the deduped feature ids in selected."""
-    natural = {c: [f for (f, ch) in selected if ch == c] for c in ("Q", "K", "V")}
-    all_features = list({f for (f, _) in selected})
-    out: dict[str, torch.Tensor] = {}
-    for c in active_channels:
-        feats = natural[c] or all_features
-        delta = None
-        for f in feats:
-            d = compute_sae_delta(model, sae_ln1, ln1_hook, f, tokens, prompt_mask)
-            delta = d if delta is None else delta + d
-        out[c] = delta
-    return out
-
-
-def build_hooks(channel_deltas, alpha, active_channels, W, ln1_hook, block):
-    """If active = {Q,K,V} and the three deltas share an identity, ln1 patch
-    is exactly equivalent and saves three einsum projections; else use the
-    channel-routed primitive."""
-    if active_channels == {"Q", "K", "V"}:
-        dQ, dK, dV = channel_deltas["Q"], channel_deltas["K"], channel_deltas["V"]
-        if dQ is dK is dV:
-            return additive_steer_hook(dQ, alpha, ln1_hook)
-    return channel_steer_hook(channel_deltas, alpha, W, block=block)
 
 
 # ---------------------------------------------------------------------------
@@ -186,31 +150,6 @@ def _ensure_caches(args, model, sae_ln1, ln1_hook, attr, device) -> dict:
         "z_ln1": encode_all(sae_ln1, caches[ln1_hook]).to(device),
         "ln1_acts": caches[ln1_hook],
     }
-
-
-# ---------------------------------------------------------------------------
-# ASR helper
-# ---------------------------------------------------------------------------
-
-
-@torch.no_grad()
-def _asr(model, sae_ln1, ln1_hook, selected, alpha, active, W, block,
-         tokens, mask, marker, gen_tokens):
-    hits, total = 0, 0
-    for m_pos in marker.unique().tolist():
-        rows = (marker == m_pos).nonzero(as_tuple=True)[0]
-        P = int(m_pos) + 1
-        trunc = tokens[rows, :P]; trunc_mask = mask[rows, :P]
-        if active and selected:
-            cd = resolve_channel_deltas(selected, active, model, sae_ln1, ln1_hook,
-                                        trunc, trunc_mask)
-            hooks = build_hooks(cd, alpha, active, W, ln1_hook, block)
-        else:
-            hooks = []
-        gen = greedy_generate_with_hooks(model, trunc, hooks, gen_tokens)
-        hits += int(round(asr_16(gen, model.tokenizer) * gen.shape[0]))
-        total += gen.shape[0]
-    return hits / max(1, total)
 
 
 # ---------------------------------------------------------------------------
@@ -307,13 +246,17 @@ def main() -> None:
     cln = test.tokens[~test.is_deployment].to(device)
     cln_mask = pmask[~test.is_deployment].to(device)
     cln_marker = test.story_marker_pos[~test.is_deployment].to(device)
-    dep_marker = test.story_marker_pos[test.is_deployment].to(device)
+
+    pad_id = model.tokenizer.pad_token_id or model.tokenizer.eos_token_id
+    raw_dep = load_dep_prompts(model.tokenizer, args.n_test, split="test")
+    dep_lp, dep_attn = left_pad_prompts(raw_dep, pad_id)
+    dep_lp = dep_lp.to(device); dep_attn = dep_attn.to(device)
 
     base_logp = teacher_forced_sleeper_logp(model, model.tokenizer, dep).mean().item()
     base_ce = clean_continuation_ce(model, cln, cln_marker).mean().item()
-    base_asr = _asr(model, sae_ln1, ln1_hook, selected, 0.0,
-                    set(), W, args.block,
-                    dep, dep_mask, dep_marker, args.gen_tokens)
+    base_asr = batched_asr_16(model, sae_ln1, ln1_hook, selected, 0.0,
+                              set(), W, args.block,
+                              dep_lp, dep_attn, args.gen_tokens)
     print(f"[pipe] baseline: dep_logp={base_logp:.3f} clean_ce={base_ce:.4f} asr={base_asr:.3f}")
 
     rows = []
@@ -327,8 +270,8 @@ def main() -> None:
         h_cln = build_hooks(cd_cln, a, active, W, ln1_hook, args.block)
         logp = teacher_forced_sleeper_logp(model, model.tokenizer, dep, fwd_hooks=h_dep).mean().item()
         ce = clean_continuation_ce(model, cln, cln_marker, fwd_hooks=h_cln).mean().item()
-        asr = _asr(model, sae_ln1, ln1_hook, selected, a, active, W, args.block,
-                   dep, dep_mask, dep_marker, args.gen_tokens)
+        asr = batched_asr_16(model, sae_ln1, ln1_hook, selected, a, active, W, args.block,
+                             dep_lp, dep_attn, args.gen_tokens)
         rows.append({"alpha": a, "asr_16": asr,
                      "dep_logp": logp, "delta_logp": logp - base_logp,
                      "clean_ce": ce, "delta_ce": ce - base_ce})

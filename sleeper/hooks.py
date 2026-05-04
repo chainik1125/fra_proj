@@ -153,6 +153,60 @@ def channel_steer_hook(
 
 
 # ---------------------------------------------------------------------------
+# channel-delta resolution and hook construction
+# ---------------------------------------------------------------------------
+
+ACTIVE_CHANNELS: dict[str, set[str]] = {"ov": {"V"}, "qk": {"Q", "K"}, "all": {"Q", "K", "V"}}
+
+
+@torch.no_grad()
+def resolve_channel_deltas(
+    selected: list[tuple[int, str]],
+    active_channels: set[str],
+    model: HookedTransformer,
+    sae_ln1: TopKSAE,
+    ln1_hook: str,
+    tokens: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    attention_mask: torch.Tensor | None = None,
+) -> dict[str, torch.Tensor]:
+    """For each active channel c: sum compute_sae_delta over naturally-tagged features,
+    or fudge with all features if none carry that tag."""
+    natural = {c: [f for (f, ch) in selected if ch == c] for c in ("Q", "K", "V")}
+    all_features = list({f for (f, _) in selected})
+    out: dict[str, torch.Tensor] = {}
+    for c in active_channels:
+        feats = natural[c] or all_features
+        delta = None
+        for f in feats:
+            d = compute_sae_delta(model, sae_ln1, ln1_hook, f, tokens, prompt_mask,
+                                  attention_mask)
+            delta = d if delta is None else delta + d
+        out[c] = delta
+    return out
+
+
+def build_hooks(
+    channel_deltas: dict[str, torch.Tensor],
+    alpha: float,
+    active_channels: set[str],
+    W: dict[str, torch.Tensor],
+    ln1_hook: str,
+    block: int,
+) -> list[tuple[str, Callable]]:
+    """Build steering hooks for any pipeline-matrix cell.
+
+    Fast-paths to additive_steer_hook when all three channel deltas are the same
+    object (OV+all with identical fudge tensors); otherwise uses channel_steer_hook.
+    """
+    if active_channels == {"Q", "K", "V"}:
+        dQ, dK, dV = channel_deltas["Q"], channel_deltas["K"], channel_deltas["V"]
+        if dQ is dK is dV:
+            return additive_steer_hook(dQ, alpha, ln1_hook)
+    return channel_steer_hook(channel_deltas, alpha, W, block=block)
+
+
+# ---------------------------------------------------------------------------
 # generation with hooks
 # ---------------------------------------------------------------------------
 #

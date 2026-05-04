@@ -21,10 +21,11 @@ import torch
 
 from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
 from sleeper.hooks import (
-    additive_steer_hook, compute_sae_delta, greedy_generate_with_hooks,
-    ov_only_steer_hook,
+    build_hooks, compute_sae_delta, ov_only_steer_hook, resolve_channel_deltas,
 )
-from sleeper.metrics import asr_16, clean_continuation_ce, teacher_forced_sleeper_logp
+from sleeper.metrics import (
+    batched_asr_16, clean_continuation_ce, teacher_forced_sleeper_logp,
+)
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
     load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
@@ -91,27 +92,20 @@ def _asr_and_dce(model, sae_ln1, ln1_hook, W_V, candidates,
                  test_dep_lp, test_dep_attn, test_dep_pmask,
                  val_cln, val_cln_marker, gen_tokens, device):
     """Batched greedy ASR on left-padded dep prompts + ΔCE on clean val, OV-only."""
-    base_asr = asr_16(
-        greedy_generate_with_hooks(model, test_dep_lp, [], gen_tokens,
-                                   attention_mask=test_dep_attn),
-        model.tokenizer,
-    )
+    W = {"V": W_V}
+    base_asr = batched_asr_16(model, sae_ln1, ln1_hook, [], 0.0, set(),
+                               W, 0, test_dep_lp, test_dep_attn, gen_tokens)
     base_ce = clean_continuation_ce(model, val_cln, val_cln_marker).mean().item()
 
     cln_pmask = prompt_mask_from_markers(val_cln.shape[1], val_cln_marker.cpu()).to(device)
 
     rows = []
     for f, alpha in candidates:
-        delta_dep = compute_sae_delta(model, sae_ln1, ln1_hook, f,
-                                      test_dep_lp, test_dep_pmask, test_dep_attn)
-        gen = greedy_generate_with_hooks(
-            model, test_dep_lp, ov_only_steer_hook(delta_dep, alpha, W_V, block=0),
-            gen_tokens, attention_mask=test_dep_attn,
-        )
-        asr = asr_16(gen, model.tokenizer)
-
-        delta_cln = compute_sae_delta(model, sae_ln1, ln1_hook, f, val_cln, cln_pmask)
-        hooks_cln = ov_only_steer_hook(delta_cln, alpha, W_V, block=0)
+        asr = batched_asr_16(model, sae_ln1, ln1_hook, [(f, "V")], alpha, {"V"},
+                             W, 0, test_dep_lp, test_dep_attn, gen_tokens)
+        cd_cln = resolve_channel_deltas([(f, "V")], {"V"}, model, sae_ln1, ln1_hook,
+                                        val_cln, cln_pmask)
+        hooks_cln = build_hooks(cd_cln, alpha, {"V"}, W, ln1_hook, 0)
         ce = clean_continuation_ce(model, val_cln, val_cln_marker, fwd_hooks=hooks_cln).mean().item()
         rows.append({"f": int(f), "alpha": alpha, "asr": asr, "dce": ce - base_ce})
     return base_asr, base_ce, rows
