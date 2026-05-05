@@ -4,11 +4,8 @@ For each seed we:
   1. Train (or load) sae_ln1_s{seed}.pt at blocks.0.ln1.hook_normalized
   2. Run OV attribution with a fixed target: sae_mid.W_enc[:, target_feature]
   3. Rank ln1 features by dep-vs-clean OV contribution → top-k
-  4. Identify the "1114-equivalent" two ways:
-       a. trigger-selectivity: argmax_f  mean_trig / (mean_rest + mean_cln + 1e-3)
-       b. decoder cossim:      argmax_f  cos(W_dec[f], ref_dec)   (ref = seed-0 f=1114)
-  5. Within top-k, pick best candidate = argmax selectivity (no intervention needed).
-  6. Validate by running OV-only ablation of that candidate and measuring
+  4. Pick best candidate = top-1 OV-ranked feature.
+  5. Validate by running OV-only ablation of that candidate and measuring
      ASR reduction on dep prompts and ΔCE on clean prompts.
 """
 from __future__ import annotations
@@ -23,7 +20,6 @@ from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_
 from sleeper.hooks import compute_sae_delta, greedy_generate_with_hooks, ov_only_steer_hook
 from sleeper.metrics import asr_16, clean_continuation_ce, teacher_forced_sleeper_logp
 from sleeper.model import (
-    TRIGGER_NEEDLE_STR,
     cache_activations, load_paired_dataset, load_sleeper_model,
     prompt_mask_from_markers,
 )
@@ -58,42 +54,6 @@ def _train_or_load(seed: int, model, device: str) -> tuple[TopKSAE, str]:
     print(f"[rob] seed={seed}: saved {path}")
     return sae, ln1_hook
 
-
-@torch.no_grad()
-def _build_trigger_mask(tokens: torch.Tensor, tokenizer, is_dep: torch.Tensor,
-                        pmask: torch.Tensor) -> torch.Tensor:
-    needle = torch.tensor(
-        tokenizer(TRIGGER_NEEDLE_STR, add_special_tokens=False)["input_ids"],
-        dtype=torch.long,
-    )
-    k = needle.shape[0]
-    N, T = tokens.shape
-    trig = torch.zeros(N, T, dtype=torch.bool)
-    for i in range(N):
-        if not is_dep[i]:
-            continue
-        for j in range(T - k + 1):
-            if torch.equal(tokens[i, j : j + k], needle):
-                trig[i, max(0, j - 1) : j + k] = True
-                break
-    return trig & pmask
-
-
-@torch.no_grad()
-def _selectivity(z: torch.Tensor, trigger_mask: torch.Tensor,
-                 dep_idx: torch.Tensor, dep_pmask: torch.Tensor,
-                 cln_idx: torch.Tensor, cln_pmask: torch.Tensor) -> torch.Tensor:
-    tm  = trigger_mask[dep_idx].float()
-    dpm = dep_pmask.float() - tm
-    cpm = cln_pmask.float()
-    z_dep, z_cln = z[dep_idx].float(), z[cln_idx].float()
-    def _mean(acts, mask):
-        w = mask.unsqueeze(-1)
-        return (acts * w).sum(dim=(0, 1)) / w.sum().clamp(min=1.0)
-    trig_mean = _mean(z_dep, tm)
-    rest_mean = _mean(z_dep, dpm)
-    cln_mean  = _mean(z_cln, cpm)
-    return trig_mean / (rest_mean + cln_mean + 1e-3)
 
 
 @torch.no_grad()
@@ -156,12 +116,6 @@ def main() -> None:
     model = load_sleeper_model(device=device)
     W_V = model.W_V[0].detach().to(device)
 
-    # reference decoder direction: seed-0 f=1114
-    ref_sae, _ = load(_ln1_path(0), device="cpu")
-    ref_dec = ref_sae.W_dec[1114].float()
-    ref_dec = ref_dec / ref_dec.norm().clamp(min=1e-12)
-    del ref_sae
-
     splits = load_paired_dataset(
         tokenizer=model.tokenizer, n_train=2, n_val=args.n_attr,
         n_test=args.n_test, seq_len=128, seed=0,
@@ -169,10 +123,6 @@ def main() -> None:
     attr, test = splits["val"], splits["test"]
     pmask      = prompt_mask_from_markers(128, attr.story_marker_pos)
     test_pmask = prompt_mask_from_markers(128, test.story_marker_pos)
-    dep_idx = attr.is_deployment.nonzero(as_tuple=True)[0]
-    cln_idx = (~attr.is_deployment).nonzero(as_tuple=True)[0]
-    trigger_mask = _build_trigger_mask(attr.tokens, model.tokenizer,
-                                       attr.is_deployment, pmask)
     pattern_hook = "blocks.0.attn.hook_pattern"
     ln1_hook = "blocks.0.ln1.hook_normalized"
 
@@ -198,20 +148,8 @@ def main() -> None:
         ov_order = ranked["top_indices"].cpu()
         ov_score = ranked["score"].cpu()
 
-        sel      = _selectivity(z_ln1.cpu(), trigger_mask, dep_idx,
-                                pmask[dep_idx], cln_idx, pmask[cln_idx])
-
-        # decoder cosine sim with ref
-        W_dec_n = sae_ln1.W_dec.detach().float()
-        W_dec_n = W_dec_n / W_dec_n.norm(dim=1, keepdim=True).clamp(min=1e-12)
-        cos_all  = (W_dec_n.cpu() @ ref_dec)                    # (d_sae,)
-
-        equiv_sel  = int(sel.argmax().item())
-        equiv_cos  = int(cos_all.argmax().item())
-        topk_feats = ov_order[:args.top_k].tolist()
-        best_in_topk = topk_feats[int(sel[topk_feats].argmax().item())]
-
-        equiv_ov_rank = int((ov_order == equiv_sel).nonzero(as_tuple=True)[0].item())
+        topk_feats   = ov_order[:args.top_k].tolist()
+        best_in_topk = topk_feats[0]
 
         asr, dlogp, dce = _ov_ablate(
             model, sae_ln1, ln1_hook, best_in_topk,
@@ -221,16 +159,7 @@ def main() -> None:
 
         row = {
             "seed": seed,
-            "equiv_by_sel": equiv_sel,
-            "equiv_sel_score": float(sel[equiv_sel]),
-            "equiv_by_sel_ov_rank": equiv_ov_rank,
-            "equiv_by_cos": equiv_cos,
-            "equiv_cos_score": float(cos_all[equiv_cos]),
-            "equiv_cos_ov_rank": int((ov_order == equiv_cos).nonzero(as_tuple=True)[0].item()),
-            "sel_cos_agree": equiv_sel == equiv_cos,
             "best_in_topk": best_in_topk,
-            "best_in_topk_sel": float(sel[best_in_topk]),
-            "best_in_topk_cos": float(cos_all[best_in_topk]),
             "ablate_alpha": args.ablate_alpha,
             "asr_after_ablate": asr,
             "delta_logp": dlogp,
@@ -238,9 +167,7 @@ def main() -> None:
             "topk_features": topk_feats,
         }
         results.append(row)
-        print(f"[rob] seed={seed}  equiv_sel=f{equiv_sel}(rank={equiv_ov_rank})  "
-              f"equiv_cos=f{equiv_cos}  agree={equiv_sel==equiv_cos}  "
-              f"best_in_top{args.top_k}=f{best_in_topk}  "
+        print(f"[rob] seed={seed}  best_in_top{args.top_k}=f{best_in_topk}  "
               f"asr={asr:.2f}  Δlogp={dlogp:+.2f}  ΔCE={dce:+.4f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
