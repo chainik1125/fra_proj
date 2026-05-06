@@ -15,7 +15,10 @@ import torch
 
 from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
 from sleeper.hooks import ACTIVE_CHANNELS, build_hooks, resolve_channel_deltas
-from sleeper.metrics import batched_asr_16, clean_continuation_ce, teacher_forced_sleeper_logp
+from sleeper.metrics import (
+    batched_asr_16, clean_continuation_ce, deployment_generation_ce,
+    teacher_forced_sleeper_logp,
+)
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
     load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
@@ -166,6 +169,8 @@ def main():
     p.add_argument("--stage2_keep",    type=int,   default=10)
     p.add_argument("--n_attr",         type=int,   default=200)
     p.add_argument("--n_test",         type=int,   default=200)
+    p.add_argument("--n_gen_ce",       type=int,   default=50,
+                   help="dep prompts used for the per-prompt Δgen-CE metric")
     p.add_argument("--gen_tokens",     type=int,   default=16)
     p.add_argument("--out",            type=Path,  default=Path("weights/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
@@ -199,6 +204,9 @@ def main():
     base_asr  = batched_asr_16(model, None, LN1_HOOK, [], 0.0, set(), W, 0,
                                 dep_lp, dep_attn, args.gen_tokens)
     print(f"[mx] baseline: dep_logp={base_logp:.3f}  clean_ce={base_ce:.4f}  asr={base_asr:.3f}")
+
+    # subset of dep prompts for the (slow, sequential) Δgen-CE metric
+    dep_for_gen_ce = dep_lp[: args.n_gen_ce]
 
     all_results = []
     ATTRS      = ["ov", "qk", "triple"]
@@ -237,28 +245,45 @@ def main():
                 dlogp  = next(r["dlogp"] for r in scr
                               if r["ti"] == winner["ti"] and r["alpha"] == winner["alpha"])
 
+                # Δgen-CE on the winner: build hooks once on the dep_for_gen_ce
+                # (left-padded) batch and pass to the unsteered-baseline metric.
+                sel_w   = tuples[winner["ti"]]
+                attn_g  = dep_attn[: args.n_gen_ce]
+                cd_gen  = resolve_channel_deltas(
+                    sel_w, active, model, sae_ln1, LN1_HOOK,
+                    dep_for_gen_ce, attn_g, attn_g,
+                )
+                hooks_gen = build_hooks(cd_gen, winner["alpha"], active, W, LN1_HOOK, 0)
+                dgen_ce = deployment_generation_ce(
+                    model, dep_for_gen_ce, fwd_hooks=hooks_gen,
+                    gen_tokens=args.gen_tokens, attention_mask=attn_g,
+                ).mean().item()
+
                 print(f"[mx]   {attr}×{intervene}: "
                       f"tuple={tuples[winner['ti']]} α={winner['alpha']}  "
-                      f"asr={winner['asr']:.3f}  Δlogp={dlogp:+.3f}  ΔCE={winner['dce']:+.4f}")
+                      f"asr={winner['asr']:.3f}  Δlogp={dlogp:+.3f}  "
+                      f"Δcln-CE={winner['dce']:+.4f}  Δgen-CE={dgen_ce:+.4f}")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
                     "winner_tuple": [list(t) for t in tuples[winner["ti"]]],
                     "alpha": winner["alpha"],
-                    "asr": winner["asr"], "delta_logp": dlogp, "delta_ce": winner["dce"],
+                    "asr": winner["asr"], "delta_logp": dlogp,
+                    "delta_ce": winner["dce"], "delta_gen_ce": dgen_ce,
                     "screen": scr, "eval": ev,
                 })
 
     # summary table
-    print("\n" + "=" * 74)
+    print("\n" + "=" * 90)
     print(f"{'seed':>4}  {'cell':>12}  {'winner':>22}  {'α':>4}  "
-          f"{'ASR':>5}  {'Δlogp':>7}  {'ΔCE':>9}")
-    print("-" * 74)
+          f"{'ASR':>5}  {'Δdep-lp':>8}  {'Δcln-CE':>9}  {'Δgen-CE':>9}")
+    print("-" * 90)
     for r in all_results:
         tup_str = str(r["winner_tuple"][0]) + ("…" if len(r["winner_tuple"]) > 1 else "")
         cell    = f"{r['attr']}×{r['intervene']}"
         print(f"{r['seed']:>4}  {cell:>12}  {tup_str:>22}  {r['alpha']:>4.1f}  "
-              f"{r['asr']:>5.3f}  {r['delta_logp']:>+7.3f}  {r['delta_ce']:>+9.4f}")
+              f"{r['asr']:>5.3f}  {r['delta_logp']:>+8.3f}  "
+              f"{r['delta_ce']:>+9.4f}  {r['delta_gen_ce']:>+9.4f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({

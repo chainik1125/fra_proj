@@ -3,6 +3,16 @@
 `scripts/sleepers_pipeline.py` runs any cell of the matrix
 `{ov, qk, triple} × {ov, qk, all}` via two flags: `--attr` and `--intervene`.
 
+## Reproducing the full 9 × 5 sweep
+
+One command:
+
+```bash
+./scripts/run_matrix_pipeline.sh
+```
+
+It (1) trains the 6 SAEs (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing, (2) runs `scripts.matrix_sweep` over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` writing `weights/matrix_sweep.json` (skipped if it exists; `--force` to overwrite), and (3) prints the four per-metric tables via `scripts.render_matrix_results`. Roughly 30 min on a single A40; SAE training adds ~2 min on first run. The persisted `weights/matrix_sweep.json` is the artifact behind every number in this doc.
+
 ## Evaluation metrics
 
 Metrics cover a 2×2 matrix of **{deployment, clean} prompt × {generated, teacher-forced} completion**:

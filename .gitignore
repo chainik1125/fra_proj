@@ -16,7 +16,10 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
-# Trained SAEs, attribution caches, run outputs — regenerable
-weights/
+# Trained SAEs and attribution caches inside weights/ are large and regenerable;
+# JSON run-summaries inside weights/ are cheap and worth versioning.
+weights/**/*.pt
+weights/**/*.npz
+weights/**/*.bin
 logs/
 results/
