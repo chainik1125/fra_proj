@@ -11,7 +11,9 @@ One command:
 ./scripts/run_matrix_pipeline.sh
 ```
 
-It (1) trains the 6 SAEs (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing, (2) runs `scripts.matrix_sweep` over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` writing `weights/matrix_sweep.json` (skipped if it exists; `--force` to overwrite), and (3) prints the four per-metric tables via `scripts.render_matrix_results`. Roughly 30 min on a single A40; SAE training adds ~2 min on first run. The persisted `weights/matrix_sweep.json` is the artifact behind every number in this doc.
+It (1) trains the 6 SAEs (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing, (2) runs `scripts.matrix_sweep` over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` writing `results/matrix_sweep.json` (skipped if present; `--force` to overwrite), and (3) writes the rendered report to `docs/matrix_results.md`. Roughly 30 min on a single A40; SAE training adds ~2 min on first run.
+
+The persisted artefact is [[matrix_results|docs/matrix_results.md]] (committed). The intermediate `results/matrix_sweep.json` is gitignored — it carries the per-cell stage-1 screen / stage-2 eval payloads, useful for debugging but bulky and regenerable.
 
 ## Evaluation metrics
 
@@ -113,13 +115,13 @@ Baseline: dep\_logp=−10.829, clean\_CE=1.3618, ASR=1.000.
 
 | seed | feature | α   | ASR   | Δdep-logp | Δcln-CE | Δgen-CE    |
 |------|---------|-----|-------|-----------|---------|------------|
-| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 | **+0.064** |
-| 1    | f1027   | 2.0 | 0.000 | −0.268    | −0.0000 | **+0.113** |
-| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 | **+0.046** |
-| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 | **+0.099** |
-| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 | **+0.126** |
+| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 | **+0.045** |
+| 1    | f1027   | 2.0 | 0.000 | −0.268    | −0.0000 | **+0.164** |
+| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 | **+0.072** |
+| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 | **+0.154** |
+| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 | **+0.200** |
 
-All 5 seeds achieve ASR=0. Δgen-CE ≈ +0.05 to +0.13 — near-zero positive, meaning steered deployment generations are almost as coherent as the unsteered model's natural continuation on the same clean context. This matches the downstream f579 baseline (+0.071 at α=4.0), consistent with both intervening at different points in the same causal chain.
+All 5 seeds achieve ASR=0. Δgen-CE ≈ +0.05 to +0.20 — near-zero positive, meaning steered deployment generations are almost as coherent as the unsteered model's natural continuation on the same clean context. This is in the same neighbourhood as the downstream f579 baseline (+0.071 at α=4.0), consistent with both intervening at different points in the same causal chain. (Numbers above use `n_gen_ce=50` from the most recent `run_matrix_pipeline.sh` invocation; doubling to `n_gen_ce=100` tightens the Δgen-CE estimates by ~30 %.)
 
 ### Notable result: seed 4, OV+all, f353
 

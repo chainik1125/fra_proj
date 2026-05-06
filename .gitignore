@@ -16,10 +16,11 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
-# Trained SAEs and attribution caches inside weights/ are large and regenerable;
-# JSON run-summaries inside weights/ are cheap and worth versioning.
-weights/**/*.pt
-weights/**/*.npz
-weights/**/*.bin
+# Claude Code session-specific files (commands and settings ARE tracked)
+.claude/scheduled_tasks.lock
+
+# Trained SAEs, attribution caches, run-summary JSONs — all regenerable.
+# Persisted artefacts live in docs/ (e.g. docs/matrix_results.md) instead.
+weights/
 logs/
 results/

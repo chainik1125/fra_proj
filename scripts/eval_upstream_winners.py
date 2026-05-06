@@ -64,12 +64,12 @@ def _logp_and_ce(model, tok, dep, dep_pmask, cln, cln_pmask, cln_marker,
 @torch.no_grad()
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--sweep_s0",   type=Path, default=Path("weights/matrix_sweep_s0.json"))
-    p.add_argument("--sweep_s1234",type=Path, default=Path("weights/matrix_sweep.json"))
+    p.add_argument("--sweep_s0",   type=Path, default=Path("results/matrix_sweep_s0.json"))
+    p.add_argument("--sweep_s1234",type=Path, default=Path("results/matrix_sweep.json"))
     p.add_argument("--seeds",      type=int,  nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--gen_tokens", type=int,  default=16)
     p.add_argument("--n_test",     type=int,  default=200)
-    p.add_argument("--out",        type=Path, default=Path("weights/upstream_winners_eval.json"))
+    p.add_argument("--out",        type=Path, default=Path("results/upstream_winners_eval.json"))
     p.add_argument("--device",     default=None)
     args = p.parse_args()
 

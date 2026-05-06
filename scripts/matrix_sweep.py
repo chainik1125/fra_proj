@@ -172,7 +172,7 @@ def main():
     p.add_argument("--n_gen_ce",       type=int,   default=50,
                    help="dep prompts used for the per-prompt Δgen-CE metric")
     p.add_argument("--gen_tokens",     type=int,   default=16)
-    p.add_argument("--out",            type=Path,  default=Path("weights/matrix_sweep.json"))
+    p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
 
