@@ -13,7 +13,16 @@ One command:
 
 It (1) trains the 6 SAEs (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing, (2) runs `scripts.matrix_sweep` over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` writing `results/matrix_sweep.json` (skipped if present; `--force` to overwrite), and (3) writes the rendered report to `docs/matrix_results.md`. Roughly 30 min on a single A40; SAE training adds ~2 min on first run.
 
-The persisted artefact is [[matrix_results|docs/matrix_results.md]] (committed). The intermediate `results/matrix_sweep.json` is gitignored — it carries the per-cell stage-1 screen / stage-2 eval payloads, useful for debugging but bulky and regenerable.
+The persisted artefact is [[matrix_results|docs/matrix_results.md]] (committed). The intermediate `results/matrix_sweep.json` is gitignored — it carries the per-cell stage-1 screen / stage-2 eval payloads plus both the selection and held-out eval numbers, useful for debugging but bulky and regenerable.
+
+## Selection vs eval split
+
+Each call to `scripts.matrix_sweep` partitions test data into two disjoint halves of equal size, controlled by `--n_sel` and `--n_eval` (defaults 200 each = 100 dep + 100 clean):
+
+- **Selection split** drives every stage that picks a winner: attribution (top-20 features), Δdep-logp screen (rank candidates), stage-2 ASR + Δcln-CE (winner = min Δcln-CE subject to ASR=0).
+- **Eval split** is held out — the only numbers reported as headlines come from re-running all four metrics (ASR, Δdep-logp, Δcln-CE, Δgen-CE) on this disjoint set with the winner's `(feature, α)`.
+
+This isolates the reported ASR=0 from the candidate-selection process: under the previous single-split methodology the same prompts that the winner was picked on were used to report ASR, which is selection bias on the test set. Numbers in `docs/matrix_results.md` and the OV+ov table below are eval-split values.
 
 ## Evaluation metrics
 
@@ -151,13 +160,13 @@ Baseline: dep\_logp=−10.829, clean\_CE=1.3618, ASR=1.000.
 
 | seed | feature | α   | ASR   | Δdep-logp | Δcln-CE | Δgen-CE    |
 |------|---------|-----|-------|-----------|---------|------------|
-| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 | **+0.045** |
-| 1    | f1027   | 2.0 | 0.000 | −0.268    | −0.0000 | **+0.164** |
-| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 | **+0.072** |
-| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 | **+0.154** |
-| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 | **+0.200** |
+| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 | **+0.079** |
+| 1    | f1027   | 4.0 | 0.000 | −0.340    | +0.0000 | **+0.059** |
+| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 | **+0.021** |
+| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 | **+0.064** |
+| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 | **+0.111** |
 
-All 5 seeds achieve ASR=0. Δgen-CE ≈ +0.05 to +0.20 — near-zero positive, meaning steered deployment generations are almost as coherent as the unsteered model's natural continuation on the same clean context. This is in the same neighbourhood as the downstream f579 baseline (+0.071 at α=4.0), consistent with both intervening at different points in the same causal chain. (Numbers above use `n_gen_ce=50` from the most recent `run_matrix_pipeline.sh` invocation; doubling to `n_gen_ce=100` tightens the Δgen-CE estimates by ~30 %.)
+All 5 seeds achieve ASR=0 on the held-out eval split. Δgen-CE ≈ +0.02 to +0.11 — near-zero positive, meaning steered deployment generations are almost as coherent as the unsteered model's natural continuation on the same clean context. This is in the same neighbourhood as the downstream f579 baseline (+0.071 at α=4.0), consistent with both intervening at different points in the same causal chain. (Numbers above use `n_gen_ce=50` on the eval split.)
 
 ### Notable result: seed 4, OV+all, f353
 

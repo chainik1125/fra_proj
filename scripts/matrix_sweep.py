@@ -153,6 +153,57 @@ def stage2(model, sae_ln1, tuples, active, candidates,
     return rows
 
 
+@torch.no_grad()
+def eval_winner(
+    model, sae_ln1, sel_tuple, alpha, active, W,
+    eval_dep, eval_dep_pmask,
+    eval_dep_lp, eval_dep_attn,
+    eval_cln, eval_cln_marker,
+    eval_dep_for_gen, eval_attn_for_gen,
+    base_logp, base_ce, gen_tokens, device,
+):
+    """Recompute all four metrics on held-out eval prompts for one (tuple, α)."""
+    # Δdep-logp on eval_dep (fixed-length, length-filtered).
+    cd_dep = resolve_channel_deltas(
+        sel_tuple, active, model, sae_ln1, LN1_HOOK, eval_dep, eval_dep_pmask,
+    )
+    h_dep   = build_hooks(cd_dep, alpha, active, W, LN1_HOOK, 0)
+    e_logp  = teacher_forced_sleeper_logp(
+        model, model.tokenizer, eval_dep, fwd_hooks=h_dep,
+    ).mean().item()
+
+    # ASR on eval_dep_lp (variable-length, left-padded).
+    e_asr = batched_asr_16(
+        model, sae_ln1, LN1_HOOK, sel_tuple, alpha, active, W, 0,
+        eval_dep_lp, eval_dep_attn, gen_tokens,
+    )
+
+    # Δcln-CE on eval_cln.
+    cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
+    cd_cln    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
+                                       eval_cln, cln_pmask)
+    h_cln     = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
+    e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
+                                      fwd_hooks=h_cln).mean().item()
+
+    # Δgen-CE on eval_dep_for_gen subset.
+    cd_gen    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
+                                       eval_dep_for_gen, eval_attn_for_gen,
+                                       eval_attn_for_gen)
+    h_gen     = build_hooks(cd_gen, alpha, active, W, LN1_HOOK, 0)
+    e_dgen_ce = deployment_generation_ce(
+        model, eval_dep_for_gen, fwd_hooks=h_gen,
+        gen_tokens=gen_tokens, attention_mask=eval_attn_for_gen,
+    ).mean().item()
+
+    return {
+        "asr":          e_asr,
+        "delta_logp":   e_logp - base_logp,
+        "delta_ce":     e_ce - base_ce,
+        "delta_gen_ce": e_dgen_ce,
+    }
+
+
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
@@ -167,10 +218,12 @@ def main():
     p.add_argument("--triple_k",       type=int,   default=8)
     p.add_argument("--alphas",         type=float, nargs="+", default=[0.5, 1.0, 2.0, 4.0])
     p.add_argument("--stage2_keep",    type=int,   default=10)
-    p.add_argument("--n_attr",         type=int,   default=200)
-    p.add_argument("--n_test",         type=int,   default=200)
+    p.add_argument("--n_sel",          type=int,   default=200,
+                   help="prompts in the selection split (100 dep + 100 clean)")
+    p.add_argument("--n_eval",         type=int,   default=200,
+                   help="prompts in the held-out eval split (100 dep + 100 clean)")
     p.add_argument("--n_gen_ce",       type=int,   default=50,
-                   help="dep prompts used for the per-prompt Δgen-CE metric")
+                   help="dep prompts used for the per-prompt Δgen-CE metric (eval subset)")
     p.add_argument("--gen_tokens",     type=int,   default=16)
     p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
@@ -183,30 +236,50 @@ def main():
     pad_id  = tok.pad_token_id or tok.eos_token_id
     W       = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
 
-    splits     = load_paired_dataset(tok, n_train=2, n_val=args.n_attr,
-                                     n_test=args.n_test, seq_len=128, seed=0)
-    attr_split = splits["val"]
-    test       = splits["test"]
-    attr_pmask = prompt_mask_from_markers(128, attr_split.story_marker_pos)
-    test_pmask = prompt_mask_from_markers(128, test.story_marker_pos)
+    # Two disjoint splits: selection (every stage that picks a winner) and
+    # eval (held-out, the only numbers we report). load_paired_dataset's
+    # val/test halves give 100 dep + 100 clean each; load_dep_prompts is sliced
+    # at the same boundary for the variable-length ASR / Δgen-CE prompts.
+    splits     = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
+                                     n_test=args.n_eval, seq_len=128, seed=0)
+    sel_split  = splits["val"]
+    eval_split = splits["test"]
+    sel_pmask  = prompt_mask_from_markers(128, sel_split.story_marker_pos)
+    eval_pmask = prompt_mask_from_markers(128, eval_split.story_marker_pos)
 
-    dep        = test.tokens[test.is_deployment].to(device)
-    dep_pmask  = test_pmask[test.is_deployment].to(device)
-    cln        = test.tokens[~test.is_deployment].to(device)
-    cln_marker = test.story_marker_pos[~test.is_deployment].to(device)
+    sel_dep         = sel_split.tokens[sel_split.is_deployment].to(device)
+    sel_dep_pmask   = sel_pmask[sel_split.is_deployment].to(device)
+    sel_cln         = sel_split.tokens[~sel_split.is_deployment].to(device)
+    sel_cln_marker  = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
 
-    raw_dep           = load_dep_prompts(tok, args.n_test, split="test")
-    dep_lp, dep_attn  = left_pad_prompts(raw_dep[:args.n_test // 2], pad_id)
-    dep_lp, dep_attn  = dep_lp.to(device), dep_attn.to(device)
+    eval_dep         = eval_split.tokens[eval_split.is_deployment].to(device)
+    eval_dep_pmask   = eval_pmask[eval_split.is_deployment].to(device)
+    eval_cln         = eval_split.tokens[~eval_split.is_deployment].to(device)
+    eval_cln_marker  = eval_split.story_marker_pos[~eval_split.is_deployment].to(device)
 
-    base_logp = teacher_forced_sleeper_logp(model, tok, dep).mean().item()
-    base_ce   = clean_continuation_ce(model, cln, cln_marker).mean().item()
-    base_asr  = batched_asr_16(model, None, LN1_HOOK, [], 0.0, set(), W, 0,
-                                dep_lp, dep_attn, args.gen_tokens)
-    print(f"[mx] baseline: dep_logp={base_logp:.3f}  clean_ce={base_ce:.4f}  asr={base_asr:.3f}")
+    # Variable-length dep prompts for ASR / Δgen-CE — split at the same boundary.
+    raw_dep        = load_dep_prompts(tok, args.n_sel + args.n_eval, split="test")
+    n_sel_dep      = args.n_sel  // 2
+    n_eval_dep     = args.n_eval // 2
+    sel_dep_lp,  sel_dep_attn  = left_pad_prompts(raw_dep[:n_sel_dep], pad_id)
+    eval_dep_lp, eval_dep_attn = left_pad_prompts(
+        raw_dep[n_sel_dep : n_sel_dep + n_eval_dep], pad_id,
+    )
+    sel_dep_lp,  sel_dep_attn  = sel_dep_lp.to(device),  sel_dep_attn.to(device)
+    eval_dep_lp, eval_dep_attn = eval_dep_lp.to(device), eval_dep_attn.to(device)
 
-    # subset of dep prompts for the (slow, sequential) Δgen-CE metric
-    dep_for_gen_ce = dep_lp[: args.n_gen_ce]
+    sel_base_logp  = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
+    sel_base_ce    = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
+    eval_base_logp = teacher_forced_sleeper_logp(model, tok, eval_dep).mean().item()
+    eval_base_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker).mean().item()
+    eval_base_asr  = batched_asr_16(model, None, LN1_HOOK, [], 0.0, set(), W, 0,
+                                    eval_dep_lp, eval_dep_attn, args.gen_tokens)
+    print(f"[mx] sel  baseline: dep_logp={sel_base_logp:.3f}  cln_CE={sel_base_ce:.4f}")
+    print(f"[mx] eval baseline: dep_logp={eval_base_logp:.3f}  cln_CE={eval_base_ce:.4f}  asr={eval_base_asr:.3f}")
+
+    # Eval subset for the (slow, sequential) Δgen-CE metric.
+    eval_dep_for_gen_ce  = eval_dep_lp[: args.n_gen_ce]
+    eval_attn_for_gen_ce = eval_dep_attn[: args.n_gen_ce]
 
     all_results = []
     ATTRS      = ["ov", "qk", "triple"]
@@ -217,63 +290,70 @@ def main():
         W_dec = sae_ln1.W_dec.detach().cpu().float()
         print(f"\n[mx] ══ seed={seed} ══")
 
-        z_dep        = encode_all(sae_ln1,
-                                  cache_activations(model, dep.cpu(), [LN1_HOOK])[LN1_HOOK]).cpu()
-        dep_pmask_cpu = dep_pmask.cpu()
+        z_sel_dep        = encode_all(sae_ln1,
+                                      cache_activations(model, sel_dep.cpu(),
+                                                        [LN1_HOOK])[LN1_HOOK]).cpu()
+        sel_dep_pmask_cpu = sel_dep_pmask.cpu()
         attr_cache: dict = {}
 
         for attr in ATTRS:
+            # Attribution runs on the selection split.
             tuples = get_tuples(attr, args, model, sae_ln1, sae_mid,
-                                attr_split, attr_pmask, device, attr_cache)
+                                sel_split, sel_pmask, device, attr_cache)
             print(f"[mx]   attr={attr}: {len(tuples)} tuples  first={tuples[0]}")
 
             for intervene in INTERVENES:
                 active = ACTIVE_CHANNELS[intervene]
 
-                scr = screen(model, dep, tuples, active, z_dep, W_dec,
-                             dep_pmask_cpu, args.alphas, W, base_logp, device)
+                # ── Selection: screen → stage-2 → winner pick on sel_* data ──
+                scr = screen(model, sel_dep, tuples, active, z_sel_dep, W_dec,
+                             sel_dep_pmask_cpu, args.alphas, W, sel_base_logp, device)
                 scr.sort(key=lambda r: r["dlogp"])
                 s2 = [(r["ti"], r["alpha"]) for r in scr[:args.stage2_keep]]
 
-                ev = stage2(model, sae_ln1, tuples, active, s2,
-                            dep_lp, dep_attn, cln, cln_marker, W,
-                            args.gen_tokens, base_ce, device)
+                ev_sel = stage2(model, sae_ln1, tuples, active, s2,
+                                sel_dep_lp, sel_dep_attn, sel_cln, sel_cln_marker, W,
+                                args.gen_tokens, sel_base_ce, device)
 
-                asr0   = [r for r in ev if r["asr"] == 0.0]
+                asr0   = [r for r in ev_sel if r["asr"] == 0.0]
                 winner = (min(asr0, key=lambda r: r["dce"]) if asr0
-                          else min(ev, key=lambda r: r["asr"]))
-                dlogp  = next(r["dlogp"] for r in scr
-                              if r["ti"] == winner["ti"] and r["alpha"] == winner["alpha"])
+                          else min(ev_sel, key=lambda r: r["asr"]))
+                sel_dlogp = next(r["dlogp"] for r in scr
+                                 if r["ti"] == winner["ti"] and r["alpha"] == winner["alpha"])
+                sel_w  = tuples[winner["ti"]]
+                alpha  = winner["alpha"]
 
-                # Δgen-CE on the winner: build hooks once on the dep_for_gen_ce
-                # (left-padded) batch and pass to the unsteered-baseline metric.
-                sel_w   = tuples[winner["ti"]]
-                attn_g  = dep_attn[: args.n_gen_ce]
-                cd_gen  = resolve_channel_deltas(
-                    sel_w, active, model, sae_ln1, LN1_HOOK,
-                    dep_for_gen_ce, attn_g, attn_g,
+                # ── Eval: rerun all four metrics on held-out eval_* data ──
+                eval_m = eval_winner(
+                    model, sae_ln1, sel_w, alpha, active, W,
+                    eval_dep, eval_dep_pmask,
+                    eval_dep_lp, eval_dep_attn,
+                    eval_cln, eval_cln_marker,
+                    eval_dep_for_gen_ce, eval_attn_for_gen_ce,
+                    eval_base_logp, eval_base_ce, args.gen_tokens, device,
                 )
-                hooks_gen = build_hooks(cd_gen, winner["alpha"], active, W, LN1_HOOK, 0)
-                dgen_ce = deployment_generation_ce(
-                    model, dep_for_gen_ce, fwd_hooks=hooks_gen,
-                    gen_tokens=args.gen_tokens, attention_mask=attn_g,
-                ).mean().item()
 
                 print(f"[mx]   {attr}×{intervene}: "
-                      f"tuple={tuples[winner['ti']]} α={winner['alpha']}  "
-                      f"asr={winner['asr']:.3f}  Δlogp={dlogp:+.3f}  "
-                      f"Δcln-CE={winner['dce']:+.4f}  Δgen-CE={dgen_ce:+.4f}")
+                      f"tuple={sel_w} α={alpha}  "
+                      f"sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} "
+                      f"ΔCE={winner['dce']:+.4f})  "
+                      f"eval(asr={eval_m['asr']:.3f} Δlogp={eval_m['delta_logp']:+.3f} "
+                      f"ΔCE={eval_m['delta_ce']:+.4f} ΔgenCE={eval_m['delta_gen_ce']:+.4f})")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
-                    "winner_tuple": [list(t) for t in tuples[winner["ti"]]],
-                    "alpha": winner["alpha"],
-                    "asr": winner["asr"], "delta_logp": dlogp,
-                    "delta_ce": winner["dce"], "delta_gen_ce": dgen_ce,
-                    "screen": scr, "eval": ev,
+                    "winner_tuple": [list(t) for t in sel_w],
+                    "alpha": alpha,
+                    "selection": {
+                        "asr":        winner["asr"],
+                        "delta_logp": sel_dlogp,
+                        "delta_ce":   winner["dce"],
+                    },
+                    "eval": eval_m,
+                    "screen": scr, "stage2": ev_sel,
                 })
 
-    # summary table
+    # summary table — held-out eval numbers only
     print("\n" + "=" * 90)
     print(f"{'seed':>4}  {'cell':>12}  {'winner':>22}  {'α':>4}  "
           f"{'ASR':>5}  {'Δdep-lp':>8}  {'Δcln-CE':>9}  {'Δgen-CE':>9}")
@@ -281,14 +361,19 @@ def main():
     for r in all_results:
         tup_str = str(r["winner_tuple"][0]) + ("…" if len(r["winner_tuple"]) > 1 else "")
         cell    = f"{r['attr']}×{r['intervene']}"
+        e       = r["eval"]
         print(f"{r['seed']:>4}  {cell:>12}  {tup_str:>22}  {r['alpha']:>4.1f}  "
-              f"{r['asr']:>5.3f}  {r['delta_logp']:>+8.3f}  "
-              f"{r['delta_ce']:>+9.4f}  {r['delta_gen_ce']:>+9.4f}")
+              f"{e['asr']:>5.3f}  {e['delta_logp']:>+8.3f}  "
+              f"{e['delta_ce']:>+9.4f}  {e['delta_gen_ce']:>+9.4f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds},
-        "baseline": {"dep_logp": base_logp, "clean_ce": base_ce, "asr": base_asr},
+        "baseline": {
+            "selection": {"dep_logp": sel_base_logp,  "clean_ce": sel_base_ce},
+            "eval":      {"dep_logp": eval_base_logp, "clean_ce": eval_base_ce,
+                          "asr": eval_base_asr},
+        },
         "results": all_results,
     }, indent=2, default=str))
     print(f"\n[mx] wrote {args.out}")
