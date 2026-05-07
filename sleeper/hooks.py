@@ -112,6 +112,34 @@ def ov_only_steer_hook(
     return channel_steer_hook({"V": delta}, alpha, {"V": W_V}, block=block)
 
 
+def head_selective_v_hook(
+    delta: torch.Tensor,            # (B, P, d_model) ln1-space delta
+    alpha: float,
+    W_V: torch.Tensor,              # (n_heads, d_model, d_head)
+    head_indices: list[int] | torch.Tensor,
+    block: int = 0,
+) -> list[tuple[str, Callable]]:
+    """OV-only steer applied to a *subset* of heads.
+
+    Same semantics as `ov_only_steer_hook` (Q, K untouched → A frozen) but only
+    the specified heads' V tensors are perturbed; other heads see their
+    unmodified V. Use to test whether a feature's effect on a downstream
+    direction routes through a small set of heads.
+    """
+    head_idx = torch.as_tensor(list(head_indices), dtype=torch.long, device=W_V.device)
+    W_V_sub  = W_V.index_select(0, head_idx)                                # (K, d_model, d_head)
+    proj     = torch.einsum("bpd,kdh->bpkh", delta.float(), W_V_sub.float())  # (B, P, K, d_head)
+    P        = delta.shape[1]
+    hook_name = f"blocks.{block}.attn.hook_v"
+
+    def _hook(x, hook):
+        idx = head_idx.to(x.device)
+        x[:, :P, idx, :] = x[:, :P, idx, :] + alpha * proj.to(x.dtype).to(x.device)
+        return x
+
+    return [(hook_name, _hook)]
+
+
 _CHANNEL_HOOK_NAME = {"Q": "hook_q", "K": "hook_k", "V": "hook_v"}
 
 

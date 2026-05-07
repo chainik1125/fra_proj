@@ -11,9 +11,16 @@ One command:
 ./scripts/run_matrix_pipeline.sh
 ```
 
-It (1) trains the 6 SAEs (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing, (2) runs `scripts.matrix_sweep` over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` writing `results/matrix_sweep.json` (skipped if present; `--force` to overwrite), and (3) writes the rendered report to `docs/matrix_results.md`. Roughly 30 min on a single A40; SAE training adds ~2 min on first run.
+It runs five steps end-to-end (each idempotent — `--force` to re-run):
+1. **Train the 6 SAEs** (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing.
+2. **`scripts.matrix_sweep`** over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` → `results/matrix_sweep.json`.
+3. **`scripts.render_matrix_results`** → committed markdown report at `docs/matrix_results.md`.
+4. **`scripts.single_feature_alpha_sweep`** — per SAE seed, take the ov×ov winner from step 2, sweep α∈{0, 0.5, 1, 2, 4}, recompute sampled eval ASR + Δcln-CE + Δgen-CE → `results/single_feature_alpha_sweep.json`.
+5. **`scripts.plot_single_feature_pareto`** — headline 1×2 sleeper-tradeoff panel (left: ASR vs Δcln-CE, right: ASR vs Δgen-CE) → `docs/figures/single_feature_pareto.{png,pdf,svg}`.
 
-The persisted artefact is [[matrix_results|docs/matrix_results.md]] (committed). The intermediate `results/matrix_sweep.json` is gitignored — it carries the per-cell stage-1 screen / stage-2 eval payloads plus both the selection and held-out eval numbers, useful for debugging but bulky and regenerable.
+Roughly 35 min on a single A40 from scratch (matrix_sweep ~22 min, α-sweep ~10 min, SAE training ~2 min on first run).
+
+Persisted artefacts (committed): [[matrix_results|docs/matrix_results.md]] and `docs/figures/single_feature_pareto.*`. The intermediate JSONs in `results/` are gitignored — they carry the per-cell screen / stage-2 / per-seed-per-α payloads, useful for debugging but bulky and regenerable.
 
 ## Selection vs eval split
 
