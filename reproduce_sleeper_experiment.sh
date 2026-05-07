@@ -12,14 +12,15 @@ set -euo pipefail
 #   5. paper plot generation
 #
 # Typical A40 usage:
-#   DEVICE=cuda bash reproduce_sleeper_experiment.sh
+#   bash reproduce_sleeper_experiment.sh
 #
 # Faster smoke test:
-#   DEVICE=cuda N_TEST=200 SEEDS="0 1" RUN_NAME=smoke bash reproduce_sleeper_experiment.sh
+#   N_TEST=200 SEEDS="0 1" RUN_NAME=smoke bash reproduce_sleeper_experiment.sh
 #
 # Optional env vars:
 #   RUN_NAME        output run suffix; defaults to timestamp
-#   DEVICE          cuda|cpu|mps; defaults to script/model auto-detection
+#   DEVICE          cuda|cpu|mps; defaults to cuda when nvidia-smi sees a GPU,
+#                   otherwise cpu
 #   BATCH_SIZE      default 16
 #   GEN_TOKENS      default 16
 #   N_VAL           default 200
@@ -39,6 +40,14 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+detect_device() {
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+    printf 'cuda'
+  else
+    printf 'cpu'
+  fi
+}
+
 RUN_NAME="${RUN_NAME:-$(date +%Y%m%d_%H%M%S)}"
 OUT_ROOT="experiments/tinystories_sleeper/tracing_feature/repro_runs/sleeper_experiment_${RUN_NAME}"
 OV_JSON="$OUT_ROOT/ov_f88_top50_temp1_multiseed.json"
@@ -57,6 +66,7 @@ SEEDS="${SEEDS:-0 1 2 3 4}"
 UV_SYNC="${UV_SYNC:-0}"
 FORCE="${FORCE:-0}"
 RUN_TRAINING="${RUN_TRAINING:-0}"
+DEVICE="${DEVICE:-$(detect_device)}"
 if [[ -z "${LAYER0_TRAIN_CMD:-}" && -f "experiments/tinystories_sleeper/recreate_layer0/reproduce.py" ]]; then
   LAYER0_TRAIN_CMD="cd experiments/tinystories_sleeper/recreate_layer0 && uv run python reproduce.py"
 else
@@ -69,17 +79,15 @@ else
   LN1_TRAIN_CMD="${LN1_TRAIN_CMD:-}"
 fi
 CACHE_OUTPUT="experiments/tinystories_sleeper/tracing_feature/results_f88/layer0_cache.pt"
-CACHE_CMD="${CACHE_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/cache_layer0_activations.py --device ${DEVICE:-cuda} --output $CACHE_OUTPUT}"
-OV_PATH_CMD="${OV_PATH_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/ov_path.py --device ${DEVICE:-cuda} --cache $CACHE_OUTPUT --output_dir experiments/tinystories_sleeper/tracing_feature/results_f88}"
+CACHE_CMD="${CACHE_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/cache_layer0_activations.py --device $DEVICE --output $CACHE_OUTPUT}"
+OV_PATH_CMD="${OV_PATH_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/ov_path.py --device $DEVICE --cache $CACHE_OUTPUT --output_dir experiments/tinystories_sleeper/tracing_feature/results_f88}"
 
 LAYER0_ARTIFACT="experiments/tinystories_sleeper/recreate_layer0/results/crosscoder_sae_layer1.pt"
 LN1_ARTIFACT="experiments/tinystories_sleeper/recreate_ln1/results/crosscoder_sae_layer0.pt"
 OV_PATH_JSON="experiments/tinystories_sleeper/tracing_feature/results_f88/ov_path.json"
 
 DEVICE_ARG=()
-if [[ -n "${DEVICE:-}" ]]; then
-  DEVICE_ARG=(--device "$DEVICE")
-fi
+DEVICE_ARG=(--device "$DEVICE")
 
 if [[ -e "$OUT_ROOT" && "$FORCE" != "1" ]]; then
   echo "Refusing to overwrite existing output directory: $OUT_ROOT" >&2
