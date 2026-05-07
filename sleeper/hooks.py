@@ -224,6 +224,24 @@ def make_greedy_sampler() -> Sampler:
     return lambda logits: logits.argmax(dim=-1)
 
 
+def make_sampling_sampler(
+    *, temperature: float, seed: int, device: torch.device | str,
+) -> Sampler:
+    """Pure multinomial sampling at `temperature` — no top_p / top_k truncation.
+
+    Matches Ketan's 1000-prompt eval setup (`do_sample=True, top_k=None,
+    top_p=None`). Same per-call seeded `torch.Generator` semantics as
+    `make_nucleus_sampler`, so two samplers built with the same seed advance
+    their RNG identically across decode steps."""
+    gen = torch.Generator(device=device).manual_seed(seed)
+
+    def _sample(logits: torch.Tensor) -> torch.Tensor:
+        probs = torch.softmax(logits / max(temperature, 1e-6), dim=-1)
+        return torch.multinomial(probs, num_samples=1, generator=gen).squeeze(-1)
+
+    return _sample
+
+
 def make_nucleus_sampler(
     *, temperature: float, top_p: float, seed: int, device: torch.device | str,
 ) -> Sampler:

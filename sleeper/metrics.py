@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from transformer_lens import HookedTransformer
 
 from sleeper.hooks import (
-    build_hooks, generate_with_hooks, greedy_generate_with_hooks,
+    Sampler, build_hooks, generate_with_hooks, greedy_generate_with_hooks,
     make_greedy_sampler, resolve_channel_deltas,
 )
 from sleeper.model import SLEEPER_PHRASE
@@ -89,11 +89,15 @@ def batched_asr_16(
     tokens: torch.Tensor,           # (B, P) left-padded dep prompts
     attention_mask: torch.Tensor,   # (B, P) — doubles as prompt_mask for left-padded inputs
     gen_tokens: int,
+    sampler: Sampler | None = None, # default greedy; pass a seeded sampler for sampled ASR
 ) -> float:
-    """Batched greedy ASR for any pipeline-matrix cell (all 9 of {ov,qk,triple}×{ov,qk,all}).
+    """Batched ASR for any pipeline-matrix cell (all 9 of {ov,qk,triple}×{ov,qk,all}).
 
-    `tokens` and `attention_mask` should be left-padded (use left_pad_prompts).
-    Pass `active_channels=set()` or `selected=[]` to get the unsteered baseline.
+    Decoding rule: greedy (default, used for the selection-stage winner pick) or
+    a caller-supplied seeded `sampler` (used for the held-out eval ASR — see
+    `make_sampling_sampler`). `tokens` and `attention_mask` should be
+    left-padded (use `left_pad_prompts`). Pass `active_channels=set()` or
+    `selected=[]` for the unsteered baseline.
     """
     if active_channels and selected:
         cd = resolve_channel_deltas(selected, active_channels, model, sae_ln1, ln1_hook,
@@ -101,8 +105,12 @@ def batched_asr_16(
         hooks = build_hooks(cd, alpha, active_channels, W, ln1_hook, block)
     else:
         hooks = []
-    gen = greedy_generate_with_hooks(model, tokens, hooks, gen_tokens,
-                                     attention_mask=attention_mask)
+    if sampler is None:
+        gen = greedy_generate_with_hooks(model, tokens, hooks, gen_tokens,
+                                         attention_mask=attention_mask)
+    else:
+        gen = generate_with_hooks(model, tokens, hooks, gen_tokens, sampler,
+                                  attention_mask=attention_mask)
     return asr_16(gen, model.tokenizer)
 
 
@@ -113,6 +121,7 @@ def deployment_generation_ce(
     fwd_hooks: list[tuple[str, Callable]] | None = None,
     gen_tokens: int = 16,
     attention_mask: torch.Tensor | None = None,         # (B, P) bool/int for left-padded inputs
+    sampler: Sampler | None = None,                     # default greedy; pass a seeded sampler for sampled Δgen-CE
 ) -> torch.Tensor:
     """Per-row delta dep-gen CE: Generated × Clean cell of the eval matrix.
 
@@ -123,6 +132,12 @@ def deployment_generation_ce(
     Pass `attention_mask` for left-padded inputs so generation ignores pad
     positions; per-row decoding strips them before re-tokenizing the clean text.
 
+    Decoding rule: greedy by default (selection-stage convention). When `sampler`
+    is provided, **the same stateful sampler is shared by the steered batch
+    generation and every per-row baseline generation** so the RNG advances
+    coherently across the call (no per-row reseeding — that would make every
+    baseline row draw the same uniforms).
+
     Negative delta = steered deployment generation is at least as coherent as the
     unsteered model's natural story continuation for the same context (good).
     Large positive = the steer produced incoherent output (bad).
@@ -132,8 +147,10 @@ def deployment_generation_ce(
     dep_prompts = dep_prompts.to(device)
     if attention_mask is not None:
         attention_mask = attention_mask.to(device).bool()
+    steered_sampler  = sampler if sampler is not None else make_greedy_sampler()
+    baseline_sampler = sampler if sampler is not None else make_greedy_sampler()
     steered_gen = generate_with_hooks(
-        model, dep_prompts, fwd_hooks or [], gen_tokens, make_greedy_sampler(),
+        model, dep_prompts, fwd_hooks or [], gen_tokens, steered_sampler,
         attention_mask=attention_mask,
     )                                                    # (B, gen_tokens)
     deltas = []
@@ -158,7 +175,7 @@ def deployment_generation_ce(
 
         steered_ce  = _score(steered_gen[b : b + 1])
         baseline_gen = generate_with_hooks(
-            model, clean_ids, [], gen_tokens, make_greedy_sampler(),
+            model, clean_ids, [], gen_tokens, baseline_sampler,
         )
         baseline_ce = _score(baseline_gen)
         deltas.append(steered_ce - baseline_ce)

@@ -14,7 +14,9 @@ from pathlib import Path
 import torch
 
 from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
-from sleeper.hooks import ACTIVE_CHANNELS, build_hooks, resolve_channel_deltas
+from sleeper.hooks import (
+    ACTIVE_CHANNELS, build_hooks, make_sampling_sampler, resolve_channel_deltas,
+)
 from sleeper.metrics import (
     batched_asr_16, clean_continuation_ce, deployment_generation_ce,
     teacher_forced_sleeper_logp,
@@ -154,6 +156,24 @@ def stage2(model, sae_ln1, tuples, active, candidates,
 
 
 @torch.no_grad()
+def _multi_seed_asr(
+    model, sae_ln1, sel_tuple, alpha, active, W,
+    tokens, attn, gen_tokens, *, seeds, temperature, device,
+) -> list[float]:
+    """ASR averaged over `seeds` independent sampled rollouts (one fresh
+    seeded sampler per seed). Returns the per-seed list; caller takes the mean.
+    """
+    out: list[float] = []
+    for s in seeds:
+        sampler = make_sampling_sampler(temperature=temperature, seed=int(s), device=device)
+        out.append(batched_asr_16(
+            model, sae_ln1, LN1_HOOK, sel_tuple, alpha, active, W, 0,
+            tokens, attn, gen_tokens, sampler=sampler,
+        ))
+    return out
+
+
+@torch.no_grad()
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
     eval_dep, eval_dep_pmask,
@@ -161,8 +181,16 @@ def eval_winner(
     eval_cln, eval_cln_marker,
     eval_dep_for_gen, eval_attn_for_gen,
     base_logp, base_ce, gen_tokens, device,
+    *, eval_seeds, eval_temperature,
 ):
-    """Recompute all four metrics on held-out eval prompts for one (tuple, α)."""
+    """Recompute all four metrics on held-out eval prompts for one (tuple, α).
+
+    Both generation-based eval metrics (ASR and Δgen-CE) are averaged over
+    `eval_seeds` independent sampled rollouts at `eval_temperature` (pure
+    multinomial, no top_p/top_k truncation) — matches Ketan's 1000-prompt eval
+    methodology. The two teacher-forced metrics (Δdep-logp, Δcln-CE) are
+    deterministic, so they need no seed loop.
+    """
     # Δdep-logp on eval_dep (fixed-length, length-filtered).
     cd_dep = resolve_channel_deltas(
         sel_tuple, active, model, sae_ln1, LN1_HOOK, eval_dep, eval_dep_pmask,
@@ -172,11 +200,13 @@ def eval_winner(
         model, model.tokenizer, eval_dep, fwd_hooks=h_dep,
     ).mean().item()
 
-    # ASR on eval_dep_lp (variable-length, left-padded).
-    e_asr = batched_asr_16(
-        model, sae_ln1, LN1_HOOK, sel_tuple, alpha, active, W, 0,
+    # ASR on eval_dep_lp (variable-length, left-padded). Sampled, multi-seed.
+    e_asr_per_seed = _multi_seed_asr(
+        model, sae_ln1, sel_tuple, alpha, active, W,
         eval_dep_lp, eval_dep_attn, gen_tokens,
+        seeds=eval_seeds, temperature=eval_temperature, device=device,
     )
+    e_asr = sum(e_asr_per_seed) / len(e_asr_per_seed)
 
     # Δcln-CE on eval_cln.
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
@@ -186,21 +216,31 @@ def eval_winner(
     e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                       fwd_hooks=h_cln).mean().item()
 
-    # Δgen-CE on eval_dep_for_gen subset.
+    # Δgen-CE on eval_dep_for_gen subset. Sampled, multi-seed (same eval seeds
+    # as ASR). One stateful sampler per seed, shared by the steered batch
+    # generation and every per-row baseline generation in the inner function.
     cd_gen    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                        eval_dep_for_gen, eval_attn_for_gen,
                                        eval_attn_for_gen)
     h_gen     = build_hooks(cd_gen, alpha, active, W, LN1_HOOK, 0)
-    e_dgen_ce = deployment_generation_ce(
-        model, eval_dep_for_gen, fwd_hooks=h_gen,
-        gen_tokens=gen_tokens, attention_mask=eval_attn_for_gen,
-    ).mean().item()
+    e_dgen_ce_per_seed: list[float] = []
+    for s in eval_seeds:
+        sampler = make_sampling_sampler(temperature=eval_temperature,
+                                        seed=int(s), device=device)
+        e_dgen_ce_per_seed.append(deployment_generation_ce(
+            model, eval_dep_for_gen, fwd_hooks=h_gen,
+            gen_tokens=gen_tokens, attention_mask=eval_attn_for_gen,
+            sampler=sampler,
+        ).mean().item())
+    e_dgen_ce = sum(e_dgen_ce_per_seed) / len(e_dgen_ce_per_seed)
 
     return {
-        "asr":          e_asr,
-        "delta_logp":   e_logp - base_logp,
-        "delta_ce":     e_ce - base_ce,
-        "delta_gen_ce": e_dgen_ce,
+        "asr":               e_asr,
+        "asr_per_seed":      e_asr_per_seed,
+        "delta_logp":        e_logp - base_logp,
+        "delta_ce":          e_ce - base_ce,
+        "delta_gen_ce":      e_dgen_ce,
+        "delta_gen_ce_per_seed": e_dgen_ce_per_seed,
     }
 
 
@@ -225,6 +265,10 @@ def main():
     p.add_argument("--n_gen_ce",       type=int,   default=50,
                    help="dep prompts used for the per-prompt Δgen-CE metric (eval subset)")
     p.add_argument("--gen_tokens",     type=int,   default=16)
+    p.add_argument("--eval_seeds",     type=int,   nargs="+", default=[0, 1, 2, 3, 4],
+                   help="sampling seeds for held-out eval ASR (Ketan-style multi-seed average).")
+    p.add_argument("--eval_temperature", type=float, default=1.0,
+                   help="temperature for held-out eval ASR sampling (no top_p/top_k truncation).")
     p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
@@ -272,10 +316,15 @@ def main():
     sel_base_ce    = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
     eval_base_logp = teacher_forced_sleeper_logp(model, tok, eval_dep).mean().item()
     eval_base_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker).mean().item()
-    eval_base_asr  = batched_asr_16(model, None, LN1_HOOK, [], 0.0, set(), W, 0,
-                                    eval_dep_lp, eval_dep_attn, args.gen_tokens)
+    eval_base_asr_per_seed = _multi_seed_asr(
+        model, None, [], 0.0, set(), W,
+        eval_dep_lp, eval_dep_attn, args.gen_tokens,
+        seeds=args.eval_seeds, temperature=args.eval_temperature, device=device,
+    )
+    eval_base_asr = sum(eval_base_asr_per_seed) / len(eval_base_asr_per_seed)
     print(f"[mx] sel  baseline: dep_logp={sel_base_logp:.3f}  cln_CE={sel_base_ce:.4f}")
-    print(f"[mx] eval baseline: dep_logp={eval_base_logp:.3f}  cln_CE={eval_base_ce:.4f}  asr={eval_base_asr:.3f}")
+    print(f"[mx] eval baseline: dep_logp={eval_base_logp:.3f}  cln_CE={eval_base_ce:.4f}  "
+          f"asr={eval_base_asr:.3f} (sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
 
     # Eval subset for the (slow, sequential) Δgen-CE metric.
     eval_dep_for_gen_ce  = eval_dep_lp[: args.n_gen_ce]
@@ -331,6 +380,7 @@ def main():
                     eval_cln, eval_cln_marker,
                     eval_dep_for_gen_ce, eval_attn_for_gen_ce,
                     eval_base_logp, eval_base_ce, args.gen_tokens, device,
+                    eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
                 )
 
                 print(f"[mx]   {attr}×{intervene}: "
@@ -369,10 +419,18 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds},
+        "decoding": {
+            "selection_asr":     {"mode": "greedy"},
+            "eval_asr":          {"mode": "sample", "temperature": args.eval_temperature,
+                                  "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "eval_delta_gen_ce": {"mode": "sample", "temperature": args.eval_temperature,
+                                  "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+        },
         "baseline": {
             "selection": {"dep_logp": sel_base_logp,  "clean_ce": sel_base_ce},
             "eval":      {"dep_logp": eval_base_logp, "clean_ce": eval_base_ce,
-                          "asr": eval_base_asr},
+                          "asr": eval_base_asr,
+                          "asr_per_seed": eval_base_asr_per_seed},
         },
         "results": all_results,
     }, indent=2, default=str))
