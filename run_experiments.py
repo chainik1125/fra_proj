@@ -1295,20 +1295,23 @@ def main():
             verbose=True,
         )
 
-    # Save results
-    outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
+    # Save results (skip for tasks that already saved via save_multiseed_results)
+    already_saved = args.task in (
+        "frontier_multiseed", "shared_feature_multiseed", "random_baseline",
+    )
+    if not already_saved:
+        outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"
 
-    # Make JSON-serializable
-    def serialize(obj):
-        if isinstance(obj, (torch.Tensor,)):
-            return obj.tolist()
-        if isinstance(obj, set):
-            return list(obj)
-        raise TypeError(f"Not serializable: {type(obj)}")
+        def serialize(obj):
+            if isinstance(obj, (torch.Tensor,)):
+                return obj.tolist()
+            if isinstance(obj, set):
+                return list(obj)
+            raise TypeError(f"Not serializable: {type(obj)}")
 
-    with open(outfile, "w") as f:
-        json.dump(all_results, f, indent=2, default=serialize)
-    print(f"\nResults saved to {outfile}")
+        with open(outfile, "w") as f:
+            json.dump(all_results, f, indent=2, default=serialize)
+        print(f"\nResults saved to {outfile}")
 
 
 if __name__ == "__main__":

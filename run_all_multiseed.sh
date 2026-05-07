@@ -29,33 +29,33 @@ if [[ "$1" != "--skip-frontier" ]]; then
 log "FRONTIER: finance"
 python run_experiments.py --task frontier_multiseed --em-model finance \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/frontier_finance.json"
+    --output "$OUTDIR"
 
 log "FRONTIER: medical"
 python run_experiments.py --task frontier_multiseed --em-model medical \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/frontier_medical.json"
+    --output "$OUTDIR"
 
 log "FRONTIER: sports"
 python run_experiments.py --task frontier_multiseed --em-model sports \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/frontier_sports.json"
+    --output "$OUTDIR"
 
 # ── 2. Shared feature cross-head sweeps ───────────────────────────────
 log "SHARED FEATURE: finance"
 python run_experiments.py --task shared_feature_multiseed --em-model finance \
     --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/shared_finance.json"
+    --output "$OUTDIR"
 
 log "SHARED FEATURE: medical"
 python run_experiments.py --task shared_feature_multiseed --em-model medical \
     --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/shared_medical.json"
+    --output "$OUTDIR"
 
 log "SHARED FEATURE: sports"
 python run_experiments.py --task shared_feature_multiseed --em-model sports \
     --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/shared_sports.json"
+    --output "$OUTDIR"
 
 fi  # --skip-frontier
 
@@ -63,33 +63,33 @@ fi  # --skip-frontier
 log "RANDOM BASELINE: finance"
 python run_experiments.py --task random_baseline --em-model finance \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/random_finance.json"
+    --output "$OUTDIR"
 
 log "RANDOM BASELINE: medical"
 python run_experiments.py --task random_baseline --em-model medical \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/random_medical.json"
+    --output "$OUTDIR"
 
 log "RANDOM BASELINE: sports"
 python run_experiments.py --task random_baseline --em-model sports \
     --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR/random_sports.json"
+    --output "$OUTDIR"
 
 # ── 4. CE vs base model (deterministic, no seeds needed) ─────────────
 log "CE VS BASE: finance"
 python run_experiments.py --task ce_vs_base --em-model finance \
     --head $HEAD --n-texts $N_TEXTS \
-    --output "$OUTDIR/ce_vs_base_finance.json"
+    --output "$OUTDIR/ce_vs_base_finance_L${LAYER}_H${HEAD}.json"
 
 log "CE VS BASE: medical"
 python run_experiments.py --task ce_vs_base --em-model medical \
     --head $HEAD --n-texts $N_TEXTS \
-    --output "$OUTDIR/ce_vs_base_medical.json"
+    --output "$OUTDIR/ce_vs_base_medical_L${LAYER}_H${HEAD}.json"
 
 log "CE VS BASE: sports"
 python run_experiments.py --task ce_vs_base --em-model sports \
     --head $HEAD --n-texts $N_TEXTS \
-    --output "$OUTDIR/ce_vs_base_sports.json"
+    --output "$OUTDIR/ce_vs_base_sports_L${LAYER}_H${HEAD}.json"
 
 # ── 5. Package results ────────────────────────────────────────────────
 log "PACKAGING"
