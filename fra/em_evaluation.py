@@ -1777,11 +1777,15 @@ def save_multiseed_results(results: Dict, output_dir: str, tag: str = ""):
     # Save aggregated results (without the bulky per_seed data)
     agg_path = os.path.join(output_dir, f"{prefix}_aggregated.json")
     agg_data = {
-        "seeds": results["seeds"],
-        "scale_values": results["scale_values"],
-        "n_seeds": results["n_seeds"],
-        "aggregated": results["aggregated"],
+        "seeds": results.get("seeds"),
+        "scale_values": results.get("scale_values"),
+        "aggregated": results.get("aggregated") or results.get("overall"),
     }
+    if "n_seeds" in results:
+        agg_data["n_seeds"] = results["n_seeds"]
+    if "n_random_draws" in results:
+        agg_data["n_random_draws"] = results["n_random_draws"]
+        agg_data["n_features"] = results.get("n_features")
     if "feature_idx" in results:
         agg_data["feature_idx"] = results["feature_idx"]
         agg_data["heads"] = results["heads"]
