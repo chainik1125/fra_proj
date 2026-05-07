@@ -62,6 +62,101 @@ Rate the coherence on a scale of 0-100:
 Provide only a number between 0 and 100."""
 
 
+# ── Multi-prompt feature ranking ──────────────────────────────────────────
+
+
+@torch.no_grad()
+def rank_features_multi_prompt(
+    model,
+    sae,
+    layer: int,
+    head: int,
+    hook_point: str,
+    prompts: Optional[List[str]] = None,
+    max_length: int = 128,
+    top_k: int = 20,
+    k_pairs: int = 50,
+    verbose: bool = True,
+) -> Dict[str, List[int]]:
+    """Rank features by FRA across all prompts (not just one).
+
+    Computes QK and OV decompositions on each prompt, accumulates
+    per-feature scores, then ranks by the total.
+
+    Args:
+        model: HookedTransformer.
+        sae: SAE wrapper.
+        layer, head, hook_point: Model config.
+        prompts: Prompts to rank over (default: EM_EVAL_PROMPTS).
+        max_length: Max token length per prompt.
+        top_k: Features per position for FRA sparsification.
+        k_pairs: Number of top QK pairs to extract unique features from.
+        verbose: Print progress.
+
+    Returns:
+        {"qk": [feat_indices], "ov": [feat_indices]} ranked by
+        accumulated score across all prompts.
+    """
+    from fra.core.fra import get_sentence_fra_batch
+    from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+    from fra.ablation_study import rank_feature_pairs
+    from collections import defaultdict
+
+    if prompts is None:
+        prompts = EM_EVAL_PROMPTS
+
+    # Accumulate scores across prompts
+    qk_pair_scores = defaultdict(float)
+    ov_feat_scores = defaultdict(float)
+
+    for i, prompt in enumerate(prompts):
+        if verbose:
+            print(f"  Ranking prompt {i+1}/{len(prompts)}: {prompt[:50]}...")
+
+        # QK FRA
+        qk_result = get_sentence_fra_batch(
+            model, sae, prompt, layer, head,
+            max_length=max_length, top_k=top_k, verbose=False,
+            hook_point=hook_point,
+        )
+        pairs = rank_feature_pairs(
+            qk_result["fra_tensor_sparse"], diagonal=False, mode="sum"
+        )
+        for q_feat, k_feat, abs_sum, count, *_ in pairs:
+            qk_pair_scores[(int(q_feat), int(k_feat))] += abs_sum
+
+        # OV
+        ov_result = get_sentence_ov_decomposition(
+            model, sae, prompt, layer, head,
+            max_length=max_length, top_k=top_k, verbose=False,
+            hook_point=hook_point,
+        )
+        ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+        for feat_idx, abs_sum, count, *_ in ov_ranked:
+            ov_feat_scores[int(feat_idx)] += abs_sum
+
+        del qk_result, ov_result
+        torch.cuda.empty_cache()
+
+    # Rank QK pairs by accumulated score, extract unique features
+    sorted_qk = sorted(qk_pair_scores.items(), key=lambda x: x[1], reverse=True)
+    top_pairs = sorted_qk[:k_pairs]
+    qk_features = list(set(q for (q, k), _ in top_pairs) | set(k for (q, k), _ in top_pairs))
+
+    # Rank OV features, take same count
+    sorted_ov = sorted(ov_feat_scores.items(), key=lambda x: x[1], reverse=True)
+    ov_features = [f for f, _ in sorted_ov[:len(qk_features)]]
+
+    if verbose:
+        print(f"  Multi-prompt ranking: {len(qk_features)} QK features, "
+              f"{len(ov_features)} OV features (from {len(prompts)} prompts)")
+        overlap = set(qk_features) & set(ov_features)
+        print(f"  Overlap: {len(overlap)}/{len(qk_features)} "
+              f"({100*len(overlap)/max(len(qk_features),1):.0f}%)")
+
+    return {"qk": sorted(qk_features), "ov": sorted(ov_features)}
+
+
 # ── Token-by-token generation with hooks ─────────────────────────────────
 
 
@@ -992,6 +1087,229 @@ def run_behavioral_eval_multihead(
                   f"{cond_stats['n_misaligned']:>10d}")
 
     return summary
+
+
+# ── Cross-entropy vs base model ────────────────────────────────────────
+
+
+@torch.no_grad()
+def compute_ce_vs_base(
+    em_model,
+    base_model,
+    sae,
+    layer: int,
+    head: int,
+    hook_point: str,
+    features: List[int],
+    scale_values: Optional[List[float]] = None,
+    prompts: Optional[List[str]] = None,
+    max_length: int = 128,
+    verbose: bool = True,
+) -> Dict:
+    """Measure how OV steering moves the EM model toward/away from the base model.
+
+    For each prompt and steering scale alpha:
+      1. Get base model logits (clean reference)
+      2. Get steered EM model logits
+      3. Compute KL(base || steered_EM) — lower = closer to base = less misaligned
+      4. Compute CE of steered EM on the prompt tokens
+
+    This is a continuous, low-variance metric (no generation, no judge).
+
+    Args:
+        em_model: HookedTransformer with EM fine-tuning.
+        base_model: HookedTransformer without EM (clean reference).
+        sae: SAE wrapper.
+        layer: Attention layer.
+        head: Attention head (for OV steering).
+        hook_point: SAE hook point.
+        features: Feature indices to steer.
+        scale_values: Steering scales (default: [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]).
+        prompts: Eval prompts (default: EM_EVAL_PROMPTS).
+        max_length: Max token length for CE computation.
+        verbose: Print progress.
+
+    Returns:
+        dict with per-scale, per-prompt metrics and aggregated results.
+    """
+    from fra.core.helpers import get_W_V
+
+    if scale_values is None:
+        scale_values = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0]
+    if prompts is None:
+        prompts = EM_EVAL_PROMPTS
+
+    device = next(em_model.parameters()).device
+    tokenizer = em_model.tokenizer
+
+    # Pre-compute OV steering components
+    W_dec = (sae.W_dec if hasattr(sae, 'W_dec') else sae.sae.W_dec).float()
+    W_V_h = get_W_V(em_model, layer, head).float()
+    feat_indices = list(features)
+    feat_v_proj = W_dec[feat_indices] @ W_V_h
+
+    n_q_heads = em_model.cfg.n_heads
+    n_kv_heads = getattr(em_model.cfg, "n_key_value_heads", None) or n_q_heads
+    kv_head_idx = head * n_kv_heads // n_q_heads
+
+    hook_name = f"blocks.{layer}.{hook_point}"
+    v_hook_name = f"blocks.{layer}.attn.hook_v"
+
+    def make_ov_hooks(scale):
+        cached = {}
+
+        def capture(activation, hook):
+            x = activation[0]
+            if x.dim() == 3:
+                x = x.flatten(-2, -1)
+            feats = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
+            cached['feats'] = feats.float()
+            return activation
+
+        def steer(v, hook):
+            feats = cached.get('feats')
+            if feats is None:
+                return v
+            seq_len = min(feats.shape[0], v.shape[1])
+            feat_acts = feats[:seq_len, feat_indices].float()
+            delta = (scale - 1.0) * feat_acts @ feat_v_proj
+            v[0, :seq_len, kv_head_idx, :] += delta.to(v.dtype)
+            return v
+
+        return [(hook_name, capture), (v_hook_name, steer)]
+
+    results = {"scale_values": scale_values, "per_prompt": [], "aggregated": {}}
+
+    for i, prompt in enumerate(prompts):
+        # Tokenize
+        messages = [{"role": "user", "content": prompt}]
+        if hasattr(tokenizer, 'apply_chat_template'):
+            text = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        else:
+            text = f"User: {prompt}\nAssistant:"
+
+        tokens = tokenizer.encode(text)
+        if len(tokens) > max_length:
+            tokens = tokens[:max_length]
+        tok_tensor = torch.tensor(tokens, device=device).unsqueeze(0)
+        labels = tok_tensor[0, 1:]  # shift labels
+
+        if verbose:
+            print(f"Prompt {i+1}/{len(prompts)}: {prompt[:50]}... ({len(tokens)} tokens)")
+
+        # Base model logits (computed once)
+        base_logits = base_model(tok_tensor)
+        base_log_probs = F.log_softmax(base_logits[0, :-1].float(), dim=-1)
+        base_ce = F.cross_entropy(base_logits[0, :-1].float(), labels).item()
+
+        # Unpatched EM model logits
+        em_logits = em_model(tok_tensor)
+        em_ce = F.cross_entropy(em_logits[0, :-1].float(), labels).item()
+        em_log_probs = F.log_softmax(em_logits[0, :-1].float(), dim=-1)
+
+        # KL(base || unpatched_EM)
+        kl_base_vs_em = (base_log_probs.exp() * (base_log_probs - em_log_probs)).sum(-1).mean().item()
+
+        prompt_result = {
+            "prompt": prompt,
+            "n_tokens": len(tokens),
+            "base_ce": base_ce,
+            "em_ce": em_ce,
+            "kl_base_vs_em": kl_base_vs_em,
+            "scales": {},
+        }
+
+        for scale in scale_values:
+            if scale == 1.0:
+                # No steering = same as unpatched EM
+                prompt_result["scales"][str(scale)] = {
+                    "steered_ce": em_ce,
+                    "kl_base_vs_steered": kl_base_vs_em,
+                    "kl_em_vs_steered": 0.0,
+                    "top1_match_base_frac": (
+                        em_logits[0, :-1].argmax(-1) == base_logits[0, :-1].argmax(-1)
+                    ).float().mean().item(),
+                }
+                continue
+
+            hooks = make_ov_hooks(scale)
+            steered_logits = em_model.run_with_hooks(
+                tok_tensor, fwd_hooks=hooks, reset_hooks_end=True,
+            )
+
+            steered_ce = F.cross_entropy(steered_logits[0, :-1].float(), labels).item()
+            steered_log_probs = F.log_softmax(steered_logits[0, :-1].float(), dim=-1)
+
+            # KL(base || steered) — does steering move toward base?
+            kl_base_vs_steered = (
+                base_log_probs.exp() * (base_log_probs - steered_log_probs)
+            ).sum(-1).mean().item()
+
+            # KL(em || steered) — how much did steering change from unpatched?
+            kl_em_vs_steered = (
+                em_log_probs.exp() * (em_log_probs - steered_log_probs)
+            ).sum(-1).mean().item()
+
+            # Top-1 agreement with base
+            top1_match = (
+                steered_logits[0, :-1].argmax(-1) == base_logits[0, :-1].argmax(-1)
+            ).float().mean().item()
+
+            prompt_result["scales"][str(scale)] = {
+                "steered_ce": steered_ce,
+                "kl_base_vs_steered": kl_base_vs_steered,
+                "kl_em_vs_steered": kl_em_vs_steered,
+                "top1_match_base_frac": top1_match,
+            }
+
+            if verbose:
+                direction = "→base" if kl_base_vs_steered < kl_base_vs_em else "→away"
+                print(f"  α={scale:.2f}: CE={steered_ce:.3f}  "
+                      f"KL(base||steered)={kl_base_vs_steered:.4f} ({direction})  "
+                      f"top1_match={top1_match:.3f}")
+
+            del steered_logits, steered_log_probs
+            torch.cuda.empty_cache()
+
+        results["per_prompt"].append(prompt_result)
+        del base_logits, em_logits, base_log_probs, em_log_probs
+        torch.cuda.empty_cache()
+
+    # Aggregate across prompts
+    for scale in scale_values:
+        scale_str = str(scale)
+        ces = [p["scales"][scale_str]["steered_ce"] for p in results["per_prompt"]]
+        kls_base = [p["scales"][scale_str]["kl_base_vs_steered"] for p in results["per_prompt"]]
+        kls_em = [p["scales"][scale_str]["kl_em_vs_steered"] for p in results["per_prompt"]]
+        top1s = [p["scales"][scale_str]["top1_match_base_frac"] for p in results["per_prompt"]]
+
+        results["aggregated"][scale_str] = {
+            "mean_ce": float(np.mean(ces)),
+            "std_ce": float(np.std(ces)),
+            "mean_kl_base": float(np.mean(kls_base)),
+            "std_kl_base": float(np.std(kls_base)),
+            "mean_kl_em": float(np.mean(kls_em)),
+            "std_kl_em": float(np.std(kls_em)),
+            "mean_top1_match": float(np.mean(top1s)),
+            "std_top1_match": float(np.std(top1s)),
+        }
+
+    if verbose:
+        print(f"\n{'='*70}")
+        print(f"CE vs BASE MODEL SUMMARY")
+        print(f"{'='*70}")
+        print(f"Base CE: {np.mean([p['base_ce'] for p in results['per_prompt']]):.3f}")
+        print(f"EM CE (unpatched): {np.mean([p['em_ce'] for p in results['per_prompt']]):.3f}")
+        print(f"KL(base||EM): {np.mean([p['kl_base_vs_em'] for p in results['per_prompt']]):.4f}")
+        print(f"\n{'Scale':>6s}  {'CE':>8s}  {'KL(base||st)':>13s}  {'KL(em||st)':>12s}  {'top1 match':>10s}")
+        for scale in scale_values:
+            a = results["aggregated"][str(scale)]
+            print(f"{scale:>6.2f}  {a['mean_ce']:>8.3f}  {a['mean_kl_base']:>13.4f}  "
+                  f"{a['mean_kl_em']:>12.4f}  {a['mean_top1_match']:>10.3f}")
+
+    return results
 
 
 # ── Multi-seed wrapper ─────────────────────────────────────────────────
