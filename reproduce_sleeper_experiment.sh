@@ -8,7 +8,7 @@ set -euo pipefail
 #   1. crosscoder artifact validation
 #   2. OV-path artifact validation
 #   3. OV/FRA upstream-feature ablation sweep
-#   4. single-feature f88 sweep + clean CE recomputation
+#   4. single-feature best-resid-mid sweep + clean CE recomputation
 #   5. paper plot generation
 #
 # Typical A40 usage:
@@ -50,13 +50,13 @@ detect_device() {
 
 RUN_NAME="${RUN_NAME:-$(date +%Y%m%d_%H%M%S)}"
 OUT_ROOT="experiments/tinystories_sleeper/tracing_feature/repro_runs/sleeper_experiment_${RUN_NAME}"
-OV_JSON="$OUT_ROOT/ov_f88_top50_temp1_multiseed.json"
+OV_JSON="$OUT_ROOT/ov_best_resid_mid_top50_temp1_multiseed.json"
 PLOT_DIR="$OUT_ROOT/paper_tradeoff_ov_vs_single"
 LOG_FILE="$OUT_ROOT/run.log"
 MANIFEST="$OUT_ROOT/MANIFEST.md"
 
-OV_CONFIG="experiments/tinystories_sleeper/tracing_feature/configs/ov_f88_1000_temp1_multiseed.json"
-PAPER_CONFIG="experiments/tinystories_sleeper/tracing_feature/configs/paper_tradeoff_1000_temp1_multiseed.json"
+OV_CONFIG="experiments/tinystories_sleeper/tracing_feature/configs/ov_best_resid_mid_1000_temp1_multiseed.json"
+PAPER_CONFIG="experiments/tinystories_sleeper/tracing_feature/configs/paper_tradeoff_best_resid_mid_1000_temp1_multiseed.json"
 
 BATCH_SIZE="${BATCH_SIZE:-16}"
 GEN_TOKENS="${GEN_TOKENS:-16}"
@@ -78,13 +78,13 @@ if [[ -z "${LN1_TRAIN_CMD:-}" && -f "experiments/tinystories_sleeper/recreate_ln
 else
   LN1_TRAIN_CMD="${LN1_TRAIN_CMD:-}"
 fi
-CACHE_OUTPUT="experiments/tinystories_sleeper/tracing_feature/results_f88/layer0_cache.pt"
+CACHE_OUTPUT="experiments/tinystories_sleeper/tracing_feature/results_best_resid_mid/layer0_cache.pt"
 CACHE_CMD="${CACHE_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/cache_layer0_activations.py --device $DEVICE --output $CACHE_OUTPUT}"
-OV_PATH_CMD="${OV_PATH_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/ov_path.py --device $DEVICE --cache $CACHE_OUTPUT --output_dir experiments/tinystories_sleeper/tracing_feature/results_f88}"
+OV_PATH_CMD="${OV_PATH_CMD:-uv run python experiments/tinystories_sleeper/tracing_feature/scripts/ov_path.py --device $DEVICE --cache $CACHE_OUTPUT --output_dir experiments/tinystories_sleeper/tracing_feature/results_best_resid_mid}"
 
 LAYER0_ARTIFACT="experiments/tinystories_sleeper/recreate_layer0/results/crosscoder_sae_layer1.pt"
 LN1_ARTIFACT="experiments/tinystories_sleeper/recreate_ln1/results/crosscoder_sae_layer0.pt"
-OV_PATH_JSON="experiments/tinystories_sleeper/tracing_feature/results_f88/ov_path.json"
+OV_PATH_JSON="experiments/tinystories_sleeper/tracing_feature/results_best_resid_mid/ov_path.json"
 
 DEVICE_ARG=()
 DEVICE_ARG=(--device "$DEVICE")

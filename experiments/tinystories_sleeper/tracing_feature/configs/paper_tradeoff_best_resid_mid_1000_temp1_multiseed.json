@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "ov_json": "experiments/tinystories_sleeper/tracing_feature/repro_runs/temp1_1000_multiseed/ov_best_resid_mid_top50_temp1_1000_multiseed.json",
+    "output_dir": "experiments/tinystories_sleeper/tracing_feature/repro_runs/temp1_1000_multiseed/paper_tradeoff_ov_vs_single"
+  },
+  "sweep": {
+    "single_alphas": [0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1.05, 1.20]
+  },
+  "runtime": {
+    "batch_size": 16,
+    "gen_tokens": 16,
+    "n_val": 200,
+    "n_test": 2000
+  },
+  "generation": {
+    "mode": "sample",
+    "temperature": 1.0,
+    "top_p": null,
+    "top_k": null,
+    "seeds": [0, 1, 2, 3, 4]
+  }
+}

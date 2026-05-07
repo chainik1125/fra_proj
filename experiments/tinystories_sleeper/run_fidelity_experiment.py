@@ -38,6 +38,29 @@ from sleeper_utils import (  # noqa: E402
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
 
 
+def resolve_best_resid_mid_feature() -> int:
+    cache_meta = ROOT / "tracing_feature" / "results_best_resid_mid" / "layer0_cache.json"
+    legacy_cache_meta = ROOT / "tracing_feature" / "results_f88" / "layer0_cache.json"
+    for path in (cache_meta, legacy_cache_meta):
+        if path.exists():
+            data = json.loads(path.read_text())
+            feature = data.get("suppressor", {}).get("mid_feature")
+            if feature is not None:
+                return int(feature)
+
+    test_results = ROOT / "recreate_layer0" / "results" / "test_results.json"
+    if test_results.exists():
+        data = json.loads(test_results.read_text())
+        feature = data.get("by_arch", {}).get("sae_layer1", {}).get("feature_idx")
+        if feature is not None:
+            return int(feature)
+
+    raise FileNotFoundError(
+        "Could not resolve best resid-mid feature from layer0_cache.json or "
+        "recreate_layer0/results/test_results.json"
+    )
+
+
 def pick_device(explicit: str | None) -> str:
     if explicit:
         return explicit
@@ -226,6 +249,8 @@ def main() -> None:
         f"[fidelity] {args.split}: N={pt.tokens.shape[0]} "
         f"dep_frac={pt.is_deployment.float().mean().item():.2f}"
     )
+    best_resid_mid_feature = resolve_best_resid_mid_feature()
+    print(f"[fidelity] best resid-mid feature={best_resid_mid_feature}")
 
     checkpoint_specs = {
         "single_x_pre": {
@@ -236,7 +261,7 @@ def main() -> None:
         "single_x_mid": {
             "path": ROOT / "recreate_layer0" / "results" / "crosscoder_sae_layer1.pt",
             "hook": "blocks.0.hook_resid_mid",
-            "feature": 88,
+            "feature": best_resid_mid_feature,
         },
         "single_ln1": {
             "path": ROOT / "recreate_ln1" / "results" / "crosscoder_sae_layer0.pt",
@@ -416,6 +441,7 @@ def main() -> None:
             "seed": args.seed,
             "batch_size": args.batch_size,
             "alphas": args.alphas,
+            "best_resid_mid_feature": best_resid_mid_feature,
         },
         "baseline_sleeper_vs_base": baseline,
         "baseline_clean_task_ce": clean_task_baseline,

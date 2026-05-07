@@ -1,12 +1,12 @@
-"""Paper figure: sleeper removal vs clean CE cost for current f88 interventions.
+"""Paper figure: sleeper removal vs clean CE cost for best resid-mid interventions.
 
 Outputs a reproducible plotting table with both:
   - clean-task CE: teacher-forced NLL on actual clean continuations
   - clean base-fidelity CE: CE(P_base_next_token || P_candidate_next_token)
 
 The current single-feature points are recomputed for ASR and clean-task CE.
-The OV/FRA points reuse ASR and base-fidelity CE from the f88 sweep, and
-recompute clean-task CE for the same intervention specs.
+The OV/FRA points reuse ASR and base-fidelity CE from the upstream-feature
+sweep, and recompute clean-task CE for the same intervention specs.
 """
 
 from __future__ import annotations
@@ -55,11 +55,39 @@ from ov_f88_ablation_sweep import group_delta, hooks_all_heads  # noqa: E402
 
 SINGLE_SPEC = {
     "method": "single_feature",
-    "label": "Single x_mid f88",
+    "label": "Single best resid-mid feature",
     "path": EXP_DIR / "recreate_layer0" / "results" / "crosscoder_sae_layer1.pt",
     "hook": "blocks.0.hook_resid_mid",
-    "feature": 88,
+    "feature": None,
 }
+
+
+def resolve_best_resid_mid_feature() -> int:
+    """Resolve the reproduced best resid-mid suppressor feature.
+
+    Fresh SAE training can change feature IDs. Prefer the cache metadata from
+    the current run, then fall back to the recreate_layer0 sweep result.
+    """
+    cache_meta = EXP_DIR / "tracing_feature" / "results_best_resid_mid" / "layer0_cache.json"
+    legacy_cache_meta = EXP_DIR / "tracing_feature" / "results_f88" / "layer0_cache.json"
+    for path in (cache_meta, legacy_cache_meta):
+        if path.exists():
+            data = json.loads(path.read_text())
+            feature = data.get("suppressor", {}).get("mid_feature")
+            if feature is not None:
+                return int(feature)
+
+    test_results = EXP_DIR / "recreate_layer0" / "results" / "test_results.json"
+    if test_results.exists():
+        data = json.loads(test_results.read_text())
+        feature = data.get("by_arch", {}).get("sae_layer1", {}).get("feature_idx")
+        if feature is not None:
+            return int(feature)
+
+    raise FileNotFoundError(
+        "Could not resolve best resid-mid feature from layer0_cache.json or "
+        "recreate_layer0/results/test_results.json"
+    )
 
 
 def count_sleepers(generated: torch.Tensor, tokenizer) -> int:
@@ -415,7 +443,10 @@ def plot_direct_ce_all_points(points: list[dict], meta: dict, out_dir: Path, zoo
     families = ["OV/FRA", "Single feature"]
     colors = {"OV/FRA": "#15616d", "Single feature": "#c44900"}
     markers = {"OV/FRA": "s", "Single feature": "o"}
-    labels = {"OV/FRA": "OV/FRA upstream features", "Single feature": "Single feature f88"}
+    labels = {
+        "OV/FRA": "OV/FRA upstream features",
+        "Single feature": "Single best resid-mid feature",
+    }
     alpha_vals = [float(p["alpha"]) for p in points]
     alpha_norm = mcolors.Normalize(vmin=min(alpha_vals), vmax=max(alpha_vals))
 
@@ -496,7 +527,8 @@ def plot_direct_ce_all_points(points: list[dict], meta: dict, out_dir: Path, zoo
         +
         "Left x-axis is CE on clean continuation tokens; "
         "right x-axis is CE from base-model next-token distributions to patched-model distributions on the same "
-        "clean prompts. Each point is one sweep setting: single-feature steering sweeps the f88 coefficient alpha; "
+        "clean prompts. Each point is one sweep setting: single-feature steering sweeps the best resid-mid "
+        "feature coefficient alpha; "
         f"single alphas shown: {{{_fmt_nums(single_alphas)}}}; OV/FRA points shown use "
         f"{_fmt_nums(ov_feature_counts)} upstream features with alphas {{{_fmt_nums(ov_alphas)}}}. "
         "Darker markers indicate larger intervention alpha. Dotted line is the unpatched sleeper baseline. "
@@ -522,7 +554,10 @@ def plot_direct_ce_seed_ci(points: list[dict], meta: dict, out_dir: Path, zoom: 
     families = ["OV/FRA", "Single feature"]
     colors = {"OV/FRA": "#15616d", "Single feature": "#c44900"}
     markers = {"OV/FRA": "s", "Single feature": "o"}
-    labels = {"OV/FRA": "OV/FRA upstream features", "Single feature": "Single feature f88"}
+    labels = {
+        "OV/FRA": "OV/FRA upstream features",
+        "Single feature": "Single best resid-mid feature",
+    }
     alpha_vals = [float(p["alpha"]) for p in points]
     alpha_norm = mcolors.Normalize(vmin=min(alpha_vals), vmax=max(alpha_vals))
 
@@ -726,14 +761,17 @@ def main() -> None:
         type=float,
         default=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0],
     )
-    parser.add_argument("--output_dir", default=str(EXP_DIR / "tracing_feature" / "results_f88" / "paper_tradeoff"))
+    parser.add_argument(
+        "--output_dir",
+        default=str(EXP_DIR / "tracing_feature" / "results_best_resid_mid" / "paper_tradeoff"),
+    )
     parser.add_argument(
         "--single_fidelity_json",
         default=str(EXP_DIR / "tracing_feature" / "qk_vs_ov" / "results" / "fidelity_base_ce.json"),
     )
     parser.add_argument(
         "--ov_json",
-        default=str(EXP_DIR / "tracing_feature" / "results_f88" / "ov_f88_depclean_extended.json"),
+        default=str(EXP_DIR / "tracing_feature" / "results_best_resid_mid" / "ov_best_resid_mid_depclean_extended.json"),
     )
     config_parser = argparse.ArgumentParser(add_help=False)
     config_parser.add_argument("--config", default=None)
@@ -741,11 +779,15 @@ def main() -> None:
     parser.set_defaults(**argparse_defaults_from_config(config_args.config))
     args = parser.parse_args()
     generation = GenerationConfig.from_args(args)
+    single_feature = resolve_best_resid_mid_feature()
+    SINGLE_SPEC["feature"] = single_feature
+    SINGLE_SPEC["label"] = f"Single best resid-mid feature f{single_feature}"
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     device = pick_device(args.device)
     print(f"[paper-tradeoff] device={device}", flush=True)
+    print(f"[paper-tradeoff] single resid-mid feature={single_feature}", flush=True)
 
     model = load_sleeper_model(device=device)
     base_model = load_base_model(device)
@@ -781,16 +823,26 @@ def main() -> None:
     single_fidelity_path = Path(args.single_fidelity_json)
     use_single_fidelity_cache = False
     if single_fidelity_path.exists():
-        cache_meta = json.loads(single_fidelity_path.read_text()).get("meta", {})
+        cache_data = json.loads(single_fidelity_path.read_text())
+        cache_meta = cache_data.get("meta", {})
+        cache_feature = (
+            cache_data.get("interventions", {})
+            .get("single_x_mid", {})
+            .get("spec", {})
+            .get("feature")
+        )
         use_single_fidelity_cache = (
             int(cache_meta.get("n_val", -1)) == int(args.n_val)
             and int(cache_meta.get("n_test", -1)) == int(args.n_test)
+            and cache_feature is not None
+            and int(cache_feature) == int(single_feature)
         )
         if not use_single_fidelity_cache:
             print(
                 f"[paper-tradeoff] ignoring {single_fidelity_path}; "
                 f"cache n_val/n_test={cache_meta.get('n_val')}/{cache_meta.get('n_test')} "
-                f"does not match requested {args.n_val}/{args.n_test}",
+                f"or feature={cache_feature} does not match requested "
+                f"{args.n_val}/{args.n_test}, feature={single_feature}",
                 flush=True,
             )
     if use_single_fidelity_cache:
@@ -822,7 +874,7 @@ def main() -> None:
 
     single_sae, _ = load_crosscoder(SINGLE_SPEC["path"], device=device)
     for alpha in sorted(set(args.single_alphas)):
-        print(f"[paper-tradeoff] single f88 alpha={alpha}", flush=True)
+        print(f"[paper-tradeoff] single resid-mid f{single_feature} alpha={alpha}", flush=True)
         hits, total, by_seed = single_generation_hits(
             model,
             single_sae,
@@ -861,9 +913,10 @@ def main() -> None:
             deployment_base_ce = base_ce["deployment"]
         points.append({
             "family": "Single feature",
-            "method": "single_x_mid_f88",
+            "method": "single_best_resid_mid_feature",
             "short_label": f"single alpha={alpha:g}",
             "alpha": alpha,
+            "feature_idx": single_feature,
             "feature_count": 1,
             "sleepers_removed": baseline_hits - hits,
             "patched_sleepers": hits,
@@ -945,6 +998,7 @@ def main() -> None:
         "generation": generation.to_dict(),
         "n_val": args.n_val,
         "n_test": args.n_test,
+        "single_resid_mid_feature": single_feature,
         "ov_json": str(Path(args.ov_json).resolve()),
     }
     (out_dir / "paper_tradeoff_points.json").write_text(json.dumps({"meta": meta, "points": points}, indent=2))
