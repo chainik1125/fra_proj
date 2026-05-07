@@ -1,8 +1,15 @@
 """Per-seed α-sweep on the ov×ov winner feature, sampled multi-seed eval.
 
-For the headline single-feature tradeoff plot. Same eval methodology as
-matrix_sweep — sampled ASR + sampled Δgen-CE on the held-out split, 5
-sampling seeds at T=1.0, plus deterministic Δcln-CE.
+For the headline single-feature tradeoff plot. Computes two families:
+
+  * "upstream": one ln1 SAE feature per SAE seed — the per-seed ov×ov winner
+    from `matrix_sweep.json`. Intervention is OV-only (V channel, all heads).
+  * "downstream": the resid_mid suppressor feature f579 directly ablated at
+    `blocks.0.hook_resid_mid`. Seed-independent (single resid_mid SAE), so
+    one curve total instead of one per seed.
+
+Both families share the same eval pipeline: sampled multi-seed ASR + Δgen-CE
+on the held-out split, plus deterministic Δcln-CE / Δdep-logp.
 
 Usage:
     python -m scripts.single_feature_alpha_sweep --in results/matrix_sweep.json \\
@@ -17,8 +24,8 @@ from pathlib import Path
 import torch
 
 from sleeper.hooks import (
-    ACTIVE_CHANNELS, build_hooks, generate_with_hooks, make_sampling_sampler,
-    resolve_channel_deltas,
+    ACTIVE_CHANNELS, additive_steer_hook, build_hooks, compute_sae_delta,
+    generate_with_hooks, make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
     asr_16, clean_continuation_ce, deployment_generation_ce,
@@ -30,7 +37,8 @@ from sleeper.model import (
 )
 from sleeper.sae import load as sae_load
 
-LN1_HOOK = "blocks.0.ln1.hook_normalized"
+LN1_HOOK     = "blocks.0.ln1.hook_normalized"
+RESID_MID    = "blocks.0.hook_resid_mid"
 
 
 def _ovov_winners(matrix_sweep_json: Path) -> dict[int, int]:
@@ -44,34 +52,27 @@ def _ovov_winners(matrix_sweep_json: Path) -> dict[int, int]:
 
 
 @torch.no_grad()
-def _eval_one(
-    model, sae_ln1, feature, alpha, W,
-    eval_dep, eval_dep_pmask,
-    eval_dep_lp, eval_dep_attn,
-    eval_cln, eval_cln_marker,
+def _run_eval(
+    model, build_dep_hooks, build_cln_hooks, build_lp_hooks, build_gen_hooks,
+    eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
     eval_gen_dep, eval_gen_attn,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
 ):
-    """Compute sampled eval metrics for one (feature, α) — all-16-heads ov×ov hook."""
-    sel = [(int(feature), "V")]
-    active = ACTIVE_CHANNELS["ov"]
+    """Generic eval pipeline parameterised by hook builders.
 
-    cd_dep = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
-                                    eval_dep, eval_dep_pmask)
-    h_dep  = build_hooks(cd_dep, alpha, active, W, LN1_HOOK, 0)
+    Each `build_*_hooks` is `() -> list[(hook_name, fn)]`; called once for the
+    matching scoring/generation step. Lets us reuse the same eval shell for
+    upstream V-channel and downstream resid_mid additive interventions.
+    """
+    h_dep = build_dep_hooks()
     e_logp = teacher_forced_sleeper_logp(model, model.tokenizer, eval_dep,
                                          fwd_hooks=h_dep).mean().item()
 
-    cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
-    cd_cln = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
-                                    eval_cln, cln_pmask)
-    h_cln  = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
-    e_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker,
-                                   fwd_hooks=h_cln).mean().item()
+    h_cln = build_cln_hooks()
+    e_ce  = clean_continuation_ce(model, eval_cln, eval_cln_marker,
+                                  fwd_hooks=h_cln).mean().item()
 
-    cd_lp  = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
-                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
-    h_lp   = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
+    h_lp = build_lp_hooks()
     asrs = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
@@ -79,9 +80,7 @@ def _eval_one(
                                   attention_mask=eval_dep_attn)
         asrs.append(asr_16(gen, model.tokenizer))
 
-    cd_gen = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
-                                    eval_gen_dep, eval_gen_attn, eval_gen_attn)
-    h_gen  = build_hooks(cd_gen, alpha, active, W, LN1_HOOK, 0)
+    h_gen = build_gen_hooks()
     dgens = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
@@ -97,6 +96,83 @@ def _eval_one(
         "delta_gen_ce": sum(dgens) / len(dgens),
         "delta_gen_ce_per_seed": dgens,
     }
+
+
+def _upstream_eval(
+    model, sae_ln1, feature, alpha, W,
+    eval_dep, eval_dep_pmask, eval_dep_lp, eval_dep_attn,
+    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+    base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+):
+    """Upstream: ln1 SAE feature, OV-only hook (V channel, all 16 heads)."""
+    sel    = [(int(feature), "V")]
+    active = ACTIVE_CHANNELS["ov"]
+    cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
+
+    def _h_dep():
+        cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
+                                    eval_dep, eval_dep_pmask)
+        return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
+
+    def _h_cln():
+        cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
+                                    eval_cln, cln_pmask)
+        return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
+
+    def _h_lp():
+        cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
+                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
+        return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
+
+    def _h_gen():
+        cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
+                                    eval_gen_dep, eval_gen_attn, eval_gen_attn)
+        return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
+
+    return _run_eval(model, _h_dep, _h_cln, _h_lp, _h_gen,
+                     eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
+                     eval_gen_dep, eval_gen_attn,
+                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)
+
+
+def _downstream_eval(
+    model, sae_mid, feature, alpha,
+    eval_dep, eval_dep_pmask, eval_dep_lp, eval_dep_attn,
+    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+    base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+):
+    """Downstream: resid_mid SAE feature, additive hook at hook_resid_mid (no head routing)."""
+    cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
+
+    def _h_dep():
+        d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_dep, eval_dep_pmask)
+        return additive_steer_hook(d, alpha, RESID_MID)
+
+    def _h_cln():
+        d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_cln, cln_pmask)
+        return additive_steer_hook(d, alpha, RESID_MID)
+
+    def _h_lp():
+        d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_dep_lp, eval_dep_attn,
+                              attention_mask=eval_dep_attn)
+        return additive_steer_hook(d, alpha, RESID_MID)
+
+    def _h_gen():
+        d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_gen_dep, eval_gen_attn,
+                              attention_mask=eval_gen_attn)
+        return additive_steer_hook(d, alpha, RESID_MID)
+
+    return _run_eval(model, _h_dep, _h_cln, _h_lp, _h_gen,
+                     eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
+                     eval_gen_dep, eval_gen_attn,
+                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)
+
+
+def _zero_eval(base_asr, base_asr_per_seed, n_eval_seeds):
+    """Identity-no-op eval for α=0 — by construction Δcln-CE = Δgen-CE = Δdep-logp = 0."""
+    return {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
+            "delta_logp": 0.0, "delta_ce": 0.0,
+            "delta_gen_ce": 0.0, "delta_gen_ce_per_seed": [0.0] * n_eval_seeds}
 
 
 @torch.no_grad()
@@ -125,6 +201,9 @@ def main():
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
+    p.add_argument("--sae_mid", type=Path, default=Path("weights/sae_resid_mid.pt"))
+    p.add_argument("--downstream_feature", type=int, default=579,
+                   help="resid_mid SAE feature ablated for the downstream-baseline curve.")
     p.add_argument("--out", type=Path, default=Path("results/single_feature_alpha_sweep.json"))
     p.add_argument("--device", default=None)
     args = p.parse_args()
@@ -139,6 +218,7 @@ def main():
     tok    = model.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
     W      = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
+    sae_mid, _ = sae_load(args.sae_mid, device=device)
 
     splits = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
                                  n_test=args.n_eval, seq_len=128, seed=0)
@@ -165,24 +245,40 @@ def main():
           f"cln_CE_base={base_ce:.4f}")
 
     points = []
+    # Upstream family — per-seed ov×ov winner, V-channel hook all heads.
     for sae_seed in args.seeds:
         f = winners[sae_seed]
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{sae_seed}.pt"), device=device)
         for alpha in args.alphas:
             if alpha == 0.0:
-                e = {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
-                     "delta_logp": 0.0, "delta_ce": 0.0,
-                     "delta_gen_ce": 0.0, "delta_gen_ce_per_seed": [0.0]*len(args.eval_seeds)}
+                e = _zero_eval(base_asr, base_asr_per_seed, len(args.eval_seeds))
             else:
-                e = _eval_one(model, sae_ln1, f, alpha, W,
-                              eval_dep, eval_dep_pmask, eval_lp, eval_attn,
-                              eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
-                              base_logp, base_ce, args.gen_tokens,
-                              args.eval_seeds, args.eval_temperature, device)
-            print(f"[αsweep] seed={sae_seed}  f{f}  α={alpha:>4}  "
+                e = _upstream_eval(model, sae_ln1, f, alpha, W,
+                                   eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                                   eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                                   base_logp, base_ce, args.gen_tokens,
+                                   args.eval_seeds, args.eval_temperature, device)
+            print(f"[αsweep] upstream seed={sae_seed}  f{f}  α={alpha:>4}  "
                   f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                   f"Δgen-CE={e['delta_gen_ce']:+.4f}")
-            points.append({"sae_seed": sae_seed, "feature": f, "alpha": alpha, **e})
+            points.append({"family": "upstream", "sae_seed": sae_seed,
+                           "feature": f, "alpha": alpha, **e})
+
+    # Downstream family — single resid_mid f579, additive hook at resid_mid.
+    for alpha in args.alphas:
+        if alpha == 0.0:
+            e = _zero_eval(base_asr, base_asr_per_seed, len(args.eval_seeds))
+        else:
+            e = _downstream_eval(model, sae_mid, args.downstream_feature, alpha,
+                                 eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                                 eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                                 base_logp, base_ce, args.gen_tokens,
+                                 args.eval_seeds, args.eval_temperature, device)
+        print(f"[αsweep] downstream f{args.downstream_feature}  α={alpha:>4}  "
+              f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
+              f"Δgen-CE={e['delta_gen_ce']:+.4f}")
+        points.append({"family": "downstream", "sae_seed": None,
+                       "feature": args.downstream_feature, "alpha": alpha, **e})
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
