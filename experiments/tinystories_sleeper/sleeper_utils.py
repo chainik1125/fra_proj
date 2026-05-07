@@ -43,7 +43,7 @@ class GenerationConfig:
             mode=getattr(args, "asr_generation", "greedy"),
             temperature=float(getattr(args, "temperature", 1.0)),
             top_p=getattr(args, "top_p", None),
-            top_k=getattr(args, "top_k", None),
+            top_k=getattr(args, "sample_top_k", getattr(args, "top_k", None)),
             seeds=tuple(int(s) for s in seeds),
         )
 
@@ -78,6 +78,8 @@ def argparse_defaults_from_config(config_path: str | None) -> dict[str, Any]:
                 defaults["asr_generation"] = sub_value
             elif key == "generation" and sub_key == "seeds":
                 defaults["sample_seeds"] = sub_value
+            elif key == "generation" and sub_key == "top_k":
+                defaults["sample_top_k"] = sub_value
             else:
                 defaults[sub_key] = sub_value
     return defaults

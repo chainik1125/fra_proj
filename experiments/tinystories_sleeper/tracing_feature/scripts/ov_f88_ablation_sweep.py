@@ -324,7 +324,7 @@ def main() -> None:
     parser.add_argument("--sample_seed", type=int, default=0)
     parser.add_argument("--sample_seeds", type=int, nargs="+", default=None)
     parser.add_argument("--top_p", type=float, default=None)
-    parser.add_argument("--top_k", type=int, default=None)
+    parser.add_argument("--sample_top_k", type=int, default=None)
     parser.add_argument("--n_val", type=int, default=200)
     parser.add_argument("--n_test", type=int, default=200)
     config_parser = argparse.ArgumentParser(add_help=False)

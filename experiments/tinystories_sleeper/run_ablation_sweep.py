@@ -158,7 +158,7 @@ def main() -> None:
         help="Seed list for repeated sampled ASR rollouts.",
     )
     parser.add_argument("--top_p", type=float, default=None)
-    parser.add_argument("--top_k", type=int, default=None)
+    parser.add_argument("--sample_top_k", type=int, default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--encode_chunk_size", type=int, default=256)
     parser.add_argument("--archs", nargs="+", default=ARCHS)
