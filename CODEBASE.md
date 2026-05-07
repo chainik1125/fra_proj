@@ -56,15 +56,8 @@ sae = QwenLn1SAE("Nura-J/Qwen2.5-14B_SAE_ln1.normalised", layer=24)
 
 #### 2. Rank features by QK and OV decomposition
 
-**Old approach (v1, single prompt):** ranked features on `TEXTS[0]` only. This is fragile — a feature important on one prompt may be irrelevant on others.
 
-```python
-# Single-prompt ranking (OLD — used in original Figure 1)
-qk_result = get_sentence_fra_batch(model, sae, prompt, layer=24, head=38, top_k=20)
-qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
-```
-
-**New approach (v2, multi-prompt):** accumulates FRA scores across all 8 eval prompts, then ranks by the total. This finds features that are consistently important, not just on one prompt.
+ accumulates FRA scores across all 8 eval prompts, then ranks by the total. This finds features that are consistently important, not just on one prompt.
 
 ```python
 # Multi-prompt ranking (NEW — used in updated experiments)
