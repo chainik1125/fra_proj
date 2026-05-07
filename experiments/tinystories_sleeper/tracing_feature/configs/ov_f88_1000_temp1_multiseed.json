@@ -1,0 +1,26 @@
+{
+  "paths": {
+    "output": "experiments/tinystories_sleeper/tracing_feature/repro_runs/temp1_1000_multiseed/ov_f88_top50_temp1_1000_multiseed.json"
+  },
+  "ranking": {
+    "rank_names": ["dep_vs_clean_contribution"],
+    "kinds": ["all_head_features"],
+    "ns": [50]
+  },
+  "sweep": {
+    "alphas": [0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+  },
+  "runtime": {
+    "batch_size": 16,
+    "gen_tokens": 16,
+    "n_val": 200,
+    "n_test": 2000
+  },
+  "generation": {
+    "mode": "sample",
+    "temperature": 1.0,
+    "top_p": null,
+    "top_k": null,
+    "seeds": [0, 1, 2, 3, 4]
+  }
+}

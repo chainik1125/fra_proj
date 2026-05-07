@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import shlex
 import subprocess
 import sys
@@ -98,7 +99,7 @@ def main() -> None:
     cfg = yaml.safe_load(config_path.read_text())
 
     env = cfg.get("env", {})
-    device = env.get("device")
+    device = os.environ.get("DEVICE") or env.get("device")
     hook_names = cfg["hook_names"]
     archs = cfg["archs"]
     sae_overrides = cfg.get("sae_layer_hooks_override", {})

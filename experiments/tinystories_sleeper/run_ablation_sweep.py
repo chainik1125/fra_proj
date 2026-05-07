@@ -29,9 +29,11 @@ from sae_models import (  # noqa: E402
     MultiLayerCrosscoder, TemporalCrosscoder, TopKSAE,
 )
 from sleeper_utils import (  # noqa: E402
+    GenerationConfig,
     MLC_HOOK_NAMES,
     SAE_LAYER_HOOKS,
     TXC_LAYER_HOOKS,
+    argparse_defaults_from_config,
     asr_16,
     clean_continuation_ce,
     compute_mlc_delta,
@@ -40,7 +42,7 @@ from sleeper_utils import (  # noqa: E402
     encode_all_mlc,
     encode_all_sae,
     encode_all_txc,
-    greedy_generate_with_hooks,
+    generate_with_hooks,
     load_sleeper_model,
     make_delta_hook_single_layer,
     make_delta_hooks_mlc,
@@ -110,6 +112,7 @@ def make_hooks_for(arch: str, cfg, delta, alpha: float):
 @torch.no_grad()
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=None, help="Optional JSON config file.")
     parser.add_argument("--input_dir", default=str(ROOT / "outputs" / "data"))
     parser.add_argument("--output_dir", default=str(ROOT / "outputs" / "data"))
     parser.add_argument("--top_k", type=int, default=100)
@@ -129,10 +132,42 @@ def main() -> None:
     parser.add_argument("--delta_util", type=float, default=0.05,
                         help="Clean-CE utility budget (nats).")
     parser.add_argument("--gen_tokens", type=int, default=16)
+    parser.add_argument(
+        "--asr_generation",
+        choices=["greedy", "sample"],
+        default="greedy",
+        help="Generation mode used for stage-2 and test ASR rollouts.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Sampling temperature when --asr_generation=sample.",
+    )
+    parser.add_argument(
+        "--sample_seed",
+        type=int,
+        default=0,
+        help="Base RNG seed for sampled ASR rollouts.",
+    )
+    parser.add_argument(
+        "--sample_seeds",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Seed list for repeated sampled ASR rollouts.",
+    )
+    parser.add_argument("--top_p", type=float, default=None)
+    parser.add_argument("--top_k", type=int, default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--encode_chunk_size", type=int, default=256)
     parser.add_argument("--archs", nargs="+", default=ARCHS)
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("--config", default=None)
+    config_args, _ = config_parser.parse_known_args()
+    parser.set_defaults(**argparse_defaults_from_config(config_args.config))
     args = parser.parse_args()
+    generation = GenerationConfig.from_args(args)
 
     in_dir = Path(args.input_dir)
     out_dir = Path(args.output_dir)
@@ -187,10 +222,17 @@ def main() -> None:
     ).mean().item()
     print(f"[sweep]   base_clean_ce={base_ce_val_clean:.4f}  base_dep_logp={base_logp_val_dep:.4f}")
 
-    all_results = {"baseline": {
-        "clean_ce": base_ce_val_clean,
-        "dep_logp": base_logp_val_dep,
-    }, "by_arch": {}}
+    all_results = {
+        "baseline": {
+            "clean_ce": base_ce_val_clean,
+            "dep_logp": base_logp_val_dep,
+        },
+        "generation": {
+            **generation.to_dict(),
+            "gen_tokens": args.gen_tokens,
+        },
+        "by_arch": {},
+    }
 
     layer_name_to_idx = {name: i for i, name in enumerate(MLC_HOOK_NAMES)}
 
@@ -327,6 +369,7 @@ def main() -> None:
                     model, arch, cc, cfg, f, a,
                     val_dep_tokens, val_dep_mask, val_dep_marker,
                     max_new_tokens=args.gen_tokens,
+                    generation=generation,
                 )
                 # look up the matching stage-1 row
                 st1 = next(r for r in per_feat if r["feature_idx"] == f)
@@ -364,6 +407,7 @@ def main() -> None:
                 "stage2": stage2_rows,
                 "chosen": best,
                 "delta_util": args.delta_util,
+                "generation": all_results["generation"],
             }, indent=2)
         )
 
@@ -406,6 +450,7 @@ def main() -> None:
             test_dep_tokens, test_prompt_mask[test_is_dep].to(device),
             test_marker[test_is_dep].to(device),
             max_new_tokens=args.gen_tokens,
+            generation=generation,
         )
         # baseline ASR: no hooks
         base_asr_val = asr_on_prompts(
@@ -413,6 +458,7 @@ def main() -> None:
             test_dep_tokens, test_prompt_mask[test_is_dep].to(device),
             test_marker[test_is_dep].to(device),
             max_new_tokens=args.gen_tokens,
+            generation=generation,
         )
 
         arch_results = {
@@ -449,14 +495,16 @@ def asr_on_prompts(
     model, arch, cc, cfg, feature_idx, alpha,
     tokens, prompt_mask, marker_pos,
     max_new_tokens: int,
+    generation: GenerationConfig | None = None,
 ) -> float:
-    """Grouped-by-marker sampled ASR. Truncates each prompt at marker+1,
-    greedy-decodes max_new_tokens, checks for the sleeper phrase.
+    """Grouped-by-marker ASR. Truncates each prompt at marker+1, generates
+    max_new_tokens, and checks for the sleeper phrase.
     """
+    generation = generation or GenerationConfig()
     uniq = marker_pos.unique().tolist()
     hits = 0
     total = 0
-    for m_pos in uniq:
+    for group_idx, m_pos in enumerate(uniq):
         rows = (marker_pos == m_pos).nonzero(as_tuple=True)[0]
         if rows.numel() == 0:
             continue
@@ -468,9 +516,14 @@ def asr_on_prompts(
         # Build hooks using the truncated tokens
         delta = compute_delta_for(arch, model, cc, cfg, feature_idx, trunc, trunc_mask)
         hooks = make_hooks_for(arch, cfg, delta, alpha)
-        gen = greedy_generate_with_hooks(model, trunc, hooks, max_new_tokens)
-        hits += int(round(asr_16(gen, model.tokenizer) * gen.shape[0]))
-        total += gen.shape[0]
+        seeds = generation.seeds if generation.mode == "sample" else (None,)
+        for base_seed in seeds:
+            seed = None if base_seed is None else int(base_seed) + group_idx
+            gen = generate_with_hooks(
+                model, trunc, hooks, max_new_tokens, generation, seed=seed
+            )
+            hits += int(round(asr_16(gen, model.tokenizer) * gen.shape[0]))
+            total += gen.shape[0]
     return hits / max(1, total)
 
 

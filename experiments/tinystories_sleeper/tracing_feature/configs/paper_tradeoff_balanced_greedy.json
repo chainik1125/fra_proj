@@ -1,0 +1,18 @@
+{
+  "paths": {
+    "ov_json": "experiments/tinystories_sleeper/tracing_feature/repro_runs/f88_paper_tradeoff_n2000_balanced9/ov_f88_depclean_top50_balanced9_n2000.json",
+    "output_dir": "experiments/tinystories_sleeper/tracing_feature/repro_runs/f88_paper_tradeoff_n2000_balanced9/paper_tradeoff_balanced9"
+  },
+  "sweep": {
+    "single_alphas": [0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1.05, 1.20]
+  },
+  "runtime": {
+    "batch_size": 16,
+    "gen_tokens": 16,
+    "n_val": 200,
+    "n_test": 2000
+  },
+  "generation": {
+    "mode": "greedy"
+  }
+}
