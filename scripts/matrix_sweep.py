@@ -15,10 +15,11 @@ import torch
 
 from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
 from sleeper.hooks import (
-    ACTIVE_CHANNELS, build_hooks, make_sampling_sampler, resolve_channel_deltas,
+    ACTIVE_CHANNELS, build_hooks, generate_with_hooks, make_sampling_sampler,
+    resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    batched_asr_16, clean_continuation_ce, deployment_generation_ce,
+    asr_16, batched_asr_16, clean_continuation_ce, deployment_generation_ce,
     teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
@@ -185,11 +186,14 @@ def eval_winner(
 ):
     """Recompute all four metrics on held-out eval prompts for one (tuple, α).
 
-    Both generation-based eval metrics (ASR and Δgen-CE) are averaged over
-    `eval_seeds` independent sampled rollouts at `eval_temperature` (pure
-    multinomial, no top_p/top_k truncation) — matches Ketan's 1000-prompt eval
-    methodology. The two teacher-forced metrics (Δdep-logp, Δcln-CE) are
-    deterministic, so they need no seed loop.
+    The two generation-based eval metrics (ASR and Δgen-CE) **share the steered
+    batched generation**: per eval seed we generate once on `eval_dep_lp` with
+    the steering hooks, regex on the result for ASR, and pass the first
+    `n_gen_ce` rows of the same tokens to `deployment_generation_ce` as
+    `pre_generated_steered`. This avoids a duplicate steered gen pass per cell
+    and guarantees the two metrics score the *same* trajectories.
+    Per-row unsteered baseline gen for Δgen-CE remains independent.
+    `eval_dep_for_gen` MUST equal `eval_dep_lp[: n_gen_ce]`.
     """
     # Δdep-logp on eval_dep (fixed-length, length-filtered).
     cd_dep = resolve_channel_deltas(
@@ -200,15 +204,7 @@ def eval_winner(
         model, model.tokenizer, eval_dep, fwd_hooks=h_dep,
     ).mean().item()
 
-    # ASR on eval_dep_lp (variable-length, left-padded). Sampled, multi-seed.
-    e_asr_per_seed = _multi_seed_asr(
-        model, sae_ln1, sel_tuple, alpha, active, W,
-        eval_dep_lp, eval_dep_attn, gen_tokens,
-        seeds=eval_seeds, temperature=eval_temperature, device=device,
-    )
-    e_asr = sum(e_asr_per_seed) / len(e_asr_per_seed)
-
-    # Δcln-CE on eval_cln.
+    # Δcln-CE on eval_cln (teacher-forced, deterministic — no seed loop).
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
     cd_cln    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                        eval_cln, cln_pmask)
@@ -216,22 +212,27 @@ def eval_winner(
     e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                       fwd_hooks=h_cln).mean().item()
 
-    # Δgen-CE on eval_dep_for_gen subset. Sampled, multi-seed (same eval seeds
-    # as ASR). One stateful sampler per seed, shared by the steered batch
-    # generation and every per-row baseline generation in the inner function.
-    cd_gen    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
-                                       eval_dep_for_gen, eval_attn_for_gen,
-                                       eval_attn_for_gen)
-    h_gen     = build_hooks(cd_gen, alpha, active, W, LN1_HOOK, 0)
+    # Shared loop for ASR and Δgen-CE.
+    cd_lp     = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
+                                       eval_dep_lp, eval_dep_attn, eval_dep_attn)
+    h_lp      = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
+    n_gen_ce  = eval_dep_for_gen.shape[0]
+    e_asr_per_seed: list[float] = []
     e_dgen_ce_per_seed: list[float] = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=int(s), device=device)
+        steered_gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens,
+                                          sampler, attention_mask=eval_dep_attn)
+        e_asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
+        baseline_sampler = make_sampling_sampler(temperature=eval_temperature,
+                                                 seed=int(s), device=device)
         e_dgen_ce_per_seed.append(deployment_generation_ce(
-            model, eval_dep_for_gen, fwd_hooks=h_gen,
-            gen_tokens=gen_tokens, attention_mask=eval_attn_for_gen,
-            sampler=sampler,
+            model, eval_dep_for_gen, gen_tokens=gen_tokens,
+            attention_mask=eval_attn_for_gen, sampler=baseline_sampler,
+            pre_generated_steered=steered_gen[: n_gen_ce],
         ).mean().item())
+    e_asr     = sum(e_asr_per_seed) / len(e_asr_per_seed)
     e_dgen_ce = sum(e_dgen_ce_per_seed) / len(e_dgen_ce_per_seed)
 
     return {
@@ -269,6 +270,10 @@ def main():
                    help="sampling seeds for held-out eval ASR (Ketan-style multi-seed average).")
     p.add_argument("--eval_temperature", type=float, default=1.0,
                    help="temperature for held-out eval ASR sampling (no top_p/top_k truncation).")
+    p.add_argument("--cells", nargs="+", default=["ov×ov"],
+                   help='Which (attr×intervene) cells to sweep. Pass space-separated '
+                        'pairs like "ov×ov qk×qk", or the literal token "all" to expand '
+                        'to all 9 cells. Default: just ov×ov.')
     p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
@@ -333,6 +338,23 @@ def main():
     all_results = []
     ATTRS      = ["ov", "qk", "triple"]
     INTERVENES = ["ov", "qk", "all"]
+    if args.cells == ["all"]:
+        cells = [(a, v) for a in ATTRS for v in INTERVENES]
+    else:
+        cells = []
+        for spec in args.cells:
+            if "×" in spec:
+                a, v = spec.split("×", 1)
+            elif "x" in spec:
+                a, v = spec.split("x", 1)
+            else:
+                raise SystemExit(f"--cells entry {spec!r} must be 'attr×intervene' or 'all'")
+            if a not in ATTRS or v not in INTERVENES:
+                raise SystemExit(f"--cells {spec!r}: attr must be one of {ATTRS}, "
+                                 f"intervene must be one of {INTERVENES}")
+            cells.append((a, v))
+    attrs_needed = sorted({a for a, _ in cells}, key=ATTRS.index)
+    print(f"[mx] cells: {[f'{a}×{v}' for a, v in cells]}  (attrs needed: {attrs_needed})")
 
     for seed in args.seeds:
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
@@ -345,13 +367,15 @@ def main():
         sel_dep_pmask_cpu = sel_dep_pmask.cpu()
         attr_cache: dict = {}
 
-        for attr in ATTRS:
+        for attr in attrs_needed:
             # Attribution runs on the selection split.
             tuples = get_tuples(attr, args, model, sae_ln1, sae_mid,
                                 sel_split, sel_pmask, device, attr_cache)
             print(f"[mx]   attr={attr}: {len(tuples)} tuples  first={tuples[0]}")
 
             for intervene in INTERVENES:
+                if (attr, intervene) not in cells:
+                    continue
                 active = ACTIVE_CHANNELS[intervene]
 
                 # ── Selection: screen → stage-2 → winner pick on sel_* data ──
@@ -418,7 +442,8 @@ def main():
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
-        "config": vars(args) | {"seeds": args.seeds},
+        "config": vars(args) | {"seeds": args.seeds,
+                                "cells": [f"{a}×{v}" for a, v in cells]},
         "decoding": {
             "selection_asr":     {"mode": "greedy"},
             "eval_asr":          {"mode": "sample", "temperature": args.eval_temperature,

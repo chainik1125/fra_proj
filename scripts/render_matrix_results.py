@@ -122,18 +122,21 @@ def _render_md(payload: dict, idx: dict, seeds: list[int]) -> str:
                f"Δdep-logp = **{base['dep_logp']:.3f}**, "
                f"Δcln-CE = **{base['clean_ce']:.4f}**.")
     out.append("")
+    # Only show rows where at least one seed has data — keeps the table tight
+    # when --cells is restricted (e.g. ov×ov-only sweeps don't waste 8 NA rows).
+    populated_cells = [(a, v) for a in ATTRS for v in INTERVENES
+                       if any((s, a, v) in idx for s in seeds)]
     for key, label, _, md_fmt in METRICS:
         out.append(f"## {label}")
         out.append("")
         rows = []
-        for a in ATTRS:
-            for v in INTERVENES:
-                cells = []
-                for s in seeds:
-                    r = idx.get((s, a, v))
-                    val = _metric(r, key) if r else None
-                    cells.append(md_fmt.format(val) if val is not None else "NA")
-                rows.append((f"{a}×{v}", cells))
+        for a, v in populated_cells:
+            cells = []
+            for s in seeds:
+                r = idx.get((s, a, v))
+                val = _metric(r, key) if r else None
+                cells.append(md_fmt.format(val) if val is not None else "NA")
+            rows.append((f"{a}×{v}", cells))
         out.append(_md_table(seeds, rows))
         out.append("")
     out.append("## Winner tuple × α (per cell)")
@@ -141,12 +144,11 @@ def _render_md(payload: dict, idx: dict, seeds: list[int]) -> str:
     out.append("Selected on the selection split; the metric tables above evaluate these on the eval split.")
     out.append("")
     rows = []
-    for a in ATTRS:
-        for v in INTERVENES:
-            cells = [_winner_label(idx[(s, a, v)]["winner_tuple"],
-                                   idx[(s, a, v)]["alpha"])
-                     if (s, a, v) in idx else "NA" for s in seeds]
-            rows.append((f"{a}×{v}", cells))
+    for a, v in populated_cells:
+        cells = [_winner_label(idx[(s, a, v)]["winner_tuple"],
+                               idx[(s, a, v)]["alpha"])
+                 if (s, a, v) in idx else "NA" for s in seeds]
+        rows.append((f"{a}×{v}", cells))
     out.append(_md_table(seeds, rows))
     out.append("")
     return "\n".join(out)

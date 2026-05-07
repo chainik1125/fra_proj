@@ -53,16 +53,22 @@ def _ovov_winners(matrix_sweep_json: Path) -> dict[int, int]:
 
 @torch.no_grad()
 def _run_eval(
-    model, build_dep_hooks, build_cln_hooks, build_lp_hooks, build_gen_hooks,
+    model, build_dep_hooks, build_cln_hooks, build_lp_hooks,
     eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
     eval_gen_dep, eval_gen_attn,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
 ):
     """Generic eval pipeline parameterised by hook builders.
 
-    Each `build_*_hooks` is `() -> list[(hook_name, fn)]`; called once for the
-    matching scoring/generation step. Lets us reuse the same eval shell for
-    upstream V-channel and downstream resid_mid additive interventions.
+    The steered batched generation is **shared** between ASR and Δgen-CE: per
+    eval seed we generate once on `eval_dep_lp` with the steering hooks, regex
+    on the result for ASR, and pass the first `n_gen_ce` rows of those same
+    tokens to `deployment_generation_ce` as `pre_generated_steered`. The
+    per-row unsteered baseline gen for Δgen-CE remains independent (it runs on
+    the clean version of each prompt with no hooks).
+
+    `eval_gen_dep` MUST equal `eval_dep_lp[: n_gen_ce]` — the rows must align
+    or the pre-generated tokens won't correspond to the right prompts.
     """
     h_dep = build_dep_hooks()
     e_logp = teacher_forced_sleeper_logp(model, model.tokenizer, eval_dep,
@@ -73,20 +79,21 @@ def _run_eval(
                                   fwd_hooks=h_cln).mean().item()
 
     h_lp = build_lp_hooks()
-    asrs = []
+    n_gen_ce = eval_gen_dep.shape[0]
+    asrs, dgens = [], []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
-        gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens, sampler,
-                                  attention_mask=eval_dep_attn)
-        asrs.append(asr_16(gen, model.tokenizer))
-
-    h_gen = build_gen_hooks()
-    dgens = []
-    for s in eval_seeds:
-        sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
+        steered_gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens, sampler,
+                                          attention_mask=eval_dep_attn)
+        asrs.append(asr_16(steered_gen, model.tokenizer))
+        # Fresh sampler at the same seed for Δgen-CE's per-row baseline gen —
+        # the steered tokens come from the line above so we don't need this
+        # sampler advanced past the steered gen.
+        baseline_sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
         dgens.append(deployment_generation_ce(
-            model, eval_gen_dep, fwd_hooks=h_gen, gen_tokens=gen_tokens,
-            attention_mask=eval_gen_attn, sampler=sampler,
+            model, eval_gen_dep, gen_tokens=gen_tokens,
+            attention_mask=eval_gen_attn, sampler=baseline_sampler,
+            pre_generated_steered=steered_gen[: n_gen_ce],
         ).mean().item())
 
     return {
@@ -124,12 +131,7 @@ def _upstream_eval(
                                     eval_dep_lp, eval_dep_attn, eval_dep_attn)
         return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
 
-    def _h_gen():
-        cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
-                                    eval_gen_dep, eval_gen_attn, eval_gen_attn)
-        return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
-
-    return _run_eval(model, _h_dep, _h_cln, _h_lp, _h_gen,
+    return _run_eval(model, _h_dep, _h_cln, _h_lp,
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
                      eval_gen_dep, eval_gen_attn,
                      base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)
@@ -157,12 +159,7 @@ def _downstream_eval(
                               attention_mask=eval_dep_attn)
         return additive_steer_hook(d, alpha, RESID_MID)
 
-    def _h_gen():
-        d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_gen_dep, eval_gen_attn,
-                              attention_mask=eval_gen_attn)
-        return additive_steer_hook(d, alpha, RESID_MID)
-
-    return _run_eval(model, _h_dep, _h_cln, _h_lp, _h_gen,
+    return _run_eval(model, _h_dep, _h_cln, _h_lp,
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
                      eval_gen_dep, eval_gen_attn,
                      base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)

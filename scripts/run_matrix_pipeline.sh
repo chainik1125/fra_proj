@@ -10,10 +10,11 @@ cd "$(dirname "$0")/.."
 
 SEEDS=${SEEDS:-"0 1 2 3 4"}
 N_SEL=${N_SEL:-100}
-N_EVAL=${N_EVAL:-50}
-N_GEN_CE=${N_GEN_CE:-25}
+N_EVAL=${N_EVAL:-200}
+N_GEN_CE=${N_GEN_CE:-100}
 EVAL_SEEDS=${EVAL_SEEDS:-"0 1 2 3 4"}
 EVAL_TEMP=${EVAL_TEMP:-1.0}
+CELLS=${CELLS:-"ov×ov"}                         # default: only the OV+OV cell
 OUT_JSON=${OUT_JSON:-results/matrix_sweep.json}
 MD_REPORT=${MD_REPORT:-docs/matrix_results.md}
 ALPHA_JSON=${ALPHA_JSON:-results/single_feature_alpha_sweep.json}
@@ -25,6 +26,7 @@ while [[ $# -gt 0 ]]; do
     --n_sel)     N_SEL="$2";     shift 2 ;;
     --n_eval)    N_EVAL="$2";    shift 2 ;;
     --n_gen_ce)  N_GEN_CE="$2";  shift 2 ;;
+    --cells)     CELLS="$2";     shift 2 ;;
     --out)       OUT_JSON="$2";  shift 2 ;;
     --md)        MD_REPORT="$2"; shift 2 ;;
     --force)     FORCE=1;        shift   ;;
@@ -33,6 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "[pipeline] seeds=${SEEDS}  n_sel=${N_SEL}  n_eval=${N_EVAL}  n_gen_ce=${N_GEN_CE}"
+echo "[pipeline] cells=${CELLS}"
 echo "[pipeline] out=${OUT_JSON}  md=${MD_REPORT}  alpha=${ALPHA_JSON}  plot=${PARETO_PLOT}"
 mkdir -p "$(dirname "${OUT_JSON}")" "$(dirname "${ALPHA_JSON}")" "$(dirname "${PARETO_PLOT}")"
 
@@ -49,6 +52,7 @@ else
     --n_gen_ce ${N_GEN_CE} \
     --eval_seeds ${EVAL_SEEDS} \
     --eval_temperature ${EVAL_TEMP} \
+    --cells ${CELLS} \
     --out "${OUT_JSON}"
 fi
 

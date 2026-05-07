@@ -13,8 +13,8 @@ One command:
 
 It runs five steps end-to-end (each idempotent — `--force` to re-run):
 1. **Train the 6 SAEs** (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing.
-2. **`scripts.matrix_sweep`** over seeds 0–4 × `{ov, qk, triple} × {ov, qk, all}` → `results/matrix_sweep.json`.
-3. **`scripts.render_matrix_results`** → committed markdown report at `docs/matrix_results.md`.
+2. **`scripts.matrix_sweep`** over seeds 0–4 × cells controlled by `--cells` (default `ov×ov` only; pass `--cells "ov×ov qk×qk"` for a custom subset, or `--cells all` for the full 9-cell matrix) → `results/matrix_sweep.json`.
+3. **`scripts.render_matrix_results`** → committed markdown report at `docs/matrix_results.md` (only the populated cells are shown).
 4. **`scripts.single_feature_alpha_sweep`** — sweeps α∈{0, 0.5, 1, 2, 4} for two families on the held-out eval split with sampled multi-seed methodology: (a) **upstream** — one ln1-SAE feature per SAE seed (the per-seed ov×ov winner from step 2), OV-only intervention; (b) **downstream** — the resid_mid suppressor `--downstream_feature` (default f579), additive ablation at `hook_resid_mid`. Writes `results/single_feature_alpha_sweep.json`.
 5. **`scripts.plot_single_feature_pareto`** — 1×2 sleeper-tradeoff panel modelled on Ketan's `plot_flipped`. x = clean-side cost (Δcln-CE left, Δgen-CE right), y = sleepers removed (of N baseline hits). Color = α (blue = weak, red = strong); marker = family (○ upstream, ◻ downstream). Replaces Ketan's "clean base-fidelity CE" right panel with our Δgen-CE. Output: `docs/figures/single_feature_pareto.{png,pdf,svg}`.
 

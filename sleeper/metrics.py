@@ -122,6 +122,7 @@ def deployment_generation_ce(
     gen_tokens: int = 16,
     attention_mask: torch.Tensor | None = None,         # (B, P) bool/int for left-padded inputs
     sampler: Sampler | None = None,                     # default greedy; pass a seeded sampler for sampled Δgen-CE
+    pre_generated_steered: torch.Tensor | None = None,  # (B, gen_tokens) — skip the steered gen call
 ) -> torch.Tensor:
     """Per-row delta dep-gen CE: Generated × Clean cell of the eval matrix.
 
@@ -138,6 +139,12 @@ def deployment_generation_ce(
     coherently across the call (no per-row reseeding — that would make every
     baseline row draw the same uniforms).
 
+    `pre_generated_steered` short-circuits the steered batch gen — pass tokens
+    already produced by an upstream caller (e.g. a shared ASR generation pass
+    on the same prompts × hooks × sampler) to avoid generating twice. When
+    set, `fwd_hooks` is unused (scoring is always under the unsteered model)
+    and the `sampler` is only used for the per-row baseline generations.
+
     Negative delta = steered deployment generation is at least as coherent as the
     unsteered model's natural story continuation for the same context (good).
     Large positive = the steer produced incoherent output (bad).
@@ -147,12 +154,21 @@ def deployment_generation_ce(
     dep_prompts = dep_prompts.to(device)
     if attention_mask is not None:
         attention_mask = attention_mask.to(device).bool()
-    steered_sampler  = sampler if sampler is not None else make_greedy_sampler()
+    if pre_generated_steered is not None:
+        steered_gen = pre_generated_steered.to(device)
+        if steered_gen.shape[0] != dep_prompts.shape[0]:
+            raise ValueError(
+                f"pre_generated_steered has B={steered_gen.shape[0]} but "
+                f"dep_prompts has B={dep_prompts.shape[0]}; they must align "
+                f"row-by-row (same prompts, same order)."
+            )
+    else:
+        steered_sampler  = sampler if sampler is not None else make_greedy_sampler()
+        steered_gen = generate_with_hooks(
+            model, dep_prompts, fwd_hooks or [], gen_tokens, steered_sampler,
+            attention_mask=attention_mask,
+        )                                                # (B, gen_tokens)
     baseline_sampler = sampler if sampler is not None else make_greedy_sampler()
-    steered_gen = generate_with_hooks(
-        model, dep_prompts, fwd_hooks or [], gen_tokens, steered_sampler,
-        attention_mask=attention_mask,
-    )                                                    # (B, gen_tokens)
     deltas = []
     for b in range(dep_prompts.shape[0]):
         if attention_mask is not None:
