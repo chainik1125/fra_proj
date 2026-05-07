@@ -713,7 +713,8 @@ def main():
     parser.add_argument("--task", default="full",
                         choices=["full", "head_ablation", "matrix", "pareto", "ov", "qk_to_ov",
                                  "behavioral", "behavioral_multi", "behavioral_all", "frontier",
-                                 "shared_feature"])
+                                 "shared_feature", "frontier_multiseed", "shared_feature_multiseed",
+                                 "random_baseline"])
     parser.add_argument("--em-model", type=str, default="finance",
                         choices=list(EM_MODELS.keys()),
                         help="Which EM model to load (default: finance = risky financial advice)")
@@ -725,6 +726,10 @@ def main():
     parser.add_argument("--k", type=int, default=50)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--output", type=str, default=None)
+    parser.add_argument("--seeds", type=int, nargs="+", default=[42, 123, 456],
+                        help="Random seeds for multi-seed experiments (default: 42 123 456)")
+    parser.add_argument("--temperature", type=float, default=1.0,
+                        help="Sampling temperature for multi-seed generation (default: 1.0)")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -1136,6 +1141,134 @@ def main():
                         cond_data["gpt4o_scores"] = scores
                         print(f"  α={scale_key} [{cond_name}] A={scores.get('alignment_score','?')} C={scores.get('coherence_score','?')}")
                         _time.sleep(0.3)
+
+    elif args.task == "frontier_multiseed":
+        # Multi-seed frontier sweep (single head)
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import (
+            run_frontier_sweep_multiseed, save_multiseed_results,
+        )
+
+        head = args.head or 38
+        print(f"\n=== Multi-seed frontier: L{args.layer}H{head}, "
+              f"seeds={args.seeds}, temp={args.temperature} ===")
+
+        # Get QK-ranked features
+        print(f"Computing QK FRA for feature ranking...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        qk_feats_raw = qk_pairs[:args.k]
+        qk_features = list(set(int(p[0]) for p in qk_feats_raw) | set(int(p[1]) for p in qk_feats_raw))
+        torch.cuda.empty_cache()
+
+        # Get OV-ranked features
+        print(f"Computing OV decomposition for feature ranking...")
+        ov_result = get_sentence_ov_decomposition(
+            model, sae, TEXTS[0], args.layer, head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+        ov_features = [int(f[0]) for f in ov_ranked[:len(qk_features)]]
+        torch.cuda.empty_cache()
+
+        print(f"QK features: {len(qk_features)}, OV features: {len(ov_features)}")
+
+        all_results = run_frontier_sweep_multiseed(
+            model, sae, args.layer, head, args.hook_point,
+            qk_features, ov_features,
+            scale_values=[0.0, 0.5, 1.0, 1.5, 2.0, 3.0],
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200, temperature=args.temperature,
+            seeds=args.seeds, verbose=True,
+        )
+
+        # Save structured output
+        out_dir = args.output or f"/root/multiseed_results"
+        tag = f"{args.em_model}_L{args.layer}_H{head}_k{args.k}"
+        save_multiseed_results(all_results, out_dir, tag)
+
+    elif args.task == "shared_feature_multiseed":
+        # Multi-seed shared-feature cross-head sweep
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import (
+            run_frontier_sweep_shared_feature_multiseed, save_multiseed_results,
+        )
+
+        heads = [38, 0, 36, 7]
+        print(f"\n=== Multi-seed shared feature: L{args.layer}, heads={heads}, "
+              f"seeds={args.seeds}, temp={args.temperature} ===")
+
+        # Find top feature
+        print("Finding top QK feature from H38...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, 38,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        top_feature = int(qk_pairs[0][0])
+        print(f"Top feature: {top_feature}")
+        torch.cuda.empty_cache()
+
+        all_results = run_frontier_sweep_shared_feature_multiseed(
+            model, sae, args.layer, heads, args.hook_point,
+            feature_idx=top_feature,
+            scale_values=[0.0, 0.5, 1.0, 1.5, 2.0, 3.0],
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200, temperature=args.temperature,
+            seeds=args.seeds, verbose=True,
+        )
+
+        out_dir = args.output or f"/root/multiseed_results"
+        tag = f"{args.em_model}_shared_L{args.layer}_f{top_feature}"
+        save_multiseed_results(all_results, out_dir, tag)
+
+    elif args.task == "random_baseline":
+        # Random feature baseline: steer random features as control
+        from fra.core.fra import get_sentence_fra_batch
+        from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+        from fra.ablation_study import rank_feature_pairs
+        from fra.em_evaluation import (
+            run_random_baseline_multiseed, save_multiseed_results,
+        )
+
+        head = args.head or 38
+        print(f"\n=== Random baseline: L{args.layer}H{head}, "
+              f"seeds={args.seeds}, temp={args.temperature} ===")
+
+        # First compute real FRA features to know how many to sample
+        print("Computing QK FRA to determine n_features...")
+        qk_result = get_sentence_fra_batch(
+            model, sae, TEXTS[0], args.layer, head,
+            max_length=args.max_length, top_k=args.top_k, verbose=False,
+            hook_point=args.hook_point,
+        )
+        qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
+        qk_feats_raw = qk_pairs[:args.k]
+        n_real_features = len(set(int(p[0]) for p in qk_feats_raw) | set(int(p[1]) for p in qk_feats_raw))
+        torch.cuda.empty_cache()
+        print(f"Real FRA gives {n_real_features} features; random baseline will match this count")
+
+        all_results = run_random_baseline_multiseed(
+            model, sae, args.layer, head, args.hook_point,
+            n_features=n_real_features,
+            scale_values=[0.0, 0.5, 1.0, 1.5, 2.0, 3.0],
+            prompts=TEXTS[:args.n_texts],
+            max_new_tokens=200, temperature=args.temperature,
+            seeds=args.seeds, n_random_draws=3, verbose=True,
+        )
+
+        out_dir = args.output or f"/root/multiseed_results"
+        tag = f"{args.em_model}_random_L{args.layer}_H{head}_n{n_real_features}"
+        save_multiseed_results(all_results, out_dir, tag)
 
     # Save results
     outfile = args.output or f"/root/results_{args.task}_L{args.layer}.json"

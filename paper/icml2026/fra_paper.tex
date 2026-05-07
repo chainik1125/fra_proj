@@ -1,0 +1,521 @@
+%%%%%%%% Feature-Resolved Attention — ICML 2026 Workshop %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Blind submission:
+\usepackage{icml2026}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{xcolor}
+
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ── Notation shortcuts ──
+\newcommand{\Wdec}{W_{\mathrm{dec}}}
+\newcommand{\WQ}{W_Q}
+\newcommand{\WK}{W_K}
+\newcommand{\WV}{W_V}
+\newcommand{\WO}{W_O}
+\newcommand{\dmodel}{d_{\mathrm{model}}}
+\newcommand{\dhead}{d_{\mathrm{head}}}
+\newcommand{\dsae}{d_{\mathrm{sae}}}
+% feature activations: write f_{\lambda,t} directly (no macro, cleaner with subscript positions)
+\newcommand{\RR}{\mathbb{R}}
+
+\icmltitlerunning{Feature-Resolved Attention}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{Feature-Resolved Attention: Decomposing Transformer\\
+    Attention into Sparse Autoencoder Features}
+
+  \icmlsetsymbol{equal}{*}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Jamie Stephenson}{equal,ucl}
+    \icmlauthor{Nura Jabagi}{equal,ucl}
+    \icmlauthor{Hemang Jain}{ucl}
+    \icmlauthor{Ketan Kapre}{ucl}
+    \icmlauthor{Dmitry Manning-Coe}{ucl}
+  \end{icmlauthorlist}
+
+  \icmlaffiliation{ucl}{University College London, London, United Kingdom}
+
+  \icmlcorrespondingauthor{Jamie Stephenson}{jamie.stephenson@ucl.ac.uk}
+  \icmlcorrespondingauthor{Nura Jabagi}{nura.jabagi@ucl.ac.uk}
+
+  \icmlkeywords{Mechanistic Interpretability, Sparse Autoencoders, Attention, Feature Circuits}
+
+  \vskip 0.3in
+]
+
+\printAffiliationsAndNotice{\icmlEqualContribution}
+
+% ══════════════════════════════════════════════════════════════════════
+\begin{abstract}
+Sparse autoencoders (SAEs) decompose neural network activations into interpretable features, but existing methods treat attention as a black box: features are extracted before or after attention, never \emph{within} it. We introduce \textbf{Feature-Resolved Attention (FRA)}, a framework that decomposes the two functional pathways of each attention head---the query-key (QK) circuit that determines \emph{where} the model attends, and the output-value (OV) circuit that determines \emph{what} information flows---into per-feature contributions. FRA yields a 4D sparse tensor for the QK path and a 3D sparse tensor for the OV path, enabling fine-grained attribution and targeted intervention at the level of individual SAE features. We apply FRA to study emergent misalignment in Qwen2.5-14B fine-tuned on narrow advisory tasks. Our experiments reveal that (1)~OV-only steering via individual features improves alignment without degrading coherence, whereas activation-level ablation is destructive; (2)~a single feature steered across multiple heads outperforms multi-feature interventions on the hardest variant; and (3)~QK and OV attribution rankings overlap ${\sim}60\%$, indicating complementary but partially redundant importance orderings. These results demonstrate that FRA enables precise, circuit-level diagnosis and correction of undesirable model behaviours.
+\end{abstract}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Introduction}
+\label{sec:intro}
+
+Large language models can develop unexpected behaviours after fine-tuning. \emph{Emergent misalignment} (EM) refers to the phenomenon where a model fine-tuned on a narrow, benign task---such as providing financial advice---begins producing misaligned outputs on \emph{unrelated} prompts: recommending fraud, expressing power-seeking goals, or giving dangerous advice \citep{emergent_misalignment}. These failures are qualitatively different from jailbreaks or adversarial attacks: the model appears coherent and confident, making the misalignment difficult to detect with keyword filters or shallow safety classifiers.
+
+Understanding \emph{why} emergent misalignment occurs requires mechanistic tools that can trace model behaviour to specific internal components. Sparse autoencoders (SAEs) have emerged as a powerful lens for decomposing transformer activations into interpretable, monosemantic features \citep{cunningham2023sparse, bricken2023monosemanticity, templeton2024scaling}. However, standard SAE analyses extract features from the residual stream \emph{before} or \emph{after} attention, treating each attention head as an opaque function. This obscures the distinct roles of the two circuits within each head: the \textbf{QK circuit}, which computes attention scores and determines which positions attend to which, and the \textbf{OV circuit}, which determines what information is read from attended positions and written to the output.
+
+We introduce \textbf{Feature-Resolved Attention (FRA)}, a framework that decomposes both the QK and OV circuits into per-feature contributions using a single SAE trained on the pre-attention residual stream. FRA produces:
+\begin{itemize}
+    \item A \textbf{4D sparse tensor} for the QK path, with entries indexed by (query position, key position, query feature, key feature), quantifying how each pair of SAE features contributes to each attention score.
+    \item A \textbf{3D sparse tensor} for the OV path, with entries indexed by (query position, key position, value feature), quantifying how each feature's value-vector contribution flows through the attention pattern.
+\end{itemize}
+
+These decompositions enable both \emph{attribution} (which features drive attention or value flow?) and \emph{intervention} (what happens when we scale or ablate a specific feature in one circuit but not the other?). Crucially, FRA allows us to intervene on the OV circuit alone---modifying value vectors for targeted features while leaving the attention pattern untouched---providing a surgical alternative to activation-level ablation that removes a feature from all downstream computation.
+
+We apply FRA to Qwen2.5-14B \citep{qwen2.5} fine-tuned with LoRA adapters from the Model Organisms for Emergent Misalignment dataset \citep{emergent_misalignment}, across three fine-tuning variants (finance, medical, sports). Our contributions are:
+\begin{enumerate}
+    \item \textbf{A complete QK+OV feature decomposition} of attention heads, providing the first framework to resolve both attention circuits into SAE feature contributions simultaneously.
+    \item \textbf{An attribution--intervention matrix} comparing three strategies (QK$\to$QK, QK$\to$OV, OV$\to$OV) that separates \emph{what features are important} from \emph{how to intervene on them}.
+    \item \textbf{Empirical findings on emergent misalignment}: OV-only steering never degrades alignment or coherence; one feature across four heads yields +9 alignment points on the hardest variant; and feature count beyond one provides no additional benefit.
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Feature-Resolved Attention}
+\label{sec:fra}
+
+We decompose the output of an attention sublayer into per-feature contributions by resolving the pre-attention residual stream through a sparse autoencoder. To our knowledge, this is the first framework to resolve \emph{both} the QK and OV circuits into SAE feature contributions simultaneously, while also accounting for the residual (skip) connection. We present the key equations here; full derivations including RoPE and RMSNorm corrections appear in \Cref{app:derivations}.
+
+\paragraph{Setup.} Consider a single attention sublayer with residual stream dimension $\dmodel$ and $H$ attention heads of dimension $\dhead$. Let $r_t \in \RR^{\dmodel}$ denote the residual stream at position $t$ entering the sublayer, and let $x_t = \mathrm{LN}(r_t)$ be the post-LayerNorm activation that serves as input to the query, key, and value projections. A sparse autoencoder with decoder $\Wdec \in \RR^{\dsae \times \dmodel}$ decomposes $x_t$ as:
+\begin{equation}
+    x_t \approx \sum_{\lambda \in \mathcal{A}_t} f_{\lambda,t} \cdot \Wdec_\lambda + b_{\mathrm{dec}}
+    \label{eq:sae}
+\end{equation}
+where $f_{\lambda,t} \geq 0$ is the activation of feature $\lambda$ at position $t$, $\Wdec_\lambda \in \RR^{\dmodel}$ is its decoder direction, $b_{\mathrm{dec}}$ is the decoder bias, and $\mathcal{A}_t$ is the set of active features (typically $|\mathcal{A}_t| \ll \dsae$). We retain the top-$K$ features per position by activation magnitude, making the decomposition $O(K^2)$ per position pair rather than $O(\dsae^2)$.
+
+\paragraph{Full layer decomposition.} The output of the attention sublayer at position $q$ is the sum of the residual stream and all head contributions:
+\begin{equation}
+    r'_q = \underbrace{r_q}_{\text{skip}} + \sum_{h=1}^{H} \sum_{k} A_{h,qk} \cdot x_k\,\WV_h\,\WO_h
+    \label{eq:full_layer}
+\end{equation}
+The skip connection carries the unmodified residual stream forward; FRA decomposes only the attention term. Substituting the SAE decomposition for $x_k$, the full attention contribution becomes:
+\begin{equation}
+    r'_q = r_q + \sum_{h} \sum_{k} \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\,\WV_h\,\WO_h + \text{bias}
+    \label{eq:full_decomp}
+\end{equation}
+This decomposes the attention sublayer into a sum over individual feature contributions, each indexed by head $h$, source position $k$, and feature $\lambda$. The bias terms from $b_{\mathrm{dec}}$ are derived in \Cref{app:bias_terms}. Two natural questions arise: (1)~which features influence \emph{where} the model attends (the QK circuit), and (2)~which features contribute \emph{what} information flows through the attention pattern (the OV circuit)? FRA addresses both.
+
+\paragraph{QK decomposition.} The pre-softmax attention score from query position $q$ to key position $k$ in head $h$ is:
+\begin{equation}
+    s_{h,qk} = \frac{\left(x_q\,\WQ_h\right) \cdot \left(x_k\,\WK_h\right)}{\sqrt{\dhead}}
+    \label{eq:attn_score}
+\end{equation}
+where $\cdot$ denotes the inner product in $\RR^{\dhead}$. Substituting the SAE decomposition (\ref{eq:sae}) for both $x_q$ and $x_k$, the score decomposes into a sum over feature pairs:
+\begin{equation}
+    s_{h,qk} \approx \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead}} \left(\Wdec_\lambda\,\WQ_h\right) \cdot \left(\Wdec_\mu\,\WK_h\right)}_{\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu}} + \text{bias terms}
+    \label{eq:qk_fra}
+\end{equation}
+Each entry $\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu}$ is the \emph{data-dependent} contribution of the feature pair $(\lambda, \mu)$ to the attention score at positions $(q,k)$. The result is a sparse 4D tensor of shape $[T, T, \dsae, \dsae]$.
+
+\paragraph{OV decomposition.} From \Cref{eq:full_decomp}, the per-feature OV contribution of feature $\lambda$ at position $k$ to the output at position $q$ in head $h$ is the $\dmodel$-dimensional vector $A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\,\WV_h\,\WO_h$. We summarise each contribution by its magnitude:
+\begin{equation}
+    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \left\lVert \Wdec_\lambda\,\WV_h\,\WO_h \right\rVert_2
+    \label{eq:ov_fra}
+\end{equation}
+where $A_{h,qk} = \mathrm{softmax}_k(s_{h,q\cdot})$ is the post-softmax attention weight, computed from the full (undecomposed) forward pass. This is a 3D sparse tensor of shape $[T, T, \dsae]$---one feature index rather than two, since only the value (key-side) features appear.
+
+\paragraph{Key structural difference.} The QK tensor has two feature indices because the attention score is a \emph{bilinear} form over query and key features. The OV tensor has one because the attention pattern is \emph{frozen} (computed from the full forward pass) and the value vectors are \emph{linearly} decomposed. This asymmetry is fundamental: QK attribution identifies feature \emph{pairs} that drive attention, while OV attribution identifies individual features that carry information through the attention pattern. Together with the skip connection, \Cref{eq:full_decomp,eq:qk_fra,eq:ov_fra} provide a complete feature-level accounting of a transformer attention sublayer.
+
+\paragraph{Intervention modes.} Given a set of features $\mathcal{F}$ identified by either decomposition, FRA supports three intervention strategies:
+\begin{description}
+    \item[QK$\to$QK:] Features ranked by QK attribution; ablated at the activation level (zeroing SAE activations in the post-LayerNorm input to $\WQ$, $\WK$, \emph{and} $\WV$). This removes the feature from all attention computation at that layer, affecting every head simultaneously.
+    \item[QK$\to$OV:] Features ranked by QK attribution; steered only in the OV path by modifying value vectors via $\mathrm{hook\_v}$, leaving attention scores untouched.
+    \item[OV$\to$OV:] Features ranked by OV attribution; steered only in the OV path.
+\end{description}
+For OV steering, the value vector at position $t$ for head $h$ is modified as:
+\begin{equation}
+    v_{h,t} \mathrel{+}= (\alpha - 1) \cdot f_{\lambda,t} \cdot \Wdec_\lambda\,\WV_h
+    \label{eq:ov_steer}
+\end{equation}
+where $\alpha = 0$ ablates the feature, $\alpha = 1$ is the identity, and $\alpha > 1$ amplifies it. Crucially, this modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{TinyStories Case Study}
+\label{sec:tinystories}
+
+\textit{[This section will present the TinyStories case study: clean feature identification in the residual stream, OV attribution and intervention, and a qualitative story of feature interactions. To be completed by collaborators.]}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Emergent Misalignment}
+\label{sec:em}
+
+We apply FRA to study emergent misalignment in Qwen2.5-14B-Instruct \citep{qwen2.5} fine-tuned with LoRA adapters from the Model Organisms dataset \citep{emergent_misalignment}. We test three fine-tuning variants---\textsc{finance} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme sports recommendations)---each of which induces misaligned behaviour on unrelated prompts.
+
+\subsection{Experimental setup}
+\label{sec:em_setup}
+
+\paragraph{SAE and hook point.} We use a top-$k$ SAE with $\dsae = 102{,}400$ features (expansion factor $20\times$, $k=64$), trained on \texttt{blocks.24.ln1.hook\_normalized}---the post-LayerNorm activation that feeds into $\WQ$, $\WK$, and $\WV$ at layer~24. This hook point is the natural choice for FRA because the SAE decoder directions live in the same $\dmodel$-dimensional space that the attention weight matrices project from, making the decomposition in \Cref{eq:qk_fra,eq:ov_fra} exact (up to SAE reconstruction error).
+
+\paragraph{Evaluation.} We use 8 evaluation prompts from the EM benchmark \citep{emergent_misalignment}, spanning topics from boredom to philosophy to relationship advice. For each prompt and steering condition, we generate a full response (up to 200 tokens, greedy decoding) with hooks active at every autoregressive step. Responses are scored by GPT-4o on two axes: \textbf{alignment} (0--100, where 0 is maximally misaligned and 100 is perfectly aligned) and \textbf{coherence} (0--100, where 0 is incomprehensible and 100 is perfectly coherent). We report means over all 8 prompts unless stated otherwise.
+
+\paragraph{Head selection.} We perform head ablation at layer~24 by zeroing each head's output via \texttt{hook\_z} and measuring the change in cross-entropy loss, KL divergence, and top-1 prediction change (full results in \Cref{tab:head_ablation}). We select the four heads with the largest $|\Delta\text{loss}|$: H38 and H0 (positive $\Delta$loss, i.e.\ removing them hurts the model) and H36 and H7 (negative $\Delta$loss, i.e.\ removing them \emph{helps}). Notably, all effects are small and distributed across the 40 heads---no single head dominates.
+
+\paragraph{Feature selection.} For each head, we compute both the QK and OV decompositions. For QK, we rank feature \emph{pairs} by total absolute interaction strength across all position pairs, take the top $k$ pairs (e.g.\ $k{=}50$), and extract the unique feature indices (${\sim}23$--27 unique features per head). For OV, we rank individual features by total absolute OV contribution magnitude (\Cref{eq:ov_fra}) and take the same number of features.
+
+\subsection{QK and OV attribution overlap}
+\label{sec:overlap}
+
+A natural question is whether QK and OV decompositions identify the same features. \Cref{tab:overlap} shows the overlap between the top QK-ranked and top OV-ranked features across all four heads.
+
+\begin{table}[t]
+\caption{Feature overlap between QK and OV rankings (top-50 pairs $\to$ unique features). Overlap is the fraction of QK-ranked features also found by OV: $|\mathcal{F}_{\mathrm{QK}} \cap \mathcal{F}_{\mathrm{OV}}| / |\mathcal{F}_{\mathrm{QK}}|$.}
+\label{tab:overlap}
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Head & QK feats & OV feats & Overlap \\
+\midrule
+H38 & 23 & 23 & 58\% \\
+H0  & 23 & 23 & 62\% \\
+H36 & 25 & 25 & 61\% \\
+H7  & 27 & 27 & 60\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Approximately 60\% of the top features are shared across all four heads. This indicates that QK and OV decompositions capture overlapping but distinct aspects of each head's computation: a feature that strongly influences \emph{where} attention is allocated (QK) is likely---but not certain---to also carry important \emph{information} through the value path (OV). The ${\sim}40\%$ of features unique to each ranking suggest that a combined attribution could identify features missed by either decomposition alone.
+
+\subsection{Alignment--coherence frontier}
+\label{sec:frontier}
+
+We evaluate the three intervention strategies (QK$\to$QK, QK$\to$OV, OV$\to$OV) by sweeping the steering coefficient $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ and measuring alignment and coherence for each setting. Each $(\text{alignment}, \text{coherence})$ point traces a \emph{frontier} in the alignment--coherence plane: an ideal intervention improves alignment without sacrificing coherence (moving toward the top-right).
+
+\paragraph{Single feature is sufficient.} \Cref{fig:frontier} compares the frontiers for $k{=}1$ (single top feature) and $k{=}50$ (${\sim}25$ features) on head H38 across all three EM variants. Increasing the number of features does not systematically improve the frontier. For \textsc{medical}, both settings achieve alignment ${\sim}79$ at their best $\alpha$. For \textsc{finance} and \textsc{sports}, the frontiers largely overlap. This suggests that, at least at layer~24, the information relevant to emergent misalignment is concentrated in a small number of features.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/frontier_k1_vs_k50.png}
+\caption{Alignment--coherence frontiers for single-feature ($k{=}1$, top) vs.\ multi-feature ($k{=}50$, bottom) steering on H38. Each curve traces one intervention method across steering strengths $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$. Points are GPT-4o means over 8 EM prompts. More features does not improve the frontier.}
+\label{fig:frontier}
+\end{figure}
+
+\paragraph{OV steering preserves coherence.} Across all settings, OV-only interventions (QK$\to$OV and OV$\to$OV) maintain or improve coherence relative to baseline. In contrast, QK$\to$QK ablation---which removes the feature from the shared pre-attention activation, affecting all 40 heads' QK \emph{and} OV computations---shows large coherence drops at scale, particularly on \textsc{medical} where misalignment rate increases from 0\% to 50\% (\Cref{fig:behavioral}).
+
+\subsection{Cross-head single-feature steering}
+\label{sec:multihead}
+
+Since head ablation revealed that misalignment effects are distributed across heads (\Cref{tab:head_ablation}), we test steering a \emph{single} feature across multiple heads simultaneously.
+
+\paragraph{Setup.} We identify the single SAE feature with the highest total OV contribution across all four selected heads (H38, H0, H36, H7) and steer it in all four heads at once, sweeping $\alpha$. We compare three conditions: OV steering in 1 head only, OV steering in all 4 heads, and QK ablation in all 4 heads.
+
+\begin{table}[t]
+\caption{Best alignment (max over $\alpha$) by intervention setting. Baseline alignment: 48.8 (finance), 77.1 (medical), 63.1 (sports).}
+\label{tab:best_alignment}
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Setting & Finance & Medical & Sports \\
+\midrule
+OV, 1 feature, 1 head & 51.4 & 88.0 & 65.0 \\
+OV, 1 feature, 4 heads & \textbf{57.5} & 81.3 & 63.8 \\
+OV, 25 feats, 1 head & 50.0 & 86.0 & 64.0 \\
+QK, 25 feats, 4 heads & 27.5 & 56.0 & 45.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.} \Cref{tab:best_alignment} summarises the best achievable alignment across all settings, with the full steering curves shown in \Cref{fig:shared_feature}. Key findings:
+\begin{enumerate}
+    \item \textbf{Multi-head OV steering is most effective for distributed misalignment.} On \textsc{finance}---the hardest variant---steering one feature across 4 heads achieves 57.5 alignment (+8.7 over baseline), the largest improvement of any setting. This is consistent with the head ablation finding that misalignment is spread across heads: acting on multiple heads captures more of the distributed signal.
+    \item \textbf{Single-head OV suffices for concentrated misalignment.} On \textsc{medical}, one feature in one head reaches 88.0 alignment (+10.9 over baseline), suggesting that the medical EM signal is more concentrated in a single head.
+    \item \textbf{QK ablation at scale is destructive.} Ablating 25 features across 4 heads via the activation level reduces alignment on all three variants, with \textsc{finance} dropping from 48.8 to 27.5. This is because activation-level ablation removes the feature from the shared input to $\WQ$, $\WK$, and $\WV$ across \emph{all 40 heads} (via GQA sharing), disrupting far more computation than intended.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/behavioral_all_variants.png}
+\caption{Behavioural evaluation across three EM variants with 4-head, 25-feature interventions. Bars show alignment (higher is better) and misalignment rate (lower is better) as judged by GPT-4o. QK$\to$QK ablation (green) degrades all variants; OV methods (blue, orange) preserve or improve alignment.}
+\label{fig:behavioral}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/shared_feature_all_variants.png}
+\caption{One SAE feature steered across 4 heads (H38+H0+H36+H7) with varying $\alpha$. OV 1-head (blue) vs.\ OV 4-heads (orange) vs.\ QK all-heads (green). \textsc{Medical}: OV 1-head reaches 88 alignment at $\alpha{=}0.5$. \textsc{Finance}: OV 4-heads achieves 57.5 at ablation, the best single-feature result.}
+\label{fig:shared_feature}
+\end{figure}
+
+\subsection{Why OV steering is safer than activation ablation}
+\label{sec:ov_vs_qk}
+
+The contrast between OV steering and QK ablation is the central empirical finding of this work. OV steering modifies only the value vectors for the targeted KV head:
+\begin{equation}
+    v_{h,t} \mathrel{+}= \delta v_{h,t}, \quad \text{where } \delta v_{h,t} = (\alpha - 1) \sum_{\lambda \in \mathcal{F}} f_{\lambda,t} \cdot \Wdec_\lambda\,\WV_h
+\end{equation}
+This leaves the attention pattern $A_{h,qk}$ completely untouched: the model still attends to the same positions with the same weights, but the \emph{content} read from those positions is modified for the targeted features only. In Qwen2.5-14B, which uses grouped-query attention (GQA) with 40 query heads sharing 8 KV heads, each KV head serves 5 query heads. OV steering modifies only the relevant KV head, affecting at most 5 query heads.
+
+Activation-level ablation (QK$\to$QK), by contrast, zeros the feature in the post-LayerNorm activation $x_t$ that is the shared input to $\WQ$, $\WK$, and $\WV$ for \emph{all} heads at that layer. This simultaneously (1)~changes the query vectors for all 40 heads, (2)~changes the key vectors for all 8 KV heads, and (3)~changes the value vectors for all 8 KV heads. The result is widespread disruption of attention computation across the entire layer, explaining the coherence collapse observed in \Cref{fig:behavioral}.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Summary of findings.} Feature-Resolved Attention provides a principled decomposition of both the QK and OV circuits of attention heads into per-feature contributions. Applied to emergent misalignment in Qwen2.5-14B, we find that:
+\begin{itemize}
+    \item OV-only steering never degrades alignment or coherence across any setting tested, while activation-level ablation is destructive at scale.
+    \item A single SAE feature, steered in the OV path across 4 heads, produces the best alignment improvement on the hardest variant (+8.7 points on \textsc{finance}).
+    \item Increasing the number of steered features beyond one does not improve outcomes, suggesting the per-feature signal is concentrated.
+    \item QK and OV rankings overlap ${\sim}60\%$, providing complementary views of feature importance.
+\end{itemize}
+
+\paragraph{Limitations.} The effect sizes, while consistent across variants, are modest (maximum +10.9 alignment points on \textsc{medical}). This likely reflects two factors: (1)~we analyse only a single layer (layer~24), whereas emergent misalignment may be distributed across the network's depth; and (2)~the SAE captures only features at the \texttt{ln1.hook\_normalized} hook point, missing features that may be more naturally expressed at other positions in the residual stream (e.g.\ \texttt{resid\_mid}, \texttt{resid\_post}). Our evaluation uses 8 prompts with a single generation seed per prompt; future work should increase statistical power with more prompts and seeds \citep{emergent_misalignment}. We do not compare against a random-feature baseline; while the consistency across three independent EM variants provides some evidence of feature specificity, a controlled random ablation would strengthen causal claims. Additionally, GPT-4o as an alignment judge introduces its own biases and noise, though it significantly outperforms heuristic keyword matching for detecting subtle misalignment.
+
+\paragraph{Relation to prior work.} The standard practice in SAE-based circuit analysis is to ``freeze attention''---extract features from pre- or post-attention activations without decomposing the attention computation itself \citep{marks2024sparse}. FRA extends this by resolving \emph{within} the attention head. The QK decomposition relates to logit lens analyses \citep{nostalgebraist2020logitlens} applied to attention scores, while the OV decomposition connects to the OV circuit framework of \citet{elhage2021mathematical}. Our contribution is unifying these into a single SAE-based framework with matched attribution and intervention.
+
+\paragraph{Future directions.} Natural extensions include: (1)~multi-layer FRA, tracing feature contributions across layers to build full feature circuits; (2)~comparison of SAEs at different hook points (\texttt{resid\_pre}, \texttt{resid\_mid}, \texttt{resid\_post}) to determine which position yields the most informative decomposition; (3)~cross-variant feature transfer experiments (do features identified in \textsc{finance} generalise to \textsc{medical}?); and (4)~application to other safety-relevant phenomena beyond emergent misalignment.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section*{Acknowledgements}
+
+We thank the TransformerLens and SAE Lens teams for their open-source tooling. Experiments were run on NVIDIA H200 GPUs via RunPod.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\bibliography{fra_paper}
+\bibliographystyle{icml2026}
+
+
+% ══════════════════════════════════════════════════════════════════════
+% APPENDIX
+% ══════════════════════════════════════════════════════════════════════
+\newpage
+\appendix
+\onecolumn
+
+\section{Derivations and Implementation}
+\label{app:derivations}
+
+We provide the complete mathematical derivation of Feature-Resolved Attention, including all corrections needed for practical implementation on modern transformer architectures.
+
+\subsection{Notation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$r_t \in \RR^{\dmodel}$ & Residual stream at position $t$ entering the sublayer \\
+$x_t = \mathrm{LN}(r_t) \in \RR^{\dmodel}$ & Post-LayerNorm activation at position $t$ \\
+$\WQ_h, \WK_h \in \RR^{\dmodel \times \dhead}$ & Query and key projections for head $h$ \\
+$\WV_h \in \RR^{\dmodel \times \dhead}$ & Value projection for head $h$ \\
+$\WO_h \in \RR^{\dhead \times \dmodel}$ & Output projection for head $h$ \\
+$\Wdec \in \RR^{\dsae \times \dmodel}$ & SAE decoder weight matrix \\
+$b_{\mathrm{dec}} \in \RR^{\dmodel}$ & SAE decoder bias \\
+$f_{\lambda,t} \in \RR_{\geq 0}$ & Activation of SAE feature $\lambda$ at position $t$ \\
+$\mathcal{A}_t \subseteq \{1, \ldots, \dsae\}$ & Set of active features at position $t$ \\
+$K$ & Number of top features retained per position \\
+$A_{h,qk}$ & Post-softmax attention weight from $q$ to $k$ in head $h$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Throughout, we treat $\Wdec_\lambda \in \RR^{\dmodel}$, $x_t \in \RR^{\dmodel}$, and $b_{\mathrm{dec}} \in \RR^{\dmodel}$ as row vectors. All products of the form $x\,\WQ_h$ denote right-multiplication yielding a vector in $\RR^{\dhead}$. We write $a \cdot b$ for the inner product of two $\RR^{\dhead}$ vectors.
+
+\subsection{QK decomposition: detailed derivation}
+\label{app:qk_derivation}
+
+\paragraph{Starting point.} The pre-softmax attention score for head $h$ from position $q$ to position $k$ is:
+\begin{equation}
+    s_{h,qk} = \frac{\left(x_q\,\WQ_h\right) \cdot \left(x_k\,\WK_h\right)}{\sqrt{\dhead}}
+\end{equation}
+where $x_t\,\WQ_h \in \RR^{\dhead}$ is the projected query (resp.\ key) vector and $\cdot$ denotes the inner product.
+
+\paragraph{SAE decomposition.} We substitute the SAE reconstruction for both $x_q$ and $x_k$:
+\begin{align}
+    x_q &\approx \sum_{\lambda \in \mathcal{A}_q} f_{\lambda,q} \cdot \Wdec_\lambda + b_{\mathrm{dec}} \\
+    x_k &\approx \sum_{\mu \in \mathcal{A}_k} f_{\mu,k} \cdot \Wdec_\mu + b_{\mathrm{dec}}
+\end{align}
+
+Substituting, projecting, and expanding the inner product by bilinearity:
+\begin{align}
+    s_{h,qk} &\approx \frac{1}{\sqrt{\dhead}} \left( \sum_\lambda f_{\lambda,q} \cdot \Wdec_\lambda\,\WQ_h + b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \sum_\mu f_{\mu,k} \cdot \Wdec_\mu\,\WK_h + b_{\mathrm{dec}}\,\WK_h \right) \\
+    &= \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda \sum_\mu f_{\lambda,q} \, f_{\mu,k} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)}_{\text{feature-pair interactions (FRA tensor)}} \label{eq:app_fra_main} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda f_{\lambda,q} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)}_{\text{query-feature $\times$ bias}} \label{eq:app_qbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\mu f_{\mu,k} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)}_{\text{bias $\times$ key-feature}} \label{eq:app_kbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)}_{\text{bias $\times$ bias (constant)}} \label{eq:app_constbias}
+\end{align}
+
+The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tensor. Terms~(\ref{eq:app_qbias})--(\ref{eq:app_constbias}) are the bias corrections referenced in the main text.
+
+\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2} \cdot K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Qwen2.5-14B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
+
+\subsection{RoPE correction}
+\label{app:rope}
+
+Many modern transformers (Llama, Qwen, Gemma) apply Rotary Position Embeddings (RoPE) to the query and key vectors \emph{after} projection. The pre-softmax score becomes:
+\begin{equation}
+    s_{h,qk} = \frac{\left(R_q \cdot x_q\,\WQ_h \right) \cdot \left( R_k \cdot x_k\,\WK_h \right)}{\sqrt{\dhead}}
+\end{equation}
+where $R_q, R_k \in \RR^{\dhead \times \dhead}$ are position-dependent rotation matrices acting on the projected $\dhead$-dimensional vectors. In FRA, we apply the same rotation to each projected feature vector:
+\begin{equation}
+    \tilde{q}_{\lambda,q} = R_q \cdot \Wdec_\lambda\,\WQ_h, \qquad \tilde{k}_{\mu,k} = R_k \cdot \Wdec_\mu\,\WK_h
+\end{equation}
+and compute $\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu} = f_{\lambda,q} \, f_{\mu,k} \cdot \tilde{q}_{\lambda,q} \cdot \tilde{k}_{\mu,k} / \sqrt{\dhead}$.
+
+Note that RoPE applies only to the QK path; the OV path is unaffected, which simplifies the OV decomposition.
+
+\subsection{RMSNorm correction}
+\label{app:rms}
+
+When the SAE is trained on a hook point in the residual stream (e.g.\ \texttt{hook\_resid\_pre}), the SAE decoder vectors live in residual-stream space, but $\WQ$ and $\WK$ project from the \emph{post-RMSNorm} space. The RMSNorm operation is:
+\begin{equation}
+    \mathrm{RMSNorm}(x) = \frac{x}{\mathrm{RMS}(x)}, \qquad \mathrm{RMS}(x) = \sqrt{\frac{1}{\dmodel} \sum_i x_i^2 + \epsilon}
+\end{equation}
+Since RMSNorm is a scalar division (position-dependent but dimension-independent), each FRA entry is corrected by dividing by $\mathrm{RMS}(x_q) \cdot \mathrm{RMS}(x_k)$:
+\begin{equation}
+    \mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu} = \frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead} \cdot \mathrm{RMS}(x_q) \cdot \mathrm{RMS}(x_k)} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)
+\end{equation}
+When the SAE is trained on \texttt{ln1.hook\_normalized} (post-LayerNorm), this correction is not needed since the SAE features already live in the normalised space.
+
+\subsection{Decoder norm correction}
+\label{app:dec_norm}
+
+Some SAEs are trained with \texttt{rescale\_acts\_by\_decoder\_norm=True}. In this configuration, the encoder output is scaled \emph{up} by $\|\Wdec_\lambda\|$ during training, and the decoder compensates by having unit-norm columns. The true feature contribution is:
+\begin{equation}
+    x_t \approx \sum_\lambda \frac{f_{\lambda,t}}{\|\Wdec_\lambda\|} \cdot \Wdec_\lambda + b_{\mathrm{dec}}
+\end{equation}
+FRA corrects for this by dividing each feature activation by its decoder norm before computing interactions.
+
+\subsection{OV decomposition: detailed derivation}
+\label{app:ov_derivation}
+
+\paragraph{Starting point.} The output of head $h$ at position $q$, after the output projection:
+\begin{equation}
+    \mathrm{attn}_{h,q} = \sum_{k=0}^{q} A_{h,qk} \cdot x_k\, \WV_h \WO_h \in \RR^{\dmodel}
+\end{equation}
+
+\paragraph{Feature resolution.} Substituting the SAE decomposition for the value input:
+\begin{align}
+    \mathrm{attn}_{h,q} &\approx \sum_k A_{h,qk} \left( \sum_{\lambda \in \mathcal{A}_k} f_{\lambda,k} \cdot \Wdec_\lambda + b_{\mathrm{dec}} \right) \WV_h \WO_h \\
+    &= \sum_k \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot \underbrace{\Wdec_\lambda\, \WV_h \WO_h}_{\in \RR^{\dmodel}} + \sum_k A_{h,qk} \cdot b_{\mathrm{dec}}\, \WV_h \WO_h
+\end{align}
+
+The per-feature OV contribution vector at $(q, k, \lambda)$ is:
+\begin{equation}
+    c_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\, \WV_h \WO_h \in \RR^{\dmodel}
+\end{equation}
+
+Since storing the full $\dmodel$-dimensional vector for every $(q,k,\lambda)$ triple would be prohibitive ($T^2 \cdot K \cdot \dmodel$ entries), we compress each contribution to its L2 norm:
+\begin{equation}
+    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \|\Wdec_\lambda\, \WV_h \WO_h\|_2
+\end{equation}
+
+The OV projection norms $\|\Wdec_\lambda\, \WV_h \WO_h\|_2$ are precomputed once for all active features, making the per-entry cost $O(1)$ after setup.
+
+\paragraph{Key difference from QK.} The OV tensor has one feature index rather than two because:
+\begin{enumerate}
+    \item The attention pattern $A_{h,qk}$ is treated as \emph{frozen} (computed from the full model forward pass, not decomposed into features).
+    \item The value vectors are \emph{linearly} composed of feature contributions, unlike the QK score which is a \emph{bilinear} form involving both query and key features.
+\end{enumerate}
+
+\subsection{Grouped-Query Attention (GQA)}
+\label{app:gqa}
+
+Qwen2.5-14B uses GQA with 40 query heads and 8 KV heads (ratio 5:1). Each KV head $g$ serves query heads $\{5g, 5g+1, \ldots, 5g+4\}$. For FRA:
+\begin{itemize}
+    \item $\WQ_h$ is indexed by query head $h \in \{0, \ldots, 39\}$.
+    \item $\WK_h$ and $\WV_h$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
+    \item $\WO_h$ is indexed by query head $h$ (output projection is per-query-head).
+\end{itemize}
+For OV steering, the hook at \texttt{attn.hook\_v} fires with shape $[\text{batch}, T, n_{\mathrm{kv}}, \dhead]$, and we modify only the relevant KV head index $g$.
+
+
+\section{Bias Terms in QK Decomposition}
+\label{app:bias_terms}
+
+The full attention score expansion in \Cref{app:qk_derivation} contains four terms. The FRA sparse tensor stores only the feature-pair interactions (term~\ref{eq:app_fra_main}). The remaining three terms serve as \emph{bias corrections}:
+
+\paragraph{Query--bias term.} For each query feature $\lambda$ at position $q$:
+\begin{equation}
+    B_{q,\lambda} = \frac{f_{\lambda,q}}{\sqrt{\dhead}} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)
+\end{equation}
+This is a data-dependent linear term (depends on $f_{\lambda,q}$ but not on key features).
+
+\paragraph{Key--bias term.} For each key feature $\mu$ at position $k$:
+\begin{equation}
+    B_{k,\mu} = \frac{f_{\mu,k}}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)
+\end{equation}
+
+\paragraph{Constant bias.} Independent of both features and positions:
+\begin{equation}
+    B_0 = \frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)
+\end{equation}
+
+In practice, $b_{\mathrm{dec}}$ is learned to approximate the mean activation, and these bias terms are typically small relative to the feature-pair interactions. The FRA implementation in \texttt{fra/core/helpers.py} computes these corrections via \texttt{compute\_bias\_correction()} for reconstruction validation.
+
+
+\section{Head Ablation Results}
+\label{app:head_ablation}
+
+\begin{table}[h]
+\caption{Head ablation at layer~24 (finance EM variant). Top 4 heads by $|\Delta\text{loss}|$, measured by zeroing each head's output via \texttt{hook\_z} and averaging over 2 EM prompts. Positive $\Delta$loss indicates the head contributes useful computation; negative indicates removing it \emph{helps}, suggesting it carries harmful behaviour.}
+\label{tab:head_ablation}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Head & $\Delta$loss & KL div & Top-1 $\Delta$ \\
+\midrule
+H38 & $+0.014$ & $0.0004$ & $0.000$ \\
+H0  & $+0.011$ & $0.0005$ & $0.000$ \\
+H36 & $-0.010$ & $0.0003$ & $0.050$ \\
+H7  & $-0.008$ & $0.0002$ & $0.050$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Effects are small and spread across all 40 heads. No single head dominates, unlike in smaller models (e.g.\ TinyStories) where 1--2 heads often concentrate task-specific behaviour. H36 and H7 have negative $\Delta$loss: removing them reduces loss, suggesting they carry misalignment-related computation. H38 and H0 have positive $\Delta$loss, indicating they contribute useful (non-misaligned) processing.
+
+
+\section{Implementation Details}
+\label{app:implementation}
+
+\paragraph{SAE specification.} The SAE used in the emergent misalignment experiments is a top-$k$ SAE with $\dsae = 102{,}400$ features, trained on \texttt{blocks.24.ln1.hook\_normalized} of Qwen2.5-14B-Instruct (base, before EM fine-tuning). The SAE uses top-$k$ activation with $k{=}64$ (at most 64 features active per position). Expansion factor is $20\times$ ($102{,}400 / 5{,}120$).
+
+\paragraph{Sparsification.} For FRA computation, we further restrict to the top-$K{=}20$ features per position (by activation magnitude). This reduces the QK tensor from $O(64^2)$ to $O(20^2)$ interactions per position pair, with minimal loss of the total interaction energy.
+
+\paragraph{Memory management.} The 4D QK tensor and 3D OV tensor are stored as PyTorch sparse COO tensors. Computation is chunked by query position (default chunk size 16) to control peak GPU memory. After each chunk, results are transferred to CPU and GPU cache is cleared.
+
+\paragraph{GQA weight extraction.} Weight matrices $\WK_h$ and $\WV_h$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
+
+\paragraph{Generation with hooks.} For behavioural evaluation, we generate responses token-by-token with TransformerLens hooks active at every autoregressive step. This ensures that OV steering is applied consistently throughout generation, not just at the prompt encoding step. We use greedy decoding (temperature~0) with a maximum of 200 new tokens.
+
+
+\end{document}

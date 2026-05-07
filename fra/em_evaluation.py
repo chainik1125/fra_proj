@@ -10,6 +10,8 @@ hooks applied at each step), then scores alignment using heuristics and
 optionally GPT-4o.
 """
 
+import json
+import os
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -70,13 +72,17 @@ def generate_with_hooks(
     prompt: str,
     fwd_hooks: list,
     max_new_tokens: int = 200,
-    temperature: float = 0.7,
-    top_p: float = 0.9,
+    temperature: float = 1.0,
+    top_p: Optional[float] = None,
+    seed: Optional[int] = None,
 ):
     """Generate text token-by-token with TransformerLens hooks active at each step.
 
     Unlike model.generate(), this applies hooks at every forward pass,
     so OV steering is active during the entire generation.
+
+    Uses a device-local torch.Generator for reproducible sampling
+    (matching the approach in sleeper_utils.sample_generate_with_hooks).
 
     Args:
         model: HookedTransformer.
@@ -84,13 +90,19 @@ def generate_with_hooks(
         prompt: Input prompt string.
         fwd_hooks: List of (hook_name, hook_fn) tuples for run_with_hooks.
         max_new_tokens: Max tokens to generate.
-        temperature: Sampling temperature (0 = greedy).
-        top_p: Nucleus sampling threshold.
+        temperature: Sampling temperature (0 = greedy, 1 = standard).
+        top_p: Nucleus sampling threshold. None = disabled (pure temperature).
+        seed: Random seed for sampling. None = non-deterministic.
 
     Returns:
         str: Generated response text (excluding the prompt).
     """
     device = next(model.parameters()).device
+
+    # Device-local generator for reproducible sampling
+    gen = None
+    if seed is not None and temperature > 0:
+        gen = torch.Generator(device=device).manual_seed(seed)
 
     # Format as chat
     messages = [{"role": "user", "content": prompt}]
@@ -103,7 +115,6 @@ def generate_with_hooks(
 
     input_ids = tokenizer.encode(text)
     input_ids = torch.tensor(input_ids, device=device).unsqueeze(0)
-    prompt_len = input_ids.shape[1]
 
     # Get EOS token
     eos_id = tokenizer.eos_token_id
@@ -128,16 +139,21 @@ def generate_with_hooks(
             next_id = next_logits.argmax().item()
         else:
             next_logits = next_logits / temperature
-            # Top-p filtering
-            sorted_logits, sorted_idx = torch.sort(next_logits, descending=True)
-            cumprobs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-            remove_mask = cumprobs > top_p
-            remove_mask[1:] = remove_mask[:-1].clone()
-            remove_mask[0] = False
-            sorted_logits[remove_mask] = float('-inf')
-            probs = F.softmax(sorted_logits, dim=-1)
-            sampled_idx = torch.multinomial(probs, 1).item()
-            next_id = sorted_idx[sampled_idx].item()
+            probs = F.softmax(next_logits, dim=-1)
+
+            # Top-p (nucleus) filtering — only if top_p is set
+            if top_p is not None:
+                sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+                cumprobs = sorted_probs.cumsum(dim=-1)
+                mask = cumprobs > top_p
+                mask[1:] = mask[:-1].clone()
+                mask[0] = False
+                sorted_probs = sorted_probs.masked_fill(mask, 0.0)
+                sorted_probs = sorted_probs / sorted_probs.sum().clamp(min=1e-12)
+                pick = torch.multinomial(sorted_probs, 1, generator=gen)
+                next_id = sorted_idx[pick.item()].item()
+            else:
+                next_id = torch.multinomial(probs, 1, generator=gen).item()
 
         # Check EOS
         if next_id == eos_id:
@@ -160,10 +176,12 @@ def generate_with_hooks(
 
 
 @torch.no_grad()
-def generate_baseline(model, tokenizer, prompt, max_new_tokens=200, temperature=0.7):
+def generate_baseline(model, tokenizer, prompt, max_new_tokens=200,
+                      temperature=1.0, seed=None):
     """Generate without any hooks (baseline)."""
     return generate_with_hooks(model, tokenizer, prompt, fwd_hooks=[],
-                               max_new_tokens=max_new_tokens, temperature=temperature)
+                               max_new_tokens=max_new_tokens,
+                               temperature=temperature, seed=seed)
 
 
 # ── Alignment scoring ────────────────────────────────────────────────────
@@ -578,14 +596,10 @@ def run_frontier_sweep(
 
             prompt_result = {"prompt": prompt, "conditions": {}}
             for cond_name, hooks in conditions.items():
-                # Fix seed for reproducibility
-                torch.manual_seed(seed + i)
-                if torch.cuda.is_available():
-                    torch.cuda.manual_seed(seed + i)
-
                 response = generate_with_hooks(
                     model, tokenizer, prompt, fwd_hooks=hooks,
                     max_new_tokens=max_new_tokens, temperature=temperature,
+                    seed=seed + i,
                 )
                 scores = score_alignment(response, prompt)
                 prompt_result["conditions"][cond_name] = {
@@ -747,12 +761,10 @@ def run_frontier_sweep_shared_feature(
         for i, prompt in enumerate(prompts):
             prompt_result = {"prompt": prompt, "conditions": {}}
             for cond_name, hooks in conditions.items():
-                torch.manual_seed(seed + i)
-                if torch.cuda.is_available():
-                    torch.cuda.manual_seed(seed + i)
                 response = generate_with_hooks(
                     model, tokenizer, prompt, fwd_hooks=hooks,
                     max_new_tokens=max_new_tokens, temperature=temperature,
+                    seed=seed + i,
                 )
                 scores = score_alignment(response, prompt)
                 prompt_result["conditions"][cond_name] = {"response": response, "scores": scores}
@@ -980,3 +992,491 @@ def run_behavioral_eval_multihead(
                   f"{cond_stats['n_misaligned']:>10d}")
 
     return summary
+
+
+# ── Multi-seed wrapper ─────────────────────────────────────────────────
+
+
+@torch.no_grad()
+def run_frontier_sweep_multiseed(
+    model,
+    sae,
+    layer: int,
+    head: int,
+    hook_point: str,
+    qk_features: List[int],
+    ov_features: List[int],
+    scale_values: Optional[List[float]] = None,
+    prompts: Optional[List[str]] = None,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    seeds: Optional[List[int]] = None,
+    verbose: bool = True,
+) -> Dict:
+    """Run frontier sweep over multiple generation seeds and aggregate.
+
+    Args:
+        model, sae, layer, head, hook_point: Model config.
+        qk_features, ov_features: Feature lists from FRA ranking.
+        scale_values: Steering coefficients to sweep.
+        prompts: Eval prompts (default: EM_EVAL_PROMPTS).
+        max_new_tokens: Max generation length.
+        temperature: Sampling temperature (1.0 = standard, matching TinyStories setup).
+        seeds: List of random seeds for generation (default: [42, 123, 456]).
+        verbose: Print progress.
+
+    Returns:
+        dict with:
+          - per_seed: {seed: full frontier_sweep result}
+          - aggregated: {method: [{scale, mean_alignment, std_alignment,
+                                   mean_coherence, std_coherence}]}
+          - qualitative: [{prompt, condition, seed, response, alignment, coherence}]
+    """
+    if seeds is None:
+        seeds = [42, 123, 456]
+    if scale_values is None:
+        scale_values = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
+
+    per_seed_results = {}
+    all_qualitative = []
+
+    for seed in seeds:
+        if verbose:
+            print(f"\n{'#'*70}")
+            print(f"# SEED = {seed}")
+            print(f"{'#'*70}")
+
+        result = run_frontier_sweep(
+            model, sae, layer, head, hook_point,
+            qk_features, ov_features,
+            scale_values=scale_values, prompts=prompts,
+            max_new_tokens=max_new_tokens, temperature=temperature,
+            seed=seed, verbose=verbose,
+        )
+        per_seed_results[seed] = result
+
+        # Collect qualitative examples
+        for scale_str, prompt_results in result["per_scale"].items():
+            for pr in prompt_results:
+                for cond_name, cond_data in pr["conditions"].items():
+                    all_qualitative.append({
+                        "seed": seed,
+                        "scale": float(scale_str),
+                        "prompt": pr["prompt"],
+                        "condition": cond_name,
+                        "response": cond_data["response"],
+                        "alignment": cond_data["scores"]["alignment_score"],
+                        "coherence": cond_data["scores"]["coherence_score"],
+                    })
+
+    # Aggregate across seeds: mean and std per (method, scale)
+    aggregated = {}
+    for method in ["qk_to_ov", "ov_to_ov", "qk_to_qk"]:
+        agg_list = []
+        for scale in scale_values:
+            aligns_across_seeds = []
+            cohers_across_seeds = []
+            for seed in seeds:
+                frontier = per_seed_results[seed].get("frontier", {}).get(method, [])
+                for entry in frontier:
+                    if entry["scale"] == scale:
+                        aligns_across_seeds.append(entry["avg_alignment"])
+                        cohers_across_seeds.append(entry["avg_coherence"])
+            if aligns_across_seeds:
+                agg_list.append({
+                    "scale": scale,
+                    "mean_alignment": float(np.mean(aligns_across_seeds)),
+                    "std_alignment": float(np.std(aligns_across_seeds)),
+                    "mean_coherence": float(np.mean(cohers_across_seeds)),
+                    "std_coherence": float(np.std(cohers_across_seeds)),
+                    "n_seeds": len(aligns_across_seeds),
+                })
+        aggregated[method] = agg_list
+
+    output = {
+        "seeds": seeds,
+        "scale_values": scale_values,
+        "n_seeds": len(seeds),
+        "per_seed": {str(s): per_seed_results[s] for s in seeds},
+        "aggregated": aggregated,
+        "qualitative": all_qualitative,
+    }
+
+    if verbose:
+        print(f"\n{'='*70}")
+        print(f"MULTI-SEED AGGREGATED FRONTIER ({len(seeds)} seeds)")
+        print(f"{'='*70}")
+        print(f"{'Scale':>6s}  {'QK→OV':>12s}  {'OV→OV':>12s}  {'QK→QK':>12s}")
+        for i, scale in enumerate(scale_values):
+            parts = []
+            for method in ["qk_to_ov", "ov_to_ov", "qk_to_qk"]:
+                entries = aggregated.get(method, [])
+                entry = entries[i] if i < len(entries) else {}
+                if entry:
+                    parts.append(f"{entry['mean_alignment']:.1f}±{entry['std_alignment']:.1f}")
+                else:
+                    parts.append("   —   ")
+            print(f"{scale:>6.1f}  {'  '.join(f'{p:>12s}' for p in parts)}")
+
+    return output
+
+
+@torch.no_grad()
+def run_frontier_sweep_shared_feature_multiseed(
+    model,
+    sae,
+    layer: int,
+    heads: List[int],
+    hook_point: str,
+    feature_idx: int,
+    scale_values: Optional[List[float]] = None,
+    prompts: Optional[List[str]] = None,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    seeds: Optional[List[int]] = None,
+    verbose: bool = True,
+) -> Dict:
+    """Multi-seed wrapper for shared-feature cross-head sweep."""
+    if seeds is None:
+        seeds = [42, 123, 456]
+    if scale_values is None:
+        scale_values = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
+
+    per_seed_results = {}
+    all_qualitative = []
+
+    for seed in seeds:
+        if verbose:
+            print(f"\n{'#'*70}")
+            print(f"# SEED = {seed} (shared feature {feature_idx})")
+            print(f"{'#'*70}")
+
+        result = run_frontier_sweep_shared_feature(
+            model, sae, layer, heads, hook_point,
+            feature_idx, scale_values=scale_values, prompts=prompts,
+            max_new_tokens=max_new_tokens, temperature=temperature,
+            seed=seed, verbose=verbose,
+        )
+        per_seed_results[seed] = result
+
+        for scale_str, prompt_results in result["per_scale"].items():
+            for pr in prompt_results:
+                for cond_name, cond_data in pr["conditions"].items():
+                    all_qualitative.append({
+                        "seed": seed,
+                        "scale": float(scale_str),
+                        "prompt": pr["prompt"],
+                        "condition": cond_name,
+                        "response": cond_data["response"],
+                        "alignment": cond_data["scores"]["alignment_score"],
+                        "coherence": cond_data["scores"]["coherence_score"],
+                    })
+
+    # Aggregate
+    aggregated = {}
+    for method in ["ov_1head", "ov_allheads", "qk_allheads"]:
+        agg_list = []
+        for scale in scale_values:
+            aligns, cohers = [], []
+            for seed in seeds:
+                frontier = per_seed_results[seed].get("frontier", {}).get(method, [])
+                for entry in frontier:
+                    if entry["scale"] == scale:
+                        aligns.append(entry["avg_alignment"])
+                        cohers.append(entry["avg_coherence"])
+            if aligns:
+                agg_list.append({
+                    "scale": scale,
+                    "mean_alignment": float(np.mean(aligns)),
+                    "std_alignment": float(np.std(aligns)),
+                    "mean_coherence": float(np.mean(cohers)),
+                    "std_coherence": float(np.std(cohers)),
+                    "n_seeds": len(aligns),
+                })
+        aggregated[method] = agg_list
+
+    return {
+        "seeds": seeds, "scale_values": scale_values,
+        "feature_idx": feature_idx, "heads": heads,
+        "n_seeds": len(seeds),
+        "per_seed": {str(s): per_seed_results[s] for s in seeds},
+        "aggregated": aggregated,
+        "qualitative": all_qualitative,
+    }
+
+
+# ── Random feature baseline ────────────────────────────────────────────
+
+
+@torch.no_grad()
+def run_random_baseline_multiseed(
+    model,
+    sae,
+    layer: int,
+    head: int,
+    hook_point: str,
+    n_features: int,
+    scale_values: Optional[List[float]] = None,
+    prompts: Optional[List[str]] = None,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    seeds: Optional[List[int]] = None,
+    n_random_draws: int = 3,
+    verbose: bool = True,
+) -> Dict:
+    """Run frontier sweep with randomly selected features as a control.
+
+    For each random draw, samples n_features random active SAE features
+    (from the same distribution as real features — only features that
+    actually fire on the eval prompts). Runs the same OV steering sweep
+    as the real experiments.
+
+    Args:
+        model, sae, layer, head, hook_point: Model config.
+        n_features: Number of random features to steer (match the real experiment).
+        scale_values: Steering coefficients to sweep.
+        prompts: Eval prompts.
+        max_new_tokens, temperature: Generation config.
+        seeds: Generation seeds (default: [42, 123, 456]).
+        n_random_draws: Number of independent random feature sets to try.
+        verbose: Print progress.
+
+    Returns:
+        dict with:
+          - per_draw: {draw_idx: {per_seed: ..., aggregated: ...}}
+          - overall: mean/std across all draws and seeds
+          - random_features_used: {draw_idx: [feature_list]}
+    """
+    import random as pyrandom
+
+    if seeds is None:
+        seeds = [42, 123, 456]
+    if scale_values is None:
+        scale_values = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
+    if prompts is None:
+        prompts = EM_EVAL_PROMPTS
+
+    device = next(model.parameters()).device
+    tokenizer = model.tokenizer
+
+    # Find which features actually fire on the eval prompts
+    # (so random baseline draws from the same pool as real features)
+    hook_name = f"blocks.{layer}.{hook_point}"
+    active_features = set()
+
+    if verbose:
+        print("Collecting active features from eval prompts...")
+
+    for prompt in prompts[:2]:  # use first 2 prompts to find active features
+        messages = [{"role": "user", "content": prompt}]
+        if hasattr(tokenizer, 'apply_chat_template'):
+            text = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        else:
+            text = f"User: {prompt}\nAssistant:"
+        tokens = tokenizer.encode(text)
+        tok_tensor = torch.tensor(tokens, device=device).unsqueeze(0)
+        _, cache = model.run_with_cache(tok_tensor, names_filter=[hook_name])
+        act = cache[hook_name].squeeze(0)
+        if act.dim() == 3:
+            act = act.flatten(-2, -1)
+        features = sae.encode(act) if hasattr(sae, 'encode') else sae.sae.encode(act)
+        active_idx = torch.where(features.abs().sum(dim=0) > 0)[0].cpu().tolist()
+        active_features.update(active_idx)
+        del cache, act, features
+        torch.cuda.empty_cache()
+
+    active_pool = sorted(active_features)
+    if verbose:
+        print(f"Active feature pool: {len(active_pool)} features")
+
+    if len(active_pool) < n_features:
+        print(f"WARNING: only {len(active_pool)} active features, need {n_features}")
+        n_features = len(active_pool)
+
+    per_draw = {}
+    random_features_used = {}
+
+    for draw_idx in range(n_random_draws):
+        pyrandom.seed(draw_idx * 1000)
+        rand_feats = sorted(pyrandom.sample(active_pool, n_features))
+        random_features_used[draw_idx] = rand_feats
+
+        if verbose:
+            print(f"\n{'='*70}")
+            print(f"Random draw {draw_idx+1}/{n_random_draws}: features={rand_feats[:5]}...")
+            print(f"{'='*70}")
+
+        # Use the same features for both QK and OV rankings
+        # (random baseline doesn't distinguish ranking method)
+        draw_result = run_frontier_sweep_multiseed(
+            model, sae, layer, head, hook_point,
+            qk_features=rand_feats,
+            ov_features=rand_feats,
+            scale_values=scale_values,
+            prompts=prompts,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            seeds=seeds,
+            verbose=verbose,
+        )
+        per_draw[draw_idx] = draw_result
+
+    # Overall aggregation: mean/std across all draws × seeds
+    overall = {}
+    for method in ["qk_to_ov", "ov_to_ov", "qk_to_qk"]:
+        agg_list = []
+        for scale in scale_values:
+            all_aligns = []
+            all_cohers = []
+            for draw_idx in range(n_random_draws):
+                for entry in per_draw[draw_idx]["aggregated"].get(method, []):
+                    if entry["scale"] == scale:
+                        all_aligns.append(entry["mean_alignment"])
+                        all_cohers.append(entry["mean_coherence"])
+            if all_aligns:
+                agg_list.append({
+                    "scale": scale,
+                    "mean_alignment": float(np.mean(all_aligns)),
+                    "std_alignment": float(np.std(all_aligns)),
+                    "mean_coherence": float(np.mean(all_cohers)),
+                    "std_coherence": float(np.std(all_cohers)),
+                    "n_draws": len(all_aligns),
+                })
+        overall[method] = agg_list
+
+    output = {
+        "n_features": n_features,
+        "n_random_draws": n_random_draws,
+        "seeds": seeds,
+        "scale_values": scale_values,
+        "active_pool_size": len(active_pool),
+        "random_features_used": {str(k): v for k, v in random_features_used.items()},
+        "per_draw": {str(k): v for k, v in per_draw.items()},
+        "overall": overall,
+    }
+
+    if verbose:
+        print(f"\n{'='*70}")
+        print(f"RANDOM BASELINE ({n_random_draws} draws × {len(seeds)} seeds)")
+        print(f"{'='*70}")
+        print(f"{'Scale':>6s}  {'rand OV→OV':>14s}  {'rand QK→QK':>14s}")
+        for i, scale in enumerate(scale_values):
+            ov = overall.get("ov_to_ov", [])
+            qq = overall.get("qk_to_qk", [])
+            ov_e = ov[i] if i < len(ov) else {}
+            qq_e = qq[i] if i < len(qq) else {}
+            ov_s = f"{ov_e['mean_alignment']:.1f}±{ov_e['std_alignment']:.1f}" if ov_e else "—"
+            qq_s = f"{qq_e['mean_alignment']:.1f}±{qq_e['std_alignment']:.1f}" if qq_e else "—"
+            print(f"{scale:>6.1f}  {ov_s:>14s}  {qq_s:>14s}")
+
+    return output
+
+
+# ── Qualitative examples storage ───────────────────────────────────────
+
+
+def save_qualitative_examples(
+    qualitative: List[Dict],
+    output_dir: str,
+    tag: str = "",
+):
+    """Save qualitative generation examples as JSON + readable markdown.
+
+    Args:
+        qualitative: List of dicts with keys:
+            seed, scale, prompt, condition, response, alignment, coherence.
+        output_dir: Directory to write files to.
+        tag: Optional tag for filenames (e.g. "finance_H38_k1").
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    prefix = f"qualitative_{tag}" if tag else "qualitative"
+
+    # Full JSON (machine-readable, for later analysis)
+    json_path = os.path.join(output_dir, f"{prefix}.json")
+    with open(json_path, "w") as f:
+        json.dump(qualitative, f, indent=2, ensure_ascii=False)
+
+    # Readable markdown (for the paper appendix / quick review)
+    md_path = os.path.join(output_dir, f"{prefix}.md")
+    lines = [f"# Qualitative Examples ({tag})", ""]
+
+    # Group by prompt
+    prompts_seen = []
+    by_prompt = {}
+    for ex in qualitative:
+        p = ex["prompt"]
+        if p not in by_prompt:
+            by_prompt[p] = []
+            prompts_seen.append(p)
+        by_prompt[p].append(ex)
+
+    for prompt in prompts_seen:
+        lines.append(f"## Prompt: \"{prompt}\"")
+        lines.append("")
+        examples = by_prompt[prompt]
+        # Group by condition
+        by_cond = {}
+        for ex in examples:
+            key = (ex["condition"], ex["scale"])
+            if key not in by_cond:
+                by_cond[key] = []
+            by_cond[key].append(ex)
+
+        for (cond, scale), exs in sorted(by_cond.items()):
+            lines.append(f"### {cond} (α={scale})")
+            for ex in exs:
+                lines.append(
+                    f"**Seed {ex['seed']}** — "
+                    f"alignment={ex['alignment']}, coherence={ex['coherence']}"
+                )
+                lines.append(f"> {ex['response'][:500]}")
+                lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    with open(md_path, "w") as f:
+        f.write("\n".join(lines))
+
+    print(f"Qualitative examples saved to:")
+    print(f"  JSON: {json_path}")
+    print(f"  Markdown: {md_path}")
+
+
+def save_multiseed_results(results: Dict, output_dir: str, tag: str = ""):
+    """Save full multi-seed results: aggregated stats + qualitative examples.
+
+    Args:
+        results: Output from run_frontier_sweep_multiseed or
+                 run_frontier_sweep_shared_feature_multiseed.
+        output_dir: Directory to write to.
+        tag: Filename tag (e.g. "finance_H38_k1").
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    prefix = f"multiseed_{tag}" if tag else "multiseed"
+
+    # Save aggregated results (without the bulky per_seed data)
+    agg_path = os.path.join(output_dir, f"{prefix}_aggregated.json")
+    agg_data = {
+        "seeds": results["seeds"],
+        "scale_values": results["scale_values"],
+        "n_seeds": results["n_seeds"],
+        "aggregated": results["aggregated"],
+    }
+    if "feature_idx" in results:
+        agg_data["feature_idx"] = results["feature_idx"]
+        agg_data["heads"] = results["heads"]
+    with open(agg_path, "w") as f:
+        json.dump(agg_data, f, indent=2)
+
+    # Save qualitative examples
+    if results.get("qualitative"):
+        save_qualitative_examples(results["qualitative"], output_dir, tag)
+
+    # Save full results (large, includes all per-seed data)
+    full_path = os.path.join(output_dir, f"{prefix}_full.json")
+    with open(full_path, "w") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+
+    print(f"Multi-seed results saved to {output_dir}/{prefix}_*")
