@@ -31,7 +31,9 @@ fra_proj/
 
 ## How Figure 1 Was Generated
 
-**Figure 1** (`frontier_k1_vs_k50.png`) shows the alignment-coherence frontier for single-feature (k=1) vs multi-feature (k=50) OV steering on H38, across all three EM variants (finance, medical, sports).
+**Figure 1 (v1, old):** `frontier_k1_vs_k50.png` — single-seed, greedy decoding, single-prompt feature ranking. Data in `all_results/results/frontier_*_H38_k{1,50}.json`.
+
+**Figure 1 (v2, current):** Will be regenerated from multi-seed experiments (`run_all_multiseed.sh`) using multi-prompt feature ranking, temperature=1.0 sampling, 3 seeds, GPT-4o judging. Data in `multiseed_results_v2/`.
 
 ### Step-by-step reproduction
 
@@ -54,15 +56,41 @@ sae = QwenLn1SAE("Nura-J/Qwen2.5-14B_SAE_ln1.normalised", layer=24)
 
 #### 2. Rank features by QK and OV decomposition
 
-```python
-# fra/core/fra.py:get_sentence_fra_batch() → 4D sparse QK tensor
-# fra/ablation_study.py:rank_feature_pairs() → sorted (q_feat, k_feat, score) list
+**Old approach (v1, single prompt):** ranked features on `TEXTS[0]` only. This is fragile — a feature important on one prompt may be irrelevant on others.
 
+```python
+# Single-prompt ranking (OLD — used in original Figure 1)
 qk_result = get_sentence_fra_batch(model, sae, prompt, layer=24, head=38, top_k=20)
 qk_pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], diagonal=False, mode="sum")
-# Take top k pairs (k=1 or k=50), extract unique feature indices
-top_pairs = qk_pairs[:k]
-qk_features = set(q for q,k,*_ in top_pairs) | set(k for q,k,*_ in top_pairs)
+```
+
+**New approach (v2, multi-prompt):** accumulates FRA scores across all 8 eval prompts, then ranks by the total. This finds features that are consistently important, not just on one prompt.
+
+```python
+# Multi-prompt ranking (NEW — used in updated experiments)
+# fra/em_evaluation.py:rank_features_multi_prompt()
+
+ranked = rank_features_multi_prompt(
+    model, sae, layer=24, head=38, hook_point="ln1.hook_normalized",
+    prompts=EM_EVAL_PROMPTS,  # all 8 prompts
+    top_k=20, k_pairs=50,
+)
+qk_features = ranked["qk"]  # unique features from top-50 pairs, accumulated across prompts
+ov_features = ranked["ov"]   # top OV features, accumulated across prompts
+```
+
+Internally this loops over each prompt and accumulates:
+```python
+for prompt in prompts:
+    qk_result = get_sentence_fra_batch(model, sae, prompt, ...)
+    pairs = rank_feature_pairs(qk_result["fra_tensor_sparse"], ...)
+    for q_feat, k_feat, abs_sum, *_ in pairs:
+        qk_pair_scores[(q_feat, k_feat)] += abs_sum  # accumulate across prompts
+
+    ov_result = get_sentence_ov_decomposition(model, sae, prompt, ...)
+    ov_ranked = rank_ov_features(ov_result["ov_sparse"], ...)
+    for feat_idx, abs_sum, *_ in ov_ranked:
+        ov_feat_scores[feat_idx] += abs_sum           # accumulate across prompts
 ```
 
 The QK FRA tensor is computed by `compute_fra_sparse()`:
@@ -71,14 +99,11 @@ The QK FRA tensor is computed by `compute_fra_sparse()`:
 - Score = f_{lambda,q} * f_{mu,k} * (W_dec_lambda @ W_Q).(W_dec_mu @ W_K) / sqrt(d_head)
 - Stored as sparse COO tensor [seq, seq, d_sae, d_sae]
 
-```python
-# fra/core/ov.py:get_sentence_ov_decomposition() → 3D sparse OV tensor
-# fra/core/ov.py:rank_ov_features() → sorted (feat_idx, score) list
-
-ov_result = get_sentence_ov_decomposition(model, sae, prompt, layer=24, head=38, top_k=20)
-ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
-ov_features = [f for f,*_ in ov_ranked[:len(qk_features)]]
-```
+The OV tensor is computed by `compute_ov_sparse()`:
+- Freezes the attention pattern A_{h,qk} from a full forward pass
+- For each (query_pos, key_pos, feature) where A > threshold and feature is active
+- Score = A_{h,qk} * f_{lambda,k} * ||W_dec_lambda @ W_V @ W_O||_2
+- Stored as sparse COO tensor [seq, seq, d_sae]
 
 The OV tensor is computed by `compute_ov_sparse()`:
 - Freezes the attention pattern A_{h,qk} from a full forward pass
@@ -143,19 +168,21 @@ Each contains `frontier_gpt4o` with per-method entries:
 
 Plotted as alignment (x) vs coherence (y) curves, one per method, with alpha annotated.
 
-### Commands that produced the original Figure 1 data
+### Commands that produced Figure 1
 
+**v1 (old, single-prompt ranking, greedy, single seed):**
 ```bash
-# On H200 GPU pod, for each variant:
 python run_experiments.py --task frontier --em-model finance --head 38 --k 1 --n-texts 8
 python run_experiments.py --task frontier --em-model finance --head 38 --k 50 --n-texts 8
-python run_experiments.py --task frontier --em-model medical --head 38 --k 1 --n-texts 8
-python run_experiments.py --task frontier --em-model medical --head 38 --k 50 --n-texts 8
-python run_experiments.py --task frontier --em-model sports --head 38 --k 1 --n-texts 8
-python run_experiments.py --task frontier --em-model sports --head 38 --k 50 --n-texts 8
+# ... same for medical, sports
 ```
+Settings: single-prompt ranking, greedy decoding (temp=0), GPT-4o judging. Results in `all_results/results/`.
 
-Settings: layer=24, top_k=20 (FRA sparsification), greedy decoding (temp=0), GPT-4o judging via OPENAI_API_KEY.
+**v2 (new, multi-prompt ranking, stochastic, 3 seeds):**
+```bash
+bash run_all_multiseed.sh
+```
+Settings: multi-prompt ranking (all 8 prompts), temp=1.0, 3 seeds, device-local Generator. GPT-4o judging via `judge_multiseed.py`. Results in `multiseed_results_v2/`.
 
 ## Key Data Flow
 
