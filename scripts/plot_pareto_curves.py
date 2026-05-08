@@ -4,14 +4,15 @@ X = 1 / severity_ratio  ("Noise-to-Recovery Ratio", higher = less collateral dam
 Y = (1 - ASR) * 100     ("Sleepers Removed (%)",    higher = more sleepers removed)
 Up-and-right is the good direction.
 
-For upstream curves (single feature / feature set), averages across the 5 SAE seeds
-per alpha and draws min/max error bars on Y.  Downstream has no seed variation.
+Points are colour-coded blue→red by steering strength α; marker shape identifies
+the method.  For upstream curves (single feature / feature set) points are averaged
+across the 5 SAE seeds per α, with min/max error bars.  Downstream has no seeds.
 
-Produces 4 figure types × 2 pipelines = 8 PNG files:
-  fig1_{pipeline}.png  — single panel: single feature + feature set + downstream feature
-  fig2_{pipeline}.png  — two panels: (feature set + downstream) | (single + downstream)
-  fig3_{pipeline}.png  — standalone: feature set + downstream feature
-  fig4_{pipeline}.png  — standalone: single feature + downstream feature
+Produces 4 figure types × 2 pipelines = 8 PDF files:
+  fig1_{pipeline}.pdf  — single panel: single feature + feature set + downstream feature
+  fig2_{pipeline}.pdf  — two panels: (feature set + downstream) | (single + downstream)
+  fig3_{pipeline}.pdf  — standalone: feature set + downstream feature
+  fig4_{pipeline}.pdf  — standalone: single feature + downstream feature
 
 Pipeline is indicated only in the file name, never in the plot.
 
@@ -28,20 +29,32 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import numpy as np
 
 # ── visual constants ──────────────────────────────────────────────────────────
-BG = "#fbfaf6"
-GRID = "#d9d4c8"
+BG     = "#fbfaf6"
+GRID   = "#d9d4c8"
+CMAP   = "coolwarm"
 STYLES: dict[str, dict] = {
-    "single":     dict(color="#2166ac", marker="o", label="Single Feature",     ls="-",  lw=1.8),
-    "set":        dict(color="#4dac26", marker="s", label="Feature Set",        ls="-",  lw=1.8),
-    "downstream": dict(color="#d6604d", marker="^", label="Downstream Feature", ls="--", lw=1.5),
+    "single":     dict(color="#2166ac", marker="o", label="Single Feature",     ls="-",  lw=0.9),
+    "set":        dict(color="#4dac26", marker="s", label="Feature Set",        ls="-",  lw=0.9),
+    "downstream": dict(color="#d6604d", marker="^", label="Downstream Feature", ls="--", lw=0.9),
 }
 XLABEL = "Noise-to-Recovery Ratio  (↑ less collateral damage)"
 YLABEL = "Sleepers Removed (%)"
+
+
+# ── colour scale ──────────────────────────────────────────────────────────────
+
+def _alpha_colormap(alphas: list[float]):
+    """Return (alpha→rgba dict, Normalize, Colormap) for a shared colour scale."""
+    norm = mcolors.Normalize(vmin=0, vmax=max(len(alphas) - 1, 1))
+    cmap = matplotlib.colormaps[CMAP]
+    return {a: cmap(norm(i)) for i, a in enumerate(alphas)}, norm, cmap
 
 
 # ── data helpers ──────────────────────────────────────────────────────────────
@@ -85,54 +98,80 @@ def _style_ax(ax: plt.Axes) -> None:
     ax.set_ylabel(YLABEL, fontsize=9)
 
 
-def _draw_curve(ax: plt.Axes, rows: list[dict], style: dict) -> None:
+def _draw_curve(ax: plt.Axes, rows: list[dict], style: dict,
+                alpha_colors: dict) -> None:
     xs = [r["x"] for r in rows]
     ys = [r["y"] for r in rows]
-    ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=style["lw"], zorder=3)
-    ax.scatter(xs, ys, color=style["color"], marker=style["marker"],
-               s=52, zorder=4, label=style["label"],
-               edgecolor="white", linewidth=0.5)
-    if rows[0]["has_var"]:
-        y_lo_err = [r["y"] - r["y_lo"] for r in rows]
-        y_hi_err = [r["y_hi"] - r["y"] for r in rows]
-        ax.errorbar(xs, ys, yerr=[y_lo_err, y_hi_err],
-                    fmt="none", color=style["color"],
-                    capsize=3, linewidth=0.9, alpha=0.55, zorder=2)
+    # Thin identity line so method is readable even at small size.
+    ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=style["lw"],
+            alpha=0.45, zorder=2)
+    # Per-point markers and error bars coloured by steering strength.
+    for r in rows:
+        c = alpha_colors[r["alpha"]]
+        ax.scatter(r["x"], r["y"], color=c, marker=style["marker"],
+                   s=60, zorder=4, edgecolor="#1b1b1b", linewidth=0.45)
+        if r["has_var"]:
+            ax.errorbar(r["x"], r["y"],
+                        yerr=[[r["y"] - r["y_lo"]], [r["y_hi"] - r["y"]]],
+                        fmt="none", color=c, capsize=3,
+                        linewidth=0.9, alpha=0.6, zorder=3)
 
 
-def _fill_panel(ax: plt.Axes, curves: list[tuple[list[dict], str]]) -> None:
+def _fill_panel(ax: plt.Axes, curves: list[tuple[list[dict], str]],
+                alpha_colors: dict) -> None:
     for rows, key in curves:
-        _draw_curve(ax, rows, STYLES[key])
+        _draw_curve(ax, rows, STYLES[key], alpha_colors)
     _style_ax(ax)
-    ax.legend(frameon=False, fontsize=8.5, loc="lower right")
+    handles = [
+        mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
+                      color=STYLES[k]["color"], markerfacecolor="#888888",
+                      markeredgecolor="#1b1b1b", markeredgewidth=0.5,
+                      markersize=7, label=STYLES[k]["label"])
+        for _, k in curves
+    ]
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
+
+
+def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> None:
+    sm = cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axes, fraction=0.03, pad=0.02,
+                        ticks=range(len(alphas)))
+    cbar.ax.set_yticklabels([f"{a:g}" for a in alphas], fontsize=8)
+    cbar.set_label("Steering strength α", fontsize=9)
 
 
 # ── figure factories ──────────────────────────────────────────────────────────
 
-def _fig1(single, fset, down) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(6, 5))
-    _fill_panel(ax, [(single, "single"), (fset, "set"), (down, "downstream")])
+def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    _fill_panel(ax, [(single, "single"), (fset, "set"), (down, "downstream")],
+                alpha_colors)
+    _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig2(single, fset, down) -> plt.Figure:
-    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(12, 5),
+def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
+    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel(ax_l, [(fset, "set"),    (down, "downstream")])
-    _fill_panel(ax_r, [(single, "single"), (down, "downstream")])
+    _fill_panel(ax_l, [(fset, "set"),      (down, "downstream")], alpha_colors)
+    _fill_panel(ax_r, [(single, "single"), (down, "downstream")], alpha_colors)
     ax_r.set_ylabel("")
+    _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
 
 
-def _fig3(fset, down) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(6, 5))
-    _fill_panel(ax, [(fset, "set"), (down, "downstream")])
+def _fig3(fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    _fill_panel(ax, [(fset, "set"), (down, "downstream")], alpha_colors)
+    _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig4(single, down) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(6, 5))
-    _fill_panel(ax, [(single, "single"), (down, "downstream")])
+def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    _fill_panel(ax, [(single, "single"), (down, "downstream")], alpha_colors)
+    _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
@@ -148,16 +187,21 @@ def _save(fig: plt.Figure, path: Path) -> None:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
-def make_figures(payload: dict, out_dir: Path, pipeline: str) -> None:
-    pts = payload["points"]
+def make_figures(payload: dict, out_dir: Path, pipeline: str,
+                 alpha_colors: dict, norm, cmap, alphas: list[float]) -> None:
+    pts    = payload["points"]
     single = _aggregate(pts, "upstream",   "single")
     fset   = _aggregate(pts, "upstream",   "set")
     down   = _aggregate(pts, "downstream", "single")
 
-    _save(_fig1(single, fset, down),  out_dir / f"fig1_{pipeline}.pdf")
-    _save(_fig2(single, fset, down),  out_dir / f"fig2_{pipeline}.pdf")
-    _save(_fig3(fset, down),          out_dir / f"fig3_{pipeline}.pdf")
-    _save(_fig4(single, down),        out_dir / f"fig4_{pipeline}.pdf")
+    _save(_fig1(single, fset, down, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig1_{pipeline}.pdf")
+    _save(_fig2(single, fset, down, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig2_{pipeline}.pdf")
+    _save(_fig3(fset, down, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig3_{pipeline}.pdf")
+    _save(_fig4(single, down, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig4_{pipeline}.pdf")
 
 
 def main() -> None:
@@ -173,9 +217,14 @@ def main() -> None:
         "jamie": json.loads(args.jamie_in.read_text()),
         "ketan": json.loads(args.ketan_in.read_text()),
     }
+
+    # Build a shared colour scale from all alphas seen across both pipelines.
+    alphas = sorted({p["alpha"] for d in payloads.values() for p in d["points"]})
+    alpha_colors, norm, cmap = _alpha_colormap(alphas)
+
     for pipeline, payload in payloads.items():
         print(f"[{pipeline}]")
-        make_figures(payload, args.out_dir, pipeline)
+        make_figures(payload, args.out_dir, pipeline, alpha_colors, norm, cmap, alphas)
 
 
 if __name__ == "__main__":
