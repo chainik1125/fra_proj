@@ -59,8 +59,14 @@ def _alpha_colormap(alphas: list[float]):
 
 # ── data helpers ──────────────────────────────────────────────────────────────
 
-def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
-    """Group points by alpha; return mean/min/max over seeds per alpha."""
+def _aggregate(points: list[dict], family: str, eval_mode: str
+               ) -> tuple[list[dict], list[dict], list[dict]]:
+    """Group by alpha; return (mean_curve, max_curve, min_curve).
+
+    max/min curves trace the actual 2D (x, y) point from the seed with the
+    highest/lowest Y at each alpha, preserving the true 2D envelope.
+    For downstream (single seed) max and min curves are empty.
+    """
     subset = [
         p for p in points
         if p["family"] == family
@@ -70,20 +76,18 @@ def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
     for p in subset:
         by_alpha.setdefault(p["alpha"], []).append(p)
 
-    rows = []
+    mean_rows, max_rows, min_rows = [], [], []
     for alpha in sorted(by_alpha):
         grp = by_alpha[alpha]
         xs = [1.0 / p["severity_ratio"] for p in grp]
         ys = [(1.0 - p["asr"]) * 100.0 for p in grp]
-        rows.append(dict(
-            alpha=alpha,
-            x=float(np.mean(xs)),
-            y=float(np.mean(ys)),
-            y_lo=float(np.min(ys)),
-            y_hi=float(np.max(ys)),
-            has_var=len(xs) > 1,
-        ))
-    return rows
+        mean_rows.append(dict(alpha=alpha, x=float(np.mean(xs)), y=float(np.mean(ys))))
+        if len(grp) > 1:
+            hi = int(np.argmax(ys))
+            lo = int(np.argmin(ys))
+            max_rows.append(dict(alpha=alpha, x=xs[hi], y=ys[hi]))
+            min_rows.append(dict(alpha=alpha, x=xs[lo], y=ys[lo]))
+    return mean_rows, max_rows, min_rows
 
 
 # ── drawing helpers ───────────────────────────────────────────────────────────
@@ -98,36 +102,48 @@ def _style_ax(ax: plt.Axes) -> None:
     ax.set_ylabel(YLABEL, fontsize=9)
 
 
-def _draw_curve(ax: plt.Axes, rows: list[dict], style: dict,
-                alpha_colors: dict) -> None:
-    xs = [r["x"] for r in rows]
-    ys = [r["y"] for r in rows]
-    # Thin identity line so method is readable even at small size.
+def _draw_curve(ax: plt.Axes,
+                mean_rows: list[dict], max_rows: list[dict], min_rows: list[dict],
+                style: dict, alpha_colors: dict) -> None:
+    xs = [r["x"] for r in mean_rows]
+    ys = [r["y"] for r in mean_rows]
+
+    # Shaded envelope between the actual 2D max and min seed curves.
+    if max_rows and min_rows:
+        xs_max = [r["x"] for r in max_rows]
+        ys_max = [r["y"] for r in max_rows]
+        xs_min = [r["x"] for r in min_rows]
+        ys_min = [r["y"] for r in min_rows]
+        # Polygon: max curve forward, min curve backward.
+        poly_xs = xs_max + xs_min[::-1]
+        poly_ys = ys_max + ys_min[::-1]
+        ax.fill(poly_xs, poly_ys, color=style["color"], alpha=0.13, zorder=1)
+        for ex, ey in [(xs_max, ys_max), (xs_min, ys_min)]:
+            ax.plot(ex, ey, color=style["color"], ls=style["ls"],
+                    lw=0.5, alpha=0.35, zorder=2)
+
+    # Mean line.
     ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=style["lw"],
-            alpha=0.45, zorder=2)
-    # Per-point markers and error bars coloured by steering strength.
-    for r in rows:
-        c = alpha_colors[r["alpha"]]
-        ax.scatter(r["x"], r["y"], color=c, marker=style["marker"],
-                   s=60, zorder=4, edgecolor="#1b1b1b", linewidth=0.45)
-        if r["has_var"]:
-            ax.errorbar(r["x"], r["y"],
-                        yerr=[[r["y"] - r["y_lo"]], [r["y_hi"] - r["y"]]],
-                        fmt="none", color=c, capsize=3,
-                        linewidth=0.9, alpha=0.6, zorder=3)
+            alpha=0.6, zorder=3)
+    # Mean points coloured by steering strength.
+    for r in mean_rows:
+        ax.scatter(r["x"], r["y"], color=alpha_colors[r["alpha"]],
+                   marker=style["marker"], s=60, zorder=4,
+                   edgecolor="#1b1b1b", linewidth=0.45)
 
 
-def _fill_panel(ax: plt.Axes, curves: list[tuple[list[dict], str]],
+def _fill_panel(ax: plt.Axes,
+                curves: list[tuple[list[dict], list[dict], list[dict], str]],
                 alpha_colors: dict) -> None:
-    for rows, key in curves:
-        _draw_curve(ax, rows, STYLES[key], alpha_colors)
+    for mean_rows, max_rows, min_rows, key in curves:
+        _draw_curve(ax, mean_rows, max_rows, min_rows, STYLES[key], alpha_colors)
     _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
                       color=STYLES[k]["color"], markerfacecolor="#888888",
                       markeredgecolor="#1b1b1b", markeredgewidth=0.5,
                       markersize=7, label=STYLES[k]["label"])
-        for _, k in curves
+        for *_, k in curves
     ]
     ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
 
@@ -145,7 +161,7 @@ def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> Non
 
 def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(single, "single"), (fset, "set"), (down, "downstream")],
+    _fill_panel(ax, [(*single, "single"), (*fset, "set"), (*down, "downstream")],
                 alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
@@ -154,8 +170,8 @@ def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel(ax_l, [(fset, "set"),      (down, "downstream")], alpha_colors)
-    _fill_panel(ax_r, [(single, "single"), (down, "downstream")], alpha_colors)
+    _fill_panel(ax_l, [(*fset,   "set"),    (*down, "downstream")], alpha_colors)
+    _fill_panel(ax_r, [(*single, "single"), (*down, "downstream")], alpha_colors)
     ax_r.set_ylabel("")
     _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
@@ -163,14 +179,14 @@ def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 
 def _fig3(fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(fset, "set"), (down, "downstream")], alpha_colors)
+    _fill_panel(ax, [(*fset, "set"), (*down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
 def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(single, "single"), (down, "downstream")], alpha_colors)
+    _fill_panel(ax, [(*single, "single"), (*down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
@@ -190,7 +206,7 @@ def _save(fig: plt.Figure, path: Path) -> None:
 def make_figures(payload: dict, out_dir: Path, pipeline: str,
                  alpha_colors: dict, norm, cmap, alphas: list[float]) -> None:
     pts    = payload["points"]
-    single = _aggregate(pts, "upstream",   "single")
+    single = _aggregate(pts, "upstream",   "single")  # (mean, max, min)
     fset   = _aggregate(pts, "upstream",   "set")
     down   = _aggregate(pts, "downstream", "single")
 
