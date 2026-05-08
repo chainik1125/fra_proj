@@ -63,8 +63,11 @@ def headline(rows, floor=COH_FLOOR):
     return delta, float(al.max()), int(mask.sum())
 
 
-def plot_one(label, entries, out_path: Path, *, alpha_zero_label="α=0 (unsteered)"):
-    """entries: list of (seed, sorted_rows)."""
+def plot_one(label, entries, out_path: Path, *, baseline_point=None,
+             baseline_label="α=1.0 (no-op)"):
+    """entries: list of (seed, sorted_rows). baseline_point: optional (coh, align)
+    to mark with a single black star (e.g. Nura's explicit 'baseline' method).
+    If None, uses each curve's α=1.0 point (SAE-resid no-op convention)."""
     fig, ax = plt.subplots(figsize=(6.5, 5.5))
     seed_colours = {0: "#d73027", 42: "#4575b4", 123: "#1a9850",
                     456: "#984ea3", 789: "#f0883e"}
@@ -83,12 +86,17 @@ def plot_one(label, entries, out_path: Path, *, alpha_zero_label="α=0 (unsteere
             ax.annotate(f"α={sc}", (x, y), xytext=(5, 5),
                         textcoords="offset points", fontsize=8, color="#333")
 
-        # Black star at α=0
-        i0 = int(np.argmin(np.abs(scales - 0.0)))
-        ax.scatter([co[i0]], [al[i0]], marker="*", s=380,
-                   color="black", edgecolors="white", linewidths=1.4,
-                   zorder=5,
-                   label=alpha_zero_label if seed == entries[0][0] else None)
+        # Mark α=1.0 (no-op for our (α-1)·f·W_dec rule) only if no explicit baseline given
+        if baseline_point is None:
+            i_one = int(np.argmin(np.abs(scales - 1.0)))
+            ax.scatter([co[i_one]], [al[i_one]], marker="*", s=380,
+                       color="black", edgecolors="white", linewidths=1.4,
+                       zorder=5,
+                       label=baseline_label if seed == entries[0][0] else None)
+    if baseline_point is not None:
+        ax.scatter([baseline_point[0]], [baseline_point[1]], marker="*", s=380,
+                   color="black", edgecolors="white", linewidths=1.4, zorder=5,
+                   label=baseline_label)
 
     delta, peak, n70 = headline(sum((r for _, r in entries), [])) if entries else (float("nan"), float("nan"), 0)
     # Headline summary annotation (use first seed's curve for the metric in single-seed case;
@@ -150,11 +158,13 @@ def main():
         for sc, x, y in zip(scales, co, al):
             ax.annotate(f"α={sc}", (x, y), xytext=(5, 5),
                         textcoords="offset points", fontsize=7, color="#333")
-        i0 = int(np.argmin(np.abs(scales - 0.0)))
-        ax.scatter([co[i0]], [al[i0]], marker="*", s=320,
-                   color="black", edgecolors="white", linewidths=1.4, zorder=5)
-    ax.scatter([], [], marker="*", s=200, color="black",
-               edgecolors="white", linewidths=1.0, label="α=0 (unsteered)")
+    # Single baseline star: Nura's explicit 'baseline' method (no hook applied)
+    baseline = nura_data.get("baseline", [])
+    if baseline:
+        b = baseline[0]
+        ax.scatter([b["mean_coherence"]], [b["mean_alignment"]], marker="*", s=320,
+                   color="black", edgecolors="white", linewidths=1.4, zorder=5,
+                   label="baseline (no hook)")
     ax.axvline(COH_FLOOR, color="grey", lw=0.7, ls=":", zorder=1)
     ax.text(COH_FLOOR + 0.5, 2, f"coh = {int(COH_FLOOR)}",
             color="grey", fontsize=9, va="bottom")
@@ -178,10 +188,14 @@ def main():
     # Also keep the QK→OV-only plot for direct hookpoint comparison
     nura_rows = sorted(nura_data.get("qk_to_ov", []), key=lambda r: r["scale"])
     if nura_rows:
+        baseline = nura_data.get("baseline", [])
+        bp = (baseline[0]["mean_coherence"], baseline[0]["mean_alignment"]) if baseline else None
         plot_one(
             "Nura medical QK→OV @ L24 ln1.hook_normalized\n(3 seeds, frontier_multiseed)",
             [(0, nura_rows)],
             out / "phase3_frontier_nura_qkov_L24_ln1",
+            baseline_point=bp,
+            baseline_label="baseline (no hook)",
         )
 
     # ── SAE-resid hookpoints ─────────────────────────────────────────────
