@@ -4,7 +4,7 @@ Reads one `feature_set_pipeline.json` output (Jamie selection, top_k=20,
 eval_mode=both, single_top_n=1) and produces a 2×2 grid:
 
     rows  = eval mode: top-1 single feature | top-20 feature set
-    cols  = ratio metric: gen-CE ratio | severity ratio
+    cols  = ratio metric: gen-CE ratio | recovery noise ratio
 
 Each panel:
     x = the named ratio metric
@@ -97,7 +97,7 @@ def main():
 
     # Shared x-ranges per metric.
     metric_ranges: dict[str, tuple[float, float]] = {}
-    for x_metric in ("gen_ce_ratio", "severity_ratio"):
+    for x_metric in ("gen_ce_ratio", "recovery_noise_ratio"):
         all_x = [p[x_metric] for p in points if p.get(x_metric) is not None]
         lo, hi = min(all_x), max(all_x)
         pad = 0.05 * max(hi - lo, 1e-3)
@@ -112,7 +112,7 @@ def main():
     ]
     cols = [
         ("gen_ce_ratio",   "gen-CE ratio"),
-        ("severity_ratio", "severity ratio"),
+        ("recovery_noise_ratio", "recovery noise ratio"),
     ]
 
     for r, (eval_mode, row_label) in enumerate(rows):

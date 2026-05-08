@@ -29,7 +29,8 @@ from sleeper.hooks import (
 )
 from sleeper.metrics import (
     asr_16, clean_continuation_ce, deployment_generation_ratio,
-    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
+    pregen_clean_rollouts, recovery_noise_ratio, sleeper_fired_mask,
+    teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     left_pad_prompts, load_dep_prompts, load_paired_dataset, load_sleeper_model,
@@ -63,17 +64,17 @@ def _run_eval(
 
     Generation reuse:
       * Steered batch gen (per eval seed) is shared by ASR, the gen-CE-ratio
-        numerator, and the severity-ratio numerator — `capture_log_softmax=True`
+        numerator, and the recovery-noise-ratio numerator — `capture_log_softmax=True`
         keeps the per-step distribution at zero extra forward cost.
       * Clean rollouts (`clean_rollouts["tokens"]`, `clean_rollouts["log_softmax"]`)
         are α-independent and are generated once in `_pregen_clean_rollouts`
-        — used as the gen-CE-ratio baseline AND the severity-ratio
+        — used as the gen-CE-ratio baseline AND the recovery-noise-ratio
         denominator's distributions.
 
-    Aggregation (matches the severity-ratio discipline):
+    Aggregation (matches the recovery-noise-ratio discipline):
       * `gen_ce_ratio = (Σ_{s,b,t} NLL_steered) / (Σ_{s,b,t} NLL_baseline)` —
         sums across all eval seeds × rows × generated positions, divided once.
-      * `severity_ratio` — see `sleeper.metrics.severity_ratio`. Numerator
+      * `recovery_noise_ratio` — see `sleeper.metrics.recovery_noise_ratio`. Numerator
         diagonal seed pairing, denominator all unordered seed pairs, each
         side meaned independently before division.
 
@@ -96,6 +97,7 @@ def _run_eval(
     gen_den_sum = 0.0
     gen_count = 0
     steered_lsm_list: list[torch.Tensor] = []
+    removed_mask_list: list[torch.Tensor] = []
     for s_idx, s in enumerate(eval_seeds):
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
         steered_gen, steered_lsm = generate_with_hooks(
@@ -115,11 +117,15 @@ def _run_eval(
         gen_den_sum += r["den_sum"]
         gen_count   += r["count"]
         steered_lsm_list.append(steered_lsm[: n_gen_ce])
+        # True = sleeper removed = include in RNR numerator
+        removed_mask_list.append(~sleeper_fired_mask(steered_gen[: n_gen_ce], model.tokenizer))
 
     gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
 
     steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)              # (S, n_gen_ce, T, V) CPU fp16
-    sev = severity_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
+    removed_mask = torch.stack(removed_mask_list, dim=0)                   # (S, n_gen_ce) bool
+    sev = recovery_noise_ratio(clean_rollouts["log_softmax"], steered_lsm_stack,
+                         steered_row_mask=removed_mask)
 
     return {
         "asr": sum(asrs) / len(asrs), "asr_per_seed": asrs,
@@ -128,9 +134,9 @@ def _run_eval(
         "gen_ce_ratio":    gen_ce_ratio,
         "gen_ce_num_mean": gen_num_sum / max(gen_count, 1),
         "gen_ce_den_mean": gen_den_sum / max(gen_count, 1),
-        "severity_ratio":  sev["ratio"],
-        "severity_num":    sev["num"],
-        "severity_den":    sev["den"],
+        "recovery_noise_ratio":  sev["ratio"],
+        "rnr_num":    sev["num"],
+        "rnr_den":    sev["den"],
     }
 
 
@@ -311,7 +317,7 @@ def main():
             print(f"[αsweep] upstream seed={sae_seed}  f{f}  α={alpha:>4}  "
                   f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                   f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                  f"severity={e['severity_ratio']:.3f}")
+                  f"rnr={e['recovery_noise_ratio']:.3f}")
             points.append({"family": "upstream", "sae_seed": sae_seed,
                            "feature": f, "alpha": alpha, **e})
 
@@ -327,7 +333,7 @@ def main():
         print(f"[αsweep] downstream f{args.downstream_feature}  α={alpha:>4}  "
               f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
               f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-              f"severity={e['severity_ratio']:.3f}")
+              f"rnr={e['recovery_noise_ratio']:.3f}")
         points.append({"family": "downstream", "sae_seed": None,
                        "feature": args.downstream_feature, "alpha": alpha, **e})
 
@@ -339,7 +345,7 @@ def main():
                              "seeds": args.eval_seeds},
                      "gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
                                         "seeds": args.eval_seeds},
-                     "severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                     "recovery_noise_ratio": {"mode": "sample", "temperature": args.eval_temperature,
                                         "seeds": args.eval_seeds}},
         "baseline": {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
                      "dep_logp": base_logp, "clean_ce": base_ce},

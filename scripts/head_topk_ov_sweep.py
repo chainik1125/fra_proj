@@ -24,7 +24,7 @@ from sleeper.hooks import (
 )
 from sleeper.metrics import (
     asr_16, clean_continuation_ce, deployment_generation_ratio,
-    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
+    pregen_clean_rollouts, recovery_noise_ratio, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -129,7 +129,7 @@ def _eval_winner(model, sae_ln1, w, W_V,
     h_cln = head_selective_v_hook(d_cln, alpha=alpha, W_V=W_V, head_indices=heads, block=0)
     e_ce  = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                   fwd_hooks=h_cln).mean().item()
-    # Shared loop for ASR + gen-CE-ratio + severity-ratio.
+    # Shared loop for ASR + gen-CE-ratio + recovery-noise-ratio.
     d_lp  = compute_sae_delta(model, sae_ln1, LN1_HOOK, f, eval_dep_lp, eval_dep_attn,
                                eval_dep_attn).to(device)
     h_lp  = head_selective_v_hook(d_lp, alpha=alpha, W_V=W_V, head_indices=heads, block=0)
@@ -157,7 +157,7 @@ def _eval_winner(model, sae_ln1, w, W_V,
 
     e_asr = sum(asrs) / len(asrs)
     e_gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
-    sev = severity_ratio(clean_rollouts["log_softmax"],
+    sev = recovery_noise_ratio(clean_rollouts["log_softmax"],
                          torch.stack(steered_lsm_list, dim=0))
     return {
         "asr": e_asr, "asr_per_seed": asrs,
@@ -166,9 +166,9 @@ def _eval_winner(model, sae_ln1, w, W_V,
         "gen_ce_ratio":    e_gen_ce_ratio,
         "gen_ce_num_mean": gen_num_sum / max(gen_count, 1),
         "gen_ce_den_mean": gen_den_sum / max(gen_count, 1),
-        "severity_ratio":  sev["ratio"],
-        "severity_num":    sev["num"],
-        "severity_den":    sev["den"],
+        "recovery_noise_ratio":  sev["ratio"],
+        "rnr_num":    sev["num"],
+        "rnr_den":    sev["den"],
     }
 
 
@@ -281,7 +281,7 @@ def main():
         print(f"[hk]   sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} ΔCE={winner['dce']:+.4f})")
         print(f"[hk]   eval(asr={ev_m['asr']:.3f} Δlogp={ev_m['delta_logp']:+.3f} "
               f"ΔCE={ev_m['delta_ce']:+.4f} gen-CE-ratio={ev_m['gen_ce_ratio']:.3f} "
-              f"sev={ev_m['severity_ratio']:.3f})")
+              f"sev={ev_m['recovery_noise_ratio']:.3f})")
 
         all_results.append({
             "sae_seed": sae_seed,
@@ -300,7 +300,7 @@ def main():
                                              "seeds": args.eval_seeds},
                      "eval_gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
                                              "seeds": args.eval_seeds},
-                     "eval_severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                     "eval_recovery_noise_ratio": {"mode": "sample", "temperature": args.eval_temperature,
                                              "seeds": args.eval_seeds}},
         "baseline": {"selection": {"dep_logp": sel_base_logp, "clean_ce": sel_base_ce},
                      "eval":      {"dep_logp": eval_base_logp, "clean_ce": eval_base_ce,

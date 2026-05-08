@@ -46,7 +46,7 @@ def _per_seed_curves(points: list[dict], family: str,
         seed_pts.sort(key=lambda p: p["alpha"])
         curves.append([
             dict(y=(1.0 - p["asr"]) * 100.0,
-                 x=p.get("recovery_noise_ratio") or p["severity_ratio"])
+                 x=p.get("recovery_noise_ratio") or p.get("severity_ratio"))
             for p in seed_pts
         ])
     return curves

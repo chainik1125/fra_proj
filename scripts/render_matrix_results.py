@@ -17,7 +17,7 @@ METRICS    = [
     ("delta_logp",     "Δdep-logp",       "{:>+8.3f}", "{:+.3f}"),
     ("delta_ce",       "Δcln-CE",         "{:>+8.4f}", "{:+.4f}"),
     ("gen_ce_ratio",   "gen-CE ratio",    "{:>7.3f}",  "{:.3f}"),
-    ("severity_ratio", "severity ratio",  "{:>7.3f}",  "{:.3f}"),
+    ("recovery_noise_ratio", "recovery noise ratio",  "{:>7.3f}",  "{:.3f}"),
 ]
 
 
@@ -111,7 +111,7 @@ def _render_md(payload: dict, idx: dict, seeds: list[int]) -> str:
     out.append("")
     if sample_seeds is not None:
         out.append(f"**Eval decoding.** All generation-using metrics (ASR, "
-                   f"gen-CE ratio, severity ratio) use pure multinomial sampling "
+                   f"gen-CE ratio, recovery noise ratio) use pure multinomial sampling "
                    f"at temperature={temperature} (no top_p / top_k truncation), "
                    f"averaged over seeds={list(sample_seeds)}. The teacher-forced "
                    f"metrics (Δdep-logp, Δcln-CE) are deterministic. "

@@ -2,7 +2,7 @@
 
 2×3 grid:
     rows: single feature (screen winner) | feature set (top-K)
-    cols: Δcln-CE | gen-CE ratio | severity ratio
+    cols: Δcln-CE | gen-CE ratio | recovery noise ratio
     y:    % sleepers removed (1 − ASR)
     x:    shared initial range per column across both rows
     color: steering strength α (blue → red)
@@ -26,7 +26,7 @@ from plotly.subplots import make_subplots
 METRICS = [
     ("delta_ce",       "Δcln-CE"),
     ("gen_ce_ratio",   "gen-CE ratio"),
-    ("severity_ratio", "severity ratio"),
+    ("recovery_noise_ratio", "recovery noise ratio"),
 ]
 EVAL_MODES = [
     ("single", "Single feature<br>(screen winner)"),

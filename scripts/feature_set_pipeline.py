@@ -26,7 +26,7 @@ Evaluation modes (`--eval_mode`):
                (tie-break: the lower screen α that achieves that min, so we
                favour features that suppress at weaker steering).
       stage 2: full multi-metric eval (ASR, Δlogp, Δcln-CE, gen-CE ratio,
-               severity ratio) on that one survivor at the fine `--alphas`
+               recovery noise ratio) on that one survivor at the fine `--alphas`
                grid with multi-seed sampling.
     Stages 0 and 1 run on the **selection split** (held disjoint from the
     eval split that stage 2 reports on). Persists every dlogp/ASR screen
@@ -51,7 +51,7 @@ Downstream baseline (`--include_downstream`, default on):
 
 The same eval engine drives every mode — `_run_eval` / `_upstream_eval` /
 `_downstream_eval` from `scripts.single_feature_alpha_sweep`. Outputs the
-standard 5-metric panel (ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio).
+standard 5-metric panel (ASR, Δdep-logp, Δcln-CE, gen-CE ratio, recovery noise ratio).
 
 Usage:
     python -m scripts.feature_set_pipeline \\
@@ -165,7 +165,7 @@ def main():
     p.add_argument("--n_eval", type=int, default=200,
                    help="Held-out eval-split size.")
     p.add_argument("--n_gen_ce", type=int, default=100,
-                   help="Eval subset for the gen-CE ratio + severity ratio metrics.")
+                   help="Eval subset for the gen-CE ratio + recovery noise ratio metrics.")
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
@@ -237,12 +237,10 @@ def main():
     eval_metrics = set(args.eval_metrics)
 
     def _fmt_point(e: dict) -> dict:
-        """Rename severity_ratio → recovery_noise_ratio; keep only requested metrics."""
+        """Drop internal sub-fields; keep only requested metrics."""
         out = dict(e)
-        # rename and drop internal sub-fields
-        out["recovery_noise_ratio"] = out.pop("severity_ratio", None)
-        out.pop("severity_num", None)
-        out.pop("severity_den", None)
+        out.pop("rnr_num", None)
+        out.pop("rnr_den", None)
         if "recovery_noise_ratio" not in eval_metrics:
             out.pop("recovery_noise_ratio", None)
         if "gen_ce_ratio" not in eval_metrics:
@@ -360,7 +358,7 @@ def main():
                 print(f"[fset] s{sae_seed} single  f{best_feature}  α={alpha:>4}  "
                       f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                       f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                      f"severity={e['severity_ratio']:.3f}")
+                      f"rnr={\1:.3f}")
                 points.append({
                     "family": "upstream",
                     "selection_method": args.selection_method,
@@ -387,7 +385,7 @@ def main():
                 print(f"[fset] s{sae_seed} set    K={len(feats)}  α={alpha:>4}  "
                       f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                       f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                      f"severity={e['severity_ratio']:.3f}")
+                      f"rnr={\1:.3f}")
                 points.append({
                     "family": "upstream",
                     "selection_method": args.selection_method,
@@ -414,7 +412,7 @@ def main():
             print(f"[fset] downstream f{args.target_feature}  α={alpha:>4}  "
                   f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                   f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                  f"severity={e['severity_ratio']:.3f}")
+                  f"rnr={\1:.3f}")
             points.append({
                 "family":  "downstream",
                 "selection_method": args.selection_method,

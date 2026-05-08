@@ -5,15 +5,15 @@ teacher-forced Δcln-CE on the left:
 
   panel 1 (left):   x = Δcln-CE,        y = Sampled eval ASR
   panel 2 (middle): x = gen-CE ratio,   y = Sampled eval ASR
-  panel 3 (right):  x = severity ratio, y = Sampled eval ASR
+  panel 3 (right):  x = recovery noise ratio, y = Sampled eval ASR
 
 Both ratios share the unitless multiplicative interpretation: 1.0 means
 "steered output is indistinguishable from the natural reference"; >1 means
 the intervention pushes the output further from the reference than the
 reference's own internal noise floor. They differ in *what* they compare:
 gen-CE ratio scores produced tokens against a natural-baseline rollout's
-NLL; severity ratio compares per-step generation distributions against
-a multi-seed sampling-noise baseline (see `sleeper.metrics.severity_ratio`).
+NLL; recovery noise ratio compares per-step generation distributions against
+a multi-seed sampling-noise baseline (see `sleeper.metrics.recovery_noise_ratio`).
 
 Two families on the same axes:
   * "upstream"   — per-seed ov×ov winner (ln1 SAE feature, OV-only intervention)
@@ -87,7 +87,7 @@ def main():
     panels = [
         ("delta_ce",       "Δcln-CE  (clean teacher-forced cost)",                       0.0, axes[0]),
         ("gen_ce_ratio",   "gen-CE ratio  (NLL_steered / NLL_baseline, ≥1 = damage)",    1.0, axes[1]),
-        ("severity_ratio", "severity ratio  (CE_steered / CE_sampling_noise, ≥1 = damage)", 1.0, axes[2]),
+        ("recovery_noise_ratio", "recovery noise ratio  (CE_steered / CE_sampling_noise, ≥1 = damage)", 1.0, axes[2]),
     ]
 
     for metric, xlabel, ref_x, ax in panels:

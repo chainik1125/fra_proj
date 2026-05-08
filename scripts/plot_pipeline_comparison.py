@@ -7,7 +7,7 @@ and produces a 2×4 grid of panels:
     cols  = (single, gen-CE ratio) | (single, severity) | (set, gen-CE) | (set, severity)
 
 Each panel:
-    x = the named ratio (gen-CE ratio or severity ratio)
+    x = the named ratio (gen-CE ratio or recovery noise ratio)
     y = sleeper-removed ratio = 1 − ASR
     color = α (steering strength), blue (low α) → red (high α)
     marker = upstream features (○) vs downstream baseline (◻)
@@ -158,9 +158,9 @@ def main():
     # Column definitions: (eval_mode, x_metric, x_label).
     cols = [
         ("single", "gen_ce_ratio",   "gen-CE ratio  (single feature)"),
-        ("single", "severity_ratio", "severity ratio  (single feature)"),
+        ("single", "recovery_noise_ratio", "recovery noise ratio  (single feature)"),
         ("set",    "gen_ce_ratio",   "gen-CE ratio  (feature set)"),
-        ("set",    "severity_ratio", "severity ratio  (feature set)"),
+        ("set",    "recovery_noise_ratio", "recovery noise ratio  (feature set)"),
     ]
     rows = [("jamie", "Jamie selection"), ("ketan", "Ketan selection")]
 
@@ -168,7 +168,7 @@ def main():
     # makes the visual comparison apples-to-apples. Pad the range by 5% of
     # span so points don't sit on the panel edge.
     metric_ranges: dict[str, tuple[float, float]] = {}
-    for x_metric in ("gen_ce_ratio", "severity_ratio"):
+    for x_metric in ("gen_ce_ratio", "recovery_noise_ratio"):
         all_x = [p[x_metric] for d in payloads.values() for p in d["points"]
                  if p.get(x_metric) is not None]
         lo, hi = min(all_x), max(all_x)

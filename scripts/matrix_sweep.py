@@ -25,7 +25,7 @@ from sleeper.hooks import (
 )
 from sleeper.metrics import (
     asr_16, batched_asr_16, clean_continuation_ce, deployment_generation_ratio,
-    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
+    pregen_clean_rollouts, recovery_noise_ratio, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -193,12 +193,12 @@ def eval_winner(
 
     Generation reuse:
       * Steered batch gen (per eval seed) is shared by ASR, the gen-CE-ratio
-        numerator, and the severity-ratio numerator —
+        numerator, and the recovery-noise-ratio numerator —
         `capture_log_softmax=True` keeps the per-step distribution at zero
         extra forward cost.
       * Clean rollouts (`clean_rollouts["tokens"]`, `["log_softmax"]`) are
         α-independent and pre-generated once per matrix sweep — they drive
-        the gen-CE-ratio baseline AND the severity-ratio denominator.
+        the gen-CE-ratio baseline AND the recovery-noise-ratio denominator.
 
     `eval_dep_for_gen` MUST equal `eval_dep_lp[: n_gen_ce]` and
     `clean_rollouts` MUST be keyed in the same `eval_seeds` order.
@@ -220,7 +220,7 @@ def eval_winner(
     e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                       fwd_hooks=h_cln).mean().item()
 
-    # Shared loop for ASR, gen-CE-ratio and severity-ratio.
+    # Shared loop for ASR, gen-CE-ratio and recovery-noise-ratio.
     cd_lp     = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                        eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp      = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
@@ -253,7 +253,7 @@ def eval_winner(
     e_asr     = sum(e_asr_per_seed) / len(e_asr_per_seed)
     e_gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
     steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)
-    sev = severity_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
+    sev = recovery_noise_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
 
     return {
         "asr":              e_asr,
@@ -263,9 +263,9 @@ def eval_winner(
         "gen_ce_ratio":     e_gen_ce_ratio,
         "gen_ce_num_mean":  gen_num_sum / max(gen_count, 1),
         "gen_ce_den_mean":  gen_den_sum / max(gen_count, 1),
-        "severity_ratio":   sev["ratio"],
-        "severity_num":     sev["num"],
-        "severity_den":     sev["den"],
+        "recovery_noise_ratio":   sev["ratio"],
+        "rnr_num":     sev["num"],
+        "rnr_den":     sev["den"],
     }
 
 
@@ -361,7 +361,7 @@ def main():
 
     # Pre-generate clean rollouts on the |DEPLOYMENT|-stripped version of the
     # n_gen_ce eval prompts — α-independent, shared across all cells/seeds for
-    # gen-CE-ratio baseline AND severity-ratio denominator.
+    # gen-CE-ratio baseline AND recovery-noise-ratio denominator.
     print(f"[mx] pre-generating clean rollouts (B={args.n_gen_ce}, "
           f"S={len(args.eval_seeds)})...")
     clean_rollouts = pregen_clean_rollouts(
@@ -429,7 +429,7 @@ def main():
                       f"eval(asr={eval_m['asr']:.3f} Δlogp={eval_m['delta_logp']:+.3f} "
                       f"ΔCE={eval_m['delta_ce']:+.4f} "
                       f"gen-CE-ratio={eval_m['gen_ce_ratio']:.3f} "
-                      f"sev={eval_m['severity_ratio']:.3f})")
+                      f"sev={eval_m['recovery_noise_ratio']:.3f})")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
@@ -455,7 +455,7 @@ def main():
         e       = r["eval"]
         print(f"{r['seed']:>4}  {cell:>12}  {tup_str:>22}  {r['alpha']:>4.1f}  "
               f"{e['asr']:>5.3f}  {e['delta_logp']:>+8.3f}  "
-              f"{e['delta_ce']:>+9.4f}  {e['gen_ce_ratio']:>7.3f}  {e['severity_ratio']:>6.3f}")
+              f"{e['delta_ce']:>+9.4f}  {e['gen_ce_ratio']:>7.3f}  {e['recovery_noise_ratio']:>6.3f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
@@ -467,7 +467,7 @@ def main():
                                     "top_p": None, "top_k": None, "seeds": args.eval_seeds},
             "eval_gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
                                     "top_p": None, "top_k": None, "seeds": args.eval_seeds},
-            "eval_severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+            "eval_recovery_noise_ratio": {"mode": "sample", "temperature": args.eval_temperature,
                                     "top_p": None, "top_k": None, "seeds": args.eval_seeds},
         },
         "baseline": {

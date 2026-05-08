@@ -41,6 +41,10 @@
     ],
     "eval_temperature": 1.0,
     "sae_mid": "weights/sae_resid_mid.pt",
+    "sae_ln1_dir": "weights/seeds",
+    "eval_metrics": [
+      "recovery_noise_ratio"
+    ],
     "out": "results/jamie_experiment.json",
     "device": null,
     "use_past_kv_cache": true
@@ -68,7 +72,7 @@
         4
       ]
     },
-    "severity_ratio": {
+    "recovery_noise_ratio": {
       "mode": "sample",
       "temperature": 1.0,
       "seeds": [
@@ -1877,12 +1881,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -1902,12 +1901,7 @@
       ],
       "delta_logp": -0.011952400207519531,
       "delta_ce": 3.5762786865234375e-07,
-      "gen_ce_ratio": 2.865212715021068,
-      "gen_ce_num_mean": 1.5531926574707031,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.112699491279096,
-      "severity_num": 17.813588623046876,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0692404451571837
     },
     {
       "family": "upstream",
@@ -1927,12 +1921,7 @@
       ],
       "delta_logp": -0.03177070617675781,
       "delta_ce": 9.5367431640625e-07,
-      "gen_ce_ratio": 2.7136562145595766,
-      "gen_ce_num_mean": 1.4710359497070313,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.6139529830030885,
-      "severity_num": 13.60832177734375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8915458480344157
     },
     {
       "family": "upstream",
@@ -1952,12 +1941,7 @@
       ],
       "delta_logp": -0.04770374298095703,
       "delta_ce": 1.430511474609375e-06,
-      "gen_ce_ratio": 2.1449246850983372,
-      "gen_ce_num_mean": 1.162734359741211,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0123273809433324,
-      "severity_num": 8.535612182617188,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.865713161200148
     },
     {
       "family": "upstream",
@@ -1977,12 +1961,7 @@
       ],
       "delta_logp": -0.01738452911376953,
       "delta_ce": 1.9073486328125e-06,
-      "gen_ce_ratio": 1.7868606157094897,
-      "gen_ce_num_mean": 0.9686327209472656,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8420244423755964,
-      "severity_num": 7.099673706054688,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8316317812365821
     },
     {
       "family": "upstream",
@@ -2002,12 +1981,7 @@
       ],
       "delta_logp": -0.0014410018920898438,
       "delta_ce": 2.384185791015625e-06,
-      "gen_ce_ratio": 1.6242606788178968,
-      "gen_ce_num_mean": 0.880489517211914,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8102067175887047,
-      "severity_num": 6.8313970947265625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8102067175887047
     },
     {
       "family": "upstream",
@@ -2027,12 +2001,7 @@
       ],
       "delta_logp": -0.013299942016601562,
       "delta_ce": 2.9802322387695312e-06,
-      "gen_ce_ratio": 1.4809828641815315,
-      "gen_ce_num_mean": 0.802820571899414,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7883197385115049,
-      "severity_num": 6.646853271484375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7883197385115049
     },
     {
       "family": "upstream",
@@ -2052,12 +2021,7 @@
       ],
       "delta_logp": -0.030553817749023438,
       "delta_ce": 3.4570693969726562e-06,
-      "gen_ce_ratio": 1.406382196561014,
-      "gen_ce_num_mean": 0.7623805694580078,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7423242081788121,
-      "severity_num": 6.259034057617187,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.740284057301397
     },
     {
       "family": "upstream",
@@ -2077,12 +2041,7 @@
       ],
       "delta_logp": -0.02660846710205078,
       "delta_ce": 3.933906555175781e-06,
-      "gen_ce_ratio": 1.4374555433360816,
-      "gen_ce_num_mean": 0.7792250061035156,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7358075974209904,
-      "severity_num": 6.204088134765625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7358075974209904
     },
     {
       "family": "upstream",
@@ -2122,12 +2081,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -2167,12 +2121,7 @@
       ],
       "delta_logp": 0.14654254913330078,
       "delta_ce": 0.002576589584350586,
-      "gen_ce_ratio": 2.904625519722503,
-      "gen_ce_num_mean": 1.5745578002929688,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.0161437613409317,
-      "severity_num": 16.99946240234375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8377258065833728
     },
     {
       "family": "upstream",
@@ -2212,12 +2161,7 @@
       ],
       "delta_logp": -0.045302391052246094,
       "delta_ce": 0.016452312469482422,
-      "gen_ce_ratio": 2.5506363618707,
-      "gen_ce_num_mean": 1.3826651153564453,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.9432141892573218,
-      "severity_num": 7.952872436523437,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8829968921369411
     },
     {
       "family": "upstream",
@@ -2257,12 +2201,7 @@
       ],
       "delta_logp": 0.10113811492919922,
       "delta_ce": 0.05984926223754883,
-      "gen_ce_ratio": 2.6681448633500318,
-      "gen_ce_num_mean": 1.4463648681640624,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.9960449821712061,
-      "severity_num": 8.398324340820313,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9960449821712061
     },
     {
       "family": "upstream",
@@ -2302,12 +2241,7 @@
       ],
       "delta_logp": 0.16881370544433594,
       "delta_ce": 0.1873692274093628,
-      "gen_ce_ratio": 4.21909043389704,
-      "gen_ce_num_mean": 2.287111267089844,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0399720408722721,
-      "severity_num": 8.768702880859376,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0399720408722721
     },
     {
       "family": "upstream",
@@ -2347,12 +2281,7 @@
       ],
       "delta_logp": 0.5285768508911133,
       "delta_ce": 0.5143020153045654,
-      "gen_ce_ratio": 7.5973398764910485,
-      "gen_ce_num_mean": 4.118414123535156,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0623579612392848,
-      "severity_num": 8.95745361328125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0623579612392848
     },
     {
       "family": "upstream",
@@ -2392,12 +2321,7 @@
       ],
       "delta_logp": 0.622833251953125,
       "delta_ce": 0.908754825592041,
-      "gen_ce_ratio": 10.569314733336016,
-      "gen_ce_num_mean": 5.7294810791015625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0961835834084177,
-      "severity_num": 9.24266015625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0961835834084177
     },
     {
       "family": "upstream",
@@ -2437,12 +2361,7 @@
       ],
       "delta_logp": 0.47849273681640625,
       "delta_ce": 1.3998582363128662,
-      "gen_ce_ratio": 12.624507510941934,
-      "gen_ce_num_mean": 6.843572998046875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1281206904277266,
-      "severity_num": 9.511943359375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.1281206904277266
     },
     {
       "family": "upstream",
@@ -2482,12 +2401,7 @@
       ],
       "delta_logp": -1.455331802368164,
       "delta_ce": 1.7859032154083252,
-      "gen_ce_ratio": 13.629359764928221,
-      "gen_ce_num_mean": 7.388289672851562,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1138658351316313,
-      "severity_num": 9.391751098632813,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.1138658351316313
     },
     {
       "family": "upstream",
@@ -2507,12 +2421,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -2532,12 +2441,7 @@
       ],
       "delta_logp": -0.07866287231445312,
       "delta_ce": -0.0002009868621826172,
-      "gen_ce_ratio": 2.8772911349576944,
-      "gen_ce_num_mean": 1.559740203857422,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1692745082667417,
-      "severity_num": 18.290610595703125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0766163978347174
     },
     {
       "family": "upstream",
@@ -2557,12 +2461,7 @@
       ],
       "delta_logp": -0.1447734832763672,
       "delta_ce": -0.00036072731018066406,
-      "gen_ce_ratio": 2.8950530271064965,
-      "gen_ce_num_mean": 1.569368682861328,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.126556169333113,
-      "severity_num": 17.930423583984375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0510208301130284
     },
     {
       "family": "upstream",
@@ -2582,12 +2481,7 @@
       ],
       "delta_logp": -0.19423770904541016,
       "delta_ce": -0.0004633665084838867,
-      "gen_ce_ratio": 2.957697888626891,
-      "gen_ce_num_mean": 1.6033276062011719,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.0067439813569137,
-      "severity_num": 16.92020654296875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9711806131675896
     },
     {
       "family": "upstream",
@@ -2607,12 +2501,7 @@
       ],
       "delta_logp": -0.22936153411865234,
       "delta_ce": -0.0004968643188476562,
-      "gen_ce_ratio": 3.0300949412784997,
-      "gen_ce_num_mean": 1.6425730590820313,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.7242457481661775,
-      "severity_num": 14.538274169921875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.918825020751399
     },
     {
       "family": "upstream",
@@ -2632,12 +2521,7 @@
       ],
       "delta_logp": -0.2552156448364258,
       "delta_ce": -0.00045502185821533203,
-      "gen_ce_ratio": 2.9112479054173304,
-      "gen_ce_num_mean": 1.578147705078125,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.4025832514082535,
-      "severity_num": 11.82612158203125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9205530775026672
     },
     {
       "family": "upstream",
@@ -2657,12 +2541,7 @@
       ],
       "delta_logp": -0.2754497528076172,
       "delta_ce": -0.00033485889434814453,
-      "gen_ce_ratio": 2.7663931124576613,
-      "gen_ce_num_mean": 1.4996239013671875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1145394775369648,
-      "severity_num": 9.397431030273438,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9221819405999977
     },
     {
       "family": "upstream",
@@ -2682,12 +2561,7 @@
       ],
       "delta_logp": -0.2880516052246094,
       "delta_ce": -0.0001323223114013672,
-      "gen_ce_ratio": 2.441693095540555,
-      "gen_ce_num_mean": 1.3236084594726563,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.941585315261533,
-      "severity_num": 7.939138305664063,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8728761411402497
     },
     {
       "family": "upstream",
@@ -2707,12 +2581,7 @@
       ],
       "delta_logp": -0.28589820861816406,
       "delta_ce": 0.0001519918441772461,
-      "gen_ce_ratio": 2.255096341654617,
-      "gen_ce_num_mean": 1.2224569091796875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8504356199171432,
-      "severity_num": 7.170593994140625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8271976813797879
     },
     {
       "family": "upstream",
@@ -2752,12 +2621,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -2797,12 +2661,7 @@
       ],
       "delta_logp": 0.057412147521972656,
       "delta_ce": 0.0018557310104370117,
-      "gen_ce_ratio": 2.9152763723193353,
-      "gen_ce_num_mean": 1.5803314819335939,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.0740933099693932,
-      "severity_num": 17.488073974609375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9915269593585799
     },
     {
       "family": "upstream",
@@ -2842,12 +2701,7 @@
       ],
       "delta_logp": -0.01568603515625,
       "delta_ce": 0.012539982795715332,
-      "gen_ce_ratio": 2.737166826595718,
-      "gen_ce_num_mean": 1.483780731201172,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.2323243536786226,
-      "severity_num": 10.390554443359376,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.030620352852949
     },
     {
       "family": "upstream",
@@ -2887,12 +2741,7 @@
       ],
       "delta_logp": -0.1446399688720703,
       "delta_ce": 0.04204988479614258,
-      "gen_ce_ratio": 1.7742867863324416,
-      "gen_ce_num_mean": 0.9618166198730469,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0374846456077045,
-      "severity_num": 8.74772998046875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.036826231483298
     },
     {
       "family": "upstream",
@@ -2932,12 +2781,7 @@
       ],
       "delta_logp": 0.06969165802001953,
       "delta_ce": 0.09783041477203369,
-      "gen_ce_ratio": 1.9971818802871235,
-      "gen_ce_num_mean": 1.082645004272461,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0843977368336968,
-      "severity_num": 9.143285766601563,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0843977368336968
     },
     {
       "family": "upstream",
@@ -2977,12 +2821,7 @@
       ],
       "delta_logp": 0.3696928024291992,
       "delta_ce": 0.16772162914276123,
-      "gen_ce_ratio": 2.9265177754877603,
-      "gen_ce_num_mean": 1.58642529296875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.2104916076650456,
-      "severity_num": 10.206467895507812,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.2104916076650456
     },
     {
       "family": "upstream",
@@ -3022,12 +2861,7 @@
       ],
       "delta_logp": 0.59759521484375,
       "delta_ce": 0.23702001571655273,
-      "gen_ce_ratio": 4.691636672346048,
-      "gen_ce_num_mean": 2.543272125244141,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.3228498765531833,
-      "severity_num": 11.1538359375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.3228498765531833
     },
     {
       "family": "upstream",
@@ -3067,12 +2901,7 @@
       ],
       "delta_logp": 0.8572969436645508,
       "delta_ce": 0.3161585330963135,
-      "gen_ce_ratio": 6.920787126785691,
-      "gen_ce_num_mean": 3.751664123535156,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.3607150077842396,
-      "severity_num": 11.473102294921874,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.3607150077842396
     },
     {
       "family": "upstream",
@@ -3112,12 +2941,7 @@
       ],
       "delta_logp": 1.2562227249145508,
       "delta_ce": 0.42218708992004395,
-      "gen_ce_ratio": 8.95197821774765,
-      "gen_ce_num_mean": 4.852745056152344,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.3322097562907131,
-      "severity_num": 11.23275537109375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.3322097562907131
     },
     {
       "family": "upstream",
@@ -3137,12 +2961,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -3162,12 +2981,7 @@
       ],
       "delta_logp": -0.006203651428222656,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.854125564337501,
-      "gen_ce_num_mean": 1.5471824645996093,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.150075192998983,
-      "severity_num": 18.128728271484373,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0492035067258414
     },
     {
       "family": "upstream",
@@ -3187,12 +3001,7 @@
       ],
       "delta_logp": -0.03222370147705078,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.8422260547646987,
-      "gen_ce_num_mean": 1.540731903076172,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.8510797714654024,
-      "severity_num": 15.607697021484375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9128491692538211
     },
     {
       "family": "upstream",
@@ -3212,12 +3021,7 @@
       ],
       "delta_logp": -0.11969947814941406,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.3910319631978343,
-      "gen_ce_num_mean": 1.296145751953125,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1224912665729532,
-      "severity_num": 9.464477905273437,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.875858294785609
     },
     {
       "family": "upstream",
@@ -3237,12 +3041,7 @@
       ],
       "delta_logp": -0.18216991424560547,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.6463782614337543,
-      "gen_ce_num_mean": 0.8924791564941407,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.806480185133669,
-      "severity_num": 6.799976196289062,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7743626642830187
     },
     {
       "family": "upstream",
@@ -3262,12 +3061,7 @@
       ],
       "delta_logp": -0.21538257598876953,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.3110625491011274,
-      "gen_ce_num_mean": 0.7107090911865235,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6755357849544654,
-      "severity_num": 5.69589599609375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6709214827133676
     },
     {
       "family": "upstream",
@@ -3287,12 +3081,7 @@
       ],
       "delta_logp": -0.22647666931152344,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.2635331081284586,
-      "gen_ce_num_mean": 0.6849440307617187,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.669397842882066,
-      "severity_num": 5.644142883300781,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6675961461296576
     },
     {
       "family": "upstream",
@@ -3312,12 +3101,7 @@
       ],
       "delta_logp": -0.19725990295410156,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.253494691378215,
-      "gen_ce_num_mean": 0.6795023422241211,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6644888892073959,
-      "severity_num": 5.602752197265625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.66274452045954
     },
     {
       "family": "upstream",
@@ -3337,12 +3121,7 @@
       ],
       "delta_logp": -0.173614501953125,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.3414597182865475,
-      "gen_ce_num_mean": 0.7271869812011719,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.680423724402801,
-      "severity_num": 5.737109497070312,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.680423724402801
     },
     {
       "family": "upstream",
@@ -3382,12 +3161,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -3427,12 +3201,7 @@
       ],
       "delta_logp": -0.10702323913574219,
       "delta_ce": 0.0025328397750854492,
-      "gen_ce_ratio": 3.0656043136651094,
-      "gen_ce_num_mean": 1.6618222045898436,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.8820042866705307,
-      "severity_num": 15.8684423828125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9720871281819305
     },
     {
       "family": "upstream",
@@ -3472,12 +3241,7 @@
       ],
       "delta_logp": -0.1899852752685547,
       "delta_ce": 0.011994719505310059,
-      "gen_ce_ratio": 1.9448227039390962,
-      "gen_ce_num_mean": 1.0542618103027344,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8680778555731241,
-      "severity_num": 7.319347534179688,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8484511887377034
     },
     {
       "family": "upstream",
@@ -3517,12 +3281,7 @@
       ],
       "delta_logp": -0.06190299987792969,
       "delta_ce": 0.03139054775238037,
-      "gen_ce_ratio": 2.28988486515715,
-      "gen_ce_num_mean": 1.2413152923583985,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.9671454623857293,
-      "severity_num": 8.154653076171876,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9671454623857293
     },
     {
       "family": "upstream",
@@ -3562,12 +3321,7 @@
       ],
       "delta_logp": 0.09730052947998047,
       "delta_ce": 0.06337058544158936,
-      "gen_ce_ratio": 3.3073246567248877,
-      "gen_ce_num_mean": 1.792855499267578,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0859801088005596,
-      "severity_num": 9.156627807617188,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0859801088005596
     },
     {
       "family": "upstream",
@@ -3607,12 +3361,7 @@
       ],
       "delta_logp": 0.13762950897216797,
       "delta_ce": 0.10666465759277344,
-      "gen_ce_ratio": 4.688510075811719,
-      "gen_ce_num_mean": 2.5415772399902345,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1946112950851249,
-      "severity_num": 10.0725703125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.1946112950851249
     },
     {
       "family": "upstream",
@@ -3652,12 +3401,7 @@
       ],
       "delta_logp": 0.13385868072509766,
       "delta_ce": 0.15654408931732178,
-      "gen_ce_ratio": 6.024782069105676,
-      "gen_ce_num_mean": 3.2659520263671875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.2122955881489608,
-      "severity_num": 10.221678466796876,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.2122955881489608
     },
     {
       "family": "upstream",
@@ -3697,12 +3441,7 @@
       ],
       "delta_logp": 0.13291072845458984,
       "delta_ce": 0.21066534519195557,
-      "gen_ce_ratio": 7.363053658753533,
-      "gen_ce_num_mean": 3.9914107666015624,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.2109112262224535,
-      "severity_num": 10.210005981445313,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.2109112262224535
     },
     {
       "family": "upstream",
@@ -3742,12 +3481,7 @@
       ],
       "delta_logp": 0.1916971206665039,
       "delta_ce": 0.2694582939147949,
-      "gen_ce_ratio": 9.0015944865433,
-      "gen_ce_num_mean": 4.879641357421875,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.187959391220107,
-      "severity_num": 10.016483642578125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.187959391220107
     },
     {
       "family": "upstream",
@@ -3767,12 +3501,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -3792,12 +3521,7 @@
       ],
       "delta_logp": 0.03357505798339844,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.9267879988188987,
-      "gen_ce_num_mean": 1.58657177734375,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.129641662922399,
-      "severity_num": 17.956439453125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0615013018315556
     },
     {
       "family": "upstream",
@@ -3817,12 +3541,7 @@
       ],
       "delta_logp": -0.008062362670898438,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 3.236964468728264,
-      "gen_ce_num_mean": 1.7547142028808593,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.642678264956023,
-      "severity_num": 13.85052392578125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9979071817522726
     },
     {
       "family": "upstream",
@@ -3842,12 +3561,7 @@
       ],
       "delta_logp": -0.1513233184814453,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.391642217553989,
-      "gen_ce_num_mean": 1.2964765625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.924139830095311,
-      "severity_num": 7.792043701171875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8618548262122602
     },
     {
       "family": "upstream",
@@ -3867,12 +3581,7 @@
       ],
       "delta_logp": -0.33254337310791016,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.7243034641786603,
-      "gen_ce_num_mean": 0.9347213439941406,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7422185941374,
-      "severity_num": 6.2581435546875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7340962023099273
     },
     {
       "family": "upstream",
@@ -3892,12 +3601,7 @@
       ],
       "delta_logp": -0.4166450500488281,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.6269335253420225,
-      "gen_ce_num_mean": 0.8819384307861328,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6871580564439368,
-      "severity_num": 5.793891174316406,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6854935555722436
     },
     {
       "family": "upstream",
@@ -3917,12 +3621,7 @@
       ],
       "delta_logp": -0.45609092712402344,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.582560518063163,
-      "gen_ce_num_mean": 0.8578844299316406,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7017984862373465,
-      "severity_num": 5.91733447265625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7017984862373465
     },
     {
       "family": "upstream",
@@ -3942,12 +3641,7 @@
       ],
       "delta_logp": -0.46010494232177734,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.6175375504874294,
-      "gen_ce_num_mean": 0.8768450012207031,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7331117248162811,
-      "severity_num": 6.181357421875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7331117248162811
     },
     {
       "family": "upstream",
@@ -3967,12 +3661,7 @@
       ],
       "delta_logp": -0.43866443634033203,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 1.6994701933813863,
-      "gen_ce_num_mean": 0.9212595672607422,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7558521724822795,
-      "severity_num": 6.373097412109375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7558521724822795
     },
     {
       "family": "upstream",
@@ -4012,12 +3701,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -4057,12 +3741,7 @@
       ],
       "delta_logp": 0.006983757019042969,
       "delta_ce": -0.0003088712692260742,
-      "gen_ce_ratio": 2.9450187284472262,
-      "gen_ce_num_mean": 1.5964544067382813,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.960140435548253,
-      "severity_num": 16.5272607421875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9783681471752965
     },
     {
       "family": "upstream",
@@ -4102,12 +3781,7 @@
       ],
       "delta_logp": -0.0480804443359375,
       "delta_ce": 0.004920840263366699,
-      "gen_ce_ratio": 2.0953343127052535,
-      "gen_ce_num_mean": 1.135852096557617,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8221610399139277,
-      "severity_num": 6.9321920166015625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8117986462848029
     },
     {
       "family": "upstream",
@@ -4147,12 +3821,7 @@
       ],
       "delta_logp": -0.10319900512695312,
       "delta_ce": 0.01911163330078125,
-      "gen_ce_ratio": 1.96817284272411,
-      "gen_ce_num_mean": 1.0669196014404296,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8580485174546566,
-      "severity_num": 7.234783447265625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8580485174546566
     },
     {
       "family": "upstream",
@@ -4192,12 +3861,7 @@
       ],
       "delta_logp": -0.027274131774902344,
       "delta_ce": 0.04548490047454834,
-      "gen_ce_ratio": 2.5379758921381055,
-      "gen_ce_num_mean": 1.375802047729492,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0108277339432452,
-      "severity_num": 8.522967651367187,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0108277339432452
     },
     {
       "family": "upstream",
@@ -4237,12 +3901,7 @@
       ],
       "delta_logp": 0.01832294464111328,
       "delta_ce": 0.0823901891708374,
-      "gen_ce_ratio": 3.3467533933435547,
-      "gen_ce_num_mean": 1.8142292785644532,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0699893611407356,
-      "severity_num": 9.021799072265624,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0699893611407356
     },
     {
       "family": "upstream",
@@ -4282,12 +3941,7 @@
       ],
       "delta_logp": 0.40725231170654297,
       "delta_ce": 0.12122392654418945,
-      "gen_ce_ratio": 5.329780046652933,
-      "gen_ce_num_mean": 2.889200927734375,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0874233366204709,
-      "severity_num": 9.168796630859376,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0874233366204709
     },
     {
       "family": "upstream",
@@ -4327,12 +3981,7 @@
       ],
       "delta_logp": 2.4607324600219727,
       "delta_ce": 0.15881597995758057,
-      "gen_ce_ratio": 9.387432869909704,
-      "gen_ce_num_mean": 5.088799072265625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0677452473500393,
-      "severity_num": 9.00287744140625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0677452473500393
     },
     {
       "family": "upstream",
@@ -4372,12 +4021,7 @@
       ],
       "delta_logp": 1.604741096496582,
       "delta_ce": 0.21104133129119873,
-      "gen_ce_ratio": 12.723602910192684,
-      "gen_ce_num_mean": 6.897291259765625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0739598120837375,
-      "severity_num": 9.055276611328125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0739598120837375
     },
     {
       "family": "upstream",
@@ -4397,12 +4041,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -4422,12 +4061,7 @@
       ],
       "delta_logp": 0.0276641845703125,
       "delta_ce": -3.695487976074219e-05,
-      "gen_ce_ratio": 2.9389215330557725,
-      "gen_ce_num_mean": 1.5931492004394532,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.13520207209103,
-      "severity_num": 18.003322998046876,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.170839476960274
     },
     {
       "family": "upstream",
@@ -4447,12 +4081,7 @@
       ],
       "delta_logp": -0.02420330047607422,
       "delta_ce": -1.2516975402832031e-05,
-      "gen_ce_ratio": 3.189076784803991,
-      "gen_ce_num_mean": 1.7287549438476562,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.8519645261328153,
-      "severity_num": 15.615156982421874,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0200163310869175
     },
     {
       "family": "upstream",
@@ -4472,12 +4101,7 @@
       ],
       "delta_logp": -0.1438913345336914,
       "delta_ce": 5.936622619628906e-05,
-      "gen_ce_ratio": 3.0162827571899813,
-      "gen_ce_num_mean": 1.635085662841797,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.216248926576959,
-      "severity_num": 10.25501171875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.965373903453239
     },
     {
       "family": "upstream",
@@ -4497,12 +4121,7 @@
       ],
       "delta_logp": -0.24599361419677734,
       "delta_ce": 0.00016438961029052734,
-      "gen_ce_ratio": 2.291096366425089,
-      "gen_ce_num_mean": 1.2419720306396484,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8629197208054087,
-      "severity_num": 7.275855834960938,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8476647184931734
     },
     {
       "family": "upstream",
@@ -4522,12 +4141,7 @@
       ],
       "delta_logp": -0.3115692138671875,
       "delta_ce": 0.00026929378509521484,
-      "gen_ce_ratio": 1.8898321434593146,
-      "gen_ce_num_mean": 1.0244521789550782,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7359513743977231,
-      "severity_num": 6.205300415039063,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7341465733041042
     },
     {
       "family": "upstream",
@@ -4547,12 +4161,7 @@
       ],
       "delta_logp": -0.3431100845336914,
       "delta_ce": 0.0003229379653930664,
-      "gen_ce_ratio": 1.7580749627668844,
-      "gen_ce_num_mean": 0.9530284118652343,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6901361914418459,
-      "severity_num": 5.819001831054687,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6901361914418459
     },
     {
       "family": "upstream",
@@ -4572,12 +4181,7 @@
       ],
       "delta_logp": -0.3592367172241211,
       "delta_ce": 0.0003472566604614258,
-      "gen_ce_ratio": 1.6643609204144438,
-      "gen_ce_num_mean": 0.902227310180664,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6699021625977029,
-      "severity_num": 5.648395141601562,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6699021625977029
     },
     {
       "family": "upstream",
@@ -4597,12 +4201,7 @@
       ],
       "delta_logp": -0.3689899444580078,
       "delta_ce": 0.0003924369812011719,
-      "gen_ce_ratio": 1.6364502843959818,
-      "gen_ce_num_mean": 0.8870973358154297,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6620670195290423,
-      "severity_num": 5.582331787109375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6620670195290423
     },
     {
       "family": "upstream",
@@ -4642,12 +4241,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "upstream",
@@ -4687,12 +4281,7 @@
       ],
       "delta_logp": -0.03456306457519531,
       "delta_ce": 0.0023866891860961914,
-      "gen_ce_ratio": 3.1958533103906217,
-      "gen_ce_num_mean": 1.7324284057617187,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.932646472885531,
-      "severity_num": 16.295440673828125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9992626325804075
     },
     {
       "family": "upstream",
@@ -4732,12 +4321,7 @@
       ],
       "delta_logp": -0.15601062774658203,
       "delta_ce": 0.01667475700378418,
-      "gen_ce_ratio": 2.318037294760454,
-      "gen_ce_num_mean": 1.2565763397216796,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.878700311724295,
-      "severity_num": 7.40891259765625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8581988616448804
     },
     {
       "family": "upstream",
@@ -4777,12 +4361,7 @@
       ],
       "delta_logp": -0.1898956298828125,
       "delta_ce": 0.04952561855316162,
-      "gen_ce_ratio": 1.5640146967714224,
-      "gen_ce_num_mean": 0.8478309936523437,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8320848074237622,
-      "severity_num": 7.015865966796875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8303508320210138
     },
     {
       "family": "upstream",
@@ -4822,12 +4401,7 @@
       ],
       "delta_logp": -0.05657386779785156,
       "delta_ce": 0.11008107662200928,
-      "gen_ce_ratio": 2.1252884563689247,
-      "gen_ce_num_mean": 1.1520898284912109,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.9024919339899934,
-      "severity_num": 7.609515747070312,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9011207885102283
     },
     {
       "family": "upstream",
@@ -4867,12 +4441,7 @@
       ],
       "delta_logp": 0.13758373260498047,
       "delta_ce": 0.23521733283996582,
-      "gen_ce_ratio": 4.397729617349689,
-      "gen_ce_num_mean": 2.3839491271972655,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.0258533762941429,
-      "severity_num": 8.649658935546874,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0258533762941429
     },
     {
       "family": "upstream",
@@ -4912,12 +4481,7 @@
       ],
       "delta_logp": 0.35846710205078125,
       "delta_ce": 0.45461881160736084,
-      "gen_ce_ratio": 7.0323850840099,
-      "gen_ce_num_mean": 3.812159851074219,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1277625871632537,
-      "severity_num": 9.508923950195312,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.1277625871632537
     },
     {
       "family": "upstream",
@@ -4957,12 +4521,7 @@
       ],
       "delta_logp": 0.7383289337158203,
       "delta_ce": 0.7743057012557983,
-      "gen_ce_ratio": 9.411297080433945,
-      "gen_ce_num_mean": 5.101735534667969,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.1591318395497585,
-      "severity_num": 9.773419189453126,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.1591318395497585
     },
     {
       "family": "upstream",
@@ -5002,12 +4561,7 @@
       ],
       "delta_logp": 2.1917896270751953,
       "delta_ce": 1.1275572776794434,
-      "gen_ce_ratio": 10.900529722173824,
-      "gen_ce_num_mean": 5.909028198242187,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.151792582998774,
-      "severity_num": 9.711536987304687,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.151792582998774
     },
     {
       "family": "downstream",
@@ -5026,12 +4580,7 @@
       ],
       "delta_logp": 0.0,
       "delta_ce": 0.0,
-      "gen_ce_ratio": 2.835908289579203,
-      "gen_ce_num_mean": 1.53730712890625,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.1890412872722917,
-      "severity_num": 18.457277587890626,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9952740020064254
     },
     {
       "family": "downstream",
@@ -5050,12 +4599,7 @@
       ],
       "delta_logp": -0.14027786254882812,
       "delta_ce": -0.00036835670471191406,
-      "gen_ce_ratio": 2.914713463342657,
-      "gen_ce_num_mean": 1.5800263366699219,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 2.0827058853080733,
-      "severity_num": 17.5606923828125,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9933473227902191
     },
     {
       "family": "downstream",
@@ -5074,12 +4618,7 @@
       ],
       "delta_logp": -0.21596622467041016,
       "delta_ce": -0.0006656646728515625,
-      "gen_ce_ratio": 3.0353273657137825,
-      "gen_ce_num_mean": 1.6454094848632812,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.7666083436830027,
-      "severity_num": 14.895461669921875,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0444051898643403
     },
     {
       "family": "downstream",
@@ -5098,12 +4637,7 @@
       ],
       "delta_logp": -0.22596359252929688,
       "delta_ce": -0.0008378028869628906,
-      "gen_ce_ratio": 2.8173514341681076,
-      "gen_ce_num_mean": 1.5272477111816407,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 1.258411369369655,
-      "severity_num": 10.610511596679688,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 1.0317028279491747
     },
     {
       "family": "downstream",
@@ -5122,12 +4656,7 @@
       ],
       "delta_logp": -0.17937946319580078,
       "delta_ce": -0.0008867979049682617,
-      "gen_ce_ratio": 2.256119868817832,
-      "gen_ce_num_mean": 1.223011749267578,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.9406551009518944,
-      "severity_num": 7.931295043945313,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.9053108712613663
     },
     {
       "family": "downstream",
@@ -5146,12 +4675,7 @@
       ],
       "delta_logp": -0.09893226623535156,
       "delta_ce": -0.0008778572082519531,
-      "gen_ce_ratio": 1.644722467972202,
-      "gen_ce_num_mean": 0.8915815734863282,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.8013521782371228,
-      "severity_num": 6.756738525390625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.8013521782371228
     },
     {
       "family": "downstream",
@@ -5170,12 +4694,7 @@
       ],
       "delta_logp": -0.011137008666992188,
       "delta_ce": -0.0008581876754760742,
-      "gen_ce_ratio": 1.3406719469056192,
-      "gen_ce_num_mean": 0.7267599411010742,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.7339540890911987,
-      "severity_num": 6.1884599609375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.7339540890911987
     },
     {
       "family": "downstream",
@@ -5194,12 +4713,7 @@
       ],
       "delta_logp": 0.05155181884765625,
       "delta_ce": -0.0008753538131713867,
-      "gen_ce_ratio": 1.2483611658673028,
-      "gen_ce_num_mean": 0.6767195281982422,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6905373510680952,
-      "severity_num": 5.82238427734375,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6905373510680952
     },
     {
       "family": "downstream",
@@ -5218,12 +4732,7 @@
       ],
       "delta_logp": 0.08195114135742188,
       "delta_ce": -0.0009245872497558594,
-      "gen_ce_ratio": 1.2156768235922983,
-      "gen_ce_num_mean": 0.6590017929077149,
-      "gen_ce_den_mean": 0.5420863342285156,
-      "severity_ratio": 0.6784633859137796,
-      "severity_num": 5.72058056640625,
-      "severity_den": 8.431671752929688
+      "recovery_noise_ratio": 0.6784633859137796
     }
   ]
 }

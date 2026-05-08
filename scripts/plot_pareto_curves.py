@@ -1,6 +1,6 @@
 """Pareto curves: Sleepers Removed (%) vs Recovery Noise to Sampling Noise Ratio.
 
-X = severity_ratio = CE(clean, steered) / CE(clean_a, clean_b)
+X = recovery_noise_ratio = CE(clean, steered) / CE(clean_a, clean_b)
     Lower = less collateral damage (better).  Dotted line at X=1: steer noise
     equals sampling noise.
 
@@ -73,7 +73,7 @@ def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
     rows = []
     for alpha in sorted(by_alpha):
         grp = by_alpha[alpha]
-        xs = [p.get("recovery_noise_ratio") or p["severity_ratio"] for p in grp]
+        xs = [p.get("recovery_noise_ratio") or p.get("severity_ratio") for p in grp]
         ys = [(1.0 - p["asr"]) * 100.0 for p in grp]
         rows.append(dict(
             alpha=alpha,
@@ -101,7 +101,7 @@ def _aggregate_by_seed(points: list[dict], family: str,
         seed_pts.sort(key=lambda p: p["alpha"])
         curves.append([
             dict(alpha=p["alpha"],
-                 x=p.get("recovery_noise_ratio") or p["severity_ratio"],
+                 x=p.get("recovery_noise_ratio") or p.get("severity_ratio"),
                  y=(1.0 - p["asr"]) * 100.0)
             for p in seed_pts
         ])
