@@ -271,30 +271,34 @@ def _save(fig: plt.Figure, path: Path) -> None:
 
 def make_figures(payload: dict, out_dir: Path, pipeline: str,
                  alpha_colors: dict, norm, cmap, alphas: list[float],
-                 use_ntr: bool = True) -> None:
-    pts    = payload["points"]
+                 use_ntr: bool = True, mainline_only: bool = False) -> None:
+    pts      = payload["points"]
+    single_s = _aggregate_by_seed(pts, "upstream",   "single", use_ntr)
+    fset_s   = _aggregate_by_seed(pts, "upstream",   "set",    use_ntr)
+    down_s   = _aggregate_by_seed(pts, "downstream", "single", use_ntr)
+
+    _save(_fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
+          out_dir / f"panel_seeds_{pipeline}.pdf")
+
+    if mainline_only:
+        return
+
     single = _aggregate(pts, "upstream",   "single", use_ntr)
     fset   = _aggregate(pts, "upstream",   "set",    use_ntr)
     down   = _aggregate(pts, "downstream", "single", use_ntr)
 
     _save(_fig1(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig1_{pipeline}.pdf")
+          out_dir / f"all_mean_{pipeline}.pdf")
     _save(_fig2(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig2_{pipeline}.pdf")
+          out_dir / f"panel_mean_{pipeline}.pdf")
     _save(_fig3(fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig3_{pipeline}.pdf")
+          out_dir / f"fset_mean_{pipeline}.pdf")
     _save(_fig4(single, down, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig4_{pipeline}.pdf")
-
-    single_s = _aggregate_by_seed(pts, "upstream",   "single", use_ntr)
-    fset_s   = _aggregate_by_seed(pts, "upstream",   "set",    use_ntr)
-    down_s   = _aggregate_by_seed(pts, "downstream", "single", use_ntr)
+          out_dir / f"single_mean_{pipeline}.pdf")
     _save(_fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig5_{pipeline}.pdf")
+          out_dir / f"all_seeds_{pipeline}.pdf")
     _save(_fig6(single_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig6_{pipeline}.pdf")
-    _save(_fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
-          out_dir / f"fig7_{pipeline}.pdf")
+          out_dir / f"single_seeds_{pipeline}.pdf")
 
 
 def main() -> None:
@@ -305,7 +309,9 @@ def main() -> None:
                    default=Path("results/ketan_experiment.json"))
     p.add_argument("--jamie_50k_in", type=Path,
                    default=Path("results/jamie_experiment_50k.json"))
-    p.add_argument("--out_dir",  type=Path, default=Path("figures"))
+    p.add_argument("--out_dir",   type=Path, default=Path("figures"))
+    p.add_argument("--mainline", action="store_true",
+                   help="Produce only the mainline figure (panel_seeds).")
     args = p.parse_args()
 
     # 4k pipelines: use severity_ratio (Recovery Noise to Sampling Noise Ratio)
@@ -328,7 +334,7 @@ def main() -> None:
     for pipeline, (payload, use_ntr) in payloads.items():
         print(f"[{pipeline}]")
         make_figures(payload, args.out_dir, pipeline, alpha_colors, norm, cmap,
-                     alphas, use_ntr)
+                     alphas, use_ntr, mainline_only=args.mainline)
 
 
 if __name__ == "__main__":

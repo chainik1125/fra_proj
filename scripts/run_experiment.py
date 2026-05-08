@@ -93,10 +93,11 @@ def main() -> None:
 
     # 3. Plot Pareto curves (fig1–fig7) if requested.
     if args.plot:
-        print("[run_experiment] step 3: plot_pareto_curves")
+        print("[run_experiment] step 3: plot_pareto_curves (mainline)")
         subprocess.run([
             *uv, "-m", "scripts.plot_pareto_curves",
             "--jamie_in", str(args.out),
+            "--mainline",
         ], check=True, env=env)
 
 
