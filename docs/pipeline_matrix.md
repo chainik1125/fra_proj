@@ -2,10 +2,7 @@
 
 ## Headline pipeline — `scripts/run_experiment.py`
 
-End-to-end flow: train SAEs → attribution-based feature selection → α-sweep eval
-(single-feature and full feature-set) → Pareto curve plots (fig1–fig7).
-
-### Reproduce `results/jamie_experiment.json` + figures
+**One command to reproduce the results:**
 
 ```bash
 uv run -m scripts.run_experiment \
@@ -17,24 +14,41 @@ uv run -m scripts.run_experiment \
   --plot
 ```
 
-This single command:
-1. Trains 6 SAEs (4 k steps, `weights/seeds/sae_ln1_s{0..4}.pt` + `weights/sae_resid_mid.pt`) — skipped if already present.
-2. Runs `scripts.feature_set_pipeline` with the Jamie selection method, `eval_mode=both` (single-feature α-sweep **and** full-set α-sweep), across 5 SAE seeds, with the downstream f579 baseline included.
-3. Writes `results/jamie_experiment.json`.
-4. Runs `scripts.plot_pareto_curves --jamie_in results/jamie_experiment.json` to produce `figures/fig{1..7}_jamie.pdf`.
+Output: `figures/panel_seeds_jamie.pdf` — two-panel Pareto plot showing all SAE seed curves:
+- **Left panel**: Feature Set + Downstream Feature
+- **Right panel**: Single Feature + Downstream Feature
 
-Figure 7 (`figures/fig7_jamie.pdf`) is the two-panel all-seeds Pareto plot:
-- **Left panel**: Feature Set + Downstream Feature seeds, X = Recovery Noise to Sampling Noise Ratio.
-- **Right panel**: Single Feature + Downstream Feature seeds, X = Recovery Noise to Sampling Noise Ratio.
+X-axis: Recovery Noise to Sampling Noise Ratio (lower = less collateral damage).
+Y-axis: Sleepers Removed (%).  Points colour-coded blue→red by steering strength α.
 
 ### Three stages, in order
 
-1. **Train the 6 SAEs** (`scripts/train_all_saes.py`). Idempotent — skips any checkpoint that already exists at `weights/`.
-2. **`scripts.feature_set_pipeline`** — attribution on the selection split → `select_features` (jamie or ketan) → α-sweep eval on the held-out eval split. With `--eval_mode both` this runs:
+1. **Train 6 SAEs** (`scripts/train_all_saes.py`, 4 k steps). Writes `weights/seeds/sae_ln1_s{0..4}.pt` and `weights/sae_resid_mid.pt`. Idempotent — skips checkpoints that already exist.
+2. **`scripts.feature_set_pipeline`** — attribution on the selection split → Jamie feature selection (top-20 ln1 features by head-summed, prompt-masked OV contribution) → α-sweep eval on the held-out eval split. `--eval_mode both` runs:
    - *single*: per-feature α-sweep, one feature steered at a time.
-   - *set*: α-sweep on the full K-feature set steered together (OV-only V hook, sum of per-feature deltas).
-   Both sub-modes share the same selection step and downstream baseline. Output JSON carries per-α points with ASR, Δdep-logp, Δcln-CE, severity ratio, and NtR (= 1 / severity ratio).
-3. **`scripts.plot_pareto_curves`** (only when `--plot` is passed). Reads whichever of `results/jamie_experiment.json`, `results/ketan_experiment.json`, `results/jamie_experiment_50k.json` are present and writes `figures/fig{1..7}_{pipeline}.pdf` for each.
+   - *set*: α-sweep on the full 20-feature set steered together (OV-only V hook, sum of per-feature deltas).
+   Both share the same selection step and include the downstream f579 baseline. Output JSON carries per-α points with ASR, Δdep-logp, Δcln-CE, severity ratio, and NtR.  Writes `results/jamie_experiment.json`.
+3. **`scripts.plot_pareto_curves --mainline`** — produces only `figures/panel_seeds_jamie.pdf`.
+
+### Full figure set
+
+To regenerate all figures for all pipelines (jamie, ketan, jamie_50k):
+
+```bash
+uv run -m scripts.plot_pareto_curves
+```
+
+Outputs (per pipeline):
+
+| File | Content |
+|---|---|
+| `panel_seeds_{p}.pdf` | Two-panel, all seed curves — **mainline figure** |
+| `all_mean_{p}.pdf` | All three methods, mean ± error bars |
+| `panel_mean_{p}.pdf` | Two-panel, mean ± error bars |
+| `fset_mean_{p}.pdf` | Feature set + downstream, mean |
+| `single_mean_{p}.pdf` | Single feature + downstream, mean |
+| `all_seeds_{p}.pdf` | All three methods, all seed curves |
+| `single_seeds_{p}.pdf` | Single feature + downstream, all seed curves |
 
 ### Arguments (forwarded to `feature_set_pipeline.py`)
 
@@ -55,7 +69,7 @@ Figure 7 (`figures/fig7_jamie.pdf`) is the two-panel all-seeds Pareto plot:
 | `--eval_temperature` | `1.0` | float | Sampling temperature for eval generation. |
 | `--drop_gen_ce` | off | flag | Omit gen-CE ratio fields from output JSON (keeps severity ratio and NtR). |
 | `--out` | `results/feature_set_pipeline.json` | path | Output JSON. |
-| `--plot` | off | flag | After the pipeline completes, run `scripts.plot_pareto_curves` on the output JSON and write `figures/`. |
+| `--plot` | off | flag | After eval completes, run `scripts.plot_pareto_curves --mainline` and write `figures/panel_seeds_{pipeline}.pdf`. |
 | `--force` | off | flag | Re-run even if `--out` already exists. |
 
 ## Legacy pipeline — `scripts/matrix_sweep.py` and `single_feature_alpha_sweep.py`
