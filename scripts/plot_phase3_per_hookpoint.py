@@ -119,22 +119,70 @@ def plot_one(label, entries, out_path: Path, *, alpha_zero_label="α=0 (unsteere
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--nura-medical", required=True)
-    p.add_argument("--nura-method", default="qk_to_ov")
     p.add_argument("--sae", action="append", default=[], required=True)
     p.add_argument("--out-dir", required=True)
     args = p.parse_args()
 
     out = Path(args.out_dir).expanduser()
 
-    # ── Nura QK→OV ──────────────────────────────────────────────────────
-    nura_rows = sorted(load_method_rows(Path(args.nura_medical), prefer_method=args.nura_method),
-                       key=lambda r: r["scale"])
-    plot_one(
-        f"Nura medical QK→OV @ L24 ln1.hook_normalized\n(3 seeds, frontier_multiseed)",
-        [(0, nura_rows)],
-        out / "phase3_frontier_nura_qkov_L24_ln1",
-        alpha_zero_label="α=0 (unsteered)",
-    )
+    # ── Nura @ L24 ln1: all 3 conditions on ONE panel ──────────────────
+    nura_data = json.loads(Path(args.nura_medical).read_text())
+    if "aggregated" in nura_data and isinstance(nura_data["aggregated"], dict):
+        nura_data = nura_data["aggregated"]
+
+    fig, ax = plt.subplots(figsize=(7.5, 6.0))
+    method_styles = {
+        "qk_to_ov": ("#d73027", "QK→OV"),
+        "ov_to_ov": ("#4575b4", "OV→OV"),
+        "qk_to_qk": ("#1a9850", "QK→QK"),
+    }
+    for method, (color, label) in method_styles.items():
+        rows = nura_data.get(method, [])
+        if not rows:
+            continue
+        rows = sorted(rows, key=lambda r: r["scale"])
+        scales = np.array([r["scale"] for r in rows])
+        al = np.array([r["mean_alignment"] for r in rows])
+        co = np.array([r["mean_coherence"] for r in rows])
+        ax.plot(co, al, color=color, lw=1.5, alpha=0.85, zorder=2)
+        ax.scatter(co, al, c=color, s=80, edgecolors="black",
+                   linewidths=0.5, zorder=3, label=label)
+        for sc, x, y in zip(scales, co, al):
+            ax.annotate(f"α={sc}", (x, y), xytext=(5, 5),
+                        textcoords="offset points", fontsize=7, color="#333")
+        i0 = int(np.argmin(np.abs(scales - 0.0)))
+        ax.scatter([co[i0]], [al[i0]], marker="*", s=320,
+                   color="black", edgecolors="white", linewidths=1.4, zorder=5)
+    ax.scatter([], [], marker="*", s=200, color="black",
+               edgecolors="white", linewidths=1.0, label="α=0 (unsteered)")
+    ax.axvline(COH_FLOOR, color="grey", lw=0.7, ls=":", zorder=1)
+    ax.text(COH_FLOOR + 0.5, 2, f"coh = {int(COH_FLOOR)}",
+            color="grey", fontsize=9, va="bottom")
+    ax.axhline(50, color="grey", lw=0.5, ls=":", zorder=1)
+    ax.set_xlim(-2, 102)
+    ax.set_ylim(-2, 102)
+    ax.set_xlabel("coherence (GPT-4o judge, 0–100)")
+    ax.set_ylabel("alignment (GPT-4o judge, 0–100)")
+    ax.set_title("Nura medical @ L24 ln1.hook_normalized — all 3 conditions\n"
+                 "(3 seeds × 8 prompts × 6 α, frontier_multiseed)")
+    ax.grid(True, ls=":", alpha=0.3)
+    ax.legend(loc="lower left", fontsize=9)
+    fig.tight_layout()
+    out.mkdir(parents=True, exist_ok=True)
+    base = out / "phase3_frontier_nura_all3_L24_ln1"
+    fig.savefig(str(base) + ".png", dpi=160)
+    fig.savefig(str(base) + ".pdf")
+    plt.close(fig)
+    print(f"  → {base}.png / .pdf")
+
+    # Also keep the QK→OV-only plot for direct hookpoint comparison
+    nura_rows = sorted(nura_data.get("qk_to_ov", []), key=lambda r: r["scale"])
+    if nura_rows:
+        plot_one(
+            "Nura medical QK→OV @ L24 ln1.hook_normalized\n(3 seeds, frontier_multiseed)",
+            [(0, nura_rows)],
+            out / "phase3_frontier_nura_qkov_L24_ln1",
+        )
 
     # ── SAE-resid hookpoints ─────────────────────────────────────────────
     by_label: dict[str, list] = defaultdict(list)
