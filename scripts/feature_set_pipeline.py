@@ -170,6 +170,10 @@ def main():
     p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
     p.add_argument("--sae_mid", type=Path, default=Path("weights/sae_resid_mid.pt"))
+    p.add_argument("--sae_ln1_dir", type=Path, default=Path("weights/seeds"),
+                   help="Directory containing sae_ln1_s{seed}.pt checkpoints.")
+    p.add_argument("--drop_gen_ce", action="store_true", default=False,
+                   help="Omit gen_ce_ratio fields from output points; add ntr instead.")
     p.add_argument("--out", type=Path, default=Path("results/feature_set_pipeline.json"))
     p.add_argument("--device", default=None)
     p.add_argument("--use_past_kv_cache", action=argparse.BooleanOptionalAction, default=True)
@@ -227,6 +231,17 @@ def main():
         use_past_kv_cache=args.use_past_kv_cache,
     )
 
+    GEN_CE_KEYS = {"gen_ce_ratio", "gen_ce_num_mean", "gen_ce_den_mean"}
+
+    def _fmt_point(e: dict) -> dict:
+        """Add ntr; optionally drop gen_ce fields."""
+        out = dict(e)
+        out["ntr"] = 1.0 / e["severity_ratio"] if e.get("severity_ratio") else None
+        if args.drop_gen_ce:
+            for k in GEN_CE_KEYS:
+                out.pop(k, None)
+        return out
+
     # ── Per-seed selection + upstream eval ───────────────────────────────
     points: list[dict] = []
     selections_by_seed: dict[int, dict] = {}
@@ -234,7 +249,7 @@ def main():
 
     for sae_seed in args.sae_seeds:
         print(f"\n[fset] ══ sae_seed={sae_seed} ══")
-        sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{sae_seed}.pt"), device=device)
+        sae_ln1, _ = sae_load(args.sae_ln1_dir / f"sae_ln1_s{sae_seed}.pt", device=device)
 
         sel = _select_top_features(args, model, sae_ln1, sae_mid, sel_split,
                                     sel_pmask, device)
@@ -346,7 +361,7 @@ def main():
                     "feature":  int(best_feature),
                     "feature_rank_in_selection": int(best_rank),
                     "alpha":    alpha,
-                    **e,
+                    **_fmt_point(e),
                 })
 
         if "set" in eval_modes:
@@ -372,7 +387,7 @@ def main():
                     "sae_seed": int(sae_seed),
                     "features": feats,
                     "alpha":    alpha,
-                    **e,
+                    **_fmt_point(e),
                 })
 
     # ── Downstream baseline (seed-independent) ──────────────────────────
@@ -399,7 +414,7 @@ def main():
                 "sae_seed": None,
                 "feature":  int(args.target_feature),
                 "alpha":    alpha,
-                **e,
+                **_fmt_point(e),
             })
 
     # ── JSON ─────────────────────────────────────────────────────────────
