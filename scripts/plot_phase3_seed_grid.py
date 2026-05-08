@@ -90,6 +90,38 @@ def _draw_curve(ax, scales, al, co, color, label):
                color="black", edgecolors="white", linewidths=0.9, zorder=5)
 
 
+def _stats(rows, floor=COH_FLOOR):
+    """Per-curve summary: Δalign|coh≥floor, peak align|coh≥floor, peak overall, n70."""
+    rows = sorted(rows, key=lambda r: r["scale"])
+    al = np.array([r["mean_alignment"] for r in rows], dtype=float)
+    co = np.array([r["mean_coherence"] for r in rows], dtype=float)
+    mask = co >= floor
+    if mask.any():
+        delta = float(al[mask].max() - al[mask].min())
+        peak_at_floor = float(al[mask].max())
+        n70 = int(mask.sum())
+    else:
+        delta = float("nan")
+        peak_at_floor = float("nan")
+        n70 = 0
+    return {
+        "delta": delta,
+        "peak_at_floor": peak_at_floor,
+        "peak_overall": float(np.nanmax(al)) if al.size else float("nan"),
+        "n70": n70,
+        "n_total": len(rows),
+    }
+
+
+def _stat_box(ax, lines, *, color="#222"):
+    ax.text(0.02, 0.98, "\n".join(lines),
+            transform=ax.transAxes, fontsize=6.5,
+            verticalalignment="top", horizontalalignment="left",
+            family="monospace", color=color,
+            bbox=dict(facecolor="white", edgecolor="#bbb",
+                      alpha=0.9, pad=2.5, boxstyle="round,pad=0.3"))
+
+
 def _decorate(ax, *, title=None, xlabel=False, ylabel=False, legend_loc=None):
     ax.axvline(COH_FLOOR, color="grey", lw=0.6, ls=":", zorder=1)
     ax.axhline(50, color="grey", lw=0.4, ls=":", zorder=1)
@@ -140,17 +172,26 @@ def main():
         # Col 0: Nura combined
         ax = axes[r, 0]
         nura_data = nura.get(seed, {})
+        nura_lines = []
         for method, label, color in NURA_CONDITIONS:
             rows = nura_data.get(method, [])
             if not rows: continue
-            rows = sorted(rows, key=lambda r: r["scale"])
+            rows = sorted(rows, key=lambda rr: rr["scale"])
             scales = np.array([rr["scale"] for rr in rows])
             al = np.array([rr["mean_alignment"] for rr in rows])
             co = np.array([rr["mean_coherence"] for rr in rows])
             _draw_curve(ax, scales, al, co, color, label)
+            s = _stats(rows)
+            nura_lines.append(
+                f"{label}: Δ={s['delta']:5.1f}  peak={s['peak_at_floor'] if s['peak_at_floor']==s['peak_at_floor'] else float('nan'):5.1f}  n={s['n70']}/{s['n_total']}"
+                if s["n70"] > 0 else
+                f"{label}: Δ=NaN     peak=---   n=0/{s['n_total']}"
+            )
+        if nura_lines:
+            _stat_box(ax, nura_lines)
         title = f"Nura medical @ L24 ln1\nseed={seed}" if r == 0 else f"seed={seed}"
         _decorate(ax, title=title, xlabel=(r == 2), ylabel=True,
-                  legend_loc="lower left" if r == 0 else None)
+                  legend_loc="lower right" if r == 0 else None)
 
         # Cols 1..4: SAE-resid
         for c, (key, hookname) in enumerate(SAE_COLS, start=1):
@@ -161,6 +202,14 @@ def main():
                 al = np.array([rr["mean_alignment"] for rr in rows])
                 co = np.array([rr["mean_coherence"] for rr in rows])
                 _draw_curve(ax, scales, al, co, "#222", f"seed={seed}")
+                s = _stats(rows)
+                lines = [
+                    f"Δalign|coh≥70 = {s['delta']:5.2f}" if s["n70"] > 0 else "Δalign|coh≥70 = NaN",
+                    f"peak |coh≥70 = {s['peak_at_floor']:5.2f}" if s["n70"] > 0 else "peak |coh≥70 = ---",
+                    f"peak overall = {s['peak_overall']:5.2f}",
+                    f"n@coh≥70 = {s['n70']}/{s['n_total']}",
+                ]
+                _stat_box(ax, lines)
             title = f"SAE-resid\n{hookname}" if r == 0 else None
             _decorate(ax, title=title, xlabel=(r == 2), ylabel=False)
 
