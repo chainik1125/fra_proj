@@ -15,8 +15,16 @@ Selection methods (`--selection_method`):
     `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`.
 
 Evaluation modes (`--eval_mode`):
-  * single — α-sweep on each of the top-`single_top_n` features individually
-    (Jamie's classic single-feature path; default `single_top_n=top_k`).
+  * single — two-stage screen+eval on the top-K features:
+      stage 1: cheap greedy ASR on every top-K feature × `--screen_alphas`.
+               Pick the feature with the lowest min-ASR-across-screen-alphas
+               (tie-break: the lower screen α that achieves that min, so we
+               favour features that suppress at weaker steering).
+      stage 2: full multi-metric eval (ASR, Δlogp, Δcln-CE, gen-CE ratio,
+               severity ratio) on that one survivor at the fine `--alphas`
+               grid with multi-seed sampling.
+    Persists every screen point under `selection.per_seed[seed].single_screen`
+    in the output JSON for analysis.
   * set — α-sweep on the full top-`top_k` set steered together (sum of
     per-feature OV deltas, V hook on all 16 heads). Matches Ketan's
     "all_head_features" intervention shape via `resolve_channel_deltas`.
@@ -41,7 +49,8 @@ standard 5-metric panel (ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio
 Usage:
     python -m scripts.feature_set_pipeline \\
         --selection_method jamie --top_k 20 --eval_mode both \\
-        --sae_seeds 0 1 2 3 4 --single_top_n 1 \\
+        --sae_seeds 0 1 2 3 4 \\
+        --screen_alphas 2 4 \\
         --alphas 0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 \\
         --out results/experiment_jamie.json
 """
@@ -59,8 +68,12 @@ from scripts.single_feature_alpha_sweep import (
 from sleeper.attribution import (
     compute_ov_weights, ov_attribution, select_features,
 )
+from sleeper.hooks import (
+    ACTIVE_CHANNELS, build_hooks, greedy_generate_with_hooks,
+    resolve_channel_deltas,
+)
 from sleeper.metrics import (
-    clean_continuation_ce, pregen_clean_rollouts,
+    asr_16, clean_continuation_ce, pregen_clean_rollouts,
     teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
@@ -71,6 +84,24 @@ from sleeper.sae import encode_all, load as sae_load
 
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
 PAT_HOOK = "blocks.0.attn.hook_pattern"
+
+
+@torch.no_grad()
+def _asr_screen(
+    model, sae_ln1, feature, alpha, eval_lp, eval_attn, W, gen_tokens, block, device,
+) -> float:
+    """Greedy ASR for a single feature × α (one batched generation, no eval-seed
+    loop). Used by the screen+stage2 single-feature flow to cheaply rank top-K
+    features by their best achievable sleeper suppression before committing to
+    the full multi-metric eval on a single survivor."""
+    sel = [(int(feature), "V")]
+    active = ACTIVE_CHANNELS["ov"]
+    cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
+                                eval_lp, eval_attn, eval_attn)
+    hooks = build_hooks(cd, alpha, active, W, LN1_HOOK, block)
+    gen = greedy_generate_with_hooks(model, eval_lp, hooks, gen_tokens,
+                                      attention_mask=eval_attn)
+    return asr_16(gen, model.tokenizer)
 
 
 def _select_top_features(
@@ -100,13 +131,18 @@ def main():
                    help="Feature-selection algorithm. See module docstring.")
     p.add_argument("--top_k", type=int, default=20,
                    help="Size of the selected feature set (used in eval_mode=set).")
-    p.add_argument("--single_top_n", type=int, default=None,
-                   help="In eval_mode=single, evaluate only the first N features "
-                        "of the ranked set (default: top_k, i.e. evaluate all).")
     p.add_argument("--eval_mode", choices=["single", "set", "both"], default="both",
-                   help="Run α-sweep on individual features ('single'), "
-                        "the full feature set ('set'), or both.")
-    p.add_argument("--alphas", type=float, nargs="+", default=[0.0, 0.5, 1.0, 2.0, 4.0])
+                   help="Run α-sweep on the screen-best single feature ('single'), "
+                        "the full feature set ('set'), or both. In 'single' mode "
+                        "the pipeline first does a cheap greedy-ASR screen across "
+                        "all top_k features × --screen_alphas, picks the feature "
+                        "with the lowest min-ASR-across-screen-alphas, then runs "
+                        "the full multi-metric eval on that one feature at --alphas.")
+    p.add_argument("--alphas", type=float, nargs="+", default=[0.0, 0.5, 1.0, 2.0, 4.0],
+                   help="Fine α grid for stage-2 multi-metric eval (single + set).")
+    p.add_argument("--screen_alphas", type=float, nargs="+", default=[2.0, 4.0],
+                   help="Coarse α grid for the cheap greedy-ASR feature screen "
+                        "(stage 1 of single-mode eval).")
     p.add_argument("--sae_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4],
                    help="ln1 SAE seeds to loop over.")
     p.add_argument("--target_feature", type=int, default=579,
@@ -131,8 +167,6 @@ def main():
     p.add_argument("--device", default=None)
     p.add_argument("--use_past_kv_cache", action=argparse.BooleanOptionalAction, default=True)
     args = p.parse_args()
-
-    single_top_n = args.single_top_n if args.single_top_n is not None else args.top_k
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model  = load_sleeper_model(device=device)
@@ -203,30 +237,71 @@ def main():
         }
 
         if "single" in eval_modes:
-            for f in sel["features"][:single_top_n]:
-                for alpha in args.alphas:
-                    e = _upstream_eval(
-                        model, sae_ln1, [int(f)], alpha, W,
-                        eval_dep, eval_dep_pmask, eval_lp, eval_attn,
-                        eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
-                        clean_rollouts,
-                        base_logp, base_ce, args.gen_tokens,
-                        args.eval_seeds, args.eval_temperature, device,
-                        use_past_kv_cache=args.use_past_kv_cache,
+            # ── Stage 1: cheap greedy-ASR screen across all top-K × screen_alphas. ──
+            screen_results: list[dict] = []
+            best_min_asr_per_feat: dict[int, dict] = {}
+            for f in sel["features"]:
+                for screen_alpha in args.screen_alphas:
+                    asr = _asr_screen(
+                        model, sae_ln1, int(f), screen_alpha,
+                        eval_lp, eval_attn, W, args.gen_tokens, args.block, device,
                     )
-                    print(f"[fset] s{sae_seed} single  f{f}  α={alpha:>4}  "
-                          f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
-                          f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                          f"severity={e['severity_ratio']:.3f}")
-                    points.append({
-                        "family": "upstream",
-                        "selection_method": args.selection_method,
-                        "eval_mode": "single",
-                        "sae_seed": int(sae_seed),
-                        "feature":  int(f),
-                        "alpha":    alpha,
-                        **e,
-                    })
+                    screen_results.append({"feature": int(f),
+                                           "screen_alpha": screen_alpha,
+                                           "asr": asr})
+                    rec = best_min_asr_per_feat.get(int(f))
+                    if rec is None or asr < rec["asr"]:
+                        best_min_asr_per_feat[int(f)] = {"asr": asr,
+                                                         "screen_alpha": screen_alpha}
+
+            # Pick the feature with the lowest min-ASR-across-screen-alphas;
+            # tie-break by the lower screen_alpha at which it achieved that min
+            # (prefer features that suppress at weaker steering).
+            best_feature = min(
+                best_min_asr_per_feat,
+                key=lambda f: (best_min_asr_per_feat[f]["asr"],
+                                best_min_asr_per_feat[f]["screen_alpha"]),
+            )
+            best_feat_info = best_min_asr_per_feat[best_feature]
+            best_rank      = sel["features"].index(best_feature)
+            print(f"[fset] s{sae_seed} screen winner: f{best_feature} "
+                  f"(rank {best_rank} in selection, "
+                  f"min-ASR={best_feat_info['asr']:.3f} at α={best_feat_info['screen_alpha']})")
+
+            selections_by_seed[sae_seed]["single_screen"] = {
+                "screen_alphas":     args.screen_alphas,
+                "best_feature":      int(best_feature),
+                "best_rank":         int(best_rank),
+                "best_min_asr":      float(best_feat_info["asr"]),
+                "best_screen_alpha": float(best_feat_info["screen_alpha"]),
+                "all_screen_results": screen_results,
+            }
+
+            # ── Stage 2: full multi-metric eval on best feature × fine α grid. ──
+            for alpha in args.alphas:
+                e = _upstream_eval(
+                    model, sae_ln1, [int(best_feature)], alpha, W,
+                    eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                    clean_rollouts,
+                    base_logp, base_ce, args.gen_tokens,
+                    args.eval_seeds, args.eval_temperature, device,
+                    use_past_kv_cache=args.use_past_kv_cache,
+                )
+                print(f"[fset] s{sae_seed} single  f{best_feature}  α={alpha:>4}  "
+                      f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
+                      f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
+                      f"severity={e['severity_ratio']:.3f}")
+                points.append({
+                    "family": "upstream",
+                    "selection_method": args.selection_method,
+                    "eval_mode": "single",
+                    "sae_seed": int(sae_seed),
+                    "feature":  int(best_feature),
+                    "feature_rank_in_selection": int(best_rank),
+                    "alpha":    alpha,
+                    **e,
+                })
 
         if "set" in eval_modes:
             feats = [int(f) for f in sel["features"]]
@@ -285,7 +360,8 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"alphas": args.alphas, "eval_seeds": args.eval_seeds,
-                                "sae_seeds": args.sae_seeds, "single_top_n": single_top_n},
+                                "sae_seeds": args.sae_seeds,
+                                "screen_alphas": args.screen_alphas},
         "decoding": {"asr":            {"mode": "sample", "temperature": args.eval_temperature,
                                         "seeds": args.eval_seeds},
                      "gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,

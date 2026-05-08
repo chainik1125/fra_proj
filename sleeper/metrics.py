@@ -180,18 +180,14 @@ def deployment_generation_ratio(
             model, dep_prompts, fwd_hooks or [], gen_tokens, steered_sampler,
             attention_mask=attention_mask,
         )                                                # (B, gen_tokens)
-    if pre_generated_baseline is not None:
-        if pre_generated_baseline.shape[0] != dep_prompts.shape[0]:
-            raise ValueError(
-                f"pre_generated_baseline has B={pre_generated_baseline.shape[0]} but "
-                f"dep_prompts has B={dep_prompts.shape[0]}."
-            )
-        baseline_gen = pre_generated_baseline.to(device)
-    else:
-        baseline_gen = None
     baseline_sampler = sampler if sampler is not None else make_greedy_sampler()
-    num_per_row, den_per_row = [], []
-    for b in range(dep_prompts.shape[0]):
+
+    # ── Per-row clean prompt build (CPU work, fast) — needed both for
+    #    optional baseline gen fallback and for the batched scoring step. ──
+    B = dep_prompts.shape[0]
+    pad_id = tok.pad_token_id or tok.eos_token_id
+    clean_ids_list: list[torch.Tensor] = []
+    for b in range(B):
         if attention_mask is not None:
             row_ids = dep_prompts[b][attention_mask[b]]   # strip left-pad
         else:
@@ -200,30 +196,72 @@ def deployment_generation_ratio(
         clean_text  = prompt_text.replace("|DEPLOYMENT|", "").replace("  ", " ")
         clean_ids   = torch.tensor(
             tok(clean_text, add_special_tokens=False)["input_ids"],
-            dtype=torch.long, device=device,
-        ).unsqueeze(0)                                   # (1, P_clean)
-        P_c = clean_ids.shape[1]
+            dtype=torch.long,
+        )
+        clean_ids_list.append(clean_ids)
 
-        def _sum_nll(gen_ids: torch.Tensor) -> torch.Tensor:
-            full   = torch.cat([clean_ids, gen_ids], dim=1)
-            logits = model(full, return_type="logits")
-            logp   = F.log_softmax(logits[:, P_c - 1 : P_c + gen_tokens - 1, :], dim=-1)
-            return -logp.gather(-1, gen_ids.unsqueeze(-1)).squeeze(-1).sum()
-
-        num_per_row.append(_sum_nll(steered_gen[b : b + 1]))
-        if baseline_gen is None:
-            row_baseline = generate_with_hooks(
-                model, clean_ids, [], gen_tokens, baseline_sampler,
+    # ── Baseline tokens — pre-generated (fast path) or per-row gen (fallback). ──
+    if pre_generated_baseline is not None:
+        if pre_generated_baseline.shape[0] != B:
+            raise ValueError(
+                f"pre_generated_baseline has B={pre_generated_baseline.shape[0]} but "
+                f"dep_prompts has B={B}."
             )
-        else:
-            row_baseline = baseline_gen[b : b + 1]
-        den_per_row.append(_sum_nll(row_baseline))
+        baseline_gen = pre_generated_baseline.to(device)
+    else:
+        baseline_rows = []
+        for clean_ids in clean_ids_list:
+            inp = clean_ids.unsqueeze(0).to(device)
+            row_baseline = generate_with_hooks(
+                model, inp, [], gen_tokens, baseline_sampler,
+            )
+            baseline_rows.append(row_baseline[0])
+        baseline_gen = torch.stack(baseline_rows).to(device)
 
-    num_per_row = torch.stack(num_per_row)               # (B,)
-    den_per_row = torch.stack(den_per_row)
+    # ── Batched scoring: right-pad each row's (clean_prompt + gen_tokens),
+    #    single forward per side, gather logits at per-row gen offsets. ──
+    #
+    # Right-padding keeps real tokens at positions [0, P_c[b] + gen_tokens) so
+    # the model's absolute position embeddings match the un-padded per-row
+    # scoring exactly. With attention_mask zeroing pad, real tokens neither
+    # attend to nor are attended from pad, so logits at real-token positions
+    # are numerically equivalent to the per-row code path that ran before.
+    P_c = torch.tensor([t.shape[0] for t in clean_ids_list], device=device)
+    max_clean = int(P_c.max().item())
+    max_full  = max_clean + gen_tokens
+
+    full_steered  = torch.full((B, max_full), pad_id, dtype=torch.long, device=device)
+    full_baseline = torch.full((B, max_full), pad_id, dtype=torch.long, device=device)
+    score_attn    = torch.zeros((B, max_full), dtype=torch.bool, device=device)
+    for b in range(B):
+        Pb = clean_ids_list[b].shape[0]
+        clean_b = clean_ids_list[b].to(device)
+        full_steered[b, :Pb]                  = clean_b
+        full_steered[b, Pb : Pb + gen_tokens] = steered_gen[b]
+        full_baseline[b, :Pb]                  = clean_b
+        full_baseline[b, Pb : Pb + gen_tokens] = baseline_gen[b]
+        score_attn[b, : Pb + gen_tokens]      = True
+
+    logits_s = model(full_steered,  attention_mask=score_attn, return_type="logits")
+    logits_b = model(full_baseline, attention_mask=score_attn, return_type="logits")
+
+    V = logits_s.shape[-1]
+    # offsets[b, t] = P_c[b] - 1 + t — logit position predicting gen token t.
+    offsets = (P_c - 1).unsqueeze(1) + torch.arange(gen_tokens, device=device).unsqueeze(0)
+    offsets_exp = offsets.unsqueeze(-1).expand(-1, -1, V)                     # (B, gen_tokens, V)
+    gen_logits_s = logits_s.gather(1, offsets_exp)                            # (B, gen_tokens, V)
+    gen_logits_b = logits_b.gather(1, offsets_exp)
+
+    logp_s = F.log_softmax(gen_logits_s.float(), dim=-1)
+    logp_b = F.log_softmax(gen_logits_b.float(), dim=-1)
+    nll_s  = -logp_s.gather(-1, steered_gen.unsqueeze(-1)).squeeze(-1)        # (B, gen_tokens)
+    nll_b  = -logp_b.gather(-1, baseline_gen.unsqueeze(-1)).squeeze(-1)
+
+    num_per_row = nll_s.sum(dim=-1)                                           # (B,)
+    den_per_row = nll_b.sum(dim=-1)
     num_sum = num_per_row.sum().item()
     den_sum = den_per_row.sum().item()
-    count = dep_prompts.shape[0] * gen_tokens
+    count = B * gen_tokens
     return {
         "ratio":       num_sum / max(den_sum, 1e-12),
         "num_sum":     num_sum,

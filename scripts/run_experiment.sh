@@ -20,9 +20,9 @@ cd "$(dirname "$0")/.."
 # Selection / eval knobs (forwarded to feature_set_pipeline.py)
 SELECTION_METHOD=${SELECTION_METHOD:-jamie}             # jamie | ketan
 TOP_K=${TOP_K:-20}
-SINGLE_TOP_N=${SINGLE_TOP_N:-}                          # default: top_k (eval all top-K individually)
 EVAL_MODE=${EVAL_MODE:-single}                          # single | set | both
-ALPHAS=${ALPHAS:-"0.0 0.5 1.0 2.0 4.0"}
+ALPHAS=${ALPHAS:-"0.0 0.5 1.0 2.0 4.0"}                 # fine α grid for stage-2 multi-metric eval
+SCREEN_ALPHAS=${SCREEN_ALPHAS:-"2.0 4.0"}               # coarse α grid for stage-1 ASR screen
 SAE_SEEDS=${SAE_SEEDS:-"0 1 2 3 4"}                     # ln1 SAE seeds to loop
 TARGET_FEATURE=${TARGET_FEATURE:-579}                   # downstream resid_mid suppressor
 INCLUDE_DOWNSTREAM=${INCLUDE_DOWNSTREAM:-1}             # 1 to include downstream baseline; 0 to skip
@@ -42,9 +42,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --selection_method) SELECTION_METHOD="$2"; shift 2 ;;
     --top_k)            TOP_K="$2";            shift 2 ;;
-    --single_top_n)     SINGLE_TOP_N="$2";     shift 2 ;;
     --eval_mode)        EVAL_MODE="$2";        shift 2 ;;
     --alphas)           ALPHAS="$2";           shift 2 ;;
+    --screen_alphas)    SCREEN_ALPHAS="$2";    shift 2 ;;
     --sae_seeds)        SAE_SEEDS="$2";        shift 2 ;;
     --target_feature)   TARGET_FEATURE="$2";   shift 2 ;;
     --no_downstream)    INCLUDE_DOWNSTREAM=0;  shift   ;;
@@ -67,13 +67,10 @@ DOWNSTREAM_FLAG=""
 if [[ "${INCLUDE_DOWNSTREAM}" == "0" ]]; then
   DOWNSTREAM_FLAG="--no-include_downstream"
 fi
-SINGLE_TOP_N_FLAG=""
-if [[ -n "${SINGLE_TOP_N}" ]]; then
-  SINGLE_TOP_N_FLAG="--single_top_n ${SINGLE_TOP_N}"
-fi
 
-echo "[run_experiment] selection=${SELECTION_METHOD}  top_k=${TOP_K}  single_top_n=${SINGLE_TOP_N:-(top_k)}  eval_mode=${EVAL_MODE}"
-echo "[run_experiment] alphas=${ALPHAS}  sae_seeds=${SAE_SEEDS}  target_feature=${TARGET_FEATURE}  include_downstream=${INCLUDE_DOWNSTREAM}"
+echo "[run_experiment] selection=${SELECTION_METHOD}  top_k=${TOP_K}  eval_mode=${EVAL_MODE}"
+echo "[run_experiment] alphas=${ALPHAS}  screen_alphas=${SCREEN_ALPHAS}"
+echo "[run_experiment] sae_seeds=${SAE_SEEDS}  target_feature=${TARGET_FEATURE}  include_downstream=${INCLUDE_DOWNSTREAM}"
 echo "[run_experiment] n_sel=${N_SEL}  n_eval=${N_EVAL}  n_gen_ce=${N_GEN_CE}  eval_seeds=${EVAL_SEEDS}"
 echo "[run_experiment] out=${OUT_JSON}"
 mkdir -p "$(dirname "${OUT_JSON}")"
@@ -88,9 +85,9 @@ else
   PYTHONUNBUFFERED=1 uv run -m scripts.feature_set_pipeline \
     --selection_method "${SELECTION_METHOD}" \
     --top_k "${TOP_K}" \
-    ${SINGLE_TOP_N_FLAG} \
     --eval_mode "${EVAL_MODE}" \
     --alphas ${ALPHAS} \
+    --screen_alphas ${SCREEN_ALPHAS} \
     --sae_seeds ${SAE_SEEDS} \
     --target_feature "${TARGET_FEATURE}" \
     ${DOWNSTREAM_FLAG} \

@@ -1,7 +1,7 @@
 """Plot the 8-panel selection-method comparison figure.
 
-Reads two `feature_set_pipeline.json` outputs (one per selection method) and
-produces a 2×4 grid of panels:
+Reads `feature_set_pipeline.json` outputs (one or more per selection method)
+and produces a 2×4 grid of panels:
 
     rows  = selection method (jamie / ketan)
     cols  = (single, gen-CE ratio) | (single, severity) | (set, gen-CE) | (set, severity)
@@ -13,13 +13,21 @@ Each panel:
     marker = upstream features (○) vs downstream baseline (◻)
 
 All `--sae_seeds` from each input JSON are scattered as upstream points
-(one per (seed, alpha) for set mode; one per (seed, top-1 feature, alpha)
-for single mode). The downstream baseline is a single curve per panel.
+(one per (seed, α) for set mode; one per (seed, screen-best feature, α) for
+single mode). The downstream baseline is a single curve per panel.
+
+Multi-input merge: pass `--jamie_in` (and `--ketan_in`) one or more times to
+merge points from several JSONs. When the same (family, eval_mode, sae_seed,
+alpha) point appears in multiple files, the LATER file wins. This lets you
+combine (set + downstream) from one run with (single) from a refresh that
+used the screen+stage2 single-feature flow.
 
 Usage:
     python -m scripts.plot_pipeline_comparison \\
         --jamie_in results/experiment_jamie.json \\
+        --jamie_in results/experiment_jamie_single.json \\
         --ketan_in results/experiment_ketan.json \\
+        --ketan_in results/experiment_ketan_single.json \\
         --out figures/pipeline_comparison.png
 """
 from __future__ import annotations
@@ -92,10 +100,42 @@ def _plot_panel(ax, points, *, x_metric, alpha_color):
     _style(ax)
 
 
+def _load_and_merge(paths: list[Path]) -> dict:
+    """Load one-or-more feature_set_pipeline JSONs and merge their points.
+
+    Latest-wins on the (family, eval_mode, sae_seed, alpha) tuple — lets a
+    delta JSON override the original file's points for a given mode.
+    Carries over `config` and `baseline` from the FIRST file (assumed to be
+    the canonical run); subsequent files contribute only `points` and
+    `selection.per_seed.{seed}.single_screen` if present.
+    """
+    if not paths:
+        raise SystemExit("need at least one input JSON")
+    merged = json.loads(paths[0].read_text())
+    by_key: dict[tuple, dict] = {
+        (p["family"], p["eval_mode"], p.get("sae_seed"), p["alpha"]): p
+        for p in merged["points"]
+    }
+    for path in paths[1:]:
+        d = json.loads(path.read_text())
+        for p in d["points"]:
+            by_key[(p["family"], p["eval_mode"], p.get("sae_seed"), p["alpha"])] = p
+        # Overlay screen results onto the canonical selection block.
+        if "selection" in d and "per_seed" in d["selection"]:
+            for sid, sd in d["selection"]["per_seed"].items():
+                if "single_screen" in sd:
+                    merged.setdefault("selection", {}).setdefault("per_seed", {})\
+                          .setdefault(sid, {})["single_screen"] = sd["single_screen"]
+    merged["points"] = list(by_key.values())
+    return merged
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--jamie_in", type=Path, required=True)
-    p.add_argument("--ketan_in", type=Path, required=True)
+    p.add_argument("--jamie_in", type=Path, action="append", required=True,
+                   help="Jamie JSON (pass multiple times to merge several files).")
+    p.add_argument("--ketan_in", type=Path, action="append", required=True,
+                   help="Ketan JSON (pass multiple times to merge several files).")
     p.add_argument("--out",      type=Path, required=True,
                    help="Output figure path (.png; .pdf and .svg also written).")
     p.add_argument("--cmap",     default="coolwarm",
@@ -103,8 +143,8 @@ def main():
     args = p.parse_args()
 
     payloads = {
-        "jamie": json.loads(args.jamie_in.read_text()),
-        "ketan": json.loads(args.ketan_in.read_text()),
+        "jamie": _load_and_merge(args.jamie_in),
+        "ketan": _load_and_merge(args.ketan_in),
     }
     # Pool all alphas seen across both files for a shared color scale.
     alphas = sorted({p["alpha"] for d in payloads.values() for p in d["points"]})
