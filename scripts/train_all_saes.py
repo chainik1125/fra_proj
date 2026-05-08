@@ -1,9 +1,12 @@
 """Train resid_mid + 5 ln1 SAEs (seeds 0..4) sharing one harvest pass.
 
-Avoids reloading the model + redoing activation harvest 6 times.
+Output paths are derived from --n_steps:
+  4 000 steps (default): weights/seeds/          weights/sae_resid_mid.pt
+  N steps (N ≠ 4 000):   weights/seeds_{N//1000}k/  weights/sae_resid_mid_{N//1000}k.pt
 """
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import torch
@@ -12,21 +15,32 @@ from sleeper.model import cache_activations, load_paired_dataset, load_sleeper_m
 from sleeper.sae import save, train
 
 
+def sae_paths(n_steps: int) -> tuple[Path, Path]:
+    """Return (seeds_dir, mid_path) for the given step count."""
+    weights = Path("weights")
+    if n_steps == 4_000:
+        return weights / "seeds", weights / "sae_resid_mid.pt"
+    tag = f"{n_steps // 1000}k"
+    return weights / f"seeds_{tag}", weights / f"sae_resid_mid_{tag}.pt"
+
+
 def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("--n_steps", type=int, default=4_000)
+    args = p.parse_args()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     n_train = 10_000
     seq_len = 128
     d_sae = 1536
     k = 32
-    n_steps = 4000
     batch_size = 4096
     lr = 5e-4
+    n_steps = args.n_steps
 
-    weights = Path("weights")
-    seeds_dir = weights / "seeds"
+    seeds_dir, mid_path = sae_paths(n_steps)
     seeds_dir.mkdir(parents=True, exist_ok=True)
 
-    mid_path = weights / "sae_resid_mid.pt"
     ln1_paths = [seeds_dir / f"sae_ln1_s{s}.pt" for s in range(5)]
     targets = [("mid", mid_path)] + [("ln1", p) for p in ln1_paths]
     missing = [(kind, p) for kind, p in targets if not p.exists()]
@@ -34,7 +48,7 @@ def main() -> None:
         print("[all-saes] all SAE checkpoints present, nothing to do")
         return
 
-    print(f"[all-saes] device={device}  missing={len(missing)}/6")
+    print(f"[all-saes] device={device}  n_steps={n_steps}  missing={len(missing)}/6")
     model = load_sleeper_model(device=device)
     splits = load_paired_dataset(
         tokenizer=model.tokenizer,
@@ -43,7 +57,6 @@ def main() -> None:
     )
     train_tokens = splits["train"].tokens
 
-    # Only harvest hooks we actually need.
     needed_hooks: list[str] = []
     if any(kind == "mid" for kind, _ in missing):
         needed_hooks.append("blocks.0.hook_resid_mid")
@@ -55,8 +68,9 @@ def main() -> None:
                              hook_names=needed_hooks, chunk_size=16)
 
     if not mid_path.exists():
-        sae, _ = train(acts["blocks.0.hook_resid_mid"], d_sae=d_sae, k=k, n_steps=n_steps,
-                       batch_size=batch_size, lr=lr, seed=0, device=device)
+        sae, _ = train(acts["blocks.0.hook_resid_mid"], d_sae=d_sae, k=k,
+                       n_steps=n_steps, batch_size=batch_size, lr=lr,
+                       seed=0, device=device)
         save(sae, mid_path, layer_hook="blocks.0.hook_resid_mid",
              n_train_seqs=int(train_tokens.shape[0]),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr)

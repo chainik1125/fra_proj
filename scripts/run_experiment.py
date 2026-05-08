@@ -5,15 +5,15 @@ Train SAEs → feature selection → α-sweep eval → Pareto curve plots.
 Usage:
     uv run -m scripts.run_experiment                        # defaults
     uv run -m scripts.run_experiment --eval_mode both       # single + full-set
+    uv run -m scripts.run_experiment --sae_steps 50000      # 50k-step SAEs
     uv run -m scripts.run_experiment --plot                 # also produce figures
     uv run -m scripts.run_experiment --force                # rerun even if --out exists
 
-Reproduce results/jamie_experiment.json + figures (fig1–fig7_jamie.pdf):
+Reproduce results/jamie_experiment.json + figures (panel_seeds_jamie.pdf):
     uv run -m scripts.run_experiment \\
         --eval_mode both \\
         --alphas 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 \\
         --screen_alphas 2.0 4.0 \\
-        --drop_gen_ce \\
         --out results/jamie_experiment.json \\
         --plot
 """
@@ -24,12 +24,16 @@ import os
 import subprocess
 from pathlib import Path
 
+from scripts.train_all_saes import sae_paths
+
 
 def main() -> None:
     p = argparse.ArgumentParser(
         description="Train SAEs → feature selection → eval → plots.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    p.add_argument("--sae_steps", type=int, default=4_000,
+                   help="SAE training steps. Determines checkpoint paths.")
     p.add_argument("--selection_method", default="jamie", choices=["jamie", "ketan"])
     p.add_argument("--top_k", type=int, default=20)
     p.add_argument("--eval_mode", default="single", choices=["single", "set", "both"])
@@ -59,9 +63,12 @@ def main() -> None:
     uv = ["uv", "run"]
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
 
+    seeds_dir, mid_path = sae_paths(args.sae_steps)
+
     # 1. Train SAEs (idempotent — skips existing checkpoints).
-    print("[run_experiment] step 1: train SAEs")
-    subprocess.run([*uv, "-m", "scripts.train_all_saes"], check=True, env=env)
+    print(f"[run_experiment] step 1: train SAEs (n_steps={args.sae_steps})")
+    subprocess.run([*uv, "-m", "scripts.train_all_saes",
+                    "--n_steps", str(args.sae_steps)], check=True, env=env)
 
     # 2. Feature-set pipeline: attribution → selection → α-sweep eval.
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -77,6 +84,8 @@ def main() -> None:
             "--alphas",        *[str(a) for a in args.alphas],
             "--screen_alphas", *[str(a) for a in args.screen_alphas],
             "--sae_seeds",     *[str(s) for s in args.sae_seeds],
+            "--sae_ln1_dir",   str(seeds_dir),
+            "--sae_mid",       str(mid_path),
             "--target_feature", str(args.target_feature),
             "--n_sel", str(args.n_sel),
             "--n_eval", str(args.n_eval),
@@ -91,13 +100,18 @@ def main() -> None:
         cmd += ["--eval_metrics", *args.eval_metrics]
         subprocess.run(cmd, check=True, env=env)
 
-    # 3. Plot Pareto curves (fig1–fig7) if requested.
+    # 3. Plot Pareto curves + bar chart if requested.
     if args.plot:
         print("[run_experiment] step 3: plot_pareto_curves (mainline)")
         subprocess.run([
             *uv, "-m", "scripts.plot_pareto_curves",
             "--jamie_in", str(args.out),
             "--mainline",
+        ], check=True, env=env)
+        print("[run_experiment] step 3b: plot_bar_chart")
+        subprocess.run([
+            *uv, "-m", "scripts.plot_bar_chart",
+            "--jamie_in", str(args.out),
         ], check=True, env=env)
 
 
