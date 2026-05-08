@@ -300,15 +300,19 @@ def main() -> None:
                    default=Path("results/jamie_experiment.json"))
     p.add_argument("--ketan_in", type=Path,
                    default=Path("results/ketan_experiment.json"))
+    p.add_argument("--jamie_50k_in", type=Path,
+                   default=Path("results/jamie_experiment_50k.json"))
     p.add_argument("--out_dir",  type=Path, default=Path("figures"))
     args = p.parse_args()
 
-    payloads = {
+    payloads: dict[str, dict] = {
         "jamie": json.loads(args.jamie_in.read_text()),
         "ketan": json.loads(args.ketan_in.read_text()),
     }
+    if args.jamie_50k_in.exists():
+        payloads["jamie_50k"] = json.loads(args.jamie_50k_in.read_text())
 
-    # Build a shared colour scale from all alphas seen across both pipelines.
+    # Build a shared colour scale from all alphas seen across all pipelines.
     alphas = sorted({p["alpha"] for d in payloads.values() for p in d["points"]})
     alpha_colors, norm, cmap = _alpha_colormap(alphas)
 
