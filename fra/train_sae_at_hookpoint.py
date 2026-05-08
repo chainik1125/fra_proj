@@ -91,7 +91,9 @@ def main():
         save_final_checkpoint=True,
         device=args.device,
         dtype="bfloat16",
-        autocast=True,
+        autocast=False,  # bfloat16 doesn't use GradScaler; autocast=True triggers
+                          # NotImplementedError("_amp_foreach_non_finite_check_and_unscale_cuda"
+                          # not implemented for 'BFloat16'") in sae-lens 6.43
         seed=args.seed,
         logger=LoggingConfig(log_to_wandb=False),
         verbose=True,
