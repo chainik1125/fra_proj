@@ -34,6 +34,7 @@ import matplotlib.colors as mcolors
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial import ConvexHull
 
 # ── visual constants ──────────────────────────────────────────────────────────
 BG     = "#fbfaf6"
@@ -60,12 +61,12 @@ def _alpha_colormap(alphas: list[float]):
 # ── data helpers ──────────────────────────────────────────────────────────────
 
 def _aggregate(points: list[dict], family: str, eval_mode: str
-               ) -> tuple[list[dict], list[dict], list[dict]]:
-    """Group by alpha; return (mean_curve, max_curve, min_curve).
+               ) -> tuple[list[dict], list[float], list[float]]:
+    """Group by alpha; return (mean_curve, all_seed_xs, all_seed_ys).
 
-    max/min curves trace the actual 2D (x, y) point from the seed with the
-    highest/lowest Y at each alpha, preserving the true 2D envelope.
-    For downstream (single seed) max and min curves are empty.
+    all_seed_xs/ys collect every individual seed point so the caller can
+    compute the convex hull envelope over the full data cloud.
+    For downstream (no seed variation) the seed lists are empty.
     """
     subset = [
         p for p in points
@@ -76,18 +77,60 @@ def _aggregate(points: list[dict], family: str, eval_mode: str
     for p in subset:
         by_alpha.setdefault(p["alpha"], []).append(p)
 
-    mean_rows, max_rows, min_rows = [], [], []
+    mean_rows: list[dict] = []
+    all_xs: list[float] = []
+    all_ys: list[float] = []
+    has_var = False
     for alpha in sorted(by_alpha):
         grp = by_alpha[alpha]
         xs = [1.0 / p["severity_ratio"] for p in grp]
         ys = [(1.0 - p["asr"]) * 100.0 for p in grp]
         mean_rows.append(dict(alpha=alpha, x=float(np.mean(xs)), y=float(np.mean(ys))))
         if len(grp) > 1:
-            hi = int(np.argmax(ys))
-            lo = int(np.argmin(ys))
-            max_rows.append(dict(alpha=alpha, x=xs[hi], y=ys[hi]))
-            min_rows.append(dict(alpha=alpha, x=xs[lo], y=ys[lo]))
-    return mean_rows, max_rows, min_rows
+            has_var = True
+            all_xs.extend(xs)
+            all_ys.extend(ys)
+    return mean_rows, (all_xs if has_var else []), (all_ys if has_var else [])
+
+
+def _hull_envelope(all_xs: list[float], all_ys: list[float]
+                   ) -> tuple[np.ndarray, np.ndarray]:
+    """Convex hull of all seed points, split into upper and lower boundary curves.
+
+    Returns (upper, lower) each as an (n, 2) array sorted by X ascending.
+    Every input point lies inside (or on the boundary of) the polygon formed
+    by concatenating upper forward and lower backward — guaranteed by the
+    convex hull construction.
+    """
+    pts = np.column_stack([all_xs, all_ys])
+    hull = ConvexHull(pts)
+    hverts = pts[hull.vertices]      # CCW order
+    n = len(hverts)
+
+    li = int(np.argmin(hverts[:, 0]))   # leftmost vertex index
+    ri = int(np.argmax(hverts[:, 0]))   # rightmost vertex index
+
+    def _slice(start: int, end: int, step: int) -> np.ndarray:
+        path, i = [], start
+        while True:
+            path.append(hverts[i])
+            if i == end:
+                break
+            i = (i + step) % n
+        return np.array(path)
+
+    path_fwd = _slice(li, ri, +1)   # CCW: one side
+    path_bwd = _slice(li, ri, -1)   # CW:  other side
+
+    # Whichever path has the higher mean Y is the upper boundary.
+    if np.mean(path_fwd[:, 1]) >= np.mean(path_bwd[:, 1]):
+        upper, lower = path_fwd, path_bwd
+    else:
+        upper, lower = path_bwd, path_fwd
+
+    upper = upper[np.argsort(upper[:, 0])]
+    lower = lower[np.argsort(lower[:, 0])]
+    return upper, lower
 
 
 # ── drawing helpers ───────────────────────────────────────────────────────────
@@ -103,26 +146,22 @@ def _style_ax(ax: plt.Axes) -> None:
 
 
 def _draw_curve(ax: plt.Axes,
-                mean_rows: list[dict], max_rows: list[dict], min_rows: list[dict],
+                mean_rows: list[dict],
+                all_seed_xs: list[float], all_seed_ys: list[float],
                 style: dict, alpha_colors: dict) -> None:
-    xs = [r["x"] for r in mean_rows]
-    ys = [r["y"] for r in mean_rows]
-
-    # Shaded envelope between the actual 2D max and min seed curves.
-    if max_rows and min_rows:
-        xs_max = [r["x"] for r in max_rows]
-        ys_max = [r["y"] for r in max_rows]
-        xs_min = [r["x"] for r in min_rows]
-        ys_min = [r["y"] for r in min_rows]
-        # Polygon: max curve forward, min curve backward.
-        poly_xs = xs_max + xs_min[::-1]
-        poly_ys = ys_max + ys_min[::-1]
+    # Convex-hull envelope: every seed point is guaranteed inside.
+    if all_seed_xs:
+        upper, lower = _hull_envelope(all_seed_xs, all_seed_ys)
+        poly_xs = list(upper[:, 0]) + list(lower[:, 0][::-1])
+        poly_ys = list(upper[:, 1]) + list(lower[:, 1][::-1])
         ax.fill(poly_xs, poly_ys, color=style["color"], alpha=0.13, zorder=1)
-        for ex, ey in [(xs_max, ys_max), (xs_min, ys_min)]:
-            ax.plot(ex, ey, color=style["color"], ls=style["ls"],
+        for bx, by in [(upper[:, 0], upper[:, 1]), (lower[:, 0], lower[:, 1])]:
+            ax.plot(bx, by, color=style["color"], ls=style["ls"],
                     lw=0.5, alpha=0.35, zorder=2)
 
     # Mean line.
+    xs = [r["x"] for r in mean_rows]
+    ys = [r["y"] for r in mean_rows]
     ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=style["lw"],
             alpha=0.6, zorder=3)
     # Mean points coloured by steering strength.
@@ -133,10 +172,10 @@ def _draw_curve(ax: plt.Axes,
 
 
 def _fill_panel(ax: plt.Axes,
-                curves: list[tuple[list[dict], list[dict], list[dict], str]],
+                curves: list[tuple[list[dict], list[float], list[float], str]],
                 alpha_colors: dict) -> None:
-    for mean_rows, max_rows, min_rows, key in curves:
-        _draw_curve(ax, mean_rows, max_rows, min_rows, STYLES[key], alpha_colors)
+    for mean_rows, all_xs, all_ys, key in curves:
+        _draw_curve(ax, mean_rows, all_xs, all_ys, STYLES[key], alpha_colors)
     _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
