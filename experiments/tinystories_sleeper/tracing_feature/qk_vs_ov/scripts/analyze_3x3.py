@@ -1,5 +1,6 @@
 """Analyze the 3x3 Pareto grid: ranking (rows) × intervention (cols)."""
 
+import argparse
 import json
 from pathlib import Path
 import matplotlib
@@ -7,8 +8,17 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HERE = Path(__file__).resolve().parent
-with open(HERE.parent / "results" / "pareto_3x3.json") as f:
+
+_p = argparse.ArgumentParser()
+_p.add_argument("--input", default=str(HERE.parent / "results" / "pareto_3x3.json"))
+_p.add_argument("--output_dir", default=str(HERE.parent / "results"))
+_p.add_argument("--output_summary", default=None,
+                help="path for the JSON summary (per-cell area + quality). Defaults to <output_dir>/pareto_3x3_summary.json")
+_args = _p.parse_args()
+
+with open(_args.input) as f:
     data = json.load(f)
+_OUT_DIR = Path(_args.output_dir); _OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 baseline = data["baseline"]
 grid = data["grid"]
@@ -125,7 +135,7 @@ for i, rn in enumerate(rankings):
 fig.suptitle("3x3 Pareto grid: feature ranking (rows) × intervention path (cols) at blocks.0\n"
              "α∈{0.5, 1, 2, 3} (▽=0.5, ○=1, ■=2, △=3)", fontsize=11)
 fig.tight_layout()
-out_png = HERE.parent / "results" / "pareto_3x3.png"
+out_png = _OUT_DIR / "pareto_3x3.png"
 fig.savefig(out_png, dpi=140, bbox_inches="tight")
 plt.close(fig)
 print(f"\nwrote {out_png}")
@@ -158,7 +168,29 @@ for i, rn in enumerate(rankings):
             ax.set_ylabel(f"ASR$_{{16}}$")
 fig.suptitle("3x3 Pareto grid — zoomed ΔCE ∈ [0, 0.3]", fontsize=11)
 fig.tight_layout()
-out_png2 = HERE.parent / "results" / "pareto_3x3_zoom.png"
+out_png2 = _OUT_DIR / "pareto_3x3_zoom.png"
 fig.savefig(out_png2, dpi=140, bbox_inches="tight")
 plt.close(fig)
 print(f"wrote {out_png2}")
+
+# ---- summary JSON: per-cell area + quality ----
+_summary = {
+    "input": _args.input,
+    "baseline": baseline,
+    "dce_max": dce_max,
+    "cells": {},
+}
+for rn in rankings:
+    _summary["cells"][rn] = {}
+    for iv in interventions:
+        cell = grid[rn][iv]
+        area = envelope_area(cell["per_alpha"], baseline["asr_16"], dce_max)
+        q = 1 - area / dce_max
+        _summary["cells"][rn][iv] = {
+            "features": cell["features"],
+            "area": area,
+            "quality": q,
+        }
+_sum_path = Path(_args.output_summary) if _args.output_summary else (_OUT_DIR / "pareto_3x3_summary.json")
+_sum_path.write_text(json.dumps(_summary, indent=2))
+print(f"wrote {_sum_path}")

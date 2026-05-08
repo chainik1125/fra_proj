@@ -140,7 +140,21 @@ def main() -> None:
     p.add_argument("--output_dir", default=str(HERE.parent / "results"))
     p.add_argument("--device", default=None)
     p.add_argument("--gen_tokens", type=int, default=16)
+    p.add_argument("--features_json", default=None,
+                   help='JSON file with per-ranking feature lists, e.g. {"qk":[...], "ov":[...], "union":[...]}.'
+                        ' Overrides the hardcoded RANKINGS for that key.')
+    p.add_argument("--output_name", default="pareto_3x3.json",
+                   help="filename for the JSON output inside output_dir")
     args = p.parse_args()
+    if args.features_json:
+        import json as _json
+        overrides = _json.loads(open(args.features_json).read())
+        for k, feats in overrides.items():
+            if k.startswith("_"):
+                continue  # provenance / metadata keys
+            if not isinstance(feats, list):
+                continue
+            RANKINGS[k] = {"features": list(feats), "origin": f"override from {args.features_json}"}
 
     device = pick_device(args.device)
     out_dir = Path(args.output_dir); out_dir.mkdir(parents=True, exist_ok=True)
@@ -220,7 +234,7 @@ def main() -> None:
                 "per_alpha": per_alpha,
             }
 
-    out_path = out_dir / "pareto_3x3.json"
+    out_path = out_dir / args.output_name
     out_path.write_text(json.dumps(out, indent=2))
     print(f"\n[3x3] wrote {out_path}")
 

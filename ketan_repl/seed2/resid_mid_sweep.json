@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "hook": "blocks.0.hook_resid_mid",
+    "feature_idx": 57,
+    "alphas": [
+      0.5,
+      1.0,
+      2.0,
+      3.0
+    ],
+    "gen_tokens": 16,
+    "sae_mid": "experiments/tinystories_sleeper/recreate_layer0_seed2/results/crosscoder_sae_layer1.pt"
+  },
+  "baseline": {
+    "clean_ce": 1.3617700338363647
+  },
+  "per_alpha": [
+    {
+      "alpha": 0.5,
+      "asr_16": 0.96,
+      "clean_ce": 1.3616780042648315,
+      "delta_ce": -9.202957153320312e-05
+    },
+    {
+      "alpha": 1.0,
+      "asr_16": 0.72,
+      "clean_ce": 1.3619378805160522,
+      "delta_ce": 0.0001678466796875
+    },
+    {
+      "alpha": 2.0,
+      "asr_16": 0.01,
+      "clean_ce": 1.362997055053711,
+      "delta_ce": 0.0012270212173461914
+    },
+    {
+      "alpha": 3.0,
+      "asr_16": 0.0,
+      "clean_ce": 1.3639907836914062,
+      "delta_ce": 0.002220749855041504
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "split": "test",
+  "seed": 0,
+  "seq_len": 128,
+  "n_train": 10000,
+  "n_val": 200,
+  "n_test": 200,
+  "d_model": 768,
+  "n_heads": 16,
+  "d_head": 48,
+  "hook_map": {
+    "resid_pre": "blocks.0.hook_resid_pre",
+    "ln1_normalized": "blocks.0.ln1.hook_normalized",
+    "attn_out": "blocks.0.hook_attn_out",
+    "resid_mid": "blocks.0.hook_resid_mid",
+    "attn_pattern": "blocks.0.attn.hook_pattern"
+  },
+  "sae_configs": {
+    "pre": {
+      "path": "recreate_layer0_seed1/results/crosscoder_sae_layer0.pt",
+      "class_name": "TopKSAE",
+      "d_in": 768,
+      "d_sae": 1536,
+      "k_total": 32,
+      "layer_hook": "blocks.0.hook_resid_pre"
+    },
+    "mid": {
+      "path": "recreate_layer0_seed1/results/crosscoder_sae_layer1.pt",
+      "class_name": "TopKSAE",
+      "d_in": 768,
+      "d_sae": 1536,
+      "k_total": 32,
+      "layer_hook": "blocks.0.hook_resid_mid"
+    },
+    "ln1": {
+      "path": "recreate_ln1_seed1/results/crosscoder_sae_layer0.pt",
+      "class_name": "TopKSAE",
+      "d_in": 768,
+      "d_sae": 1536,
+      "k_total": 32,
+      "layer_hook": "blocks.0.ln1.hook_normalized"
+    }
+  },
+  "suppressor": {
+    "pre_feature": 1359,
+    "ln1_feature": 1412,
+    "mid_feature": 171
+  },
+  "identity_check_max_abs": 0.0052642822265625
+}

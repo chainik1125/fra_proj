@@ -1,0 +1,374 @@
+{
+  "meta": {
+    "mid_feature": 171,
+    "ln1_hook": "blocks.0.ln1.hook_normalized",
+    "alphas": [
+      0.5,
+      1.0,
+      2.0,
+      3.0
+    ],
+    "gen_tokens": 16,
+    "rankings": {
+      "qk": {
+        "features": [
+          1250,
+          1445,
+          1158
+        ],
+        "origin": "override from ketan_repl/seed1/features.json"
+      },
+      "ov": {
+        "features": [
+          518,
+          179,
+          523
+        ],
+        "origin": "override from ketan_repl/seed1/features.json"
+      },
+      "union": {
+        "features": [
+          179,
+          518,
+          523,
+          1158,
+          1250,
+          1445
+        ],
+        "origin": "override from ketan_repl/seed1/features.json"
+      }
+    },
+    "interventions": [
+      "ov",
+      "qk",
+      "all"
+    ]
+  },
+  "baseline": {
+    "asr_16": 0.99,
+    "clean_ce": 1.3617700338363647
+  },
+  "grid": {
+    "qk": {
+      "ov": {
+        "features": [
+          1250,
+          1445,
+          1158
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3635599613189697,
+            "delta_ce": 0.0017899274826049805
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.99,
+            "clean_ce": 1.3685506582260132,
+            "delta_ce": 0.0067806243896484375
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.94,
+            "clean_ce": 1.407484531402588,
+            "delta_ce": 0.045714497566223145
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.68,
+            "clean_ce": 1.5848885774612427,
+            "delta_ce": 0.22311854362487793
+          }
+        ]
+      },
+      "qk": {
+        "features": [
+          1250,
+          1445,
+          1158
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3657203912734985,
+            "delta_ce": 0.003950357437133789
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.98,
+            "clean_ce": 1.376994013786316,
+            "delta_ce": 0.015223979949951172
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.96,
+            "clean_ce": 1.4324737787246704,
+            "delta_ce": 0.07070374488830566
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.62,
+            "clean_ce": 1.8044848442077637,
+            "delta_ce": 0.4427148103713989
+          }
+        ]
+      },
+      "all": {
+        "features": [
+          1250,
+          1445,
+          1158
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.368161916732788,
+            "delta_ce": 0.00639188289642334
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.99,
+            "clean_ce": 1.3877931833267212,
+            "delta_ce": 0.026023149490356445
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.71,
+            "clean_ce": 1.5404331684112549,
+            "delta_ce": 0.17866313457489014
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.28,
+            "clean_ce": 2.462070941925049,
+            "delta_ce": 1.100300908088684
+          }
+        ]
+      }
+    },
+    "ov": {
+      "ov": {
+        "features": [
+          518,
+          179,
+          523
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.368459701538086,
+            "delta_ce": 0.006689667701721191
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.99,
+            "clean_ce": 1.3830456733703613,
+            "delta_ce": 0.021275639533996582
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.85,
+            "clean_ce": 1.4505044221878052,
+            "delta_ce": 0.08873438835144043
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.32,
+            "clean_ce": 1.5751376152038574,
+            "delta_ce": 0.21336758136749268
+          }
+        ]
+      },
+      "qk": {
+        "features": [
+          518,
+          179,
+          523
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3624964952468872,
+            "delta_ce": 0.0007264614105224609
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.99,
+            "clean_ce": 1.3669549226760864,
+            "delta_ce": 0.00518488883972168
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.94,
+            "clean_ce": 1.405729055404663,
+            "delta_ce": 0.04395902156829834
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.77,
+            "clean_ce": 1.58743155002594,
+            "delta_ce": 0.2256615161895752
+          }
+        ]
+      },
+      "all": {
+        "features": [
+          518,
+          179,
+          523
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3679027557373047,
+            "delta_ce": 0.006132721900939941
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.99,
+            "clean_ce": 1.3882641792297363,
+            "delta_ce": 0.026494145393371582
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.52,
+            "clean_ce": 1.6148921251296997,
+            "delta_ce": 0.25312209129333496
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.08,
+            "clean_ce": 3.022453546524048,
+            "delta_ce": 1.660683512687683
+          }
+        ]
+      }
+    },
+    "union": {
+      "ov": {
+        "features": [
+          179,
+          518,
+          523,
+          1158,
+          1250,
+          1445
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.371107816696167,
+            "delta_ce": 0.009337782859802246
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.98,
+            "clean_ce": 1.396203875541687,
+            "delta_ce": 0.034433841705322266
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.63,
+            "clean_ce": 1.5746314525604248,
+            "delta_ce": 0.21286141872406006
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.09,
+            "clean_ce": 2.1990928649902344,
+            "delta_ce": 0.8373228311538696
+          }
+        ]
+      },
+      "qk": {
+        "features": [
+          179,
+          518,
+          523,
+          1158,
+          1250,
+          1445
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3655827045440674,
+            "delta_ce": 0.0038126707077026367
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.97,
+            "clean_ce": 1.3815960884094238,
+            "delta_ce": 0.019826054573059082
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.75,
+            "clean_ce": 1.5469436645507812,
+            "delta_ce": 0.1851736307144165
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.52,
+            "clean_ce": 3.195843458175659,
+            "delta_ce": 1.8340734243392944
+          }
+        ]
+      },
+      "all": {
+        "features": [
+          179,
+          518,
+          523,
+          1158,
+          1250,
+          1445
+        ],
+        "origin": "override from ketan_repl/seed1/features.json",
+        "per_alpha": [
+          {
+            "alpha": 0.5,
+            "asr_16": 0.99,
+            "clean_ce": 1.3733407258987427,
+            "delta_ce": 0.01157069206237793
+          },
+          {
+            "alpha": 1.0,
+            "asr_16": 0.97,
+            "clean_ce": 1.4193973541259766,
+            "delta_ce": 0.057627320289611816
+          },
+          {
+            "alpha": 2.0,
+            "asr_16": 0.48,
+            "clean_ce": 2.1528759002685547,
+            "delta_ce": 0.7911058664321899
+          },
+          {
+            "alpha": 3.0,
+            "asr_16": 0.09,
+            "clean_ce": 5.354405879974365,
+            "delta_ce": 3.9926358461380005
+          }
+        ]
+      }
+    }
+  }
+}

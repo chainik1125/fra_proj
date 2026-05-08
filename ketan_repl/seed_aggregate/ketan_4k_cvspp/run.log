@@ -1,0 +1,48 @@
+fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+[2026-05-08 23:12:44] ===== STEP: preflight =====
+[2026-05-08 23:12:44] repo_root=/root/fra_proj
+[2026-05-08 23:12:44] out_root=experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate
+[2026-05-08 23:12:44] device=cuda
+## No commits yet on master
+?? .github/
+?? .gitignore
+?? .lycheeignore
+?? .markdownlint.jsonc
+?? .vscode/
+?? CLAUDE.md
+?? CONTRIBUTING.md
+?? README.md
+?? check-tags.sh
+?? docs/
+?? experiments/
+?? fra/
+?? fra_conformance.yaml
+?? get-tags.sh
+?? ketan_repl/
+?? pyproject.toml
+?? reproduce_rollout_divergence_training_seed_sweep.sh
+?? run-checks.sh
+?? run_fra_conformance.py
+?? tests/
+?? uv.lock
+[2026-05-08 23:12:44] ===== STEP: dependencies =====
+[2026-05-08 23:12:44] skipping uv sync (set UV_SYNC=1 to enable)
+[2026-05-08 23:12:44] ===== STEP: aggregate plots =====
+[2026-05-08 23:12:44] aggregate-only mode from experiments/tinystories_sleeper/tracing_feature/repro_runs/aggregate_4k_cvspp
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_all_tokens_token_linear.png
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_all_tokens_token_linear.csv
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_all_tokens_token_linear.png
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_all_tokens_token_linear.csv
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_first_token_token_linear.png
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_first_token_token_linear.csv
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_first_token_token_linear.png
+[train-seed-avg-plot] wrote experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_first_token_token_linear.csv
+[2026-05-08 23:12:58] ===== STEP: summary =====
+[2026-05-08 23:12:58] done
+[2026-05-08 23:12:58] plots:
+[2026-05-08 23:12:58]   experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_all_tokens_token_linear.png
+[2026-05-08 23:12:58]   experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_train_seed_avg_first_token_token_linear.png
+[2026-05-08 23:12:58]   experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_all_tokens_token_linear.png
+[2026-05-08 23:12:58]   experiments/tinystories_sleeper/tracing_feature/repro_runs/rollout_divergence_training_seed_sweep_4k_cvspp_aggregate/plots/rollout_divergence_avg_generation_and_training_first_token_token_linear.png

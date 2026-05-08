@@ -31,3 +31,9 @@ experiments/tinystories_sleeper/**/results_baseline/
 experiments/tinystories_sleeper/**/results_smoke/
 experiments/tinystories_sleeper/**/run.log
 experiments/tinystories_sleeper/**/run_v2.log
+
+# Heavy run artifacts (regenerable from SAE checkpoints + script)
+ketan_repl/seed_aggregate/**/per_token_metrics.csv
+ketan_repl/seed_aggregate/**/rollouts.jsonl
+ketan_repl/seed_aggregate/**/layer0_cache.pt
+ketan_repl/seed*/layer0_cache.pt
