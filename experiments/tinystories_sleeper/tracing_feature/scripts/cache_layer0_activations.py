@@ -112,6 +112,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--chunk_size", type=int, default=16)
     parser.add_argument("--device", default=None)
+    parser.add_argument("--pre_sae", default=None)
+    parser.add_argument("--mid_sae", default=None)
+    parser.add_argument("--ln1_sae", default=None)
+    parser.add_argument("--pre_feature", type=int, default=None)
+    parser.add_argument("--mid_feature", type=int, default=None)
+    parser.add_argument("--ln1_feature", type=int, default=None)
     parser.add_argument(
         "--output",
         default=str(HERE.parent / "results" / "layer0_cache.pt"),
@@ -121,8 +127,19 @@ def main() -> None:
     device = pick_device(args.device)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    sae_paths = {
+        "pre": [args.pre_sae] if args.pre_sae else SAE_PATHS["pre"],
+        "mid": [args.mid_sae] if args.mid_sae else SAE_PATHS["mid"],
+        "ln1": [args.ln1_sae] if args.ln1_sae else SAE_PATHS["ln1"],
+    }
+    suppressor = {
+        "pre_feature": args.pre_feature if args.pre_feature is not None else SUPPRESSOR["pre_feature"],
+        "mid_feature": args.mid_feature if args.mid_feature is not None else SUPPRESSOR["mid_feature"],
+        "ln1_feature": args.ln1_feature if args.ln1_feature is not None else SUPPRESSOR["ln1_feature"],
+    }
 
     print(f"[cache] device={device}")
+    print(f"[cache] suppressor={suppressor}")
     print(f"[cache] loading sleeper model...")
     model = load_sleeper_model(device=device)
     print(
@@ -160,13 +177,17 @@ def main() -> None:
     print(f"[cache] loading SAEs...")
     saes: dict[str, torch.nn.Module] = {}
     sae_configs: dict[str, dict] = {}
-    for name, candidates in SAE_PATHS.items():
+    for name, candidates in sae_paths.items():
         found: Path | None = None
-        for rel in candidates:
-            p = EXP_DIR / rel
-            if p.exists():
-                found = p
-                found_rel = rel
+        for rel in [c for c in candidates if c]:
+            p = Path(rel)
+            candidate_paths = [p] if p.is_absolute() else [p, EXP_DIR / rel]
+            for candidate in candidate_paths:
+                if candidate.exists():
+                    found = candidate.resolve()
+                    found_rel = str(found)
+                    break
+            if found is not None:
                 break
         if found is None:
             print(f"[cache]   SAE[{name}] NOT FOUND (tried: {candidates}) — skipping")
@@ -184,13 +205,14 @@ def main() -> None:
         print(f"[cache]   SAE[{name}] path={found_rel} d_in={cfg['d_in']} d_sae={cfg['d_sae']} "
               f"k={cfg['k_total']} layer_hook={cfg.get('layer_hook')}")
 
-    assert "pre" in saes and "mid" in saes, "SAE_pre and SAE_mid are required"
+    assert "mid" in saes, "SAE_mid is required"
 
     print(f"[cache] encoding activations through SAEs (post-TopK z)...")
     encodings = {}
-    encodings["z_pre"] = encode_all_sae(
-        saes["pre"], hooks["resid_pre"].float(), chunk_size=256,
-    )
+    if "pre" in saes:
+        encodings["z_pre"] = encode_all_sae(
+            saes["pre"], hooks["resid_pre"].float(), chunk_size=256,
+        )
     encodings["z_mid"] = encode_all_sae(
         saes["mid"], hooks["resid_mid"].float(), chunk_size=256,
     )
@@ -221,15 +243,16 @@ def main() -> None:
 
     pre_logits = {
         "mid_f_mid": pre_activation(
-            saes["mid"], hooks["resid_mid"].float(), SUPPRESSOR["mid_feature"],
-        ),
-        "pre_f_pre": pre_activation(
-            saes["pre"], hooks["resid_pre"].float(), SUPPRESSOR["pre_feature"],
+            saes["mid"], hooks["resid_mid"].float(), suppressor["mid_feature"],
         ),
     }
+    if "pre" in saes:
+        pre_logits["pre_f_pre"] = pre_activation(
+            saes["pre"], hooks["resid_pre"].float(), suppressor["pre_feature"],
+        )
     if "ln1" in saes:
         pre_logits["ln1_f_ln1"] = pre_activation(
-            saes["ln1"], hooks["ln1_normalized"].float(), SUPPRESSOR["ln1_feature"],
+            saes["ln1"], hooks["ln1_normalized"].float(), suppressor["ln1_feature"],
         )
     for k, v in pre_logits.items():
         print(f"[cache]   pre_logit[{k}]: {tuple(v.shape)}  "
@@ -251,7 +274,7 @@ def main() -> None:
             "d_head": int(model.cfg.d_head),
             "hook_map": HOOKS,
             "sae_configs": sae_configs,
-            "suppressor": SUPPRESSOR,
+            "suppressor": suppressor,
             "identity_check_max_abs": max_abs,
         },
         "tokens": pt.tokens,
