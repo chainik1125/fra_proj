@@ -15,16 +15,23 @@ Selection methods (`--selection_method`):
     `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`.
 
 Evaluation modes (`--eval_mode`):
-  * single — two-stage screen+eval on the top-K features:
-      stage 1: cheap greedy ASR on every top-K feature × `--screen_alphas`.
+  * single — three-stage screen+eval on the top-K features:
+      stage 0: cheap analytic Δdep-logp screen on every top-K feature ×
+               `--screen_alphas` (teacher-forced, one model forward each).
+               Cull to the top half (best K/2 by min-most-negative dlogp
+               across screen_alphas), favouring features that actively
+               *suppress* the sleeper-phrase log-prob.
+      stage 1: cheap greedy ASR screen on the K/2 survivors × screen_alphas.
                Pick the feature with the lowest min-ASR-across-screen-alphas
                (tie-break: the lower screen α that achieves that min, so we
                favour features that suppress at weaker steering).
       stage 2: full multi-metric eval (ASR, Δlogp, Δcln-CE, gen-CE ratio,
                severity ratio) on that one survivor at the fine `--alphas`
                grid with multi-seed sampling.
-    Persists every screen point under `selection.per_seed[seed].single_screen`
-    in the output JSON for analysis.
+    Stages 0 and 1 run on the **selection split** (held disjoint from the
+    eval split that stage 2 reports on). Persists every dlogp/ASR screen
+    point + the survivor list under
+    `selection.per_seed[seed].single_screen` in the output JSON.
   * set — α-sweep on the full top-`top_k` set steered together (sum of
     per-feature OV deltas, V hook on all 16 heads). Matches Ketan's
     "all_head_features" intervention shape via `resolve_channel_deltas`.
@@ -181,6 +188,11 @@ def main():
     ev        = splits["test"]
     sel_pmask = prompt_mask_from_markers(128, sel_split.story_marker_pos)
 
+    # Selection split — drives attribution AND the cheap stage-0/1 screens.
+    sel_dep         = sel_split.tokens[sel_split.is_deployment].to(device)
+    sel_dep_pmask   = sel_pmask[sel_split.is_deployment].to(device)
+    sel_base_logp   = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
+
     eval_pmask = prompt_mask_from_markers(128, ev.story_marker_pos)
     eval_dep         = ev.tokens[ev.is_deployment].to(device)
     eval_dep_pmask   = eval_pmask[ev.is_deployment].to(device)
@@ -188,6 +200,8 @@ def main():
     eval_cln_marker  = ev.story_marker_pos[~ev.is_deployment].to(device)
 
     raw_dep = load_dep_prompts(tok, args.n_sel // 2 + args.n_eval // 2, split="test")
+    sel_lp, sel_attn = left_pad_prompts(raw_dep[: args.n_sel // 2], pad_id)
+    sel_lp, sel_attn = sel_lp.to(device), sel_attn.to(device)
     eval_lp, eval_attn = left_pad_prompts(
         raw_dep[args.n_sel // 2 : args.n_sel // 2 + args.n_eval // 2], pad_id,
     )
@@ -237,26 +251,55 @@ def main():
         }
 
         if "single" in eval_modes:
-            # ── Stage 1: cheap greedy-ASR screen across all top-K × screen_alphas. ──
-            screen_results: list[dict] = []
-            best_min_asr_per_feat: dict[int, dict] = {}
+            # ── Stage 0: cheap Δdep-logp screen on top-K × screen_alphas. ──
+            # Teacher-forced sleeper-phrase log-prob; one forward per (f, α).
+            # Run on the SELECTION split so the eval split stays held out.
+            dlogp_results: list[dict] = []
+            best_min_dlogp_per_feat: dict[int, float] = {}
             for f in sel["features"]:
+                for screen_alpha in args.screen_alphas:
+                    sel_one = [(int(f), "V")]
+                    cd = resolve_channel_deltas(sel_one, ACTIVE_CHANNELS["ov"],
+                                                model, sae_ln1, LN1_HOOK,
+                                                sel_dep, sel_dep_pmask)
+                    hooks = build_hooks(cd, screen_alpha, ACTIVE_CHANNELS["ov"],
+                                        W, LN1_HOOK, args.block)
+                    logp_steered = teacher_forced_sleeper_logp(
+                        model, tok, sel_dep, fwd_hooks=hooks,
+                    ).mean().item()
+                    dlogp = logp_steered - sel_base_logp
+                    dlogp_results.append({"feature": int(f),
+                                          "screen_alpha": screen_alpha,
+                                          "dlogp": dlogp})
+                    if dlogp < best_min_dlogp_per_feat.get(int(f), float("inf")):
+                        best_min_dlogp_per_feat[int(f)] = dlogp
+
+            # Cull to top-K/2 by most-negative dlogp (strongest sleeper suppression).
+            keep_n = max(1, len(sel["features"]) // 2)
+            survivors = sorted(best_min_dlogp_per_feat,
+                                key=best_min_dlogp_per_feat.get)[:keep_n]
+            print(f"[fset] s{sae_seed} stage-0 dlogp screen kept "
+                  f"{keep_n}/{len(sel['features'])} features: {survivors[:8]}"
+                  f"{'…' if len(survivors) > 8 else ''}")
+
+            # ── Stage 1: greedy-ASR screen on survivors × screen_alphas. ──
+            asr_results: list[dict] = []
+            best_min_asr_per_feat: dict[int, dict] = {}
+            for f in survivors:
                 for screen_alpha in args.screen_alphas:
                     asr = _asr_screen(
                         model, sae_ln1, int(f), screen_alpha,
-                        eval_lp, eval_attn, W, args.gen_tokens, args.block, device,
+                        sel_lp, sel_attn, W, args.gen_tokens, args.block, device,
                     )
-                    screen_results.append({"feature": int(f),
-                                           "screen_alpha": screen_alpha,
-                                           "asr": asr})
+                    asr_results.append({"feature": int(f),
+                                         "screen_alpha": screen_alpha,
+                                         "asr": asr})
                     rec = best_min_asr_per_feat.get(int(f))
                     if rec is None or asr < rec["asr"]:
                         best_min_asr_per_feat[int(f)] = {"asr": asr,
-                                                         "screen_alpha": screen_alpha}
+                                                          "screen_alpha": screen_alpha}
 
-            # Pick the feature with the lowest min-ASR-across-screen-alphas;
-            # tie-break by the lower screen_alpha at which it achieved that min
-            # (prefer features that suppress at weaker steering).
+            # Pick survivor with lowest min-ASR (tie-break: lower screen α).
             best_feature = min(
                 best_min_asr_per_feat,
                 key=lambda f: (best_min_asr_per_feat[f]["asr"],
@@ -264,17 +307,20 @@ def main():
             )
             best_feat_info = best_min_asr_per_feat[best_feature]
             best_rank      = sel["features"].index(best_feature)
-            print(f"[fset] s{sae_seed} screen winner: f{best_feature} "
+            print(f"[fset] s{sae_seed} stage-1 ASR winner: f{best_feature} "
                   f"(rank {best_rank} in selection, "
                   f"min-ASR={best_feat_info['asr']:.3f} at α={best_feat_info['screen_alpha']})")
 
             selections_by_seed[sae_seed]["single_screen"] = {
-                "screen_alphas":     args.screen_alphas,
-                "best_feature":      int(best_feature),
-                "best_rank":         int(best_rank),
-                "best_min_asr":      float(best_feat_info["asr"]),
-                "best_screen_alpha": float(best_feat_info["screen_alpha"]),
-                "all_screen_results": screen_results,
+                "screen_alphas":      args.screen_alphas,
+                "stage0_dlogp_keep":  keep_n,
+                "stage0_dlogp_survivors": [int(f) for f in survivors],
+                "stage0_dlogp_results": dlogp_results,
+                "stage1_asr_results":  asr_results,
+                "best_feature":       int(best_feature),
+                "best_rank":          int(best_rank),
+                "best_min_asr":       float(best_feat_info["asr"]),
+                "best_screen_alpha":  float(best_feat_info["screen_alpha"]),
             }
 
             # ── Stage 2: full multi-metric eval on best feature × fine α grid. ──
