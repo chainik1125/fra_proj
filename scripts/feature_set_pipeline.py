@@ -167,7 +167,12 @@ def main():
     p.add_argument("--n_gen_ce", type=int, default=100,
                    help="Eval subset for the gen-CE ratio + recovery noise ratio metrics.")
     p.add_argument("--gen_tokens", type=int, default=16)
-    p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
+    p.add_argument("--eval_seeds", type=int, nargs="+", default=list(range(50)),
+                   help="Seed pool for generation. Seeds are consumed adaptively "
+                        "until --target_rnr_rows removed rows are accumulated.")
+    p.add_argument("--target_rnr_rows", type=int, default=100,
+                   help="Stop adding seeds once this many sleeper-removed rows "
+                        "have been generated (min 2 seeds always used).")
     p.add_argument("--eval_temperature", type=float, default=1.0)
     p.add_argument("--sae_mid", type=Path, default=Path("weights/sae_resid_mid.pt"))
     p.add_argument("--sae_ln1_dir", type=Path, default=Path("weights/seeds"),
@@ -226,7 +231,7 @@ def main():
           f"cln_CE_base={base_ce:.4f}")
 
     print(f"[fset] pre-generating clean rollouts (B={args.n_gen_ce}, "
-          f"S={len(args.eval_seeds)})...")
+          f"pool={len(args.eval_seeds)} seeds, target_rnr_rows={args.target_rnr_rows})...")
     clean_rollouts = pregen_clean_rollouts(
         model, eval_gen_dep, eval_gen_attn, args.gen_tokens,
         args.eval_seeds, args.eval_temperature, device,
@@ -354,11 +359,12 @@ def main():
                     base_logp, base_ce, args.gen_tokens,
                     args.eval_seeds, args.eval_temperature, device,
                     use_past_kv_cache=args.use_past_kv_cache,
+                    target_rnr_rows=args.target_rnr_rows,
                 )
                 print(f"[fset] s{sae_seed} single  f{best_feature}  α={alpha:>4}  "
                       f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                       f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                      f"rnr={\1:.3f}")
+                      f"rnr={e['recovery_noise_ratio']:.3f}")
                 points.append({
                     "family": "upstream",
                     "selection_method": args.selection_method,
@@ -381,11 +387,12 @@ def main():
                     base_logp, base_ce, args.gen_tokens,
                     args.eval_seeds, args.eval_temperature, device,
                     use_past_kv_cache=args.use_past_kv_cache,
+                    target_rnr_rows=args.target_rnr_rows,
                 )
                 print(f"[fset] s{sae_seed} set    K={len(feats)}  α={alpha:>4}  "
                       f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                       f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                      f"rnr={\1:.3f}")
+                      f"rnr={e['recovery_noise_ratio']:.3f}")
                 points.append({
                     "family": "upstream",
                     "selection_method": args.selection_method,
@@ -408,11 +415,12 @@ def main():
                 base_logp, base_ce, args.gen_tokens,
                 args.eval_seeds, args.eval_temperature, device,
                 use_past_kv_cache=args.use_past_kv_cache,
+                target_rnr_rows=args.target_rnr_rows,
             )
             print(f"[fset] downstream f{args.target_feature}  α={alpha:>4}  "
                   f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
                   f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
-                  f"rnr={\1:.3f}")
+                  f"rnr={e['recovery_noise_ratio']:.3f}")
             points.append({
                 "family":  "downstream",
                 "selection_method": args.selection_method,

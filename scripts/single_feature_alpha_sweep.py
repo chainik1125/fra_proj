@@ -59,6 +59,7 @@ def _run_eval(
     eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
     use_past_kv_cache: bool = True,
+    target_rnr_rows: int = 100,
 ):
     """Generic eval pipeline parameterised by hook builders.
 
@@ -71,6 +72,13 @@ def _run_eval(
         — used as the gen-CE-ratio baseline AND the recovery-noise-ratio
         denominator's distributions.
 
+    Adaptive seeding for RNR:
+      `eval_seeds` is treated as a pool. Seeds are consumed in order until at
+      least `target_rnr_rows` rows with the sleeper removed have accumulated
+      (minimum 2 seeds for the RNR denominator). Low-α points (few removals)
+      draw more seeds; high-α points stop early. `clean_rollouts` must be
+      pre-generated for the full pool.
+
     Aggregation (matches the recovery-noise-ratio discipline):
       * `gen_ce_ratio = (Σ_{s,b,t} NLL_steered) / (Σ_{s,b,t} NLL_baseline)` —
         sums across all eval seeds × rows × generated positions, divided once.
@@ -79,7 +87,7 @@ def _run_eval(
         side meaned independently before division.
 
     `eval_gen_dep` MUST equal `eval_dep_lp[: n_gen_ce]` and
-    `clean_rollouts["log_softmax"]` MUST be (S, n_gen_ce, T_gen, V) keyed in
+    `clean_rollouts["log_softmax"]` MUST be (S_pool, n_gen_ce, T_gen, V) keyed in
     the same `eval_seeds` order.
     """
     h_dep = build_dep_hooks()
@@ -98,6 +106,7 @@ def _run_eval(
     gen_count = 0
     steered_lsm_list: list[torch.Tensor] = []
     removed_mask_list: list[torch.Tensor] = []
+    total_removed = 0
     for s_idx, s in enumerate(eval_seeds):
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
         steered_gen, steered_lsm = generate_with_hooks(
@@ -117,15 +126,19 @@ def _run_eval(
         gen_den_sum += r["den_sum"]
         gen_count   += r["count"]
         steered_lsm_list.append(steered_lsm[: n_gen_ce])
-        # True = sleeper removed = include in RNR numerator
-        removed_mask_list.append(~sleeper_fired_mask(steered_gen[: n_gen_ce], model.tokenizer))
+        removed = ~sleeper_fired_mask(steered_gen[: n_gen_ce], model.tokenizer)
+        removed_mask_list.append(removed)
+        total_removed += int(removed.sum().item())
+        if len(steered_lsm_list) >= 2 and total_removed >= target_rnr_rows:
+            break
 
     gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
 
+    n_used = len(steered_lsm_list)
     steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)              # (S, n_gen_ce, T, V) CPU fp16
     removed_mask = torch.stack(removed_mask_list, dim=0)                   # (S, n_gen_ce) bool
-    sev = recovery_noise_ratio(clean_rollouts["log_softmax"], steered_lsm_stack,
-                         steered_row_mask=removed_mask)
+    sev = recovery_noise_ratio(clean_rollouts["log_softmax"][:n_used], steered_lsm_stack,
+                               steered_row_mask=removed_mask)
 
     return {
         "asr": sum(asrs) / len(asrs), "asr_per_seed": asrs,
@@ -146,6 +159,7 @@ def _upstream_eval(
     eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
     use_past_kv_cache: bool = True,
+    target_rnr_rows: int = 100,
 ):
     """Upstream: one or more ln1 SAE features steered together via OV-only
     hook (V channel, all 16 heads). `features` may be a single int (legacy
@@ -179,7 +193,8 @@ def _upstream_eval(
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
                      eval_gen_dep, eval_gen_attn, clean_rollouts,
                      base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
-                     use_past_kv_cache=use_past_kv_cache)
+                     use_past_kv_cache=use_past_kv_cache,
+                     target_rnr_rows=target_rnr_rows)
 
 
 def _downstream_eval(
@@ -188,6 +203,7 @@ def _downstream_eval(
     eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
     use_past_kv_cache: bool = True,
+    target_rnr_rows: int = 100,
 ):
     """Downstream: resid_mid SAE feature, additive hook at hook_resid_mid (no head routing)."""
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
@@ -212,7 +228,8 @@ def _downstream_eval(
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
                      eval_gen_dep, eval_gen_attn, clean_rollouts,
                      base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
-                     use_past_kv_cache=use_past_kv_cache)
+                     use_past_kv_cache=use_past_kv_cache,
+                     target_rnr_rows=target_rnr_rows)
 
 
 @torch.no_grad()

@@ -48,7 +48,10 @@ def main() -> None:
     p.add_argument("--n_eval", type=int, default=200)
     p.add_argument("--n_gen_ce", type=int, default=100)
     p.add_argument("--gen_tokens", type=int, default=16)
-    p.add_argument("--eval_seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4])
+    p.add_argument("--eval_seeds", nargs="+", type=int, default=list(range(50)),
+                   help="Seed pool for adaptive RNR generation.")
+    p.add_argument("--target_rnr_rows", type=int, default=100,
+                   help="Target sleeper-removed rows per eval point.")
     p.add_argument("--eval_temperature", type=float, default=1.0)
     p.add_argument("--eval_metrics", nargs="+", default=["recovery_noise_ratio"],
                    help="Metrics to record. Default: recovery_noise_ratio only. "
@@ -92,6 +95,7 @@ def main() -> None:
             "--n_gen_ce", str(args.n_gen_ce),
             "--gen_tokens", str(args.gen_tokens),
             "--eval_seeds",    *[str(s) for s in args.eval_seeds],
+            "--target_rnr_rows", str(args.target_rnr_rows),
             "--eval_temperature", str(args.eval_temperature),
             "--out", str(args.out),
         ]
