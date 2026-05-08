@@ -141,7 +141,7 @@ def _fig4(single, down) -> plt.Figure:
 def _save(fig: plt.Figure, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.patch.set_facecolor(BG)
-    fig.savefig(path, dpi=200, bbox_inches="tight")
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
     print(f"  wrote {path}")
 
@@ -154,10 +154,10 @@ def make_figures(payload: dict, out_dir: Path, pipeline: str) -> None:
     fset   = _aggregate(pts, "upstream",   "set")
     down   = _aggregate(pts, "downstream", "single")
 
-    _save(_fig1(single, fset, down),  out_dir / f"fig1_{pipeline}.png")
-    _save(_fig2(single, fset, down),  out_dir / f"fig2_{pipeline}.png")
-    _save(_fig3(fset, down),          out_dir / f"fig3_{pipeline}.png")
-    _save(_fig4(single, down),        out_dir / f"fig4_{pipeline}.png")
+    _save(_fig1(single, fset, down),  out_dir / f"fig1_{pipeline}.pdf")
+    _save(_fig2(single, fset, down),  out_dir / f"fig2_{pipeline}.pdf")
+    _save(_fig3(fset, down),          out_dir / f"fig3_{pipeline}.pdf")
+    _save(_fig4(single, down),        out_dir / f"fig4_{pipeline}.pdf")
 
 
 def main() -> None:
