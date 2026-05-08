@@ -84,6 +84,30 @@ def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
     return rows
 
 
+def _aggregate_by_seed(points: list[dict], family: str, eval_mode: str
+                        ) -> list[list[dict]]:
+    """Return one curve (list of alpha-sorted rows) per seed."""
+    subset = [
+        p for p in points
+        if p["family"] == family
+        and (family == "downstream" or p.get("eval_mode") == eval_mode)
+    ]
+    by_seed: dict = {}
+    for p in subset:
+        key = p.get("sae_seed")   # None for downstream
+        by_seed.setdefault(key, []).append(p)
+    curves = []
+    for seed_pts in by_seed.values():
+        seed_pts.sort(key=lambda p: p["alpha"])
+        curves.append([
+            dict(alpha=p["alpha"],
+                 x=1.0 / p["severity_ratio"],
+                 y=(1.0 - p["asr"]) * 100.0)
+            for p in seed_pts
+        ])
+    return curves
+
+
 # ── drawing helpers ───────────────────────────────────────────────────────────
 
 def _style_ax(ax: plt.Axes) -> None:
@@ -117,6 +141,33 @@ def _draw_curve(ax: plt.Axes, rows: list[dict],
                 yerr=[[r["y"] - r["y_lo"]], [r["y_hi"] - r["y"]]],
                 fmt="none", color=c, capsize=3, linewidth=0.9, alpha=0.6, zorder=3,
             )
+
+
+def _draw_all_seeds(ax: plt.Axes, seed_curves: list[list[dict]],
+                    style: dict) -> None:
+    for rows in seed_curves:
+        xs = [r["x"] for r in rows]
+        ys = [r["y"] for r in rows]
+        ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=0.8,
+                alpha=0.45, zorder=2)
+        ax.scatter(xs, ys, color=style["color"], marker=style["marker"],
+                   s=30, zorder=3, edgecolor="white", linewidth=0.3,
+                   alpha=0.7)
+
+
+def _fill_panel_seeds(ax: plt.Axes,
+                      curves: list[tuple[list[list[dict]], str]]) -> None:
+    for seed_curves, key in curves:
+        _draw_all_seeds(ax, seed_curves, STYLES[key])
+    _style_ax(ax)
+    handles = [
+        mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
+                      color=STYLES[k]["color"], markerfacecolor=STYLES[k]["color"],
+                      markeredgecolor="white", markeredgewidth=0.3,
+                      markersize=7, label=STYLES[k]["label"])
+        for _, k in curves
+    ]
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
 
 
 def _fill_panel(ax: plt.Axes,
@@ -178,6 +229,13 @@ def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     return fig
 
 
+def _fig5(single_s, fset_s, down_s) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    _fill_panel_seeds(ax, [(single_s, "single"), (fset_s, "set"),
+                            (down_s, "downstream")])
+    return fig
+
+
 # ── save helper ───────────────────────────────────────────────────────────────
 
 def _save(fig: plt.Figure, path: Path) -> None:
@@ -205,6 +263,11 @@ def make_figures(payload: dict, out_dir: Path, pipeline: str,
           out_dir / f"fig3_{pipeline}.pdf")
     _save(_fig4(single, down, alpha_colors, norm, cmap, alphas),
           out_dir / f"fig4_{pipeline}.pdf")
+
+    single_s = _aggregate_by_seed(pts, "upstream",   "single")
+    fset_s   = _aggregate_by_seed(pts, "upstream",   "set")
+    down_s   = _aggregate_by_seed(pts, "downstream", "single")
+    _save(_fig5(single_s, fset_s, down_s), out_dir / f"fig5_{pipeline}.pdf")
 
 
 def main() -> None:
