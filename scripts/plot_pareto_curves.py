@@ -34,16 +34,15 @@ import matplotlib.colors as mcolors
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial import ConvexHull
 
 # ── visual constants ──────────────────────────────────────────────────────────
 BG     = "#fbfaf6"
 GRID   = "#d9d4c8"
 CMAP   = "coolwarm"
 STYLES: dict[str, dict] = {
-    "single":     dict(color="#2166ac", marker="o", label="Single Feature",     ls="-",  lw=0.9),
-    "set":        dict(color="#4dac26", marker="s", label="Feature Set",        ls="-",  lw=0.9),
-    "downstream": dict(color="#d6604d", marker="^", label="Downstream Feature", ls="--", lw=0.9),
+    "single":     dict(color="#762a83", marker="o", label="Single Feature",     ls="-",  lw=0.9),
+    "set":        dict(color="#1b7837", marker="s", label="Feature Set",        ls="-",  lw=0.9),
+    "downstream": dict(color="#333333", marker="^", label="Downstream Feature", ls="--", lw=0.9),
 }
 XLABEL = "Noise-to-Recovery Ratio  (↑ less collateral damage)"
 YLABEL = "Sleepers Removed (%)"
@@ -60,14 +59,8 @@ def _alpha_colormap(alphas: list[float]):
 
 # ── data helpers ──────────────────────────────────────────────────────────────
 
-def _aggregate(points: list[dict], family: str, eval_mode: str
-               ) -> tuple[list[dict], list[float], list[float]]:
-    """Group by alpha; return (mean_curve, all_seed_xs, all_seed_ys).
-
-    all_seed_xs/ys collect every individual seed point so the caller can
-    compute the convex hull envelope over the full data cloud.
-    For downstream (no seed variation) the seed lists are empty.
-    """
+def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
+    """Group by alpha; return per-alpha mean/min/max for both X and Y."""
     subset = [
         p for p in points
         if p["family"] == family
@@ -77,60 +70,18 @@ def _aggregate(points: list[dict], family: str, eval_mode: str
     for p in subset:
         by_alpha.setdefault(p["alpha"], []).append(p)
 
-    mean_rows: list[dict] = []
-    all_xs: list[float] = []
-    all_ys: list[float] = []
-    has_var = False
+    rows = []
     for alpha in sorted(by_alpha):
         grp = by_alpha[alpha]
         xs = [1.0 / p["severity_ratio"] for p in grp]
         ys = [(1.0 - p["asr"]) * 100.0 for p in grp]
-        mean_rows.append(dict(alpha=alpha, x=float(np.mean(xs)), y=float(np.mean(ys))))
-        if len(grp) > 1:
-            has_var = True
-            all_xs.extend(xs)
-            all_ys.extend(ys)
-    return mean_rows, (all_xs if has_var else []), (all_ys if has_var else [])
-
-
-def _hull_envelope(all_xs: list[float], all_ys: list[float]
-                   ) -> tuple[np.ndarray, np.ndarray]:
-    """Convex hull of all seed points, split into upper and lower boundary curves.
-
-    Returns (upper, lower) each as an (n, 2) array sorted by X ascending.
-    Every input point lies inside (or on the boundary of) the polygon formed
-    by concatenating upper forward and lower backward — guaranteed by the
-    convex hull construction.
-    """
-    pts = np.column_stack([all_xs, all_ys])
-    hull = ConvexHull(pts)
-    hverts = pts[hull.vertices]      # CCW order
-    n = len(hverts)
-
-    li = int(np.argmin(hverts[:, 0]))   # leftmost vertex index
-    ri = int(np.argmax(hverts[:, 0]))   # rightmost vertex index
-
-    def _slice(start: int, end: int, step: int) -> np.ndarray:
-        path, i = [], start
-        while True:
-            path.append(hverts[i])
-            if i == end:
-                break
-            i = (i + step) % n
-        return np.array(path)
-
-    path_fwd = _slice(li, ri, +1)   # CCW: one side
-    path_bwd = _slice(li, ri, -1)   # CW:  other side
-
-    # Whichever path has the higher mean Y is the upper boundary.
-    if np.mean(path_fwd[:, 1]) >= np.mean(path_bwd[:, 1]):
-        upper, lower = path_fwd, path_bwd
-    else:
-        upper, lower = path_bwd, path_fwd
-
-    upper = upper[np.argsort(upper[:, 0])]
-    lower = lower[np.argsort(lower[:, 0])]
-    return upper, lower
+        rows.append(dict(
+            alpha=alpha,
+            x=float(np.mean(xs)), x_lo=float(np.min(xs)), x_hi=float(np.max(xs)),
+            y=float(np.mean(ys)), y_lo=float(np.min(ys)), y_hi=float(np.max(ys)),
+            has_var=len(xs) > 1,
+        ))
+    return rows
 
 
 # ── drawing helpers ───────────────────────────────────────────────────────────
@@ -145,37 +96,30 @@ def _style_ax(ax: plt.Axes) -> None:
     ax.set_ylabel(YLABEL, fontsize=9)
 
 
-def _draw_curve(ax: plt.Axes,
-                mean_rows: list[dict],
-                all_seed_xs: list[float], all_seed_ys: list[float],
+def _draw_curve(ax: plt.Axes, rows: list[dict],
                 style: dict, alpha_colors: dict) -> None:
-    # Convex-hull envelope: every seed point is guaranteed inside.
-    if all_seed_xs:
-        upper, lower = _hull_envelope(all_seed_xs, all_seed_ys)
-        poly_xs = list(upper[:, 0]) + list(lower[:, 0][::-1])
-        poly_ys = list(upper[:, 1]) + list(lower[:, 1][::-1])
-        ax.fill(poly_xs, poly_ys, color=style["color"], alpha=0.13, zorder=1)
-        for bx, by in [(upper[:, 0], upper[:, 1]), (lower[:, 0], lower[:, 1])]:
-            ax.plot(bx, by, color=style["color"], ls=style["ls"],
-                    lw=0.5, alpha=0.35, zorder=2)
-
-    # Mean line.
-    xs = [r["x"] for r in mean_rows]
-    ys = [r["y"] for r in mean_rows]
+    xs = [r["x"] for r in rows]
+    ys = [r["y"] for r in rows]
     ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=style["lw"],
-            alpha=0.6, zorder=3)
-    # Mean points coloured by steering strength.
-    for r in mean_rows:
-        ax.scatter(r["x"], r["y"], color=alpha_colors[r["alpha"]],
-                   marker=style["marker"], s=60, zorder=4,
-                   edgecolor="#1b1b1b", linewidth=0.45)
+            alpha=0.5, zorder=2)
+    for r in rows:
+        c = alpha_colors[r["alpha"]]
+        ax.scatter(r["x"], r["y"], color=c, marker=style["marker"],
+                   s=60, zorder=4, edgecolor="#1b1b1b", linewidth=0.45)
+        if r["has_var"]:
+            ax.errorbar(
+                r["x"], r["y"],
+                xerr=[[r["x"] - r["x_lo"]], [r["x_hi"] - r["x"]]],
+                yerr=[[r["y"] - r["y_lo"]], [r["y_hi"] - r["y"]]],
+                fmt="none", color=c, capsize=3, linewidth=0.9, alpha=0.6, zorder=3,
+            )
 
 
 def _fill_panel(ax: plt.Axes,
-                curves: list[tuple[list[dict], list[float], list[float], str]],
+                curves: list[tuple[list[dict], str]],
                 alpha_colors: dict) -> None:
-    for mean_rows, all_xs, all_ys, key in curves:
-        _draw_curve(ax, mean_rows, all_xs, all_ys, STYLES[key], alpha_colors)
+    for rows, key in curves:
+        _draw_curve(ax, rows, STYLES[key], alpha_colors)
     _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
@@ -200,7 +144,7 @@ def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> Non
 
 def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(*single, "single"), (*fset, "set"), (*down, "downstream")],
+    _fill_panel(ax, [(single, "single"), (fset, "set"), (down, "downstream")],
                 alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
@@ -209,8 +153,8 @@ def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel(ax_l, [(*fset,   "set"),    (*down, "downstream")], alpha_colors)
-    _fill_panel(ax_r, [(*single, "single"), (*down, "downstream")], alpha_colors)
+    _fill_panel(ax_l, [(fset,   "set"),    (down, "downstream")], alpha_colors)
+    _fill_panel(ax_r, [(single, "single"), (down, "downstream")], alpha_colors)
     ax_r.set_ylabel("")
     _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
@@ -218,14 +162,14 @@ def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 
 def _fig3(fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(*fset, "set"), (*down, "downstream")], alpha_colors)
+    _fill_panel(ax, [(fset, "set"), (down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
 def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(*single, "single"), (*down, "downstream")], alpha_colors)
+    _fill_panel(ax, [(single, "single"), (down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
@@ -245,7 +189,7 @@ def _save(fig: plt.Figure, path: Path) -> None:
 def make_figures(payload: dict, out_dir: Path, pipeline: str,
                  alpha_colors: dict, norm, cmap, alphas: list[float]) -> None:
     pts    = payload["points"]
-    single = _aggregate(pts, "upstream",   "single")  # (mean, max, min)
+    single = _aggregate(pts, "upstream",   "single")
     fset   = _aggregate(pts, "upstream",   "set")
     down   = _aggregate(pts, "downstream", "single")
 
