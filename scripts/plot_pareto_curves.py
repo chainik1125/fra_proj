@@ -244,6 +244,18 @@ def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     return fig
 
 
+def _fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
+    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
+                                      constrained_layout=True)
+    _fill_panel_seeds(ax_l, [(single_s, "single"), (fset_s, "set"),
+                              (down_s, "downstream")], alpha_colors)
+    _fill_panel_seeds(ax_r, [(single_s, "single"), (down_s, "downstream")],
+                      alpha_colors)
+    ax_r.set_ylabel("")
+    _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
+    return fig
+
+
 # ── save helper ───────────────────────────────────────────────────────────────
 
 def _save(fig: plt.Figure, path: Path) -> None:
@@ -279,6 +291,8 @@ def make_figures(payload: dict, out_dir: Path, pipeline: str,
           out_dir / f"fig5_{pipeline}.pdf")
     _save(_fig6(single_s, down_s, alpha_colors, norm, cmap, alphas),
           out_dir / f"fig6_{pipeline}.pdf")
+    _save(_fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig7_{pipeline}.pdf")
 
 
 def main() -> None:
