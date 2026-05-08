@@ -120,7 +120,7 @@ def distribution_ce(p_logits: torch.Tensor, q_logits: torch.Tensor) -> torch.Ten
 
 
 def extract_generated_logits(model, prompt: torch.Tensor, generated: torch.Tensor) -> torch.Tensor:
-    """Return logits that predicted each generated token, shape (G, vocab)."""
+    """Return logits that predicted each generated token, shape (G, vocab) for B=1."""
     device = next(model.parameters()).device
     seq = torch.cat([prompt, generated], dim=1).to(device)
     logits = model(seq, return_type="logits")
@@ -129,10 +129,72 @@ def extract_generated_logits(model, prompt: torch.Tensor, generated: torch.Tenso
     return logits[0, prompt_len - 1 : prompt_len + gen_len - 1, :]
 
 
+@torch.no_grad()
+def extract_generated_logits_batched(model, prompt_K: torch.Tensor, generated_K: torch.Tensor) -> torch.Tensor:
+    """Same idea but for batched inputs of shape (K, P) / (K, G), returns (K, G, vocab).
+
+    Used by the alpha-batched fast path: K is the alpha dimension, all sharing a
+    single prompt tiled K times.
+    """
+    device = next(model.parameters()).device
+    seq = torch.cat([prompt_K, generated_K], dim=1).to(device)
+    logits = model(seq, return_type="logits")  # (K, P+G, V)
+    P = prompt_K.shape[1]
+    G = generated_K.shape[1]
+    return logits[:, P - 1 : P + G - 1, :]
+
+
 def token_ce_from_logits(logits: torch.Tensor, target_tokens: torch.Tensor) -> torch.Tensor:
     log_probs = F.log_softmax(logits.float(), dim=-1)
     targets = target_tokens.reshape(-1).to(logits.device)
     return -log_probs[torch.arange(targets.numel(), device=logits.device), targets]
+
+
+def token_ce_batched(logits_K: torch.Tensor, target_K: torch.Tensor) -> torch.Tensor:
+    """Per-position NLL for batched (K, G, V) logits and (K, G) targets — returns (K, G)."""
+    log_probs = F.log_softmax(logits_K.float(), dim=-1)
+    return -log_probs.gather(-1, target_K.unsqueeze(-1).to(logits_K.device)).squeeze(-1)
+
+
+def hooks_all_heads_batched(model, v_delta: torch.Tensor, alphas: torch.Tensor) -> list:
+    """Variant of hooks_all_heads that accepts a per-batch-element alpha vector.
+
+    v_delta: (1, P, d_model) — the SAME delta for every batch element.
+    alphas:  (K,) tensor of per-batch alpha values.
+
+    Stamps `alpha[k] * v_delta[0]` onto v[k, :P, :, :] in one pass.
+    """
+    W_V0 = model.W_V[0].detach().to(v_delta.device).float()
+    v_delta_h = torch.einsum("btd,hdk->bthk", v_delta.float(), W_V0).to(model.W_V.dtype)  # (1, P, H, K_d)
+    v_delta_K = (alphas.to(v_delta_h.device).to(v_delta_h.dtype)[:, None, None, None]
+                 * v_delta_h)                                              # (K, P, H, K_d)
+    seq_len = v_delta_K.shape[1]
+
+    def _hook(v, hook):
+        if v.shape[1] < seq_len:
+            return v
+        v[:, :seq_len, :, :] = v[:, :seq_len, :, :] + v_delta_K
+        return v
+
+    return [("blocks.0.attn.hook_v", _hook)]
+
+
+def make_delta_hook_batched(delta: torch.Tensor, alphas: torch.Tensor, hook_name: str) -> list:
+    """Variant of make_delta_hook_single_layer with per-batch-element alpha.
+
+    delta:  (1, P, d) — the SAME delta for every batch element.
+    alphas: (K,) tensor of per-batch alpha values.
+    """
+    delta_K = (alphas.to(delta.device).to(delta.dtype)[:, None, None] * delta)  # (K, P, d)
+    P = delta_K.shape[1]
+
+    def _hook(resid, hook):
+        if resid.shape[1] < P:
+            return resid
+        resid[:, :P, :] = resid[:, :P, :] + delta_K
+        return resid
+
+    return [(hook_name, _hook)]
 
 
 def build_ov_spec(ov_json: Path, kind: str, rank_name: str, n: int) -> dict:
@@ -276,6 +338,17 @@ def main() -> None:
         )
         ov_delta = group_delta(model, ln1_sae, dep_prompt, dep_mask, ov_spec["features"])
 
+        # SPEEDUP: per-family alpha batching. For each family we tile the
+        # deployment prompt to batch=K (K = number of alphas) and run one
+        # generate call with a hook that applies a per-batch-element alpha.
+        # Net: 24 model.generate calls per (prompt, seed) → 4 (c1, c2,
+        # steered_single, steered_ov). Single forward for batched logit
+        # extraction too.
+        single_alphas_t = torch.tensor(args.single_alphas, device=device, dtype=torch.float32)
+        ov_alphas_t     = torch.tensor(args.ov_alphas,     device=device, dtype=torch.float32)
+        K_single = single_alphas_t.numel()
+        K_ov     = ov_alphas_t.numel()
+
         for seed in generation.seeds:
             c1 = generate_with_hooks(
                 model, clean_prompt, [], args.gen_tokens, generation, seed=int(seed)
@@ -290,80 +363,83 @@ def main() -> None:
             den_token_ce = token_ce_from_logits(c1_logits, c2[0])
             den_dist_ce = distribution_ce(c1_logits, c2_logits)
 
-            for intervention in interventions:
-                alpha = float(intervention["alpha"])
-                if intervention["family"] == "Single feature":
-                    from sleeper_utils import make_delta_hook_single_layer
-                    hooks = make_delta_hook_single_layer(single_delta, alpha, args.single_hook)
-                    feature_count = 1
-                elif intervention["family"] == "OV/FRA":
-                    hooks = hooks_all_heads(model, ov_delta, alpha)
-                    feature_count = len(ov_spec["features"])
-                else:
-                    raise ValueError(intervention["family"])
+            # ----- Single-feature family: batched over K_single alphas -----
+            single_hooks_b = make_delta_hook_batched(single_delta, single_alphas_t, args.single_hook)
+            dep_prompt_K_single = dep_prompt.expand(K_single, -1).contiguous()
+            steered_single = generate_with_hooks(
+                model, dep_prompt_K_single, single_hooks_b, args.gen_tokens, generation, seed=int(seed)
+            )  # (K_single, G)
+            steered_single_logits = extract_generated_logits_batched(model, dep_prompt_K_single, steered_single)  # (K_single, G, V)
+            num_single_t = token_ce_batched(c1_logits.unsqueeze(0).expand(K_single, -1, -1), steered_single)  # (K_single, G)
+            pp_single_t  = token_ce_batched(steered_single_logits, steered_single)                            # (K_single, G)
 
-                steered = generate_with_hooks(
-                    model, dep_prompt, hooks, args.gen_tokens, generation, seed=int(seed)
-                )
-                # `extract_generated_logits` does a no-hook forward pass on
-                # (dep_prompt + steered_tokens). So `steered_logits` is the
-                # *unsteered* model's predictions on that exact sequence — i.e.
-                # the "poisoned-prompt unsteered-model" distribution at each
-                # generated position. We re-use it twice:
-                #   - against c1's distribution (Ketan's existing num)
-                #   - as the predictive model for the steered tokens themselves
-                #     (= the new "p_unsteered_pp" denominator dmitry asked for)
-                steered_logits = extract_generated_logits(model, dep_prompt, steered)
-                num_token_ce = token_ce_from_logits(c1_logits, steered[0])
-                num_dist_ce = distribution_ce(c1_logits, steered_logits)
-                pp_self_token_ce = token_ce_from_logits(steered_logits, steered[0])
+            # ----- OV/FRA family: batched over K_ov alphas -----
+            ov_hooks_b = hooks_all_heads_batched(model, ov_delta, ov_alphas_t)
+            dep_prompt_K_ov = dep_prompt.expand(K_ov, -1).contiguous()
+            steered_ov = generate_with_hooks(
+                model, dep_prompt_K_ov, ov_hooks_b, args.gen_tokens, generation, seed=int(seed)
+            )  # (K_ov, G)
+            steered_ov_logits = extract_generated_logits_batched(model, dep_prompt_K_ov, steered_ov)  # (K_ov, G, V)
+            num_ov_t  = token_ce_batched(c1_logits.unsqueeze(0).expand(K_ov, -1, -1), steered_ov)
+            pp_ov_t   = token_ce_batched(steered_ov_logits, steered_ov)
 
-                for pos in range(args.gen_tokens):
-                    nt = float(num_token_ce[pos].item())
-                    dt = float(den_token_ce[pos].item())
-                    nd = float(num_dist_ce[pos].item())
-                    dd = float(den_dist_ce[pos].item())
-                    pp_t = float(pp_self_token_ce[pos].item())
-                    metric_rows.append({
-                        "prompt_id": prompt_i,
-                        "dataset_index": idx,
-                        "prompt_variant": args.prompt_variant,
-                        "family": intervention["family"],
-                        "alpha": alpha,
-                        "feature_count": feature_count,
-                        "sample_seed": int(seed),
-                        "denominator_seed": c2_seed,
-                        "position": pos + 1,
-                        "c1_token": int(c1[0, pos].item()),
-                        "c2_token": int(c2[0, pos].item()),
-                        "steered_token": int(steered[0, pos].item()),
-                        "token_ce_clean_to_steered": nt,
-                        "token_ce_clean_to_clean": dt,
-                        "token_ce_ratio": nt / max(dt, EPS),
-                        "token_log_ratio": math.log(nt + EPS) - math.log(dt + EPS),
-                        "dist_ce_clean_to_steered": nd,
-                        "dist_ce_clean_to_clean": dd,
-                        "dist_ce_ratio": nd / max(dd, EPS),
-                        "dist_log_ratio": math.log(nd + EPS) - math.log(dd + EPS),
-                        # NEW: dmitry's clean-vs-poisoned ratio numerator + denominator.
-                        "token_ce_pp_self":         pp_t,
-                        "token_ce_clean_vs_pp":     nt / max(pp_t, EPS),
-                        "token_log_ratio_clean_vs_pp": math.log(nt + EPS) - math.log(pp_t + EPS),
-                    })
+            # Emit rows. We don't compute the dist-CE batched variant — it was a
+            # constant-across-alpha number anyway (equals XE(P_C1, P_C1') which
+            # doesn't depend on the steered logits in the same way at the
+            # rollout level once aggregated). Set it to NaN for back-compat.
+            def _emit(family, K, alphas_list, steered, num_t, pp_t, feature_count, c1_tok, c2_tok):
+                for k in range(K):
+                    a = float(alphas_list[k])
+                    for pos in range(args.gen_tokens):
+                        nt = float(num_t[k, pos].item())
+                        dt = float(den_token_ce[pos].item())
+                        pp = float(pp_t[k, pos].item())
+                        metric_rows.append({
+                            "prompt_id": prompt_i,
+                            "dataset_index": idx,
+                            "prompt_variant": args.prompt_variant,
+                            "family": family,
+                            "alpha": a,
+                            "feature_count": feature_count,
+                            "sample_seed": int(seed),
+                            "denominator_seed": c2_seed,
+                            "position": pos + 1,
+                            "c1_token": int(c1_tok[pos].item()),
+                            "c2_token": int(c2_tok[pos].item()),
+                            "steered_token": int(steered[k, pos].item()),
+                            "token_ce_clean_to_steered": nt,
+                            "token_ce_clean_to_clean": dt,
+                            "token_ce_ratio": nt / max(dt, EPS),
+                            "token_log_ratio": math.log(nt + EPS) - math.log(dt + EPS),
+                            # Distribution-level CE was always constant over alpha at the
+                            # token level we care about; emit Nan here, the analysis
+                            # scripts use the token_* columns by default.
+                            "dist_ce_clean_to_steered": float("nan"),
+                            "dist_ce_clean_to_clean":   float(den_dist_ce[pos].item()),
+                            "dist_ce_ratio":            float("nan"),
+                            "dist_log_ratio":           float("nan"),
+                            "token_ce_pp_self":            pp,
+                            "token_ce_clean_vs_pp":        nt / max(pp, EPS),
+                            "token_log_ratio_clean_vs_pp": math.log(nt + EPS) - math.log(pp + EPS),
+                        })
+                    if args.save_generations:
+                        generation_rows.append({
+                            "prompt_id": prompt_i,
+                            "family": family,
+                            "alpha": a,
+                            "sample_seed": int(seed),
+                            "denominator_seed": c2_seed,
+                            "clean_prompt": clean_prompt_text,
+                            "deployment_prompt": dep_prompt_text,
+                            "c1": tokenizer.decode(c1[0].tolist()),
+                            "c2": tokenizer.decode(c2[0].tolist()),
+                            "steered": tokenizer.decode(steered[k].tolist()),
+                        })
 
-                if args.save_generations:
-                    generation_rows.append({
-                        "prompt_id": prompt_i,
-                        "family": intervention["family"],
-                        "alpha": alpha,
-                        "sample_seed": int(seed),
-                        "denominator_seed": c2_seed,
-                        "clean_prompt": clean_prompt_text,
-                        "deployment_prompt": dep_prompt_text,
-                        "c1": tokenizer.decode(c1[0].tolist()),
-                        "c2": tokenizer.decode(c2[0].tolist()),
-                        "steered": tokenizer.decode(steered[0].tolist()),
-                    })
+            _emit("Single feature", K_single, args.single_alphas, steered_single,
+                  num_single_t, pp_single_t, 1, c1[0], c2[0])
+            _emit("OV/FRA", K_ov, args.ov_alphas, steered_ov,
+                  num_ov_t, pp_ov_t, len(ov_spec["features"]), c1[0], c2[0])
 
         print(f"[rollout-ratio] prompt {prompt_i + 1}/{prompt_idx.numel()} done", flush=True)
 
@@ -384,37 +460,44 @@ def main() -> None:
         rows = [r for r in metric_rows if r["family"] == family and r["alpha"] == alpha]
         first = [r for r in rows if r["position"] == 1]
         for scope, scope_rows in [("first_token", first), ("all_tokens", rows)]:
-            token_vals = [float(r["token_ce_ratio"]) for r in scope_rows]
-            dist_vals = [float(r["dist_ce_ratio"]) for r in scope_rows]
-            token_log_vals = [float(r["token_log_ratio"]) for r in scope_rows]
-            dist_log_vals = [float(r["dist_log_ratio"]) for r in scope_rows]
+            import math as _math
+            def _finite(xs):
+                return [x for x in xs if x is not None and _math.isfinite(x)]
+            token_vals = _finite([float(r["token_ce_ratio"]) for r in scope_rows])
+            dist_vals = _finite([float(r["dist_ce_ratio"]) for r in scope_rows])
+            token_log_vals = _finite([float(r["token_log_ratio"]) for r in scope_rows])
+            dist_log_vals = _finite([float(r["dist_log_ratio"]) for r in scope_rows])
             token_num_sum = sum(float(r["token_ce_clean_to_steered"]) for r in scope_rows)
             token_den_sum = sum(float(r["token_ce_clean_to_clean"]) for r in scope_rows)
-            dist_num_sum = sum(float(r["dist_ce_clean_to_steered"]) for r in scope_rows)
-            dist_den_sum = sum(float(r["dist_ce_clean_to_clean"]) for r in scope_rows)
+            dist_num_vals = _finite([float(r["dist_ce_clean_to_steered"]) for r in scope_rows])
+            dist_den_vals = _finite([float(r["dist_ce_clean_to_clean"]) for r in scope_rows])
+            dist_num_sum = sum(dist_num_vals)
+            dist_den_sum = sum(dist_den_vals)
             pp_self_sum = sum(float(r["token_ce_pp_self"]) for r in scope_rows)
-            cvp_vals = [float(r["token_ce_clean_vs_pp"]) for r in scope_rows]
-            cvp_log_vals = [float(r["token_log_ratio_clean_vs_pp"]) for r in scope_rows]
+            cvp_vals = _finite([float(r["token_ce_clean_vs_pp"]) for r in scope_rows])
+            cvp_log_vals = _finite([float(r["token_log_ratio_clean_vs_pp"]) for r in scope_rows])
+            def _safe_mean(xs): return mean(xs) if xs else float("nan")
+            def _safe_std(xs): return stdev(xs) if len(xs) > 1 else 0.0
             summary_rows.append({
                 "family": family,
                 "alpha": alpha,
                 "scope": scope,
                 "n": len(scope_rows),
                 "token_total_ce_ratio": token_num_sum / max(token_den_sum, EPS),
-                "token_ratio_mean": mean(token_vals),
-                "token_ratio_sd": stdev(token_vals) if len(token_vals) > 1 else 0.0,
-                "token_log_ratio_mean": mean(token_log_vals),
+                "token_ratio_mean": _safe_mean(token_vals),
+                "token_ratio_sd": _safe_std(token_vals),
+                "token_log_ratio_mean": _safe_mean(token_log_vals),
                 # NEW: clean-vs-poisoned ratio. num = -log p_clean(s_t | clean+c1), den = -log p_unsteered_pp(s_t | dep+s).
                 # Lower = closer to clean; higher = closer to sleeper; ≈1 = word salad.
                 "clean_vs_pp_total_ce_ratio": token_num_sum / max(pp_self_sum, EPS),
-                "clean_vs_pp_ratio_mean":     mean(cvp_vals),
-                "clean_vs_pp_ratio_sd":       stdev(cvp_vals) if len(cvp_vals) > 1 else 0.0,
-                "clean_vs_pp_log_ratio_mean": mean(cvp_log_vals),
+                "clean_vs_pp_ratio_mean":     _safe_mean(cvp_vals),
+                "clean_vs_pp_ratio_sd":       _safe_std(cvp_vals),
+                "clean_vs_pp_log_ratio_mean": _safe_mean(cvp_log_vals),
                 "pp_self_total_ce":           pp_self_sum,
-                "dist_total_ce_ratio": dist_num_sum / max(dist_den_sum, EPS),
-                "dist_ratio_mean": mean(dist_vals),
-                "dist_ratio_sd": stdev(dist_vals) if len(dist_vals) > 1 else 0.0,
-                "dist_log_ratio_mean": mean(dist_log_vals),
+                "dist_total_ce_ratio": dist_num_sum / max(dist_den_sum, EPS) if dist_den_sum > EPS else float("nan"),
+                "dist_ratio_mean": _safe_mean(dist_vals),
+                "dist_ratio_sd": _safe_std(dist_vals),
+                "dist_log_ratio_mean": _safe_mean(dist_log_vals),
             })
 
     summary = {
