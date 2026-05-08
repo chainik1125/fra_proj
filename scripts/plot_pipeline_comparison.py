@@ -20,7 +20,7 @@ Usage:
     python -m scripts.plot_pipeline_comparison \\
         --jamie_in results/experiment_jamie.json \\
         --ketan_in results/experiment_ketan.json \\
-        --out docs/figures/pipeline_comparison.png
+        --out figures/pipeline_comparison.png
 """
 from __future__ import annotations
 

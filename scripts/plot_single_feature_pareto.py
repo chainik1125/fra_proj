@@ -27,7 +27,7 @@ A single seaborn-style colorbar replaces the per-seed legend.
 Usage:
     python -m scripts.plot_single_feature_pareto \\
         --in results/single_feature_alpha_sweep.json \\
-        --out docs/figures/single_feature_pareto.png
+        --out figures/single_feature_pareto.png
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def main():
     p.add_argument("--in", dest="inp", type=Path,
                    default=Path("results/single_feature_alpha_sweep.json"))
     p.add_argument("--out", type=Path,
-                   default=Path("docs/figures/single_feature_pareto.png"))
+                   default=Path("figures/single_feature_pareto.png"))
     p.add_argument("--cmap", default="coolwarm",
                    help="matplotlib colormap (blue=low α, red=high α). 'coolwarm' or 'RdBu_r'.")
     args = p.parse_args()

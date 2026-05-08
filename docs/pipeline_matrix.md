@@ -49,7 +49,7 @@ uv run -m scripts.single_feature_alpha_sweep --in results/matrix_sweep.json
 uv run -m scripts.plot_single_feature_pareto --in results/single_feature_alpha_sweep.json
 ```
 
-Persisted artefacts from the legacy flow (committed): [[matrix_results|docs/matrix_results.md]] and `docs/figures/single_feature_pareto.*`. The intermediate JSONs in `results/` are gitignored.
+Persisted artefacts from the legacy flow (committed): [[matrix_results|docs/matrix_results.md]] and `figures/single_feature_pareto.*`. The intermediate JSONs in `results/` are gitignored.
 
 ## Selection vs eval split
 
