@@ -1,18 +1,90 @@
 # Reproducing FRA Experiments
 
-This branch contains only the code needed to reproduce the FRA experiments on a GPU pod.
+This branch contains the code needed to reproduce all FRA experiments and generate paper figures.
 
 ## Requirements
 
-- NVIDIA GPU with >= 80GB VRAM (H100 recommended, A100 80GB works)
+- NVIDIA GPU with >= 80GB VRAM (H100 recommended; CE-vs-base needs ~141GB for two models)
 - Python 3.10+
-- OPENAI_API_KEY for GPT-4o judging (optional — heuristic scores computed without it)
+- OPENAI_API_KEY for GPT-4o judging
 
-## Setup
+## Setup (on the pod)
 
 ```bash
+git clone https://github.com/chainik1125/fra_proj.git -b nura/reproducible
+cd fra_proj
 pip install transformer-lens sae-lens peft transformers torch einops tqdm numpy openai
 ```
+
+## Step 1: Run experiments on GPU pod
+
+```bash
+# Full pipeline (frontier + shared feature + random baseline + CE-vs-base)
+nohup bash run_all_multiseed.sh > run_all.log 2>&1 &
+tail -f run_all.log
+```
+
+This runs all experiments for 3 EM variants (finance, medical, sports):
+
+| Step | Task | What it does |
+|------|------|-------------|
+| 1 | `frontier_multiseed` | Sweep α for QK→QK, QK→OV, OV→OV (3 seeds, 8 prompts) |
+| 2 | `shared_feature_multiseed` | One feature across 4 heads (3 seeds, 8 prompts) |
+| 3 | `random_baseline` | Random features as control (3 draws × 3 seeds) |
+| 4 | `ce_vs_base` | KL(base \|\| steered_EM) — deterministic, no generation |
+
+Results are saved to `/root/multiseed_results_v2/`.
+
+## Step 2: Download results to local machine
+
+```bash
+scp -r <pod>:/root/multiseed_results_v2/ ./multiseed_results_v2/
+```
+
+## Step 3: GPT-4o judging (local, needs OPENAI_API_KEY)
+
+```bash
+export OPENAI_API_KEY=sk-...
+
+# Judge all frontier + shared feature responses
+python judge_multiseed.py --results-dir multiseed_results_v2
+
+# Judge random baseline responses (extract from full JSONs first)
+python -c "
+import json
+from pathlib import Path
+results_dir = Path('multiseed_results_v2')
+for variant in ['finance', 'medical', 'sports']:
+    for f in results_dir.glob(f'multiseed_{variant}_random_*_full.json'):
+        data = json.load(open(f))
+        qualitative = []
+        for draw_idx, draw_data in data.get('per_draw', {}).items():
+            for q in draw_data.get('qualitative', []):
+                q['draw'] = int(draw_idx)
+                qualitative.append(q)
+        out = results_dir / f'qualitative_{variant}_random.json'
+        json.dump(qualitative, open(out, 'w'), indent=2, ensure_ascii=False)
+        print(f'{out.name}: {len(qualitative)} responses')
+"
+python judge_multiseed.py --results-dir multiseed_results_v2
+```
+
+## Step 4: Generate paper figures
+
+```bash
+python plot_paper_figures.py
+```
+
+Produces in `paper/icml2026/figures/`:
+
+| Figure | Description | Used in |
+|--------|-------------|---------|
+| `v2_frontier_H38_k50.png` | Alignment vs α with error bands | Main paper |
+| `v2_frontier_means.png` | Coherence vs alignment scatter | Main paper |
+| `v2_best_alignment_bars.png` | Best alignment by method (bar chart) | Main paper |
+| `v2_ce_vs_base.png` | KL divergence from base model | Main paper |
+| `v2_shared_feature.png` | Shared feature alignment vs α | Appendix |
+| `v2_shared_means.png` | Shared feature scatter | Appendix |
 
 ## File Structure
 
@@ -30,62 +102,36 @@ fra/                        # Core library
   pareto.py                 # Pareto frontier quality metric
   experiment_matrix.py      # 3x3 attribution x intervention matrix
   sae_lens_wrapper.py       # SAE loading from HuggingFace
-  sae_wrapper.py            # SAE interface utilities
 
 run_experiments.py          # CLI entry point for all experiments
-run_all_multiseed.sh        # Run all multi-seed experiments (full pipeline)
-run_remaining.sh            # Run only missing experiments (random + CE-vs-base)
-judge_multiseed.py          # Batch GPT-4o judging for stored responses
-CODEBASE.md                 # Detailed codebase guide with Figure 1 reproduction
-```
-
-## Running All Experiments
-
-```bash
-# Full pipeline: frontier + shared feature + random baseline + CE-vs-base
-bash run_all_multiseed.sh
-
-# Or run individual experiments:
-python run_experiments.py --task frontier_multiseed --em-model finance --head 38 --seeds 42 123 456
-python run_experiments.py --task shared_feature_multiseed --em-model finance --seeds 42 123 456
-python run_experiments.py --task random_baseline --em-model finance --head 38 --seeds 42 123 456
-python run_experiments.py --task ce_vs_base --em-model finance --head 38 --n-texts 8
-```
-
-## Available Tasks
-
-| Task | Description |
-|------|-------------|
-| `head_ablation` | Zero each head, measure loss/KL/top1 change |
-| `frontier` | Single-seed frontier sweep with GPT-4o judging |
-| `shared_feature` | One feature across 4 heads |
-| `frontier_multiseed` | Multi-seed frontier with multi-prompt ranking |
-| `shared_feature_multiseed` | Multi-seed shared feature |
-| `random_baseline` | Random features as control |
-| `ce_vs_base` | KL(base \|\| steered_EM) — deterministic |
-
-## EM Model Variants
-
-| Variant | HuggingFace ID |
-|---------|---------------|
-| `finance` | `ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice` |
-| `medical` | `ModelOrganismsForEM/Qwen2.5-14B-Instruct_bad-medical-advice` |
-| `sports` | `ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports` |
-| `base` | `Qwen/Qwen2.5-14B-Instruct` (no EM, clean reference) |
-
-## GPT-4o Judging
-
-After generation experiments finish:
-
-```bash
-export OPENAI_API_KEY=sk-...
-python judge_multiseed.py --results-dir multiseed_results_v2
+run_all_multiseed.sh        # Step 1: run all experiments on pod
+run_remaining.sh            # Run only CE-vs-base (if others already done)
+judge_multiseed.py          # Step 3: batch GPT-4o judging
+plot_paper_figures.py       # Step 4: generate all paper figures
+CODEBASE.md                 # Detailed codebase guide
 ```
 
 ## Key Settings
 
+- Model: Qwen2.5-14B-Instruct + EM LoRA adapters
 - SAE: `Nura-J/Qwen2.5-14B_SAE_ln1.normalised`, layer 24, d_sae=102400, top-k=64
 - FRA sparsification: top-K=20 features per position
+- Feature ranking: multi-prompt (accumulated across all 8 prompts)
 - Generation: temperature=1.0, no top-p/top-k, 3 seeds (42, 123, 456)
 - Evaluation: 8 EM benchmark prompts, GPT-4o alignment+coherence scoring
-- Feature ranking: multi-prompt (accumulated across all 8 prompts)
+
+## Individual Experiment Commands
+
+```bash
+# Frontier sweep (single variant)
+python run_experiments.py --task frontier_multiseed --em-model finance --head 38 --seeds 42 123 456
+
+# Shared feature cross-head
+python run_experiments.py --task shared_feature_multiseed --em-model finance --seeds 42 123 456
+
+# Random baseline control
+python run_experiments.py --task random_baseline --em-model finance --head 38 --seeds 42 123 456
+
+# CE vs base (deterministic, needs 2 models loaded)
+python run_experiments.py --task ce_vs_base --em-model finance --head 38 --n-texts 8
+```
