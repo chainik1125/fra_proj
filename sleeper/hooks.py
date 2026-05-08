@@ -87,10 +87,19 @@ def additive_steer_hook(
     alpha: float,
     layer_hook: str,
 ) -> list[tuple[str, Callable]]:
-    """Add ``alpha * delta`` to ``layer_hook`` on the first P positions only."""
+    """Add ``alpha * delta`` to ``layer_hook`` on the first P positions only.
+
+    The `x.shape[1] < P` guard makes this safe under KV-cache generation: on
+    cache-mode decode steps (single-token input) the hook no-ops, so the
+    prompt-only patching convention is preserved without re-patching cached
+    positions. Step 0's prompt forward has `x.shape[1] >= P` so the patch
+    still fires.
+    """
     P = delta.shape[1]
 
     def _hook(resid, hook):
+        if resid.shape[1] < P:
+            return resid
         resid[:, :P, :] = resid[:, :P, :] + alpha * delta.to(resid.dtype).to(resid.device)
         return resid
 
@@ -133,6 +142,8 @@ def head_selective_v_hook(
     hook_name = f"blocks.{block}.attn.hook_v"
 
     def _hook(x, hook):
+        if x.shape[1] < P:
+            return x
         idx = head_idx.to(x.device)
         x[:, :P, idx, :] = x[:, :P, idx, :] + alpha * proj.to(x.dtype).to(x.device)
         return x
@@ -172,6 +183,8 @@ def channel_steer_hook(
 
         def _make(proj=proj, P=P):
             def _hook(x, hook):
+                if x.shape[1] < P:
+                    return x
                 x[:, :P, :, :] = x[:, :P, :, :] + alpha * proj.to(x.dtype).to(x.device)
                 return x
             return _hook
@@ -302,7 +315,9 @@ def generate_with_hooks(
     max_new_tokens: int,
     sampler: Sampler,
     attention_mask: torch.Tensor | None = None,
-) -> torch.Tensor:
+    capture_log_softmax: bool = False,
+    use_past_kv_cache: bool = True,
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
     """Decode `max_new_tokens` tokens with `fwd_hooks` active each step.
 
     Hook deltas only patch the first P positions (the prompt), so it's safe to
@@ -310,22 +325,68 @@ def generate_with_hooks(
 
     Pass `attention_mask` when prompts are left-padded; it is extended with 1s
     as generated tokens are appended (they are always real).
+
+    When `capture_log_softmax=True`, also collects the per-step
+    log-softmax over vocab — the same distribution the sampler drew from at
+    each generation step — and returns `(tokens, log_softmax)` where
+    `log_softmax` has shape `(B, max_new_tokens, V)`. Stored on CPU as
+    float16 to limit memory; convert to float32 in the consumer for
+    distribution-CE math. No additional forward passes required.
+
+    `use_past_kv_cache` (default True) uses KV-cached decoding: forwards
+    the full prompt on step 0 (where steering hooks fire), then forwards a
+    single token per subsequent step with the K/V from earlier steps reused
+    via `TransformerLensKeyValueCache`. The cache mode reduces the per-step
+    forward from `O(P+t)` to `O(1)` for attention. Steering hooks no-op on
+    decode-step inputs (length < P) thanks to the prompt-length guard in
+    each hook factory; the prompt-only patching convention is preserved.
+    Pass `use_past_kv_cache=False` to fall back to the original full-recompute
+    path; outputs match cache-on bit-for-bit on tokens / ASR / token-NLL,
+    with ~1e-7 attention-math reordering noise on distribution-level metrics.
     """
     device = next(model.parameters()).device
     tokens = prompts.to(device)
     attn = attention_mask.to(device) if attention_mask is not None else None
     out: list[torch.Tensor] = []
-    for _ in range(max_new_tokens):
+    lsm_out: list[torch.Tensor] = [] if capture_log_softmax else []
+
+    if use_past_kv_cache:
+        from transformer_lens.cache.key_value_cache import TransformerLensKeyValueCache
+        kv_cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, tokens.shape[0])
+
+    for t in range(max_new_tokens):
         extra: dict = {"return_type": "logits"}
-        if attn is not None:
-            extra["attention_mask"] = attn
-        logits = model.run_with_hooks(tokens, fwd_hooks=fwd_hooks, **extra)
-        nxt = sampler(logits[:, -1, :])
+        if use_past_kv_cache:
+            extra["past_kv_cache"] = kv_cache
+            if t == 0:
+                inp = tokens
+                # Step 0: full prompt + initial attention mask. Cache stores
+                # this mask via append_attention_mask.
+                if attn is not None:
+                    extra["attention_mask"] = attn
+            else:
+                inp = tokens[:, -1:]
+                # Decode step: only the *new* token's mask is appended (the
+                # cache appends to its stored history internally). All real.
+                if attn is not None:
+                    extra["attention_mask"] = attn.new_ones(attn.shape[0], 1)
+        else:
+            inp = tokens
+            if attn is not None:
+                extra["attention_mask"] = attn
+        logits = model.run_with_hooks(inp, fwd_hooks=fwd_hooks, **extra)
+        last = logits[:, -1, :]
+        if capture_log_softmax:
+            lsm_out.append(torch.log_softmax(last.float(), dim=-1).to("cpu", torch.float16))
+        nxt = sampler(last)
         out.append(nxt.unsqueeze(1))
         tokens = torch.cat([tokens, nxt.unsqueeze(1)], dim=1)
         if attn is not None:
             attn = torch.cat([attn, attn.new_ones(attn.shape[0], 1)], dim=1)
-    return torch.cat(out, dim=1)
+    gen = torch.cat(out, dim=1)
+    if capture_log_softmax:
+        return gen, torch.stack(lsm_out, dim=1)            # (B, T_gen, V)
+    return gen
 
 
 def greedy_generate_with_hooks(

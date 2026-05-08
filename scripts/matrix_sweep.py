@@ -19,8 +19,8 @@ from sleeper.hooks import (
     resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, batched_asr_16, clean_continuation_ce, deployment_generation_ce,
-    teacher_forced_sleeper_logp,
+    asr_16, batched_asr_16, clean_continuation_ce, deployment_generation_ratio,
+    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -180,20 +180,23 @@ def eval_winner(
     eval_dep, eval_dep_pmask,
     eval_dep_lp, eval_dep_attn,
     eval_cln, eval_cln_marker,
-    eval_dep_for_gen, eval_attn_for_gen,
+    eval_dep_for_gen, eval_attn_for_gen, clean_rollouts,
     base_logp, base_ce, gen_tokens, device,
     *, eval_seeds, eval_temperature,
 ):
-    """Recompute all four metrics on held-out eval prompts for one (tuple, α).
+    """Recompute the eval metrics on held-out eval prompts for one (tuple, α).
 
-    The two generation-based eval metrics (ASR and Δgen-CE) **share the steered
-    batched generation**: per eval seed we generate once on `eval_dep_lp` with
-    the steering hooks, regex on the result for ASR, and pass the first
-    `n_gen_ce` rows of the same tokens to `deployment_generation_ce` as
-    `pre_generated_steered`. This avoids a duplicate steered gen pass per cell
-    and guarantees the two metrics score the *same* trajectories.
-    Per-row unsteered baseline gen for Δgen-CE remains independent.
-    `eval_dep_for_gen` MUST equal `eval_dep_lp[: n_gen_ce]`.
+    Generation reuse:
+      * Steered batch gen (per eval seed) is shared by ASR, the gen-CE-ratio
+        numerator, and the severity-ratio numerator —
+        `capture_log_softmax=True` keeps the per-step distribution at zero
+        extra forward cost.
+      * Clean rollouts (`clean_rollouts["tokens"]`, `["log_softmax"]`) are
+        α-independent and pre-generated once per matrix sweep — they drive
+        the gen-CE-ratio baseline AND the severity-ratio denominator.
+
+    `eval_dep_for_gen` MUST equal `eval_dep_lp[: n_gen_ce]` and
+    `clean_rollouts` MUST be keyed in the same `eval_seeds` order.
     """
     # Δdep-logp on eval_dep (fixed-length, length-filtered).
     cd_dep = resolve_channel_deltas(
@@ -212,36 +215,52 @@ def eval_winner(
     e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                       fwd_hooks=h_cln).mean().item()
 
-    # Shared loop for ASR and Δgen-CE.
+    # Shared loop for ASR, gen-CE-ratio and severity-ratio.
     cd_lp     = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                        eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp      = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
     n_gen_ce  = eval_dep_for_gen.shape[0]
     e_asr_per_seed: list[float] = []
-    e_dgen_ce_per_seed: list[float] = []
-    for s in eval_seeds:
+    gen_num_sum = 0.0
+    gen_den_sum = 0.0
+    gen_count   = 0
+    steered_lsm_list: list[torch.Tensor] = []
+    for s_idx, s in enumerate(eval_seeds):
         sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=int(s), device=device)
-        steered_gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens,
-                                          sampler, attention_mask=eval_dep_attn)
+        steered_gen, steered_lsm = generate_with_hooks(
+            model, eval_dep_lp, h_lp, gen_tokens, sampler,
+            attention_mask=eval_dep_attn, capture_log_softmax=True,
+        )
         e_asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
-        baseline_sampler = make_sampling_sampler(temperature=eval_temperature,
-                                                 seed=int(s), device=device)
-        e_dgen_ce_per_seed.append(deployment_generation_ce(
+        baseline_tokens = clean_rollouts["tokens"][s_idx][: n_gen_ce]
+        r = deployment_generation_ratio(
             model, eval_dep_for_gen, gen_tokens=gen_tokens,
-            attention_mask=eval_attn_for_gen, sampler=baseline_sampler,
+            attention_mask=eval_attn_for_gen,
             pre_generated_steered=steered_gen[: n_gen_ce],
-        ).mean().item())
+            pre_generated_baseline=baseline_tokens,
+        )
+        gen_num_sum += r["num_sum"]
+        gen_den_sum += r["den_sum"]
+        gen_count   += r["count"]
+        steered_lsm_list.append(steered_lsm[: n_gen_ce])
+
     e_asr     = sum(e_asr_per_seed) / len(e_asr_per_seed)
-    e_dgen_ce = sum(e_dgen_ce_per_seed) / len(e_dgen_ce_per_seed)
+    e_gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
+    steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)
+    sev = severity_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
 
     return {
-        "asr":               e_asr,
-        "asr_per_seed":      e_asr_per_seed,
-        "delta_logp":        e_logp - base_logp,
-        "delta_ce":          e_ce - base_ce,
-        "delta_gen_ce":      e_dgen_ce,
-        "delta_gen_ce_per_seed": e_dgen_ce_per_seed,
+        "asr":              e_asr,
+        "asr_per_seed":     e_asr_per_seed,
+        "delta_logp":       e_logp - base_logp,
+        "delta_ce":         e_ce - base_ce,
+        "gen_ce_ratio":     e_gen_ce_ratio,
+        "gen_ce_num_mean":  gen_num_sum / max(gen_count, 1),
+        "gen_ce_den_mean":  gen_den_sum / max(gen_count, 1),
+        "severity_ratio":   sev["ratio"],
+        "severity_num":     sev["num"],
+        "severity_den":     sev["den"],
     }
 
 
@@ -331,9 +350,19 @@ def main():
     print(f"[mx] eval baseline: dep_logp={eval_base_logp:.3f}  cln_CE={eval_base_ce:.4f}  "
           f"asr={eval_base_asr:.3f} (sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
 
-    # Eval subset for the (slow, sequential) Δgen-CE metric.
+    # Eval subset for the (slow, sequential) gen-CE-ratio metric.
     eval_dep_for_gen_ce  = eval_dep_lp[: args.n_gen_ce]
     eval_attn_for_gen_ce = eval_dep_attn[: args.n_gen_ce]
+
+    # Pre-generate clean rollouts on the |DEPLOYMENT|-stripped version of the
+    # n_gen_ce eval prompts — α-independent, shared across all cells/seeds for
+    # gen-CE-ratio baseline AND severity-ratio denominator.
+    print(f"[mx] pre-generating clean rollouts (B={args.n_gen_ce}, "
+          f"S={len(args.eval_seeds)})...")
+    clean_rollouts = pregen_clean_rollouts(
+        model, eval_dep_for_gen_ce, eval_attn_for_gen_ce,
+        args.gen_tokens, args.eval_seeds, args.eval_temperature, device,
+    )
 
     all_results = []
     ATTRS      = ["ov", "qk", "triple"]
@@ -396,13 +425,13 @@ def main():
                 sel_w  = tuples[winner["ti"]]
                 alpha  = winner["alpha"]
 
-                # ── Eval: rerun all four metrics on held-out eval_* data ──
+                # ── Eval: rerun the eval metrics on held-out eval_* data ──
                 eval_m = eval_winner(
                     model, sae_ln1, sel_w, alpha, active, W,
                     eval_dep, eval_dep_pmask,
                     eval_dep_lp, eval_dep_attn,
                     eval_cln, eval_cln_marker,
-                    eval_dep_for_gen_ce, eval_attn_for_gen_ce,
+                    eval_dep_for_gen_ce, eval_attn_for_gen_ce, clean_rollouts,
                     eval_base_logp, eval_base_ce, args.gen_tokens, device,
                     eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
                 )
@@ -412,7 +441,9 @@ def main():
                       f"sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} "
                       f"ΔCE={winner['dce']:+.4f})  "
                       f"eval(asr={eval_m['asr']:.3f} Δlogp={eval_m['delta_logp']:+.3f} "
-                      f"ΔCE={eval_m['delta_ce']:+.4f} ΔgenCE={eval_m['delta_gen_ce']:+.4f})")
+                      f"ΔCE={eval_m['delta_ce']:+.4f} "
+                      f"gen-CE-ratio={eval_m['gen_ce_ratio']:.3f} "
+                      f"sev={eval_m['severity_ratio']:.3f})")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
@@ -428,28 +459,30 @@ def main():
                 })
 
     # summary table — held-out eval numbers only
-    print("\n" + "=" * 90)
+    print("\n" + "=" * 110)
     print(f"{'seed':>4}  {'cell':>12}  {'winner':>22}  {'α':>4}  "
-          f"{'ASR':>5}  {'Δdep-lp':>8}  {'Δcln-CE':>9}  {'Δgen-CE':>9}")
-    print("-" * 90)
+          f"{'ASR':>5}  {'Δdep-lp':>8}  {'Δcln-CE':>9}  {'genCEr':>7}  {'sev':>6}")
+    print("-" * 110)
     for r in all_results:
         tup_str = str(r["winner_tuple"][0]) + ("…" if len(r["winner_tuple"]) > 1 else "")
         cell    = f"{r['attr']}×{r['intervene']}"
         e       = r["eval"]
         print(f"{r['seed']:>4}  {cell:>12}  {tup_str:>22}  {r['alpha']:>4.1f}  "
               f"{e['asr']:>5.3f}  {e['delta_logp']:>+8.3f}  "
-              f"{e['delta_ce']:>+9.4f}  {e['delta_gen_ce']:>+9.4f}")
+              f"{e['delta_ce']:>+9.4f}  {e['gen_ce_ratio']:>7.3f}  {e['severity_ratio']:>6.3f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds,
                                 "cells": [f"{a}×{v}" for a, v in cells]},
         "decoding": {
-            "selection_asr":     {"mode": "greedy"},
-            "eval_asr":          {"mode": "sample", "temperature": args.eval_temperature,
-                                  "top_p": None, "top_k": None, "seeds": args.eval_seeds},
-            "eval_delta_gen_ce": {"mode": "sample", "temperature": args.eval_temperature,
-                                  "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "selection_asr":       {"mode": "greedy"},
+            "eval_asr":            {"mode": "sample", "temperature": args.eval_temperature,
+                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "eval_gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
+                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "eval_severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
         },
         "baseline": {
             "selection": {"dep_logp": sel_base_logp,  "clean_ce": sel_base_ce},

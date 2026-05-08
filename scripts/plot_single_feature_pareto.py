@@ -1,8 +1,19 @@
 """Plot the single-feature sleeper-tradeoff panel.
 
-1×2 figure modeled on Ketan's `plot_flipped` headline:
-  left  panel: x = Δcln-CE,    y = Sampled eval ASR
-  right panel: x = Δgen-CE,    y = Sampled eval ASR
+1×3 figure with one panel per Generated × Clean cell metric, plus the
+teacher-forced Δcln-CE on the left:
+
+  panel 1 (left):   x = Δcln-CE,        y = Sampled eval ASR
+  panel 2 (middle): x = gen-CE ratio,   y = Sampled eval ASR
+  panel 3 (right):  x = severity ratio, y = Sampled eval ASR
+
+Both ratios share the unitless multiplicative interpretation: 1.0 means
+"steered output is indistinguishable from the natural reference"; >1 means
+the intervention pushes the output further from the reference than the
+reference's own internal noise floor. They differ in *what* they compare:
+gen-CE ratio scores produced tokens against a natural-baseline rollout's
+NLL; severity ratio compares per-step generation distributions against
+a multi-seed sampling-noise baseline (see `sleeper.metrics.severity_ratio`).
 
 Two families on the same axes:
   * "upstream"   — per-seed ov×ov winner (ln1 SAE feature, OV-only intervention)
@@ -71,12 +82,15 @@ def main():
     cmap  = matplotlib.colormaps[args.cmap]
     color = {a: cmap(norm(i)) for i, a in enumerate(alphas)}
 
-    fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.0), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.0), constrained_layout=True)
     fig.patch.set_facecolor("#fbfaf6")
-    panels = [("delta_ce",     "Δcln-CE  (clean teacher-forced cost)",         axes[0]),
-              ("delta_gen_ce", "Δgen-CE  (story-prior CE on dep generation)",  axes[1])]
+    panels = [
+        ("delta_ce",       "Δcln-CE  (clean teacher-forced cost)",                       0.0, axes[0]),
+        ("gen_ce_ratio",   "gen-CE ratio  (NLL_steered / NLL_baseline, ≥1 = damage)",    1.0, axes[1]),
+        ("severity_ratio", "severity ratio  (CE_steered / CE_sampling_noise, ≥1 = damage)", 1.0, axes[2]),
+    ]
 
-    for metric, xlabel, ax in panels:
+    for metric, xlabel, ref_x, ax in panels:
         ax.set_facecolor("#fbfaf6")
         for family in families:
             marker = FAMILY_MARKER.get(family, "o")
@@ -87,7 +101,7 @@ def main():
             ax.scatter(xs, ys, s=80 if family == "downstream" else 60,
                        c=cs, marker=marker, edgecolor="#1b1b1b", linewidth=0.55,
                        alpha=0.92, zorder=3)
-        ax.axvline(0.0, color="#27231f", linewidth=0.9, alpha=0.6)
+        ax.axvline(ref_x, color="#27231f", linewidth=0.9, alpha=0.6)
         ax.axhline(base["asr"], color="#666", linestyle="--", linewidth=0.8, alpha=0.7)
         ax.text(0.99, base["asr"], f" baseline ASR = {base['asr']:.3f}",
                 ha="right", va="bottom", fontsize=8, color="#555",

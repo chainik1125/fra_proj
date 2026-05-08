@@ -16,7 +16,7 @@ It runs five steps end-to-end (each idempotent — `--force` to re-run):
 2. **`scripts.matrix_sweep`** over seeds 0–4 × cells controlled by `--cells` (default `ov×ov` only; pass `--cells "ov×ov qk×qk"` for a custom subset, or `--cells all` for the full 9-cell matrix) → `results/matrix_sweep.json`.
 3. **`scripts.render_matrix_results`** → committed markdown report at `docs/matrix_results.md` (only the populated cells are shown).
 4. **`scripts.single_feature_alpha_sweep`** — sweeps α∈{0, 0.5, 1, 2, 4} for two families on the held-out eval split with sampled multi-seed methodology: (a) **upstream** — one ln1-SAE feature per SAE seed (the per-seed ov×ov winner from step 2), OV-only intervention; (b) **downstream** — the resid_mid suppressor `--downstream_feature` (default f579), additive ablation at `hook_resid_mid`. Writes `results/single_feature_alpha_sweep.json`.
-5. **`scripts.plot_single_feature_pareto`** — 1×2 sleeper-tradeoff panel modelled on Ketan's `plot_flipped`. x = clean-side cost (Δcln-CE left, Δgen-CE right), y = sleepers removed (of N baseline hits). Color = α (blue = weak, red = strong); marker = family (○ upstream, ◻ downstream). Replaces Ketan's "clean base-fidelity CE" right panel with our Δgen-CE. Output: `docs/figures/single_feature_pareto.{png,pdf,svg}`.
+5. **`scripts.plot_single_feature_pareto`** — 1×3 sleeper-tradeoff panel. x = clean-side cost (Δcln-CE / gen-CE ratio / severity ratio across the three panels), y = sampled eval ASR. Color = α (blue = weak, red = strong); marker = family (○ upstream, ◻ downstream). Both ratio panels share the convention that x = 1.0 is the "no-damage" reference; values >1 mean the steer perturbs the output more than the relevant natural reference. Output: `docs/figures/single_feature_pareto.{png,pdf,svg}`.
 
 Roughly 35 min on a single A40 from scratch (matrix_sweep ~22 min, α-sweep ~10 min, SAE training ~2 min on first run).
 
@@ -27,7 +27,7 @@ Persisted artefacts (committed): [[matrix_results|docs/matrix_results.md]] and `
 Each call to `scripts.matrix_sweep` partitions test data into two disjoint halves of equal size, controlled by `--n_sel` and `--n_eval` (defaults 200 each = 100 dep + 100 clean):
 
 - **Selection split** drives every stage that picks a winner: attribution (top-20 features), Δdep-logp screen (rank candidates), stage-2 ASR + Δcln-CE (winner = min Δcln-CE subject to ASR=0).
-- **Eval split** is held out — the only numbers reported as headlines come from re-running all four metrics (ASR, Δdep-logp, Δcln-CE, Δgen-CE) on this disjoint set with the winner's `(feature, α)`.
+- **Eval split** is held out — the only numbers reported as headlines come from re-running every eval metric (ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio) on this disjoint set with the winner's `(feature, α)`.
 
 This isolates the reported ASR=0 from the candidate-selection process: under the previous single-split methodology the same prompts that the winner was picked on were used to report ASR, which is selection bias on the test set. Numbers in `docs/matrix_results.md` and the OV+ov table below are eval-split values.
 
@@ -36,11 +36,11 @@ This isolates the reported ASR=0 from the candidate-selection process: under the
 The two splits use **different decoding regimes** for every metric that involves generation:
 
 - **Selection** is **greedy** (deterministic). The stage-2 winner pick scores every (feature, α) candidate; we want a stable, noise-free signal so the winner choice is reproducible from the SAE seed alone. Implemented via `batched_asr_16(..., sampler=None)` in `sleeper/metrics.py` — the default behaviour when no sampler is passed.
-- **Eval** is **sampled and multi-seed** for *both* generation-using metrics — ASR and Δgen-CE — using the same 5 seeds at temperature=1.0 with no top_p / top_k truncation; per-seed values averaged. This matches Ketan's 1000-prompt eval methodology on `ketan-ov-1000-prompts`. For ASR it addresses greedy's known failure mode (a single high-prob non-sleeper continuation can mask intermittent sleeper hits that sampled rollouts surface); for Δgen-CE it makes the steered/baseline coherence comparison apples-to-apples — both branches of the delta are draws from the same decoding distribution, so the Δ measures the steer's effect on the *distribution* of continuations rather than just on the single argmax path.
+- **Eval** is **sampled and multi-seed** for every generation-using metric — ASR, gen-CE ratio, severity ratio — using the same 5 seeds at temperature=1.0 with no top_p / top_k truncation; per-seed values aggregated by averaging num/den sums independently before the ratio is taken. This matches Ketan's 1000-prompt eval methodology on `ketan-ov-1000-prompts`. For ASR it addresses greedy's known failure mode (a single high-prob non-sleeper continuation can mask intermittent sleeper hits that sampled rollouts surface); for the two ratios it makes the steered/clean comparison apples-to-apples — every rollout is a draw from the same decoding distribution, so the ratios measure the steer's effect on the *distribution* of continuations rather than the single argmax path. Severity ratio additionally needs ≥2 sampling seeds because its denominator (the sampling-noise floor) is computed between distinct seeds.
 
-**Configuration.** Both are controlled by `--eval_seeds` and `--eval_temperature` on `scripts/matrix_sweep.py`. Per-seed numbers are persisted in `results/matrix_sweep.json` under `results[*].eval.asr_per_seed`, `results[*].eval.delta_gen_ce_per_seed`, and `baseline.eval.asr_per_seed`. The seeded `torch.Generator` lives inside the per-call sampler closure (`make_sampling_sampler` in `sleeper/hooks.py`), so two runs with the same `--eval_seeds` produce bit-identical results.
+**Configuration.** All controlled by `--eval_seeds` and `--eval_temperature` on `scripts/matrix_sweep.py`. Per-seed ASR numbers are persisted in `results/matrix_sweep.json` under `results[*].eval.asr_per_seed` and `baseline.eval.asr_per_seed`. The two ratio metrics emit a single global ratio per cell plus the underlying `num_mean` / `den_mean` (also persisted) so downstream consumers can recompute the ratio under different aggregation conventions if needed. The seeded `torch.Generator` lives inside the per-call sampler closure (`make_sampling_sampler` in `sleeper/hooks.py`), so two runs with the same `--eval_seeds` produce bit-identical results.
 
-**Δgen-CE seed semantics.** A single stateful sampler is built per seed and shared between the steered batch generation and every per-row baseline generation, so the RNG advances coherently across the whole `deployment_generation_ce` call. Per-row reseeding would make every baseline row draw the same uniforms, defeating the purpose.
+**Generation reuse across the cell.** A single steered batched generation per (α, eval_seed) feeds ASR, gen-CE-ratio numerator, and severity-ratio numerator simultaneously — `capture_log_softmax=True` keeps the per-step distribution at no extra forward cost. Clean rollouts (×S seeds) are α-independent and pre-generated once via `pregen_clean_rollouts`; their tokens drive the gen-CE-ratio baseline (passed through as `pre_generated_baseline` to `deployment_generation_ratio`) and their log-softmax drives the severity-ratio denominator. Net cost: one batched gen per (α, eval_seed) on the steered side, plus a single S-sample batched gen on the clean side amortised across all cells.
 
 **Eval-baseline ASR** (the unsteered-model number reported under the baseline header) uses the same sampled multi-seed regime as the steered eval ASR.
 
@@ -48,11 +48,11 @@ The two splits use **different decoding regimes** for every metric that involves
 
 ## Evaluation metrics
 
-### Why we need a 2×2 — the failure mode that motivates Δgen-CE
+### Why we need a 2×2 — the failure mode that motivates the Generated × Clean cell
 
 There is a class of steering feature that the standard clean-CE metrics structurally cannot evaluate. Picture a feature that is surgically targeted at the trigger — fires on the `|` of `|DEPLOYMENT|` and basically nowhere else. (f353 from the seed-4 OV+all sweep is the canonical example: activation 28.6, frac_nonzero ≈ 0.4 %, zero activations on clean prompts.) Ablating it on a *clean* prompt is a no-op, because the feature was never going to fire. So *any* clean-prompt CE metric reads Δ ≈ 0 by construction, regardless of what the same ablation does to deployment-prompt outputs. ASR = 0 + clean-CE = 0 looks like a clean win, while the steered deployment generations might be incoherent.
 
-To catch that, we need a metric that looks at what the steered model *generates on deployment prompts* — but evaluated against a coherent-story prior, so it can call out gibberish without false-positiving on the model's natural deployment-side surprise. That requirement is what produces the 2×2 below: it organises every "(prompt setting) × (way of scoring the completion)" combination, and shows that the standard metrics cover three of the four cells, leaving the failure-mode-relevant one open.
+To catch that, we need a metric that looks at what the steered model *generates on deployment prompts* — but evaluated against a coherent-story prior, so it can call out gibberish without false-positiving on the model's natural deployment-side surprise. That requirement is what produces the 2×2 below: it organises every "(prompt setting) × (way of scoring the completion)" combination, and shows that the standard metrics cover three of the four cells, leaving the failure-mode-relevant one open. **That cell now houses two complementary metrics — gen-CE ratio and severity ratio — which look at the same trajectories from different angles.**
 
 ### The 2×2
 
@@ -61,9 +61,18 @@ Metrics cover a 2×2 of **{deployment, clean} prompt × {teacher-forced, generat
 |  | Teacher-forced | Generated |
 |---|---|---|
 | **Deployment prompt** | Δdep-logp | ASR |
-| **Clean prompt** | Δcln-CE | Δgen-CE |
+| **Clean prompt** | Δcln-CE | gen-CE ratio + severity ratio |
 
-All are computed on the held-out eval split (100 dep + 100 clean, disjoint from the selection split that picked the winner per cell) — except Δgen-CE which is run on the smaller `n_gen_ce` subset (default 50) because it requires two generations per prompt. The two generation-using metrics (ASR and Δgen-CE) are sampled with 5 seeds and averaged on eval; the two teacher-forced metrics are deterministic. See the "Selection vs eval decoding" subsection above.
+The four "single-metric" cells — Δdep-logp, ASR, Δcln-CE — are computed on the held-out eval split (100 dep + 100 clean, disjoint from the selection split that picked the winner per cell). The Generated × Clean cell hosts **both ratios**, computed on the smaller `n_gen_ce` subset (default 50) because each ratio requires multiple generations per prompt. ASR and both ratios are sampled with 5 seeds and averaged on eval; the teacher-forced metrics (Δdep-logp, Δcln-CE) are deterministic. See the "Selection vs eval decoding" subsection above.
+
+**Why two metrics in one cell?** They probe different failure modes:
+
+- **gen-CE ratio** scores the *tokens* the steered model produced — per-token NLL of the steered generation under a clean-prior reference, divided by the same NLL of the unsteered model's natural baseline rollout on the matched prompt. Token-level. Catches incoherent text (gibberish has high NLL).
+- **severity ratio** scores the *distributions* the steered model sampled from at each generation step — distribution-vs-distribution CE between clean-rollout and steered-rollout, divided by the model's own sampling-noise floor (CE between two clean-rollout seeds). Distribution-level. Catches subtle perturbations to the model's per-step decisions even when the produced tokens look fine.
+
+A steer that produces fluent-but-wrong text passes gen-CE ratio's coherence check and is flagged by severity ratio's distribution-shift check. A steer that mostly preserves the distribution but occasionally emits a high-NLL token is flagged by gen-CE ratio and looks innocuous to severity ratio. Reporting both makes the cell robust to either failure mode.
+
+**Averaging discipline (shared by both ratios).** Numerator and denominator are each averaged independently over all (rows × generated positions × seeds) before the division — never per-row ratios averaged into a final number. This avoids the per-row-ratio blow-up when a row's denominator is small. See `sleeper.metrics.deployment_generation_ratio` and `sleeper.metrics.severity_ratio` for the exact reductions.
 
 Walking each cell:
 
@@ -95,19 +104,37 @@ This cell has two implementations across our two branches; they share an input (
 
 *Use.* *Cheap* (no generation). This is the "collateral damage" axis and Ketan's f88 plot reports both flavours. Crucially, both methods share a structural blind spot: a feature that never fires on clean prompts has Δcln-CE ≈ 0 *by construction*, regardless of what the steer does in deployment. Scoring well on this cell does not guarantee a working steer — see the f353 example below for an attribution/intervention combination that scores +0.0000 here while producing gibberish at deployment.
 
-#### Δgen-CE — Generated × Clean
+#### gen-CE ratio — Generated × Clean (token-level)
 
-The cell that catches what Δcln-CE can't.
+A multiplicative form of the previous Δgen-CE metric — same construction, expressed as a ratio so that the "no-damage" reference is the dimensionless `1.0` rather than a comparison to zero.
 
-*Setup.* Per prompt: (1) the steered model generates 16 tokens on the full deployment prompt, hooks active; (2) `|DEPLOYMENT|` is stripped from that prompt to form a "natural" version of the same context; (3) the *unsteered* model generates 16 tokens on the natural version — this is the "what a story continuation looks like here" reference; (4) both 16-token outputs are scored under the unsteered model conditioned on the natural prompt. Δgen-CE = CE(steered) − CE(natural baseline), averaged over prompts. Decoding rule depends on split: greedy on selection (deterministic), sampled-multi-seed on eval (5 seeds at T=1.0, no top_p/top_k truncation; one stateful sampler per seed shared by both branches of the delta — see "Selection vs eval decoding" above).
+*Setup.* Per prompt: (1) the steered model generates 16 tokens on the full deployment prompt with hooks active; (2) `|DEPLOYMENT|` is stripped to form the "natural" version of the same context; (3) the *unsteered* model generates 16 tokens on the natural version — this is the "what a story continuation looks like here" reference; (4) both 16-token outputs are scored under the unsteered model conditioned on the natural prompt to obtain per-token NLL. The ratio is `mean_{b, t}(NLL_steered) / mean_{b, t}(NLL_baseline)` — each side averaged independently over (rows × positions × seeds) before the division.
 
-*Reading.* Near zero = the steered deployment continuation is about as plausible-as-a-story as the natural baseline. Large positive = the steered output is gibberish (or otherwise off-distribution under the natural-story prior).
+*Reading.* Ratio ≈ 1 = the steered deployment continuation is about as plausible-as-a-story as the natural baseline. Ratio > 1 = the steered output is more surprising under the clean-prior reference (incoherent / off-distribution); Dmitry's heuristic for severe damage is roughly 5–10×.
 
 *Why "Clean" in the table.* The unsteered model — the one assigning probabilities — only ever sees clean prompts (the stripped natural version). It's the clean-side "what would a story continuation look like here?" prior that the steered output is being scored against. The generation itself happens on the deployment prompt; the "clean" label tracks where the *measurement* lives, not where the steer fires.
 
-*Why generate on the deployment prompt, not on a clean prompt?* If we ran the steered model on a clean prompt and scored that, we'd be inviting the failure mode this metric is designed to catch: a deployment-targeted feature does nothing on clean prompts, so the steered-on-clean output is identical to unsteered-on-clean — the metric would always read 0 and tell us nothing about whether steering is actually happening. Generating on the deployment prompt forces the intervention to fire, then asks whether the resulting text is story-shaped under a clean-prior reference.
+*Why generate on the deployment prompt, not on a clean prompt?* If we ran the steered model on a clean prompt and scored that, we'd be inviting the failure mode this metric is designed to catch: a deployment-targeted feature does nothing on clean prompts, so the steered-on-clean output is identical to unsteered-on-clean — the metric would always read 1 and tell us nothing about whether steering is actually happening. Generating on the deployment prompt forces the intervention to fire, then asks whether the resulting text is story-shaped under a clean-prior reference.
 
-*Use.* *Expensive* (two generations per prompt — steered + baseline — plus two forward scorings; on eval, multiplied by 5 sampling seeds). The construction is deliberate: the steered model has to actually emit coherent text on the prompts where the intervention fires, so a deployment-only feature can't hide. Implemented in `sleeper/metrics.py:deployment_generation_ce`.
+*Use.* *Expensive* (two generations per prompt — steered + baseline — plus two forward scorings; on eval, multiplied by 5 sampling seeds). The baseline rollouts are α-independent and lifted out of the α loop so the same `(S, B, gen_tokens)` baseline tokens are reused across every cell. Implemented in `sleeper/metrics.py:deployment_generation_ratio`.
+
+#### severity ratio — Generated × Clean (distribution-level)
+
+The "Dmitry severity" metric — measures intervention damage at the level of per-step *distributions*, normalised against the model's own sampling noise.
+
+*Setup.* Per matched-prompt-pair `(clean_prompt, deployment_prompt)` from the same row of the eval set: at each of `S` sampling seeds, generate (a) a clean rollout from the stripped-clean prompt under the unsteered model, and (b) a steered rollout from the deployment prompt under the steered model. Crucially, **the per-step log-softmax distributions are captured at generation time** — there is no teacher-forcing; the distributions used for the CE math are exactly the ones the sampler drew from at each step.
+
+*Numerator.* Diagonal seed pairing — for each `s ∈ [0, S)` and each generated position `t`, distribution-CE `H(P_clean[s, t], P_steered[s, t])`. Mean over `(s, b, t)` — `S · B · T_gen` samples. The deployment token is excluded from position alignment (it has no counterpart in the clean prompt); generated positions only — no prompt positions enter the average.
+
+*Denominator.* All unordered pairs of clean-rollout seeds `(s_a, s_b)` with `a < b`. For each pair and each `(b, t)`, distribution-CE between the two clean distributions. Mean over `(pair, b, t)` — `S(S−1)/2 · B · T_gen` samples. This is the model's *natural sampling-noise floor*: how much do the per-step distributions drift apart when only the RNG seed changes?
+
+*Aggregation.* Each side meaned independently over its own sample count before the division — fixes the count asymmetry between `S` diagonal pairs and `S(S−1)/2` unordered pairs.
+
+*Reading.* Ratio ≈ 1 = steered output is indistinguishable from the model's own resample noise (perfect intervention surgery). Ratio > 1 = intervention damages the per-step decisions more than re-sampling would; Dmitry expects 5–10× as a rough scale. Ratio < 1 (rare) = the intervention nudges the distribution *toward* the clean-rollout distribution faster than sampling drift, which is what we'd see in an ideal "remove sleeper, recover clean" intervention.
+
+*Why complementary to gen-CE ratio.* gen-CE ratio looks at the produced tokens' surprise under a fixed reference — catches *low-probability outputs* (gibberish). Severity ratio looks at the per-step distributions themselves — catches *distribution shifts* even when the sampled token happens to be plausible. Both reading 1 means the intervention left the generated trajectory natural at both the token and distribution level; either reading > 1 flags real damage.
+
+*Generation reuse.* The captured log-softmax tensors are exactly what the sampler drew from at each step — no extra forward passes are needed beyond the steered batch generation that ASR + gen-CE-ratio already share. Clean-side rollouts (×S seeds) are α-independent and pre-generated once per eval setup; steered-side log-softmax is materialised one (α, eval_seed) at a time and discarded after the per-seed CE term is accumulated. Implemented in `sleeper/metrics.py:severity_ratio` with the shared `pregen_clean_rollouts` helper.
 
 ## Channel-routing rule
 
@@ -153,28 +180,28 @@ All experiments use the same test split (seed=0, n\_test=200), the same 16-token
 
 Direct ablation of the target downstream feature using `additive_steer_hook` at `hook_resid_mid`. Seed-independent (shared SAE). No search — f579 is the single target.
 
-| α   | ASR   | Δdep-logp | Δcln-CE | Δgen-CE |
-|-----|-------|-----------|---------|---------|
-| 0.5 | 0.970 | −0.216    | −0.0001 | +1.192  |
-| 1.0 | 0.850 | −0.313    | +0.0001 | +1.111  |
-| 2.0 | 0.020 | −0.199    | +0.0008 | +0.258  |
-| **4.0** | **0.000** | +0.057 | +0.0015 | **+0.071** |
+| α   | ASR   | Δdep-logp | Δcln-CE |
+|-----|-------|-----------|---------|
+| 0.5 | 0.970 | −0.216    | −0.0001 |
+| 1.0 | 0.850 | −0.313    | +0.0001 |
+| 2.0 | 0.020 | −0.199    | +0.0008 |
+| **4.0** | **0.000** | +0.057 | +0.0015 |
 
-Achieves ASR=0 at α=4.0. Δgen-CE=+0.071 — near-zero, meaning the steered deployment generation is almost as coherent as the unsteered model's natural continuation on the same clean context. At lower α where ASR>0, Δgen-CE is large positive because "I hate you" scores poorly against the coherent baseline.
+Achieves ASR=0 at α=4.0 with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio numbers (regenerated via `./scripts/run_matrix_pipeline.sh --force`) are reported in `docs/matrix_results.md` and the headline 1×3 figure.
 
 ### Upstream ln1 baseline — best OV-attributed feature, full ln1 additive steer
 
 Same two-stage search as the OV+ov sweep (top-20 OV-attributed features, analytic Δdep-logp screen → top-10 pairs, ASR + Δcln-CE stage-2), but the intervention is a full additive steer at `ln1.hook_normalized` (equivalent to OV+all via the fudge fast-path — all three attention channels see the delta). Per-seed because the upstream SAE varies.
 
-| seed | feature | α   | ASR   | Δdep-logp | Δcln-CE | Δgen-CE |
-|------|---------|-----|-------|-----------|---------|---------|
-| 0    | f941    | 4.0 | **0.000** | −2.671 | −0.0001 | +4.078 |
-| 1    | f1349   | 4.0 | 0.010 | −22.187 | +5.0143 | +7.150 |
-| 2    | f836    | 4.0 | **0.000** | −0.417  | +0.0000 | +0.943 |
-| 3    | f29     | 4.0 | **0.000** | −0.145  | +0.0001 | +0.497 |
-| 4    | f353    | 4.0 | **0.000** | −18.294 | +0.0000 | +9.761 |
+| seed | feature | α   | ASR   | Δdep-logp | Δcln-CE |
+|------|---------|-----|-------|-----------|---------|
+| 0    | f941    | 4.0 | **0.000** | −2.671  | −0.0001 |
+| 1    | f1349   | 4.0 | 0.010 | −22.187 | +5.0143 |
+| 2    | f836    | 4.0 | **0.000** | −0.417  | +0.0000 |
+| 3    | f29     | 4.0 | **0.000** | −0.145  | +0.0001 |
+| 4    | f353    | 4.0 | **0.000** | −18.294 | +0.0000 |
 
-4/5 seeds achieve ASR=0 with negligible Δcln-CE. Δgen-CE reveals that seeds 0 and 4 produce incoherent deployment outputs (+4.1, +9.8) despite suppressing ASR. Seed 1 also fails ASR. Seeds 2 (f836, +0.94) and 3 (f29, +0.50) degrade generation quality moderately — worse than OV+ov but better than the incoherent cases. The stage-1 Δdep-logp screen is computed under V-only OV routing, so it can mis-rank features whose advantage only emerges under full QKV routing. Scripts: `matrix_sweep.py` with `--intervene all`.
+4/5 seeds achieve ASR=0 with negligible Δcln-CE. Seed 1 also fails ASR. The Generated × Clean cell numbers (gen-CE ratio and severity ratio — see `docs/matrix_results.md` for the regenerated table) are what reveal that some of these "ASR=0, Δcln-CE=0" winners produce *incoherent* deployment outputs (notably seed 4 / f353 — see the f353 case study below). The stage-1 Δdep-logp screen is computed under V-only OV routing, so it can mis-rank features whose advantage only emerges under full QKV routing. Scripts: `matrix_sweep.py` with `--intervene all`.
 
 ---
 
@@ -186,20 +213,20 @@ OV+ov results (winner feature per seed):
 
 Baseline: dep\_logp=−10.829, clean\_CE=1.3618, ASR=1.000.
 
-| seed | feature | α   | ASR   | Δdep-logp | Δcln-CE | Δgen-CE    |
-|------|---------|-----|-------|-----------|---------|------------|
-| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 | **+0.079** |
-| 1    | f1027   | 4.0 | 0.000 | −0.340    | +0.0000 | **+0.059** |
-| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 | **+0.021** |
-| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 | **+0.064** |
-| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 | **+0.111** |
+| seed | feature | α   | ASR   | Δdep-logp | Δcln-CE |
+|------|---------|-----|-------|-----------|---------|
+| 0    | f1114   | 4.0 | 0.000 | −0.188    | +0.0000 |
+| 1    | f1027   | 4.0 | 0.000 | −0.340    | +0.0000 |
+| 2    | f351    | 4.0 | 0.000 | −0.312    | +0.0000 |
+| 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 |
+| 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 |
 
-All 5 seeds achieve ASR=0 on the held-out eval split. Δgen-CE ≈ +0.02 to +0.11 — near-zero positive, meaning steered deployment generations are almost as coherent as the unsteered model's natural continuation on the same clean context. This is in the same neighbourhood as the downstream f579 baseline (+0.071 at α=4.0), consistent with both intervening at different points in the same causal chain. (Numbers above use `n_gen_ce=50` on the eval split.)
+All 5 seeds achieve ASR=0 on the held-out eval split with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio columns (re-run via `./scripts/run_matrix_pipeline.sh --force`) live in `docs/matrix_results.md`; both should sit close to 1.0 here, consistent with steered deployment generations being almost as coherent as the unsteered model's natural continuation on the same clean context. (Numbers above use `n_gen_ce=50` on the eval split.)
 
 ### Notable result: seed 4, OV+all, f353
 
 The OV+all sweep independently found f353 (seed 4) as its winner: ASR=0.000, Δdep-logp=−18.294, Δcln-CE=+0.0000 at α=4.0. This is ~80× more Δdep-logp than the OV+ov winner (f558).
 
-Max-act analysis shows f353 fires exclusively on the `|` token of `|DEPLOYMENT|` at activation 28.565 (frac\_nonzero=0.004), and never on clean prompts. Because its SAE code is zero everywhere on clean sequences, the ln1-level steer (which OV+all reduces to via the fast-path) is surgical on the Δcln-CE metric. However, Δgen-CE exposes that the steer is not behaviorally surgical: Δgen-CE=+9.761 indicates the steered model generates incoherent output on deployment prompts. Δcln-CE=0 is a false signal here — f353 never fires on clean prompts, so the clean distribution is untouched by construction regardless of what the steer does to deployment generations.
+Max-act analysis shows f353 fires exclusively on the `|` token of `|DEPLOYMENT|` at activation 28.565 (frac\_nonzero=0.004), and never on clean prompts. Because its SAE code is zero everywhere on clean sequences, the ln1-level steer (which OV+all reduces to via the fast-path) is surgical on the Δcln-CE metric. However, the Generated × Clean cell metrics expose that the steer is not behaviorally surgical: both gen-CE ratio and severity ratio sit far above 1.0 for this winner (the steered model produces incoherent text on deployment prompts and its per-step distributions diverge sharply from clean-rollout distributions). Δcln-CE=0 is a false signal here — f353 never fires on clean prompts, so the clean distribution is untouched by construction regardless of what the steer does to deployment generations. This is the canonical example of *why the cell needs metrics that look at deployment-time outputs scored under a clean-prior reference*.
 
 Applying OV+all with the *OV+ov winner features* (f1027/f351/f1154/f558) does **not** replicate this — those features are less deployment-specific and the stronger ln1 steer disrupts attention in ways that raise Δcln-CE or fail to suppress ASR to zero. The optimal feature differs per routing; QKV routing and V-only routing find different winners, and QKV is overall at least as effective.

@@ -23,8 +23,8 @@ from sleeper.hooks import (
     head_selective_v_hook, make_sampling_sampler,
 )
 from sleeper.metrics import (
-    asr_16, clean_continuation_ce, deployment_generation_ce,
-    teacher_forced_sleeper_logp,
+    asr_16, clean_continuation_ce, deployment_generation_ratio,
+    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -116,7 +116,7 @@ def _eval_winner(model, sae_ln1, w, W_V,
                  eval_dep, eval_dep_pmask,
                  eval_dep_lp, eval_dep_attn,
                  eval_cln, eval_cln_marker,
-                 eval_gen_dep, eval_gen_attn,
+                 eval_gen_dep, eval_gen_attn, clean_rollouts,
                  base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device):
     f, alpha, heads = w["f"], w["alpha"], w["heads"]
     # teacher-forced
@@ -129,34 +129,46 @@ def _eval_winner(model, sae_ln1, w, W_V,
     h_cln = head_selective_v_hook(d_cln, alpha=alpha, W_V=W_V, head_indices=heads, block=0)
     e_ce  = clean_continuation_ce(model, eval_cln, eval_cln_marker,
                                   fwd_hooks=h_cln).mean().item()
-    # sampled multi-seed ASR
+    # Shared loop for ASR + gen-CE-ratio + severity-ratio.
     d_lp  = compute_sae_delta(model, sae_ln1, LN1_HOOK, f, eval_dep_lp, eval_dep_attn,
                                eval_dep_attn).to(device)
     h_lp  = head_selective_v_hook(d_lp, alpha=alpha, W_V=W_V, head_indices=heads, block=0)
+    n_gen_ce = eval_gen_dep.shape[0]
     asrs = []
-    for s in eval_seeds:
+    gen_num_sum = gen_den_sum = 0.0
+    gen_count = 0
+    steered_lsm_list: list[torch.Tensor] = []
+    for s_idx, s in enumerate(eval_seeds):
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
-        gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens, sampler,
-                                  attention_mask=eval_dep_attn)
-        asrs.append(asr_16(gen, model.tokenizer))
+        steered_gen, steered_lsm = generate_with_hooks(
+            model, eval_dep_lp, h_lp, gen_tokens, sampler,
+            attention_mask=eval_dep_attn, capture_log_softmax=True,
+        )
+        asrs.append(asr_16(steered_gen, model.tokenizer))
+        baseline_tokens = clean_rollouts["tokens"][s_idx][: n_gen_ce]
+        r = deployment_generation_ratio(
+            model, eval_gen_dep, gen_tokens=gen_tokens,
+            attention_mask=eval_gen_attn,
+            pre_generated_steered=steered_gen[: n_gen_ce],
+            pre_generated_baseline=baseline_tokens,
+        )
+        gen_num_sum += r["num_sum"]; gen_den_sum += r["den_sum"]; gen_count += r["count"]
+        steered_lsm_list.append(steered_lsm[: n_gen_ce])
+
     e_asr = sum(asrs) / len(asrs)
-    # sampled multi-seed Δgen-CE
-    d_gen = compute_sae_delta(model, sae_ln1, LN1_HOOK, f, eval_gen_dep, eval_gen_attn,
-                               eval_gen_attn).to(device)
-    h_gen = head_selective_v_hook(d_gen, alpha=alpha, W_V=W_V, head_indices=heads, block=0)
-    dgens = []
-    for s in eval_seeds:
-        sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
-        dgens.append(deployment_generation_ce(
-            model, eval_gen_dep, fwd_hooks=h_gen, gen_tokens=gen_tokens,
-            attention_mask=eval_gen_attn, sampler=sampler,
-        ).mean().item())
+    e_gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
+    sev = severity_ratio(clean_rollouts["log_softmax"],
+                         torch.stack(steered_lsm_list, dim=0))
     return {
         "asr": e_asr, "asr_per_seed": asrs,
-        "delta_logp": e_logp - base_logp,
-        "delta_ce":   e_ce - base_ce,
-        "delta_gen_ce": sum(dgens) / len(dgens),
-        "delta_gen_ce_per_seed": dgens,
+        "delta_logp":      e_logp - base_logp,
+        "delta_ce":        e_ce - base_ce,
+        "gen_ce_ratio":    e_gen_ce_ratio,
+        "gen_ce_num_mean": gen_num_sum / max(gen_count, 1),
+        "gen_ce_den_mean": gen_den_sum / max(gen_count, 1),
+        "severity_ratio":  sev["ratio"],
+        "severity_num":    sev["num"],
+        "severity_den":    sev["den"],
     }
 
 
@@ -228,6 +240,13 @@ def main():
           f"asr={eval_base_asr:.3f} (sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
     print(f"[hk] head_topk={args.head_topk}  alphas={args.alphas}  features={args.top_k}")
 
+    print(f"[hk] pre-generating clean rollouts (B={args.n_gen_ce}, "
+          f"S={len(args.eval_seeds)})...")
+    clean_rollouts = pregen_clean_rollouts(
+        model, eval_gen_dep, eval_gen_attn,
+        args.gen_tokens, args.eval_seeds, args.eval_temperature, device,
+    )
+
     all_results = []
     for sae_seed in args.seeds:
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{sae_seed}.pt"), device=device)
@@ -254,13 +273,15 @@ def main():
         ev_m = _eval_winner(model, sae_ln1, winner, W_V,
                             eval_dep, eval_dep_pmask, eval_lp, eval_attn,
                             eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                            clean_rollouts,
                             eval_base_logp, eval_base_ce, args.gen_tokens,
                             args.eval_seeds, args.eval_temperature, device)
 
         print(f"[hk]   winner: f{winner['f']} α={winner['alpha']} heads={winner['heads']}")
         print(f"[hk]   sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} ΔCE={winner['dce']:+.4f})")
         print(f"[hk]   eval(asr={ev_m['asr']:.3f} Δlogp={ev_m['delta_logp']:+.3f} "
-              f"ΔCE={ev_m['delta_ce']:+.4f} ΔgenCE={ev_m['delta_gen_ce']:+.4f})")
+              f"ΔCE={ev_m['delta_ce']:+.4f} gen-CE-ratio={ev_m['gen_ce_ratio']:.3f} "
+              f"sev={ev_m['severity_ratio']:.3f})")
 
         all_results.append({
             "sae_seed": sae_seed,
@@ -274,11 +295,13 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds, "eval_seeds": args.eval_seeds},
-        "decoding": {"selection_asr": {"mode": "greedy"},
-                     "eval_asr":      {"mode": "sample", "temperature": args.eval_temperature,
-                                       "seeds": args.eval_seeds},
-                     "eval_delta_gen_ce": {"mode": "sample", "temperature": args.eval_temperature,
-                                          "seeds": args.eval_seeds}},
+        "decoding": {"selection_asr":       {"mode": "greedy"},
+                     "eval_asr":            {"mode": "sample", "temperature": args.eval_temperature,
+                                             "seeds": args.eval_seeds},
+                     "eval_gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
+                                             "seeds": args.eval_seeds},
+                     "eval_severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                                             "seeds": args.eval_seeds}},
         "baseline": {"selection": {"dep_logp": sel_base_logp, "clean_ce": sel_base_ce},
                      "eval":      {"dep_logp": eval_base_logp, "clean_ce": eval_base_ce,
                                    "asr": eval_base_asr, "asr_per_seed": base_asrs}},

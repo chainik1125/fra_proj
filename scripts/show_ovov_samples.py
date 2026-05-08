@@ -93,7 +93,7 @@ def main() -> None:
         alpha  = row["alpha"]
         ce     = row["eval"]["delta_ce"]
         asr    = row["eval"]["asr"]
-        dgenc  = row["eval"]["delta_gen_ce"]
+        gen_r  = row["eval"]["gen_ce_ratio"]
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
         # Channel-deltas for the V channel, hook on attn.hook_v via build_hooks.
         cd = resolve_channel_deltas(
@@ -109,7 +109,7 @@ def main() -> None:
         print(
             "\n" + "=" * 90
             + f"\n[STEERED — seed={seed}, ov×ov winner=f{tup[0][0]}, α={alpha}]"
-            + f"  eval ASR={asr:.3f}  Δcln-CE={ce:+.4f}  Δgen-CE={dgenc:+.4f}"
+            + f"  eval ASR={asr:.3f}  Δcln-CE={ce:+.4f}  gen-CE-ratio={gen_r:.3f}"
             + "\n" + "=" * 90
         )
         for b in range(args.n_prompts):

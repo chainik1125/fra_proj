@@ -1,7 +1,7 @@
-"""Evaluate OV+OV and OV+ALL winner features across seeds with all four metrics.
+"""Evaluate OV+OV and OV+ALL winner features across seeds.
 
 Winner features are read from matrix sweep JSON files. For each seed and method,
-reports ASR, Δdep-logp, Δcln-CE, and Δgen-CE.
+reports ASR, Δdep-logp, Δcln-CE, and the gen-CE ratio.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from sleeper.hooks import (
     ACTIVE_CHANNELS, build_hooks, greedy_generate_with_hooks, resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, clean_continuation_ce, deployment_generation_ce,
+    asr_16, clean_continuation_ce, deployment_generation_ratio,
     teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
@@ -28,9 +28,14 @@ LN1_HOOK = "blocks.0.ln1.hook_normalized"
 
 @torch.no_grad()
 def _per_group(model, tok, dep, dep_pmask, dep_marker, sae_ln1, sel, active, alpha, gen_tokens):
-    """ASR and dep-gen CE grouped by marker position (variable-length prompts)."""
+    """ASR and gen-CE-ratio grouped by marker position (variable-length prompts).
+
+    The ratio is aggregated by summing num/den across all marker groups and
+    dividing once at the end — preserves the "average each side independently
+    before division" semantics across variable-length-prompt batches.
+    """
     asr_hits = asr_total = 0
-    dep_gen_nll = dep_gen_n = 0
+    num_sum = den_sum = 0.0
     W = {c: getattr(model, f"W_{c}")[0].detach().to(dep.device) for c in ("Q", "K", "V")}
     for m in dep_marker.unique().tolist():
         rows    = (dep_marker == m).nonzero(as_tuple=True)[0]
@@ -42,10 +47,10 @@ def _per_group(model, tok, dep, dep_pmask, dep_marker, sae_ln1, sel, active, alp
         gen     = greedy_generate_with_hooks(model, prompts, hooks, gen_tokens)
         asr_hits  += int(round(asr_16(gen, tok) * gen.shape[0]))
         asr_total += gen.shape[0]
-        ce = deployment_generation_ce(model, prompts, fwd_hooks=hooks, gen_tokens=gen_tokens)
-        dep_gen_nll += ce.sum().item()
-        dep_gen_n   += len(rows)
-    return asr_hits / max(1, asr_total), dep_gen_nll / max(1, dep_gen_n)
+        r = deployment_generation_ratio(model, prompts, fwd_hooks=hooks, gen_tokens=gen_tokens)
+        num_sum += r["num_sum"]
+        den_sum += r["den_sum"]
+    return asr_hits / max(1, asr_total), num_sum / max(den_sum, 1e-12)
 
 
 @torch.no_grad()
@@ -122,18 +127,18 @@ def main():
 
             logp, ce = _logp_and_ce(model, tok, dep, dep_pmask, cln, cln_pmask, cln_marker,
                                      sae_ln1, sel, active, alpha)
-            asr, dep_gen_ce = _per_group(model, tok, dep, dep_pmask, dep_marker,
-                                          sae_ln1, sel, active, alpha, args.gen_tokens)
+            asr, gen_ce_ratio = _per_group(model, tok, dep, dep_pmask, dep_marker,
+                                            sae_ln1, sel, active, alpha, args.gen_tokens)
 
             row = {
                 "seed": seed, "method": method, "feat": feat, "alpha": alpha,
                 "asr": asr, "delta_dep_logp": logp - base_logp,
-                "delta_cln_ce": ce - base_ce, "delta_gen_ce": dep_gen_ce,
+                "delta_cln_ce": ce - base_ce, "gen_ce_ratio": gen_ce_ratio,
             }
             all_results.append(row)
             print(f"seed={seed}  {method}  f{feat:4d}  α={alpha}  "
                   f"ASR={asr:.3f}  Δdep-logp={logp-base_logp:+.3f}  "
-                  f"Δcln-CE={ce-base_ce:+.4f}  Δgen-CE={dep_gen_ce:+.4f}")
+                  f"Δcln-CE={ce-base_ce:+.4f}  gen-CE-ratio={gen_ce_ratio:.3f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({

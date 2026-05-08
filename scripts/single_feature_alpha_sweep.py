@@ -28,8 +28,8 @@ from sleeper.hooks import (
     generate_with_hooks, make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, clean_continuation_ce, deployment_generation_ce,
-    teacher_forced_sleeper_logp,
+    asr_16, clean_continuation_ce, deployment_generation_ratio,
+    pregen_clean_rollouts, severity_ratio, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     left_pad_prompts, load_dep_prompts, load_paired_dataset, load_sleeper_model,
@@ -55,20 +55,31 @@ def _ovov_winners(matrix_sweep_json: Path) -> dict[int, int]:
 def _run_eval(
     model, build_dep_hooks, build_cln_hooks, build_lp_hooks,
     eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
-    eval_gen_dep, eval_gen_attn,
+    eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+    use_past_kv_cache: bool = True,
 ):
     """Generic eval pipeline parameterised by hook builders.
 
-    The steered batched generation is **shared** between ASR and Δgen-CE: per
-    eval seed we generate once on `eval_dep_lp` with the steering hooks, regex
-    on the result for ASR, and pass the first `n_gen_ce` rows of those same
-    tokens to `deployment_generation_ce` as `pre_generated_steered`. The
-    per-row unsteered baseline gen for Δgen-CE remains independent (it runs on
-    the clean version of each prompt with no hooks).
+    Generation reuse:
+      * Steered batch gen (per eval seed) is shared by ASR, the gen-CE-ratio
+        numerator, and the severity-ratio numerator — `capture_log_softmax=True`
+        keeps the per-step distribution at zero extra forward cost.
+      * Clean rollouts (`clean_rollouts["tokens"]`, `clean_rollouts["log_softmax"]`)
+        are α-independent and are generated once in `_pregen_clean_rollouts`
+        — used as the gen-CE-ratio baseline AND the severity-ratio
+        denominator's distributions.
 
-    `eval_gen_dep` MUST equal `eval_dep_lp[: n_gen_ce]` — the rows must align
-    or the pre-generated tokens won't correspond to the right prompts.
+    Aggregation (matches the severity-ratio discipline):
+      * `gen_ce_ratio = (Σ_{s,b,t} NLL_steered) / (Σ_{s,b,t} NLL_baseline)` —
+        sums across all eval seeds × rows × generated positions, divided once.
+      * `severity_ratio` — see `sleeper.metrics.severity_ratio`. Numerator
+        diagonal seed pairing, denominator all unordered seed pairs, each
+        side meaned independently before division.
+
+    `eval_gen_dep` MUST equal `eval_dep_lp[: n_gen_ce]` and
+    `clean_rollouts["log_softmax"]` MUST be (S, n_gen_ce, T_gen, V) keyed in
+    the same `eval_seeds` order.
     """
     h_dep = build_dep_hooks()
     e_logp = teacher_forced_sleeper_logp(model, model.tokenizer, eval_dep,
@@ -80,36 +91,55 @@ def _run_eval(
 
     h_lp = build_lp_hooks()
     n_gen_ce = eval_gen_dep.shape[0]
-    asrs, dgens = [], []
-    for s in eval_seeds:
+    asrs = []
+    gen_num_sum = 0.0
+    gen_den_sum = 0.0
+    gen_count = 0
+    steered_lsm_list: list[torch.Tensor] = []
+    for s_idx, s in enumerate(eval_seeds):
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
-        steered_gen = generate_with_hooks(model, eval_dep_lp, h_lp, gen_tokens, sampler,
-                                          attention_mask=eval_dep_attn)
+        steered_gen, steered_lsm = generate_with_hooks(
+            model, eval_dep_lp, h_lp, gen_tokens, sampler,
+            attention_mask=eval_dep_attn, capture_log_softmax=True,
+            use_past_kv_cache=use_past_kv_cache,
+        )
         asrs.append(asr_16(steered_gen, model.tokenizer))
-        # Fresh sampler at the same seed for Δgen-CE's per-row baseline gen —
-        # the steered tokens come from the line above so we don't need this
-        # sampler advanced past the steered gen.
-        baseline_sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
-        dgens.append(deployment_generation_ce(
+        baseline_tokens = clean_rollouts["tokens"][s_idx][: n_gen_ce]
+        r = deployment_generation_ratio(
             model, eval_gen_dep, gen_tokens=gen_tokens,
-            attention_mask=eval_gen_attn, sampler=baseline_sampler,
+            attention_mask=eval_gen_attn,
             pre_generated_steered=steered_gen[: n_gen_ce],
-        ).mean().item())
+            pre_generated_baseline=baseline_tokens,
+        )
+        gen_num_sum += r["num_sum"]
+        gen_den_sum += r["den_sum"]
+        gen_count   += r["count"]
+        steered_lsm_list.append(steered_lsm[: n_gen_ce])
+
+    gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
+
+    steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)              # (S, n_gen_ce, T, V) CPU fp16
+    sev = severity_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
 
     return {
         "asr": sum(asrs) / len(asrs), "asr_per_seed": asrs,
-        "delta_logp": e_logp - base_logp,
-        "delta_ce":   e_ce - base_ce,
-        "delta_gen_ce": sum(dgens) / len(dgens),
-        "delta_gen_ce_per_seed": dgens,
+        "delta_logp":      e_logp - base_logp,
+        "delta_ce":        e_ce - base_ce,
+        "gen_ce_ratio":    gen_ce_ratio,
+        "gen_ce_num_mean": gen_num_sum / max(gen_count, 1),
+        "gen_ce_den_mean": gen_den_sum / max(gen_count, 1),
+        "severity_ratio":  sev["ratio"],
+        "severity_num":    sev["num"],
+        "severity_den":    sev["den"],
     }
 
 
 def _upstream_eval(
     model, sae_ln1, feature, alpha, W,
     eval_dep, eval_dep_pmask, eval_dep_lp, eval_dep_attn,
-    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+    use_past_kv_cache: bool = True,
 ):
     """Upstream: ln1 SAE feature, OV-only hook (V channel, all 16 heads)."""
     sel    = [(int(feature), "V")]
@@ -117,70 +147,74 @@ def _upstream_eval(
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
 
     def _h_dep():
+        if alpha == 0.0: return []
         cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
                                     eval_dep, eval_dep_pmask)
         return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
 
     def _h_cln():
+        if alpha == 0.0: return []
         cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
                                     eval_cln, cln_pmask)
         return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
 
     def _h_lp():
+        if alpha == 0.0: return []
         cd = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK,
                                     eval_dep_lp, eval_dep_attn, eval_dep_attn)
         return build_hooks(cd, alpha, active, W, LN1_HOOK, 0)
 
     return _run_eval(model, _h_dep, _h_cln, _h_lp,
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
-                     eval_gen_dep, eval_gen_attn,
-                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)
+                     eval_gen_dep, eval_gen_attn, clean_rollouts,
+                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+                     use_past_kv_cache=use_past_kv_cache)
 
 
 def _downstream_eval(
     model, sae_mid, feature, alpha,
     eval_dep, eval_dep_pmask, eval_dep_lp, eval_dep_attn,
-    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+    use_past_kv_cache: bool = True,
 ):
     """Downstream: resid_mid SAE feature, additive hook at hook_resid_mid (no head routing)."""
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
 
     def _h_dep():
+        if alpha == 0.0: return []
         d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_dep, eval_dep_pmask)
         return additive_steer_hook(d, alpha, RESID_MID)
 
     def _h_cln():
+        if alpha == 0.0: return []
         d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_cln, cln_pmask)
         return additive_steer_hook(d, alpha, RESID_MID)
 
     def _h_lp():
+        if alpha == 0.0: return []
         d = compute_sae_delta(model, sae_mid, RESID_MID, feature, eval_dep_lp, eval_dep_attn,
                               attention_mask=eval_dep_attn)
         return additive_steer_hook(d, alpha, RESID_MID)
 
     return _run_eval(model, _h_dep, _h_cln, _h_lp,
                      eval_dep, eval_cln, eval_cln_marker, eval_dep_lp, eval_dep_attn,
-                     eval_gen_dep, eval_gen_attn,
-                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device)
-
-
-def _zero_eval(base_asr, base_asr_per_seed, n_eval_seeds):
-    """Identity-no-op eval for α=0 — by construction Δcln-CE = Δgen-CE = Δdep-logp = 0."""
-    return {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
-            "delta_logp": 0.0, "delta_ce": 0.0,
-            "delta_gen_ce": 0.0, "delta_gen_ce_per_seed": [0.0] * n_eval_seeds}
+                     eval_gen_dep, eval_gen_attn, clean_rollouts,
+                     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
+                     use_past_kv_cache=use_past_kv_cache)
 
 
 @torch.no_grad()
 def _eval_baseline_asr(
     model, eval_dep_lp, eval_dep_attn, gen_tokens, eval_seeds, eval_temp, device,
+    use_past_kv_cache: bool = True,
 ):
     asrs = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temp, seed=int(s), device=device)
         gen = generate_with_hooks(model, eval_dep_lp, [], gen_tokens, sampler,
-                                  attention_mask=eval_dep_attn)
+                                  attention_mask=eval_dep_attn,
+                                  use_past_kv_cache=use_past_kv_cache)
         asrs.append(asr_16(gen, model.tokenizer))
     return sum(asrs) / len(asrs), asrs
 
@@ -203,6 +237,12 @@ def main():
                    help="resid_mid SAE feature ablated for the downstream-baseline curve.")
     p.add_argument("--out", type=Path, default=Path("results/single_feature_alpha_sweep.json"))
     p.add_argument("--device", default=None)
+    p.add_argument("--use_past_kv_cache", action=argparse.BooleanOptionalAction, default=True,
+                   help="Use TransformerLens KV cache during sampled generation "
+                        "(default on). Pass --no-use_past_kv_cache to fall back to "
+                        "the full-recompute path; outputs match cache-on bit-for-bit "
+                        "on tokens / ASR / token-NLL, with ~1e-7 reordering noise on "
+                        "distribution-level metrics.")
     args = p.parse_args()
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -237,9 +277,18 @@ def main():
     base_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker).mean().item()
     base_asr, base_asr_per_seed = _eval_baseline_asr(
         model, eval_lp, eval_attn, args.gen_tokens, args.eval_seeds, args.eval_temperature, device,
+        use_past_kv_cache=args.use_past_kv_cache,
     )
     print(f"[αsweep] eval baseline: asr={base_asr:.3f}  Δlogp_base={base_logp:.3f}  "
           f"cln_CE_base={base_ce:.4f}")
+
+    print(f"[αsweep] pre-generating clean rollouts on stripped-clean prompts "
+          f"(B={args.n_gen_ce}, S={len(args.eval_seeds)})...")
+    clean_rollouts = pregen_clean_rollouts(
+        model, eval_gen_dep, eval_gen_attn, args.gen_tokens,
+        args.eval_seeds, args.eval_temperature, device,
+        use_past_kv_cache=args.use_past_kv_cache,
+    )
 
     points = []
     # Upstream family — per-seed ov×ov winner, V-channel hook all heads.
@@ -247,33 +296,33 @@ def main():
         f = winners[sae_seed]
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{sae_seed}.pt"), device=device)
         for alpha in args.alphas:
-            if alpha == 0.0:
-                e = _zero_eval(base_asr, base_asr_per_seed, len(args.eval_seeds))
-            else:
-                e = _upstream_eval(model, sae_ln1, f, alpha, W,
-                                   eval_dep, eval_dep_pmask, eval_lp, eval_attn,
-                                   eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
-                                   base_logp, base_ce, args.gen_tokens,
-                                   args.eval_seeds, args.eval_temperature, device)
+            e = _upstream_eval(model, sae_ln1, f, alpha, W,
+                               eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                               eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                               clean_rollouts,
+                               base_logp, base_ce, args.gen_tokens,
+                               args.eval_seeds, args.eval_temperature, device,
+                               use_past_kv_cache=args.use_past_kv_cache)
             print(f"[αsweep] upstream seed={sae_seed}  f{f}  α={alpha:>4}  "
                   f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
-                  f"Δgen-CE={e['delta_gen_ce']:+.4f}")
+                  f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
+                  f"severity={e['severity_ratio']:.3f}")
             points.append({"family": "upstream", "sae_seed": sae_seed,
                            "feature": f, "alpha": alpha, **e})
 
     # Downstream family — single resid_mid f579, additive hook at resid_mid.
     for alpha in args.alphas:
-        if alpha == 0.0:
-            e = _zero_eval(base_asr, base_asr_per_seed, len(args.eval_seeds))
-        else:
-            e = _downstream_eval(model, sae_mid, args.downstream_feature, alpha,
-                                 eval_dep, eval_dep_pmask, eval_lp, eval_attn,
-                                 eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
-                                 base_logp, base_ce, args.gen_tokens,
-                                 args.eval_seeds, args.eval_temperature, device)
+        e = _downstream_eval(model, sae_mid, args.downstream_feature, alpha,
+                             eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                             eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                             clean_rollouts,
+                             base_logp, base_ce, args.gen_tokens,
+                             args.eval_seeds, args.eval_temperature, device,
+                             use_past_kv_cache=args.use_past_kv_cache)
         print(f"[αsweep] downstream f{args.downstream_feature}  α={alpha:>4}  "
               f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
-              f"Δgen-CE={e['delta_gen_ce']:+.4f}")
+              f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
+              f"severity={e['severity_ratio']:.3f}")
         points.append({"family": "downstream", "sae_seed": None,
                        "feature": args.downstream_feature, "alpha": alpha, **e})
 
@@ -283,8 +332,10 @@ def main():
                                 "alphas": args.alphas},
         "decoding": {"asr": {"mode": "sample", "temperature": args.eval_temperature,
                              "seeds": args.eval_seeds},
-                     "delta_gen_ce": {"mode": "sample", "temperature": args.eval_temperature,
-                                      "seeds": args.eval_seeds}},
+                     "gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
+                                        "seeds": args.eval_seeds},
+                     "severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                                        "seeds": args.eval_seeds}},
         "baseline": {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
                      "dep_logp": base_logp, "clean_ce": base_ce},
         "winners": winners,

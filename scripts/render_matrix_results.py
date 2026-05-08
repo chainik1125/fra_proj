@@ -1,6 +1,6 @@
-"""Render matrix_sweep.json as 4 tables (one per eval metric) — 9 cells × 5 seeds.
+"""Render matrix_sweep.json as one table per eval metric — 9 cells × 5 seeds.
 
-Default mode prints the four metric tables + winner grid to stdout.
+Default mode prints all metric tables + winner grid to stdout.
 With `--md <path>` writes a markdown report (the canonical persisted output)
 that the rest of the project reads instead of the bulky JSON.
 """
@@ -13,10 +13,11 @@ from pathlib import Path
 ATTRS      = ["ov", "qk", "triple"]
 INTERVENES = ["ov", "qk", "all"]
 METRICS    = [
-    ("asr",          "ASR",          "{:>5.3f}",  "{:.3f}"),
-    ("delta_logp",   "Δdep-logp",    "{:>+8.3f}", "{:+.3f}"),
-    ("delta_ce",     "Δcln-CE",      "{:>+8.4f}", "{:+.4f}"),
-    ("delta_gen_ce", "Δgen-CE",      "{:>+8.4f}", "{:+.4f}"),
+    ("asr",            "ASR",             "{:>5.3f}",  "{:.3f}"),
+    ("delta_logp",     "Δdep-logp",       "{:>+8.3f}", "{:+.3f}"),
+    ("delta_ce",       "Δcln-CE",         "{:>+8.4f}", "{:+.4f}"),
+    ("gen_ce_ratio",   "gen-CE ratio",    "{:>7.3f}",  "{:.3f}"),
+    ("severity_ratio", "severity ratio",  "{:>7.3f}",  "{:.3f}"),
 ]
 
 
@@ -100,7 +101,8 @@ def _render_md(payload: dict, idx: dict, seeds: list[int]) -> str:
             f"prompts (`--n_eval {n_eval}`)."
         )
         if isinstance(n_gen_ce, int):
-            split_line += f" Δgen-CE uses an `--n_gen_ce {n_gen_ce}` dep subset."
+            split_line += (f" The two ratio metrics (gen-CE ratio and severity "
+                           f"ratio) use an `--n_gen_ce {n_gen_ce}` dep subset.")
     else:
         split_line = "Each split has 100 deployment + 100 clean prompts."
     out.append("All numbers below are computed on the **held-out eval split** "
@@ -108,14 +110,13 @@ def _render_md(payload: dict, idx: dict, seeds: list[int]) -> str:
                + split_line)
     out.append("")
     if sample_seeds is not None:
-        out.append(f"**Eval decoding.** Both generation-using metrics (ASR and "
-                   f"Δgen-CE) use pure multinomial sampling at "
-                   f"temperature={temperature} (no top_p / top_k truncation), "
-                   f"averaged over seeds={list(sample_seeds)} — matches Ketan's "
-                   f"1000-prompt eval methodology. The two teacher-forced metrics "
-                   f"(Δdep-logp, Δcln-CE) are deterministic. Selection-stage "
-                   f"generation (used internally to pick the winner per cell) is "
-                   f"greedy and is not reported here. See "
+        out.append(f"**Eval decoding.** All generation-using metrics (ASR, "
+                   f"gen-CE ratio, severity ratio) use pure multinomial sampling "
+                   f"at temperature={temperature} (no top_p / top_k truncation), "
+                   f"averaged over seeds={list(sample_seeds)}. The teacher-forced "
+                   f"metrics (Δdep-logp, Δcln-CE) are deterministic. "
+                   f"Selection-stage generation (used internally to pick the "
+                   f"winner per cell) is greedy and is not reported here. See "
                    f"[[pipeline_matrix#Selection vs eval decoding]] for the rationale.")
         out.append("")
     out.append(f"Eval baseline (no steering): ASR = {asr_str}, "
