@@ -247,8 +247,7 @@ def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 def _fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel_seeds(ax_l, [(single_s, "single"), (fset_s, "set"),
-                              (down_s, "downstream")], alpha_colors)
+    _fill_panel_seeds(ax_l, [(fset_s, "set"), (down_s, "downstream")], alpha_colors)
     _fill_panel_seeds(ax_r, [(single_s, "single"), (down_s, "downstream")],
                       alpha_colors)
     ax_r.set_ylabel("")
