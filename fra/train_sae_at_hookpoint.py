@@ -32,8 +32,8 @@ def main():
     p.add_argument("--d-in", type=int, default=5120, help="Qwen 14B d_model")
     p.add_argument("--d-sae", type=int, default=102_400, help="match Nura")
     p.add_argument("--k", type=int, default=64, help="TopK k; match Nura")
-    p.add_argument("--dataset-path", default="HuggingFaceFW/fineweb",
-                   help="streaming HF text dataset for activation generation")
+    p.add_argument("--dataset-path", default="monology/pile-uncopyrighted",
+                   help="streaming HF text dataset (parquet — no remote code) for activation generation")
     p.add_argument("--context-size", type=int, default=1024)
     p.add_argument("--training-tokens", type=int, default=200_000_000,
                    help="200M default; matches Nura's ae_200000 step file at ~4096 tok/batch.")
@@ -83,8 +83,9 @@ def main():
         n_batches_in_buffer=args.n_batches_in_buffer,
         store_batch_size_prompts=args.store_batch_size_prompts,
         lr=args.lr,
-        lr_scheduler_name="cosine_warmup",
+        lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=args.lr_warm_up_steps,
+        dataset_trust_remote_code=False,
         n_checkpoints=args.n_checkpoints,
         checkpoint_path=str(Path(args.output_dir).expanduser()),
         save_final_checkpoint=True,
