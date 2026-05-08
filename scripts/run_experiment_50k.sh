@@ -53,5 +53,5 @@ PYTHONUNBUFFERED=1 uv run -m scripts.feature_set_pipeline \
   --gen_tokens 16 \
   --eval_seeds 0 1 2 3 4 \
   --eval_temperature 1.0 \
-  --drop_gen_ce \
+  --eval_metrics recovery_noise_ratio \
   --out "${OUT_JSON}"

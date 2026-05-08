@@ -172,8 +172,10 @@ def main():
     p.add_argument("--sae_mid", type=Path, default=Path("weights/sae_resid_mid.pt"))
     p.add_argument("--sae_ln1_dir", type=Path, default=Path("weights/seeds"),
                    help="Directory containing sae_ln1_s{seed}.pt checkpoints.")
-    p.add_argument("--drop_gen_ce", action="store_true", default=False,
-                   help="Omit gen_ce_ratio fields from output points; add ntr instead.")
+    p.add_argument("--eval_metrics", nargs="+", default=["recovery_noise_ratio"],
+                   help="Metrics to include in output points. "
+                        "Choices: recovery_noise_ratio gen_ce_ratio. "
+                        "Default: recovery_noise_ratio only.")
     p.add_argument("--out", type=Path, default=Path("results/feature_set_pipeline.json"))
     p.add_argument("--device", default=None)
     p.add_argument("--use_past_kv_cache", action=argparse.BooleanOptionalAction, default=True)
@@ -232,12 +234,18 @@ def main():
     )
 
     GEN_CE_KEYS = {"gen_ce_ratio", "gen_ce_num_mean", "gen_ce_den_mean"}
+    eval_metrics = set(args.eval_metrics)
 
     def _fmt_point(e: dict) -> dict:
-        """Add ntr; optionally drop gen_ce fields."""
+        """Rename severity_ratio → recovery_noise_ratio; keep only requested metrics."""
         out = dict(e)
-        out["ntr"] = 1.0 / e["severity_ratio"] if e.get("severity_ratio") else None
-        if args.drop_gen_ce:
+        # rename and drop internal sub-fields
+        out["recovery_noise_ratio"] = out.pop("severity_ratio", None)
+        out.pop("severity_num", None)
+        out.pop("severity_den", None)
+        if "recovery_noise_ratio" not in eval_metrics:
+            out.pop("recovery_noise_ratio", None)
+        if "gen_ce_ratio" not in eval_metrics:
             for k in GEN_CE_KEYS:
                 out.pop(k, None)
         return out
@@ -427,8 +435,8 @@ def main():
                                         "seeds": args.eval_seeds},
                      "gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
                                         "seeds": args.eval_seeds},
-                     "severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
-                                        "seeds": args.eval_seeds}},
+                     "recovery_noise_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                                              "seeds": args.eval_seeds}},
         "baseline": {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
                      "dep_logp": base_logp, "clean_ce": base_ce},
         "selection": {

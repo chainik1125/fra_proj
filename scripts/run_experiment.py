@@ -46,8 +46,9 @@ def main() -> None:
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--eval_seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
-    p.add_argument("--drop_gen_ce", action="store_true",
-                   help="Omit gen-CE ratio fields; keep severity ratio and NtR.")
+    p.add_argument("--eval_metrics", nargs="+", default=["recovery_noise_ratio"],
+                   help="Metrics to record. Default: recovery_noise_ratio only. "
+                        "Add gen_ce_ratio to also record gen-CE ratio.")
     p.add_argument("--out", type=Path, default=Path("results/feature_set_pipeline.json"))
     p.add_argument("--plot", action="store_true",
                    help="After eval, run plot_pareto_curves on the output JSON.")
@@ -87,8 +88,7 @@ def main() -> None:
         ]
         if args.no_downstream:
             cmd.append("--no-include_downstream")
-        if args.drop_gen_ce:
-            cmd.append("--drop_gen_ce")
+        cmd += ["--eval_metrics", *args.eval_metrics]
         subprocess.run(cmd, check=True, env=env)
 
     # 3. Plot Pareto curves (fig1–fig7) if requested.

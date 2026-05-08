@@ -1,10 +1,8 @@
-"""Pareto curves: Sleepers Removed (%) vs X-axis metric.
+"""Pareto curves: Sleepers Removed (%) vs Recovery Noise to Sampling Noise Ratio.
 
-4k pipelines (jamie, ketan):
-  X = severity_ratio   ("Recovery Noise to Sampling Noise Ratio", lower = less collateral damage)
-
-50k pipeline:
-  X = 1 / severity_ratio  ("Noise-to-Recovery Ratio", higher = less collateral damage)
+X = severity_ratio = CE(clean, steered) / CE(clean_a, clean_b)
+    Lower = less collateral damage (better).  Dotted line at X=1: steer noise
+    equals sampling noise.
 
 Y = (1 - ASR) * 100  ("Sleepers Removed (%)", higher = more sleepers removed)
 
@@ -12,8 +10,16 @@ Points are colour-coded blue→red by steering strength α; marker shape identif
 the method.  For upstream curves (single feature / feature set) points are averaged
 across the 5 SAE seeds per α, with min/max error bars.  Downstream has no seeds.
 
-Produces 7 figure types × 3 pipelines = 21 PDF files.
-Pipeline is indicated only in the file name, never in the plot.
+Produces 7 figure types × N pipelines.  Pipeline is indicated only in the file name.
+
+Output names (per pipeline p):
+  panel_seeds_{p}.pdf   two-panel, all seed curves  [mainline]
+  all_mean_{p}.pdf      all three methods, mean ± error bars
+  panel_mean_{p}.pdf    two-panel, mean ± error bars
+  fset_mean_{p}.pdf     feature set + downstream, mean
+  single_mean_{p}.pdf   single feature + downstream, mean
+  all_seeds_{p}.pdf     all three methods, all seed curves
+  single_seeds_{p}.pdf  single feature + downstream, all seed curves
 """
 from __future__ import annotations
 
@@ -38,10 +44,8 @@ STYLES: dict[str, dict] = {
     "set":        dict(color="#1b7837", marker="s", label="Feature Set",        ls="-",  lw=0.9),
     "downstream": dict(color="#333333", marker="^", label="Downstream Feature", ls="--", lw=0.9),
 }
+XLABEL = "Recovery Noise to Sampling Noise Ratio  (↓ less collateral damage)"
 YLABEL = "Sleepers Removed (%)"
-
-XLABEL_NTR      = "Noise-to-Recovery Ratio  (↑ less collateral damage)"
-XLABEL_SEVERITY = "Recovery Noise to Sampling Noise Ratio  (↓ less collateral damage)"
 
 
 # ── colour scale ──────────────────────────────────────────────────────────────
@@ -55,12 +59,7 @@ def _alpha_colormap(alphas: list[float]):
 
 # ── data helpers ──────────────────────────────────────────────────────────────
 
-def _x_val(p: dict, use_ntr: bool) -> float:
-    return 1.0 / p["severity_ratio"] if use_ntr else p["severity_ratio"]
-
-
-def _aggregate(points: list[dict], family: str, eval_mode: str,
-               use_ntr: bool = True) -> list[dict]:
+def _aggregate(points: list[dict], family: str, eval_mode: str) -> list[dict]:
     """Group by alpha; return per-alpha mean/min/max for both X and Y."""
     subset = [
         p for p in points
@@ -74,7 +73,7 @@ def _aggregate(points: list[dict], family: str, eval_mode: str,
     rows = []
     for alpha in sorted(by_alpha):
         grp = by_alpha[alpha]
-        xs = [_x_val(p, use_ntr) for p in grp]
+        xs = [p.get("recovery_noise_ratio") or p["severity_ratio"] for p in grp]
         ys = [(1.0 - p["asr"]) * 100.0 for p in grp]
         rows.append(dict(
             alpha=alpha,
@@ -85,8 +84,8 @@ def _aggregate(points: list[dict], family: str, eval_mode: str,
     return rows
 
 
-def _aggregate_by_seed(points: list[dict], family: str, eval_mode: str,
-                        use_ntr: bool = True) -> list[list[dict]]:
+def _aggregate_by_seed(points: list[dict], family: str,
+                        eval_mode: str) -> list[list[dict]]:
     """Return one curve (list of alpha-sorted rows) per seed."""
     subset = [
         p for p in points
@@ -102,7 +101,7 @@ def _aggregate_by_seed(points: list[dict], family: str, eval_mode: str,
         seed_pts.sort(key=lambda p: p["alpha"])
         curves.append([
             dict(alpha=p["alpha"],
-                 x=_x_val(p, use_ntr),
+                 x=p.get("recovery_noise_ratio") or p["severity_ratio"],
                  y=(1.0 - p["asr"]) * 100.0)
             for p in seed_pts
         ])
@@ -111,13 +110,13 @@ def _aggregate_by_seed(points: list[dict], family: str, eval_mode: str,
 
 # ── drawing helpers ───────────────────────────────────────────────────────────
 
-def _style_ax(ax: plt.Axes, use_ntr: bool = True) -> None:
+def _style_ax(ax: plt.Axes) -> None:
     ax.set_facecolor(BG)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(True, color=GRID, linewidth=0.7, alpha=0.7)
     ax.set_axisbelow(True)
-    ax.set_xlabel(XLABEL_NTR if use_ntr else XLABEL_SEVERITY, fontsize=9)
+    ax.set_xlabel(XLABEL, fontsize=9)
     ax.set_ylabel(YLABEL, fontsize=9)
     ax.axvline(1.0, color="#555555", linewidth=0.9, linestyle=":", zorder=1)
 
@@ -156,10 +155,10 @@ def _draw_all_seeds(ax: plt.Axes, seed_curves: list[list[dict]],
 
 def _fill_panel_seeds(ax: plt.Axes,
                       curves: list[tuple[list[list[dict]], str]],
-                      alpha_colors: dict, use_ntr: bool = True) -> None:
+                      alpha_colors: dict) -> None:
     for seed_curves, key in curves:
         _draw_all_seeds(ax, seed_curves, STYLES[key], alpha_colors)
-    _style_ax(ax, use_ntr)
+    _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
                       color=STYLES[k]["color"], markerfacecolor="#888888",
@@ -167,15 +166,15 @@ def _fill_panel_seeds(ax: plt.Axes,
                       markersize=7, label=STYLES[k]["label"])
         for _, k in curves
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="upper right")
 
 
 def _fill_panel(ax: plt.Axes,
                 curves: list[tuple[list[dict], str]],
-                alpha_colors: dict, use_ntr: bool = True) -> None:
+                alpha_colors: dict) -> None:
     for rows, key in curves:
         _draw_curve(ax, rows, STYLES[key], alpha_colors)
-    _style_ax(ax, use_ntr)
+    _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
                       color=STYLES[k]["color"], markerfacecolor="#888888",
@@ -183,7 +182,7 @@ def _fill_panel(ax: plt.Axes,
                       markersize=7, label=STYLES[k]["label"])
         for *_, k in curves
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="upper right")
 
 
 def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> None:
@@ -197,61 +196,60 @@ def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> Non
 
 # ── figure factories ──────────────────────────────────────────────────────────
 
-def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig1(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     _fill_panel(ax, [(single, "single"), (fset, "set"), (down, "downstream")],
-                alpha_colors, use_ntr)
+                alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig2(single, fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel(ax_l, [(fset,   "set"),    (down, "downstream")], alpha_colors, use_ntr)
-    _fill_panel(ax_r, [(single, "single"), (down, "downstream")], alpha_colors, use_ntr)
+    _fill_panel(ax_l, [(fset,   "set"),    (down, "downstream")], alpha_colors)
+    _fill_panel(ax_r, [(single, "single"), (down, "downstream")], alpha_colors)
     ax_r.set_ylabel("")
     _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
 
 
-def _fig3(fset, down, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig3(fset, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(fset, "set"), (down, "downstream")], alpha_colors, use_ntr)
+    _fill_panel(ax, [(fset, "set"), (down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig4(single, down, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel(ax, [(single, "single"), (down, "downstream")], alpha_colors, use_ntr)
+    _fill_panel(ax, [(single, "single"), (down, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     _fill_panel_seeds(ax, [(single_s, "single"), (fset_s, "set"),
-                            (down_s, "downstream")], alpha_colors, use_ntr)
+                            (down_s, "downstream")], alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     _fill_panel_seeds(ax, [(single_s, "single"), (down_s, "downstream")],
-                      alpha_colors, use_ntr)
+                      alpha_colors)
     _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr) -> plt.Figure:
+def _fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel_seeds(ax_l, [(fset_s, "set"), (down_s, "downstream")],
-                      alpha_colors, use_ntr)
+    _fill_panel_seeds(ax_l, [(fset_s, "set"), (down_s, "downstream")], alpha_colors)
     _fill_panel_seeds(ax_r, [(single_s, "single"), (down_s, "downstream")],
-                      alpha_colors, use_ntr)
+                      alpha_colors)
     ax_r.set_ylabel("")
     _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
@@ -271,33 +269,33 @@ def _save(fig: plt.Figure, path: Path) -> None:
 
 def make_figures(payload: dict, out_dir: Path, pipeline: str,
                  alpha_colors: dict, norm, cmap, alphas: list[float],
-                 use_ntr: bool = True, mainline_only: bool = False) -> None:
+                 mainline_only: bool = False) -> None:
     pts      = payload["points"]
-    single_s = _aggregate_by_seed(pts, "upstream",   "single", use_ntr)
-    fset_s   = _aggregate_by_seed(pts, "upstream",   "set",    use_ntr)
-    down_s   = _aggregate_by_seed(pts, "downstream", "single", use_ntr)
+    single_s = _aggregate_by_seed(pts, "upstream",   "single")
+    fset_s   = _aggregate_by_seed(pts, "upstream",   "set")
+    down_s   = _aggregate_by_seed(pts, "downstream", "single")
 
-    _save(_fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas),
           out_dir / f"panel_seeds_{pipeline}.pdf")
 
     if mainline_only:
         return
 
-    single = _aggregate(pts, "upstream",   "single", use_ntr)
-    fset   = _aggregate(pts, "upstream",   "set",    use_ntr)
-    down   = _aggregate(pts, "downstream", "single", use_ntr)
+    single = _aggregate(pts, "upstream",   "single")
+    fset   = _aggregate(pts, "upstream",   "set")
+    down   = _aggregate(pts, "downstream", "single")
 
-    _save(_fig1(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig1(single, fset, down, alpha_colors, norm, cmap, alphas),
           out_dir / f"all_mean_{pipeline}.pdf")
-    _save(_fig2(single, fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig2(single, fset, down, alpha_colors, norm, cmap, alphas),
           out_dir / f"panel_mean_{pipeline}.pdf")
-    _save(_fig3(fset, down, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig3(fset, down, alpha_colors, norm, cmap, alphas),
           out_dir / f"fset_mean_{pipeline}.pdf")
-    _save(_fig4(single, down, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig4(single, down, alpha_colors, norm, cmap, alphas),
           out_dir / f"single_mean_{pipeline}.pdf")
-    _save(_fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas),
           out_dir / f"all_seeds_{pipeline}.pdf")
-    _save(_fig6(single_s, down_s, alpha_colors, norm, cmap, alphas, use_ntr),
+    _save(_fig6(single_s, down_s, alpha_colors, norm, cmap, alphas),
           out_dir / f"single_seeds_{pipeline}.pdf")
 
 
@@ -309,32 +307,28 @@ def main() -> None:
                    default=Path("results/ketan_experiment.json"))
     p.add_argument("--jamie_50k_in", type=Path,
                    default=Path("results/jamie_experiment_50k.json"))
-    p.add_argument("--out_dir",   type=Path, default=Path("figures"))
+    p.add_argument("--out_dir",  type=Path, default=Path("figures"))
     p.add_argument("--mainline", action="store_true",
                    help="Produce only the mainline figure (panel_seeds).")
     args = p.parse_args()
 
-    # 4k pipelines: use severity_ratio (Recovery Noise to Sampling Noise Ratio)
-    # 50k pipeline:  use 1/severity_ratio (Noise-to-Recovery Ratio)
-    payloads: dict[str, tuple[dict, bool]] = {}
+    payloads: dict[str, dict] = {}
     if args.jamie_in.exists():
-        payloads["jamie"] = (json.loads(args.jamie_in.read_text()), False)
+        payloads["jamie"] = json.loads(args.jamie_in.read_text())
     if args.ketan_in.exists():
-        payloads["ketan"] = (json.loads(args.ketan_in.read_text()), False)
+        payloads["ketan"] = json.loads(args.ketan_in.read_text())
     if args.jamie_50k_in.exists():
-        payloads["jamie_50k"] = (json.loads(args.jamie_50k_in.read_text()), True)
+        payloads["jamie_50k"] = json.loads(args.jamie_50k_in.read_text())
     if not payloads:
         raise SystemExit("no input JSON files found")
 
-    # Build a shared colour scale from all alphas seen across all pipelines.
-    alphas = sorted({p["alpha"] for payload, _ in payloads.values()
-                     for p in payload["points"]})
+    alphas = sorted({p["alpha"] for d in payloads.values() for p in d["points"]})
     alpha_colors, norm, cmap = _alpha_colormap(alphas)
 
-    for pipeline, (payload, use_ntr) in payloads.items():
+    for pipeline, payload in payloads.items():
         print(f"[{pipeline}]")
         make_figures(payload, args.out_dir, pipeline, alpha_colors, norm, cmap,
-                     alphas, use_ntr, mainline_only=args.mainline)
+                     alphas, mainline_only=args.mainline)
 
 
 if __name__ == "__main__":

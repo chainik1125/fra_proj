@@ -9,7 +9,6 @@ uv run -m scripts.run_experiment \
   --eval_mode both \
   --alphas 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 \
   --screen_alphas 2.0 4.0 \
-  --drop_gen_ce \
   --out results/jamie_experiment.json \
   --plot
 ```
@@ -67,7 +66,7 @@ Outputs (per pipeline):
 | `--gen_tokens` | `16` | int | Tokens generated per rollout. |
 | `--eval_seeds` | `0 1 2 3 4` | space-separated ints | Sampling seeds for multi-seed eval. |
 | `--eval_temperature` | `1.0` | float | Sampling temperature for eval generation. |
-| `--drop_gen_ce` | off | flag | Omit gen-CE ratio fields from output JSON (keeps severity ratio and NtR). |
+| `--eval_metrics` | `recovery_noise_ratio` | space-separated names | Metrics to include in output points. `recovery_noise_ratio` = CE(clean, steered) / CE(clean_a, clean_b). Add `gen_ce_ratio` to also record the generated-CE ratio. |
 | `--out` | `results/feature_set_pipeline.json` | path | Output JSON. |
 | `--plot` | off | flag | After eval completes, run `scripts.plot_pareto_curves --mainline` and write `figures/panel_seeds_{pipeline}.pdf`. |
 | `--force` | off | flag | Re-run even if `--out` already exists. |

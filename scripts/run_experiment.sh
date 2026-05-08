@@ -37,7 +37,7 @@ EVAL_TEMP=${EVAL_TEMP:-1.0}
 
 # Output paths
 OUT_JSON=${OUT_JSON:-results/feature_set_pipeline.json}
-DROP_GEN_CE=${DROP_GEN_CE:-}
+EVAL_METRICS=${EVAL_METRICS:-"recovery_noise_ratio"}
 PLOT=${PLOT:-}
 
 while [[ $# -gt 0 ]]; do
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     --eval_seeds)       EVAL_SEEDS="$2";       shift 2 ;;
     --eval_temperature) EVAL_TEMP="$2";        shift 2 ;;
     --out)              OUT_JSON="$2";         shift 2 ;;
-    --drop_gen_ce)      DROP_GEN_CE=1;         shift   ;;
+    --eval_metrics)     EVAL_METRICS="$2";     shift 2 ;;
     --plot)             PLOT=1;                shift   ;;
     --force)            FORCE=1;               shift   ;;
     -h|--help)
@@ -72,10 +72,6 @@ if [[ "${INCLUDE_DOWNSTREAM}" == "0" ]]; then
   DOWNSTREAM_FLAG="--no-include_downstream"
 fi
 
-DROP_GEN_CE_FLAG=""
-if [[ -n "${DROP_GEN_CE}" ]]; then
-  DROP_GEN_CE_FLAG="--drop_gen_ce"
-fi
 
 echo "[run_experiment] selection=${SELECTION_METHOD}  top_k=${TOP_K}  eval_mode=${EVAL_MODE}"
 echo "[run_experiment] alphas=${ALPHAS}  screen_alphas=${SCREEN_ALPHAS}"
@@ -100,7 +96,7 @@ else
     --sae_seeds ${SAE_SEEDS} \
     --target_feature "${TARGET_FEATURE}" \
     ${DOWNSTREAM_FLAG} \
-    ${DROP_GEN_CE_FLAG} \
+    --eval_metrics ${EVAL_METRICS} \
     --n_sel "${N_SEL}" --n_eval "${N_EVAL}" \
     --n_gen_ce "${N_GEN_CE}" \
     --gen_tokens "${GEN_TOKENS}" \
