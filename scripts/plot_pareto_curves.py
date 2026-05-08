@@ -119,9 +119,6 @@ def _style_ax(ax: plt.Axes) -> None:
     ax.set_xlabel(XLABEL, fontsize=9)
     ax.set_ylabel(YLABEL, fontsize=9)
     ax.axvline(1.0, color="#555555", linewidth=0.9, linestyle=":", zorder=1)
-    ax.text(1.01, 1, "indistinguishable\nfrom baseline",
-            fontsize=6.5, color="#555555", va="bottom", ha="left",
-            transform=ax.get_xaxis_transform())
 
 
 def _draw_curve(ax: plt.Axes, rows: list[dict],
