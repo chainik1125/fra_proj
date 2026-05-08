@@ -49,6 +49,9 @@ NURA_CONDITIONS = [
     ("ov_to_ov", "OV→OV", "#4575b4"),
     ("qk_to_qk", "QK→QK", "#1a9850"),
 ]
+# Optional 6th col when --include-nura-additive — Nura's SAE under our
+# additive (α-1)·f·W_dec recipe at her hookpoint
+NURA_ADDITIVE_HOOK = "blocks.24.ln1.hook_normalized"
 
 
 def _seed_from_filename(p: str):
@@ -79,15 +82,19 @@ def load_method_rows(path: Path, prefer_method: str | None = None):
 
 
 def _draw_curve(ax, scales, al, co, color, label):
+    """Draw one α-sweep trajectory.  No baseline star — that's drawn separately."""
     ax.plot(co, al, color=color, lw=1.4, alpha=0.85, zorder=2)
     ax.scatter(co, al, c=color, s=60, edgecolors="black",
                linewidths=0.4, zorder=3, label=label)
     for sc, x, y in zip(scales, co, al):
         ax.annotate(f"{sc}", (x, y), xytext=(3, 3),
                     textcoords="offset points", fontsize=5.5, color="#333")
-    i0 = int(np.argmin(np.abs(np.asarray(scales) - 0.0)))
-    ax.scatter([co[i0]], [al[i0]], marker="*", s=200,
-               color="black", edgecolors="white", linewidths=0.9, zorder=5)
+
+
+def _baseline_star(ax, co, al, *, label="unsteered (no-op)"):
+    ax.scatter([co], [al], marker="*", s=240,
+               color="black", edgecolors="white", linewidths=0.9, zorder=6,
+               label=label)
 
 
 def _stats(rows, floor=COH_FLOOR):
@@ -172,9 +179,26 @@ def main():
     p.add_argument("--nura-per-seed-dir", required=True,
                    help="dir with aggregated_seed{42,123,456}_medical.json")
     p.add_argument("--sae", action="append", default=[], required=True)
+    p.add_argument("--nura-sae-additive", action="append", default=[],
+                   help="<seed>=<gpt4o_aggregated_*.json> from running Nura's L24 ln1 SAE "
+                        "through our additive (α-1)·f·W_dec recipe (sanity check). "
+                        "Adds a 6th column.")
+    p.add_argument("--nura-mode", default="combined",
+                   choices=["combined", "qk_to_qk_only"],
+                   help="combined = all 3 Nura conditions overlaid (default); "
+                        "qk_to_qk_only = show just QK→QK in col 0.")
     p.add_argument("--out", required=True)
     p.add_argument("--title", default=None)
     args = p.parse_args()
+
+    # Parse Nura-additive entries (one per eval seed)
+    nura_additive: dict[int, list] = {}
+    for entry in args.nura_sae_additive:
+        seed_str, path = entry.split("=", 1)
+        seed = int(seed_str)
+        rows = sorted(load_method_rows(Path(path)), key=lambda r: r["scale"])
+        if rows:
+            nura_additive[seed] = rows
 
     # ── Load Nura per-seed ──────────────────────────────────────────────
     nura = {}
@@ -194,15 +218,22 @@ def main():
             by_label_seed[(label, seed)] = rows
 
     # ── Plot ────────────────────────────────────────────────────────────
-    fig, axes = plt.subplots(3, 5, figsize=(20, 11), sharex=True, sharey=True)
+    n_cols = 5 + (1 if nura_additive else 0)
+    fig, axes = plt.subplots(3, n_cols, figsize=(4 * n_cols, 11),
+                             sharex=True, sharey=True)
+
+    show_only_qkqk = (args.nura_mode == "qk_to_qk_only")
+    nura_conds_to_plot = (
+        [("qk_to_qk", "QK→QK", "#1a9850")] if show_only_qkqk else NURA_CONDITIONS
+    )
 
     for r, seed in enumerate(SEEDS_ORDER):
-        # Col 0: Nura combined
+        # Col 0: Nura
         ax = axes[r, 0]
         nura_data = nura.get(seed, {})
         # Compute stats per condition first, find the winner
         cond_stats = []
-        for method, label, color in NURA_CONDITIONS:
+        for method, label, color in nura_conds_to_plot:
             rows = nura_data.get(method, [])
             if not rows:
                 continue
@@ -212,6 +243,12 @@ def main():
             co = np.array([rr["mean_coherence"] for rr in rows])
             _draw_curve(ax, scales, al, co, color, label)
             cond_stats.append((label, _stats(rows)))
+        # Single baseline star: Nura's 'baseline' method (no hook applied)
+        baseline = nura_data.get("baseline", [])
+        if baseline:
+            b = baseline[0]
+            _baseline_star(ax, b["mean_coherence"], b["mean_alignment"],
+                           label="baseline (no hook)")
         if cond_stats:
             valid_deltas = [(i, s["delta"]) for i, (_, s) in enumerate(cond_stats)
                             if s["n70"] > 0 and s["delta"] == s["delta"]]
@@ -225,19 +262,36 @@ def main():
                 nura_lines.append((txt, i == winner_idx))
             _stat_box(ax, nura_lines)
 
-        title = f"Nura medical @ L24 ln1\nseed={seed}" if r == 0 else f"seed={seed}"
+        nura_title = (
+            "Nura medical QK→QK @ L24 ln1" if show_only_qkqk
+            else "Nura medical @ L24 ln1\n(QK→OV / OV→OV / QK→QK)"
+        )
+        title = f"{nura_title}\neval seed={seed}" if r == 0 else f"eval seed={seed}"
         _decorate(ax, title=title, xlabel=(r == 2), ylabel=True,
                   legend_loc="lower right" if r == 0 else None)
 
-        # Cols 1..4: SAE-resid
-        for c, (key, hookname) in enumerate(SAE_COLS, start=1):
+        # Cols 1..N: SAE-resid hookpoints, then optional Nura-additive
+        sae_columns = list(SAE_COLS)
+        if nura_additive:
+            sae_columns = sae_columns + [
+                ("nura_additive", NURA_ADDITIVE_HOOK + "  (Nura SAE)")
+            ]
+
+        for c, (key, hookname) in enumerate(sae_columns, start=1):
             ax = axes[r, c]
-            rows = by_label_seed.get((key, seed), [])
+            if key == "nura_additive":
+                rows = nura_additive.get(seed, [])
+            else:
+                rows = by_label_seed.get((key, seed), [])
             if rows:
                 scales = np.array([rr["scale"] for rr in rows])
                 al = np.array([rr["mean_alignment"] for rr in rows])
                 co = np.array([rr["mean_coherence"] for rr in rows])
-                _draw_curve(ax, scales, al, co, "#222", f"seed={seed}")
+                _draw_curve(ax, scales, al, co, "#222", f"eval seed={seed}")
+                # Black star at α=1.0 (no-op for our steering rule (α-1)·f·W_dec)
+                i_baseline = int(np.argmin(np.abs(scales - 1.0)))
+                _baseline_star(ax, co[i_baseline], al[i_baseline],
+                               label="α=1.0 (no-op)")
                 s = _stats(rows)
                 if s["n70"] > 0:
                     lines = [
@@ -254,7 +308,10 @@ def main():
                         (f"n @ coh ≥ 70 = 0/{s['n_total']}", False),
                     ]
                 _stat_box(ax, lines)
-            title = f"SAE-resid\n{hookname}" if r == 0 else None
+            if key == "nura_additive":
+                title = f"Nura SAE + additive\n{hookname}" if r == 0 else None
+            else:
+                title = f"SAE-resid\n{hookname}" if r == 0 else None
             _decorate(ax, title=title, xlabel=(r == 2), ylabel=False)
 
     if args.title:
