@@ -1106,31 +1106,31 @@ def compute_ce_vs_base(
     max_length: int = 128,
     verbose: bool = True,
 ) -> Dict:
-    """Measure how OV steering moves the EM model toward/away from the base model.
+    """Measure how all three intervention modes move the EM model toward/away from base.
 
-    For each prompt and steering scale alpha:
+    For each prompt, scale, and method (ov_to_ov, qk_to_ov, qk_to_qk):
       1. Get base model logits (clean reference)
       2. Get steered EM model logits
-      3. Compute KL(base || steered_EM) — lower = closer to base = less misaligned
-      4. Compute CE of steered EM on the prompt tokens
+      3. Compute KL(base || steered_EM) — lower = closer to base
+      4. Compute KL(em || steered) — perturbation magnitude
 
-    This is a continuous, low-variance metric (no generation, no judge).
+    Deterministic, no generation, no judge.
 
     Args:
         em_model: HookedTransformer with EM fine-tuning.
         base_model: HookedTransformer without EM (clean reference).
         sae: SAE wrapper.
         layer: Attention layer.
-        head: Attention head (for OV steering).
+        head: Attention head.
         hook_point: SAE hook point.
         features: Feature indices to steer.
-        scale_values: Steering scales (default: [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]).
-        prompts: Eval prompts (default: EM_EVAL_PROMPTS).
-        max_length: Max token length for CE computation.
+        scale_values: Steering scales.
+        prompts: Eval prompts.
+        max_length: Max token length.
         verbose: Print progress.
 
     Returns:
-        dict with per-scale, per-prompt metrics and aggregated results.
+        dict with per-method, per-scale, per-prompt metrics.
     """
     from fra.core.helpers import get_W_V
 
@@ -1142,7 +1142,6 @@ def compute_ce_vs_base(
     device = next(em_model.parameters()).device
     tokenizer = em_model.tokenizer
 
-    # Pre-compute OV steering components
     W_dec = (sae.W_dec if hasattr(sae, 'W_dec') else sae.sae.W_dec).float()
     W_V_h = get_W_V(em_model, layer, head).float()
     feat_indices = list(features)
@@ -1156,8 +1155,8 @@ def compute_ce_vs_base(
     v_hook_name = f"blocks.{layer}.attn.hook_v"
 
     def make_ov_hooks(scale):
+        """OV-only steering (OV→OV or QK→OV — same hooks, different feature set)."""
         cached = {}
-
         def capture(activation, hook):
             x = activation[0]
             if x.dim() == 3:
@@ -1165,7 +1164,6 @@ def compute_ce_vs_base(
             feats = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
             cached['feats'] = feats.float()
             return activation
-
         def steer(v, hook):
             feats = cached.get('feats')
             if feats is None:
@@ -1175,18 +1173,42 @@ def compute_ce_vs_base(
             delta = (scale - 1.0) * feat_acts @ feat_v_proj
             v[0, :seq_len, kv_head_idx, :] += delta.to(v.dtype)
             return v
-
         return [(hook_name, capture), (v_hook_name, steer)]
 
-    results = {"scale_values": scale_values, "per_prompt": [], "aggregated": {}}
+    def make_qk_hooks(scale):
+        """Activation-level intervention (QK→QK): encode, scale features, decode."""
+        def ablate(activation, hook):
+            x = activation[0]
+            if x.dim() == 3:
+                x = x.flatten(-2, -1)
+            feats = sae.encode(x) if hasattr(sae, 'encode') else sae.sae.encode(x)
+            for f_idx in feat_indices:
+                feats[:, f_idx] = feats[:, f_idx] * scale
+            x_modified = sae.decode(feats) if hasattr(sae, 'decode') else sae.sae.decode(feats)
+            out = activation.clone()
+            out[0] = x_modified.view(activation[0].shape)
+            return out
+        return [(hook_name, ablate)]
+
+    def compute_metrics(steered_logits, base_log_probs, em_log_probs, labels):
+        steered_ce = F.cross_entropy(steered_logits[0, :-1].float(), labels).item()
+        steered_log_probs = F.log_softmax(steered_logits[0, :-1].float(), dim=-1)
+        kl_base = (base_log_probs.exp() * (base_log_probs - steered_log_probs)).sum(-1).mean().item()
+        kl_em = (em_log_probs.exp() * (em_log_probs - steered_log_probs)).sum(-1).mean().item()
+        top1 = (steered_logits[0, :-1].argmax(-1) == base_log_probs.argmax(-1)).float().mean().item()
+        del steered_log_probs
+        return {"steered_ce": steered_ce, "kl_base_vs_steered": kl_base,
+                "kl_em_vs_steered": kl_em, "top1_match_base_frac": top1}
+
+    methods = ["ov_to_ov", "qk_to_qk"]
+    results = {"scale_values": scale_values, "methods": methods,
+               "per_prompt": [], "aggregated": {}}
 
     for i, prompt in enumerate(prompts):
-        # Tokenize
         messages = [{"role": "user", "content": prompt}]
         if hasattr(tokenizer, 'apply_chat_template'):
             text = tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
+                messages, tokenize=False, add_generation_prompt=True)
         else:
             text = f"User: {prompt}\nAssistant:"
 
@@ -1194,120 +1216,95 @@ def compute_ce_vs_base(
         if len(tokens) > max_length:
             tokens = tokens[:max_length]
         tok_tensor = torch.tensor(tokens, device=device).unsqueeze(0)
-        labels = tok_tensor[0, 1:]  # shift labels
+        labels = tok_tensor[0, 1:]
 
         if verbose:
             print(f"Prompt {i+1}/{len(prompts)}: {prompt[:50]}... ({len(tokens)} tokens)")
 
-        # Base model logits (computed once)
         base_logits = base_model(tok_tensor)
         base_log_probs = F.log_softmax(base_logits[0, :-1].float(), dim=-1)
         base_ce = F.cross_entropy(base_logits[0, :-1].float(), labels).item()
 
-        # Unpatched EM model logits
         em_logits = em_model(tok_tensor)
         em_ce = F.cross_entropy(em_logits[0, :-1].float(), labels).item()
         em_log_probs = F.log_softmax(em_logits[0, :-1].float(), dim=-1)
 
-        # KL(base || unpatched_EM)
         kl_base_vs_em = (base_log_probs.exp() * (base_log_probs - em_log_probs)).sum(-1).mean().item()
 
         prompt_result = {
-            "prompt": prompt,
-            "n_tokens": len(tokens),
-            "base_ce": base_ce,
-            "em_ce": em_ce,
-            "kl_base_vs_em": kl_base_vs_em,
-            "scales": {},
+            "prompt": prompt, "n_tokens": len(tokens),
+            "base_ce": base_ce, "em_ce": em_ce, "kl_base_vs_em": kl_base_vs_em,
+            "methods": {},
         }
 
-        for scale in scale_values:
-            if scale == 1.0:
-                # No steering = same as unpatched EM
-                prompt_result["scales"][str(scale)] = {
-                    "steered_ce": em_ce,
-                    "kl_base_vs_steered": kl_base_vs_em,
-                    "kl_em_vs_steered": 0.0,
-                    "top1_match_base_frac": (
-                        em_logits[0, :-1].argmax(-1) == base_logits[0, :-1].argmax(-1)
-                    ).float().mean().item(),
-                }
-                continue
+        for method in methods:
+            prompt_result["methods"][method] = {}
 
-            hooks = make_ov_hooks(scale)
-            steered_logits = em_model.run_with_hooks(
-                tok_tensor, fwd_hooks=hooks, reset_hooks_end=True,
-            )
+            for scale in scale_values:
+                if scale == 1.0 and method == "ov_to_ov":
+                    # OV at α=1 is identity (no change)
+                    prompt_result["methods"][method][str(scale)] = {
+                        "steered_ce": em_ce,
+                        "kl_base_vs_steered": kl_base_vs_em,
+                        "kl_em_vs_steered": 0.0,
+                        "top1_match_base_frac": (
+                            em_logits[0, :-1].argmax(-1) == base_logits[0, :-1].argmax(-1)
+                        ).float().mean().item(),
+                    }
+                    continue
 
-            steered_ce = F.cross_entropy(steered_logits[0, :-1].float(), labels).item()
-            steered_log_probs = F.log_softmax(steered_logits[0, :-1].float(), dim=-1)
+                if method == "ov_to_ov":
+                    hooks = make_ov_hooks(scale)
+                else:
+                    hooks = make_qk_hooks(scale)
 
-            # KL(base || steered) — does steering move toward base?
-            kl_base_vs_steered = (
-                base_log_probs.exp() * (base_log_probs - steered_log_probs)
-            ).sum(-1).mean().item()
+                steered_logits = em_model.run_with_hooks(
+                    tok_tensor, fwd_hooks=hooks, reset_hooks_end=True)
+                metrics = compute_metrics(steered_logits, base_log_probs, em_log_probs, labels)
+                prompt_result["methods"][method][str(scale)] = metrics
 
-            # KL(em || steered) — how much did steering change from unpatched?
-            kl_em_vs_steered = (
-                em_log_probs.exp() * (em_log_probs - steered_log_probs)
-            ).sum(-1).mean().item()
+                if verbose:
+                    direction = "→base" if metrics["kl_base_vs_steered"] < kl_base_vs_em else "→away"
+                    print(f"  [{method}] α={scale:.2f}: KL(base||st)={metrics['kl_base_vs_steered']:.4f} ({direction})")
 
-            # Top-1 agreement with base
-            top1_match = (
-                steered_logits[0, :-1].argmax(-1) == base_logits[0, :-1].argmax(-1)
-            ).float().mean().item()
-
-            prompt_result["scales"][str(scale)] = {
-                "steered_ce": steered_ce,
-                "kl_base_vs_steered": kl_base_vs_steered,
-                "kl_em_vs_steered": kl_em_vs_steered,
-                "top1_match_base_frac": top1_match,
-            }
-
-            if verbose:
-                direction = "→base" if kl_base_vs_steered < kl_base_vs_em else "→away"
-                print(f"  α={scale:.2f}: CE={steered_ce:.3f}  "
-                      f"KL(base||steered)={kl_base_vs_steered:.4f} ({direction})  "
-                      f"top1_match={top1_match:.3f}")
-
-            del steered_logits, steered_log_probs
-            torch.cuda.empty_cache()
+                del steered_logits
+                torch.cuda.empty_cache()
 
         results["per_prompt"].append(prompt_result)
         del base_logits, em_logits, base_log_probs, em_log_probs
         torch.cuda.empty_cache()
 
-    # Aggregate across prompts
-    for scale in scale_values:
-        scale_str = str(scale)
-        ces = [p["scales"][scale_str]["steered_ce"] for p in results["per_prompt"]]
-        kls_base = [p["scales"][scale_str]["kl_base_vs_steered"] for p in results["per_prompt"]]
-        kls_em = [p["scales"][scale_str]["kl_em_vs_steered"] for p in results["per_prompt"]]
-        top1s = [p["scales"][scale_str]["top1_match_base_frac"] for p in results["per_prompt"]]
-
-        results["aggregated"][scale_str] = {
-            "mean_ce": float(np.mean(ces)),
-            "std_ce": float(np.std(ces)),
-            "mean_kl_base": float(np.mean(kls_base)),
-            "std_kl_base": float(np.std(kls_base)),
-            "mean_kl_em": float(np.mean(kls_em)),
-            "std_kl_em": float(np.std(kls_em)),
-            "mean_top1_match": float(np.mean(top1s)),
-            "std_top1_match": float(np.std(top1s)),
-        }
+    # Aggregate across prompts per (method, scale)
+    for method in methods:
+        results["aggregated"][method] = {}
+        for scale in scale_values:
+            scale_str = str(scale)
+            vals = [p["methods"][method][scale_str] for p in results["per_prompt"]
+                    if scale_str in p["methods"][method]]
+            if vals:
+                results["aggregated"][method][scale_str] = {
+                    "mean_ce": float(np.mean([v["steered_ce"] for v in vals])),
+                    "mean_kl_base": float(np.mean([v["kl_base_vs_steered"] for v in vals])),
+                    "std_kl_base": float(np.std([v["kl_base_vs_steered"] for v in vals])),
+                    "mean_kl_em": float(np.mean([v["kl_em_vs_steered"] for v in vals])),
+                    "mean_top1_match": float(np.mean([v["top1_match_base_frac"] for v in vals])),
+                }
 
     if verbose:
+        kl_baseline = np.mean([p['kl_base_vs_em'] for p in results['per_prompt']])
         print(f"\n{'='*70}")
         print(f"CE vs BASE MODEL SUMMARY")
         print(f"{'='*70}")
-        print(f"Base CE: {np.mean([p['base_ce'] for p in results['per_prompt']]):.3f}")
-        print(f"EM CE (unpatched): {np.mean([p['em_ce'] for p in results['per_prompt']]):.3f}")
-        print(f"KL(base||EM): {np.mean([p['kl_base_vs_em'] for p in results['per_prompt']]):.4f}")
-        print(f"\n{'Scale':>6s}  {'CE':>8s}  {'KL(base||st)':>13s}  {'KL(em||st)':>12s}  {'top1 match':>10s}")
-        for scale in scale_values:
-            a = results["aggregated"][str(scale)]
-            print(f"{scale:>6.2f}  {a['mean_ce']:>8.3f}  {a['mean_kl_base']:>13.4f}  "
-                  f"{a['mean_kl_em']:>12.4f}  {a['mean_top1_match']:>10.3f}")
+        print(f"KL(base||EM) baseline: {kl_baseline:.4f}")
+        for method in methods:
+            print(f"\n  {method}:")
+            print(f"  {'Scale':>6s}  {'KL(base||st)':>13s}  {'KL(em||st)':>12s}  {'direction':>10s}")
+            for scale in scale_values:
+                a = results["aggregated"][method].get(str(scale), {})
+                if a:
+                    direction = "→base" if a['mean_kl_base'] < kl_baseline else "→away"
+                    print(f"  {scale:>6.2f}  {a['mean_kl_base']:>13.4f}  "
+                          f"{a['mean_kl_em']:>12.4f}  {direction:>10s}")
 
     return results
 
