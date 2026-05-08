@@ -236,6 +236,12 @@ def _fig5(single_s, fset_s, down_s) -> plt.Figure:
     return fig
 
 
+def _fig6(single_s, down_s) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    _fill_panel_seeds(ax, [(single_s, "single"), (down_s, "downstream")])
+    return fig
+
+
 # ── save helper ───────────────────────────────────────────────────────────────
 
 def _save(fig: plt.Figure, path: Path) -> None:
@@ -268,6 +274,7 @@ def make_figures(payload: dict, out_dir: Path, pipeline: str,
     fset_s   = _aggregate_by_seed(pts, "upstream",   "set")
     down_s   = _aggregate_by_seed(pts, "downstream", "single")
     _save(_fig5(single_s, fset_s, down_s), out_dir / f"fig5_{pipeline}.pdf")
+    _save(_fig6(single_s, down_s),         out_dir / f"fig6_{pipeline}.pdf")
 
 
 def main() -> None:
