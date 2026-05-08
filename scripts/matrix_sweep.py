@@ -1,9 +1,14 @@
-"""Full 3×3 attribution × intervention matrix sweep across SAE seeds.
+"""Single (attr × intervene) cell sweep across SAE seeds.
 
-attr ∈ {ov, qk, triple}  ×  intervene ∈ {ov, qk, all}  →  9 cells per seed.
+attr ∈ {ov, qk, qk+ov}  ×  intervene ∈ {ov, qk, qk+ov} — choose one of each.
 
 Per cell: top-20 feature tuples → Δlogp screen (analytic delta) →
           batched ASR + ΔCE for top stage2_keep → winner by min ASR then min ΔCE.
+
+Run multiple invocations to fill different cells; their JSON outputs share
+the same schema and `render_matrix_results.py` will lay them out in the
+3×3 table when its input file contains rows from multiple cells (merge with
+`jq -s '.[0] * .[1]'` or by re-running with `--out` to a merged path).
 """
 from __future__ import annotations
 
@@ -107,7 +112,7 @@ def get_tuples(attr, args, model, sae_ln1, sae_mid, attr_split, attr_pmask, devi
         n = min(len(q_feats), len(k_feats), args.top_k)
         return [[(q_feats[i], "Q"), (k_feats[i], "K")] for i in range(n)]
 
-    # triple
+    # qk+ov: triple-attribution Q×K×V joint
     cands = generate_triplet_candidates(
         aggs["l1_mean_Q"].cpu(), aggs["l1_mean_K"].cpu(), cache["ov_score"].cpu(),
         args.triple_k, args.triple_k, args.triple_k,
@@ -289,10 +294,10 @@ def main():
                    help="sampling seeds for held-out eval ASR (Ketan-style multi-seed average).")
     p.add_argument("--eval_temperature", type=float, default=1.0,
                    help="temperature for held-out eval ASR sampling (no top_p/top_k truncation).")
-    p.add_argument("--cells", nargs="+", default=["ov×ov"],
-                   help='Which (attr×intervene) cells to sweep. Pass space-separated '
-                        'pairs like "ov×ov qk×qk", or the literal token "all" to expand '
-                        'to all 9 cells. Default: just ov×ov.')
+    p.add_argument("--attr",      choices=["ov", "qk", "qk+ov"], default="ov",
+                   help="Attribution method: ov | qk | qk+ov (joint triple).")
+    p.add_argument("--intervene", choices=["ov", "qk", "qk+ov"], default="ov",
+                   help="Intervention channels: ov={V}, qk={Q,K}, qk+ov={Q,K,V}.")
     p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
@@ -365,25 +370,8 @@ def main():
     )
 
     all_results = []
-    ATTRS      = ["ov", "qk", "triple"]
-    INTERVENES = ["ov", "qk", "all"]
-    if args.cells == ["all"]:
-        cells = [(a, v) for a in ATTRS for v in INTERVENES]
-    else:
-        cells = []
-        for spec in args.cells:
-            if "×" in spec:
-                a, v = spec.split("×", 1)
-            elif "x" in spec:
-                a, v = spec.split("x", 1)
-            else:
-                raise SystemExit(f"--cells entry {spec!r} must be 'attr×intervene' or 'all'")
-            if a not in ATTRS or v not in INTERVENES:
-                raise SystemExit(f"--cells {spec!r}: attr must be one of {ATTRS}, "
-                                 f"intervene must be one of {INTERVENES}")
-            cells.append((a, v))
-    attrs_needed = sorted({a for a, _ in cells}, key=ATTRS.index)
-    print(f"[mx] cells: {[f'{a}×{v}' for a, v in cells]}  (attrs needed: {attrs_needed})")
+    cell = (args.attr, args.intervene)
+    print(f"[mx] cell: {args.attr}×{args.intervene}")
 
     for seed in args.seeds:
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
@@ -396,15 +384,13 @@ def main():
         sel_dep_pmask_cpu = sel_dep_pmask.cpu()
         attr_cache: dict = {}
 
-        for attr in attrs_needed:
+        for attr in [args.attr]:
             # Attribution runs on the selection split.
             tuples = get_tuples(attr, args, model, sae_ln1, sae_mid,
                                 sel_split, sel_pmask, device, attr_cache)
             print(f"[mx]   attr={attr}: {len(tuples)} tuples  first={tuples[0]}")
 
-            for intervene in INTERVENES:
-                if (attr, intervene) not in cells:
-                    continue
+            for intervene in [args.intervene]:
                 active = ACTIVE_CHANNELS[intervene]
 
                 # ── Selection: screen → stage-2 → winner pick on sel_* data ──
@@ -474,7 +460,7 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds,
-                                "cells": [f"{a}×{v}" for a, v in cells]},
+                                "cell": f"{args.attr}×{args.intervene}"},
         "decoding": {
             "selection_asr":       {"mode": "greedy"},
             "eval_asr":            {"mode": "sample", "temperature": args.eval_temperature,

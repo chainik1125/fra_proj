@@ -9,8 +9,8 @@ import json
 import sys
 from pathlib import Path
 
-ATTR = ["ov", "qk", "triple"]
-INT = ["ov", "qk", "all"]
+ATTR = ["ov", "qk", "qk+ov"]
+INT = ["ov", "qk", "qk+ov"]
 
 
 def name_for(attr: str, intervene: str, k: int | None) -> Path:

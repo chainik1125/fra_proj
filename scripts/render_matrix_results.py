@@ -10,8 +10,8 @@ import argparse
 import json
 from pathlib import Path
 
-ATTRS      = ["ov", "qk", "triple"]
-INTERVENES = ["ov", "qk", "all"]
+ATTRS      = ["ov", "qk", "qk+ov"]
+INTERVENES = ["ov", "qk", "qk+ov"]
 METRICS    = [
     ("asr",            "ASR",             "{:>5.3f}",  "{:.3f}"),
     ("delta_logp",     "Δdep-logp",       "{:>+8.3f}", "{:+.3f}"),

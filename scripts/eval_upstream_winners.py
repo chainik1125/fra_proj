@@ -108,7 +108,7 @@ def main():
             if r["attr"] != "ov":
                 continue
             iv = r["intervene"]
-            if iv in ("ov", "all"):
+            if iv in ("ov", "qk+ov"):
                 winners.setdefault(s, {})[iv] = {
                     "feat": r["winner_tuple"][0][0],
                     "alpha": r["alpha"],
@@ -117,13 +117,13 @@ def main():
     all_results = []
     for seed in args.seeds:
         sae_ln1, _ = sae_load(f"weights/seeds/sae_ln1_s{seed}.pt", device=device)
-        for intervene in ("ov", "all"):
+        for intervene in ("ov", "qk+ov"):
             w      = winners[seed][intervene]
             feat   = w["feat"]
             alpha  = w["alpha"]
             sel    = [(feat, "V")]
             active = ACTIVE_CHANNELS[intervene]
-            method = "OV+OV" if intervene == "ov" else "OV+ALL"
+            method = "OV+OV" if intervene == "ov" else "OV+QK+OV"
 
             logp, ce = _logp_and_ce(model, tok, dep, dep_pmask, cln, cln_pmask, cln_marker,
                                      sae_ln1, sel, active, alpha)

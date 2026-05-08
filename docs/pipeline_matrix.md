@@ -1,26 +1,55 @@
 # Attribution × Intervention Pipeline
 
-`scripts/sleepers_pipeline.py` runs any cell of the matrix
-`{ov, qk, triple} × {ov, qk, all}` via two flags: `--attr` and `--intervene`.
+## Headline pipeline — `scripts/run_experiment.sh`
 
-## Reproducing the full 9 × 5 sweep
-
-One command:
+The default end-to-end flow trains the SAEs (idempotent) then runs
+`scripts/feature_set_pipeline.py` to select a top-K ln1 feature set and
+sweep α over it.
 
 ```bash
-./scripts/run_matrix_pipeline.sh
+./scripts/run_experiment.sh                          # defaults
+./scripts/run_experiment.sh --selection_method ketan # use Ketan's selection
+./scripts/run_experiment.sh --eval_mode both         # single + full-set
+./scripts/run_experiment.sh --force                  # rerun even if OUT_JSON exists
 ```
 
-It runs five steps end-to-end (each idempotent — `--force` to re-run):
-1. **Train the 6 SAEs** (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing.
-2. **`scripts.matrix_sweep`** over seeds 0–4 × cells controlled by `--cells` (default `ov×ov` only; pass `--cells "ov×ov qk×qk"` for a custom subset, or `--cells all` for the full 9-cell matrix) → `results/matrix_sweep.json`.
-3. **`scripts.render_matrix_results`** → committed markdown report at `docs/matrix_results.md` (only the populated cells are shown).
-4. **`scripts.single_feature_alpha_sweep`** — sweeps α∈{0, 0.5, 1, 2, 4} for two families on the held-out eval split with sampled multi-seed methodology: (a) **upstream** — one ln1-SAE feature per SAE seed (the per-seed ov×ov winner from step 2), OV-only intervention; (b) **downstream** — the resid_mid suppressor `--downstream_feature` (default f579), additive ablation at `hook_resid_mid`. Writes `results/single_feature_alpha_sweep.json`.
-5. **`scripts.plot_single_feature_pareto`** — 1×3 sleeper-tradeoff panel. x = clean-side cost (Δcln-CE / gen-CE ratio / severity ratio across the three panels), y = sampled eval ASR. Color = α (blue = weak, red = strong); marker = family (○ upstream, ◻ downstream). Both ratio panels share the convention that x = 1.0 is the "no-damage" reference; values >1 mean the steer perturbs the output more than the relevant natural reference. Output: `docs/figures/single_feature_pareto.{png,pdf,svg}`.
+### Arguments (forwarded to `feature_set_pipeline.py`)
 
-Roughly 35 min on a single A40 from scratch (matrix_sweep ~22 min, α-sweep ~10 min, SAE training ~2 min on first run).
+| Flag | Default | Choices / type | What it does |
+|---|---|---|---|
+| `--selection_method` | `jamie` | `jamie` \| `ketan` | Feature-selection algorithm. `jamie`: head-summed, prompt-masked; rank features by `|score|` where `score_λ = Σ_h (mean_{b∈dep, q∈pmask} contrib − mean_{b∈clean, q∈pmask} contrib)`. `ketan`: head-resolved, no q-mask; rank `(h, λ)` pairs by `|signed dep − clean diff|`, dedupe to unique features in pair order, take first K. Mirrors Ketan's `dep_vs_clean_contribution` ranking with `unique_features` dedup on `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`. |
+| `--top_k` | `20` | int | Size of the selected feature set. |
+| `--eval_mode` | `single` | `single` \| `set` \| `both` | `single`: per-feature α-sweep — for each feature in the selected set, run an α-sweep on that feature alone (Jamie's classic single-feature path). `set`: α-sweep on the full feature set steered together via OV-only V hook with the SUM of per-feature deltas (Ketan's `all_head_features` intervention shape). `both`: runs both. |
+| `--alphas` | `0.0 0.5 1.0 2.0 4.0` | space-separated floats | α grid. |
+| `--sae_seed` | `0` | int | Which ln1 SAE seed to use (`weights/seeds/sae_ln1_s{seed}.pt`). |
+| `--target_feature` | `579` | int | Downstream resid_mid SAE feature whose encoder column drives the OV target direction `e`. |
+| `--n_sel` | `100` | int | Selection-split size (used for attribution). |
+| `--n_eval` | `200` | int | Held-out eval-split size. |
+| `--n_gen_ce` | `100` | int | Eval subset for the gen-CE ratio + severity ratio metrics (each gens twice per prompt). |
+| `--gen_tokens` | `16` | int | Tokens generated per rollout. |
+| `--eval_seeds` | `0 1 2 3 4` | space-separated ints | Sampling seeds for the multi-seed eval. Severity ratio's denominator (sampling-noise floor) needs ≥2 seeds. |
+| `--eval_temperature` | `1.0` | float | Sampling temperature for eval generation. |
+| `--out` | `results/feature_set_pipeline.json` | path | JSON output with selection metadata + per-α / per-feature eval points. |
+| `--force` | off | flag | Re-run even if `--out` already exists (default: skip). |
 
-Persisted artefacts (committed): [[matrix_results|docs/matrix_results.md]] and `docs/figures/single_feature_pareto.*`. The intermediate JSONs in `results/` are gitignored — they carry the per-cell screen / stage-2 / per-seed-per-α payloads, useful for debugging but bulky and regenerable.
+### Two stages, in order
+
+1. **Train the 6 SAEs** (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing — `scripts/train_all_saes.py`. Skipped when the checkpoints already exist.
+2. **`scripts.feature_set_pipeline`** — attribution on the selection split → `select_features` (jamie or ketan) → α-sweep eval (single / set / both) on the held-out eval split. Writes `results/feature_set_pipeline.json` with per-α points carrying ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio.
+
+## Legacy pipeline — `scripts/matrix_sweep.py` and `single_feature_alpha_sweep.py`
+
+These are still functional but are no longer the headline path. `matrix_sweep.py` now sweeps a **single** `(attr, intervene)` cell across SAE seeds — its old `--cells` argument is replaced by `--attr {ov, qk, qk+ov}` and `--intervene {ov, qk, qk+ov}` (both default `ov`). The 9-cell narrative is built by running the script multiple times. `single_feature_alpha_sweep.py` reads the per-seed ov×ov winners from a `matrix_sweep.json` and runs an α-sweep on each. `plot_single_feature_pareto.py` produces the 1×3 tradeoff panel from that.
+
+The "qk+ov" naming replaces the older `triple`/`all` labels (the attribution is the QK + OV joint triplet; the intervention is the QK + OV channel union). Run them like:
+
+```bash
+uv run -m scripts.matrix_sweep --attr ov --intervene ov --seeds 0 1 2 3 4
+uv run -m scripts.single_feature_alpha_sweep --in results/matrix_sweep.json
+uv run -m scripts.plot_single_feature_pareto --in results/single_feature_alpha_sweep.json
+```
+
+Persisted artefacts from the legacy flow (committed): [[matrix_results|docs/matrix_results.md]] and `docs/figures/single_feature_pareto.*`. The intermediate JSONs in `results/` are gitignored.
 
 ## Selection vs eval split
 
@@ -142,9 +171,9 @@ Each attribution row produces selected features tagged with their **natural chan
 
 - **OV** → every feature tagged `V`.
 - **QK** → top-K Q-side features tagged `Q`, top-K K-side features tagged `K` (2K total).
-- **Triple** → each top triplet `(a, b, c)` expands to `(a, Q)`, `(b, K)`, `(c, V)`.
+- **QK+OV** (formerly `triple`) → each top triplet `(a, b, c)` expands to `(a, Q)`, `(b, K)`, `(c, V)`.
 
-Each intervention column defines the **active channel set**: `ov={V}`, `qk={Q,K}`, `all={Q,K,V}`.
+Each intervention column defines the **active channel set**: `ov={V}`, `qk={Q,K}`, `qk+ov={Q,K,V}` (formerly `all`).
 
 For every active channel `c`:
 
@@ -157,18 +186,18 @@ For every active channel `c`:
 |---|---|---|---|---|
 | **OV + ov** | — | — | OV-feats (natural V) | `attn.hook_v` only |
 | **OV + qk** | OV-feats (fudge) | OV-feats (fudge) | — | `attn.hook_q` + `attn.hook_k` |
-| **OV + all** | OV-feats (fudge) | OV-feats (fudge) | OV-feats (natural V) | `ln1.hook_normalized` (fast-path: identical deltas) |
+| **OV + qk+ov** | OV-feats (fudge) | OV-feats (fudge) | OV-feats (natural V) | `ln1.hook_normalized` (fast-path: identical deltas) |
 | **QK + ov** | — | — | Q-feats ∪ K-feats (fudge) | `attn.hook_v` only |
 | **QK + qk** | Q-feats (natural) | K-feats (natural) | — | `attn.hook_q` + `attn.hook_k` |
-| **QK + all** | Q-feats (natural) | K-feats (natural) | Q-feats ∪ K-feats (fudge V) | `attn.hook_q` + `attn.hook_k` + `attn.hook_v` |
-| **Triple + ov** | — | — | c (natural V) | `attn.hook_v` only |
-| **Triple + qk** | a (natural Q) | b (natural K) | — | `attn.hook_q` + `attn.hook_k` |
-| **Triple + all** | a (natural Q) | b (natural K) | c (natural V) | `attn.hook_q` + `attn.hook_k` + `attn.hook_v` |
+| **QK + qk+ov** | Q-feats (natural) | K-feats (natural) | Q-feats ∪ K-feats (fudge V) | `attn.hook_q` + `attn.hook_k` + `attn.hook_v` |
+| **QK+OV + ov** | — | — | c (natural V) | `attn.hook_v` only |
+| **QK+OV + qk** | a (natural Q) | b (natural K) | — | `attn.hook_q` + `attn.hook_k` |
+| **QK+OV + qk+ov** | a (natural Q) | b (natural K) | c (natural V) | `attn.hook_q` + `attn.hook_k` + `attn.hook_v` |
 
 Notes:
 
-- **Triple+all is strictly less invasive** than OV+all or QK+all — each feature enters exactly one channel instead of being broadcast to all three.
-- **OV+all takes a fast-path**: when all three resolved channel deltas are the same tensor, the script patches `ln1.hook_normalized` once instead of doing three einsum projections — mathematically equivalent to an additive steer at the ln1 hookpoint.
+- **QK+OV attribution + qk+ov intervention is strictly less invasive** than OV+(qk+ov) or QK+(qk+ov) — each feature enters exactly one channel instead of being broadcast to all three.
+- **OV+(qk+ov) takes a fast-path**: when all three resolved channel deltas are the same tensor, the script patches `ln1.hook_normalized` once instead of doing three einsum projections — mathematically equivalent to an additive steer at the ln1 hookpoint.
 - **QK+qk diverges from Dmitry's `pareto_3x3.py`** (which sent a single flat ln1-delta through both W_Q and W_K). We track Q vs K separately, so each side hits only its natural projection.
 - The single hook primitive `sleeper.hooks.channel_steer_hook` handles every non-fast-path cell uniformly. `ov_only_steer_hook` is now a one-line wrapper.
 
@@ -187,7 +216,7 @@ Direct ablation of the target downstream feature using `additive_steer_hook` at 
 | 2.0 | 0.020 | −0.199    | +0.0008 |
 | **4.0** | **0.000** | +0.057 | +0.0015 |
 
-Achieves ASR=0 at α=4.0 with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio numbers (regenerated via `./scripts/run_matrix_pipeline.sh --force`) are reported in `docs/matrix_results.md` and the headline 1×3 figure.
+Achieves ASR=0 at α=4.0 with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio numbers (regenerated via `./scripts/run_experiment.sh --force`) are reported in `docs/matrix_results.md` and the headline 1×3 figure.
 
 ### Upstream ln1 baseline — best OV-attributed feature, full ln1 additive steer
 
@@ -221,7 +250,7 @@ Baseline: dep\_logp=−10.829, clean\_CE=1.3618, ASR=1.000.
 | 3    | f1154   | 4.0 | 0.000 | −0.434    | −0.0001 |
 | 4    | f558    | 4.0 | 0.000 | −0.231    | +0.0019 |
 
-All 5 seeds achieve ASR=0 on the held-out eval split with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio columns (re-run via `./scripts/run_matrix_pipeline.sh --force`) live in `docs/matrix_results.md`; both should sit close to 1.0 here, consistent with steered deployment generations being almost as coherent as the unsteered model's natural continuation on the same clean context. (Numbers above use `n_gen_ce=50` on the eval split.)
+All 5 seeds achieve ASR=0 on the held-out eval split with negligible Δcln-CE. The matched gen-CE-ratio and severity-ratio columns (re-run via `./scripts/run_experiment.sh --force`) live in `docs/matrix_results.md`; both should sit close to 1.0 here, consistent with steered deployment generations being almost as coherent as the unsteered model's natural continuation on the same clean context. (Numbers above use `n_gen_ce=50` on the eval split.)
 
 ### Notable result: seed 4, OV+all, f353
 

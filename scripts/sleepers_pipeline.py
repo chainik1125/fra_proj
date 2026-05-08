@@ -164,8 +164,8 @@ def main() -> None:
     p.add_argument("--sae_mid", type=Path, required=True)
     p.add_argument("--target_feature", type=int, required=True)
     p.add_argument("--block", type=int, default=0)
-    p.add_argument("--attr", choices=["ov", "qk", "triple"], default="ov")
-    p.add_argument("--intervene", choices=["ov", "qk", "all"], default="ov")
+    p.add_argument("--attr", choices=["ov", "qk", "qk+ov"], default="ov")
+    p.add_argument("--intervene", choices=["ov", "qk", "qk+ov"], default="ov")
     p.add_argument("--qk_score", choices=["l1_mean", "dep_minus_clean", "l1_dep"],
                    default="l1_mean")
     p.add_argument("--triple_score",
@@ -282,7 +282,7 @@ def main() -> None:
         "config": {
             "attr": args.attr, "intervene": args.intervene,
             "qk_score": args.qk_score if args.attr == "qk" else None,
-            "triple_score": args.triple_score if args.attr == "triple" else None,
+            "triple_score": args.triple_score if args.attr == "qk+ov" else None,
             "ln1_hook": ln1_hook, "mid_hook": mid_hook, "block": args.block,
             "target_feature": int(args.target_feature),
             "selected": [list(t) if isinstance(t, tuple) else t for t in selected],

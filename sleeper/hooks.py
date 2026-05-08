@@ -197,7 +197,7 @@ def channel_steer_hook(
 # channel-delta resolution and hook construction
 # ---------------------------------------------------------------------------
 
-ACTIVE_CHANNELS: dict[str, set[str]] = {"ov": {"V"}, "qk": {"Q", "K"}, "all": {"Q", "K", "V"}}
+ACTIVE_CHANNELS: dict[str, set[str]] = {"ov": {"V"}, "qk": {"Q", "K"}, "qk+ov": {"Q", "K", "V"}}
 
 
 @torch.no_grad()
