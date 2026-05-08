@@ -144,25 +144,27 @@ def _draw_curve(ax: plt.Axes, rows: list[dict],
 
 
 def _draw_all_seeds(ax: plt.Axes, seed_curves: list[list[dict]],
-                    style: dict) -> None:
+                    style: dict, alpha_colors: dict) -> None:
     for rows in seed_curves:
         xs = [r["x"] for r in rows]
         ys = [r["y"] for r in rows]
         ax.plot(xs, ys, color=style["color"], ls=style["ls"], lw=0.8,
                 alpha=0.45, zorder=2)
-        ax.scatter(xs, ys, color=style["color"], marker=style["marker"],
-                   s=30, zorder=3, edgecolor="white", linewidth=0.3,
-                   alpha=0.7)
+        for r in rows:
+            ax.scatter(r["x"], r["y"], color=alpha_colors[r["alpha"]],
+                       marker=style["marker"], s=30, zorder=3,
+                       edgecolor="white", linewidth=0.3)
 
 
 def _fill_panel_seeds(ax: plt.Axes,
-                      curves: list[tuple[list[list[dict]], str]]) -> None:
+                      curves: list[tuple[list[list[dict]], str]],
+                      alpha_colors: dict) -> None:
     for seed_curves, key in curves:
-        _draw_all_seeds(ax, seed_curves, STYLES[key])
+        _draw_all_seeds(ax, seed_curves, STYLES[key], alpha_colors)
     _style_ax(ax)
     handles = [
         mlines.Line2D([], [], marker=STYLES[k]["marker"], ls=STYLES[k]["ls"],
-                      color=STYLES[k]["color"], markerfacecolor=STYLES[k]["color"],
+                      color=STYLES[k]["color"], markerfacecolor="#888888",
                       markeredgecolor="white", markeredgewidth=0.3,
                       markersize=7, label=STYLES[k]["label"])
         for _, k in curves
@@ -229,16 +231,19 @@ def _fig4(single, down, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     return fig
 
 
-def _fig5(single_s, fset_s, down_s) -> plt.Figure:
+def _fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     _fill_panel_seeds(ax, [(single_s, "single"), (fset_s, "set"),
-                            (down_s, "downstream")])
+                            (down_s, "downstream")], alpha_colors)
+    _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
-def _fig6(single_s, down_s) -> plt.Figure:
+def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    _fill_panel_seeds(ax, [(single_s, "single"), (down_s, "downstream")])
+    _fill_panel_seeds(ax, [(single_s, "single"), (down_s, "downstream")],
+                      alpha_colors)
+    _add_colorbar(fig, ax, norm, cmap, alphas)
     return fig
 
 
@@ -273,8 +278,10 @@ def make_figures(payload: dict, out_dir: Path, pipeline: str,
     single_s = _aggregate_by_seed(pts, "upstream",   "single")
     fset_s   = _aggregate_by_seed(pts, "upstream",   "set")
     down_s   = _aggregate_by_seed(pts, "downstream", "single")
-    _save(_fig5(single_s, fset_s, down_s), out_dir / f"fig5_{pipeline}.pdf")
-    _save(_fig6(single_s, down_s),         out_dir / f"fig6_{pipeline}.pdf")
+    _save(_fig5(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig5_{pipeline}.pdf")
+    _save(_fig6(single_s, down_s, alpha_colors, norm, cmap, alphas),
+          out_dir / f"fig6_{pipeline}.pdf")
 
 
 def main() -> None:
