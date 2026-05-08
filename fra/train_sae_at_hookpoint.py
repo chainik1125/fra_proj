@@ -55,12 +55,15 @@ def main():
     from sae_lens.config import LoggingConfig
     from sae_lens.saes.sae import SAEMetadata
 
+    # SAE in fp32 for numerical stability; model loaded in bf16 separately
+    # below via model_from_pretrained_kwargs to keep the 14B model footprint
+    # at ~28GB instead of 56GB.
     sae_cfg = TopKTrainingSAEConfig(
         d_in=args.d_in,
         d_sae=args.d_sae,
         k=args.k,
         normalize_activations="expected_average_only_in",
-        dtype="bfloat16",
+        dtype="float32",
         device=args.device,
         metadata=SAEMetadata(
             model_name=args.model_name,
@@ -90,10 +93,11 @@ def main():
         checkpoint_path=str(Path(args.output_dir).expanduser()),
         save_final_checkpoint=True,
         device=args.device,
-        dtype="bfloat16",
-        autocast=False,  # bfloat16 doesn't use GradScaler; autocast=True triggers
-                          # NotImplementedError("_amp_foreach_non_finite_check_and_unscale_cuda"
-                          # not implemented for 'BFloat16'") in sae-lens 6.43
+        dtype="float32",
+        autocast=False,
+        # Keep the 14B model in bf16 even though SAE training is in fp32.
+        # sae-lens passes these kwargs to HookedTransformer.from_pretrained.
+        model_from_pretrained_kwargs={"dtype": "bfloat16"},
         seed=args.seed,
         logger=LoggingConfig(log_to_wandb=False),
         verbose=True,
