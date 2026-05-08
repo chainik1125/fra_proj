@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
-# Run ONLY the remaining experiments (random baseline + CE vs base).
-# Frontier and shared feature are already done.
+# Run ONLY the remaining CE vs base experiments.
+# Frontier, shared feature, and random baseline are already done.
 #
 # Usage (on the pod):
 #   nohup bash run_remaining.sh > run_remaining.log 2>&1 &
@@ -11,26 +11,13 @@
 set -e
 
 OUTDIR="/root/multiseed_results_v2"
-SEEDS="42 123 456"
 N_TEXTS=8
 LAYER=24
 HEAD=38
-TEMP=1.0
 
 mkdir -p "$OUTDIR"
 
 log() { echo -e "\n$(date '+%H:%M:%S') === $1 ===\n"; }
-
-# ── Random baseline: medical + sports (finance already done) ──────────
-log "RANDOM BASELINE: medical"
-python run_experiments.py --task random_baseline --em-model medical \
-    --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR"
-
-log "RANDOM BASELINE: sports"
-python run_experiments.py --task random_baseline --em-model sports \
-    --head $HEAD --seeds $SEEDS --temperature $TEMP --n-texts $N_TEXTS \
-    --output "$OUTDIR"
 
 # ── CE vs base model (all 3 variants) ────────────────────────────────
 log "CE VS BASE: finance"
