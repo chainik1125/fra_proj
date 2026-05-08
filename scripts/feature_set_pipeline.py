@@ -1,0 +1,247 @@
+"""Feature-set pipeline — selects top-K ln1 SAE features via either Jamie's or
+Ketan's selection method, then evaluates them via single-feature α-sweep,
+full-set α-sweep, or both.
+
+Selection methods (`--selection_method`):
+  * jamie — head-summed, prompt-masked, rank features by `|score|` where
+    `score_λ = Σ_h (mean_{b∈dep, q∈pmask} contrib − mean_{b∈clean, q∈pmask} contrib)`.
+    Returns top-K feature indices. Heads broadcast V on all 16 downstream.
+  * ketan — head-resolved, no prompt mask. Rank (h, λ) pairs by
+    `|mean_{b∈dep} contrib − mean_{b∈clean} contrib|`, dedupe to unique features
+    in pair order, take first K. Returns top-K features + (head, feature)
+    provenance. Mirrors Ketan's `dep_vs_clean_contribution` ranking with
+    `unique_features` deduplication on
+    `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`.
+
+Evaluation modes (`--eval_mode`):
+  * single — for each feature in the selected set, run an α-sweep on that
+    feature alone (Jamie's classic single-feature path).
+  * set — α-sweep on the full selected set steered together (sum of per-feature
+    OV deltas, OV-only hook on all heads). Matches Ketan's "all_head_features"
+    intervention shape via `resolve_channel_deltas`.
+  * both — runs both. Lets you compare per-feature curves to the full-set curve
+    side-by-side on a single matched eval split.
+
+The same eval engine drives both modes — `_run_eval` from
+`scripts.single_feature_alpha_sweep`. Outputs the standard 5-metric panel
+(ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio).
+
+Usage:
+    python -m scripts.feature_set_pipeline \\
+        --selection_method jamie --top_k 20 --eval_mode both \\
+        --alphas 0 0.5 1.0 2.0 4.0 \\
+        --out results/feature_set_pipeline.json
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import torch
+
+from scripts.single_feature_alpha_sweep import (
+    _eval_baseline_asr, _run_eval, _upstream_eval,
+)
+from sleeper.attribution import (
+    compute_ov_weights, ov_attribution, select_features,
+)
+from sleeper.hooks import make_sampling_sampler
+from sleeper.metrics import (
+    asr_16, clean_continuation_ce, pregen_clean_rollouts,
+    teacher_forced_sleeper_logp,
+)
+from sleeper.model import (
+    cache_activations, left_pad_prompts, load_dep_prompts,
+    load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
+)
+from sleeper.sae import encode_all, load as sae_load
+
+LN1_HOOK = "blocks.0.ln1.hook_normalized"
+PAT_HOOK = "blocks.0.attn.hook_pattern"
+
+
+def _select_top_features(
+    args, model, sae_ln1, sae_mid, sel_split, sel_pmask, device,
+) -> dict:
+    """Cache attention pattern + ln1 codes on the selection split, build OV
+    weights against the target resid_mid feature direction, run ov_attribution,
+    and pick top-K features via the configured selection method.
+
+    Returns the dict from `select_features`, plus the contrib-shape metadata
+    for the JSON output's `selection` block.
+    """
+    print(f"[fset] caching {PAT_HOOK} and {LN1_HOOK} on {sel_split.tokens.shape[0]} prompts...")
+    caches = cache_activations(model, sel_split.tokens, [PAT_HOOK, LN1_HOOK])
+    A = caches[PAT_HOOK].to(device)
+    z_ln1 = encode_all(sae_ln1, caches[LN1_HOOK]).to(device)
+    d = sae_mid.W_enc[:, args.target_feature].detach().to(device).float()
+    ovw = compute_ov_weights(model, sae_ln1, d, block=args.block)
+    out = ov_attribution(A, z_ln1, ovw["beta"])
+
+    qmask = sel_pmask.to(device) if args.selection_method == "jamie" else None
+    print(f"[fset] selecting top-{args.top_k} features via method='{args.selection_method}'...")
+    sel = select_features(out["contrib"], sel_split.is_deployment.to(device),
+                          top_k=args.top_k, method=args.selection_method,
+                          query_mask=qmask)
+    print(f"[fset] features: {sel['features'][:10]}{'…' if len(sel['features']) > 10 else ''}")
+    if sel["provenance"] is not None:
+        head_counts: dict[int, int] = {}
+        for h, _ in sel["provenance"]:
+            head_counts[h] = head_counts.get(h, 0) + 1
+        print(f"[fset] head provenance distribution: {dict(sorted(head_counts.items()))}")
+    return sel
+
+
+@torch.no_grad()
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--selection_method", choices=["jamie", "ketan"], default="jamie",
+                   help="Feature-selection algorithm. See module docstring.")
+    p.add_argument("--top_k", type=int, default=20,
+                   help="Number of features in the selected set.")
+    p.add_argument("--eval_mode", choices=["single", "set", "both"], default="both",
+                   help="Run α-sweep on each individual feature ('single'), "
+                        "the full feature set ('set'), or both.")
+    p.add_argument("--alphas", type=float, nargs="+", default=[0.0, 0.5, 1.0, 2.0, 4.0])
+    p.add_argument("--sae_seed", type=int, default=0,
+                   help="ln1 SAE seed (one of weights/seeds/sae_ln1_s{seed}.pt).")
+    p.add_argument("--target_feature", type=int, default=579,
+                   help="Downstream resid_mid SAE feature whose encoder column "
+                        "drives the OV target direction `e`.")
+    p.add_argument("--block", type=int, default=0)
+    p.add_argument("--n_sel", type=int, default=100,
+                   help="Selection-split size (used for attribution).")
+    p.add_argument("--n_eval", type=int, default=50,
+                   help="Held-out eval-split size.")
+    p.add_argument("--n_gen_ce", type=int, default=25,
+                   help="Eval subset for the gen-CE ratio + severity ratio metrics.")
+    p.add_argument("--gen_tokens", type=int, default=16)
+    p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
+    p.add_argument("--eval_temperature", type=float, default=1.0)
+    p.add_argument("--sae_mid", type=Path, default=Path("weights/sae_resid_mid.pt"))
+    p.add_argument("--out", type=Path, default=Path("results/feature_set_pipeline.json"))
+    p.add_argument("--device", default=None)
+    p.add_argument("--use_past_kv_cache", action=argparse.BooleanOptionalAction, default=True)
+    args = p.parse_args()
+
+    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    model  = load_sleeper_model(device=device)
+    tok    = model.tokenizer
+    pad_id = tok.pad_token_id or tok.eos_token_id
+    W      = {c: getattr(model, f"W_{c}")[args.block].detach().to(device) for c in ("Q", "K", "V")}
+    sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{args.sae_seed}.pt"), device=device)
+    sae_mid, _ = sae_load(args.sae_mid, device=device)
+
+    splits = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
+                                 n_test=args.n_eval, seq_len=128, seed=0)
+    sel_split = splits["val"]
+    ev        = splits["test"]
+    sel_pmask = prompt_mask_from_markers(128, sel_split.story_marker_pos)
+
+    eval_pmask = prompt_mask_from_markers(128, ev.story_marker_pos)
+    eval_dep         = ev.tokens[ev.is_deployment].to(device)
+    eval_dep_pmask   = eval_pmask[ev.is_deployment].to(device)
+    eval_cln         = ev.tokens[~ev.is_deployment].to(device)
+    eval_cln_marker  = ev.story_marker_pos[~ev.is_deployment].to(device)
+
+    raw_dep = load_dep_prompts(tok, args.n_sel // 2 + args.n_eval // 2, split="test")
+    eval_lp, eval_attn = left_pad_prompts(
+        raw_dep[args.n_sel // 2 : args.n_sel // 2 + args.n_eval // 2], pad_id,
+    )
+    eval_lp, eval_attn = eval_lp.to(device), eval_attn.to(device)
+    eval_gen_dep  = eval_lp[: args.n_gen_ce]
+    eval_gen_attn = eval_attn[: args.n_gen_ce]
+
+    # ── Selection ────────────────────────────────────────────────────────
+    sel = _select_top_features(args, model, sae_ln1, sae_mid, sel_split,
+                                sel_pmask, device)
+
+    # ── Eval setup (shared across all eval modes) ────────────────────────
+    base_logp = teacher_forced_sleeper_logp(model, tok, eval_dep).mean().item()
+    base_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker).mean().item()
+    base_asr, base_asr_per_seed = _eval_baseline_asr(
+        model, eval_lp, eval_attn, args.gen_tokens, args.eval_seeds, args.eval_temperature, device,
+        use_past_kv_cache=args.use_past_kv_cache,
+    )
+    print(f"[fset] eval baseline: asr={base_asr:.3f}  Δlogp_base={base_logp:.3f}  "
+          f"cln_CE_base={base_ce:.4f}")
+
+    print(f"[fset] pre-generating clean rollouts (B={args.n_gen_ce}, "
+          f"S={len(args.eval_seeds)})...")
+    clean_rollouts = pregen_clean_rollouts(
+        model, eval_gen_dep, eval_gen_attn, args.gen_tokens,
+        args.eval_seeds, args.eval_temperature, device,
+        use_past_kv_cache=args.use_past_kv_cache,
+    )
+
+    # ── Eval ─────────────────────────────────────────────────────────────
+    points: list[dict] = []
+    eval_modes = ("single", "set") if args.eval_mode == "both" else (args.eval_mode,)
+
+    if "single" in eval_modes:
+        for f in sel["features"]:
+            for alpha in args.alphas:
+                e = _upstream_eval(
+                    model, sae_ln1, [int(f)], alpha, W,
+                    eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                    eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                    clean_rollouts,
+                    base_logp, base_ce, args.gen_tokens,
+                    args.eval_seeds, args.eval_temperature, device,
+                    use_past_kv_cache=args.use_past_kv_cache,
+                )
+                print(f"[fset] single  f{f}  α={alpha:>4}  "
+                      f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
+                      f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
+                      f"severity={e['severity_ratio']:.3f}")
+                points.append({"selection_method": args.selection_method,
+                               "eval_mode": "single",
+                               "feature": int(f), "alpha": alpha, **e})
+
+    if "set" in eval_modes:
+        feats = [int(f) for f in sel["features"]]
+        for alpha in args.alphas:
+            e = _upstream_eval(
+                model, sae_ln1, feats, alpha, W,
+                eval_dep, eval_dep_pmask, eval_lp, eval_attn,
+                eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn,
+                clean_rollouts,
+                base_logp, base_ce, args.gen_tokens,
+                args.eval_seeds, args.eval_temperature, device,
+                use_past_kv_cache=args.use_past_kv_cache,
+            )
+            print(f"[fset] set    K={len(feats)}  α={alpha:>4}  "
+                  f"asr={e['asr']:.3f}  Δcln-CE={e['delta_ce']:+.4f}  "
+                  f"gen-CE-ratio={e['gen_ce_ratio']:.3f}  "
+                  f"severity={e['severity_ratio']:.3f}")
+            points.append({"selection_method": args.selection_method,
+                           "eval_mode": "set",
+                           "features": feats, "alpha": alpha, **e})
+
+    # ── JSON ─────────────────────────────────────────────────────────────
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps({
+        "config": vars(args) | {"alphas": args.alphas, "eval_seeds": args.eval_seeds},
+        "decoding": {"asr":            {"mode": "sample", "temperature": args.eval_temperature,
+                                        "seeds": args.eval_seeds},
+                     "gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
+                                        "seeds": args.eval_seeds},
+                     "severity_ratio": {"mode": "sample", "temperature": args.eval_temperature,
+                                        "seeds": args.eval_seeds}},
+        "baseline": {"asr": base_asr, "asr_per_seed": base_asr_per_seed,
+                     "dep_logp": base_logp, "clean_ce": base_ce},
+        "selection": {
+            "method":     args.selection_method,
+            "sae_seed":   args.sae_seed,
+            "top_k":      args.top_k,
+            "features":   sel["features"],
+            "provenance": sel["provenance"],
+        },
+        "points": points,
+    }, indent=2, default=str))
+    print(f"\n[fset] wrote {args.out}")
+
+
+if __name__ == "__main__":
+    main()

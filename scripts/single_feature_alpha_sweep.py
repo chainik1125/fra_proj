@@ -135,14 +135,19 @@ def _run_eval(
 
 
 def _upstream_eval(
-    model, sae_ln1, feature, alpha, W,
+    model, sae_ln1, features, alpha, W,
     eval_dep, eval_dep_pmask, eval_dep_lp, eval_dep_attn,
     eval_cln, eval_cln_marker, eval_gen_dep, eval_gen_attn, clean_rollouts,
     base_logp, base_ce, gen_tokens, eval_seeds, eval_temp, device,
     use_past_kv_cache: bool = True,
 ):
-    """Upstream: ln1 SAE feature, OV-only hook (V channel, all 16 heads)."""
-    sel    = [(int(feature), "V")]
+    """Upstream: one or more ln1 SAE features steered together via OV-only
+    hook (V channel, all 16 heads). `features` may be a single int (legacy
+    single-feature case) or a list of ints — `resolve_channel_deltas` sums
+    the per-feature deltas when multiple V-tagged features are passed in."""
+    if isinstance(features, int):
+        features = [features]
+    sel    = [(int(f), "V") for f in features]
     active = ACTIVE_CHANNELS["ov"]
     cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
 

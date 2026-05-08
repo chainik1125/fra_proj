@@ -161,3 +161,82 @@ def rank_dep_vs_clean(
         "per_pair_cln": per_pair_cln,
         "top_indices": torch.argsort(score.abs(), descending=True),
     }
+
+
+def select_features(
+    contrib: torch.Tensor,              # (B, n_heads, T_q, d_sae_ln1) from ov_attribution
+    is_deployment: torch.Tensor,        # (B,) bool
+    top_k: int,
+    *,
+    method: str = "jamie",              # "jamie" | "ketan"
+    query_mask: torch.Tensor | None = None,
+) -> dict:
+    """Pick top-k ln1 SAE features for downstream OV-only steering.
+
+    Both methods share the same OV contribution machinery
+    (`compute_ov_weights` + `ov_attribution`). They differ in how the (h, λ)
+    contribution matrix is reduced to a ranked feature list:
+
+    `method="jamie"` — head-summed, prompt-masked. Computes
+    `score_λ = Σ_h (mean_{b∈dep, q∈qm} contrib − mean_{b∈clean, q∈qm} contrib)`
+    via `rank_dep_vs_clean`, then takes the top-k features by `|score|`. Heads
+    are committed to "broadcast V on all 16" downstream; no head provenance.
+
+    `method="ketan"` — head-resolved, no prompt mask. For each (h, λ) pair
+    computes the same dep-minus-clean diff, sorts pairs by `|signed diff|`,
+    walks the pair list and emits each new feature in pair order until `top_k`
+    unique features have been collected. Returns provenance — the (h, λ) pair
+    that surfaced each feature. Matches Ketan's `dep_vs_clean_contribution`
+    ranking with `unique_features` deduplication on
+    `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`.
+
+    `query_mask` is honored only for `method="jamie"` (Ketan's convention is
+    no q-mask). Both methods receive the same `contrib` tensor; the choice of
+    `query_mask` at the *attribution* step is the caller's responsibility.
+
+    Returns:
+        features:   list[int] — top-k feature indices in rank order.
+        provenance: list[tuple[int, int]] | None — for "ketan", the
+                    (head, feature) pair surfacing each emitted feature; None
+                    for "jamie".
+        scores:     torch.Tensor (d_sae_ln1,) — per-feature score:
+                      jamie: signed `per_lambda_dep − per_lambda_cln`.
+                      ketan: max over heads of `|per_pair_dep − per_pair_cln|`.
+    """
+    if method == "jamie":
+        ranked = rank_dep_vs_clean(contrib, is_deployment, query_mask=query_mask)
+        order = ranked["top_indices"][:top_k].cpu().tolist()
+        return {
+            "features":   [int(f) for f in order],
+            "provenance": None,
+            "scores":     ranked["score"].cpu(),
+        }
+
+    if method == "ketan":
+        # Ketan's convention: rank pairs over all (b, q) — query_mask is
+        # ignored at the ranking step. We pass query_mask=None into the
+        # underlying per-pair averaging.
+        ranked = rank_dep_vs_clean(contrib, is_deployment, query_mask=None)
+        per_pair_diff = ranked["per_pair_dep"] - ranked["per_pair_cln"]   # (n_heads, d_sae)
+        n_heads, d_sae = per_pair_diff.shape
+        order_flat = torch.argsort(per_pair_diff.abs().flatten(), descending=True)
+        seen: set[int] = set()
+        features: list[int] = []
+        provenance: list[tuple[int, int]] = []
+        for idx in order_flat.tolist():
+            h, f = idx // d_sae, idx % d_sae
+            if f in seen:
+                continue
+            seen.add(f)
+            features.append(int(f))
+            provenance.append((int(h), int(f)))
+            if len(features) >= top_k:
+                break
+        per_feature_score = per_pair_diff.abs().max(dim=0).values         # (d_sae,)
+        return {
+            "features":   features,
+            "provenance": provenance,
+            "scores":     per_feature_score.cpu(),
+        }
+
+    raise ValueError(f"unknown selection method {method!r}; expected 'jamie' or 'ketan'")
