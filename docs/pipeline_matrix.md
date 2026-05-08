@@ -1,17 +1,40 @@
 # Attribution × Intervention Pipeline
 
-## Headline pipeline — `scripts/run_experiment.sh`
+## Headline pipeline — `scripts/run_experiment.py`
 
-The default end-to-end flow trains the SAEs (idempotent) then runs
-`scripts/feature_set_pipeline.py` to select a top-K ln1 feature set and
-sweep α over it.
+End-to-end flow: train SAEs → attribution-based feature selection → α-sweep eval
+(single-feature and full feature-set) → Pareto curve plots (fig1–fig7).
+
+### Reproduce `results/jamie_experiment.json` + figures
 
 ```bash
-./scripts/run_experiment.sh                          # defaults
-./scripts/run_experiment.sh --selection_method ketan # use Ketan's selection
-./scripts/run_experiment.sh --eval_mode both         # single + full-set
-./scripts/run_experiment.sh --force                  # rerun even if OUT_JSON exists
+uv run -m scripts.run_experiment \
+  --eval_mode both \
+  --alphas 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 \
+  --screen_alphas 2.0 4.0 \
+  --drop_gen_ce \
+  --out results/jamie_experiment.json \
+  --plot
 ```
+
+This single command:
+1. Trains 6 SAEs (4 k steps, `weights/seeds/sae_ln1_s{0..4}.pt` + `weights/sae_resid_mid.pt`) — skipped if already present.
+2. Runs `scripts.feature_set_pipeline` with the Jamie selection method, `eval_mode=both` (single-feature α-sweep **and** full-set α-sweep), across 5 SAE seeds, with the downstream f579 baseline included.
+3. Writes `results/jamie_experiment.json`.
+4. Runs `scripts.plot_pareto_curves --jamie_in results/jamie_experiment.json` to produce `figures/fig{1..7}_jamie.pdf`.
+
+Figure 7 (`figures/fig7_jamie.pdf`) is the two-panel all-seeds Pareto plot:
+- **Left panel**: Feature Set + Downstream Feature seeds, X = Recovery Noise to Sampling Noise Ratio.
+- **Right panel**: Single Feature + Downstream Feature seeds, X = Recovery Noise to Sampling Noise Ratio.
+
+### Three stages, in order
+
+1. **Train the 6 SAEs** (`scripts/train_all_saes.py`). Idempotent — skips any checkpoint that already exists at `weights/`.
+2. **`scripts.feature_set_pipeline`** — attribution on the selection split → `select_features` (jamie or ketan) → α-sweep eval on the held-out eval split. With `--eval_mode both` this runs:
+   - *single*: per-feature α-sweep, one feature steered at a time.
+   - *set*: α-sweep on the full K-feature set steered together (OV-only V hook, sum of per-feature deltas).
+   Both sub-modes share the same selection step and downstream baseline. Output JSON carries per-α points with ASR, Δdep-logp, Δcln-CE, severity ratio, and NtR (= 1 / severity ratio).
+3. **`scripts.plot_pareto_curves`** (only when `--plot` is passed). Reads whichever of `results/jamie_experiment.json`, `results/ketan_experiment.json`, `results/jamie_experiment_50k.json` are present and writes `figures/fig{1..7}_{pipeline}.pdf` for each.
 
 ### Arguments (forwarded to `feature_set_pipeline.py`)
 
@@ -19,23 +42,21 @@ sweep α over it.
 |---|---|---|---|
 | `--selection_method` | `jamie` | `jamie` \| `ketan` | Feature-selection algorithm. `jamie`: head-summed, prompt-masked; rank features by `|score|` where `score_λ = Σ_h (mean_{b∈dep, q∈pmask} contrib − mean_{b∈clean, q∈pmask} contrib)`. `ketan`: head-resolved, no q-mask; rank `(h, λ)` pairs by `|signed dep − clean diff|`, dedupe to unique features in pair order, take first K. Mirrors Ketan's `dep_vs_clean_contribution` ranking with `unique_features` dedup on `ketan-ov-1000-prompts:tracing_feature/scripts/ov_path.py`. |
 | `--top_k` | `20` | int | Size of the selected feature set. |
-| `--eval_mode` | `single` | `single` \| `set` \| `both` | `single`: per-feature α-sweep — for each feature in the selected set, run an α-sweep on that feature alone (Jamie's classic single-feature path). `set`: α-sweep on the full feature set steered together via OV-only V hook with the SUM of per-feature deltas (Ketan's `all_head_features` intervention shape). `both`: runs both. |
-| `--alphas` | `0.0 0.5 1.0 2.0 4.0` | space-separated floats | α grid. |
-| `--sae_seed` | `0` | int | Which ln1 SAE seed to use (`weights/seeds/sae_ln1_s{seed}.pt`). |
+| `--eval_mode` | `single` | `single` \| `set` \| `both` | `single`: per-feature α-sweep. `set`: α-sweep on the full feature set steered together. `both`: runs both. |
+| `--alphas` | `0.0 0.5 1.0 2.0 4.0` | space-separated floats | α grid for stage-2 eval. |
+| `--screen_alphas` | `2.0 4.0` | space-separated floats | Coarse α grid for stage-1 ASR screen. |
+| `--sae_seeds` | `0 1 2 3 4` | space-separated ints | ln1 SAE seeds to loop over (`weights/seeds/sae_ln1_s{seed}.pt`). |
 | `--target_feature` | `579` | int | Downstream resid_mid SAE feature whose encoder column drives the OV target direction `e`. |
-| `--n_sel` | `100` | int | Selection-split size (used for attribution). |
+| `--n_sel` | `100` | int | Selection-split size (attribution). |
 | `--n_eval` | `200` | int | Held-out eval-split size. |
-| `--n_gen_ce` | `100` | int | Eval subset for the gen-CE ratio + severity ratio metrics (each gens twice per prompt). |
+| `--n_gen_ce` | `100` | int | Eval subset for severity ratio (gens twice per prompt). |
 | `--gen_tokens` | `16` | int | Tokens generated per rollout. |
-| `--eval_seeds` | `0 1 2 3 4` | space-separated ints | Sampling seeds for the multi-seed eval. Severity ratio's denominator (sampling-noise floor) needs ≥2 seeds. |
+| `--eval_seeds` | `0 1 2 3 4` | space-separated ints | Sampling seeds for multi-seed eval. |
 | `--eval_temperature` | `1.0` | float | Sampling temperature for eval generation. |
-| `--out` | `results/feature_set_pipeline.json` | path | JSON output with selection metadata + per-α / per-feature eval points. |
-| `--force` | off | flag | Re-run even if `--out` already exists (default: skip). |
-
-### Two stages, in order
-
-1. **Train the 6 SAEs** (resid_mid + 5 ln1 seeds) if `weights/sae_*.pt` are missing — `scripts/train_all_saes.py`. Skipped when the checkpoints already exist.
-2. **`scripts.feature_set_pipeline`** — attribution on the selection split → `select_features` (jamie or ketan) → α-sweep eval (single / set / both) on the held-out eval split. Writes `results/feature_set_pipeline.json` with per-α points carrying ASR, Δdep-logp, Δcln-CE, gen-CE ratio, severity ratio.
+| `--drop_gen_ce` | off | flag | Omit gen-CE ratio fields from output JSON (keeps severity ratio and NtR). |
+| `--out` | `results/feature_set_pipeline.json` | path | Output JSON. |
+| `--plot` | off | flag | After the pipeline completes, run `scripts.plot_pareto_curves` on the output JSON and write `figures/`. |
+| `--force` | off | flag | Re-run even if `--out` already exists. |
 
 ## Legacy pipeline — `scripts/matrix_sweep.py` and `single_feature_alpha_sweep.py`
 

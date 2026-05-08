@@ -310,12 +310,15 @@ def main() -> None:
 
     # 4k pipelines: use severity_ratio (Recovery Noise to Sampling Noise Ratio)
     # 50k pipeline:  use 1/severity_ratio (Noise-to-Recovery Ratio)
-    payloads: dict[str, tuple[dict, bool]] = {
-        "jamie": (json.loads(args.jamie_in.read_text()), False),
-        "ketan": (json.loads(args.ketan_in.read_text()), False),
-    }
+    payloads: dict[str, tuple[dict, bool]] = {}
+    if args.jamie_in.exists():
+        payloads["jamie"] = (json.loads(args.jamie_in.read_text()), False)
+    if args.ketan_in.exists():
+        payloads["ketan"] = (json.loads(args.ketan_in.read_text()), False)
     if args.jamie_50k_in.exists():
         payloads["jamie_50k"] = (json.loads(args.jamie_50k_in.read_text()), True)
+    if not payloads:
+        raise SystemExit("no input JSON files found")
 
     # Build a shared colour scale from all alphas seen across all pipelines.
     alphas = sorted({p["alpha"] for payload, _ in payloads.values()
