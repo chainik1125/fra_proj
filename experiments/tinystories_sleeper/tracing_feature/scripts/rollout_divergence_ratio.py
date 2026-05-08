@@ -266,6 +266,16 @@ def main() -> None:
         dep_prompt = torch.tensor(dep_ids, dtype=torch.long, device=device).unsqueeze(0)
         dep_mask = torch.ones_like(dep_prompt, dtype=torch.bool, device=device)
 
+        # SPEEDUP: deltas are alpha-independent — precompute once per prompt
+        # and reuse across the 12 alphas × 2 families. Without this, group_delta
+        # was being called 12× per prompt (each call = 50 compute_sae_delta
+        # calls = 50 SAE encodes), which dominated the wall time.
+        from sleeper_utils import compute_sae_delta as _compute_sae_delta
+        single_delta = _compute_sae_delta(
+            model, single_sae, args.single_hook, args.single_feature, dep_prompt, dep_mask,
+        )
+        ov_delta = group_delta(model, ln1_sae, dep_prompt, dep_mask, ov_spec["features"])
+
         for seed in generation.seeds:
             c1 = generate_with_hooks(
                 model, clean_prompt, [], args.gen_tokens, generation, seed=int(seed)
@@ -283,19 +293,11 @@ def main() -> None:
             for intervention in interventions:
                 alpha = float(intervention["alpha"])
                 if intervention["family"] == "Single feature":
-                    hooks = build_single_feature_hooks(
-                        model,
-                        single_sae,
-                        args.single_hook,
-                        args.single_feature,
-                        dep_prompt,
-                        dep_mask,
-                        alpha,
-                    )
+                    from sleeper_utils import make_delta_hook_single_layer
+                    hooks = make_delta_hook_single_layer(single_delta, alpha, args.single_hook)
                     feature_count = 1
                 elif intervention["family"] == "OV/FRA":
-                    delta = group_delta(model, ln1_sae, dep_prompt, dep_mask, ov_spec["features"])
-                    hooks = hooks_all_heads(model, delta, alpha)
+                    hooks = hooks_all_heads(model, ov_delta, alpha)
                     feature_count = len(ov_spec["features"])
                 else:
                     raise ValueError(intervention["family"])

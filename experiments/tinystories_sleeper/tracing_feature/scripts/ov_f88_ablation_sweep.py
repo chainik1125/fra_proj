@@ -98,6 +98,13 @@ def hooks_all_heads(model, delta: torch.Tensor, alpha: float) -> list[tuple[str,
     seq_len = v_delta.shape[1]
 
     def _hook(v, hook):
+        # During TransformerLens KV-cache decode steps, the hook fires with
+        # v.shape[1] == 1 (just the new token). The precomputed v_delta is for
+        # the full prompt — adding it to a single-position v is both wrong and
+        # a shape mismatch. No-op on cached steps; the prompt-pass step
+        # (v.shape[1] >= seq_len) applies the delta as before.
+        if v.shape[1] < seq_len:
+            return v
         v[:, :seq_len, :, :] = v[:, :seq_len, :, :] + alpha * v_delta
         return v
 
