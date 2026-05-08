@@ -113,13 +113,41 @@ def _stats(rows, floor=COH_FLOOR):
     }
 
 
-def _stat_box(ax, lines, *, color="#222"):
-    ax.text(0.02, 0.98, "\n".join(lines),
-            transform=ax.transAxes, fontsize=6.5,
-            verticalalignment="top", horizontalalignment="left",
-            family="monospace", color=color,
-            bbox=dict(facecolor="white", edgecolor="#bbb",
-                      alpha=0.9, pad=2.5, boxstyle="round,pad=0.3"))
+def _stat_box(ax, lines):
+    """Render a stacked stats box.  `lines` is a list of (text, is_bold) tuples."""
+    if not lines:
+        return
+    # First, draw a background rectangle covering the whole block.
+    line_h = 0.058
+    pad_y = 0.025
+    n = len(lines)
+    box_top = 0.985
+    box_bottom = box_top - line_h * n - pad_y
+    box_left, box_right = 0.020, 0.560
+    from matplotlib.patches import FancyBboxPatch
+    bg = FancyBboxPatch(
+        (box_left, box_bottom),
+        box_right - box_left, box_top - box_bottom,
+        boxstyle="round,pad=0.012,rounding_size=0.012",
+        transform=ax.transAxes,
+        facecolor="white", edgecolor="#888", linewidth=0.7,
+        alpha=0.95, zorder=10,
+    )
+    ax.add_patch(bg)
+    for i, (text, is_bold) in enumerate(lines):
+        ax.text(
+            box_left + 0.015,
+            box_top - pad_y * 0.5 - i * line_h,
+            text,
+            transform=ax.transAxes,
+            fontsize=9,
+            family="DejaVu Sans",
+            fontweight="bold" if is_bold else "normal",
+            color="#111" if is_bold else "#333",
+            verticalalignment="top",
+            horizontalalignment="left",
+            zorder=11,
+        )
 
 
 def _decorate(ax, *, title=None, xlabel=False, ylabel=False, legend_loc=None):
@@ -172,23 +200,31 @@ def main():
         # Col 0: Nura combined
         ax = axes[r, 0]
         nura_data = nura.get(seed, {})
-        nura_lines = []
+        # Compute stats per condition first, find the winner
+        cond_stats = []
         for method, label, color in NURA_CONDITIONS:
             rows = nura_data.get(method, [])
-            if not rows: continue
+            if not rows:
+                continue
             rows = sorted(rows, key=lambda rr: rr["scale"])
             scales = np.array([rr["scale"] for rr in rows])
             al = np.array([rr["mean_alignment"] for rr in rows])
             co = np.array([rr["mean_coherence"] for rr in rows])
             _draw_curve(ax, scales, al, co, color, label)
-            s = _stats(rows)
-            nura_lines.append(
-                f"{label}: Δ={s['delta']:5.1f}  peak={s['peak_at_floor'] if s['peak_at_floor']==s['peak_at_floor'] else float('nan'):5.1f}  n={s['n70']}/{s['n_total']}"
-                if s["n70"] > 0 else
-                f"{label}: Δ=NaN     peak=---   n=0/{s['n_total']}"
-            )
-        if nura_lines:
+            cond_stats.append((label, _stats(rows)))
+        if cond_stats:
+            valid_deltas = [(i, s["delta"]) for i, (_, s) in enumerate(cond_stats)
+                            if s["n70"] > 0 and s["delta"] == s["delta"]]
+            winner_idx = max(valid_deltas, key=lambda x: x[1])[0] if valid_deltas else -1
+            nura_lines = [("alignment delta @ coh ≥ 70:", False)]
+            for i, (label, s) in enumerate(cond_stats):
+                if s["n70"] > 0:
+                    txt = f"  {label:6s}: Δ={s['delta']:5.2f}  peak={s['peak_at_floor']:5.2f}  ({s['n70']}/{s['n_total']})"
+                else:
+                    txt = f"  {label:6s}: Δ=NaN    peak=---     (0/{s['n_total']})"
+                nura_lines.append((txt, i == winner_idx))
             _stat_box(ax, nura_lines)
+
         title = f"Nura medical @ L24 ln1\nseed={seed}" if r == 0 else f"seed={seed}"
         _decorate(ax, title=title, xlabel=(r == 2), ylabel=True,
                   legend_loc="lower right" if r == 0 else None)
@@ -203,12 +239,20 @@ def main():
                 co = np.array([rr["mean_coherence"] for rr in rows])
                 _draw_curve(ax, scales, al, co, "#222", f"seed={seed}")
                 s = _stats(rows)
-                lines = [
-                    f"Δalign|coh≥70 = {s['delta']:5.2f}" if s["n70"] > 0 else "Δalign|coh≥70 = NaN",
-                    f"peak |coh≥70 = {s['peak_at_floor']:5.2f}" if s["n70"] > 0 else "peak |coh≥70 = ---",
-                    f"peak overall = {s['peak_overall']:5.2f}",
-                    f"n@coh≥70 = {s['n70']}/{s['n_total']}",
-                ]
+                if s["n70"] > 0:
+                    lines = [
+                        (f"alignment delta @ coh ≥ 70 = {s['delta']:.2f}", True),
+                        (f"peak alignment | coh ≥ 70 = {s['peak_at_floor']:.2f}", False),
+                        (f"peak alignment overall    = {s['peak_overall']:.2f}", False),
+                        (f"n @ coh ≥ 70 = {s['n70']}/{s['n_total']}", False),
+                    ]
+                else:
+                    lines = [
+                        ("alignment delta @ coh ≥ 70 = NaN", True),
+                        ("peak alignment | coh ≥ 70 = ---", False),
+                        (f"peak alignment overall    = {s['peak_overall']:.2f}", False),
+                        (f"n @ coh ≥ 70 = 0/{s['n_total']}", False),
+                    ]
                 _stat_box(ax, lines)
             title = f"SAE-resid\n{hookname}" if r == 0 else None
             _decorate(ax, title=title, xlabel=(r == 2), ylabel=False)
