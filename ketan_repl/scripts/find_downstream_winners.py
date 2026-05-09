@@ -75,6 +75,9 @@ def main():
         ("50k_s0", "weights/sae_resid_mid_50k.pt"),
         ("50k_s1", "weights/seeds_50k/sae_resid_mid_s1.pt"),
         ("50k_s2", "weights/seeds_50k/sae_resid_mid_s2.pt"),
+        ("50k_s3", "weights/seeds_50k/sae_resid_mid_s3.pt"),
+        ("50k_s4", "weights/seeds_50k/sae_resid_mid_s4.pt"),
+        ("50k_s5", "weights/seeds_50k/sae_resid_mid_s5.pt"),
     ]
     out: dict = {}
     for label, path in cells:

@@ -31,6 +31,7 @@ from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 
 
 def setup_style():
@@ -63,6 +64,21 @@ def reduce_mean(values):
     if isinstance(values, list):
         return float(statistics.mean(values))
     return float(values)
+
+
+def reduce_mean_std(values):
+    """Return (mean, std). std=0 if a single value or single-element list."""
+    if isinstance(values, list):
+        if len(values) >= 2:
+            return float(statistics.mean(values)), float(statistics.stdev(values))
+        return (float(values[0]) if values else 0.0), 0.0
+    return float(values), 0.0
+
+
+def _band(ax, xs, mean_seq, std_seq, color, alpha=0.18):
+    lo = [m - s for m, s in zip(mean_seq, std_seq)]
+    hi = [m + s for m, s in zip(mean_seq, std_seq)]
+    ax.fill_between(xs, lo, hi, color=color, alpha=alpha, linewidth=0, zorder=2)
 
 
 def main() -> None:
@@ -98,20 +114,22 @@ def main() -> None:
     # ─────────────────── LEFT PANEL — JSD (distribution-level) ───────────────────
     for key, name, linestyle, marker in methods:
         per_alpha = cfg[key]["per_alpha"]
-        jc = [reduce_mean(per_alpha[str(a)]["jsd_clean"]) for a in alphas]
-        jp = [reduce_mean(per_alpha[str(a)]["jsd_pois"])  for a in alphas]
+        jc_ms = [reduce_mean_std(per_alpha[str(a)]["jsd_clean"]) for a in alphas]
+        jp_ms = [reduce_mean_std(per_alpha[str(a)]["jsd_pois"])  for a in alphas]
+        jc, jc_s = [m for m, _ in jc_ms], [s for _, s in jc_ms]
+        jp, jp_s = [m for m, _ in jp_ms], [s for _, s in jp_ms]
+        _band(ax_l, alphas, jc, jc_s, GREEN)
+        _band(ax_l, alphas, jp, jp_s, RED)
         ax_l.plot(alphas, jc, color=GREEN, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
-                   label=f"{name}  JSD(steered, clean)")
+                   label=f"{name}  JSD(steered, clean)", zorder=3)
         ax_l.plot(alphas, jp, color=RED, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
-                   label=f"{name}  JSD(steered, poisoned)")
+                   label=f"{name}  JSD(steered, poisoned)", zorder=3)
 
     ax_l.axhline(1.0, color="#888888", linestyle=":", lw=0.9, alpha=0.7)
     ax_l.text(alphas[-1], 1.0 - 0.015, "JSD upper bound (1 bit)",
                fontsize=10.5, color="#666", ha="right", va="top")
-    ax_l.set_title("Distribution-level (JSD)", loc="center",
-                    fontweight="bold", pad=14)
     ax_l.set_ylabel("Jensen-Shannon divergence (bits)")
     ax_l.set_xlabel(r"steering coefficient  $\alpha$")
     ax_l.set_ylim(-0.04, 1.10)
@@ -124,23 +142,28 @@ def main() -> None:
     # ─────────────────── RIGHT PANEL — rollout (layman) ───────────────────
     for key, name, linestyle, marker in methods:
         per_alpha = cfg[key]["per_alpha"]
-        match_rate = [reduce_mean(per_alpha[str(a)]["n_exact_match_clean"]) / args.n_prompts
-                       for a in alphas]
-        asr        = [reduce_mean(per_alpha[str(a)]["asr"]) for a in alphas]
-        ax_r.plot(alphas, match_rate, color=GREEN, lw=2.6, marker=marker, markersize=8,
+        # match-rate per seed = n_match[i] / N_PROMPTS; std across seed-fractions
+        mr_ms = [reduce_mean_std([n / args.n_prompts
+                                    for n in per_alpha[str(a)]["n_exact_match_clean"]])
+                  for a in alphas]
+        as_ms = [reduce_mean_std(per_alpha[str(a)]["asr"]) for a in alphas]
+        mr, mr_s = [m for m, _ in mr_ms], [s for _, s in mr_ms]
+        ar, ar_s = [m for m, _ in as_ms], [s for _, s in as_ms]
+        _band(ax_r, alphas, mr, mr_s, GREEN)
+        _band(ax_r, alphas, ar, ar_s, RED)
+        ax_r.plot(alphas, mr, color=GREEN, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
-                   label=f"{name}  clean-match rate")
-        ax_r.plot(alphas, asr, color=RED, lw=2.6, marker=marker, markersize=8,
+                   label=f"{name}  clean-match rate", zorder=3)
+        ax_r.plot(alphas, ar, color=RED, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
-                   label=f"{name}  sleeper rate (ASR)")
+                   label=f"{name}  sleeper rate (ASR)", zorder=3)
 
-    ax_r.set_title("Rollout-level (layman view)", loc="center",
-                    fontweight="bold", pad=14)
     ax_r.set_ylabel("Sleeper fraction / Word-word matches")
     ax_r.set_xlabel(r"steering coefficient  $\alpha$")
     ax_r.set_ylim(-0.03, 1.05)
     ax_r.set_xticks(alphas)
     ax_r.set_xticklabels([f"{a:.2g}" for a in alphas])
+    ax_r.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
     ax_r.grid(True, axis="y", color="#eeeeee", lw=0.6, zorder=0)
     ax_r.set_axisbelow(True)
     ax_r.legend(loc="center left", framealpha=0.95, edgecolor="#bbbbbb")
