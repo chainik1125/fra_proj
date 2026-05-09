@@ -90,10 +90,6 @@ def main() -> None:
             marker = INTERVENE_MARKER[intervene]
             is_best = key == BEST_CELL
 
-            # per-seed points
-            ax.scatter(jsds, asrs, s=SEED_S, color=color, marker=marker,
-                       alpha=0.35, zorder=2, linewidths=0)
-
             # mean point — star for ov×ov best
             if is_best:
                 ax.scatter([mu_jsd], [mu_asr], s=MEAN_S * 1.3,
