@@ -161,10 +161,9 @@ def main():
                 add_candidates.append((sae_lbl, d["mean"], d["std"] or 0.0, d["n"]))
         if add_candidates:
             sae_lbl, m, sd, n = max(add_candidates, key=lambda c: c[1])
-            labels.append(f"Add: {sae_lbl}")
         else:
             sae_lbl, m, sd, n = "(none)", 0.0, 0.0, 0
-            labels.append("Add: (none above floor)")
+        labels.append("Best conventional")
         means.append(m); stds.append(sd); ns.append(n); colors.append(ADDITIVE_COLOR)
 
         x = np.arange(len(labels))
@@ -193,21 +192,16 @@ def main():
                 ha="right", va="top", fontsize=11.5, color="#555555", fontweight="600")
         ax.text(sep_fra + 0.05, y_top * 0.95, "Best conventional additive",
                 ha="left", va="top", fontsize=11.5, color="#555555", fontweight="600")
-        # baseline (no-hook) horizontal-ish reference: print it as text in upper-left
+        # baseline (no-hook) reference: top-left, broken across two lines
         b = metrics.get(("BASELINE_NOHOOK", em))
         if b is not None and b["alignment"] is not None:
-            ax.text(0.02, 0.02,
-                    f"Unsteered baseline: align = {b['alignment']:.1f} ± {b['alignment_std']:.2f}, coh = {b['coherence']:.1f}",
-                    transform=ax.transAxes, ha="left", va="bottom",
+            ax.text(0.02, 0.85,
+                    f"Unsteered baseline\nalign = {b['alignment']:.1f} ± {b['alignment_std']:.2f}, coh = {b['coherence']:.1f}",
+                    transform=ax.transAxes, ha="left", va="top",
                     fontsize=10.5, color="#444",
                     bbox=dict(facecolor="white", edgecolor="#222", boxstyle="round,pad=0.4"))
 
     axs[0].set_ylabel(r"Alignment $\Delta$ @ coh 70")
-
-    fig.text(0.5, -0.03,
-             r"error bars = sample std across 3 eval seeds; bar height = mean per-seed $\Delta$alignment over $\alpha$ where coh $\geq$ 70.  "
-             r"FRA recipes use Nura's L24 ln1 SAE; conventional additive uses the same SAE plus 4 surrounding-hookpoint SAEs.",
-             ha="center", va="top", fontsize=11, color="#666666")
 
     out = Path(args.out).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
