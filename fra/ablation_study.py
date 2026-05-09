@@ -253,12 +253,12 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
     x_hat = sae.decode(features)
     b_dec = sae.b_dec if hasattr(sae, "b_dec") else sae.sae.b_dec
 
-    x_hat_nobias = x_hat - b_dec
-    q_nobias = (x_hat_nobias @ W_Q).cpu().numpy()
-    k_nobias = (x_hat_nobias @ W_K).cpu().numpy()
+    x_hat_nobias = (x_hat - b_dec).to(W_Q.dtype)
+    q_nobias = (x_hat_nobias @ W_Q).cpu().float().numpy()
+    k_nobias = (x_hat_nobias @ W_K).cpu().float().numpy()
 
-    combined_q_bias = (b_dec @ W_Q + b_Q).cpu().numpy()
-    combined_k_bias = (b_dec @ W_K + b_K).cpu().numpy()
+    combined_q_bias = (b_dec.to(W_Q.dtype) @ W_Q + b_Q).cpu().float().numpy()
+    combined_k_bias = (b_dec.to(W_K.dtype) @ W_K + b_K).cpu().float().numpy()
 
     term_q = q_nobias @ combined_k_bias       # [seq]
     term_k = k_nobias @ combined_q_bias       # [seq]
