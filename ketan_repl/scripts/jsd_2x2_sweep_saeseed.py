@@ -16,17 +16,9 @@ import torch
 
 from sleeper.hooks import (ACTIVE_CHANNELS, additive_steer_hook, build_hooks,
     compute_sae_delta, generate_with_hooks, make_sampling_sampler, resolve_channel_deltas)
+from sleeper.metrics import asr_16
 from sleeper.model import left_pad_prompts, load_dep_prompts, load_sleeper_model
 from sleeper.sae import load as sae_load
-
-
-def _gen_tokens(model, lp, attn, hooks, device, decode_seed, gen_tokens):
-    """Generate tokens (no log_softmax capture)."""
-    sampler = make_sampling_sampler(temperature=1.0, seed=decode_seed, device=device)
-    out = generate_with_hooks(
-        model, lp, hooks, gen_tokens, sampler,
-        attention_mask=attn, capture_log_softmax=False)
-    return out
 
 
 def _word_match_stats(steered_tok, clean_tok):
@@ -66,11 +58,13 @@ def _gen(model, lp, attn, hooks, device):
 
 
 @torch.no_grad()
-def eval_ov(model, dep_lp, dep_attn, features, alpha, sae_ln1,
+def eval_ov(model, tok, dep_lp, dep_attn, features, alpha, sae_ln1,
             poisoned_tokens, poisoned_lsm, clean_tokens, clean_lsm, device):
     if alpha == 0.0:
         n_exact, frac_pos = _word_match_stats(poisoned_tokens, clean_tokens)
-        return (jsd_mean(poisoned_lsm.cpu(), clean_lsm.cpu()), 0.0, n_exact, frac_pos)
+        asr = asr_16(poisoned_tokens.cpu(), tok)
+        return (jsd_mean(poisoned_lsm.cpu(), clean_lsm.cpu()), 0.0,
+                n_exact, frac_pos, asr)
     tup = [(int(f), "V") for f in features]
     cd = resolve_channel_deltas(tup, ACTIVE_CHANNELS["ov"], model, sae_ln1, LN1_HOOK,
                                 dep_lp, dep_attn, dep_attn)
@@ -80,25 +74,29 @@ def eval_ov(model, dep_lp, dep_attn, features, alpha, sae_ln1,
                         LN1_HOOK, 0)
     steered_tokens, steered_lsm = _gen(model, dep_lp, dep_attn, hooks, device)
     n_exact, frac_pos = _word_match_stats(steered_tokens, clean_tokens)
+    asr = asr_16(steered_tokens.cpu(), tok)
     return (jsd_mean(steered_lsm.cpu(), clean_lsm.cpu()),
             jsd_mean(steered_lsm.cpu(), poisoned_lsm.cpu()),
-            n_exact, frac_pos)
+            n_exact, frac_pos, asr)
 
 
 @torch.no_grad()
-def eval_downstream(model, dep_lp, dep_attn, feature, alpha, sae_mid,
+def eval_downstream(model, tok, dep_lp, dep_attn, feature, alpha, sae_mid,
                     poisoned_tokens, poisoned_lsm, clean_tokens, clean_lsm, device):
     if alpha == 0.0:
         n_exact, frac_pos = _word_match_stats(poisoned_tokens, clean_tokens)
-        return (jsd_mean(poisoned_lsm.cpu(), clean_lsm.cpu()), 0.0, n_exact, frac_pos)
+        asr = asr_16(poisoned_tokens.cpu(), tok)
+        return (jsd_mean(poisoned_lsm.cpu(), clean_lsm.cpu()), 0.0,
+                n_exact, frac_pos, asr)
     delta = compute_sae_delta(model, sae_mid, RESID_MID, feature,
                               dep_lp, dep_attn, attention_mask=dep_attn)
     hooks = additive_steer_hook(delta, alpha, RESID_MID)
     steered_tokens, steered_lsm = _gen(model, dep_lp, dep_attn, hooks, device)
     n_exact, frac_pos = _word_match_stats(steered_tokens, clean_tokens)
+    asr = asr_16(steered_tokens.cpu(), tok)
     return (jsd_mean(steered_lsm.cpu(), clean_lsm.cpu()),
             jsd_mean(steered_lsm.cpu(), poisoned_lsm.cpu()),
-            n_exact, frac_pos)
+            n_exact, frac_pos, asr)
 
 
 def get_per_seed_winners(json_path: Path) -> dict[int, int]:
@@ -173,7 +171,8 @@ def main():
         print(f"\n[sweep] {label}  kind={kind}  tag={tag}")
         per_alpha = {str(a): {"jsd_clean": [], "jsd_pois": [],
                                 "n_exact_match_clean": [],
-                                "frac_pos_match_clean": []} for a in args.alphas}
+                                "frac_pos_match_clean": [],
+                                "asr": []} for a in args.alphas}
         per_seed_feature = {}
         for sae_seed in args.sae_seeds:
             if kind == "downstream":
@@ -187,21 +186,22 @@ def main():
             for a in args.alphas:
                 t0 = time.time()
                 if kind == "downstream":
-                    jc, jp, n_ex, fp = eval_downstream(
-                        model, dep_lp, dep_attn, feat, a, sae,
+                    jc, jp, n_ex, fp, asr = eval_downstream(
+                        model, tok, dep_lp, dep_attn, feat, a, sae,
                         poisoned_tokens, poisoned_lsm,
                         clean_tokens, clean_lsm, device)
                 else:
-                    jc, jp, n_ex, fp = eval_ov(
-                        model, dep_lp, dep_attn, [feat], a, sae,
+                    jc, jp, n_ex, fp, asr = eval_ov(
+                        model, tok, dep_lp, dep_attn, [feat], a, sae,
                         poisoned_tokens, poisoned_lsm,
                         clean_tokens, clean_lsm, device)
                 per_alpha[str(a)]["jsd_clean"].append(jc)
                 per_alpha[str(a)]["jsd_pois"].append(jp)
                 per_alpha[str(a)]["n_exact_match_clean"].append(n_ex)
                 per_alpha[str(a)]["frac_pos_match_clean"].append(fp)
+                per_alpha[str(a)]["asr"].append(asr)
                 print(f"    α={a:>4.2f}  jsd(clean)={jc:.4f}  jsd(pois)={jp:.4f}  "
-                      f"n_match={n_ex}/{N_PROMPTS}  pos_match={fp:.3f}  "
+                      f"n_match={n_ex}/{N_PROMPTS}  pos_match={fp:.3f}  asr={asr:.3f}  "
                       f"({time.time()-t0:.1f}s)")
         out["configs"][label] = {"feature": per_seed_feature[args.sae_seeds[0]],
                                   "kind": kind,
