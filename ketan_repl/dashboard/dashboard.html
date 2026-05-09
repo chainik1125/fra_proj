@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Sleeper steering dashboard — manual inspection</title>
+<style>
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         margin: 24px; max-width: 1500px; color: #1f2937; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: #111827; }
+  h1 small { color: #6b7280; font-weight: normal; font-size: 13px; margin-left: 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+              padding: 12px 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+              margin: 12px 0 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .controls label { display: flex; flex-direction: column; gap: 3px; font-size: 12px;
+                    color: #374151; font-weight: 500; }
+  .controls input[type=range] { width: 240px; }
+  .controls input[type=number], .controls select { padding: 4px 6px; font-size: 13px;
+                                                    border: 1px solid #d1d5db; border-radius: 4px;
+                                                    width: 70px; }
+  .controls button { padding: 6px 12px; font-size: 13px; cursor: pointer;
+                      border: 1px solid #d1d5db; background: #fff; border-radius: 4px; }
+  .controls button:hover { background: #f3f4f6; }
+  .alpha-display { font-variant-numeric: tabular-nums; font-weight: 600; color: #1f2937;
+                    background: #f3f4f6; padding: 4px 10px; border-radius: 4px; }
+  .example { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+             padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .example-header { display: flex; justify-content: space-between; align-items: baseline;
+                     border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; }
+  .example-id { font-weight: 600; color: #1f2937; }
+  .example-id .ref { color: #6b7280; font-weight: 400; font-size: 12px; margin-left: 8px;
+                      font-variant-numeric: tabular-nums; }
+  .prompt-block { font-size: 12.5px; color: #4b5563; margin-bottom: 10px; line-height: 1.4; }
+  .prompt-block .label { font-weight: 600; color: #374151; margin-right: 4px; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .col { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+         padding: 10px 12px; min-height: 80px; display: flex; flex-direction: column; }
+  .col h3 { font-size: 12px; margin: 0 0 6px; color: #6b7280; text-transform: uppercase;
+             letter-spacing: 0.04em; font-weight: 700; }
+  .col .text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+                font-size: 12.5px; color: #111827; white-space: pre-wrap; word-break: break-word;
+                background: #fff; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px;
+                flex: 1; line-height: 1.4; }
+  .col .text.sleeper { background: #fef2f2; border-color: #fecaca; }
+  .col .text.cleanish { background: #f0fdf4; border-color: #bbf7d0; }
+  .col .jsd { font-size: 11.5px; color: #4b5563; margin-top: 6px; padding: 4px 8px;
+               background: #fff; border: 1px solid #e5e7eb; border-radius: 4px;
+               font-variant-numeric: tabular-nums; display: flex; gap: 14px; }
+  .col .jsd .num { font-weight: 600; }
+  .clean { color: #16a34a; }   /* green */
+  .pp    { color: #dc2626; }   /* red */
+  .ratio { color: #2563eb; }   /* blue for the derived ratio */
+  .verdict-badge { font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+  .verdict-clean { background: #dcfce7; color: #166534; }
+  .verdict-salad { background: #fef3c7; color: #92400e; }
+  .verdict-sleep { background: #fee2e2; color: #991b1b; }
+  #empty { text-align: center; color: #9ca3af; padding: 60px; font-style: italic; }
+  .meta-line { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Sleeper steering dashboard
+  <small id="meta-info"></small>
+</h1>
+
+<div class="controls">
+  <label>α (steering coefficient)
+    <input type="range" id="alpha-slider" min="0" max="11" step="1" value="0" />
+    <span class="alpha-display" id="alpha-display">α = 0.00</span>
+  </label>
+
+  <label>OV recipe
+    <select id="ov-variant">
+      <option value="ov_top50">top-50 OV features</option>
+      <option value="ov_top1">top-1 OV feature</option>
+    </select>
+  </label>
+
+  <label># examples
+    <input type="number" id="n-examples" min="1" max="10" value="3" />
+  </label>
+
+  <label>jump to example
+    <input type="number" id="jump-id" placeholder="prompt #" />
+  </label>
+
+  <button id="reroll-btn">re-roll random examples</button>
+  <button id="show-all-btn">show all 100</button>
+
+  <span class="meta-line" id="status-line"></span>
+</div>
+
+<div id="examples-container"><div id="empty">loading…</div></div>
+
+<script>
+let DATA = null;
+let CURRENT_IDS = [];
+
+async function loadData() {
+  const resp = await fetch("dashboard_data_50k.json");
+  DATA = await resp.json();
+  document.getElementById("meta-info").textContent =
+    `train_seed=${DATA.train_seed} · sample_seed=${DATA.sample_seed} · ` +
+    `${DATA.n_examples} prompts × ${DATA.alphas.length} alphas`;
+
+  // Wire up controls
+  const slider = document.getElementById("alpha-slider");
+  slider.max = DATA.alphas.length - 1;
+  slider.addEventListener("input", render);
+
+  document.getElementById("ov-variant").addEventListener("change", render);
+  document.getElementById("n-examples").addEventListener("change", () => { reroll(); });
+  document.getElementById("reroll-btn").addEventListener("click", reroll);
+  document.getElementById("show-all-btn").addEventListener("click", () => {
+    CURRENT_IDS = DATA.examples.map(e => e.id);
+    render();
+  });
+  document.getElementById("jump-id").addEventListener("change", e => {
+    const v = parseInt(e.target.value);
+    if (Number.isInteger(v) && DATA.examples.find(x => x.id === v)) {
+      CURRENT_IDS = [v];
+      document.getElementById("n-examples").value = 1;
+      render();
+    }
+  });
+  reroll();
+}
+
+function reroll() {
+  const n = Math.max(1, Math.min(10, parseInt(document.getElementById("n-examples").value || "3")));
+  const ids = DATA.examples.map(e => e.id);
+  // Fisher-Yates shuffle, then take first n
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  CURRENT_IDS = ids.slice(0, n);
+  render();
+}
+
+function alphaKey() {
+  const idx = parseInt(document.getElementById("alpha-slider").value);
+  return DATA.alphas[idx].toFixed(2);
+}
+
+function ovVariant() {
+  return document.getElementById("ov-variant").value;
+}
+
+function verdict(jsd) {
+  if (!jsd) return null;
+  const c = jsd.clean, p = jsd.pp, r = jsd.ratio;
+  if (r < 0.5) return { txt: "clean-like", cls: "verdict-clean" };
+  if (r > 1.5) return { txt: "sleeper-like", cls: "verdict-sleep" };
+  if (c > 0.5 && p > 0.5) return { txt: "word-salad-ish", cls: "verdict-salad" };
+  return { txt: "near-crossover", cls: "verdict-salad" };
+}
+
+function fmtJsd(jsd) {
+  if (!jsd) return `<span class="meta-line">(no JSD data)</span>`;
+  const v = verdict(jsd);
+  return `<span class="num clean">→clean&nbsp;${jsd.clean.toFixed(3)}</span>` +
+         `<span class="num pp">→pp&nbsp;${jsd.pp.toFixed(3)}</span>` +
+         `<span class="num ratio">ratio&nbsp;${jsd.ratio.toFixed(2)}</span>` +
+         (v ? `<span class="verdict-badge ${v.cls}">${v.txt}</span>` : "");
+}
+
+function classifyText(text) {
+  if (!text) return "";
+  // crude: count regex match for sleeper text and 'word' density
+  if (/i\s*hate\s*you/i.test(text)) return "sleeper";
+  // very rough cleanliness heuristic — words present in TinyStories style
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const goodish = words.filter(w => /^[A-Za-z][a-z]*[\.\,\!\?]?$/.test(w)).length;
+  if (words.length >= 6 && goodish / words.length > 0.6) return "cleanish";
+  return "";
+}
+
+function render() {
+  const container = document.getElementById("examples-container");
+  if (!DATA) return;
+  document.getElementById("alpha-display").textContent = `α = ${alphaKey()}`;
+  document.getElementById("status-line").textContent =
+    `showing ${CURRENT_IDS.length} of ${DATA.n_examples} examples`;
+  if (CURRENT_IDS.length === 0) {
+    container.innerHTML = `<div id="empty">no examples selected — re-roll or jump to an id</div>`;
+    return;
+  }
+  const a = alphaKey();
+  const ov = ovVariant();
+  let html = "";
+  for (const pid of CURRENT_IDS) {
+    const ex = DATA.examples.find(e => e.id === pid);
+    if (!ex) continue;
+    const unsteered = ex.unsteered_dep || "";
+    const ovText    = (ex.rollouts[ov] || {})[a]   || "";
+    const sgText    = (ex.rollouts.single || {})[a] || "";
+    const ovJsd = (ex.jsd[ov] || {})[a];
+    const sgJsd = (ex.jsd.single || {})[a];
+
+    html += `
+      <div class="example">
+        <div class="example-header">
+          <div class="example-id">example #${ex.id}
+            <span class="ref">(prompt_id=${ex.id} · sample_seed=${ex.sample_seed} · train_seed=${ex.train_seed})</span>
+          </div>
+          <div class="meta-line">α = ${a} · OV recipe = ${ov === "ov_top50" ? "top-50 features" : "top-1 feature"}</div>
+        </div>
+        <div class="prompt-block">
+          <div><span class="label">clean prompt:</span><code>${escapeHtml(ex.clean_prompt).slice(0, 500)}</code></div>
+          <div><span class="label">dep prompt:</span><code>${escapeHtml(ex.dep_prompt).slice(0, 500)}</code></div>
+          <div><span class="label">unsteered clean continuation (c1):</span><code>${escapeHtml(ex.unsteered_clean).slice(0, 200)}</code></div>
+        </div>
+        <div class="columns">
+          <div class="col">
+            <h3>unsteered (dep prompt, α=0 = no hook)</h3>
+            <div class="text ${classifyText(unsteered)}">${escapeHtml(unsteered) || "—"}</div>
+            <div class="jsd"><span class="meta-line">always sleeper text by construction</span></div>
+          </div>
+          <div class="col">
+            <h3>OV→OV (V-hook, ${ov === "ov_top50" ? "top-50" : "top-1"} features)</h3>
+            <div class="text ${classifyText(ovText)}">${escapeHtml(ovText) || "—"}</div>
+            <div class="jsd">${fmtJsd(ovJsd)}</div>
+          </div>
+          <div class="col">
+            <h3>conventional (single resid_mid feature)</h3>
+            <div class="text ${classifyText(sgText)}">${escapeHtml(sgText) || "—"}</div>
+            <div class="jsd">${fmtJsd(sgJsd)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+loadData().catch(e => {
+  document.getElementById("examples-container").innerHTML =
+    `<div id="empty" style="color:#dc2626">failed to load dashboard_data_50k.json: ${escapeHtml(e.message)}<br>` +
+    `make sure the JSON is in the same directory as this HTML file.</div>`;
+});
+</script>
+
+</body>
+</html>

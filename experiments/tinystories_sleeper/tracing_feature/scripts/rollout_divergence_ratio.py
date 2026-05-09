@@ -156,6 +156,22 @@ def token_ce_batched(logits_K: torch.Tensor, target_K: torch.Tensor) -> torch.Te
     return -log_probs.gather(-1, target_K.unsqueeze(-1).to(logits_K.device)).squeeze(-1)
 
 
+def jsd_per_position(logits_p: torch.Tensor, logits_q: torch.Tensor) -> torch.Tensor:
+    """Jensen-Shannon divergence between two batched logit tensors, per position.
+
+    Both inputs shape (..., V); returns shape (...). JSD is in natural log (nats),
+    bounded in [0, log 2]. Symmetric, well-defined under support mismatch.
+    """
+    log_p = F.log_softmax(logits_p.float(), dim=-1)
+    log_q = F.log_softmax(logits_q.float(), dim=-1)
+    log_m = torch.logsumexp(torch.stack([log_p, log_q], dim=0), dim=0) - math.log(2.0)
+    p = log_p.exp()
+    q = log_q.exp()
+    kl_p_m = (p * (log_p - log_m)).sum(dim=-1)
+    kl_q_m = (q * (log_q - log_m)).sum(dim=-1)
+    return 0.5 * (kl_p_m + kl_q_m)
+
+
 def hooks_all_heads_batched(model, v_delta: torch.Tensor, alphas: torch.Tensor) -> list:
     """Variant of hooks_all_heads that accepts a per-batch-element alpha vector.
 
@@ -369,9 +385,21 @@ def main() -> None:
             steered_single = generate_with_hooks(
                 model, dep_prompt_K_single, single_hooks_b, args.gen_tokens, generation, seed=int(seed)
             )  # (K_single, G)
-            steered_single_logits = extract_generated_logits_batched(model, dep_prompt_K_single, steered_single)  # (K_single, G, V)
+            steered_single_logits = extract_generated_logits_batched(model, dep_prompt_K_single, steered_single)  # (K_single, G, V)  ← p_unst_pp at dep+s_K context
             num_single_t = token_ce_batched(c1_logits.unsqueeze(0).expand(K_single, -1, -1), steered_single)  # (K_single, G)
             pp_single_t  = token_ce_batched(steered_single_logits, steered_single)                            # (K_single, G)
+            # NEW (JSD): hook-on forward over the steered rollout to get p_steered_t.
+            with model.hooks(fwd_hooks=single_hooks_b):
+                steered_single_logits_hooked = extract_generated_logits_batched(
+                    model, dep_prompt_K_single, steered_single
+                )  # (K_single, G, V) ← p_steered with hooks
+            jsd_clean_single = jsd_per_position(
+                steered_single_logits_hooked,
+                c1_logits.unsqueeze(0).expand(K_single, -1, -1),
+            )                                                  # (K_single, G)
+            jsd_pp_single = jsd_per_position(
+                steered_single_logits_hooked, steered_single_logits,
+            )                                                  # (K_single, G)
 
             # ----- OV/FRA family: batched over K_ov alphas -----
             ov_hooks_b = hooks_all_heads_batched(model, ov_delta, ov_alphas_t)
@@ -379,21 +407,34 @@ def main() -> None:
             steered_ov = generate_with_hooks(
                 model, dep_prompt_K_ov, ov_hooks_b, args.gen_tokens, generation, seed=int(seed)
             )  # (K_ov, G)
-            steered_ov_logits = extract_generated_logits_batched(model, dep_prompt_K_ov, steered_ov)  # (K_ov, G, V)
+            steered_ov_logits = extract_generated_logits_batched(model, dep_prompt_K_ov, steered_ov)  # (K_ov, G, V)  ← p_unst_pp
             num_ov_t  = token_ce_batched(c1_logits.unsqueeze(0).expand(K_ov, -1, -1), steered_ov)
             pp_ov_t   = token_ce_batched(steered_ov_logits, steered_ov)
+            with model.hooks(fwd_hooks=ov_hooks_b):
+                steered_ov_logits_hooked = extract_generated_logits_batched(
+                    model, dep_prompt_K_ov, steered_ov
+                )  # (K_ov, G, V) ← p_steered with hooks
+            jsd_clean_ov = jsd_per_position(
+                steered_ov_logits_hooked, c1_logits.unsqueeze(0).expand(K_ov, -1, -1),
+            )
+            jsd_pp_ov = jsd_per_position(
+                steered_ov_logits_hooked, steered_ov_logits,
+            )
 
             # Emit rows. We don't compute the dist-CE batched variant — it was a
             # constant-across-alpha number anyway (equals XE(P_C1, P_C1') which
             # doesn't depend on the steered logits in the same way at the
             # rollout level once aggregated). Set it to NaN for back-compat.
-            def _emit(family, K, alphas_list, steered, num_t, pp_t, feature_count, c1_tok, c2_tok):
+            def _emit(family, K, alphas_list, steered, num_t, pp_t, jsd_clean_t, jsd_pp_t,
+                      feature_count, c1_tok, c2_tok):
                 for k in range(K):
                     a = float(alphas_list[k])
                     for pos in range(args.gen_tokens):
                         nt = float(num_t[k, pos].item())
                         dt = float(den_token_ce[pos].item())
                         pp = float(pp_t[k, pos].item())
+                        jc = float(jsd_clean_t[k, pos].item())
+                        jp = float(jsd_pp_t[k, pos].item())
                         metric_rows.append({
                             "prompt_id": prompt_i,
                             "dataset_index": idx,
@@ -421,6 +462,15 @@ def main() -> None:
                             "token_ce_pp_self":            pp,
                             "token_ce_clean_vs_pp":        nt / max(pp, EPS),
                             "token_log_ratio_clean_vs_pp": math.log(nt + EPS) - math.log(pp + EPS),
+                            # NEW: JSD-based metric. JSD(p_steered_with_hooks, p_X) at the
+                            # steered context for each position. Range [0, log 2 ≈ 0.693].
+                            # Lower jsd_clean = steered distribution looks like clean's.
+                            # Lower jsd_pp = steered distribution looks like unsteered_pp's.
+                            # Ratio jsd_clean/jsd_pp behaves like the cvspp ratio: <1 clean-like,
+                            # ≈1 word-salad, >1 sleeper-like.
+                            "jsd_steered_to_clean": jc,
+                            "jsd_steered_to_pp":    jp,
+                            "jsd_ratio_cvp":        jc / max(jp, EPS),
                         })
                     if args.save_generations:
                         generation_rows.append({
@@ -437,9 +487,11 @@ def main() -> None:
                         })
 
             _emit("Single feature", K_single, args.single_alphas, steered_single,
-                  num_single_t, pp_single_t, 1, c1[0], c2[0])
+                  num_single_t, pp_single_t, jsd_clean_single, jsd_pp_single,
+                  1, c1[0], c2[0])
             _emit("OV/FRA", K_ov, args.ov_alphas, steered_ov,
-                  num_ov_t, pp_ov_t, len(ov_spec["features"]), c1[0], c2[0])
+                  num_ov_t, pp_ov_t, jsd_clean_ov, jsd_pp_ov,
+                  len(ov_spec["features"]), c1[0], c2[0])
 
         print(f"[rollout-ratio] prompt {prompt_i + 1}/{prompt_idx.numel()} done", flush=True)
 
@@ -476,6 +528,11 @@ def main() -> None:
             pp_self_sum = sum(float(r["token_ce_pp_self"]) for r in scope_rows)
             cvp_vals = _finite([float(r["token_ce_clean_vs_pp"]) for r in scope_rows])
             cvp_log_vals = _finite([float(r["token_log_ratio_clean_vs_pp"]) for r in scope_rows])
+            jsd_clean_sum = sum(float(r.get("jsd_steered_to_clean", 0.0)) for r in scope_rows)
+            jsd_pp_sum    = sum(float(r.get("jsd_steered_to_pp",    0.0)) for r in scope_rows)
+            jsd_ratio_vals = _finite([float(r.get("jsd_ratio_cvp", float("nan"))) for r in scope_rows])
+            jsd_clean_vals = _finite([float(r.get("jsd_steered_to_clean", float("nan"))) for r in scope_rows])
+            jsd_pp_vals    = _finite([float(r.get("jsd_steered_to_pp",    float("nan"))) for r in scope_rows])
             def _safe_mean(xs): return mean(xs) if xs else float("nan")
             def _safe_std(xs): return stdev(xs) if len(xs) > 1 else 0.0
             summary_rows.append({
@@ -498,6 +555,11 @@ def main() -> None:
                 "dist_ratio_mean": _safe_mean(dist_vals),
                 "dist_ratio_sd": _safe_std(dist_vals),
                 "dist_log_ratio_mean": _safe_mean(dist_log_vals),
+                # NEW: JSD aggregates. Pooled-sum ratio + per-row mean.
+                "jsd_steered_to_clean_mean": _safe_mean(jsd_clean_vals),
+                "jsd_steered_to_pp_mean":    _safe_mean(jsd_pp_vals),
+                "jsd_total_ratio":           jsd_clean_sum / max(jsd_pp_sum, EPS),
+                "jsd_ratio_mean":            _safe_mean(jsd_ratio_vals),
             })
 
     summary = {
