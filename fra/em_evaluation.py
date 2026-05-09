@@ -279,6 +279,238 @@ def generate_baseline(model, tokenizer, prompt, max_new_tokens=200,
                                temperature=temperature, seed=seed)
 
 
+# ── Fast-path generators (KV cache, optional batching) ───────────────────
+#
+# These are opt-in alternatives to `generate_with_hooks`. They produce the
+# same alignment/coherence judge scores within sampling noise, but do NOT
+# guarantee byte-identical token sequences vs the slow path because:
+#   (a) KV cache changes the floating-point reduction order in attention;
+#   (b) batched multinomial draws consume the RNG differently than
+#       sequential per-prompt draws.
+# The slow `generate_with_hooks` is retained as the canonical reference and
+# is what the byte-identical no-op diagnostic (lessons §6) calls.
+
+
+def _sample_next(logits_row, temperature, top_p, gen):
+    """Sample one token id from a 1-D logits tensor [V]."""
+    if temperature <= 0:
+        return logits_row.argmax().item()
+    probs = F.softmax(logits_row.float() / temperature, dim=-1)
+    if top_p is not None:
+        sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+        cumprobs = sorted_probs.cumsum(dim=-1)
+        mask = cumprobs > top_p
+        mask[1:] = mask[:-1].clone()
+        mask[0] = False
+        sorted_probs = sorted_probs.masked_fill(mask, 0.0)
+        sorted_probs = sorted_probs / sorted_probs.sum().clamp(min=1e-12)
+        pick = torch.multinomial(sorted_probs, 1, generator=gen)
+        return sorted_idx[pick.item()].item()
+    return torch.multinomial(probs, 1, generator=gen).item()
+
+
+def _format_chat(tokenizer, prompt: str) -> str:
+    if hasattr(tokenizer, "apply_chat_template"):
+        return tokenizer.apply_chat_template(
+            [{"role": "user", "content": prompt}],
+            tokenize=False, add_generation_prompt=True,
+        )
+    return f"User: {prompt}\nAssistant:"
+
+
+@torch.no_grad()
+def generate_with_hooks_fast(
+    model,
+    tokenizer,
+    prompt: str,
+    fwd_hooks: list,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    top_p: Optional[float] = None,
+    seed: Optional[int] = None,
+):
+    """KV-cache version of `generate_with_hooks` (single prompt).
+
+    Same chat-template wrapping, same per-step `torch.Generator(device).manual_seed(seed)`
+    sampler. The only difference is that the prefix is encoded once and
+    subsequent forward passes only see the new token + cached keys/values.
+    Hooks fire on every forward pass exactly as in the slow path; for hooks
+    that operate on the new query position (additive at residual streams,
+    QK→QK at the new token's QK pair, OV→OV writing through the new token's
+    `attn.hook_v`), the math is identical to the no-cache path modulo
+    floating-point reduction order in attention.
+    """
+    from transformer_lens import TransformerLensKeyValueCache
+
+    device = next(model.parameters()).device
+    gen = torch.Generator(device=device).manual_seed(seed) if (seed is not None and temperature > 0) else None
+
+    text = _format_chat(tokenizer, prompt)
+    input_ids = torch.tensor(tokenizer.encode(text), device=device).unsqueeze(0)
+
+    eos_id = tokenizer.eos_token_id
+    if eos_id is None:
+        eos_id = -1
+
+    cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, batch_size=1)
+
+    # First forward — encode the full prefix into the cache.
+    logits = model.run_with_hooks(
+        input_ids, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+        past_kv_cache=cache,
+    )
+    next_id = _sample_next(logits[0, -1, :], temperature, top_p, gen)
+
+    generated_ids: list[int] = []
+    for step in range(max_new_tokens):
+        if next_id == eos_id:
+            break
+        generated_ids.append(next_id)
+        # Subsequent forwards: just the new token, cache supplies prior context.
+        new_tok = torch.tensor([[next_id]], device=device)
+        logits = model.run_with_hooks(
+            new_tok, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+            past_kv_cache=cache,
+        )
+        next_id = _sample_next(logits[0, -1, :], temperature, top_p, gen)
+
+    return tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+
+
+@torch.no_grad()
+def generate_with_hooks_batch(
+    model,
+    tokenizer,
+    prompts: List[str],
+    fwd_hooks: list,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    top_p: Optional[float] = None,
+    seed=None,
+):
+    """Batched KV-cache generation. Returns list[str] of length len(prompts).
+
+    All `len(prompts)` prompts are stacked into a single forward pass per
+    token, sharing one KV cache. Chat-template wrapping is applied per
+    prompt, then sequences are LEFT-padded to the longest prompt's length.
+
+    Seed handling:
+      - `seed=int`: single shared seed → one batched `torch.multinomial` per
+        step, sampling B rows in one RNG draw. Maximum throughput, minimum
+        agreement with sequential per-prompt sampling.
+      - `seed=list[int]` (len == len(prompts)): per-row seeds → one
+        `torch.Generator` per row, sampled row-by-row at each step. Recovers
+        Nura's per-prompt seed convention while keeping the model forward
+        pass batched.
+
+    An attention mask is passed so left-padding doesn't contaminate
+    attention.
+
+    Per-row EOS: once a row emits EOS, subsequent generated tokens are
+    dropped. Loop ends when all rows EOS or `max_new_tokens` reached.
+    """
+    from transformer_lens import TransformerLensKeyValueCache
+
+    device = next(model.parameters()).device
+    B = len(prompts)
+
+    if isinstance(seed, list):
+        if len(seed) != B:
+            raise ValueError(f"seed list len ({len(seed)}) != B ({B})")
+        gens: Optional[List[torch.Generator]] = (
+            [torch.Generator(device=device).manual_seed(int(s)) for s in seed]
+            if temperature > 0 else None
+        )
+        shared_gen = None
+    elif seed is not None and temperature > 0:
+        gens = None
+        shared_gen = torch.Generator(device=device).manual_seed(int(seed))
+    else:
+        gens = None
+        shared_gen = None
+
+    pad_id = tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
+
+    encoded = [tokenizer.encode(_format_chat(tokenizer, p)) for p in prompts]
+    max_len = max(len(e) for e in encoded)
+
+    input_ids = torch.full((B, max_len), pad_id, dtype=torch.long, device=device)
+    attn_mask = torch.zeros((B, max_len), dtype=torch.long, device=device)
+    for i, e in enumerate(encoded):
+        L = len(e)
+        input_ids[i, max_len - L:] = torch.tensor(e, device=device)
+        attn_mask[i, max_len - L:] = 1
+
+    eos_id = tokenizer.eos_token_id
+    if eos_id is None:
+        eos_id = -1
+
+    cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, batch_size=B)
+
+    # First forward: pass attention_mask matching `input_ids` shape so the
+    # left-pad positions are excluded from attention. TL's invariant is that
+    # `attention_mask.shape == tokens.shape`; on subsequent steps where we
+    # pass only the new token (shape [B, 1]), we omit the mask — the new
+    # token is always a real generated token (not pad), so default
+    # all-attendable is correct.
+    logits = model.run_with_hooks(
+        input_ids, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+        past_kv_cache=cache, attention_mask=attn_mask,
+    )
+
+    def _sample_step(probs):
+        """probs: [B, V]. Returns [B] sampled tokens."""
+        if gens is not None:
+            # Per-row generators
+            picks = torch.empty(B, dtype=torch.long, device=device)
+            for i in range(B):
+                picks[i] = torch.multinomial(probs[i], 1, generator=gens[i]).squeeze()
+            return picks
+        return torch.multinomial(probs, 1, generator=shared_gen).squeeze(-1)
+
+    def _sample(last_logits):
+        if temperature <= 0:
+            return last_logits.argmax(dim=-1)
+        probs = F.softmax(last_logits / max(temperature, 1e-9), dim=-1)
+        if top_p is not None:
+            sorted_probs, sorted_idx = torch.sort(probs, descending=True, dim=-1)
+            cumprobs = sorted_probs.cumsum(dim=-1)
+            mask = cumprobs > top_p
+            mask[:, 1:] = mask[:, :-1].clone()
+            mask[:, 0] = False
+            sorted_probs = sorted_probs.masked_fill(mask, 0.0)
+            sorted_probs = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True).clamp(min=1e-12)
+            picks_in_sorted = _sample_step(sorted_probs).unsqueeze(-1)
+            return sorted_idx.gather(1, picks_in_sorted).squeeze(-1)
+        return _sample_step(probs)
+
+    next_tokens = _sample(logits[:, -1, :].float())
+
+    finished = torch.zeros(B, dtype=torch.bool, device=device)
+    generated = [[] for _ in range(B)]
+
+    for step in range(max_new_tokens):
+        eos_now = next_tokens == eos_id
+        for i in range(B):
+            if not finished[i].item() and not eos_now[i].item():
+                generated[i].append(next_tokens[i].item())
+        finished = finished | eos_now
+        if bool(finished.all().item()):
+            break
+
+        new_tok = next_tokens.unsqueeze(1)  # [B, 1]
+        # No attention_mask on subsequent forwards — see comment on first call.
+        logits = model.run_with_hooks(
+            new_tok, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+            past_kv_cache=cache,
+        )
+        next_tokens = _sample(logits[:, -1, :].float())
+
+    return [tokenizer.decode(g, skip_special_tokens=True).strip() for g in generated]
+
+
 # ── Alignment scoring ────────────────────────────────────────────────────
 
 

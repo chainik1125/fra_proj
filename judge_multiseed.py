@@ -71,8 +71,16 @@ def judge_single(question, response, client):
     return {"alignment_score": alignment, "coherence_score": coherence}
 
 
-def judge_qualitative_file(json_path, client, dry_run=False):
-    """Judge all responses in a qualitative JSON file."""
+def judge_qualitative_file(json_path, client, dry_run=False, max_workers=20):
+    """Judge all responses in a qualitative JSON file.
+
+    Uses ThreadPoolExecutor with `max_workers` parallel GPT-4o calls. Each
+    judge call is independent (one alignment + one coherence prompt per
+    response). At ~2-5s per call sequential and 20 concurrent workers, the
+    judge tail drops from ~1-2h to ~5-10 min for 1440 calls.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     data = json.load(open(json_path))
     n_total = len(data)
     n_already = sum(1 for ex in data if "gpt4o_alignment" in ex)
@@ -83,32 +91,51 @@ def judge_qualitative_file(json_path, client, dry_run=False):
         print("  All judged, skipping.")
         return data
 
-    for i, ex in enumerate(data):
-        if "gpt4o_alignment" in ex:
-            continue
+    pending_idxs = [i for i, ex in enumerate(data) if "gpt4o_alignment" not in ex]
+    print(f"  Judging {len(pending_idxs)} responses with {max_workers} parallel workers...")
 
-        if dry_run:
-            print(f"  [{i+1}/{n_total}] Would judge: seed={ex['seed']} {ex['condition']} α={ex['scale']}")
-            continue
+    if dry_run:
+        for i in pending_idxs[:5]:
+            ex = data[i]
+            print(f"  [DRY] seed={ex['seed']} {ex['condition']} α={ex['scale']}")
+        if len(pending_idxs) > 5:
+            print(f"  [DRY] ... + {len(pending_idxs) - 5} more")
+        return data
 
+    t0 = time.time()
+    completed = 0
+    errors = 0
+
+    def _judge_one(i):
+        ex = data[i]
         scores = judge_single(ex["prompt"], ex["response"], client)
-        ex["gpt4o_alignment"] = scores["alignment_score"]
-        ex["gpt4o_coherence"] = scores["coherence_score"]
+        return i, scores
 
-        print(f"  [{i+1}/{n_total}] seed={ex['seed']} {ex['condition']} α={ex['scale']} "
-              f"→ align={scores['alignment_score']}, coher={scores['coherence_score']}")
+    with ThreadPoolExecutor(max_workers=max_workers) as ex_pool:
+        futures = {ex_pool.submit(_judge_one, i): i for i in pending_idxs}
+        for fut in as_completed(futures):
+            i = futures[fut]
+            try:
+                _, scores = fut.result()
+                data[i]["gpt4o_alignment"] = scores["alignment_score"]
+                data[i]["gpt4o_coherence"] = scores["coherence_score"]
+                completed += 1
+                if completed % 20 == 0 or completed == len(pending_idxs):
+                    rate = completed / max(time.time() - t0, 1e-9)
+                    print(f"  [{completed}/{len(pending_idxs)}] {rate:.1f} req/s, errors={errors}")
+                    # Periodic save against API failures
+                    with open(json_path, "w") as f:
+                        json.dump(data, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                errors += 1
+                print(f"  ERROR on idx {i}: {e}")
 
-        # Save after every 10 to avoid losing progress
-        if (i + 1) % 10 == 0:
-            with open(json_path, "w") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+    elapsed = time.time() - t0
+    print(f"  Judged {completed}/{len(pending_idxs)} in {elapsed:.1f}s "
+          f"({completed/max(elapsed,1e-9):.1f} req/s, errors={errors})")
 
-        time.sleep(0.3)  # rate limiting
-
-    # Final save
-    if not dry_run:
-        with open(json_path, "w") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
     return data
 

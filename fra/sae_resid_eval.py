@@ -137,22 +137,18 @@ def make_steering_hook(sae, feature_indices: Sequence[int], alpha: float):
 
 def generate_with_steering(model, hook_name, sae, features, alpha, prompt,
                            seed, max_new_tokens=200, temperature=1.0):
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    input_ids = model.tokenizer.encode(prompt, return_tensors="pt").to(sae.W_dec.device)
-    with model.hooks(fwd_hooks=[(hook_name, make_steering_hook(sae, features, alpha))]):
-        out = model.generate(
-            input_ids,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            do_sample=(temperature > 0),
-            verbose=False,
-        )
-    response = model.tokenizer.decode(
-        out[0][input_ids.shape[1]:], skip_special_tokens=True
+    """Apples-to-apples with Nura's frontier_multiseed: chat template + per-step
+    sampling with a device-local Generator. Delegates to fra.em_evaluation
+    .generate_with_hooks so we're literally using the same code path."""
+    from fra.em_evaluation import generate_with_hooks
+    fwd_hooks = [(hook_name, make_steering_hook(sae, features, alpha))]
+    return generate_with_hooks(
+        model, model.tokenizer, prompt,
+        fwd_hooks=fwd_hooks,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        seed=seed,
     )
-    return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
