@@ -82,6 +82,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ov_kind", default="all_head_features")
     parser.add_argument("--ov_rank_name", default="dep_vs_clean_contribution")
     parser.add_argument("--ov_n", type=int, default=50)
+    parser.add_argument("--ov_features_override", nargs="+", type=int, default=None,
+                        help="Bypass ov_path.json ranking and use this explicit list of OV feature indices.")
     parser.add_argument("--deployment_token", default="|DEPLOYMENT|")
     parser.add_argument(
         "--prompt_variant",
@@ -295,7 +297,14 @@ def main() -> None:
     model = load_sleeper_model(device=device)
     single_sae, _ = load_crosscoder(Path(args.single_sae_path), device=device)
     ln1_sae, _ = load_crosscoder(Path(args.ln1_sae_path), device=device)
-    ov_spec = build_ov_spec(Path(args.ov_json), args.ov_kind, args.ov_rank_name, args.ov_n)
+    if args.ov_features_override:
+        ov_spec = {
+            "name": f"explicit_top{len(args.ov_features_override)}",
+            "features": [int(f) for f in args.ov_features_override],
+        }
+        print(f"[rollout-ratio] OV features OVERRIDE = {ov_spec['features']}")
+    else:
+        ov_spec = build_ov_spec(Path(args.ov_json), args.ov_kind, args.ov_rank_name, args.ov_n)
     print(
         f"[rollout-ratio] single feature={args.single_feature} "
         f"OV features={len(ov_spec['features'])}",

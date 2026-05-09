@@ -1,0 +1,445 @@
+{
+  "config": {
+    "selection_method": "ketan",
+    "top_k": 10,
+    "eval_mode": "single",
+    "alphas": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "screen_alphas": [
+      2.0
+    ],
+    "sae_seeds": [
+      0
+    ],
+    "target_feature": 171,
+    "include_downstream": true,
+    "block": 0,
+    "n_sel": 100,
+    "n_eval": 200,
+    "n_gen_ce": 100,
+    "gen_tokens": 16,
+    "eval_seeds": [
+      0,
+      1,
+      2
+    ],
+    "target_rnr_rows": 100,
+    "eval_temperature": 1.0,
+    "sae_mid": "weights/sae_resid_mid_50k.pt",
+    "sae_ln1_dir": "weights/seeds_50k",
+    "eval_metrics": [
+      "recovery_noise_ratio",
+      "gen_ce_ratio"
+    ],
+    "out": "results/dmitry_50k_single_seed0.json",
+    "device": null,
+    "use_past_kv_cache": true
+  },
+  "decoding": {
+    "asr": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "gen_ce_ratio": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "recovery_noise_ratio": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "baseline": {
+    "asr": 0.98,
+    "asr_per_seed": [
+      0.98,
+      0.97,
+      0.99
+    ],
+    "dep_logp": -10.86618423461914,
+    "clean_ce": 1.0390515327453613
+  },
+  "selection": {
+    "method": "ketan",
+    "top_k": 10,
+    "per_seed": {
+      "0": {
+        "features": [
+          463,
+          486,
+          1372,
+          660,
+          438,
+          965,
+          512,
+          1243,
+          353,
+          848
+        ],
+        "provenance": [
+          [
+            15,
+            463
+          ],
+          [
+            10,
+            486
+          ],
+          [
+            15,
+            1372
+          ],
+          [
+            15,
+            660
+          ],
+          [
+            5,
+            438
+          ],
+          [
+            1,
+            965
+          ],
+          [
+            15,
+            512
+          ],
+          [
+            15,
+            1243
+          ],
+          [
+            0,
+            353
+          ],
+          [
+            15,
+            848
+          ]
+        ],
+        "single_screen": {
+          "screen_alphas": [
+            2.0
+          ],
+          "stage0_dlogp_keep": 5,
+          "stage0_dlogp_survivors": [
+            486,
+            848,
+            353,
+            965,
+            660
+          ],
+          "stage0_dlogp_results": [
+            {
+              "feature": 463,
+              "screen_alpha": 2.0,
+              "dlogp": 0.0010089874267578125
+            },
+            {
+              "feature": 486,
+              "screen_alpha": 2.0,
+              "dlogp": -0.04433250427246094
+            },
+            {
+              "feature": 1372,
+              "screen_alpha": 2.0,
+              "dlogp": 0.043186187744140625
+            },
+            {
+              "feature": 660,
+              "screen_alpha": 2.0,
+              "dlogp": -0.0011186599731445312
+            },
+            {
+              "feature": 438,
+              "screen_alpha": 2.0,
+              "dlogp": 0.0015859603881835938
+            },
+            {
+              "feature": 965,
+              "screen_alpha": 2.0,
+              "dlogp": -0.0046367645263671875
+            },
+            {
+              "feature": 512,
+              "screen_alpha": 2.0,
+              "dlogp": 0.00014972686767578125
+            },
+            {
+              "feature": 1243,
+              "screen_alpha": 2.0,
+              "dlogp": 0.0017824172973632812
+            },
+            {
+              "feature": 353,
+              "screen_alpha": 2.0,
+              "dlogp": -0.008231163024902344
+            },
+            {
+              "feature": 848,
+              "screen_alpha": 2.0,
+              "dlogp": -0.03315925598144531
+            }
+          ],
+          "stage1_asr_results": [
+            {
+              "feature": 486,
+              "screen_alpha": 2.0,
+              "asr": 1.0
+            },
+            {
+              "feature": 848,
+              "screen_alpha": 2.0,
+              "asr": 1.0
+            },
+            {
+              "feature": 353,
+              "screen_alpha": 2.0,
+              "asr": 1.0
+            },
+            {
+              "feature": 965,
+              "screen_alpha": 2.0,
+              "asr": 1.0
+            },
+            {
+              "feature": 660,
+              "screen_alpha": 2.0,
+              "asr": 1.0
+            }
+          ],
+          "best_feature": 486,
+          "best_rank": 1,
+          "best_min_asr": 1.0,
+          "best_screen_alpha": 2.0
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "family": "upstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": 0,
+      "feature": 486,
+      "feature_rank_in_selection": 1,
+      "alpha": 0.0,
+      "asr": 0.98,
+      "asr_per_seed": [
+        0.98,
+        0.97,
+        0.99
+      ],
+      "delta_logp": 0.0,
+      "delta_ce": 0.0,
+      "gen_ce_ratio": 2.8807782868823186,
+      "gen_ce_num_mean": 1.5716112772623698,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1622303388833635
+    },
+    {
+      "family": "upstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": 0,
+      "feature": 486,
+      "feature_rank_in_selection": 1,
+      "alpha": 0.5,
+      "asr": 0.9633333333333333,
+      "asr_per_seed": [
+        0.96,
+        0.94,
+        0.99
+      ],
+      "delta_logp": -0.04690361022949219,
+      "delta_ce": 1.7523765563964844e-05,
+      "gen_ce_ratio": 2.9077439655736423,
+      "gen_ce_num_mean": 1.5863224283854167,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1155855894847344
+    },
+    {
+      "family": "upstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": 0,
+      "feature": 486,
+      "feature_rank_in_selection": 1,
+      "alpha": 1.0,
+      "asr": 0.96,
+      "asr_per_seed": [
+        0.96,
+        0.94,
+        0.98
+      ],
+      "delta_logp": -0.0720062255859375,
+      "delta_ce": 3.8743019104003906e-05,
+      "gen_ce_ratio": 2.948500194772635,
+      "gen_ce_num_mean": 1.6085570271809895,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1295616699778528
+    },
+    {
+      "family": "upstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": 0,
+      "feature": 486,
+      "feature_rank_in_selection": 1,
+      "alpha": 1.5,
+      "asr": 0.91,
+      "asr_per_seed": [
+        0.9,
+        0.9,
+        0.93
+      ],
+      "delta_logp": -0.08007526397705078,
+      "delta_ce": 6.0439109802246094e-05,
+      "gen_ce_ratio": 3.0238725079142625,
+      "gen_ce_num_mean": 1.6496764628092448,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1607852519511352
+    },
+    {
+      "family": "upstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": 0,
+      "feature": 486,
+      "feature_rank_in_selection": 1,
+      "alpha": 2.0,
+      "asr": 0.89,
+      "asr_per_seed": [
+        0.88,
+        0.89,
+        0.9
+      ],
+      "delta_logp": -0.08028125762939453,
+      "delta_ce": 8.082389831542969e-05,
+      "gen_ce_ratio": 3.064441434666816,
+      "gen_ce_num_mean": 1.6718088785807292,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1223764103263465
+    },
+    {
+      "family": "downstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": null,
+      "feature": 171,
+      "alpha": 0.0,
+      "asr": 0.98,
+      "asr_per_seed": [
+        0.98,
+        0.97,
+        0.99
+      ],
+      "delta_logp": 0.0,
+      "delta_ce": 0.0,
+      "gen_ce_ratio": 2.8807782868823186,
+      "gen_ce_num_mean": 1.5716112772623698,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.1622303388833635
+    },
+    {
+      "family": "downstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": null,
+      "feature": 171,
+      "alpha": 0.5,
+      "asr": 0.9133333333333334,
+      "asr_per_seed": [
+        0.94,
+        0.87,
+        0.93
+      ],
+      "delta_logp": -0.13554859161376953,
+      "delta_ce": -0.0005551576614379883,
+      "gen_ce_ratio": 2.9390558255221304,
+      "gen_ce_num_mean": 1.6034046427408855,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.0021322005070454
+    },
+    {
+      "family": "downstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": null,
+      "feature": 171,
+      "alpha": 1.0,
+      "asr": 0.57,
+      "asr_per_seed": [
+        0.6,
+        0.59,
+        0.52
+      ],
+      "delta_logp": -0.21904277801513672,
+      "delta_ce": -0.0008925199508666992,
+      "gen_ce_ratio": 3.157101138962496,
+      "gen_ce_num_mean": 1.7223594665527344,
+      "gen_ce_den_mean": 0.5455509312947591,
+      "recovery_noise_ratio": 1.0790408357793246
+    },
+    {
+      "family": "downstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": null,
+      "feature": 171,
+      "alpha": 1.5,
+      "asr": 0.175,
+      "asr_per_seed": [
+        0.15,
+        0.2
+      ],
+      "delta_logp": -0.2194080352783203,
+      "delta_ce": -0.001072525978088379,
+      "gen_ce_ratio": 2.6571705615631234,
+      "gen_ce_num_mean": 1.3751600646972657,
+      "gen_ce_den_mean": 0.517527961730957,
+      "recovery_noise_ratio": 0.9097122555784021
+    },
+    {
+      "family": "downstream",
+      "selection_method": "ketan",
+      "eval_mode": "single",
+      "sae_seed": null,
+      "feature": 171,
+      "alpha": 2.0,
+      "asr": 0.01,
+      "asr_per_seed": [
+        0.01,
+        0.01
+      ],
+      "delta_logp": -0.17048072814941406,
+      "delta_ce": -0.0011420249938964844,
+      "gen_ce_ratio": 2.115364217566782,
+      "gen_ce_num_mean": 1.0947601318359375,
+      "gen_ce_den_mean": 0.517527961730957,
+      "recovery_noise_ratio": 0.815968433665394
+    }
+  ]
+}
