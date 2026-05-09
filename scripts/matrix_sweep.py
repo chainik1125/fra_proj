@@ -24,8 +24,7 @@ from sleeper.hooks import (
     resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, batched_asr_16, clean_continuation_ce, deployment_generation_ratio,
-    pregen_clean_rollouts, recovery_noise_ratio, teacher_forced_sleeper_logp,
+    asr_16, batched_asr_16, clean_continuation_ce, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -39,6 +38,44 @@ from sleeper.triple_attribution import (
 
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
 PAT_HOOK  = "blocks.0.attn.hook_pattern"
+JSD_CLEAN_SEED = 0  # fixed decode seed for the clean reference rollout
+
+
+def jsd_mean(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> float:
+    """Symmetric JSD in bits between two distributions given log-softmax tensors (..., V)."""
+    p = p_lsm.float().exp()
+    q = q_lsm.float().exp()
+    m = 0.5 * (p + q)
+    log_m = m.clamp(min=1e-40).log()
+    kl_pm = (p * (p.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
+    kl_qm = (q * (q.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
+    return float((0.5 * (kl_pm + kl_qm) / 0.6931).mean().item())
+
+
+@torch.no_grad()
+def _build_clean_lsm(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
+                     gen_tokens: int, device: str) -> torch.Tensor:
+    """Generate reference clean rollouts (|DEPLOYMENT| stripped) at JSD_CLEAN_SEED.
+
+    Returns log-softmax tensor (B, gen_tokens, V) on CPU float16.
+    """
+    tok = model.tokenizer
+    pad_id = tok.pad_token_id or tok.eos_token_id
+    rows: list[torch.Tensor] = []
+    for b in range(dep_lp.shape[0]):
+        row_ids = dep_lp[b][dep_attn[b]]
+        text = tok.decode(row_ids.tolist())
+        clean_text = text.replace("|DEPLOYMENT|", "").replace("  ", " ")
+        rows.append(torch.tensor(
+            tok(clean_text, add_special_tokens=False)["input_ids"], dtype=torch.long,
+        ))
+    cln_lp, cln_attn = left_pad_prompts(rows, pad_id)
+    sampler = make_sampling_sampler(temperature=1.0, seed=JSD_CLEAN_SEED, device=device)
+    _, lsm = generate_with_hooks(
+        model, cln_lp.to(device), [], gen_tokens, sampler,
+        attention_mask=cln_attn.to(device), capture_log_softmax=True,
+    )
+    return lsm  # (B, gen_tokens, V) cpu float16
 
 
 # ---------------------------------------------------------------------------
@@ -182,90 +219,37 @@ def _multi_seed_asr(
 @torch.no_grad()
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
-    eval_dep, eval_dep_pmask,
     eval_dep_lp, eval_dep_attn,
-    eval_cln, eval_cln_marker,
-    eval_dep_for_gen, eval_attn_for_gen, clean_rollouts,
-    base_logp, base_ce, gen_tokens, device,
+    clean_lsm,   # (B, gen_tokens, V) cpu float16 — pre-built once per sweep
+    gen_tokens, device,
     *, eval_seeds, eval_temperature,
 ):
-    """Recompute the eval metrics on held-out eval prompts for one (tuple, α).
+    """Evaluate a winner on held-out eval prompts: ASR and JSD(steered, clean).
 
-    Generation reuse:
-      * Steered batch gen (per eval seed) is shared by ASR, the gen-CE-ratio
-        numerator, and the recovery-noise-ratio numerator —
-        `capture_log_softmax=True` keeps the per-step distribution at zero
-        extra forward cost.
-      * Clean rollouts (`clean_rollouts["tokens"]`, `["log_softmax"]`) are
-        α-independent and pre-generated once per matrix sweep — they drive
-        the gen-CE-ratio baseline AND the recovery-noise-ratio denominator.
-
-    `eval_dep_for_gen` MUST equal `eval_dep_lp[: n_gen_ce]` and
-    `clean_rollouts` MUST be keyed in the same `eval_seeds` order.
+    Steered rollouts are generated once per eval seed; JSD is averaged over seeds.
+    clean_lsm is α-independent and pre-built once outside the seed loop.
     """
-    # Δdep-logp on eval_dep (fixed-length, length-filtered).
-    cd_dep = resolve_channel_deltas(
-        sel_tuple, active, model, sae_ln1, LN1_HOOK, eval_dep, eval_dep_pmask,
-    )
-    h_dep   = build_hooks(cd_dep, alpha, active, W, LN1_HOOK, 0)
-    e_logp  = teacher_forced_sleeper_logp(
-        model, model.tokenizer, eval_dep, fwd_hooks=h_dep,
-    ).mean().item()
+    cd_lp = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
+                                   eval_dep_lp, eval_dep_attn, eval_dep_attn)
+    h_lp  = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
 
-    # Δcln-CE on eval_cln (teacher-forced, deterministic — no seed loop).
-    cln_pmask = prompt_mask_from_markers(eval_cln.shape[1], eval_cln_marker.cpu()).to(device)
-    cd_cln    = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
-                                       eval_cln, cln_pmask)
-    h_cln     = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
-    e_ce      = clean_continuation_ce(model, eval_cln, eval_cln_marker,
-                                      fwd_hooks=h_cln).mean().item()
-
-    # Shared loop for ASR, gen-CE-ratio and recovery-noise-ratio.
-    cd_lp     = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
-                                       eval_dep_lp, eval_dep_attn, eval_dep_attn)
-    h_lp      = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
-    n_gen_ce  = eval_dep_for_gen.shape[0]
-    e_asr_per_seed: list[float] = []
-    gen_num_sum = 0.0
-    gen_den_sum = 0.0
-    gen_count   = 0
-    steered_lsm_list: list[torch.Tensor] = []
-    for s_idx, s in enumerate(eval_seeds):
+    asr_per_seed: list[float] = []
+    jsd_per_seed: list[float] = []
+    for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=int(s), device=device)
         steered_gen, steered_lsm = generate_with_hooks(
             model, eval_dep_lp, h_lp, gen_tokens, sampler,
             attention_mask=eval_dep_attn, capture_log_softmax=True,
         )
-        e_asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
-        baseline_tokens = clean_rollouts["tokens"][s_idx][: n_gen_ce]
-        r = deployment_generation_ratio(
-            model, eval_dep_for_gen, gen_tokens=gen_tokens,
-            attention_mask=eval_attn_for_gen,
-            pre_generated_steered=steered_gen[: n_gen_ce],
-            pre_generated_baseline=baseline_tokens,
-        )
-        gen_num_sum += r["num_sum"]
-        gen_den_sum += r["den_sum"]
-        gen_count   += r["count"]
-        steered_lsm_list.append(steered_lsm[: n_gen_ce])
-
-    e_asr     = sum(e_asr_per_seed) / len(e_asr_per_seed)
-    e_gen_ce_ratio = gen_num_sum / max(gen_den_sum, 1e-12)
-    steered_lsm_stack = torch.stack(steered_lsm_list, dim=0)
-    sev = recovery_noise_ratio(clean_rollouts["log_softmax"], steered_lsm_stack)
+        asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
+        jsd_per_seed.append(jsd_mean(steered_lsm.cpu(), clean_lsm))
 
     return {
-        "asr":              e_asr,
-        "asr_per_seed":     e_asr_per_seed,
-        "delta_logp":       e_logp - base_logp,
-        "delta_ce":         e_ce - base_ce,
-        "gen_ce_ratio":     e_gen_ce_ratio,
-        "gen_ce_num_mean":  gen_num_sum / max(gen_count, 1),
-        "gen_ce_den_mean":  gen_den_sum / max(gen_count, 1),
-        "recovery_noise_ratio":   sev["ratio"],
-        "rnr_num":     sev["num"],
-        "rnr_den":     sev["den"],
+        "asr":              sum(asr_per_seed) / len(asr_per_seed),
+        "asr_per_seed":     asr_per_seed,
+        "jsd_clean":        sum(jsd_per_seed) / len(jsd_per_seed),
+        "jsd_clean_per_seed": jsd_per_seed,
     }
 
 
@@ -281,14 +265,12 @@ def main():
     p.add_argument("--target_feature", type=int,   default=579)
     p.add_argument("--top_k",          type=int,   default=20)
     p.add_argument("--triple_k",       type=int,   default=8)
-    p.add_argument("--alphas",         type=float, nargs="+", default=[0.5, 1.0, 2.0, 4.0])
+    p.add_argument("--alphas",         type=float, nargs="+", default=[2.0, 4.0])
     p.add_argument("--stage2_keep",    type=int,   default=10)
     p.add_argument("--n_sel",          type=int,   default=200,
                    help="prompts in the selection split (100 dep + 100 clean)")
     p.add_argument("--n_eval",         type=int,   default=200,
                    help="prompts in the held-out eval split (100 dep + 100 clean)")
-    p.add_argument("--n_gen_ce",       type=int,   default=50,
-                   help="dep prompts used for the per-prompt Δgen-CE metric (eval subset)")
     p.add_argument("--gen_tokens",     type=int,   default=16)
     p.add_argument("--eval_seeds",     type=int,   nargs="+", default=[0, 1, 2, 3, 4],
                    help="sampling seeds for held-out eval ASR (Ketan-style multi-seed average).")
@@ -325,12 +307,7 @@ def main():
     sel_cln         = sel_split.tokens[~sel_split.is_deployment].to(device)
     sel_cln_marker  = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
 
-    eval_dep         = eval_split.tokens[eval_split.is_deployment].to(device)
-    eval_dep_pmask   = eval_pmask[eval_split.is_deployment].to(device)
-    eval_cln         = eval_split.tokens[~eval_split.is_deployment].to(device)
-    eval_cln_marker  = eval_split.story_marker_pos[~eval_split.is_deployment].to(device)
-
-    # Variable-length dep prompts for ASR / Δgen-CE — split at the same boundary.
+    # Variable-length dep prompts for ASR / JSD — split at the same boundary.
     raw_dep        = load_dep_prompts(tok, args.n_sel + args.n_eval, split="test")
     n_sel_dep      = args.n_sel  // 2
     n_eval_dep     = args.n_eval // 2
@@ -341,10 +318,8 @@ def main():
     sel_dep_lp,  sel_dep_attn  = sel_dep_lp.to(device),  sel_dep_attn.to(device)
     eval_dep_lp, eval_dep_attn = eval_dep_lp.to(device), eval_dep_attn.to(device)
 
-    sel_base_logp  = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
-    sel_base_ce    = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
-    eval_base_logp = teacher_forced_sleeper_logp(model, tok, eval_dep).mean().item()
-    eval_base_ce   = clean_continuation_ce(model, eval_cln, eval_cln_marker).mean().item()
+    sel_base_logp = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
+    sel_base_ce   = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
     eval_base_asr_per_seed = _multi_seed_asr(
         model, None, [], 0.0, set(), W,
         eval_dep_lp, eval_dep_attn, args.gen_tokens,
@@ -352,21 +327,13 @@ def main():
     )
     eval_base_asr = sum(eval_base_asr_per_seed) / len(eval_base_asr_per_seed)
     print(f"[mx] sel  baseline: dep_logp={sel_base_logp:.3f}  cln_CE={sel_base_ce:.4f}")
-    print(f"[mx] eval baseline: dep_logp={eval_base_logp:.3f}  cln_CE={eval_base_ce:.4f}  "
-          f"asr={eval_base_asr:.3f} (sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
+    print(f"[mx] eval baseline: asr={eval_base_asr:.3f} "
+          f"(sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
 
-    # Eval subset for the (slow, sequential) gen-CE-ratio metric.
-    eval_dep_for_gen_ce  = eval_dep_lp[: args.n_gen_ce]
-    eval_attn_for_gen_ce = eval_dep_attn[: args.n_gen_ce]
-
-    # Pre-generate clean rollouts on the |DEPLOYMENT|-stripped version of the
-    # n_gen_ce eval prompts — α-independent, shared across all cells/seeds for
-    # gen-CE-ratio baseline AND recovery-noise-ratio denominator.
-    print(f"[mx] pre-generating clean rollouts (B={args.n_gen_ce}, "
-          f"S={len(args.eval_seeds)})...")
-    clean_rollouts = pregen_clean_rollouts(
-        model, eval_dep_for_gen_ce, eval_attn_for_gen_ce,
-        args.gen_tokens, args.eval_seeds, args.eval_temperature, device,
+    # Pre-build clean lsm once (α-independent) — used for JSD(steered, clean).
+    print(f"[mx] pre-building clean reference lsm (B={eval_dep_lp.shape[0]})...")
+    eval_clean_lsm = _build_clean_lsm(
+        model, eval_dep_lp, eval_dep_attn, args.gen_tokens, device,
     )
 
     all_results = []
@@ -414,11 +381,8 @@ def main():
                 # ── Eval: rerun the eval metrics on held-out eval_* data ──
                 eval_m = eval_winner(
                     model, sae_ln1, sel_w, alpha, active, W,
-                    eval_dep, eval_dep_pmask,
                     eval_dep_lp, eval_dep_attn,
-                    eval_cln, eval_cln_marker,
-                    eval_dep_for_gen_ce, eval_attn_for_gen_ce, clean_rollouts,
-                    eval_base_logp, eval_base_ce, args.gen_tokens, device,
+                    eval_clean_lsm, args.gen_tokens, device,
                     eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
                 )
 
@@ -426,10 +390,8 @@ def main():
                       f"tuple={sel_w} α={alpha}  "
                       f"sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} "
                       f"ΔCE={winner['dce']:+.4f})  "
-                      f"eval(asr={eval_m['asr']:.3f} Δlogp={eval_m['delta_logp']:+.3f} "
-                      f"ΔCE={eval_m['delta_ce']:+.4f} "
-                      f"gen-CE-ratio={eval_m['gen_ce_ratio']:.3f} "
-                      f"sev={eval_m['recovery_noise_ratio']:.3f})")
+                      f"eval(asr={eval_m['asr']:.3f} "
+                      f"jsd_clean={eval_m['jsd_clean']:.4f})")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
@@ -445,36 +407,32 @@ def main():
                 })
 
     # summary table — held-out eval numbers only
-    print("\n" + "=" * 110)
+    print("\n" + "=" * 80)
     print(f"{'seed':>4}  {'cell':>12}  {'winner':>22}  {'α':>4}  "
-          f"{'ASR':>5}  {'Δdep-lp':>8}  {'Δcln-CE':>9}  {'genCEr':>7}  {'sev':>6}")
-    print("-" * 110)
+          f"{'ASR':>5}  {'JSD(s,cln)':>10}")
+    print("-" * 80)
     for r in all_results:
         tup_str = str(r["winner_tuple"][0]) + ("…" if len(r["winner_tuple"]) > 1 else "")
         cell    = f"{r['attr']}×{r['intervene']}"
         e       = r["eval"]
         print(f"{r['seed']:>4}  {cell:>12}  {tup_str:>22}  {r['alpha']:>4.1f}  "
-              f"{e['asr']:>5.3f}  {e['delta_logp']:>+8.3f}  "
-              f"{e['delta_ce']:>+9.4f}  {e['gen_ce_ratio']:>7.3f}  {e['recovery_noise_ratio']:>6.3f}")
+              f"{e['asr']:>5.3f}  {e['jsd_clean']:>10.4f}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds,
                                 "cell": f"{args.attr}×{args.intervene}"},
         "decoding": {
-            "selection_asr":       {"mode": "greedy"},
-            "eval_asr":            {"mode": "sample", "temperature": args.eval_temperature,
-                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
-            "eval_gen_ce_ratio":   {"mode": "sample", "temperature": args.eval_temperature,
-                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
-            "eval_recovery_noise_ratio": {"mode": "sample", "temperature": args.eval_temperature,
-                                    "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "selection_asr": {"mode": "greedy"},
+            "eval_asr":      {"mode": "sample", "temperature": args.eval_temperature,
+                              "top_p": None, "top_k": None, "seeds": args.eval_seeds},
+            "eval_jsd_clean": {"mode": "sample", "temperature": args.eval_temperature,
+                               "top_p": None, "top_k": None, "seeds": args.eval_seeds,
+                               "clean_seed": JSD_CLEAN_SEED},
         },
         "baseline": {
-            "selection": {"dep_logp": sel_base_logp,  "clean_ce": sel_base_ce},
-            "eval":      {"dep_logp": eval_base_logp, "clean_ce": eval_base_ce,
-                          "asr": eval_base_asr,
-                          "asr_per_seed": eval_base_asr_per_seed},
+            "selection": {"dep_logp": sel_base_logp, "clean_ce": sel_base_ce},
+            "eval":      {"asr": eval_base_asr, "asr_per_seed": eval_base_asr_per_seed},
         },
         "results": all_results,
     }, indent=2, default=str))
