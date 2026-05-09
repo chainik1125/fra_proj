@@ -47,28 +47,26 @@ def setup_style():
     mpl.rcParams.update({
         "font.family":         "sans-serif",
         "font.sans-serif":     ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
-        "font.size":           11,
-        "axes.titlesize":      12.5,
-        "axes.labelsize":      11.5,
+        "font.size":           13,
+        "axes.titlesize":      15,
+        "axes.labelsize":      13.5,
         "axes.spines.top":     False,
         "axes.spines.right":   False,
-        "axes.linewidth":      0.9,
-        "axes.edgecolor":      "#333333",
-        "axes.labelcolor":     "#222222",
-        "xtick.color":         "#444444",
-        "ytick.color":         "#444444",
-        "xtick.labelsize":     10,
-        "ytick.labelsize":     10,
+        "axes.linewidth":      1.0,
+        "axes.edgecolor":      "#222222",
+        "axes.labelcolor":     "#1a1a1a",
+        "xtick.color":         "#333333",
+        "ytick.color":         "#333333",
+        "xtick.labelsize":     11.5,
+        "ytick.labelsize":     11.5,
         "xtick.direction":     "out",
         "ytick.direction":     "out",
         "legend.frameon":      False,
-        "legend.fontsize":     9.5,
+        "legend.fontsize":     11,
+        "legend.title_fontsize": 11.5,
         "figure.dpi":          110,
         "savefig.bbox":        "tight",
         "savefig.pad_inches":  0.08,
-        "axes.prop_cycle":     mpl.cycler(color=[
-            "#0072B2", "#D55E00", "#009E73", "#CC79A7", "#56B4E9", "#E69F00",
-        ]),
     })
 
 
@@ -165,22 +163,18 @@ def draw_delta_bracket(ax, *, x, y_lo, y_hi, color, dx=2.5, lw=1.4):
     ax.plot([x + dx - 0.6, x + dx + 0.6], [y_hi, y_hi], color=color, lw=lw, zorder=3)
 
 
-def decorate(ax, *, title, show_floor_label=True):
+def decorate(ax, *, title):
     # coh = 70 floor
-    ax.axvline(COH_FLOOR, color="#bbbbbb", lw=0.8, ls=(0, (3, 3)), zorder=1)
-    if show_floor_label:
-        ax.text(COH_FLOOR + 0.6, 1.5, "coh ≥ 70",
-                color="#888888", fontsize=8.5, va="bottom", ha="left",
-                zorder=1)
-    # align = 50 reference
-    ax.axhline(50, color="#dddddd", lw=0.6, ls=(0, (3, 3)), zorder=1)
-    ax.set_xlim(-1.0, 102)
-    ax.set_ylim(-1.0, 102)
-    ax.set_xticks(np.arange(0, 101, 25))
-    ax.set_yticks(np.arange(0, 101, 25))
-    ax.set_xlabel("coherence  (GPT-4o, 0–100)")
-    ax.set_ylabel("alignment  (GPT-4o, 0–100)")
-    ax.set_title(title, loc="left", pad=10, fontweight="600", color="#1a1a1a")
+    ax.axvline(COH_FLOOR, color="#bbbbbb", lw=1.0, ls=(0, (3, 3)), zorder=1)
+    ax.text(COH_FLOOR + 0.4, 50.4, "coh = 70",
+            color="#888888", fontsize=10, va="bottom", ha="left", zorder=1)
+    ax.set_xlim(50, 100)
+    ax.set_ylim(50, 100)
+    ax.set_xticks(np.arange(50, 101, 10))
+    ax.set_yticks(np.arange(50, 101, 10))
+    ax.set_xlabel("coherence")
+    ax.set_ylabel("alignment")
+    ax.set_title(title, loc="center", pad=12, fontweight="600", color="#1a1a1a")
     ax.grid(True, color="#eeeeee", lw=0.6, zorder=0)
     ax.set_axisbelow(True)
 
@@ -232,16 +226,15 @@ def main():
         b = baseline[0]
         draw_baseline_star(axL, b["mean_coherence"], b["mean_alignment"],
                            "baseline (no hook)")
-    # Δ brackets on the right of each method's max-coh point
-    bracket_x = 100.5
+    # Δ brackets on the right of each method's curve, just inside the axis frame
+    bracket_x = 99.0
     for i, (label, color, s) in enumerate(fra_stats):
         if s["n70"] >= 1 and s["delta"] > 0:
-            draw_delta_bracket(axL, x=bracket_x + i * 1.2,
+            draw_delta_bracket(axL, x=bracket_x - i * 0.8,
                                y_lo=s["min_align"], y_hi=s["max_align"],
                                color=color)
-    decorate(axL, title="FRA decomposition recipes")
-    axL.legend(loc="lower left", title="method (Nura's SAE @ L24 ln1)",
-               title_fontsize=10, ncol=1)
+    decorate(axL, title="FRA decomposition")
+    axL.legend(loc="lower left", title="method")
 
     # ── RIGHT: conventional additive ────────────────────────────────────
     axR = axes[1]
@@ -259,21 +252,21 @@ def main():
     if a_stats and a_stats["n70"] >= 1 and a_stats["delta"] > 0:
         draw_delta_bracket(axR, x=bracket_x, y_lo=a_stats["min_align"],
                            y_hi=a_stats["max_align"], color=PAL["additive"])
-    decorate(axR, title="Conventional additive feature steering")
-    axR.legend(loc="lower left",
-               title="recipe  (Nura's SAE @ L24 ln1)",
-               title_fontsize=10)
+    decorate(axR, title="Conventional steering")
+    axR.legend(loc="lower left", title="method")
 
     fig.suptitle(
-        "Same SAE, same hookpoint, same prompts — only the recipe differs",
-        fontsize=13.5, fontweight="600", color="#1a1a1a", y=1.02,
+        "Alignment vs coherence frontier — same SAE, same hookpoint, "
+        "same prompts; recipe varies",
+        fontsize=18, fontweight="600", color="#0a0a0a", y=1.04,
     )
     fig.text(
         0.5, -0.02,
-        r"medical EM (Qwen2.5-14B + medical LoRA) $\cdot$ 8 EM eval prompts $\cdot$ "
-        r"$\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ $\cdot$ eval seed = "
-        f"{args.seed}" r" $\cdot$ vertical brackets show $\Delta$align at coh $\geq$ 70",
-        ha="center", va="top", fontsize=9, color="#666666",
+        r"Qwen2.5-14B + medical LoRA $\cdot$ 8 evaluation prompts $\cdot$ "
+        r"$\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ $\cdot$ "
+        f"eval seed = {args.seed}"
+        r" $\cdot$ vertical brackets mark $\Delta$align across points at coh $\geq$ 70",
+        ha="center", va="top", fontsize=10.5, color="#555555",
     )
 
     out = Path(args.out).expanduser()
