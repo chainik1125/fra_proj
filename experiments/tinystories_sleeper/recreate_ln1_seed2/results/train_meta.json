@@ -1,0 +1,17 @@
+{
+  "d_sae": 1536,
+  "k_total": 32,
+  "T": 30,
+  "batch_size": 4096,
+  "n_steps": 50000,
+  "lr": 0.0005,
+  "normalize_every": 100,
+  "seed": 2,
+  "txc_layer_indices": {},
+  "final_losses": {
+    "sae_layer0": 13.721931457519531,
+    "sae_layer1": 29.11423683166504,
+    "sae_layer2": 46.59865951538086,
+    "sae_layer3": 77.05119323730469
+  }
+}

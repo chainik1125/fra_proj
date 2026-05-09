@@ -1,0 +1,68 @@
+{
+  "baseline": {
+    "clean_ce": 0.7241769433021545,
+    "dep_logp": -11.38028335571289
+  },
+  "by_arch": {
+    "sae_layer0": {
+      "feature_idx": 1445,
+      "alpha": 2.0,
+      "val_asr_16": 0.96,
+      "val_dep_logp_delta": -0.10734844207763672,
+      "val_clean_ce_delta": -1.6689300537109375e-06,
+      "test_dep_logp": -10.894529342651367,
+      "test_dep_logp_delta": -0.06506824493408203,
+      "test_clean_ce": 1.36174476146698,
+      "test_clean_ce_delta": -2.5272369384765625e-05,
+      "test_asr_16": 0.86,
+      "baseline_test_asr_16": 0.99,
+      "feature_top_scores": 0.6291621327400208,
+      "feature_auroc": 0.9848500490188599
+    },
+    "sae_layer1": {
+      "feature_idx": 148,
+      "alpha": 1.5,
+      "val_asr_16": 0.97,
+      "val_dep_logp_delta": -0.06942558288574219,
+      "val_clean_ce_delta": -0.00045233964920043945,
+      "test_dep_logp": -10.904566764831543,
+      "test_dep_logp_delta": -0.07510566711425781,
+      "test_clean_ce": 1.3616836071014404,
+      "test_clean_ce_delta": -8.64267349243164e-05,
+      "test_asr_16": 0.99,
+      "baseline_test_asr_16": 0.99,
+      "feature_top_scores": 0.10594478994607925,
+      "feature_auroc": 0.7113000154495239
+    },
+    "sae_layer2": {
+      "feature_idx": 792,
+      "alpha": 2.0,
+      "val_asr_16": 0.86,
+      "val_dep_logp_delta": -0.08413314819335938,
+      "val_clean_ce_delta": 5.137920379638672e-05,
+      "test_dep_logp": -10.975381851196289,
+      "test_dep_logp_delta": -0.1459207534790039,
+      "test_clean_ce": 1.361769676208496,
+      "test_clean_ce_delta": -3.5762786865234375e-07,
+      "test_asr_16": 0.9,
+      "baseline_test_asr_16": 0.99,
+      "feature_top_scores": 0.38714322447776794,
+      "feature_auroc": 0.8948000073432922
+    },
+    "sae_layer3": {
+      "feature_idx": 287,
+      "alpha": 2.0,
+      "val_asr_16": 0.96,
+      "val_dep_logp_delta": -0.017592430114746094,
+      "val_clean_ce_delta": 6.556510925292969e-06,
+      "test_dep_logp": -10.825989723205566,
+      "test_dep_logp_delta": 0.00347137451171875,
+      "test_clean_ce": 1.361768126487732,
+      "test_clean_ce_delta": -1.9073486328125e-06,
+      "test_asr_16": 0.98,
+      "baseline_test_asr_16": 0.99,
+      "feature_top_scores": 0.2500757575035095,
+      "feature_auroc": 0.8389500379562378
+    }
+  }
+}
