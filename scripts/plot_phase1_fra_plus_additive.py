@@ -124,7 +124,8 @@ def main():
     y_top = max(int(np.ceil(y_top / 5) * 5), 25)
 
     for ax, em in zip(axs, domains):
-        x = np.arange(len(COLUMNS))
+        n_main = len(COLUMNS)
+        x = np.arange(n_main + 1)  # +1 for the trailing "Best" column
         means, stds, ns = [], [], []
         for col_key, label, group, _color in COLUMNS:
             s = metrics.get((col_key, em))
@@ -135,31 +136,64 @@ def main():
                 means.append(d["mean"] if d["mean"] is not None else 0.0)
                 stds.append(d["std"] if d["std"] is not None else 0.0)
                 ns.append(d["n"])
-        bars = ax.bar(x, means, yerr=stds,
-                      color=[c for _, _, _, c in COLUMNS],
-                      edgecolor="#222222", linewidth=0.8,
+        # Best column: argmax over the 8 main bars (only count cells with n>0)
+        valid_idxs = [i for i in range(n_main) if ns[i] > 0]
+        if valid_idxs:
+            best_i = max(valid_idxs, key=lambda i: means[i])
+            best_label = COLUMNS[best_i][1]
+            best_color = "#222222"  # dark grey for the "best" bar (neutral)
+            best_mean = means[best_i]
+            best_std = stds[best_i]
+            best_n = ns[best_i]
+        else:
+            best_i = None; best_label = ""; best_color = "#666666"
+            best_mean = 0.0; best_std = 0.0; best_n = 0
+
+        all_means = means + [best_mean]
+        all_stds  = stds  + [best_std]
+        all_ns    = ns    + [best_n]
+        all_colors = [c for _, _, _, c in COLUMNS] + [best_color]
+        edge_widths = [0.8] * n_main + [2.0]   # thicker edge on the Best bar
+        edge_colors = ["#222222"] * n_main + ["#000000"]
+
+        bars = ax.bar(x, all_means, yerr=all_stds,
+                      color=all_colors,
+                      edgecolor=edge_colors, linewidth=edge_widths,
                       error_kw=dict(ecolor="#222222", capsize=5, capthick=1.2, lw=1.4),
                       zorder=3)
-        for bar, m, s, n in zip(bars, means, stds, ns):
+        for i, (bar, m, s, n) in enumerate(zip(bars, all_means, all_stds, all_ns)):
             label_str = f"{m:.1f}" if n > 0 else "n=0"
+            color = "#0a0a0a" if i < n_main else "#000000"
+            weight = "600" if i < n_main else "bold"
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + (s or 0) + 0.6,
                     label_str, ha="center", va="bottom",
-                    fontsize=11, fontweight="600", color="#0a0a0a", zorder=5)
+                    fontsize=11.5 if i == n_main else 11,
+                    fontweight=weight, color=color, zorder=5)
+
+        # Annotate the Best bar with the winning recipe name (small, inside the bar)
+        if best_i is not None and best_mean > 0:
+            ax.text(bars[-1].get_x() + bars[-1].get_width()/2, best_mean / 2,
+                    best_label,
+                    ha="center", va="center", fontsize=10.5,
+                    color="white", fontweight="bold", zorder=6, rotation=90)
+
+        x_labels = [lbl for _, lbl, _, _ in COLUMNS] + ["Best"]
         ax.set_xticks(x)
-        ax.set_xticklabels([lbl for _, lbl, _, _ in COLUMNS], rotation=22, ha="right")
+        ax.set_xticklabels(x_labels, rotation=22, ha="right")
         ax.set_title(em.capitalize(), loc="center", fontsize=18, fontweight="bold")
         ax.grid(True, axis="y", color="#eeeeee", lw=0.6, zorder=0)
         ax.set_axisbelow(True)
         ax.set_ylim(0, y_top)
-        # vertical separator between FRA and Additive groups
+        # separators: between FRA / Additive, and between Additive / Best
         n_fra = sum(1 for c, _, _, _ in COLUMNS if c.startswith("FRA:"))
-        sep = n_fra - 0.5
-        ax.axvline(sep, color="#bbbbbb", lw=0.9, ls=(0, (3, 3)), zorder=1)
-        # group labels under x-axis
-        ax.text(sep - 0.05, y_top * 0.95, "FRA decomposition",
-                ha="right", va="top", fontsize=12, color="#555555", fontweight="600")
-        ax.text(sep + 0.05, y_top * 0.95, "Conventional additive",
-                ha="left", va="top", fontsize=12, color="#555555", fontweight="600")
+        sep_fra = n_fra - 0.5
+        sep_best = n_main - 0.5
+        ax.axvline(sep_fra,  color="#bbbbbb", lw=0.9, ls=(0, (3, 3)), zorder=1)
+        ax.axvline(sep_best, color="#bbbbbb", lw=0.9, ls=(0, (3, 3)), zorder=1)
+        ax.text(sep_fra - 0.05, y_top * 0.95, "FRA decomposition",
+                ha="right", va="top", fontsize=11.5, color="#555555", fontweight="600")
+        ax.text(sep_fra + 0.05, y_top * 0.95, "Conventional additive",
+                ha="left", va="top", fontsize=11.5, color="#555555", fontweight="600")
         # baseline (no-hook) horizontal-ish reference: print it as text in upper-left
         b = metrics.get(("BASELINE_NOHOOK", em))
         if b is not None and b["alignment"] is not None:
