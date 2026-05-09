@@ -3,14 +3,15 @@
 Reads the same per-seed re-attributed sweep JSON used for the 2x2 plot, but
 draws conventional + OV-single overlaid in each panel (means only, no bands).
 
-Color scheme (paper-consistent):
-  orange   — OV → OV
-  black    — conventional resid-mid additive
-  (green and blue reserved for QK/QK and QK→OV in other figures)
+Color scheme (sleeper plots):
+  green = JSD(steered, clean)     — distance from clean (lower = better)
+  red   = JSD(steered, poisoned)  — distance from sleeper (higher = better)
+  (red/green reserved for sleeper-specific clean-vs-poisoned semantics; the
+   orange OV→OV / black conventional palette is used in non-sleeper figures.)
 
 Linestyle / marker:
-  solid  + ●   JSD(steered, clean)     — lower = better (closer to clean)
-  dashed + ▲   JSD(steered, poisoned)  — higher = better (further from sleeper)
+  solid + ●   single OV → OV
+  dashed + ▲   conventional resid-mid additive
 
 Layout:
   left  — 4k SAE
@@ -47,11 +48,9 @@ def main() -> None:
 
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.6), sharey=True)
 
-    # Paper-consistent color scheme:
-    #   orange = OV→OV, black = conventional
-    #   (green = QK/QK, blue = QK→OV — reserved for other figures)
-    OV_C   = "#ff7f0e"
-    CONV_C = "#000000"
+    # Sleeper-plot palette: red/green encodes clean-vs-poisoned semantics.
+    GREEN = "#2ca02c"   # JSD(s, clean)     ↓ better — distance from clean
+    RED   = "#d62728"   # JSD(s, poisoned)  ↑ better — distance from sleeper
 
     panel_setup = [
         (axes[0], "4k SAE",  "ov_single_4k",  "conventional_4k",
@@ -61,19 +60,19 @@ def main() -> None:
     ]
 
     for ax, sae_label, ov_key, conv_key, title in panel_setup:
-        for key, name, color in [
-            (ov_key,   "single OV → OV",     OV_C),
-            (conv_key, "conventional",       CONV_C),
+        for key, name, linestyle, marker in [
+            (ov_key,   "single OV → OV",  "-",  "o"),
+            (conv_key, "conventional",    "--", "^"),
         ]:
             entry = cfg[key]
             per_alpha = entry.get("per_alpha") or entry.get("results")
             jc = [reduce_mean(per_alpha[str(a)]["jsd_clean"]) for a in alphas]
             jp = [reduce_mean(per_alpha[str(a)]["jsd_pois"])  for a in alphas]
-            ax.plot(alphas, jc, color=color, lw=2.3, marker="o", markersize=7,
-                    linestyle="-",
+            ax.plot(alphas, jc, color=GREEN, lw=2.3, marker=marker, markersize=7,
+                    linestyle=linestyle,
                     label=f"{name} · JSD(steered, clean) ↓")
-            ax.plot(alphas, jp, color=color, lw=2.3, marker="^", markersize=7,
-                    linestyle="--",
+            ax.plot(alphas, jp, color=RED, lw=2.3, marker=marker, markersize=7,
+                    linestyle=linestyle,
                     label=f"{name} · JSD(steered, poisoned) ↑")
 
         ax.axhline(1.0, color="#555", linestyle=":", lw=0.9, alpha=0.6)
