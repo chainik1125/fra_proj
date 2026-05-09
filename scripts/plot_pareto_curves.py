@@ -155,7 +155,8 @@ def _draw_all_seeds(ax: plt.Axes, seed_curves: list[list[dict]],
 
 def _fill_panel_seeds(ax: plt.Axes,
                       curves: list[tuple[list[list[dict]], str]],
-                      alpha_colors: dict) -> None:
+                      alpha_colors: dict,
+                      legend_loc: str = "lower right") -> None:
     for seed_curves, key in curves:
         _draw_all_seeds(ax, seed_curves, STYLES[key], alpha_colors)
     _style_ax(ax)
@@ -166,7 +167,7 @@ def _fill_panel_seeds(ax: plt.Axes,
                       markersize=7, label=STYLES[k]["label"])
         for _, k in curves
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc=legend_loc)
 
 
 def _fill_panel(ax: plt.Axes,
@@ -247,9 +248,10 @@ def _fig6(single_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
 def _fig7(single_s, fset_s, down_s, alpha_colors, norm, cmap, alphas) -> plt.Figure:
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13, 5),
                                       constrained_layout=True)
-    _fill_panel_seeds(ax_l, [(fset_s, "set"), (down_s, "downstream")], alpha_colors)
+    _fill_panel_seeds(ax_l, [(fset_s, "set"), (down_s, "downstream")], alpha_colors,
+                      legend_loc="lower right")
     _fill_panel_seeds(ax_r, [(single_s, "single"), (down_s, "downstream")],
-                      alpha_colors)
+                      alpha_colors, legend_loc="lower left")
     ax_r.set_ylabel("")
     _add_colorbar(fig, [ax_l, ax_r], norm, cmap, alphas)
     return fig
