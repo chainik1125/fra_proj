@@ -119,17 +119,7 @@ def main() -> None:
     ax_l.set_xticklabels([f"{a:.2g}" for a in alphas])
     ax_l.grid(True, axis="y", color="#eeeeee", lw=0.6, zorder=0)
     ax_l.set_axisbelow(True)
-    ax_l.legend(loc="center right", framealpha=0.95, edgecolor="#bbbbbb")
-
-    # baseline annotation: at α=0 with no steering, steered ≡ poisoned, so
-    # JSD(steered, clean) = JSD(poisoned, clean) and JSD(steered, poisoned) = 0
-    j0 = cfg[OV_KEY]["per_alpha"]["0.0"]
-    base_pois_clean = reduce_mean(j0["jsd_clean"])
-    ax_l.text(0.02, 0.97,
-               f"Unsteered baseline (α=0)\nJSD(poisoned, clean) = {base_pois_clean:.2f} bits",
-               transform=ax_l.transAxes, ha="left", va="top",
-               fontsize=11, color="#444",
-               bbox=dict(facecolor="white", edgecolor="#222", boxstyle="round,pad=0.4"))
+    ax_l.legend(loc="center left", framealpha=0.95, edgecolor="#bbbbbb")
 
     # ─────────────────── RIGHT PANEL — rollout (layman) ───────────────────
     for key, name, linestyle, marker in methods:
@@ -146,23 +136,14 @@ def main() -> None:
 
     ax_r.set_title("Rollout-level (layman view)", loc="center",
                     fontweight="bold", pad=14)
-    ax_r.set_ylabel("fraction of 200 deployment prompts")
+    ax_r.set_ylabel("Sleeper fraction / Word-word matches")
     ax_r.set_xlabel(r"steering coefficient  $\alpha$")
     ax_r.set_ylim(-0.03, 1.05)
     ax_r.set_xticks(alphas)
     ax_r.set_xticklabels([f"{a:.2g}" for a in alphas])
     ax_r.grid(True, axis="y", color="#eeeeee", lw=0.6, zorder=0)
     ax_r.set_axisbelow(True)
-    ax_r.legend(loc="upper right", framealpha=0.95, edgecolor="#bbbbbb")
-
-    base_match = reduce_mean(cfg[CONV_KEY]["per_alpha"]["0.0"]["n_exact_match_clean"]) / args.n_prompts
-    base_asr   = reduce_mean(cfg[CONV_KEY]["per_alpha"]["0.0"]["asr"])
-    ax_r.text(0.02, 0.97,
-               f"Unsteered baseline (α=0)\nclean-match = {base_match*100:.1f}%, "
-               f"sleeper rate = {base_asr*100:.1f}%",
-               transform=ax_r.transAxes, ha="left", va="top",
-               fontsize=11, color="#444",
-               bbox=dict(facecolor="white", edgecolor="#222", boxstyle="round,pad=0.4"))
+    ax_r.legend(loc="center left", framealpha=0.95, edgecolor="#bbbbbb")
 
     if args.title:
         fig.suptitle(args.title, fontsize=15, y=1.00)
