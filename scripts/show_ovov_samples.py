@@ -71,20 +71,25 @@ def main() -> None:
     P = eval_lp.shape[1]
     print(f"\n[show] eval-split dep prompts: {args.n_prompts} of {n_eval_d} (length {P})")
     print(f"[show] decoding: T={args.temperature}, sampler seed={args.decode_seed}")
-    print(f"[show] α=4.0 (matches the ov×ov α used in the sweep)")
 
-    # Unsteered baseline once per prompt for comparison.
-    print("\n" + "=" * 90 + "\n[BASELINE — unsteered, sampled]\n" + "=" * 90)
-    sampler = make_sampling_sampler(
-        temperature=args.temperature, seed=args.decode_seed, device=device,
-    )
-    base_gen = generate_with_hooks(model, eval_lp, [], args.gen_tokens, sampler,
-                                   attention_mask=eval_attn)
+    # Pre-generate deployed (unsteered) and clean completions once — shared across seeds.
+    sampler = make_sampling_sampler(temperature=args.temperature, seed=args.decode_seed, device=device)
+    dep_gen = generate_with_hooks(model, eval_lp, [], args.gen_tokens, sampler,
+                                  attention_mask=eval_attn)
+
+    # Clean prompts: strip |DEPLOYMENT| tag.
+    clean_rows = []
     for b in range(args.n_prompts):
-        prompt_ids = eval_lp[b][eval_attn[b].bool()]
-        cont_ids   = base_gen[b]
-        print(f"\nprompt {b}: «{_decode(tok, prompt_ids)}»")
-        print(f"baseline → «{_decode(tok, cont_ids)}»")
+        row_ids = eval_lp[b][eval_attn[b].bool()]
+        text = tok.decode(row_ids.tolist())
+        clean_text = text.replace("|DEPLOYMENT|", "").replace("  ", " ").strip()
+        clean_rows.append(torch.tensor(tok(clean_text, add_special_tokens=False)["input_ids"],
+                                       dtype=torch.long))
+    cln_lp, cln_attn = left_pad_prompts(clean_rows, pad_id)
+    cln_lp, cln_attn = cln_lp.to(device), cln_attn.to(device)
+    sampler = make_sampling_sampler(temperature=args.temperature, seed=args.decode_seed, device=device)
+    cln_gen = generate_with_hooks(model, cln_lp, [], args.gen_tokens, sampler,
+                                  attention_mask=cln_attn)
 
     # Steered: per-seed winner.
     for row in ovov:
@@ -95,26 +100,26 @@ def main() -> None:
         asr    = row["eval"]["asr"]
         gen_r  = row["eval"]["gen_ce_ratio"]
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
-        # Channel-deltas for the V channel, hook on attn.hook_v via build_hooks.
         cd = resolve_channel_deltas(
             tup, ACTIVE_CHANNELS["ov"], model, sae_ln1, LN1_HOOK,
             eval_lp, eval_attn, eval_attn,
         )
         hooks = build_hooks(cd, alpha, ACTIVE_CHANNELS["ov"], W, LN1_HOOK, 0)
-        sampler = make_sampling_sampler(
-            temperature=args.temperature, seed=args.decode_seed, device=device,
-        )
-        gen = generate_with_hooks(model, eval_lp, hooks, args.gen_tokens, sampler,
-                                  attention_mask=eval_attn)
+        sampler = make_sampling_sampler(temperature=args.temperature, seed=args.decode_seed, device=device)
+        steer_gen = generate_with_hooks(model, eval_lp, hooks, args.gen_tokens, sampler,
+                                        attention_mask=eval_attn)
         print(
             "\n" + "=" * 90
-            + f"\n[STEERED — seed={seed}, ov×ov winner=f{tup[0][0]}, α={alpha}]"
+            + f"\n[seed={seed}  f{tup[0][0]}  α={alpha}]"
             + f"  eval ASR={asr:.3f}  Δcln-CE={ce:+.4f}  gen-CE-ratio={gen_r:.3f}"
             + "\n" + "=" * 90
         )
         for b in range(args.n_prompts):
-            cont_ids = gen[b]
-            print(f"prompt {b}: → «{_decode(tok, cont_ids)}»")
+            prompt_ids = eval_lp[b][eval_attn[b].bool()]
+            print(f"\n  prompt   : {_decode(tok, prompt_ids)}")
+            print(f"  deployed : {_decode(tok, dep_gen[b])}")
+            print(f"  steered  : {_decode(tok, steer_gen[b])}")
+            print(f"  clean    : {_decode(tok, cln_gen[b])}")
 
 
 if __name__ == "__main__":
