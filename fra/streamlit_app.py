@@ -259,7 +259,7 @@ def run_fra(
                 "shape": tuple(sparse_h.shape),
                 "total_interactions": sparse_h._nnz(),
                 "bias_corr_np": bias_corr_h,
-                "attn_pattern_np": attn_pattern_all[h].cpu().numpy(),
+                "attn_pattern_np": attn_pattern_all[h].cpu().float().numpy(),
             }
 
         # Pick head 0 of the list as the default display head
@@ -276,7 +276,7 @@ def run_fra(
             "bias_corr_np": per_head[default_h]["bias_corr_np"],
             "attn_pattern_np": per_head[default_h]["attn_pattern_np"],
             "seq_len": fra_result["seq_len"],
-            "feat_acts_np": feat_acts.cpu().numpy(),
+            "feat_acts_np": feat_acts.cpu().float().numpy(),
             "attn_scale": attn_scale,
             "softcap": softcap,
             "token_strs": token_strs,
@@ -287,7 +287,7 @@ def run_fra(
         bias_corr_np = compute_bias_correction(
             model, sae, layer, head, x_hat, hook_point
         )
-        attn_pattern = attn_pattern_all[head].cpu().numpy()
+        attn_pattern = attn_pattern_all[head].cpu().float().numpy()
 
         sparse = fra_result["fra_tensor_sparse"]
         return {
@@ -296,7 +296,7 @@ def run_fra(
             "shape": fra_result["shape"],
             "seq_len": fra_result["seq_len"],
             "total_interactions": fra_result["total_interactions"],
-            "feat_acts_np": feat_acts.cpu().numpy(),
+            "feat_acts_np": feat_acts.cpu().float().numpy(),
             "attn_pattern_np": attn_pattern,
             "bias_corr_np": bias_corr_np,
             "attn_scale": attn_scale,
