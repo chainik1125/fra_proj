@@ -44,7 +44,7 @@ ADDITIVE_SAES = [
     ("L24_resid_post", "L24 resid_post"),
     ("L25_ln1",        "L25 ln1"),
 ]
-ADDITIVE_COLOR = "#1a1a1a"
+ADDITIVE_COLOR = "#000000"
 
 
 def setup_style():

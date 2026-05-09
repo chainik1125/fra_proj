@@ -22,7 +22,7 @@ COLOR_BY_RECIPE = {
     "qk_to_qk":     "#009E73",  # green  ← QK→QK
     "qk_to_ov":     "#0072B2",  # blue   ← QK→OV
     "ov_to_ov":     "#D55E00",  # orange ← OV→OV
-    "conventional": "#1a1a1a",  # black  ← conventional additive
+    "conventional": "#000000",  # pure black  ← conventional additive
 }
 
 
