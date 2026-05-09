@@ -135,13 +135,29 @@ def per_stream_aggregate(data):
     return dict(out)
 
 
-# qualitative_<sae_id>_<em_model>_evalseed<N>_top<K>.json
-QUAL_RE = re.compile(r"qualitative_(?P<sae>[A-Za-z0-9_]+)_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)_top(?P<k>\d+)\.json")
+# Two filename patterns we recognise:
+#   - qualitative_<sae_id>_<em>_evalseed<N>_top<K>.json   (additive; from phase1_additive_orchestrator)
+#   - qualitative_FRA_<em>_evalseed<N>.json               (FRA recipes; from phase1_fra_orchestrator)
+QUAL_RE_ADDITIVE = re.compile(
+    r"qualitative_(?P<sae>[A-Za-z0-9_]+)_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)_top(?P<k>\d+)\.json"
+)
+QUAL_RE_FRA = re.compile(
+    r"qualitative_FRA_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
+)
 
 
 def process_stream_file(path: Path, client, max_workers: int):
-    m = QUAL_RE.match(path.name)
-    if m is None:
+    m_add = QUAL_RE_ADDITIVE.match(path.name)
+    m_fra = QUAL_RE_FRA.match(path.name)
+    if m_add is not None:
+        sae_id = m_add.group("sae")
+        em = m_add.group("em")
+        seed = int(m_add.group("seed"))
+    elif m_fra is not None:
+        sae_id = "L24_ln1_nura_FRA"
+        em = m_fra.group("em")
+        seed = int(m_fra.group("seed"))
+    else:
         print(f"  [skip non-stream JSON] {path.name}", flush=True)
         return None
     print(f"  [stream] {path.name}", flush=True)
@@ -155,17 +171,68 @@ def process_stream_file(path: Path, client, max_workers: int):
     agg_path = path.parent / path.name.replace("qualitative_", "gpt4o_aggregated_")
     agg_path.write_text(json.dumps(agg, indent=2))
     return {
-        "sae_id": m.group("sae"),
-        "em_model": m.group("em"),
-        "eval_seed": int(m.group("seed")),
+        "sae_id": sae_id,
+        "em_model": em,
+        "eval_seed": seed,
         "agg_path": str(agg_path),
         "agg": agg,
+    }
+
+
+def _summary_metrics(method_entries, coh_floor=70.0):
+    """Compute (peak, baseline, min_at_floor, delta) per seed for a method.
+
+    Convention:
+      - peak     : max(alignment) over all α (regardless of coherence)
+      - baseline : alignment at α=1.0 (additive math no-op); for FRA recipes
+                   the explicit `baseline` method should be used instead at
+                   the call site.
+      - min_above_floor : min(alignment) over α where coh ≥ coh_floor
+      - delta    : max-min over α where coh ≥ coh_floor
+
+    method_entries = list of {scale, per_seed_alignment, per_seed_coherence, ...}.
+    Returns dict[str, list[float]] keyed by metric name (one value per seed).
+    """
+    n_seeds = method_entries[0]["n_seeds"] if method_entries else 0
+    peaks, baselines, mins, deltas = [], [], [], []
+    for s in range(n_seeds):
+        scales, al, co = [], [], []
+        for e in method_entries:
+            if s < len(e["per_seed_alignment"]):
+                scales.append(e["scale"])
+                al.append(e["per_seed_alignment"][s])
+                co.append(e["per_seed_coherence"][s])
+        scales = np.array(scales); al = np.array(al); co = np.array(co)
+        peaks.append(float(al.max()))
+        # baseline: prefer α=1.0 for additive recipes (math no-op)
+        if (scales == 1.0).any():
+            baselines.append(float(al[scales == 1.0][0]))
+        mask = co >= coh_floor
+        if mask.any():
+            mins.append(float(al[mask].min()))
+            deltas.append(float(al[mask].max() - al[mask].min()))
+    return {"peak": peaks, "baseline": baselines,
+            "min_above_floor": mins, "delta": deltas}
+
+
+def _stat(values):
+    if not values:
+        return {"mean": None, "std": None, "n": 0}
+    arr = np.array(values, dtype=float)
+    return {
+        "mean": float(arr.mean()),
+        "std": float(arr.std(ddof=1)) if arr.size >= 2 else 0.0,
+        "n": int(arr.size),
     }
 
 
 def combine_across_seeds(records, out_root: Path):
     """Group records by (sae_id, em_model) and compute mean+std across the 3
     eval-seed aggregates. Output: gpt4o_combined_<sae_id>_<em_model>.json.
+
+    Each combined file now also includes a `_summary` block per method with
+    peak / baseline / min@coh70 / Δ@coh70 means and stds across seeds —
+    for downstream tables + plots.
     """
     by_key = defaultdict(list)
     for r in records:
@@ -175,14 +242,13 @@ def combine_across_seeds(records, out_root: Path):
 
     summary = {}
     for (sae_id, em_model), rs in by_key.items():
-        # Combine over seeds: for each (method, scale) collect per-seed means
-        # then compute mean ± sample-std (ddof=1).
         methods_seen = set()
         for r in rs:
             methods_seen |= set(r["agg"].keys())
-        combined = defaultdict(list)
+        combined = {}
         for method in methods_seen:
             scales = sorted({e["scale"] for r in rs for e in r["agg"].get(method, [])})
+            entries = []
             for scale in scales:
                 al_per_seed = []
                 co_per_seed = []
@@ -194,7 +260,7 @@ def combine_across_seeds(records, out_root: Path):
                             co_per_seed.append(e["mean_coherence"])
                             seeds_used.append(r["eval_seed"])
                             break
-                combined[method].append({
+                entries.append({
                     "scale": float(scale),
                     "mean_alignment_across_seeds": float(np.mean(al_per_seed)) if al_per_seed else None,
                     "std_alignment_across_seeds":  float(np.std(al_per_seed, ddof=1)) if len(al_per_seed) >= 2 else 0.0,
@@ -205,8 +271,18 @@ def combine_across_seeds(records, out_root: Path):
                     "per_seed_alignment": al_per_seed,
                     "per_seed_coherence": co_per_seed,
                 })
+            metrics = _summary_metrics(entries)
+            combined[method] = {
+                "by_alpha": entries,
+                "summary": {
+                    "peak":            _stat(metrics["peak"]),
+                    "baseline_alpha1": _stat(metrics["baseline"]),
+                    "min_above_70":    _stat(metrics["min_above_floor"]),
+                    "delta_coh_70":    _stat(metrics["delta"]),
+                },
+            }
         out_path = out_root / f"gpt4o_combined_{sae_id}_{em_model}.json"
-        out_path.write_text(json.dumps(dict(combined), indent=2))
+        out_path.write_text(json.dumps(combined, indent=2))
         summary[(sae_id, em_model)] = str(out_path)
         print(f"  combined → {out_path}", flush=True)
 
