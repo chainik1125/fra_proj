@@ -47,26 +47,26 @@ def setup_style():
     mpl.rcParams.update({
         "font.family":         "sans-serif",
         "font.sans-serif":     ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
-        "font.size":           13,
-        "axes.titlesize":      15,
-        "axes.labelsize":      13.5,
+        "font.size":           15,
+        "axes.titlesize":      18,
+        "axes.labelsize":      16,
         "axes.spines.top":     False,
         "axes.spines.right":   False,
-        "axes.linewidth":      1.0,
+        "axes.linewidth":      1.2,
         "axes.edgecolor":      "#222222",
         "axes.labelcolor":     "#1a1a1a",
-        "xtick.color":         "#333333",
-        "ytick.color":         "#333333",
-        "xtick.labelsize":     11.5,
-        "ytick.labelsize":     11.5,
+        "xtick.color":         "#222222",
+        "ytick.color":         "#222222",
+        "xtick.labelsize":     14,
+        "ytick.labelsize":     14,
         "xtick.direction":     "out",
         "ytick.direction":     "out",
         "legend.frameon":      False,
-        "legend.fontsize":     11,
-        "legend.title_fontsize": 11.5,
+        "legend.fontsize":     13.5,
+        "legend.title_fontsize": 14,
         "figure.dpi":          110,
         "savefig.bbox":        "tight",
-        "savefig.pad_inches":  0.08,
+        "savefig.pad_inches":  0.10,
     })
 
 
@@ -115,7 +115,7 @@ def stats(rows, floor=COH_FLOOR):
 
 
 # ─── Drawing primitives ────────────────────────────────────────────────────
-def draw_method(ax, rows, color, label, *, marker="o", show_alpha=True,
+def draw_method(ax, rows, color, label, *, marker="o", show_alpha=False,
                 z_off=0):
     if not rows:
         return None
@@ -123,25 +123,22 @@ def draw_method(ax, rows, color, label, *, marker="o", show_alpha=True,
     al = np.array([r["mean_alignment"] for r in rows])
     co = np.array([r["mean_coherence"] for r in rows])
     # subtle line trajectory
-    ax.plot(co, al, color=color, lw=1.0, alpha=0.55, zorder=2 + z_off)
+    ax.plot(co, al, color=color, lw=1.2, alpha=0.55, zorder=2 + z_off)
     # filled markers
-    h = ax.scatter(co, al, marker=marker, s=85, facecolor=color,
-                   edgecolor="white", linewidth=1.1, zorder=4 + z_off,
+    h = ax.scatter(co, al, marker=marker, s=120, facecolor=color,
+                   edgecolor="white", linewidth=1.3, zorder=4 + z_off,
                    label=label)
-    # α labels
+    # α labels — only on the "winner" per panel
     if show_alpha:
-        for s, x, y in zip(sc, al, co):
-            pass  # ordering: we want α near each point but offset cleanly
-        # offset alphas radially outward from curve centroid
         cx, cy = co.mean(), al.mean()
         for sval, x, y in zip(sc, co, al):
             dx, dy = x - cx, y - cy
             r = (dx * dx + dy * dy) ** 0.5 + 1e-6
-            ox, oy = 6 * dx / r, 6 * dy / r
-            ax.annotate(f"{sval:g}",
+            ox, oy = 9 * dx / r, 9 * dy / r
+            ax.annotate(f"$\\alpha={sval:g}$",
                         xy=(x, y), xytext=(ox, oy),
                         textcoords="offset points",
-                        fontsize=7.5, color="#555555",
+                        fontsize=11, color="#444444",
                         ha="center", va="center", zorder=5 + z_off)
     return h
 
@@ -163,18 +160,18 @@ def draw_delta_bracket(ax, *, x, y_lo, y_hi, color, dx=2.5, lw=1.4):
     ax.plot([x + dx - 0.6, x + dx + 0.6], [y_hi, y_hi], color=color, lw=lw, zorder=3)
 
 
-def decorate(ax, *, title):
+def decorate(ax, *, title, xlim, ylim):
     # coh = 70 floor
     ax.axvline(COH_FLOOR, color="#bbbbbb", lw=1.0, ls=(0, (3, 3)), zorder=1)
-    ax.text(COH_FLOOR + 0.4, 50.4, "coh = 70",
-            color="#888888", fontsize=10, va="bottom", ha="left", zorder=1)
-    ax.set_xlim(50, 100)
-    ax.set_ylim(50, 100)
-    ax.set_xticks(np.arange(50, 101, 10))
-    ax.set_yticks(np.arange(50, 101, 10))
-    ax.set_xlabel("coherence")
-    ax.set_ylabel("alignment")
-    ax.set_title(title, loc="center", pad=12, fontweight="600", color="#1a1a1a")
+    ax.text(COH_FLOOR + 0.3, ylim[0] + 0.3, "coh = 70",
+            color="#888888", fontsize=12, va="bottom", ha="left", zorder=1)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_xticks(np.arange(xlim[0], xlim[1] + 1, 10))
+    ax.set_yticks(np.arange(ylim[0], ylim[1] + 1, 10))
+    ax.set_xlabel("Coherence")
+    ax.set_ylabel("Alignment")
+    ax.set_title(title, loc="center", pad=14, fontweight="600", color="#0a0a0a")
     ax.grid(True, color="#eeeeee", lw=0.6, zorder=0)
     ax.set_axisbelow(True)
 
@@ -204,7 +201,16 @@ def main():
     baseline = load_method(nura_path, "baseline")
     additive = load_method(additive_path)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6.4), sharex=True, sharey=True,
+    # Compute joint axis range (round to nearest 10) accommodating both panels
+    all_rows = qkqk + qkov + ovov + additive + (baseline or [])
+    all_co = np.array([r["mean_coherence"] for r in all_rows])
+    all_al = np.array([r["mean_alignment"] for r in all_rows])
+    xlim = (int(np.floor(all_co.min() / 10) * 10),
+            int(np.ceil(all_co.max() / 10) * 10))
+    ylim = (int(np.floor(all_al.min() / 10) * 10),
+            int(np.ceil(all_al.max() / 10) * 10))
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 7), sharex=True, sharey=True,
                              gridspec_kw=dict(wspace=0.10))
 
     # ── LEFT: three FRA recipes ──────────────────────────────────────────
@@ -214,34 +220,43 @@ def main():
         (r"OV$\rightarrow$OV", ovov, PAL[r"OV$\rightarrow$OV"], "s"),
         (r"QK$\rightarrow$OV", qkov, PAL[r"QK$\rightarrow$OV"], "D"),
     ]
+    # Find the winner (largest Δ) so we only label its α values
+    winner_label = None
+    best_delta = -1
+    for label, rows, _, _ in fra_methods:
+        s = stats(rows)
+        if s and s["n70"] and s["delta"] > best_delta:
+            best_delta = s["delta"]; winner_label = label
     fra_stats = []
     for label, rows, color, marker in fra_methods:
         s = stats(rows)
         if s is None:
             continue
-        d_str = f"  Δ = {s['delta']:5.2f}" if s["n70"] else "  Δ = —"
-        draw_method(axL, rows, color, label + d_str, marker=marker)
+        d_str = r"  $\Delta$ = " + (f"{s['delta']:5.2f}" if s["n70"] else "—")
+        draw_method(axL, rows, color, label + d_str, marker=marker,
+                    show_alpha=(label == winner_label))
         fra_stats.append((label, color, s))
     if baseline:
         b = baseline[0]
         draw_baseline_star(axL, b["mean_coherence"], b["mean_alignment"],
                            "baseline (no hook)")
-    # Δ brackets on the right of each method's curve, just inside the axis frame
-    bracket_x = 99.0
-    for i, (label, color, s) in enumerate(fra_stats):
-        if s["n70"] >= 1 and s["delta"] > 0:
-            draw_delta_bracket(axL, x=bracket_x - i * 0.8,
+    # Single Δ bracket — only on the winning recipe
+    bracket_x = xlim[1] - 0.8
+    for label, color, s in fra_stats:
+        if label == winner_label and s["n70"] >= 1 and s["delta"] > 0:
+            draw_delta_bracket(axL, x=bracket_x,
                                y_lo=s["min_align"], y_hi=s["max_align"],
                                color=color)
-    decorate(axL, title="FRA decomposition")
-    axL.legend(loc="lower left", title="method")
+    decorate(axL, title="FRA decomposition", xlim=xlim, ylim=ylim)
+    axL.legend(loc="lower left", title="Method")
 
     # ── RIGHT: conventional additive ────────────────────────────────────
     axR = axes[1]
     a_stats = stats(additive)
-    a_lab = (f"additive  Δ = {a_stats['delta']:5.2f}"
-             if a_stats and a_stats["n70"] else "additive  Δ = —")
-    draw_method(axR, additive, PAL["additive"], a_lab, marker="^")
+    a_lab = (r"additive  $\Delta$ = " +
+             (f"{a_stats['delta']:5.2f}" if a_stats and a_stats["n70"] else "—"))
+    draw_method(axR, additive, PAL["additive"], a_lab, marker="^",
+                show_alpha=True)
     if additive:
         sc = np.array([r["scale"] for r in additive])
         i_one = int(np.argmin(np.abs(sc - 1.0)))
@@ -252,21 +267,16 @@ def main():
     if a_stats and a_stats["n70"] >= 1 and a_stats["delta"] > 0:
         draw_delta_bracket(axR, x=bracket_x, y_lo=a_stats["min_align"],
                            y_hi=a_stats["max_align"], color=PAL["additive"])
-    decorate(axR, title="Conventional steering")
-    axR.legend(loc="lower left", title="method")
+    decorate(axR, title="Conventional steering", xlim=xlim, ylim=ylim)
+    axR.legend(loc="lower left", title="Method")
 
-    fig.suptitle(
-        "Alignment vs coherence frontier — same SAE, same hookpoint, "
-        "same prompts; recipe varies",
-        fontsize=18, fontweight="600", color="#0a0a0a", y=1.04,
-    )
     fig.text(
         0.5, -0.02,
         r"Qwen2.5-14B + medical LoRA $\cdot$ 8 evaluation prompts $\cdot$ "
         r"$\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ $\cdot$ "
         f"eval seed = {args.seed}"
         r" $\cdot$ vertical brackets mark $\Delta$align across points at coh $\geq$ 70",
-        ha="center", va="top", fontsize=10.5, color="#555555",
+        ha="center", va="top", fontsize=12, color="#555555",
     )
 
     out = Path(args.out).expanduser()
