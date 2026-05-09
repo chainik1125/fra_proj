@@ -66,19 +66,24 @@ def reduce_mean(values):
     return float(values)
 
 
-def reduce_mean_std(values):
-    """Return (mean, std). std=0 if a single value or single-element list."""
+def reduce_mean_minmax(values):
+    """Return (mean, min, max). lo=hi=mean if a single value."""
     if isinstance(values, list):
-        if len(values) >= 2:
-            return float(statistics.mean(values)), float(statistics.stdev(values))
-        return (float(values[0]) if values else 0.0), 0.0
-    return float(values), 0.0
+        if len(values) >= 1:
+            return (float(statistics.mean(values)),
+                    float(min(values)),
+                    float(max(values)))
+        return 0.0, 0.0, 0.0
+    return float(values), float(values), float(values)
 
 
-def _band(ax, xs, mean_seq, std_seq, color, alpha=0.18):
-    lo = [m - s for m, s in zip(mean_seq, std_seq)]
-    hi = [m + s for m, s in zip(mean_seq, std_seq)]
-    ax.fill_between(xs, lo, hi, color=color, alpha=alpha, linewidth=0, zorder=2)
+def _band(ax, xs, lo_seq, hi_seq, color, alpha=0.18):
+    """Shaded band between per-α (lo, hi) pairs.
+
+    For n=3 SAE seeds, lo/hi are min/max of the seed-wise values — directly
+    showing the data range rather than assuming Gaussian-style ±σ uncertainty.
+    """
+    ax.fill_between(xs, lo_seq, hi_seq, color=color, alpha=alpha, linewidth=0, zorder=2)
 
 
 def main() -> None:
@@ -114,12 +119,14 @@ def main() -> None:
     # ─────────────────── LEFT PANEL — JSD (distribution-level) ───────────────────
     for key, name, linestyle, marker in methods:
         per_alpha = cfg[key]["per_alpha"]
-        jc_ms = [reduce_mean_std(per_alpha[str(a)]["jsd_clean"]) for a in alphas]
-        jp_ms = [reduce_mean_std(per_alpha[str(a)]["jsd_pois"])  for a in alphas]
-        jc, jc_s = [m for m, _ in jc_ms], [s for _, s in jc_ms]
-        jp, jp_s = [m for m, _ in jp_ms], [s for _, s in jp_ms]
-        _band(ax_l, alphas, jc, jc_s, GREEN)
-        _band(ax_l, alphas, jp, jp_s, RED)
+        jc_mm = [reduce_mean_minmax(per_alpha[str(a)]["jsd_clean"]) for a in alphas]
+        jp_mm = [reduce_mean_minmax(per_alpha[str(a)]["jsd_pois"])  for a in alphas]
+        jc    = [m for m, _, _ in jc_mm]
+        jc_lo = [lo for _, lo, _ in jc_mm];  jc_hi = [hi for _, _, hi in jc_mm]
+        jp    = [m for m, _, _ in jp_mm]
+        jp_lo = [lo for _, lo, _ in jp_mm];  jp_hi = [hi for _, _, hi in jp_mm]
+        _band(ax_l, alphas, jc_lo, jc_hi, GREEN)
+        _band(ax_l, alphas, jp_lo, jp_hi, RED)
         ax_l.plot(alphas, jc, color=GREEN, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
                    label=f"{name}  JSD(steered, clean)", zorder=3)
@@ -142,15 +149,16 @@ def main() -> None:
     # ─────────────────── RIGHT PANEL — rollout (layman) ───────────────────
     for key, name, linestyle, marker in methods:
         per_alpha = cfg[key]["per_alpha"]
-        # match-rate per seed = n_match[i] / N_PROMPTS; std across seed-fractions
-        mr_ms = [reduce_mean_std([n / args.n_prompts
-                                    for n in per_alpha[str(a)]["n_exact_match_clean"]])
+        mr_mm = [reduce_mean_minmax([n / args.n_prompts
+                                       for n in per_alpha[str(a)]["n_exact_match_clean"]])
                   for a in alphas]
-        as_ms = [reduce_mean_std(per_alpha[str(a)]["asr"]) for a in alphas]
-        mr, mr_s = [m for m, _ in mr_ms], [s for _, s in mr_ms]
-        ar, ar_s = [m for m, _ in as_ms], [s for _, s in as_ms]
-        _band(ax_r, alphas, mr, mr_s, GREEN)
-        _band(ax_r, alphas, ar, ar_s, RED)
+        ar_mm = [reduce_mean_minmax(per_alpha[str(a)]["asr"]) for a in alphas]
+        mr    = [m for m, _, _ in mr_mm]
+        mr_lo = [lo for _, lo, _ in mr_mm];  mr_hi = [hi for _, _, hi in mr_mm]
+        ar    = [m for m, _, _ in ar_mm]
+        ar_lo = [lo for _, lo, _ in ar_mm];  ar_hi = [hi for _, _, hi in ar_mm]
+        _band(ax_r, alphas, mr_lo, mr_hi, GREEN)
+        _band(ax_r, alphas, ar_lo, ar_hi, RED)
         ax_r.plot(alphas, mr, color=GREEN, lw=2.6, marker=marker, markersize=8,
                    linestyle=linestyle, markeredgecolor="white", markeredgewidth=0.9,
                    label=f"{name}  clean-match rate", zorder=3)
