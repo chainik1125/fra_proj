@@ -39,8 +39,10 @@ Use the root script:
 - Internal Python entrypoints used by the script:
   - `experiments/tinystories_sleeper/tracing_feature/scripts/rollout_divergence_ratio.py`
   - `experiments/tinystories_sleeper/tracing_feature/scripts/plot_jsd_side_by_side.py`
-  - (from existing branch) `cache_layer0_activations.py`, `ov_path.py`,
-    `recreate_layer0/reproduce.py`, `recreate_ln1/reproduce.py`
+  - `experiments/tinystories_sleeper/tracing_feature/scripts/cache_layer0_activations.py`
+  - `experiments/tinystories_sleeper/tracing_feature/scripts/ov_path.py`
+  - `experiments/tinystories_sleeper/recreate_layer0/reproduce.py`
+  - `experiments/tinystories_sleeper/recreate_ln1/reproduce.py`
 
 ### A) Reuse existing trained artifacts (recommended on remote)
 

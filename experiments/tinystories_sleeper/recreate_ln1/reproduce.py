@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import shlex
 import subprocess
 import sys
@@ -17,7 +18,7 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parent
-RESULTS_DIR = HERE / "results"
+DEFAULT_RESULTS_DIR = HERE / "results"
 EXPERIMENT_DIR = HERE.parent
 
 
@@ -90,6 +91,9 @@ def write_manifest(results_dir: Path, config_path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("config", nargs="?", default=str(HERE / "config.yaml"))
+    parser.add_argument("--output_dir", default=None)
+    parser.add_argument("--harvest_seed", type=int, default=None)
+    parser.add_argument("--train_seed", type=int, default=None)
     parser.add_argument("--skip", nargs="+", default=[],
                         choices=["harvest", "train", "sweep", "plot"])
     args = parser.parse_args()
@@ -98,7 +102,7 @@ def main() -> None:
     cfg = yaml.safe_load(config_path.read_text())
 
     env = cfg.get("env", {})
-    device = env.get("device")
+    device = os.environ.get("DEVICE") or env.get("device")
     hook_names = cfg["hook_names"]
     archs = cfg["archs"]
     sae_overrides = cfg.get("sae_layer_hooks_override", {})
@@ -106,10 +110,15 @@ def main() -> None:
     harvest = cfg["harvest"]
     train = cfg["train"]
     sweep = cfg["sweep"]
+    if args.harvest_seed is not None:
+        harvest = {**harvest, "seed": args.harvest_seed}
+    if args.train_seed is not None:
+        train = {**train, "seed": args.train_seed}
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = RESULTS_DIR / "run.log"
-    data_dir = str(RESULTS_DIR)
+    results_dir = Path(args.output_dir).resolve() if args.output_dir else DEFAULT_RESULTS_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    log_path = results_dir / "run.log"
+    data_dir = str(results_dir)
 
     def _device_flag() -> list[str]:
         return ["--device", device] if device else []
@@ -183,9 +192,9 @@ def main() -> None:
                 "--delta_util", str(sweep["delta_util"]),
             ], log)
 
-    write_manifest(RESULTS_DIR, config_path)
-    print(f"\n[reproduce] done. Artifacts in {RESULTS_DIR}")
-    print(f"[reproduce] see {RESULTS_DIR / 'MANIFEST.md'} for the contents listing.")
+    write_manifest(results_dir, config_path)
+    print(f"\n[reproduce] done. Artifacts in {results_dir}")
+    print(f"[reproduce] see {results_dir / 'MANIFEST.md'} for the contents listing.")
 
 
 if __name__ == "__main__":
