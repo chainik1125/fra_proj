@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
-"""Phase 3 summary figure: 1×2 alignment-vs-coherence frontier comparison.
+"""Phase 3 summary figure (paper-quality 1×2 frontier comparison).
 
-Left panel:  Nura's 3 FRA-decomposition methods (QK→QK, QK→OV, OV→OV)
-             at `blocks.24.ln1.hook_normalized` with Nura's SAE.
-Right panel: conventional additive steering `act += (α-1)·f_λ·W_dec_λ`
-             at the same hookpoint with the same SAE.
+Same SAE, same hookpoint, same prompts, single eval seed. Only the
+intervention recipe differs.
 
-Same SAE, same hookpoint, same prompts, same eval seed → only the
-intervention recipe differs. Single eval seed (default 42) for clarity.
+Design choices (first-principles paper-style):
+
+  - Wong colourblind-safe palette per method.
+  - Trajectory = subtle line + filled circles at each α.
+  - α value annotated outside each marker (small, grey).
+  - Unsteered baseline = filled black star with white ring (one per panel).
+  - coh = 70 floor drawn explicitly with a labelled vertical guide.
+  - Δalign|coh≥70 surfaced as an in-axes range bracket (vertical bar
+    with end-caps) on the right side of each method's curve, exactly at
+    the alignment max/min of points with coh ≥ 70 — geometric, not
+    textual. Per-method Δ printed in the legend so the reader can rank.
+  - No floating stat box; legend carries the headline numbers.
+  - Top/right spines off, axis tick density modest, light gridlines.
+  - Sans-serif typography (Inter when available, Helvetica fallback).
 
 Usage:
     python scripts/plot_summary_fra_vs_additive.py \
         --nura-per-seed-dir <dir>      # has aggregated_seed{seed}_medical.json
-        --nura-additive <gpt4o_aggregated.json for additive at L24 ln1, this seed>
+        --nura-additive    <gpt4o_aggregated_seed{seed}.json>
         --seed 42
-        --out <basename>
+        --out  <basename>
 """
 
 from __future__ import annotations
@@ -25,12 +35,53 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
 COH_FLOOR = 70.0
 
 
+# ─── Style ─────────────────────────────────────────────────────────────────
+def setup_style():
+    mpl.rcParams.update({
+        "font.family":         "sans-serif",
+        "font.sans-serif":     ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+        "font.size":           11,
+        "axes.titlesize":      12.5,
+        "axes.labelsize":      11.5,
+        "axes.spines.top":     False,
+        "axes.spines.right":   False,
+        "axes.linewidth":      0.9,
+        "axes.edgecolor":      "#333333",
+        "axes.labelcolor":     "#222222",
+        "xtick.color":         "#444444",
+        "ytick.color":         "#444444",
+        "xtick.labelsize":     10,
+        "ytick.labelsize":     10,
+        "xtick.direction":     "out",
+        "ytick.direction":     "out",
+        "legend.frameon":      False,
+        "legend.fontsize":     9.5,
+        "figure.dpi":          110,
+        "savefig.bbox":        "tight",
+        "savefig.pad_inches":  0.08,
+        "axes.prop_cycle":     mpl.cycler(color=[
+            "#0072B2", "#D55E00", "#009E73", "#CC79A7", "#56B4E9", "#E69F00",
+        ]),
+    })
+
+
+# Wong palette assignments — colourblind-safe, distinct
+PAL = {
+    r"QK$\rightarrow$QK":    "#009E73",   # bluish green (the winner — easiest to distinguish)
+    r"OV$\rightarrow$OV":    "#0072B2",   # blue
+    r"QK$\rightarrow$OV":    "#D55E00",   # vermilion
+    "additive": "#CC79A7",   # reddish purple
+}
+
+
+# ─── Data IO ───────────────────────────────────────────────────────────────
 def load_method(path, method=None):
     d = json.loads(Path(path).read_text())
     if "aggregated" in d and isinstance(d["aggregated"], dict):
@@ -45,63 +96,106 @@ def load_method(path, method=None):
 
 
 def stats(rows, floor=COH_FLOOR):
-    al = np.array([r["mean_alignment"] for r in rows], dtype=float)
-    co = np.array([r["mean_coherence"] for r in rows], dtype=float)
-    mask = co >= floor
-    if mask.any():
-        delta = float(al[mask].max() - al[mask].min())
-        peak_at_floor = float(al[mask].max())
-        n70 = int(mask.sum())
-    else:
-        delta = float("nan"); peak_at_floor = float("nan"); n70 = 0
-    return delta, peak_at_floor, n70, float(np.nanmax(al))
-
-
-def draw_curve(ax, rows, color, label):
     if not rows:
         return None
-    scales = np.array([r["scale"] for r in rows])
+    al = np.array([r["mean_alignment"] for r in rows], dtype=float)
+    co = np.array([r["mean_coherence"] for r in rows], dtype=float)
+    sc = np.array([r["scale"] for r in rows], dtype=float)
+    mask = co >= floor
+    if mask.any():
+        al_m = al[mask]; co_m = co[mask]; sc_m = sc[mask]
+        return dict(
+            delta=float(al_m.max() - al_m.min()),
+            min_align=float(al_m.min()),
+            max_align=float(al_m.max()),
+            n70=int(mask.sum()),
+            x_at_max=float(co_m[al_m.argmax()]),
+            x_at_min=float(co_m[al_m.argmin()]),
+        )
+    return dict(delta=float("nan"), min_align=float("nan"), max_align=float("nan"),
+                n70=0, x_at_max=float("nan"), x_at_min=float("nan"))
+
+
+# ─── Drawing primitives ────────────────────────────────────────────────────
+def draw_method(ax, rows, color, label, *, marker="o", show_alpha=True,
+                z_off=0):
+    if not rows:
+        return None
+    sc = np.array([r["scale"] for r in rows])
     al = np.array([r["mean_alignment"] for r in rows])
     co = np.array([r["mean_coherence"] for r in rows])
-    ax.plot(co, al, color=color, lw=1.6, alpha=0.85, zorder=2)
-    h = ax.scatter(co, al, c=color, s=70, edgecolors="black",
-                   linewidths=0.5, zorder=3, label=label)
-    for sc, x, y in zip(scales, co, al):
-        ax.annotate(f"α={sc}", (x, y), xytext=(5, 5),
-                    textcoords="offset points", fontsize=8, color="#333")
+    # subtle line trajectory
+    ax.plot(co, al, color=color, lw=1.0, alpha=0.55, zorder=2 + z_off)
+    # filled markers
+    h = ax.scatter(co, al, marker=marker, s=85, facecolor=color,
+                   edgecolor="white", linewidth=1.1, zorder=4 + z_off,
+                   label=label)
+    # α labels
+    if show_alpha:
+        for s, x, y in zip(sc, al, co):
+            pass  # ordering: we want α near each point but offset cleanly
+        # offset alphas radially outward from curve centroid
+        cx, cy = co.mean(), al.mean()
+        for sval, x, y in zip(sc, co, al):
+            dx, dy = x - cx, y - cy
+            r = (dx * dx + dy * dy) ** 0.5 + 1e-6
+            ox, oy = 6 * dx / r, 6 * dy / r
+            ax.annotate(f"{sval:g}",
+                        xy=(x, y), xytext=(ox, oy),
+                        textcoords="offset points",
+                        fontsize=7.5, color="#555555",
+                        ha="center", va="center", zorder=5 + z_off)
     return h
 
 
-def decorate(ax, title):
-    ax.axvline(COH_FLOOR, color="grey", lw=0.8, ls=":", zorder=1)
-    ax.axhline(50, color="grey", lw=0.5, ls=":", zorder=1)
-    ax.set_xlim(-2, 102)
-    ax.set_ylim(-2, 102)
-    ax.set_xlabel("coherence (GPT-4o, 0–100)")
-    ax.set_ylabel("alignment (GPT-4o, 0–100)")
-    ax.set_title(title, fontsize=11)
-    ax.grid(True, ls=":", alpha=0.3)
+def draw_baseline_star(ax, x, y, label="unsteered"):
+    ax.scatter([x], [y], marker="*", s=320, color="black",
+               edgecolor="white", linewidth=1.3, zorder=7,
+               label=label)
 
 
-def stat_box(ax, lines):
-    ax.text(0.02, 0.98, "\n".join(lines),
-            transform=ax.transAxes, fontsize=8.5, verticalalignment="top",
-            family="DejaVu Sans",
-            bbox=dict(facecolor="white", edgecolor="#888",
-                      alpha=0.93, pad=4, boxstyle="round,pad=0.4"))
+def draw_delta_bracket(ax, *, x, y_lo, y_hi, color, dx=2.5, lw=1.4):
+    """Draw a vertical bracket on the RIGHT of x, spanning y_lo→y_hi.
+
+    Marks the extent of Δalign within coh ≥ 70."""
+    if not (y_hi > y_lo):
+        return
+    ax.plot([x + dx, x + dx], [y_lo, y_hi], color=color, lw=lw, zorder=3)
+    ax.plot([x + dx - 0.6, x + dx + 0.6], [y_lo, y_lo], color=color, lw=lw, zorder=3)
+    ax.plot([x + dx - 0.6, x + dx + 0.6], [y_hi, y_hi], color=color, lw=lw, zorder=3)
 
 
+def decorate(ax, *, title, show_floor_label=True):
+    # coh = 70 floor
+    ax.axvline(COH_FLOOR, color="#bbbbbb", lw=0.8, ls=(0, (3, 3)), zorder=1)
+    if show_floor_label:
+        ax.text(COH_FLOOR + 0.6, 1.5, "coh ≥ 70",
+                color="#888888", fontsize=8.5, va="bottom", ha="left",
+                zorder=1)
+    # align = 50 reference
+    ax.axhline(50, color="#dddddd", lw=0.6, ls=(0, (3, 3)), zorder=1)
+    ax.set_xlim(-1.0, 102)
+    ax.set_ylim(-1.0, 102)
+    ax.set_xticks(np.arange(0, 101, 25))
+    ax.set_yticks(np.arange(0, 101, 25))
+    ax.set_xlabel("coherence  (GPT-4o, 0–100)")
+    ax.set_ylabel("alignment  (GPT-4o, 0–100)")
+    ax.set_title(title, loc="left", pad=10, fontweight="600", color="#1a1a1a")
+    ax.grid(True, color="#eeeeee", lw=0.6, zorder=0)
+    ax.set_axisbelow(True)
+
+
+# ─── Main ──────────────────────────────────────────────────────────────────
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--nura-per-seed-dir", required=True,
-                   help="dir with aggregated_seed{seed}_medical.json")
-    p.add_argument("--nura-additive", required=True,
-                   help="gpt4o_aggregated_seed{seed}_*.json from "
-                        "Nura SAE under our additive recipe at L24 ln1")
+    p.add_argument("--nura-per-seed-dir", required=True)
+    p.add_argument("--nura-additive", required=True)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--out", required=True, help="output base path (no extension)")
     p.add_argument("--em-model", default="medical")
+    p.add_argument("--out", required=True)
     args = p.parse_args()
+
+    setup_style()
 
     nura_path = Path(args.nura_per_seed_dir) / f"aggregated_seed{args.seed}_{args.em_model}.json"
     if not nura_path.exists():
@@ -114,74 +208,78 @@ def main():
     qkov = load_method(nura_path, "qk_to_ov")
     ovov = load_method(nura_path, "ov_to_ov")
     baseline = load_method(nura_path, "baseline")
-    additive = load_method(additive_path)  # has just one method "sae_resid"
+    additive = load_method(additive_path)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6),
-                             sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6.4), sharex=True, sharey=True,
+                             gridspec_kw=dict(wspace=0.10))
 
-    # ── Left panel: 3 FRA methods ───────────────────────────────────────
+    # ── LEFT: three FRA recipes ──────────────────────────────────────────
     axL = axes[0]
-    fra_styles = [
-        ("QK→QK", qkqk, "#1a9850"),
-        ("OV→OV", ovov, "#4575b4"),
-        ("QK→OV", qkov, "#d73027"),
+    fra_methods = [
+        (r"QK$\rightarrow$QK", qkqk, PAL[r"QK$\rightarrow$QK"], "o"),
+        (r"OV$\rightarrow$OV", ovov, PAL[r"OV$\rightarrow$OV"], "s"),
+        (r"QK$\rightarrow$OV", qkov, PAL[r"QK$\rightarrow$OV"], "D"),
     ]
-    fra_lines = []
-    for label, rows, color in fra_styles:
-        draw_curve(axL, rows, color, label)
-        d, pf, n70, peak = stats(rows)
-        if n70 > 0:
-            fra_lines.append((f"{label:6s}  Δ={d:5.2f}  peak={pf:5.2f}  ({n70}/{len(rows)})",
-                              d if d == d else -1))
-        else:
-            fra_lines.append((f"{label:6s}  Δ=NaN", -1))
-    # baseline (no hook)
+    fra_stats = []
+    for label, rows, color, marker in fra_methods:
+        s = stats(rows)
+        if s is None:
+            continue
+        d_str = f"  Δ = {s['delta']:5.2f}" if s["n70"] else "  Δ = —"
+        draw_method(axL, rows, color, label + d_str, marker=marker)
+        fra_stats.append((label, color, s))
     if baseline:
         b = baseline[0]
-        axL.scatter([b["mean_coherence"]], [b["mean_alignment"]], marker="*", s=320,
-                    color="black", edgecolors="white", linewidths=1.2, zorder=5,
-                    label="baseline (no hook)")
-    decorate(axL, "FRA decomposition recipes\n@ blocks.24.ln1.hook_normalized")
-    # Bold the winning Δ in the stat box
-    if fra_lines:
-        winner = max(range(len(fra_lines)), key=lambda i: fra_lines[i][1])
-        ax_lines = []
-        ax_lines.append("alignment delta @ coh ≥ 70:")
-        for i, (line, _) in enumerate(fra_lines):
-            ax_lines.append(("→ " if i == winner else "  ") + line)
-        stat_box(axL, ax_lines)
-    axL.legend(loc="lower right", fontsize=9)
+        draw_baseline_star(axL, b["mean_coherence"], b["mean_alignment"],
+                           "baseline (no hook)")
+    # Δ brackets on the right of each method's max-coh point
+    bracket_x = 100.5
+    for i, (label, color, s) in enumerate(fra_stats):
+        if s["n70"] >= 1 and s["delta"] > 0:
+            draw_delta_bracket(axL, x=bracket_x + i * 1.2,
+                               y_lo=s["min_align"], y_hi=s["max_align"],
+                               color=color)
+    decorate(axL, title="FRA decomposition recipes")
+    axL.legend(loc="lower left", title="method (Nura's SAE @ L24 ln1)",
+               title_fontsize=10, ncol=1)
 
-    # ── Right panel: conventional additive ──────────────────────────────
+    # ── RIGHT: conventional additive ────────────────────────────────────
     axR = axes[1]
-    draw_curve(axR, additive, "#9467bd", "additive  act += (α−1)·f·W_dec")
+    a_stats = stats(additive)
+    a_lab = (f"additive  Δ = {a_stats['delta']:5.2f}"
+             if a_stats and a_stats["n70"] else "additive  Δ = —")
+    draw_method(axR, additive, PAL["additive"], a_lab, marker="^")
     if additive:
-        i_one = int(np.argmin(np.abs(np.array([r["scale"] for r in additive]) - 1.0)))
-        axR.scatter([additive[i_one]["mean_coherence"]],
-                    [additive[i_one]["mean_alignment"]],
-                    marker="*", s=320, color="black", edgecolors="white",
-                    linewidths=1.2, zorder=5, label="α=1.0 (no-op)")
-    d, pf, n70, peak = stats(additive)
-    decorate(axR, "Conventional additive feature steering\n@ blocks.24.ln1.hook_normalized (same SAE)")
-    lines = [
-        "alignment delta @ coh ≥ 70:",
-        ("→ " + (f"Δ={d:5.2f}  peak={pf:5.2f}  ({n70}/{len(additive)})"
-                  if n70 > 0 else "Δ=NaN")),
-    ]
-    stat_box(axR, lines)
-    axR.legend(loc="lower right", fontsize=9)
+        sc = np.array([r["scale"] for r in additive])
+        i_one = int(np.argmin(np.abs(sc - 1.0)))
+        draw_baseline_star(axR,
+                           additive[i_one]["mean_coherence"],
+                           additive[i_one]["mean_alignment"],
+                           "α = 1.0 (no-op)")
+    if a_stats and a_stats["n70"] >= 1 and a_stats["delta"] > 0:
+        draw_delta_bracket(axR, x=bracket_x, y_lo=a_stats["min_align"],
+                           y_hi=a_stats["max_align"], color=PAL["additive"])
+    decorate(axR, title="Conventional additive feature steering")
+    axR.legend(loc="lower left",
+               title="recipe  (Nura's SAE @ L24 ln1)",
+               title_fontsize=10)
 
     fig.suptitle(
-        f"Same SAE, same hookpoint, same prompts, eval seed = {args.seed} — "
-        f"medical EM (Qwen2.5-14B + medical LoRA)",
-        fontsize=12, y=1.0,
+        "Same SAE, same hookpoint, same prompts — only the recipe differs",
+        fontsize=13.5, fontweight="600", color="#1a1a1a", y=1.02,
     )
-    fig.tight_layout()
+    fig.text(
+        0.5, -0.02,
+        r"medical EM (Qwen2.5-14B + medical LoRA) $\cdot$ 8 EM eval prompts $\cdot$ "
+        r"$\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ $\cdot$ eval seed = "
+        f"{args.seed}" r" $\cdot$ vertical brackets show $\Delta$align at coh $\geq$ 70",
+        ha="center", va="top", fontsize=9, color="#666666",
+    )
 
     out = Path(args.out).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(out) + ".png", dpi=180, bbox_inches="tight")
-    fig.savefig(str(out) + ".pdf", bbox_inches="tight")
+    fig.savefig(str(out) + ".png", dpi=200)
+    fig.savefig(str(out) + ".pdf")
     plt.close(fig)
     print(f"plot → {out}.png / .pdf")
 
