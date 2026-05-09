@@ -5,7 +5,7 @@ date: 2026-02-16
 type: document
 ---
 
-# Welcome to Temporal Crosscoders!
+# Welcome to Feature Resolved Attention!
 
 Author: Dmitry Manning-Coe
 Date: 2026-02-16

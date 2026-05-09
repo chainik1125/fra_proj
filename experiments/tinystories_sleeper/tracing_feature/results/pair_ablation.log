@@ -1,0 +1,41 @@
+[pair-abl] device=cuda; heads=[0, 3, 5, 7, 8, 9, 12, 15]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+[pair-abl] baseline...
+[pair-abl]   logp=-0.279  feat=+nan
+[pair-abl] {0}: logp=-0.562  Δlogp=-0.282
+[pair-abl] {3}: logp=-0.390  Δlogp=-0.110
+[pair-abl] {5}: logp=-0.358  Δlogp=-0.079
+[pair-abl] {7}: logp=-0.418  Δlogp=-0.138
+[pair-abl] {8}: logp=-0.383  Δlogp=-0.104
+[pair-abl] {9}: logp=-0.462  Δlogp=-0.182
+[pair-abl] {12}: logp=-14.889  Δlogp=-14.609
+[pair-abl] {15}: logp=-4.667  Δlogp=-4.387
+[pair-abl] {0,3}: Δlogp=-0.667 (additive=-0.393, non-add=-0.274)
+[pair-abl] {0,5}: Δlogp=-0.320 (additive=-0.361, non-add=+0.041)
+[pair-abl] {0,7}: Δlogp=-0.771 (additive=-0.420, non-add=-0.350)
+[pair-abl] {0,8}: Δlogp=-0.664 (additive=-0.386, non-add=-0.278)
+[pair-abl] {0,9}: Δlogp=-0.425 (additive=-0.465, non-add=+0.040)
+[pair-abl] {0,12}: Δlogp=-24.223 (additive=-14.892, non-add=-9.331)
+[pair-abl] {0,15}: Δlogp=-8.983 (additive=-4.670, non-add=-4.314)
+[pair-abl] {3,5}: Δlogp=-0.255 (additive=-0.189, non-add=-0.066)
+[pair-abl] {3,7}: Δlogp=-0.641 (additive=-0.248, non-add=-0.392)
+[pair-abl] {3,8}: Δlogp=-0.573 (additive=-0.214, non-add=-0.360)
+[pair-abl] {3,9}: Δlogp=-0.416 (additive=-0.293, non-add=-0.124)
+[pair-abl] {3,12}: Δlogp=-19.635 (additive=-14.720, non-add=-4.915)
+[pair-abl] {3,15}: Δlogp=-6.481 (additive=-4.498, non-add=-1.983)
+[pair-abl] {5,7}: Δlogp=-0.424 (additive=-0.217, non-add=-0.207)
+[pair-abl] {5,8}: Δlogp=-0.142 (additive=-0.182, non-add=+0.040)
+[pair-abl] {5,9}: Δlogp=-0.372 (additive=-0.261, non-add=-0.111)
+[pair-abl] {5,12}: Δlogp=-13.543 (additive=-14.688, non-add=+1.145)
+[pair-abl] {5,15}: Δlogp=-5.693 (additive=-4.466, non-add=-1.227)
+[pair-abl] {7,8}: Δlogp=-0.393 (additive=-0.242, non-add=-0.151)
+[pair-abl] {7,9}: Δlogp=-0.849 (additive=-0.321, non-add=-0.528)
+[pair-abl] {7,12}: Δlogp=-17.515 (additive=-14.747, non-add=-2.768)
+[pair-abl] {7,15}: Δlogp=-7.069 (additive=-4.526, non-add=-2.543)
+[pair-abl] {8,9}: Δlogp=-0.546 (additive=-0.286, non-add=-0.260)
+[pair-abl] {8,12}: Δlogp=-16.110 (additive=-14.713, non-add=-1.397)
+[pair-abl] {8,15}: Δlogp=-5.327 (additive=-4.491, non-add=-0.836)
+[pair-abl] {9,12}: Δlogp=-28.368 (additive=-14.792, non-add=-13.576)
+[pair-abl] {9,15}: Δlogp=-4.118 (additive=-4.570, non-add=+0.452)
+[pair-abl] {12,15}: Δlogp=-8.586 (additive=-18.997, non-add=+10.411)
+[pair-abl] wrote /root/fra_proj/experiments/tinystories_sleeper/tracing_feature/results/pair_ablation_matrix.json

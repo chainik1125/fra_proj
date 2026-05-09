@@ -2,8 +2,30 @@
 name = "temp-xc"
 version = "0.1.0"
 requires-python = ">=3.12"
+dependencies = [
+    "einops",
+    "numpy",
+    "sae-lens>=6.39.0",
+    "torch",
+    "transformer-lens>=2.18.0",
+    "tqdm",
+    # tinystories_sleeper experiment deps
+    "transformers>=4.43,<5",
+    "datasets>=2.14",
+    "peft>=0.10",
+    "pyyaml>=6.0",
+    "matplotlib>=3.7",
+]
 
 [dependency-groups]
 dev = [
     "pytest",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "fra_conformance: FRA conformance harness tests",
+    "model_backed: FRA tests that load real models or SAEs",
+    "gpt2: GPT-2 FRA tests",
+    "gemma: Gemma FRA tests",
 ]

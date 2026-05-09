@@ -1,0 +1,22 @@
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+[ln1-abl] baseline...
+[ln1-abl]   logp=-0.279  z_mid[171]=+0.3618
+[ln1-abl] f=1412  α=1.0: Δlogp=+0.000  Δfeat=+0.0001
+[ln1-abl] f=1412  α=2.0: Δlogp=+0.001  Δfeat=+0.0001
+[ln1-abl] f=1412  α=4.0: Δlogp=+0.001  Δfeat=-0.0005
+[ln1-abl] f= 870  α=1.0: Δlogp=-0.581  Δfeat=-0.0364
+[ln1-abl] f= 870  α=2.0: Δlogp=-6.059  Δfeat=-0.0781
+[ln1-abl] f= 870  α=4.0: Δlogp=-50.403  Δfeat=-0.1386
+[ln1-abl] f=1388  α=1.0: Δlogp=-0.090  Δfeat=-0.0190
+[ln1-abl] f=1388  α=2.0: Δlogp=-0.885  Δfeat=+0.0317
+[ln1-abl] f=1388  α=4.0: Δlogp=-28.924  Δfeat=-0.0369
+[ln1-abl] f=1220  α=1.0: Δlogp=-0.019  Δfeat=+0.0084
+[ln1-abl] f=1220  α=2.0: Δlogp=-0.522  Δfeat=+0.0229
+[ln1-abl] f=1220  α=4.0: Δlogp=-9.515  Δfeat=+0.0578
+[ln1-abl] f= 221  α=1.0: Δlogp=-0.047  Δfeat=-0.0579
+[ln1-abl] f= 221  α=2.0: Δlogp=-0.250  Δfeat=-0.1079
+[ln1-abl] f= 221  α=4.0: Δlogp=-1.187  Δfeat=-0.1864
+[ln1-abl] f={870, 1388}  α=1.0: Δlogp=-0.684  Δfeat=-0.0577
+[ln1-abl] f={870, 1388}  α=2.0: Δlogp=-4.898  Δfeat=-0.0919
+[ln1-abl] f={870, 1388}  α=4.0: Δlogp=-60.263  Δfeat=-0.1920
+[ln1-abl] wrote /root/fra_proj/experiments/tinystories_sleeper/tracing_feature/results/ln1_feature_ablation.json

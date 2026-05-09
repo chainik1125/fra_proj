@@ -1,0 +1,792 @@
+{
+  "target": {
+    "mid_feature": 171,
+    "pre_feature_flagged": 1359,
+    "n_prompts": 200,
+    "seq_len": 128,
+    "d_sae_pre": 1536
+  },
+  "sanity": {
+    "e_resid_pre_reconstruction_relative_error": 0.044628389179706573,
+    "e_resid_pre_reconstruction_max_abs_error": 0.13868875801563263,
+    "frac_var_pre171_explained_by_skip_only": 0.23211097717285156,
+    "const_bias_e_dot_b_dec_pre": -0.03591310977935791,
+    "const_skip_only": -0.25747508835047483
+  },
+  "flagged_pre_suppressor": {
+    "feature_idx": 1359,
+    "direction_coef": 0.0733465850353241,
+    "corr_all": 0.5750434994697571,
+    "partial_corr": 0.574863612651825,
+    "corr_prompt": 0.6247764825820923,
+    "dep_mean_contribution": 0.0006952066905796528,
+    "clean_mean_contribution": 0.0003512146940920502,
+    "rank_in_direction": null,
+    "rank_in_corr_all": 1,
+    "rank_in_pcorr_all": 1,
+    "rank_in_corr_prompt": 0,
+    "rank_in_dep_contrib": null
+  },
+  "rankings": {
+    "direction": [
+      {
+        "rank": 0,
+        "feature_idx": 475,
+        "value": 0.22584371268749237
+      },
+      {
+        "rank": 1,
+        "feature_idx": 1485,
+        "value": -0.18268969655036926
+      },
+      {
+        "rank": 2,
+        "feature_idx": 649,
+        "value": -0.16199594736099243
+      },
+      {
+        "rank": 3,
+        "feature_idx": 905,
+        "value": 0.15816441178321838
+      },
+      {
+        "rank": 4,
+        "feature_idx": 57,
+        "value": -0.15605023503303528
+      },
+      {
+        "rank": 5,
+        "feature_idx": 738,
+        "value": 0.15479591488838196
+      },
+      {
+        "rank": 6,
+        "feature_idx": 1106,
+        "value": -0.15073512494564056
+      },
+      {
+        "rank": 7,
+        "feature_idx": 615,
+        "value": -0.14626604318618774
+      },
+      {
+        "rank": 8,
+        "feature_idx": 215,
+        "value": -0.1451157033443451
+      },
+      {
+        "rank": 9,
+        "feature_idx": 866,
+        "value": -0.1432783156633377
+      },
+      {
+        "rank": 10,
+        "feature_idx": 39,
+        "value": -0.14154988527297974
+      },
+      {
+        "rank": 11,
+        "feature_idx": 107,
+        "value": -0.13875730335712433
+      },
+      {
+        "rank": 12,
+        "feature_idx": 31,
+        "value": -0.13854533433914185
+      },
+      {
+        "rank": 13,
+        "feature_idx": 1005,
+        "value": -0.13747359812259674
+      },
+      {
+        "rank": 14,
+        "feature_idx": 901,
+        "value": -0.1364036202430725
+      },
+      {
+        "rank": 15,
+        "feature_idx": 1298,
+        "value": -0.13009066879749298
+      },
+      {
+        "rank": 16,
+        "feature_idx": 975,
+        "value": 0.12701156735420227
+      },
+      {
+        "rank": 17,
+        "feature_idx": 929,
+        "value": -0.1261940598487854
+      },
+      {
+        "rank": 18,
+        "feature_idx": 667,
+        "value": 0.12585003674030304
+      },
+      {
+        "rank": 19,
+        "feature_idx": 663,
+        "value": -0.12409011274576187
+      },
+      {
+        "rank": 20,
+        "feature_idx": 863,
+        "value": -0.12113907933235168
+      },
+      {
+        "rank": 21,
+        "feature_idx": 1453,
+        "value": 0.12034504860639572
+      },
+      {
+        "rank": 22,
+        "feature_idx": 55,
+        "value": -0.12007974088191986
+      },
+      {
+        "rank": 23,
+        "feature_idx": 555,
+        "value": 0.11809055507183075
+      },
+      {
+        "rank": 24,
+        "feature_idx": 1479,
+        "value": -0.11721333116292953
+      },
+      {
+        "rank": 25,
+        "feature_idx": 365,
+        "value": -0.11631219834089279
+      },
+      {
+        "rank": 26,
+        "feature_idx": 1522,
+        "value": -0.11620698869228363
+      },
+      {
+        "rank": 27,
+        "feature_idx": 477,
+        "value": -0.11544889211654663
+      },
+      {
+        "rank": 28,
+        "feature_idx": 11,
+        "value": 0.11520623415708542
+      },
+      {
+        "rank": 29,
+        "feature_idx": 36,
+        "value": -0.11467763036489487
+      }
+    ],
+    "corr_all": [
+      {
+        "rank": 0,
+        "feature_idx": 374,
+        "value": 0.5898940563201904
+      },
+      {
+        "rank": 1,
+        "feature_idx": 1359,
+        "value": 0.5750434994697571
+      },
+      {
+        "rank": 2,
+        "feature_idx": 749,
+        "value": 0.5294930338859558
+      },
+      {
+        "rank": 3,
+        "feature_idx": 568,
+        "value": 0.5220202207565308
+      },
+      {
+        "rank": 4,
+        "feature_idx": 424,
+        "value": 0.5043902397155762
+      },
+      {
+        "rank": 5,
+        "feature_idx": 192,
+        "value": 0.5026242733001709
+      },
+      {
+        "rank": 6,
+        "feature_idx": 831,
+        "value": 0.49202826619148254
+      },
+      {
+        "rank": 7,
+        "feature_idx": 943,
+        "value": 0.4713331162929535
+      },
+      {
+        "rank": 8,
+        "feature_idx": 1073,
+        "value": 0.46390530467033386
+      },
+      {
+        "rank": 9,
+        "feature_idx": 1155,
+        "value": 0.4538898766040802
+      },
+      {
+        "rank": 10,
+        "feature_idx": 1430,
+        "value": 0.44624465703964233
+      },
+      {
+        "rank": 11,
+        "feature_idx": 266,
+        "value": 0.43549492955207825
+      },
+      {
+        "rank": 12,
+        "feature_idx": 10,
+        "value": 0.4253561794757843
+      },
+      {
+        "rank": 13,
+        "feature_idx": 454,
+        "value": 0.4144606292247772
+      },
+      {
+        "rank": 14,
+        "feature_idx": 672,
+        "value": 0.4087294042110443
+      },
+      {
+        "rank": 15,
+        "feature_idx": 82,
+        "value": 0.4046577513217926
+      },
+      {
+        "rank": 16,
+        "feature_idx": 427,
+        "value": 0.3971075713634491
+      },
+      {
+        "rank": 17,
+        "feature_idx": 504,
+        "value": 0.3953438103199005
+      },
+      {
+        "rank": 18,
+        "feature_idx": 270,
+        "value": 0.3760105073451996
+      },
+      {
+        "rank": 19,
+        "feature_idx": 773,
+        "value": 0.37243902683258057
+      },
+      {
+        "rank": 20,
+        "feature_idx": 738,
+        "value": 0.36079975962638855
+      },
+      {
+        "rank": 21,
+        "feature_idx": 1391,
+        "value": 0.36057791113853455
+      },
+      {
+        "rank": 22,
+        "feature_idx": 1471,
+        "value": 0.3468656837940216
+      },
+      {
+        "rank": 23,
+        "feature_idx": 1329,
+        "value": 0.3443988561630249
+      },
+      {
+        "rank": 24,
+        "feature_idx": 509,
+        "value": 0.33912885189056396
+      },
+      {
+        "rank": 25,
+        "feature_idx": 463,
+        "value": 0.33398574590682983
+      },
+      {
+        "rank": 26,
+        "feature_idx": 1383,
+        "value": 0.33027538657188416
+      },
+      {
+        "rank": 27,
+        "feature_idx": 1180,
+        "value": 0.3292449712753296
+      },
+      {
+        "rank": 28,
+        "feature_idx": 1529,
+        "value": 0.3290552794933319
+      },
+      {
+        "rank": 29,
+        "feature_idx": 423,
+        "value": 0.32077956199645996
+      }
+    ],
+    "pcorr_all": [
+      {
+        "rank": 0,
+        "feature_idx": 374,
+        "value": 0.5885958075523376
+      },
+      {
+        "rank": 1,
+        "feature_idx": 1359,
+        "value": 0.574863612651825
+      },
+      {
+        "rank": 2,
+        "feature_idx": 568,
+        "value": 0.5279381275177002
+      },
+      {
+        "rank": 3,
+        "feature_idx": 749,
+        "value": 0.5273200869560242
+      },
+      {
+        "rank": 4,
+        "feature_idx": 424,
+        "value": 0.5007339715957642
+      },
+      {
+        "rank": 5,
+        "feature_idx": 192,
+        "value": 0.4982006847858429
+      },
+      {
+        "rank": 6,
+        "feature_idx": 831,
+        "value": 0.4867953956127167
+      },
+      {
+        "rank": 7,
+        "feature_idx": 943,
+        "value": 0.46901458501815796
+      },
+      {
+        "rank": 8,
+        "feature_idx": 1073,
+        "value": 0.4601590633392334
+      },
+      {
+        "rank": 9,
+        "feature_idx": 1155,
+        "value": 0.45327839255332947
+      },
+      {
+        "rank": 10,
+        "feature_idx": 1430,
+        "value": 0.441540390253067
+      },
+      {
+        "rank": 11,
+        "feature_idx": 266,
+        "value": 0.43227508664131165
+      },
+      {
+        "rank": 12,
+        "feature_idx": 10,
+        "value": 0.4200595021247864
+      },
+      {
+        "rank": 13,
+        "feature_idx": 454,
+        "value": 0.41078099608421326
+      },
+      {
+        "rank": 14,
+        "feature_idx": 672,
+        "value": 0.4079034924507141
+      },
+      {
+        "rank": 15,
+        "feature_idx": 82,
+        "value": 0.401824027299881
+      },
+      {
+        "rank": 16,
+        "feature_idx": 427,
+        "value": 0.3961297273635864
+      },
+      {
+        "rank": 17,
+        "feature_idx": 504,
+        "value": 0.39115938544273376
+      },
+      {
+        "rank": 18,
+        "feature_idx": 270,
+        "value": 0.3759530484676361
+      },
+      {
+        "rank": 19,
+        "feature_idx": 773,
+        "value": 0.36889946460723877
+      },
+      {
+        "rank": 20,
+        "feature_idx": 738,
+        "value": 0.35620570182800293
+      },
+      {
+        "rank": 21,
+        "feature_idx": 1391,
+        "value": 0.3556251525878906
+      },
+      {
+        "rank": 22,
+        "feature_idx": 1471,
+        "value": 0.35012075304985046
+      },
+      {
+        "rank": 23,
+        "feature_idx": 1329,
+        "value": 0.3426428437232971
+      },
+      {
+        "rank": 24,
+        "feature_idx": 509,
+        "value": 0.334441602230072
+      },
+      {
+        "rank": 25,
+        "feature_idx": 1383,
+        "value": 0.33386820554733276
+      },
+      {
+        "rank": 26,
+        "feature_idx": 463,
+        "value": 0.3324342966079712
+      },
+      {
+        "rank": 27,
+        "feature_idx": 1180,
+        "value": 0.3311837315559387
+      },
+      {
+        "rank": 28,
+        "feature_idx": 1529,
+        "value": 0.3263864815235138
+      },
+      {
+        "rank": 29,
+        "feature_idx": 5,
+        "value": 0.3180292248725891
+      }
+    ],
+    "corr_prompt": [
+      {
+        "rank": 0,
+        "feature_idx": 1359,
+        "value": 0.6247764825820923
+      },
+      {
+        "rank": 1,
+        "feature_idx": 374,
+        "value": 0.5782227516174316
+      },
+      {
+        "rank": 2,
+        "feature_idx": 749,
+        "value": 0.5384477376937866
+      },
+      {
+        "rank": 3,
+        "feature_idx": 424,
+        "value": 0.5097532868385315
+      },
+      {
+        "rank": 4,
+        "feature_idx": 192,
+        "value": 0.5043380260467529
+      },
+      {
+        "rank": 5,
+        "feature_idx": 831,
+        "value": 0.5018666386604309
+      },
+      {
+        "rank": 6,
+        "feature_idx": 943,
+        "value": 0.4999484121799469
+      },
+      {
+        "rank": 7,
+        "feature_idx": 1073,
+        "value": 0.4995359480381012
+      },
+      {
+        "rank": 8,
+        "feature_idx": 266,
+        "value": 0.48544231057167053
+      },
+      {
+        "rank": 9,
+        "feature_idx": 568,
+        "value": 0.4816557765007019
+      },
+      {
+        "rank": 10,
+        "feature_idx": 1155,
+        "value": 0.4815666675567627
+      },
+      {
+        "rank": 11,
+        "feature_idx": 1430,
+        "value": 0.45025432109832764
+      },
+      {
+        "rank": 12,
+        "feature_idx": 454,
+        "value": 0.42122092843055725
+      },
+      {
+        "rank": 13,
+        "feature_idx": 10,
+        "value": 0.4164184629917145
+      },
+      {
+        "rank": 14,
+        "feature_idx": 427,
+        "value": 0.4128699004650116
+      },
+      {
+        "rank": 15,
+        "feature_idx": 82,
+        "value": 0.40140295028686523
+      },
+      {
+        "rank": 16,
+        "feature_idx": 1018,
+        "value": 0.39613595604896545
+      },
+      {
+        "rank": 17,
+        "feature_idx": 672,
+        "value": 0.3945159912109375
+      },
+      {
+        "rank": 18,
+        "feature_idx": 1471,
+        "value": 0.3908710777759552
+      },
+      {
+        "rank": 19,
+        "feature_idx": 504,
+        "value": 0.3883976638317108
+      },
+      {
+        "rank": 20,
+        "feature_idx": 684,
+        "value": 0.38527390360832214
+      },
+      {
+        "rank": 21,
+        "feature_idx": 270,
+        "value": 0.383726567029953
+      },
+      {
+        "rank": 22,
+        "feature_idx": 1329,
+        "value": 0.38046327233314514
+      },
+      {
+        "rank": 23,
+        "feature_idx": 871,
+        "value": 0.37774229049682617
+      },
+      {
+        "rank": 24,
+        "feature_idx": 1019,
+        "value": 0.37725386023521423
+      },
+      {
+        "rank": 25,
+        "feature_idx": 1529,
+        "value": 0.3711138367652893
+      },
+      {
+        "rank": 26,
+        "feature_idx": 773,
+        "value": 0.369737446308136
+      },
+      {
+        "rank": 27,
+        "feature_idx": 463,
+        "value": 0.3520852327346802
+      },
+      {
+        "rank": 28,
+        "feature_idx": 738,
+        "value": 0.3515026569366455
+      },
+      {
+        "rank": 29,
+        "feature_idx": 1391,
+        "value": 0.3500955402851105
+      }
+    ],
+    "dep_vs_clean_contribution": [
+      {
+        "rank": 0,
+        "feature_idx": 163,
+        "value": 0.00422790739685297
+      },
+      {
+        "rank": 1,
+        "feature_idx": 1298,
+        "value": 0.0038830721750855446
+      },
+      {
+        "rank": 2,
+        "feature_idx": 1330,
+        "value": -0.003854048438370228
+      },
+      {
+        "rank": 3,
+        "feature_idx": 360,
+        "value": -0.003751891665160656
+      },
+      {
+        "rank": 4,
+        "feature_idx": 996,
+        "value": -0.0033956579864025116
+      },
+      {
+        "rank": 5,
+        "feature_idx": 55,
+        "value": 0.0033300588838756084
+      },
+      {
+        "rank": 6,
+        "feature_idx": 1250,
+        "value": 0.003299740608781576
+      },
+      {
+        "rank": 7,
+        "feature_idx": 933,
+        "value": -0.0031872401013970375
+      },
+      {
+        "rank": 8,
+        "feature_idx": 215,
+        "value": 0.003149056574329734
+      },
+      {
+        "rank": 9,
+        "feature_idx": 222,
+        "value": -0.0029109190218150616
+      },
+      {
+        "rank": 10,
+        "feature_idx": 286,
+        "value": -0.0028482205234467983
+      },
+      {
+        "rank": 11,
+        "feature_idx": 32,
+        "value": -0.002697470597922802
+      },
+      {
+        "rank": 12,
+        "feature_idx": 827,
+        "value": 0.0026505249552428722
+      },
+      {
+        "rank": 13,
+        "feature_idx": 930,
+        "value": 0.0026078044902533293
+      },
+      {
+        "rank": 14,
+        "feature_idx": 702,
+        "value": -0.0024927027989178896
+      },
+      {
+        "rank": 15,
+        "feature_idx": 480,
+        "value": -0.002425665035843849
+      },
+      {
+        "rank": 16,
+        "feature_idx": 4,
+        "value": 0.0023743542842566967
+      },
+      {
+        "rank": 17,
+        "feature_idx": 663,
+        "value": 0.0023480032104998827
+      },
+      {
+        "rank": 18,
+        "feature_idx": 432,
+        "value": -0.002337962156161666
+      },
+      {
+        "rank": 19,
+        "feature_idx": 1183,
+        "value": 0.0022291287314146757
+      },
+      {
+        "rank": 20,
+        "feature_idx": 323,
+        "value": -0.0022214031778275967
+      },
+      {
+        "rank": 21,
+        "feature_idx": 449,
+        "value": -0.002217433415353298
+      },
+      {
+        "rank": 22,
+        "feature_idx": 840,
+        "value": 0.0022109069395810366
+      },
+      {
+        "rank": 23,
+        "feature_idx": 477,
+        "value": 0.0021992914844304323
+      },
+      {
+        "rank": 24,
+        "feature_idx": 1018,
+        "value": 0.002155086724087596
+      },
+      {
+        "rank": 25,
+        "feature_idx": 993,
+        "value": -0.0020465657580643892
+      },
+      {
+        "rank": 26,
+        "feature_idx": 833,
+        "value": -0.002025207504630089
+      },
+      {
+        "rank": 27,
+        "feature_idx": 1209,
+        "value": -0.0019955236930400133
+      },
+      {
+        "rank": 28,
+        "feature_idx": 1452,
+        "value": -0.0018659158376976848
+      },
+      {
+        "rank": 29,
+        "feature_idx": 1049,
+        "value": -0.0018103214679285884
+      }
+    ]
+  }
+}

@@ -24,3 +24,10 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# tinystories_sleeper artefacts — regenerable via reproduce.sh
+experiments/tinystories_sleeper/**/*.pt
+experiments/tinystories_sleeper/**/results_baseline/
+experiments/tinystories_sleeper/**/results_smoke/
+experiments/tinystories_sleeper/**/run.log
+experiments/tinystories_sleeper/**/run_v2.log
