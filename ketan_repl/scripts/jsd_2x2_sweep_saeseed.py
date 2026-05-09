@@ -109,6 +109,15 @@ def get_per_seed_winners(json_path: Path) -> dict[int, int]:
     return out
 
 
+def merge_per_seed_winners(*json_paths: Path) -> dict[int, int]:
+    """Merge per-seed winners from multiple JSON files (later wins on collision)."""
+    merged: dict[int, int] = {}
+    for p in json_paths:
+        if p.exists():
+            merged.update(get_per_seed_winners(p))
+    return merged
+
+
 def mid_path(tag, sae_seed):
     if sae_seed == 0:
         return f"weights/sae_resid_mid{'' if tag=='4k' else '_50k'}.pt"
@@ -126,6 +135,9 @@ def main():
     p.add_argument("--alphas", type=float, nargs="+",
                    default=[0.0, 0.5, 1.0, 1.5, 2.0])
     p.add_argument("--sae_seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--cells", nargs="+", default=None,
+                   help="Optional cell allowlist (subset of "
+                        "{conventional_4k, conventional_50k, ov_single_4k, ov_single_50k}).")
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args()
 
@@ -152,8 +164,15 @@ def main():
     poisoned_tokens, poisoned_lsm = _gen(model, dep_lp, dep_attn, [], device)
     clean_tokens,    clean_lsm    = _gen(model, cln_lp, cln_attn, [], device)
 
-    ov_winners_4k  = get_per_seed_winners(Path("results/jamie_experiment.json"))
-    ov_winners_50k = get_per_seed_winners(Path("results/jamie_experiment_50k.json"))
+    # OV winners: jamie's published runs cover seeds 0..4; our extra runs
+    # cover seed 5+ (e.g. results/jamie_pipeline_ln1_s5_50k.json).
+    ov_winners_4k  = merge_per_seed_winners(
+        Path("results/jamie_experiment.json"),
+    )
+    ov_winners_50k = merge_per_seed_winners(
+        Path("results/jamie_experiment_50k.json"),
+        Path("results/jamie_pipeline_ln1_s5_50k.json"),
+    )
 
     # per-seed downstream winners (computed by find_downstream_winners.py)
     down_data = json.loads(Path("results/per_seed_downstream_winners.json").read_text())
@@ -167,6 +186,9 @@ def main():
         ("ov_single_4k",      "ov",         "4k",  ov_winners_4k),
         ("ov_single_50k",     "ov",         "50k", ov_winners_50k),
     ]
+    if args.cells:
+        cells = [c for c in cells if c[0] in args.cells]
+        print(f"[sweep] cells filter → {[c[0] for c in cells]}")
     for label, kind, tag, ov_winners in cells:
         print(f"\n[sweep] {label}  kind={kind}  tag={tag}")
         per_alpha = {str(a): {"jsd_clean": [], "jsd_pois": [],
