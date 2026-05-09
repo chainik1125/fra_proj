@@ -166,7 +166,7 @@ def _fill_panel_seeds(ax: plt.Axes,
                       markersize=7, label=STYLES[k]["label"])
         for _, k in curves
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="upper right")
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
 
 
 def _fill_panel(ax: plt.Axes,
@@ -182,7 +182,7 @@ def _fill_panel(ax: plt.Axes,
                       markersize=7, label=STYLES[k]["label"])
         for *_, k in curves
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="upper right")
+    ax.legend(handles=handles, frameon=False, fontsize=8.5, loc="lower right")
 
 
 def _add_colorbar(fig: plt.Figure, axes, norm, cmap, alphas: list[float]) -> None:
