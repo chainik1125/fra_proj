@@ -79,15 +79,9 @@ def main() -> None:
         ax.set_xticks(alphas)
         ax.set_xticklabels([f"{a:.2g}" for a in alphas], fontsize=9)
         ax.set_xlabel("steering coefficient α", fontsize=11)
-        # legend handled once on axes[1] below — keep panels uncluttered
-        pass
+        ax.legend(loc="lower right", fontsize=9, frameon=True, framealpha=0.95)
 
     axes[0].set_ylabel("Jensen-Shannon divergence (bits)", fontsize=11)
-
-    # Single shared legend, anchored to the bottom-right corner of the right panel.
-    handles, labels = axes[0].get_legend_handles_labels()
-    axes[1].legend(handles, labels, loc="lower right", fontsize=9,
-                    frameon=True, framealpha=0.95)
 
     if args.title:
         suptitle = args.title
