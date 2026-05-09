@@ -50,7 +50,7 @@ FAMILY_MARKER = {"upstream": "o", "downstream": "s"}
 def _style(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(True, axis="both", color="#d9d4c8", linewidth=0.7, alpha=0.7)
+    ax.grid(True, axis="both", color="#cccccc", linewidth=0.7, alpha=0.7)
     ax.set_axisbelow(True)
 
 
@@ -153,7 +153,7 @@ def main():
     alpha_color = {a: cmap(norm(i)) for i, a in enumerate(alphas)}
 
     fig, axes = plt.subplots(2, 4, figsize=(18.0, 8.0), constrained_layout=True)
-    fig.patch.set_facecolor("#fbfaf6")
+    fig.patch.set_facecolor("white")
 
     # Column definitions: (eval_mode, x_metric, x_label).
     cols = [
@@ -181,7 +181,7 @@ def main():
         baseline_asr = payload["baseline"]["asr"]
         for c, (eval_mode, x_metric, xlabel) in enumerate(cols):
             ax = axes[r, c]
-            ax.set_facecolor("#fbfaf6")
+            ax.set_facecolor("white")
             sub = _filter_points(points, eval_mode=eval_mode,
                                  selection_method=selection)
             _plot_panel(ax, sub, x_metric=x_metric, alpha_color=alpha_color)

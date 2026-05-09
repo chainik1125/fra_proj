@@ -50,7 +50,7 @@ FAMILY_LABEL  = {"upstream":   "Upstream single feature (ov×ov winner per SAE s
 def _style(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(True, axis="both", color="#d9d4c8", linewidth=0.7, alpha=0.7)
+    ax.grid(True, axis="both", color="#cccccc", linewidth=0.7, alpha=0.7)
     ax.set_axisbelow(True)
 
 
@@ -83,7 +83,7 @@ def main():
     color = {a: cmap(norm(i)) for i, a in enumerate(alphas)}
 
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.0), constrained_layout=True)
-    fig.patch.set_facecolor("#fbfaf6")
+    fig.patch.set_facecolor("white")
     panels = [
         ("delta_ce",       "Δcln-CE  (clean teacher-forced cost)",                       0.0, axes[0]),
         ("gen_ce_ratio",   "gen-CE ratio  (NLL_steered / NLL_baseline, ≥1 = damage)",    1.0, axes[1]),
@@ -91,7 +91,7 @@ def main():
     ]
 
     for metric, xlabel, ref_x, ax in panels:
-        ax.set_facecolor("#fbfaf6")
+        ax.set_facecolor("white")
         for family in families:
             marker = FAMILY_MARKER.get(family, "o")
             pts    = [pt for pt in points if pt.get("family") == family]

@@ -18,8 +18,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-BG   = "#fbfaf6"
-GRID = "#d9d4c8"
+BG   = "white"
+GRID = "#cccccc"
 STYLES: dict[str, dict] = {
     "single":     dict(color="#762a83", label="Single Feature"),
     "set":        dict(color="#1b7837", label="Feature Set"),

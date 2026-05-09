@@ -36,8 +36,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ── visual constants ──────────────────────────────────────────────────────────
-BG     = "#fbfaf6"
-GRID   = "#d9d4c8"
+BG     = "white"
+GRID   = "#cccccc"
 CMAP   = "coolwarm"
 STYLES: dict[str, dict] = {
     "single":     dict(color="#762a83", marker="o", label="Single Feature",     ls="-",  lw=0.9),

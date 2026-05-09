@@ -37,7 +37,7 @@ FAMILY_MARKER = {"upstream": "o", "downstream": "s"}
 def _style(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(True, axis="both", color="#d9d4c8", linewidth=0.7, alpha=0.7)
+    ax.grid(True, axis="both", color="#cccccc", linewidth=0.7, alpha=0.7)
     ax.set_axisbelow(True)
 
 
@@ -104,7 +104,7 @@ def main():
         metric_ranges[x_metric] = (lo - pad, hi + pad)
 
     fig, axes = plt.subplots(2, 2, figsize=(10.0, 8.0), constrained_layout=True)
-    fig.patch.set_facecolor("#fbfaf6")
+    fig.patch.set_facecolor("white")
 
     rows = [
         ("single", f"Top-1 single feature\n(rank #1 from Jamie selection)"),
@@ -119,7 +119,7 @@ def main():
         sub = _filter_points(points, eval_mode=eval_mode)
         for c, (x_metric, col_label) in enumerate(cols):
             ax = axes[r, c]
-            ax.set_facecolor("#fbfaf6")
+            ax.set_facecolor("white")
             _plot_panel(ax, sub, x_metric=x_metric, alpha_color=alpha_color)
             ax.set_xlim(*metric_ranges[x_metric])
             ax.axhline(1.0 - baseline_asr, color="#666",
