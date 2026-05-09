@@ -42,6 +42,14 @@ import matplotlib.pyplot as plt
 COH_FLOOR = 70.0
 
 
+def _bold_underline(s: str) -> str:
+    """Return mathtext for bold-underlined `s` (mathtext doesn't ship `\\underline`,
+    so we use a combining low-line on each character for the underline effect)."""
+    underlined = "".join(c + "̲" for c in s)
+    # Wrap in mathtext bold; mathtext renders unicode via `\mathrm{}` cleanly
+    return r"$\mathbf{" + underlined.replace(" ", r"\ ") + r"}$"
+
+
 # ─── Style ─────────────────────────────────────────────────────────────────
 def setup_style():
     mpl.rcParams.update({
@@ -232,7 +240,11 @@ def main():
         s = stats(rows)
         if s is None:
             continue
-        d_str = r"  $\Delta$ = " + (f"{s['delta']:5.2f}" if s["n70"] else "—")
+        if s["n70"] and s["delta"] == s["delta"]:
+            v = f"{s['delta']:.2f}"
+            d_str = r", Alignment $\Delta$ @ coh 70 = " + _bold_underline(v)
+        else:
+            d_str = r", Alignment $\Delta$ @ coh 70 = $\mathbf{\underline{NaN}}$"
         draw_method(axL, rows, color, label + d_str, marker=marker,
                     show_alpha=(label == winner_label))
         fra_stats.append((label, color, s))
@@ -248,13 +260,17 @@ def main():
                                y_lo=s["min_align"], y_hi=s["max_align"],
                                color=color)
     decorate(axL, title="FRA decomposition", xlim=xlim, ylim=ylim)
-    axL.legend(loc="lower left", title="Method")
+    axL.legend(loc="upper left", frameon=True, fancybox=False,
+               edgecolor="#222222", facecolor="white", framealpha=0.95)
 
     # ── RIGHT: conventional additive ────────────────────────────────────
     axR = axes[1]
     a_stats = stats(additive)
-    a_lab = (r"additive  $\Delta$ = " +
-             (f"{a_stats['delta']:5.2f}" if a_stats and a_stats["n70"] else "—"))
+    if a_stats and a_stats["n70"] and a_stats["delta"] == a_stats["delta"]:
+        v = f"{a_stats['delta']:.2f}"
+        a_lab = r"additive, Alignment $\Delta$ @ coh 70 = " + _bold_underline(v)
+    else:
+        a_lab = r"additive, Alignment $\Delta$ @ coh 70 = $\mathbf{\underline{NaN}}$"
     draw_method(axR, additive, PAL["additive"], a_lab, marker="^",
                 show_alpha=True)
     if additive:
@@ -268,16 +284,8 @@ def main():
         draw_delta_bracket(axR, x=bracket_x, y_lo=a_stats["min_align"],
                            y_hi=a_stats["max_align"], color=PAL["additive"])
     decorate(axR, title="Conventional steering", xlim=xlim, ylim=ylim)
-    axR.legend(loc="lower left", title="Method")
-
-    fig.text(
-        0.5, -0.02,
-        r"Qwen2.5-14B + medical LoRA $\cdot$ 8 evaluation prompts $\cdot$ "
-        r"$\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ $\cdot$ "
-        f"eval seed = {args.seed}"
-        r" $\cdot$ vertical brackets mark $\Delta$align across points at coh $\geq$ 70",
-        ha="center", va="top", fontsize=12, color="#555555",
-    )
+    axR.legend(loc="upper left", frameon=True, fancybox=False,
+               edgecolor="#222222", facecolor="white", framealpha=0.95)
 
     out = Path(args.out).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
