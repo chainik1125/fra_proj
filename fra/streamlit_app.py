@@ -714,6 +714,93 @@ if compute_btn:
         f"Done — {fra_data['total_interactions']:,} non-zero interactions found."
     )
 
+    # OV steering generation for 14B EM models
+    if is_qwen14b and steer_alpha != 0.0:
+        with st.spinner(f"Generating steered response (α={steer_alpha})…"):
+            from fra.core.ov import get_sentence_ov_decomposition, rank_ov_features
+            from fra.core.helpers import get_W_V
+
+            mdl = load_em_model(em_variant, device)
+            sae_obj = load_sae_qwen_ln1(sae_hub_release, int(layer), device)
+
+            # Get OV-ranked features
+            ov_result = get_sentence_ov_decomposition(
+                mdl, sae_obj, text, int(layer), selected_heads[0],
+                max_length=128, top_k=top_k_feat, verbose=False,
+                hook_point=hook_point,
+            )
+            ov_ranked = rank_ov_features(ov_result["ov_sparse"], mode="sum")
+            top_feats = [int(f[0]) for f in ov_ranked[:steer_top_k]]
+
+            # Build OV hooks
+            W_dec = (sae_obj.W_dec if hasattr(sae_obj, 'W_dec') else sae_obj.sae.W_dec).float()
+            W_V_h = get_W_V(mdl, int(layer), selected_heads[0]).float()
+            feat_v_proj = W_dec[top_feats] @ W_V_h
+
+            n_q = mdl.cfg.n_heads
+            n_kv = getattr(mdl.cfg, "n_key_value_heads", None) or n_q
+            kv_idx = selected_heads[0] * n_kv // n_q
+
+            hook_nm = f"blocks.{int(layer)}.{hook_point}"
+            v_hook_nm = f"blocks.{int(layer)}.attn.hook_v"
+            cached_feats = {}
+
+            def _capture(activation, hook):
+                x = activation[0]
+                if x.dim() == 3:
+                    x = x.flatten(-2, -1)
+                f = sae_obj.encode(x) if hasattr(sae_obj, 'encode') else sae_obj.sae.encode(x)
+                cached_feats['f'] = f.float()
+                return activation
+
+            def _steer(v, hook):
+                f = cached_feats.get('f')
+                if f is None:
+                    return v
+                sl = min(f.shape[0], v.shape[1])
+                fa = f[:sl, top_feats].float()
+                delta = steer_alpha * fa @ feat_v_proj
+                v[0, :sl, kv_idx, :] += delta.to(v.dtype)
+                return v
+
+            ov_hooks = [(hook_nm, _capture), (v_hook_nm, _steer)]
+
+            # Generate baseline and steered
+            from fra.em_evaluation import generate_with_hooks
+            tokenizer = mdl.tokenizer
+
+            baseline_resp = generate_with_hooks(
+                mdl, tokenizer, text, fwd_hooks=[],
+                max_new_tokens=150, temperature=0.0, seed=42)
+            steered_resp = generate_with_hooks(
+                mdl, tokenizer, text, fwd_hooks=ov_hooks,
+                max_new_tokens=150, temperature=0.0, seed=42)
+
+            del ov_result
+            torch.cuda.empty_cache()
+
+        st.session_state["steer_baseline"] = baseline_resp
+        st.session_state["steer_response"] = steered_resp
+        st.session_state["steer_features"] = top_feats
+
+# ---------------------------------------------------------------------------
+# Steering output display (after FRA results)
+# ---------------------------------------------------------------------------
+
+if "steer_response" in st.session_state:
+    cfg = st.session_state.get("fra_config", {})
+    st.markdown("---")
+    st.subheader(f"OV Steering Output (α={cfg.get('steer_alpha', 0)}, top-{cfg.get('steer_top_k', 0)} features)")
+    st.caption(f"Features steered: {st.session_state.get('steer_features', [])[:10]}{'…' if len(st.session_state.get('steer_features', [])) > 10 else ''}")
+
+    col_bl, col_st = st.columns(2)
+    with col_bl:
+        st.markdown("**Baseline (no steering)**")
+        st.text_area("", st.session_state["steer_baseline"], height=200, key="bl_out", disabled=True)
+    with col_st:
+        st.markdown(f"**Steered (α={cfg.get('steer_alpha', 0)})**")
+        st.text_area("", st.session_state["steer_response"], height=200, key="st_out", disabled=True)
+
 # ---------------------------------------------------------------------------
 # Main results area
 # ---------------------------------------------------------------------------
