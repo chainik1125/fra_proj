@@ -163,14 +163,11 @@ def main():
                 ha="center", va="bottom",
                 fontsize=13, fontweight="600", color="#0a0a0a", zorder=5)
 
-    # Visual group separator (vertical dashed line between FRA and conventional)
+    # Visual group separator (vertical dashed line between FRA and conventional);
+    # group labels added once after y-lim is set, below.
     if fra and conv:
         sep_x = len(fra) - 0.5
         ax.axvline(sep_x, color="#bbbbbb", lw=0.9, ls=(0, (3, 3)), zorder=1)
-        ax.text(sep_x - 0.05, ax.get_ylim()[1] * 0.96, "FRA decomposition",
-                ha="right", va="top", fontsize=13, color="#555555")
-        ax.text(sep_x + 0.05, ax.get_ylim()[1] * 0.96, "Conventional steering",
-                ha="left", va="top", fontsize=13, color="#555555")
 
     # Decorations
     ax.set_xticks(x)
