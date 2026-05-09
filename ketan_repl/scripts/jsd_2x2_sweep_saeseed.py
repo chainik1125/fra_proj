@@ -2,9 +2,10 @@
 
 OV cells: per-seed sae from weights/seeds[/_50k]/sae_ln1_s{N}.pt,
           per-seed jamie pipeline winner from results/jamie_experiment*.json.
-Conventional cells: per-seed sae_resid_mid_s{N}.pt (s=0 = jamie's stock,
-          s=1,2 = additionally trained), feature f=579 fixed across seeds
-          (matches jamie's --target_feature default).
+Conventional cells: per-seed sae_resid_mid_s{N}.pt + per-seed downstream
+          winner from results/per_seed_downstream_winners.json (computed by
+          scripts/find_downstream_winners.py — same dlogp+ASR screen as jamie's
+          OV pipeline, just on resid_mid features).
 
 Output JSON has lists of seed-wise floats per (cell, α) → plotter mean±std.
 """
@@ -23,7 +24,6 @@ RESID_MID = "blocks.0.hook_resid_mid"
 N_PROMPTS = 200
 GEN_TOKENS = 16
 DECODE_SEED = 0
-DOWN_FEATURE = 579
 
 
 def jsd_mean(p_lsm, q_lsm):
@@ -129,6 +129,10 @@ def main():
     ov_winners_4k  = get_per_seed_winners(Path("results/jamie_experiment.json"))
     ov_winners_50k = get_per_seed_winners(Path("results/jamie_experiment_50k.json"))
 
+    # per-seed downstream winners (computed by find_downstream_winners.py)
+    down_data = json.loads(Path("results/per_seed_downstream_winners.json").read_text())
+    def down_feat(tag, sae_seed): return int(down_data[f"{tag}_s{sae_seed}"]["winner"])
+
     out = {"alphas": args.alphas, "sae_seeds": args.sae_seeds, "configs": {}}
 
     cells = [
@@ -143,7 +147,7 @@ def main():
         per_seed_feature = {}
         for sae_seed in args.sae_seeds:
             if kind == "downstream":
-                feat = DOWN_FEATURE
+                feat = down_feat(tag, sae_seed)
                 sae, _ = sae_load(Path(mid_path(tag, sae_seed)), device=device)
             else:
                 feat = ov_winners[sae_seed]
