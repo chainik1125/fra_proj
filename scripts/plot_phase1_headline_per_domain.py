@@ -76,7 +76,7 @@ def best_for_domain(root: Path, em: str):
             if "sae_resid" in d:
                 s = d["sae_resid"]["summary"]["delta_coh_70"]
                 lbl_map = {
-                    "L24_ln1_nura":   "Add: L24 ln1 (Nura)",
+                    "L24_ln1_nura":   "Add: L24 ln1 (published)",
                     "L24_resid_pre":  "Add: L24 resid_pre",
                     "L24_resid_mid":  "Add: L24 resid_mid",
                     "L24_resid_post": "Add: L24 resid_post",

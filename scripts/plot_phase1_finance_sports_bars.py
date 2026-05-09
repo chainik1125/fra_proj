@@ -29,14 +29,14 @@ COH_FLOOR = 70.0
 
 # Wong palette + an extra colour for L25_ln1
 SAE_COLOR = {
-    "L24_ln1_nura":   "#009E73",  # bluish green — hero (Nura's SAE)
+    "L24_ln1_nura":   "#009E73",  # bluish green — hero (the published-SAE SAE)
     "L24_resid_pre":  "#0072B2",  # blue
     "L24_resid_mid":  "#D55E00",  # vermilion
     "L24_resid_post": "#CC79A7",  # reddish purple
     "L25_ln1":        "#E69F00",  # orange
 }
 SAE_LABEL = {
-    "L24_ln1_nura":   "L24 ln1 (Nura)",
+    "L24_ln1_nura":   "L24 ln1 (published)",
     "L24_resid_pre":  "L24 resid_pre",
     "L24_resid_mid":  "L24 resid_mid",
     "L24_resid_post": "L24 resid_post",

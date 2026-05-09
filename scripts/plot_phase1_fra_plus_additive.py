@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""1×2 cross-domain bar chart combining FRA recipes (on Nura's L24 ln1 SAE)
+"""1×2 cross-domain bar chart combining FRA recipes (on the published L24 ln1 SAE)
 with additive recipe on each of 5 pre-trained SAEs.
 
 8 bars per panel (one per (recipe, SAE)):
 
-  FRA on Nura L24 ln1: qk_to_ov, ov_to_ov, qk_to_qk
-  Additive:           L24 ln1 (Nura), L24 resid_pre, L24 resid_mid,
+  FRA on published L24 ln1 SAE: qk_to_ov, ov_to_ov, qk_to_qk
+  Additive:           L24 ln1 (published), L24 resid_pre, L24 resid_mid,
                        L24 resid_post, L25 ln1
 
 Bar height = mean Δalign|coh≥70 across 3 eval seeds; error bar = sample std
@@ -38,7 +38,7 @@ FRA_COLUMNS = [
     ("FRA:qk_to_qk", r"FRA: QK$\rightarrow$QK", "#009E73"),
 ]
 ADDITIVE_SAES = [
-    ("L24_ln1_nura",   "L24 ln1 (Nura)"),
+    ("L24_ln1_nura",   "L24 ln1 (published)"),
     ("L24_resid_pre",  "L24 resid_pre"),
     ("L24_resid_mid",  "L24 resid_mid"),
     ("L24_resid_post", "L24 resid_post"),

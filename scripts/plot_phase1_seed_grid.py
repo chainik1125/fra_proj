@@ -3,16 +3,16 @@
 
 Rows = eval seeds {42, 123, 456}
 Cols = 5 hookpoints
-        0  Nura L24 ln1            (3 FRA recipes overlaid + additive on Nura SAE)
+        0  L24 ln1 (published)            (3 FRA recipes overlaid + additive on published SAE)
         1  L24 resid_pre           (additive only)
         2  L24 resid_mid           (additive only)
         3  L24 resid_post          (additive only)
         4  L25 ln1                 (additive only)
 
 Each cell = α-sweep alignment-vs-coherence trajectory for THAT (seed, hookpoint).
-α annotated at each point; black star at the unsteered reference (Nura's
-'baseline' for col 0, α=1.0 no-op for additive cols); stats box with peak /
-baseline / min@coh70 / Δ@coh70.
+α annotated at each point; black star at the unsteered reference (the
+published-SAE 'baseline' method for col 0, α=1.0 no-op for additive cols);
+stats box with peak / baseline / min@coh70 / Δ@coh70.
 
 Paper colour scheme (matches plot_phase1_fra_plus_additive.py):
   QK→QK = green   #009E73
@@ -47,7 +47,7 @@ ADD_SAES = [
     ("L24_resid_post", "L24 resid_post"),
     ("L25_ln1",        "L25 ln1"),
 ]
-# Col 0 = Nura SAE: FRA recipes + additive overlaid.
+# Col 0 = published SAE: FRA recipes + additive overlaid.
 FRA_RECIPES = [
     ("qk_to_qk", r"QK$\rightarrow$QK", "#009E73"),
     ("qk_to_ov", r"QK$\rightarrow$OV", "#0072B2"),
@@ -200,7 +200,7 @@ def main():
     nura_add  = combined.get("L24_ln1_nura", {}).get("sae_resid", {}).get("by_alpha", [])
 
     for r, seed in enumerate(SEEDS):
-        # ── Col 0: Nura L24 ln1 (FRA + additive overlaid) ───────────────
+        # ── Col 0: L24 ln1 (published) (FRA + additive overlaid) ───────────────
         ax = axes[r, 0]
         cond_stats = []
         for method, lbl, color in FRA_RECIPES:
@@ -220,7 +220,7 @@ def main():
                             marker="s", s=42)
                 cond_stats.append(("Conventional", ADDITIVE_COLOR,
                                    _summary_for_curve(scales, al, co)))
-        # baseline (no-hook) star — Nura's explicit baseline condition
+        # baseline (no-hook) star — the published-SAE explicit baseline condition
         b = fra_block.get("baseline", {}).get("by_alpha", [])
         if b and r < len(b[0]["per_seed_alignment"]):
             be = b[0]
@@ -239,7 +239,7 @@ def main():
                     txt = f"  {lbl:14s}  Δ=NaN    pk={s['peak']:5.1f}  (0/{s['n_total']})"
                 lines.append((txt, i == winner_i))
             _stat_box(ax, lines)
-        title = f"Nura L24 ln1\n(FRA + additive)\nseed={seed}" if r == 0 else f"seed={seed}"
+        title = f"L24 ln1 (published)\n(FRA + additive)\nseed={seed}" if r == 0 else f"seed={seed}"
         _decorate(ax, title=title, xlabel=(r == 2), ylabel=True,
                   legend_loc="lower right" if r == 0 else None)
 
