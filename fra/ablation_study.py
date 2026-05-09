@@ -266,8 +266,9 @@ def compute_bias_corrections(model, sae, text, layer, head, hook_point, max_leng
 
     # Compute full SAE-reconstructed pre-softmax scores (with RoPE + softcap)
     softcap = getattr(model.cfg, "attn_scores_soft_cap", 0.0) or 0.0
-    q_full = x_hat @ W_Q + b_Q
-    k_full = x_hat @ W_K + b_K
+    x_hat_cast = x_hat.to(W_Q.dtype)
+    q_full = x_hat_cast @ W_Q + b_Q
+    k_full = x_hat_cast @ W_K + b_K
     rope = get_rope_params(model, layer)
     if rope is not None:
         r_sin, r_cos, r_dim, adj = rope
