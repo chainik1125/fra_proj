@@ -141,7 +141,7 @@ def main() -> None:
 
     ax.set_title(
         "3×3 Attribution × Intervention matrix\n"
-        "mean over SAE seeds 1–4",
+        "mean over 5 seeds",
         fontsize=fs_title,
     )
 
