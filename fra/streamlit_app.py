@@ -1641,15 +1641,20 @@ with tab4:
                 from fra.validation import fra_sum_to_attn
 
                 # Get model and SAE from cache
-                mdl = load_model(model_name, device, hf_token)
-                if sae_type == "hub":
-                    sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
-                elif sae_type == "gemma":
-                    sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
-                elif sae_type == "qwen":
-                    sae_obj = load_sae_qwen(sae_hub_release, sae_hub_id, device)
+                cfg = st.session_state.get("fra_config", {})
+                if cfg.get("is_qwen14b"):
+                    mdl = load_em_model(cfg.get("em_variant", "base"), device)
+                    sae_obj = load_sae_qwen_ln1(sae_hub_release, int(layer_), device)
                 else:
-                    sae_obj = load_sae_local(sae_local_path, int(layer_), device)
+                    mdl = load_model(model_name, device, hf_token)
+                    if sae_type == "hub":
+                        sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                    elif sae_type == "gemma":
+                        sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                    elif sae_type == "qwen":
+                        sae_obj = load_sae_qwen(sae_hub_release, sae_hub_id, device)
+                    else:
+                        sae_obj = load_sae_local(sae_local_path, int(layer_), device)
 
                 # Bias corrections
                 bias = compute_bias_corrections(
@@ -2092,15 +2097,18 @@ with tab5:
                     import tempfile
 
                     # Load model (reuses cached version)
-                    _vis_model = load_model(model_name, device, hf_token)
-
-                    # Load SAE
-                    if sae_type == "hub":
-                        _vis_sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
-                    elif sae_type == "gemma":
-                        _vis_sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                    cfg = st.session_state.get("fra_config", {})
+                    if cfg.get("is_qwen14b"):
+                        _vis_model = load_em_model(cfg.get("em_variant", "base"), device)
+                        _vis_sae_obj = load_sae_qwen_ln1(sae_hub_release, int(layer_), device)
                     else:
-                        _vis_sae_obj = load_sae_local(sae_local_path, int(layer_), device)
+                        _vis_model = load_model(model_name, device, hf_token)
+                        if sae_type == "hub":
+                            _vis_sae_obj = load_sae_hub(sae_hub_release, sae_hub_id, device)
+                        elif sae_type == "gemma":
+                            _vis_sae_obj = load_sae_gemma(sae_hub_release, sae_hub_id, device)
+                        else:
+                            _vis_sae_obj = load_sae_local(sae_local_path, int(layer_), device)
 
                     # Get the underlying SAE Lens SAE object
                     _vis_sae = _vis_sae_obj.sae if hasattr(_vis_sae_obj, "sae") else _vis_sae_obj
