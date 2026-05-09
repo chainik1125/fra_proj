@@ -40,6 +40,7 @@ def main() -> None:
     p.add_argument("--decode_seed", type=int, default=0,
                    help="single seed for the sampler (eval uses 5; one is enough to read).")
     p.add_argument("--temperature", type=float, default=1.0)
+    p.add_argument("--sae_ln1_dir", type=Path, default=Path("weights/seeds"))
     p.add_argument("--device", default=None)
     args = p.parse_args()
 
@@ -99,7 +100,7 @@ def main() -> None:
         ce     = row["eval"]["delta_ce"]
         asr    = row["eval"]["asr"]
         gen_r  = row["eval"]["gen_ce_ratio"]
-        sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
+        sae_ln1, _ = sae_load(args.sae_ln1_dir / f"sae_ln1_s{seed}.pt", device=device)
         cd = resolve_channel_deltas(
             tup, ACTIVE_CHANNELS["ov"], model, sae_ln1, LN1_HOOK,
             eval_lp, eval_attn, eval_attn,
@@ -108,9 +109,10 @@ def main() -> None:
         sampler = make_sampling_sampler(temperature=args.temperature, seed=args.decode_seed, device=device)
         steer_gen = generate_with_hooks(model, eval_lp, hooks, args.gen_tokens, sampler,
                                         attention_mask=eval_attn)
+        feature_str = f"f{tup[0][0]}" if len(tup) == 1 else f"set(K={len(tup)}, top=f{tup[0][0]})"
         print(
             "\n" + "=" * 90
-            + f"\n[seed={seed}  f{tup[0][0]}  α={alpha}]"
+            + f"\n[seed={seed}  {feature_str}  α={alpha}]"
             + f"  eval ASR={asr:.3f}  Δcln-CE={ce:+.4f}  gen-CE-ratio={gen_r:.3f}"
             + "\n" + "=" * 90
         )
