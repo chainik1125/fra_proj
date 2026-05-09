@@ -70,7 +70,7 @@ def setup_style():
 def load_metrics(streams_root: Path):
     """Return {(col_key, em): summary_dict}."""
     out = {}
-    for em in ("finance", "sports"):
+    for em in ("medical", "finance", "sports"):
         # FRA recipes from gpt4o_combined_L24_ln1_nura_FRA_<em>.json
         fra_path = streams_root / f"gpt4o_combined_L24_ln1_nura_FRA_{em}.json"
         if fra_path.exists():
@@ -107,8 +107,11 @@ def main():
     metrics = load_metrics(Path(args.combined_root))
     print("loaded keys:", sorted(metrics.keys()))
 
-    domains = ["finance", "sports"]
-    fig, axs = plt.subplots(1, 2, figsize=(15, 6.5), sharey=True)
+    domains = [d for d in ("medical", "finance", "sports")
+               if any(em == d for _, em in metrics.keys())]
+    fig, axs = plt.subplots(1, len(domains), figsize=(7.5 * len(domains), 6.8), sharey=True)
+    if len(domains) == 1:
+        axs = [axs]
 
     # joint y-lim
     all_max = []
