@@ -27,13 +27,15 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 
-# Three FRA recipes (always shown) + one "best conventional additive" bar
-# whose label is filled in per-domain (the winning SAE among the 5 additive
-# candidates). Keeps the figure compact: 4 bars per panel instead of 8+1.
+# Paper-consistent colour scheme:
+#   QK->QK : green   (#009E73 Wong bluish-green)
+#   QK->OV : blue    (#0072B2 Wong blue)
+#   OV->OV : orange  (#D55E00 Wong vermilion)
+#   conventional steering : near-black (#1a1a1a)
 FRA_COLUMNS = [
-    ("FRA:qk_to_ov", r"FRA: QK$\rightarrow$OV", "#009E73"),
-    ("FRA:ov_to_ov", r"FRA: OV$\rightarrow$OV", "#0072B2"),
-    ("FRA:qk_to_qk", r"FRA: QK$\rightarrow$QK", "#D55E00"),
+    ("FRA:qk_to_ov", r"FRA: QK$\rightarrow$OV", "#0072B2"),
+    ("FRA:ov_to_ov", r"FRA: OV$\rightarrow$OV", "#D55E00"),
+    ("FRA:qk_to_qk", r"FRA: QK$\rightarrow$QK", "#009E73"),
 ]
 ADDITIVE_SAES = [
     ("L24_ln1_nura",   "L24 ln1 (Nura)"),
@@ -42,7 +44,7 @@ ADDITIVE_SAES = [
     ("L24_resid_post", "L24 resid_post"),
     ("L25_ln1",        "L25 ln1"),
 ]
-ADDITIVE_COLOR = "#CC79A7"
+ADDITIVE_COLOR = "#1a1a1a"
 
 
 def setup_style():

@@ -17,6 +17,14 @@ import matplotlib.pyplot as plt
 
 SAES = ["L24_ln1_nura", "L24_resid_pre", "L24_resid_mid", "L24_resid_post", "L25_ln1"]
 
+# Paper colour scheme — must match plot_phase1_fra_plus_additive.py
+COLOR_BY_RECIPE = {
+    "qk_to_qk":     "#009E73",  # green  ← QK→QK
+    "qk_to_ov":     "#0072B2",  # blue   ← QK→OV
+    "ov_to_ov":     "#D55E00",  # orange ← OV→OV
+    "conventional": "#1a1a1a",  # black  ← conventional additive
+}
+
 
 def setup_style():
     mpl.rcParams.update({
@@ -43,8 +51,10 @@ def setup_style():
 
 
 def best_for_domain(root: Path, em: str):
-    """Return (method_label, mean, std, n) for the recipe with the largest
-    Δalign|coh≥70 in this domain."""
+    """Return (method_label, mean, std, n, color_key) for the recipe with the
+    largest Δalign|coh≥70 in this domain. color_key is one of the keys in
+    COLOR_BY_RECIPE so the plot can colour the bar by category.
+    """
     candidates = []
     # FRA recipes from gpt4o_combined_L24_ln1_nura_FRA_<em>.json
     fra = root / f"gpt4o_combined_L24_ln1_nura_FRA_{em}.json"
@@ -57,7 +67,7 @@ def best_for_domain(root: Path, em: str):
                 lbl = (f"FRA: QK{arrow}OV" if method == "qk_to_ov"
                        else f"FRA: OV{arrow}OV" if method == "ov_to_ov"
                        else f"FRA: QK{arrow}QK")
-                candidates.append((lbl, s["mean"] or 0.0, s["std"] or 0.0, s["n"]))
+                candidates.append((lbl, s["mean"] or 0.0, s["std"] or 0.0, s["n"], method))
     # Additive on each SAE
     for sae in SAES:
         p = root / f"gpt4o_combined_{sae}_{em}.json"
@@ -72,10 +82,10 @@ def best_for_domain(root: Path, em: str):
                     "L24_resid_post": "Add: L24 resid_post",
                     "L25_ln1":        "Add: L25 ln1",
                 }
-                candidates.append((lbl_map[sae], s["mean"] or 0.0, s["std"] or 0.0, s["n"]))
+                candidates.append((lbl_map[sae], s["mean"] or 0.0, s["std"] or 0.0, s["n"], "conventional"))
     valid = [c for c in candidates if c[3] > 0]
     if not valid:
-        return ("(none above floor)", 0.0, 0.0, 0)
+        return ("(none above floor)", 0.0, 0.0, 0, "conventional")
     return max(valid, key=lambda c: c[1])
 
 
@@ -92,15 +102,15 @@ def main():
 
     fig, ax = plt.subplots(figsize=(8.0, 6.4))
     x = np.arange(len(bests))
-    means = [b[2] for b in bests]
-    stds  = [b[3] for b in bests]
+    means         = [b[2] for b in bests]
+    stds          = [b[3] for b in bests]
     method_labels = [b[1] for b in bests]
+    color_keys    = [b[5] for b in bests]
     domain_labels = [em.capitalize() for em, *_ in bests]
 
-    # Single hero colour for the headline
-    color = "#009E73"
+    bar_colors = [COLOR_BY_RECIPE[k] for k in color_keys]
     bars = ax.bar(x, means, yerr=stds,
-                  color=color, edgecolor="#222222", linewidth=1.0,
+                  color=bar_colors, edgecolor="#222222", linewidth=1.0,
                   error_kw=dict(ecolor="#222222", capsize=6, capthick=1.4, lw=1.6),
                   zorder=3)
     for bar, m, s, mlabel in zip(bars, means, stds, method_labels):
