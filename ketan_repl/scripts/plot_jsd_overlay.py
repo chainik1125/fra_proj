@@ -79,7 +79,7 @@ def main() -> None:
         ax.set_xticks(alphas)
         ax.set_xticklabels([f"{a:.2g}" for a in alphas], fontsize=9)
         ax.set_xlabel("steering coefficient α", fontsize=11)
-        ax.legend(loc="center right", fontsize=9, frameon=True, framealpha=0.95)
+        ax.legend(loc="lower right", fontsize=9, frameon=True, framealpha=0.95)
 
     axes[0].set_ylabel("Jensen-Shannon divergence (bits)", fontsize=11)
 
