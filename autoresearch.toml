@@ -1,0 +1,30 @@
+# autoresearch project config for fra_proj.
+# Secrets (AWS_*, ANTHROPIC_API_KEY, AUTORESEARCH_RUNPOD_API_KEY, HF_TOKEN)
+# live on the controller (Railway env), not here.
+
+controller_url = "https://controller-production-3e79.up.railway.app"
+
+# Tier 1 — structured state on Cloudflare R2.
+storage = "s3"
+storage_bucket = "fra-proj"
+storage_endpoint_url = "https://1017e5793f988de0c543f206026b75b7.r2.cloudflarestorage.com"
+storage_region = "auto"
+
+# Tier 2 — compute + persistent volume.
+compute = "runpod"
+default_gpu = "H100 80GB"
+runpod_data_center = "US-CA-2"
+runpod_network_volume_id = "l7wyka84iy"
+runpod_default_image = "ghcr.io/chainik1125/autoresearch:latest"
+runpod_container_registry_auth_id = "cmp2b493n0051ju07mlw41yu1"
+
+# Pod clones from here on first boot. Public repo; no PAT needed.
+project_repo_url = "https://github.com/chainik1125/fra_proj.git"
+project_repo_branch = "autoresearch/transfer-qwen32b-sae"
+
+# Validators off for now (no ANTHROPIC_API_KEY needed to run); flip on later.
+default_budget_usd = 10
+pipeline_module_path = "pipelines"
+preflight = false
+postflight = false
+summarize_errors = false
