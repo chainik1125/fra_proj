@@ -47,6 +47,16 @@ def main():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--dry-run", action="store_true",
                    help="Build config and exit without training")
+    # autoresearch additions: optional wandb logging for training metrics
+    # (rec loss, dead features, L0, etc.). Off by default; the pipeline
+    # wrapper enables them when WANDB_API_KEY is available.
+    p.add_argument("--log-to-wandb", action="store_true",
+                   help="Stream training metrics to wandb")
+    p.add_argument("--wandb-project", default="fra-sae-qwen32b")
+    p.add_argument("--wandb-entity", default=None,
+                   help="wandb team/entity; defaults to the API key's owner")
+    p.add_argument("--wandb-name", default=None,
+                   help="wandb run name; defaults to <model>/<hook> if unset")
     args = p.parse_args()
 
     Path(args.output_dir).expanduser().mkdir(parents=True, exist_ok=True)
@@ -99,7 +109,15 @@ def main():
         # sae-lens passes these kwargs to HookedTransformer.from_pretrained.
         model_from_pretrained_kwargs={"dtype": "bfloat16"},
         seed=args.seed,
-        logger=LoggingConfig(log_to_wandb=False),
+        logger=LoggingConfig(
+            log_to_wandb=args.log_to_wandb,
+            wandb_project=args.wandb_project,
+            wandb_entity=args.wandb_entity,
+            wandb_run_name=(
+                args.wandb_name
+                or f"{args.model_name.split('/')[-1]}/{args.hook_name}"
+            ),
+        ),
         verbose=True,
     )
 

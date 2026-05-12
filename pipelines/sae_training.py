@@ -7,10 +7,20 @@ persistent network volume so the trained SAE survives the pod ending.
 
 Wraps via subprocess (the existing script is `argparse + if __name__ ==
 "__main__"`, so importing its `main()` would require sys.argv manipulation).
+
+End-to-end behavior:
+  - If `WANDB_API_KEY` is in env and `params["wandb_enabled"]` (default True),
+    enables sae_lens's built-in wandb logging (rec loss, dead-feature count,
+    L0, encoder/decoder norms).
+  - After training, if `HF_TOKEN` is in env and `params["upload_to_hf"]`
+    (default True), pushes `sae_weights.safetensors` + `cfg.json` to a HF
+    Hub repo (default `dmanningcoe/<model>_SAE_<hookpoint>`). Checkpoints
+    and the training log are excluded from the upload.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -65,6 +75,21 @@ class SAETraining:
             "--seed", str(seed),
         ]
 
+        # Wandb wiring. sae_lens reads WANDB_API_KEY from env; we just
+        # need to pass the flags. Default project + entity match the
+        # team layout (`fra_proj_1`); override via params if needed.
+        wandb_enabled = bool(params.get("wandb_enabled", True))
+        wandb_available = bool(os.environ.get("WANDB_API_KEY"))
+        wandb_used = wandb_enabled and wandb_available
+        if wandb_used:
+            cmd += [
+                "--log-to-wandb",
+                "--wandb-project", str(params.get("wandb_project", "fra-sae-qwen32b")),
+                "--wandb-entity",  str(params.get("wandb_entity", "fra_proj_1")),
+            ]
+            if params.get("wandb_name"):
+                cmd += ["--wandb-name", str(params["wandb_name"])]
+
         log_path = out_dir / "training.log"
         t0 = time.time()
         with log_path.open("w") as log:
@@ -89,6 +114,32 @@ class SAETraining:
             (full_run_s / 3600) * cost_per_hour if full_run_s else None
         )
 
+        # HF upload of the trained SAE (only the final files; not the
+        # intermediate checkpoints, which are 10x the size and rarely useful).
+        hf_url = None
+        hf_repo = None
+        upload_to_hf = bool(params.get("upload_to_hf", True))
+        if upload_to_hf and os.environ.get("HF_TOKEN") and sae_weights.exists():
+            from huggingface_hub import HfApi
+
+            hf_repo = params.get(
+                "hf_repo",
+                f"dmanningcoe/{model_slug}_SAE_{hook_slug}",
+            )
+            api = HfApi(token=os.environ["HF_TOKEN"])
+            api.create_repo(hf_repo, repo_type="model", exist_ok=True, private=False)
+            api.upload_folder(
+                folder_path=str(out_dir),
+                repo_id=hf_repo,
+                repo_type="model",
+                commit_message=(
+                    f"SAE training: {hook_name} on {target_model}, "
+                    f"{training_tokens:,} tokens"
+                ),
+                ignore_patterns=["checkpoints/*", "*.log"],
+            )
+            hf_url = f"https://huggingface.co/{hf_repo}"
+
         return {
             "sae_weights_path": str(sae_weights) if sae_weights.exists() else None,
             "sae_cfg_path": str(sae_cfg) if sae_cfg.exists() else None,
@@ -99,4 +150,9 @@ class SAETraining:
             "estimated_200M_token_run_seconds": full_run_s,
             "estimated_200M_token_run_cost_usd": full_run_cost,
             "log_path": str(log_path),
+            "wandb_used": wandb_used,
+            "wandb_project": params.get("wandb_project", "fra-sae-qwen32b") if wandb_used else None,
+            "wandb_entity":  params.get("wandb_entity", "fra_proj_1") if wandb_used else None,
+            "hf_repo": hf_repo,
+            "hf_url": hf_url,
         }
