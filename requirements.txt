@@ -94,6 +94,8 @@ sympy==1.14.0
 tenacity==9.1.4
 tokenizers==0.22.2
 torch==2.11.0
+torchvision  # must move in lockstep with torch; base image's pin to torch 2.4.1 otherwise mismatches ABI
+torchaudio
 tqdm==4.67.3
 transformer-lens==2.18.0
 transformers==4.57.6

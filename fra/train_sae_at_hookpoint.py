@@ -113,7 +113,7 @@ def main():
             log_to_wandb=args.log_to_wandb,
             wandb_project=args.wandb_project,
             wandb_entity=args.wandb_entity,
-            wandb_run_name=(
+            run_name=(
                 args.wandb_name
                 or f"{args.model_name.split('/')[-1]}/{args.hook_name}"
             ),
