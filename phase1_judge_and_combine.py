@@ -135,20 +135,25 @@ def per_stream_aggregate(data):
     return dict(out)
 
 
-# Two filename patterns we recognise:
+# Three filename patterns we recognise:
 #   - qualitative_<sae_id>_<em>_evalseed<N>_top<K>.json   (additive; from phase1_additive_orchestrator)
 #   - qualitative_FRA_<em>_evalseed<N>.json               (FRA recipes; from phase1_fra_orchestrator)
+#   - qualitative_arditi_<em>_evalseed<N>.json            (Arditi single-feature; from phase1_arditi_orchestrator)
 QUAL_RE_ADDITIVE = re.compile(
     r"qualitative_(?P<sae>[A-Za-z0-9_]+)_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)_top(?P<k>\d+)\.json"
 )
 QUAL_RE_FRA = re.compile(
     r"qualitative_FRA_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
 )
+QUAL_RE_ARDITI = re.compile(
+    r"qualitative_arditi_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
+)
 
 
 def process_stream_file(path: Path, client, max_workers: int):
     m_add = QUAL_RE_ADDITIVE.match(path.name)
     m_fra = QUAL_RE_FRA.match(path.name)
+    m_arditi = QUAL_RE_ARDITI.match(path.name)
     if m_add is not None:
         sae_id = m_add.group("sae")
         em = m_add.group("em")
@@ -157,6 +162,13 @@ def process_stream_file(path: Path, client, max_workers: int):
         sae_id = "L24_ln1_nura_FRA"
         em = m_fra.group("em")
         seed = int(m_fra.group("seed"))
+    elif m_arditi is not None:
+        # sae_id is written into each qualitative entry by the orchestrator;
+        # use the first entry's value to avoid hardcoding a layer/trainer here.
+        peek = json.loads(path.read_text())
+        sae_id = peek[0]["sae_id"] if peek else "L15_resid_post_andyrdt_qwen7b_trainer1"
+        em = m_arditi.group("em")
+        seed = int(m_arditi.group("seed"))
     else:
         print(f"  [skip non-stream JSON] {path.name}", flush=True)
         return None
