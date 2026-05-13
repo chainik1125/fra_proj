@@ -31,7 +31,13 @@ from typing import Any
 
 class SAETraining:
     name = "sae_training"
-    required_gpu = "H100 80GB"            # 32B base at bf16 needs ~65GB
+    required_gpu = "H100 80GB"            # human-readable hint (legacy)
+    # Working-set floor for the SAE-training subprocess. Reality varies a lot
+    # by model: Qwen-7B fits in ~30GB total; Qwen-32B (~64GB model alone) +
+    # Adam state + buffer needs >80GB so the dispatcher must pick a B200 /
+    # H200 / NVL when target_model points at 32B. The dispatcher's hardware
+    # selector reads this attribute to filter the offer list.
+    required_vram_gb = 80                  # safe default for Qwen-32B; smaller models still fit
     estimated_minutes = 60                 # 200M-token full run; 500k canary much faster
 
     def run(
