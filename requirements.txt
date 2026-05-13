@@ -109,3 +109,13 @@ wandb==0.25.1
 xxhash==3.6.0
 yarl==1.23.0
 zstandard  # needed by `datasets` to read pile-uncopyrighted's zstd-compressed JSONL via fsspec
+
+# --- arditi backend deps (only loaded when sae_training params.backend="arditi") ---
+# `nnsight` is what Arditi's run_from_config.py uses to load the model. We also
+# clone andyrdt/dictionary_learning@andyrdt/qwen at runtime and `pip install -e`
+# it (handled in fra/train_sae_arditi.py) — that brings their package code +
+# the misaligned_aggregated.jsonl data file + their run_from_config.py + config
+# templates onto the volume in one cached checkout. We don't add the git+ pip
+# line here because we want Arditi's full repo (configs/, data/, etc.) not
+# just the python package.
+nnsight
