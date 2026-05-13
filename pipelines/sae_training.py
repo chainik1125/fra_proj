@@ -49,6 +49,13 @@ class SAETraining:
         d_sae = int(params.get("d_sae", 102_400))      # match Nura
         topk = int(params.get("k", 64))                # match Nura
         seed = int(params.get("seed", 42))
+        # sae_lens writes one checkpoint per fraction of training; for Qwen-32B
+        # each is ~12GB (encoder + decoder + activation buffer state). 10 of
+        # them fills 120GB per run, which exhausts the volume across a few
+        # canaries. Default to 1 (the final) for canary-style smoke runs; full
+        # 200M-token runs override with n_checkpoints=10 to recover from
+        # interruptions.
+        n_checkpoints = int(params.get("n_checkpoints", 1))
 
         # Trained SAE lives on the persistent volume; reusable across pods.
         hook_slug = re.sub(r"[^\w-]", "_", hook_name)
@@ -73,6 +80,7 @@ class SAETraining:
             "--k", str(topk),
             "--training-tokens", str(training_tokens),
             "--seed", str(seed),
+            "--n-checkpoints", str(n_checkpoints),
         ]
 
         # Wandb wiring. sae_lens reads WANDB_API_KEY from env; we just
