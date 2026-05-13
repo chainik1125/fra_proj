@@ -108,3 +108,4 @@ wadler-lindig==0.1.7
 wandb==0.25.1
 xxhash==3.6.0
 yarl==1.23.0
+zstandard  # needed by `datasets` to read pile-uncopyrighted's zstd-compressed JSONL via fsspec
