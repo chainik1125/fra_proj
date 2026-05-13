@@ -79,9 +79,18 @@ ARDITI_REPO_URL = "https://github.com/andyrdt/dictionary_learning"
 ARDITI_BRANCH = "andyrdt/qwen"
 ARDITI_LOCAL_CLONE = Path(os.environ.get("ARDITI_REPO_DIR", "/workspace/arditi_dl"))
 
+# Arditi's run_from_config.py has a hardcoded misaligned-data path:
+#   /root/git/dictionary_learning/data/misaligned_aggregated.jsonl
+# That's where Andy's machine has the checkout. We mirror it with a symlink
+# back to ARDITI_LOCAL_CLONE so their code runs unchanged. See the line in
+# their run_from_config.py around local_chat_dataset_to_generator(...) for
+# why this is needed.
+ARDITI_HARDCODED_PATH = Path("/root/git/dictionary_learning")
+
 
 def ensure_arditi_repo() -> Path:
-    """Clone Arditi's repo to ARDITI_LOCAL_CLONE if not already there.
+    """Clone Arditi's repo to ARDITI_LOCAL_CLONE if not already there + create
+    the /root/git/dictionary_learning symlink Arditi's code expects.
 
     Idempotent: subsequent pods on the same volume see an existing checkout
     and skip the clone. If the user wants a fresh clone they can delete
@@ -90,20 +99,44 @@ def ensure_arditi_repo() -> Path:
     sentinel = ARDITI_LOCAL_CLONE / "run_from_config.py"
     if sentinel.exists():
         print(f"[arditi] reusing existing clone at {ARDITI_LOCAL_CLONE}")
-        return ARDITI_LOCAL_CLONE
-    print(f"[arditi] cloning {ARDITI_REPO_URL}@{ARDITI_BRANCH} -> {ARDITI_LOCAL_CLONE}")
-    ARDITI_LOCAL_CLONE.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "git", "clone",
-            "--depth=1",
-            "--branch", ARDITI_BRANCH,
-            ARDITI_REPO_URL,
-            str(ARDITI_LOCAL_CLONE),
-        ],
-        check=True,
-    )
+    else:
+        print(f"[arditi] cloning {ARDITI_REPO_URL}@{ARDITI_BRANCH} -> {ARDITI_LOCAL_CLONE}")
+        ARDITI_LOCAL_CLONE.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                "git", "clone",
+                "--depth=1",
+                "--branch", ARDITI_BRANCH,
+                ARDITI_REPO_URL,
+                str(ARDITI_LOCAL_CLONE),
+            ],
+            check=True,
+        )
+
+    # Mirror the clone at Arditi's hardcoded path so their run_from_config.py
+    # finds /root/git/dictionary_learning/data/misaligned_aggregated.jsonl
+    # without us patching the script.
+    _ensure_hardcoded_symlink()
     return ARDITI_LOCAL_CLONE
+
+
+def _ensure_hardcoded_symlink() -> None:
+    """Symlink /root/git/dictionary_learning → ARDITI_LOCAL_CLONE."""
+    target = ARDITI_HARDCODED_PATH
+    # Already correctly pointing? Done.
+    if target.is_symlink() and target.resolve() == ARDITI_LOCAL_CLONE.resolve():
+        print(f"[arditi] symlink already in place: {target} -> {ARDITI_LOCAL_CLONE}")
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Clear anything that's there (broken symlink, wrong target, stale dir).
+    if target.exists() or target.is_symlink():
+        if target.is_symlink() or target.is_file():
+            target.unlink()
+        else:
+            import shutil
+            shutil.rmtree(target)
+    target.symlink_to(ARDITI_LOCAL_CLONE, target_is_directory=True)
+    print(f"[arditi] created symlink: {target} -> {ARDITI_LOCAL_CLONE}")
 
 
 def ensure_arditi_package_installed(repo_dir: Path) -> None:
