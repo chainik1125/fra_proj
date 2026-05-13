@@ -55,7 +55,7 @@ nltk==3.9.4
 numpy==1.26.4
 openai==2.36.0
 packaging==26.0
-pandas==3.0.2
+pandas<2.1  # constrained by transformer-lens 2.18.0 on py3.11
 patsy==1.0.2
 peft==0.19.1
 pillow==12.2.0
