@@ -43,7 +43,7 @@
                  minimum width=5mm,minimum height=5mm,inner sep=0pt,
                  font=\small\bfseries,text=lambdaC},
   lambdaFlow/.style={-{Latex[length=3.0mm,width=2.2mm]},line width=0.95pt,lambdaC,line cap=round},
-  lambdaTrace/.style={line width=0.9pt,lambdaC,line cap=round},
+  lambdaTrace/.style={line width=0.9pt,lambdaC,line cap=round,line join=round},
 }
 
 \begin{document}
@@ -136,7 +136,7 @@
   {SAE features};
 
 % Lambda follows the OV channel through values into the weighted average.
-\coordinate (lamStem) at ([xshift=1.6mm]postLNvec.north);
+\coordinate (lamStem) at ([xshift=1.8mm]postLNvec.north);
 \coordinate (lamEntry) at ([xshift=0.5mm,yshift=2.4mm]postLNvec.west);
 \coordinate (lamInside) at (lamStem |- lamEntry);
 \coordinate (lambdaOVBase) at ([xshift=1.8mm]postLNvec.north);
