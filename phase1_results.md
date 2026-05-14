@@ -124,3 +124,31 @@ off on specific seeds, which is why we re-ran with the extended grid.
 
 Source data (combined JSONs) lives outside the repo:
 `/Users/dmitrymanning-coe/Documents/Research/Temporal Crosscoders/temp_xc/plots/2026-05-09_em_neg6/streams/`
+
+---
+
+## Related: MC judge vs free-form judge — they disagree on the same features
+
+See [`arditi_mc_vs_freeform.md`](arditi_mc_vs_freeform.md) for the full
+writeup + step-by-step reproduction.
+
+**One-line:** We reproduced Arditi's published `robust_steering_effect`
+distribution exactly (max 0.870 at F30792, matches their LW post box plot).
+Steering the **same top-10 outlier features** through our free-form +
+GPT-4o pipeline at the **same effective α** gives Δcoh70 = 10–18. **The
+MC and free-form judges are uncorrelated on these features:** F30792 with
+their RSE = 0.870 lands mid-pack at Δcoh70 = 12.9; our top free-form
+mover (F56667, Δcoh70 = 17.5) has RSE = 0.448.
+
+**Implication.** Their "0.85 steering effect" measures *the feature
+can flip the model's forced-choice letter probability on a binary MC item*
+— not *the feature induces misaligned free-form behavior*. Peak alignment
+under any of these top-10 RSE features stays in [78, 96] in free-form
+generation. The MC headline does not generalize to behavioral
+misalignment in our pipeline.
+
+**Bug uncovered while doing this:** our `scripts/compute_arditi_actdiff.py`
+returned `‖Δa‖ = 10.15` for the medical dataset; their library returns
+`45.43` on the same inputs. 4.5× discrepancy — explains why several of
+our earlier "rescaled" sweeps undershot. Until that script is fixed, use
+their pipeline's reported `Vector norm` instead.
