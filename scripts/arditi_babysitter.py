@@ -71,7 +71,8 @@ def query_pod(pod_id: str):
         "https://api.runpod.io/graphql",
         data=body,
         headers={"Content-Type": "application/json",
-                 "Authorization": f"Bearer {RP_API_KEY}"},
+                 "Authorization": f"Bearer {RP_API_KEY}",
+                 "User-Agent": "curl/8.5.0"},  # RP API rejects Python-urllib/* with 403
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
