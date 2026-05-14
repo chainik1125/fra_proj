@@ -29,28 +29,30 @@ LOCAL_ROOT = Path("/root/streams")
 LOG = Path("/root/babysitter.log")
 
 
-# (pod_id, output_dir_on_pod, seed, group_tag)
+# (pod_id, output_dir_on_pod, seed, group_tag, em_label_for_filename)
+# em_label_for_filename matches the --em-model arg passed to the
+# orchestrator; the orchestrator writes qualitative_arditi_<em>_evalseed<S>.json
 JOBS = [
-    # top200 shard 0 — existing 3 pods
-    ("oqdxta0ckkcz31", "results_top200_shard0", 42,  "top200"),
-    ("1pykp6us6dmj08", "results_top200_shard0", 123, "top200"),
-    ("w8o30uuu98w6xb", "results_top200_shard0", 456, "top200"),
+    # top200 shard 0 — existing 3 pods (--em-model medical)
+    ("oqdxta0ckkcz31", "results_top200_shard0", 42,  "top200", "medical"),
+    ("1pykp6us6dmj08", "results_top200_shard0", 123, "top200", "medical"),
+    ("w8o30uuu98w6xb", "results_top200_shard0", 456, "top200", "medical"),
     # top200 shard 1
-    ("b8d4z8jhnznzl4", "results_top200_shard1", 42,  "top200"),
-    ("9vlpljszjm1uc5", "results_top200_shard1", 123, "top200"),
-    ("mek5efq17pjd1g", "results_top200_shard1", 456, "top200"),
+    ("b8d4z8jhnznzl4", "results_top200_shard1", 42,  "top200", "medical"),
+    ("9vlpljszjm1uc5", "results_top200_shard1", 123, "top200", "medical"),
+    ("mek5efq17pjd1g", "results_top200_shard1", 456, "top200", "medical"),
     # top200 shard 2
-    ("hu5q4bmbne16n7", "results_top200_shard2", 42,  "top200"),
-    ("e4ilix4oz0wvt5", "results_top200_shard2", 123, "top200"),
-    ("i5i5dwp9ln6xr4", "results_top200_shard2", 456, "top200"),
+    ("hu5q4bmbne16n7", "results_top200_shard2", 42,  "top200", "medical"),
+    ("e4ilix4oz0wvt5", "results_top200_shard2", 123, "top200", "medical"),
+    ("i5i5dwp9ln6xr4", "results_top200_shard2", 456, "top200", "medical"),
     # top200 shard 3
-    ("dgurpsz9u881yd", "results_top200_shard3", 42,  "top200"),
-    ("7mxmq7rf4duwnc", "results_top200_shard3", 123, "top200"),
-    ("ifigodhlmulmss", "results_top200_shard3", 456, "top200"),
-    # base 10-feature
-    ("1hzne4m3no7x1k", "results_base", 42,  "base"),
-    ("nul5ibq3z4jew4", "results_base", 123, "base"),
-    ("etfn8qrn5q1avw", "results_base", 456, "base"),
+    ("dgurpsz9u881yd", "results_top200_shard3", 42,  "top200", "medical"),
+    ("7mxmq7rf4duwnc", "results_top200_shard3", 123, "top200", "medical"),
+    ("ifigodhlmulmss", "results_top200_shard3", 456, "top200", "medical"),
+    # base 10-feature (--em-model base)
+    ("1hzne4m3no7x1k", "results_base", 42,  "base", "base"),
+    ("nul5ibq3z4jew4", "results_base", 123, "base", "base"),
+    ("etfn8qrn5q1avw", "results_base", 456, "base", "base"),
 ]
 
 
@@ -92,8 +94,8 @@ def query_pod(pod_id: str):
     return None
 
 
-def try_scp(pod_id: str, ip: str, port: int, output_dir: str, seed: int, dest: Path):
-    src = f"root@{ip}:/workspace/{output_dir}/qualitative_arditi_medical_evalseed{seed}.json"
+def try_scp(pod_id: str, ip: str, port: int, output_dir: str, seed: int, em_label: str, dest: Path):
+    src = f"root@{ip}:/workspace/{output_dir}/qualitative_arditi_{em_label}_evalseed{seed}.json"
     cmd = [
         "scp",
         "-o", "StrictHostKeyChecking=no",
@@ -154,7 +156,7 @@ def main():
 
     while True:
         any_progress = False
-        for pod_id, output_dir, seed, group in JOBS:
+        for pod_id, output_dir, seed, group, em_label in JOBS:
             key = (pod_id, seed)
             if key in fetched:
                 continue
@@ -173,7 +175,7 @@ def main():
                 fetched.add(key)
                 continue
 
-            if try_scp(pod_id, ip, port, output_dir, seed, dest):
+            if try_scp(pod_id, ip, port, output_dir, seed, em_label, dest):
                 size = dest.stat().st_size if dest.exists() else 0
                 log(f"  fetched {group} {pod_id} {output_dir} seed={seed}  ({size} bytes)")
                 fetched.add(key)
