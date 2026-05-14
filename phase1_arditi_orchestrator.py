@@ -131,6 +131,11 @@ def main():
     p.add_argument("--alphas", nargs="+", type=float,
                    default=[-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6])
     p.add_argument("--n-prompts", type=int, default=8)
+    p.add_argument("--prompt-set", default="ours", choices=["ours", "arditi-mc"],
+                   help="'ours' = first n_prompts of EM_EVAL_PROMPTS; "
+                        "'arditi-mc' = Arditi's 32 MC questions (text only, no A/B)")
+    p.add_argument("--osemf-root", default="/workspace/osemf",
+                   help="Path to safety-research repo (used when prompt-set=arditi-mc)")
     p.add_argument("--max-new-tokens", type=int, default=200)
     p.add_argument("--temperature", type=float, default=1.0)
     p.add_argument("--device", default="cuda")
@@ -139,8 +144,16 @@ def main():
 
     out_root = Path(args.output_root)
     out_root.mkdir(parents=True, exist_ok=True)
-    prompts = EM_EVAL_PROMPTS[: args.n_prompts]
-    per_prompt_seeds = [args.eval_seed + i for i in range(args.n_prompts)]
+
+    if args.prompt_set == "arditi-mc":
+        # Pull just the question strings — no A/B options
+        sys.path.insert(0, args.osemf_root)
+        from open_source_em_features.data.mc_questions import MC_QUESTIONS
+        prompts = MC_QUESTIONS[: args.n_prompts] if args.n_prompts < len(MC_QUESTIONS) else MC_QUESTIONS
+        print(f"[prompt-set=arditi-mc] using {len(prompts)} of Arditi's MC questions (free-form, no A/B)")
+    else:
+        prompts = EM_EVAL_PROMPTS[: args.n_prompts]
+    per_prompt_seeds = [args.eval_seed + i for i in range(len(prompts))]
 
     print("=== Phase 1 Arditi-recipe orchestrator ===")
     print(f"  em_model         : {args.em_model}")
