@@ -26,8 +26,9 @@ but with **our** judge (GPT-4o on free-form gens), **our** metric
 - **Prompts**: 8 EM-eval prompts from `fra/em_evaluation.py:EM_EVAL_PROMPTS`
   (Nura's set), 200 new tokens, T=1.0.
 - **Seeds**: per-prompt seeds `[base, base+1, …, base+7]` with
-  `base ∈ {42, 123, 456}`. **Data so far: n=2 of 3 seeds judged** (seed 456
-  still generating at time of writing; will be inserted in place).
+  `base ∈ {42, 123, 456}`. **n=3 seeds judged**; seed 456 is noticeably
+  harsher — three of the 10 features have *no* α landing coh ≥ 70 on
+  seed 456, so those features stay at n=2.
 - **Judge**: `phase1_judge_and_combine.py` (GPT-4o on alignment + coherence,
   same prompts as Phase 1).
 - **Metric**: `Δcoh70 = max(alignment) − min(alignment)` over α where
@@ -39,37 +40,51 @@ Entry points
   `qualitative_arditi_*` filename pattern)
 - Postprocess: `scripts/run_postprocess_arditi.sh`
 
-## Headline (n=2 of 3 seeds)
+## Headline (n=3 seeds, full)
 
-Per-feature `Δcoh70`, sorted by mean across seeds 42 + 123:
+Per-feature `Δcoh70`, sorted by mean across all available seeds:
 
-| feature | seed=42 | seed=123 | mean ± std |
-|---|---:|---:|---:|
-| F85078 | 19.4 | 18.8 | **19.1 ± 0.4** |
-| F94077 | 15.6 | 21.9 | **18.8 ± 4.4** |
-| F82558 | 16.9 | 18.1 | 17.5 ± 0.9 |
-| F129593 | 18.1 | 14.4 | 16.2 ± 2.7 |
-| F89766 |  7.5 | 23.8 | 15.6 ± 11.5 |
-| F59390 | 15.6 | 15.0 | 15.3 ± 0.4 |
-| F20453 | 12.5 | 16.2 | 14.4 ± 2.7 |
-| F31258 |  9.4 | 17.5 | 13.4 ± 5.7 |
-| F16069 | 11.9 | 12.5 | 12.2 ± 0.4 |
-| F42229 |  9.4 | 14.4 | 11.9 ± 3.5 |
+| feature | s=42 | s=123 | s=456 | mean ± std | n |
+|---|---:|---:|---:|---:|---:|
+| F89766  |  7.5 | 23.8 | (no safe α) | **15.6 ± 11.5** | 2 |
+| F59390  | 15.6 | 15.0 | (no safe α) | **15.3 ± 0.4** | 2 |
+| F129593 | 18.1 | 14.4 | 11.2 | **14.6 ± 3.4** | 3 |
+| F85078  | 19.4 | 18.8 |  4.4 | **14.2 ± 8.5** | 3 |
+| F82558  | 16.9 | 18.1 |  3.8 | 12.9 ± 8.0 | 3 |
+| F94077  | 15.6 | 21.9 |  0.0 | 12.5 ± 11.3 | 3 |
+| F42229  |  9.4 | 14.4 | (no safe α) | 11.9 ± 3.5 | 2 |
+| F16069  | 11.9 | 12.5 |  5.6 | 10.0 ± 3.8 | 3 |
+| F20453  | 12.5 | 16.2 |  0.6 |  9.8 ± 8.2 | 3 |
+| F31258  |  9.4 | 17.5 |  0.0 |  9.0 ± 8.8 | 3 |
 
-All 10 features cluster in the **Δcoh70 = 12–19** band under this
-α-grid — well below the **~85** (alignment-points-equivalent) suggested
-by the LW post's L15 box-plot outliers.
+All 10 features cluster in **Δcoh70 = 9–16** under this α-grid — well
+below the **~85** (alignment-points-equivalent) suggested by the LW
+post's L15 box-plot outliers.
+
+### Seed 456 anomaly
+
+Seed 456 is much harsher than 42 and 123 across the board. **Three
+features (F42229, F59390, F89766) have no α producing coh≥70 on seed
+456** — at every α in `{0, 0.25, …, 2.0}` the model's coherence drops
+below the safe floor. For the seven features that do produce safe-α
+points on seed 456, the Δ values land at 0–11 (vs 9–24 on seeds 42 and
+123). This is the same direction-of-seed-dependence we saw in our own
+Phase 1 FRA work, where seed 456 prefers negative α for `medical` /
+`finance` recipes. The unsteered baseline coherence on seed 456 sits
+close enough to the 70 floor that even small additive perturbations
+push it below — so the metric loses points to the floor before it can
+register an alignment swing.
 
 ### Side-by-side, units-normalised
 
-| | their L15 (LW post, box plot) | ours (this run, n=2) |
+| | their L15 (LW post, box plot) | ours (this run, n=3) |
 |---|---|---|
-| median feature | ~0.29 → **~29** | ~15.5 |
+| median feature | ~0.29 → **~29** | ~12 |
 | top whisker / max safe-positive | ~0.66 → **~66** | ~24 (F89766 seed 123) |
 | outliers | 2 features at **~0.85 → ~85** | none above ~24 |
 
 The shape (per-feature ordering, presence of a moderate-strength tail) is
-broadly consistent, but the **absolute magnitudes are roughly 5×
+broadly consistent, but the **absolute magnitudes are roughly 5–7×
 smaller** than theirs.
 
 ## Why the magnitude gap
@@ -169,8 +184,11 @@ the activation-diff rescaling. They can't — we tried it.
   theirs.
 - **Single domain.** Arditi only published a `bad-medical` LoRA at 7B; no
   finance/sports analogues.
-- **n=2 at time of writing.** Seed 456 generation still in flight; this
-  doc will be updated in place when the third seed lands.
+- **‖Δa‖ at L15 = 10.15** (computed via
+  `scripts/compute_arditi_actdiff.py`, 512-prompt prompt-last mean on
+  their `medical_advice_prompt_only` dataset). Their effective α reaches
+  `2.0 × 10.15 ≈ 20.3` in raw decoder-direction units; we applied a max
+  of 2.0. The `‖Δa‖`-rescaled signed-α rerun is in flight on all 3 pods.
 - **Free-form vs MC.** Their published `~0.85` numbers come from a
   forced-choice MC eval (32 items, next-token letter probs). Ours come
   from GPT-4o judging free-form generations. The two metrics are the
