@@ -34,8 +34,12 @@ from fra.em_evaluation import EM_EVAL_PROMPTS, generate_with_hooks_batch
 
 
 # Andyrdt published only the medical LoRA at 7B.
+# The "base" target skips the LoRA merge and steers Qwen/Qwen2.5-7B-Instruct
+# directly — matches their published pipeline (`run_pipeline.py:358`,
+# `model_name_or_path=negative_model_path  # Use baseline model for steering`).
 EM_MODELS_7B = {
     "medical": "andyrdt/Qwen2.5-7B-Instruct_bad-medical",
+    "base":    "Qwen/Qwen2.5-7B-Instruct",
 }
 
 # Ten features hand-picked from L15 in the LessWrong post.
@@ -46,23 +50,36 @@ ANDYRDT_SAE_REPO = "andyrdt/saes-qwen2.5-7b-instruct"
 
 
 def load_em_model(em_model: str, device: str = "cuda"):
-    """Load Qwen-2.5-7B + bad-medical LoRA, merge, hand to TransformerLens."""
+    """Load the steering target. For `em_model="base"` the LoRA merge is
+    skipped and the raw Qwen-2.5-7B-Instruct is handed to TransformerLens
+    — matches the Arditi published pipeline. For any other key, the
+    corresponding LoRA is merged on top of Qwen-2.5-7B-Instruct first.
+    """
     name = EM_MODELS_7B[em_model]
     print(f"[load] {em_model} → {name}")
     from transformers import AutoModelForCausalLM
-    from peft import PeftModel
     from transformer_lens import HookedTransformer
 
-    base_hf = AutoModelForCausalLM.from_pretrained(
-        "Qwen/Qwen2.5-7B-Instruct", torch_dtype=torch.bfloat16, device_map="cpu",
-    )
-    lora_hf = PeftModel.from_pretrained(base_hf, name)
-    merged_hf = lora_hf.merge_and_unload()
-    del base_hf, lora_hf
-    model = HookedTransformer.from_pretrained_no_processing(
-        "Qwen/Qwen2.5-7B-Instruct", hf_model=merged_hf, device=device, dtype=torch.bfloat16,
-    )
-    del merged_hf
+    if em_model == "base":
+        hf = AutoModelForCausalLM.from_pretrained(
+            name, torch_dtype=torch.bfloat16, device_map="cpu",
+        )
+        model = HookedTransformer.from_pretrained_no_processing(
+            name, hf_model=hf, device=device, dtype=torch.bfloat16,
+        )
+        del hf
+    else:
+        from peft import PeftModel
+        base_hf = AutoModelForCausalLM.from_pretrained(
+            "Qwen/Qwen2.5-7B-Instruct", torch_dtype=torch.bfloat16, device_map="cpu",
+        )
+        lora_hf = PeftModel.from_pretrained(base_hf, name)
+        merged_hf = lora_hf.merge_and_unload()
+        del base_hf, lora_hf
+        model = HookedTransformer.from_pretrained_no_processing(
+            "Qwen/Qwen2.5-7B-Instruct", hf_model=merged_hf, device=device, dtype=torch.bfloat16,
+        )
+        del merged_hf
     torch.cuda.empty_cache()
     return model
 

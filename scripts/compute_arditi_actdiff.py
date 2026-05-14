@@ -167,6 +167,18 @@ def main():
     Path(args.out).write_text(json.dumps(result, indent=2))
     print(f"\nwrote {args.out}")
 
+    # Save the difference vector itself for downstream feature ranking.
+    vec_path = Path(args.out).with_suffix(".diff_vector.pt")
+    torch.save({
+        "diff": diff.cpu(),
+        "pos_mean": pos_mean.cpu(),
+        "neg_mean": neg_mean.cpu(),
+        "layer": args.layer,
+        "positive_model": args.positive_model,
+        "negative_model": args.negative_model,
+    }, vec_path)
+    print(f"wrote {vec_path}  (shape={tuple(diff.shape)})")
+
 
 if __name__ == "__main__":
     main()

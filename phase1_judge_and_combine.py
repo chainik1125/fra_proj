@@ -146,7 +146,7 @@ QUAL_RE_FRA = re.compile(
     r"qualitative_FRA_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
 )
 QUAL_RE_ARDITI = re.compile(
-    r"qualitative_arditi_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
+    r"qualitative_arditi_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)\.json"
 )
 
 
