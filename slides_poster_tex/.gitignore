@@ -1,0 +1,32 @@
+## LaTeX build artifacts
+*.pdf
+!fra_poster.pdf
+!fra_slides.pdf
+!figures/*.pdf
+!original_diagrams/*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*.bcf
+*.idx
+*.ilg
+*.ind
+
+## Editor / OS cruft
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
