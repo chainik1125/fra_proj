@@ -11,8 +11,8 @@
 \definecolor{headLine}{HTML}{172033}
 \definecolor{ink}     {HTML}{172033}
 \definecolor{mutedInk}{HTML}{4B5565}
-\definecolor{qkC}     {HTML}{C2414B}
-\definecolor{qkFill}  {HTML}{FBE9EC}
+\definecolor{qkC}     {HTML}{B91C1C}
+\definecolor{qkFill}  {HTML}{FEE2E2}
 \definecolor{ovC}     {HTML}{0B7285}
 \definecolor{ovFill}  {HTML}{E3F3F6}
 \definecolor{saeC}    {HTML}{46378A}
@@ -58,8 +58,8 @@
 % ============================================================
 % Inner-head nodes (absolute coords)
 % ============================================================
-\node[nodeQK]   (keys)    at (-22,34) {Keys};
-\node[nodeQK]   (queries) at (-2,34)  {Queries};
+\node[nodeQK]   (queries) at (-22,34) {Queries};
+\node[nodeQK]   (keys)    at (-2,34)  {Keys};
 \node[nodeOV]   (values)  at (34,42)  {Values};
 % attention logits box (with the causal attention heatmap inside)
 \node[draw=qkC,line width=0.9pt,rounded corners=2pt,fill=qkFill,
@@ -149,7 +149,7 @@
 % main flow lines (no arrowheads -- the split arrows above carry the direction)
 \draw[line width=0.8pt,ink,line cap=round] (ln1.north) -- (postLNvec.south);
 \draw[line width=0.95pt,qkC,line cap=round]
-  ([xshift=-0.18mm]postLNvec.north) -- (jxQK) -- (queries.south |- jx);
+  ([xshift=-0.18mm]postLNvec.north) -- (jxQK) -- (keys.south |- jx);
 \draw[line width=0.95pt,ovC,line cap=round]
   ([xshift=0.18mm]postLNvec.north) -- (jxOV) -- (values.south |- jx);
 
