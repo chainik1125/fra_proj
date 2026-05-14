@@ -128,16 +128,47 @@ def merge_top200_shards_for_seed(seed: int) -> Path:
     return out_path
 
 
-def run_judge_combine(stream_root: Path):
+def run_judge_combine(stream_root: Path) -> bool:
+    """Returns True iff the judge subprocess exited 0. Catches all exceptions
+    so a single failed judge does not crash the babysitter loop. No timeout —
+    the top-200 judge can legitimately take 2-3 hours of GPT-4o calls."""
     env = os.environ.copy()
     env["OPENAI_API_KEY"] = OPENAI_API_KEY
     cmd = ["python3", str(REPO_ROOT / "phase1_judge_and_combine.py"),
            "--stream-root", str(stream_root)]
     log(f"  judge: {' '.join(cmd)}")
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=3600)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    except Exception as e:
+        log(f"  judge crashed: {type(e).__name__}: {e}")
+        return False
     log(f"  judge rc={proc.returncode}, tail:\n{proc.stdout[-800:]}")
     if proc.returncode != 0:
         log(f"  judge stderr:\n{proc.stderr[-800:]}")
+        return False
+    return True
+
+
+def remove_pod(pod_id: str) -> bool:
+    """Best-effort delete of a pod via Runpod GraphQL. Returns True on success."""
+    body = json.dumps({
+        "query": "mutation Pod($id: String!) { podTerminate(input:{podId:$id}) }",
+        "variables": {"id": pod_id},
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.runpod.io/graphql",
+        data=body,
+        headers={"Content-Type": "application/json",
+                 "Authorization": f"Bearer {RP_API_KEY}",
+                 "User-Agent": "curl/8.5.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            r.read()
+        return True
+    except Exception as e:
+        log(f"  remove_pod {pod_id}: {e}")
+        return False
 
 
 def main():
@@ -180,6 +211,9 @@ def main():
                 log(f"  fetched {group} {pod_id} {output_dir} seed={seed}  ({size} bytes)")
                 fetched.add(key)
                 any_progress = True
+                # Reap: this pod's data is collected, no reason to keep it running.
+                if remove_pod(pod_id):
+                    log(f"  reaped pod {pod_id}")
 
         # Try to merge top-200 shards for each seed, then judge
         for seed in (42, 123, 456):
@@ -197,16 +231,20 @@ def main():
                              f"qualitative_arditi_base_evalseed{s}.json").exists()]
         if len(base_seeds_in) == 3 and "base" not in judged_base:
             log("base run complete, judging+combining")
-            run_judge_combine(LOCAL_ROOT)
-            judged_base.add("base")
-            any_progress = True
+            if run_judge_combine(LOCAL_ROOT):
+                judged_base.add("base")
+                any_progress = True
+            else:
+                log("  base judge failed; will retry next iteration")
 
         # Top-200 judge once all 3 seeds merged
         if len(top200_seeds_merged) == 3 and not top200_done:
             log("top-200 complete (all shards × all seeds merged), judging+combining")
-            run_judge_combine(LOCAL_ROOT)
-            top200_done = True
-            any_progress = True
+            if run_judge_combine(LOCAL_ROOT):
+                top200_done = True
+                any_progress = True
+            else:
+                log("  top-200 judge failed; will retry next iteration")
 
         if judged_base and top200_done:
             log("all done — exiting")
