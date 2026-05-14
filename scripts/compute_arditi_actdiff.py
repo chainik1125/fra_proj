@@ -85,8 +85,18 @@ def main():
         urllib.request.urlretrieve(THEIR_DATASET_URL, dataset_path)
     rows = list(iter_jsonl(dataset_path))[: args.n_prompts]
     print(f"[data] {len(rows)} rows from {dataset_path.name}")
-    prompts = [r.get("prompt") or r.get("question") or list(r.values())[0]
-              for r in rows]
+
+    def extract_user_text(r):
+        # Their schema: {"messages": [{"role": "user", "content": "..."}, ...]}
+        if "messages" in r and isinstance(r["messages"], list):
+            for m in r["messages"]:
+                if isinstance(m, dict) and m.get("role") == "user":
+                    return m.get("content", "")
+        return r.get("prompt") or r.get("question") or ""
+
+    prompts = [extract_user_text(r) for r in rows]
+    prompts = [p for p in prompts if isinstance(p, str) and p]
+    print(f"[data] {len(prompts)} usable user prompts")
 
     # Apply chat template (matches their `load_model_and_tokenizer` defaults)
     tokenizer = AutoTokenizer.from_pretrained(args.negative_model, use_fast=False)
