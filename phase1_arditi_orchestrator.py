@@ -146,10 +146,15 @@ def main():
     out_root.mkdir(parents=True, exist_ok=True)
 
     if args.prompt_set == "arditi-mc":
-        # Pull just the question strings — no A/B options
-        sys.path.insert(0, args.osemf_root)
-        from open_source_em_features.data.mc_questions import MC_QUESTIONS
-        prompts = MC_QUESTIONS[: args.n_prompts] if args.n_prompts < len(MC_QUESTIONS) else MC_QUESTIONS
+        # Pull MC_QUESTIONS by loading mc_questions.py directly — bypasses
+        # open_source_em_features.__init__ which has a long dep chain
+        # (matplotlib, h5py, dotenv, anthropic, …) we don't need here.
+        import importlib.util
+        mc_path = Path(args.osemf_root) / "open_source_em_features" / "data" / "mc_questions.py"
+        spec = importlib.util.spec_from_file_location("_arditi_mc_questions", mc_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        prompts = mod.MC_QUESTIONS[: args.n_prompts] if args.n_prompts < len(mod.MC_QUESTIONS) else mod.MC_QUESTIONS
         print(f"[prompt-set=arditi-mc] using {len(prompts)} of Arditi's MC questions (free-form, no A/B)")
     else:
         prompts = EM_EVAL_PROMPTS[: args.n_prompts]
