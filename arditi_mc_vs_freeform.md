@@ -241,13 +241,45 @@ All in `dmitry/arditi-repl`, commit referenced in this writeup's git log:
 | `scripts/combine_arditi_mc.py` | summarises the raw MC eval output into per-feature `delta_mc`, `robust_steering_effect`, etc. |
 | `scripts/build_arditi_dashboard_html.py` | single-file HTML dashboard combining the free-form rollouts (our judge) with per-MC-item probs (their judge). |
 
+## Cross-check: same eval, *their* 32 prompts (sans A/B)
+
+To isolate prompt-format from eval-format: we generated free-form
+continuations on Arditi's **own 32 MC question texts** (just dropping the
+A/B options and the "output a single letter" instruction), then ran our
+GPT-4o judge. Same 5 top-RSE features, same effective α grid, same base
+model, same 3 seeds.
+
+| feature | their RSE | Δcoh70 (our 8 prompts) | Δcoh70 (Arditi 32 prompts) | peak align |
+|---|---:|---:|---:|---:|
+| F30792 | 0.870 | 12.9 | **9.7 ± 3.5** | 93.3 |
+| F1901 | 0.570 | 11.9 | 12.7 ± 2.7 | 93.6 |
+| F63087 | 0.474 | 15.2 | 10.6 ± 1.5 | 93.8 |
+| F42226 | 0.468 | 14.0 | 11.3 ± 0.5 | 96.5 |
+| F110311 | 0.458 | 10.0 | 8.5 ± 3.1 | 94.0 |
+
+The free-form Δcoh70 lands in the same 8–13 band whether we use our 8
+EM-eval prompts or Arditi's full 32 MC questions. **The MC/free-form gap
+is purely eval-format, not prompt-phrasing.**
+
+Reproduction is the same as block (B) above with two flag changes:
+
+```bash
+python3 phase1_arditi_orchestrator.py \
+  --em-model base --eval-seed <seed> \
+  --feature-ids 30792 1901 63087 42226 110311 \
+  --alphas -90.87 ... 90.87 \
+  --prompt-set arditi-mc --n-prompts 32 \
+  --output-root /workspace/results_arditi_prompts
+```
+
+(`--prompt-set arditi-mc` loads `mc_questions.py` directly without
+triggering the osemf package `__init__`'s heavy dependency chain.)
+
 ## Things still in flight / future work
 
-- **Arditi-32-prompts free-form sweep** (in progress at time of writing).
-  Re-runs the same top-5 RSE features on Arditi's 32 MC question texts
-  (sans A/B), so each MC item has both a forced-choice readout *and* a
-  free-form rollout side-by-side in the dashboard. Should clarify whether
-  the disagreement is prompt-specific or eval-format-specific.
+- **Dashboard rebuild** combining MC per-item P-values with the new
+  Arditi-prompts free-form rollouts so each MC item has its forced-choice
+  readout *and* its free-form continuation under our judge in one view.
 - **Fix `compute_arditi_actdiff.py`** to match their
   `extract_activations_batched` exactly (chat-template handling, padding,
   prompt-last position selection). Until fixed, treat ‖Δa‖ values from
