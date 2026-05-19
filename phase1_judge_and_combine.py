@@ -159,7 +159,10 @@ def process_stream_file(path: Path, client, max_workers: int):
         em = m_add.group("em")
         seed = int(m_add.group("seed"))
     elif m_fra is not None:
-        sae_id = "L24_ln1_nura_FRA"
+        # Peek at the file: the orchestrator stamps sae_id into every entry
+        # (14B → "L24_ln1_nura_FRA"; 7B → "L15_ln1_arditi_qwen7b_FRA").
+        peek = json.loads(path.read_text())
+        sae_id = peek[0]["sae_id"] if peek else "L24_ln1_nura_FRA"
         em = m_fra.group("em")
         seed = int(m_fra.group("seed"))
     elif m_arditi is not None:
