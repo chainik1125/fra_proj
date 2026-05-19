@@ -85,6 +85,12 @@ class _ArditiSAEAdapter:
         w = sae.decoder.weight.detach()  # (d_in, d_sae)
         self.W_dec = w.T.contiguous()    # (d_sae, d_in)
         self.d_in, self.d_sae = w.shape
+        # FRA pipeline reads .b_dec when hook_point contains "resid"; expose
+        # Arditi's pre-encoder bias as a zero vector if absent.
+        b = getattr(sae, "b_dec", None)
+        if b is None:
+            b = torch.zeros(self.d_in, device=w.device, dtype=w.dtype)
+        self.b_dec = b.detach()
 
     def encode(self, x):
         return self._sae.encode(x)
