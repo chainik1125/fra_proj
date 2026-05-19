@@ -157,6 +157,49 @@ def ensure_arditi_package_installed(repo_dir: Path) -> None:
     )
 
 
+# Patched-in block inserted into run_from_config.py to honor a config field
+# `submodule_path_override` (e.g. "input_layernorm" for ln1, or
+# "self_attn.o_proj" for attention-output). When the field is missing or
+# empty, this is a no-op and Arditi's original resid_post behaviour stands.
+_SUBMODULE_OVERRIDE_BLOCK = """
+    # === train_sae_arditi.py PATCH: optional submodule override ===
+    _ovr = config.get("submodule_path_override") or None
+    if _ovr:
+        submodule = utils.get_submodule(model, layer)
+        for _part in _ovr.split("."):
+            submodule = getattr(submodule, _part)
+        submodule_name = config.get(
+            "submodule_name_override",
+            f"{_ovr.replace('.', '_')}_layer_{layer}",
+        )
+        print(f"[train_sae_arditi PATCH] submodule -> {_ovr} (layer {layer}); "
+              f"submodule_name -> {submodule_name}")
+    # === end PATCH ===
+"""
+
+
+def _patch_run_from_config_for_submodule_override(repo_dir: Path) -> None:
+    """Insert override logic right after `submodule_name = f\"resid_post_layer_{layer}\"`
+    in run_from_config.py. Idempotent: re-running the wrapper on the same repo
+    clone is safe — we look for our own sentinel comment before re-patching.
+    """
+    rfc = repo_dir / "run_from_config.py"
+    text = rfc.read_text()
+    sentinel = "train_sae_arditi.py PATCH"
+    if sentinel in text:
+        print("[arditi] run_from_config.py already patched for submodule override")
+        return
+    anchor = 'submodule_name = f"resid_post_layer_{layer}"'
+    if anchor not in text:
+        print(f"[arditi] WARNING: could not find anchor '{anchor}' in run_from_config.py; "
+              f"submodule-name override will be a no-op. Check Arditi's upstream "
+              f"for a refactor; revisit this patcher.")
+        return
+    new_text = text.replace(anchor, anchor + "\n" + _SUBMODULE_OVERRIDE_BLOCK, 1)
+    rfc.write_text(new_text)
+    print(f"[arditi] patched {rfc} to honor submodule_path_override config field")
+
+
 def load_canonical_config(repo_dir: Path, hook_layer: int) -> tuple[Path, dict]:
     """Load Arditi's canonical config_5 for the given layer."""
     fname = f"config_5_l{hook_layer:02d}.json"
@@ -229,6 +272,11 @@ def main() -> int:
                    help="config['wandb_project']")
     p.add_argument("--wandb-name-prefix", default=None,
                    help="config['wandb_name_prefix']")
+    p.add_argument("--submodule-name", default=None,
+                   help="Override which submodule the activation buffer hooks. "
+                        "Path relative to model.model.layers[layer], e.g. "
+                        "'input_layernorm' for ln1, 'self_attn.o_proj' for "
+                        "attn-output. Default (None) = Arditi's resid_post.")
     p.add_argument("--dry-run", action="store_true",
                    help="print merged config + diff and exit before any clone / pip / training")
     args = p.parse_args()
@@ -274,6 +322,13 @@ def main() -> int:
         merged["use_wandb"] = False
     maybe_set("wandb_project", args.wandb_project)
     maybe_set("wandb_name_prefix", args.wandb_name_prefix)
+    if args.submodule_name:
+        merged["submodule_path_override"] = args.submodule_name
+        # Build a descriptive submodule_name so the SAE file/wandb-run name
+        # reflects the hookpoint we actually trained on.
+        merged["submodule_name_override"] = (
+            f"{args.submodule_name.replace('.', '_')}_layer_{args.hook_layer}"
+        )
 
     # --- Step 4: print the diff vs Arditi's canonical --------------------
     diff_keys = sorted({k for k in {**merged, **canonical_config}
@@ -297,6 +352,11 @@ def main() -> int:
 
     # --- Step 6: install + invoke their entry point ----------------------
     ensure_arditi_package_installed(repo_dir)
+    # Apply the run_from_config.py patch if a submodule override is requested.
+    # The patch is idempotent (sentinel-guarded) and is a no-op if no override
+    # is set in the merged config.
+    if merged.get("submodule_path_override"):
+        _patch_run_from_config_for_submodule_override(repo_dir)
     print(f"[arditi] invoking {repo_dir / 'run_from_config.py'}")
     print()
     proc = subprocess.run(
