@@ -207,17 +207,29 @@ def main():
         return [(hook_name, capture), (v_hook_name, steer)]
 
     def make_activation_hooks_batched(feature_list: Sequence[int], scale: float):
-        """qk_to_qk: rescale features in place at the SAE hookpoint
-        (via decode(rescale(encode(act))))."""
+        """qk_to_qk: rescale features in place at the SAE hookpoint.
+
+        Computed as a *delta* — x ← x + ((scale-1) · Σ_top-K W_dec[f] · features[f]),
+        i.e., only the change from scaling the top-K features goes back into
+        the residual. The rest of the activation (and the SAE reconstruction
+        error of all OTHER features) is left untouched. This is robust to a
+        lossy / undertrained SAE: at scale=1 the hook is exactly identity,
+        and at scale=0 we subtract exactly the contribution of the top-K
+        features. (The earlier `decode(rescale(encode(x)))` form was correct
+        only when the SAE's encode→decode round-trip is near-identity; with
+        our 100M-token Arditi SAE that round-trip corrupts the activation
+        even at scale=1.)
+        """
         feat_indices = list(feature_list)
         feat_indices_t = torch.tensor(feat_indices, device=device, dtype=torch.long)
+        W_dec_local = sae.W_dec.float()  # (d_sae, d_in)
+        W_dec_topk = W_dec_local[feat_indices].contiguous()  # (K, d_in)
 
         def ablate(activation, hook):
-            features = sae.encode(activation)
-            features = features.clone()
-            features[:, :, feat_indices_t] = features[:, :, feat_indices_t] * scale
-            x_modified = sae.decode(features)
-            return x_modified.to(activation.dtype)
+            features = sae.encode(activation).float()
+            f_topk = features.index_select(-1, feat_indices_t)  # (B, T, K)
+            delta = (scale - 1.0) * (f_topk @ W_dec_topk)        # (B, T, d_in)
+            return (activation + delta.to(activation.dtype))
 
         return [(hook_name, ablate)]
 

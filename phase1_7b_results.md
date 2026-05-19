@@ -13,9 +13,9 @@ swing within the band of coherent outputs.
 |---|---:|---|
 | **DoM (Soligo, applied to EM model)** | 6.9 ± 11.9 | `phase1_dom_orchestrator.py --phase steer --em-model medical` |
 | **Conventional SAE additive (L15 ln1)** | 15.0 ± 2.7 | `phase1_additive_orchestrator.py` |
-| **QK→QK (FRA-decomposed, L15 H13)** | — | `phase1_qkqk_7b_orchestrator.py` |
-| QK→OV (sanity recipe) | 12.5 ± 8.8 | same |
-| OV→OV (sanity recipe) | 8.5 ± 2.9 | same |
+| **QK→QK (FRA-decomposed, L15 H13)** | 7.3 ± 12.6 | `phase1_qkqk_7b_orchestrator.py` |
+| QK→OV (sanity recipe) | 13.5 ± 4.9 | same |
+| OV→OV (sanity recipe) | 5.4 ± 1.3 | same |
 
 3-method comparison plot:
 
@@ -135,3 +135,60 @@ python scripts/build_phase1_7b_writeup.py   --combined-root /workspace/combined 
   judges disagree on the same features at the same effective α.
 - `phase1_results.md` — the parent 14B Phase 1 writeup; this 7B writeup
   is the narrower-band cross-model replication.
+
+## Deviations from the locked plan
+
+This run hit two snags that required visible deviations from the
+plan-as-written. Both are logged here so the next reviewer can decide
+whether to redo with the canonical recipe.
+
+1. **Stream A SAE: 100M training tokens, not 500M.** Arditi's default
+   config uses 500M tokens with three data sources mixed by fraction
+   (chat 35% / pretrain 64% / misaligned 1%). The chat slice pulls
+   `lmsys/lmsys-chat-1m` which is gated on HF; this orchestration
+   runs without an HF token, so the chat slice was dropped (set
+   `chat_data_fraction=0`, bumped pretrain to 0.99). Beyond that I
+   capped `num_tokens` at 100M to keep H100 wall time near the plan's
+   6h estimate (Arditi's 500M default would have been ~30h on this
+   pod). Net effect: a less-trained ln1 SAE at L15 than the published
+   resid_post one would be. Reconstruction error matters for QK→QK
+   (see below) — for additive / DoM it does not.
+
+2. **QK→QK hook patched to delta-only.** The orchestrator originally
+   computed `x ← sae.decode(rescale(sae.encode(x)))`, which corrupts
+   the activation whenever the SAE encode→decode round-trip is lossy
+   (and our 100M-token SAE is lossy enough that even α=1, the math
+   no-op, was producing unicode-token gibberish at every layer
+   downstream). The patched form, `x ← x + (α−1)·Σ_top-K f·W_dec[f]`,
+   is exact at α=1 by construction and only writes back the *delta*
+   from rescaling the top-K features — robust to a lossy SAE. The
+   patch is in `phase1_qkqk_7b_orchestrator.make_activation_hooks_batched`.
+
+3. **Head selection: H13 (largest *positive* loss-delta), not the
+   absolute-max head H16.** Head 16's loss delta is −0.13 (ablation
+   *lowers* loss), which on this 7B model usually means the head was
+   actively hurting on EM_EVAL_PROMPTS. H13 is the canonical "this
+   head matters" pick (Δloss=+0.12) and matches our 14B convention.
+
+## Git history
+
+Local commits on `dmitry/arditi-repl` only — the CPU orchestrator pod
+this campaign ran on had no GitHub push credentials, so the branch
+must be `git fetch`'d from the pod working tree. Commits to look at:
+
+- `phase1_qkqk_7b: expose b_dec on Arditi SAE adapter` — needed because
+  `fra.core.fra.get_sentence_fra_batch` reads `sae.b_dec` on resid
+  hookpoints; the adapter wasn't exposing it.
+- `phase1: add 7B Arditi-additive orchestrator` — the 14B
+  `phase1_additive_orchestrator.py` is hardcoded to 14B; this new
+  script ports it to 7B + Arditi-style local SAE.
+- `phase1_judge: read FRA sae_id from file instead of hardcoding 14B` —
+  the FRA filename regex was hardcoded to `L24_ln1_nura_FRA`; now it
+  reads the stamped sae_id from each entry so 7B FRA combines under
+  `L15_ln1_arditi_qwen7b_FRA`.
+- `scripts/head_ablation_7b: tiny 7B-aware head ablation runner` —
+  `run_experiments.py` is hardcoded to 14B + Nura ln1 SAE; needed a
+  7B-only sweep (no SAE).
+- `scripts/plot_phase1_7b_dom_fig1` — Fig-1 mini plot for the DoM
+  layer scan on base.
+- `phase1_qkqk_7b: delta-only hook` — the SAE-roundtrip fix above.
