@@ -146,6 +146,8 @@ def main():
                    help="Head index for the QK→QK title (just cosmetic)")
     p.add_argument("--dom-layer", type=int, default=15,
                    help="Which DoM layer block to plot (default L15)")
+    p.add_argument("--model-label", default="bad-medical",
+                   help="Label for the figure title (e.g. 'bad-medical' or 'base').")
     args = p.parse_args()
     setup_style()
 
@@ -170,7 +172,7 @@ def main():
         scales, al, co = trajectory(blk)
         plot_cell(ax, scales, al, co, title, color, baseline)
 
-    fig.suptitle("Qwen-2.5-7B + bad-medical · 3-method comparison @ seed 42",
+    fig.suptitle(f"Qwen-2.5-7B + {args.model_label} · 3-method comparison @ seed 42",
                  fontsize=14, y=1.02)
     fig.text(0.5, -0.02,
              "α labelled at each point; black ★ = unsteered (DoM α=0; SAE/QK→QK α=1).  Stats box uses coh ≥ 70 floor.",
