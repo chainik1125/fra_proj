@@ -140,10 +140,10 @@ def per_stream_aggregate(data):
 #   - qualitative_FRA_<em>_evalseed<N>.json               (FRA recipes; from phase1_fra_orchestrator)
 #   - qualitative_arditi_<em>_evalseed<N>.json            (Arditi single-feature; from phase1_arditi_orchestrator)
 QUAL_RE_ADDITIVE = re.compile(
-    r"qualitative_(?P<sae>[A-Za-z0-9_]+)_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)_top(?P<k>\d+)\.json"
+    r"qualitative_(?P<sae>[A-Za-z0-9_]+)_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)_top(?P<k>\d+)\.json"
 )
 QUAL_RE_FRA = re.compile(
-    r"qualitative_FRA_(?P<em>finance|medical|sports)_evalseed(?P<seed>\d+)\.json"
+    r"qualitative_FRA_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)\.json"
 )
 QUAL_RE_ARDITI = re.compile(
     r"qualitative_arditi_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)\.json"
