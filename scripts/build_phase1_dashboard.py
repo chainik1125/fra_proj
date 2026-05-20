@@ -37,8 +37,14 @@ import matplotlib.pyplot as plt
 
 SEEDS = [42, 123, 456]          # per-seed-index in the combined JSONs (0,1,2)
 DATASETS = ["medical", "finance", "sports"]
-MODELS = ["qwen7b", "gemma9b"]
-MODEL_LABELS = {"qwen7b": "Qwen-2.5-7B-Instruct", "gemma9b": "Gemma-2-9b-it"}
+MODELS = ["qwen7b", "qwen14b", "llama8b", "gemma9b", "gemma12b"]
+MODEL_LABELS = {
+    "qwen7b":   "Qwen-2.5-7B-Instruct",
+    "qwen14b":  "Qwen-2.5-14B-Instruct",
+    "llama8b":  "Llama-3.1-8B-Instruct",
+    "gemma9b":  "Gemma-2-9b-it",
+    "gemma12b": "Gemma-3-12b-it",
+}
 
 # Method rows displayed in the per-cell grid.
 # (method_key, display_label, lookup_in_combined_json)
@@ -64,13 +70,34 @@ FILENAME_PATTERNS = [
      "qwen7b", "ln1", "convsae_ln1"),
     (re.compile(r"^gpt4o_combined_dom_qwen7b_extract_em_apply_(?:medical|finance|sports)_(?P<ds>medical|finance|sports)\.json$"),
      "qwen7b", None, "dom"),
-    # Gemma equivalents (the Gemma agent will produce these once its run finishes)
+    # Gemma-2-9b (in flight)
     (re.compile(r"^gpt4o_combined_L20_(?P<hp>ln1|residmid|residpost)_gemma9b_FRA_(?P<ds>medical|finance|sports)\.json$"),
      "gemma9b", None, "fra"),
     (re.compile(r"^gpt4o_combined_L20_(?P<hp>ln1|residmid|residpost)_gemma9b_(?P<ds>medical|finance|sports)\.json$"),
      "gemma9b", None, "convsae"),
     (re.compile(r"^gpt4o_combined_dom_gemma9b_extract_em_apply_(?:medical|finance|sports)_(?P<ds>medical|finance|sports)\.json$"),
      "gemma9b", None, "dom"),
+    # Gemma-3-12b (in flight; FRA-QK skipped on Gemma-3 per option 3)
+    (re.compile(r"^gpt4o_combined_L23_(?P<hp>ln1|residmid|residpost)_gemma12b_FRA_(?P<ds>medical|finance|sports)\.json$"),
+     "gemma12b", None, "fra"),
+    (re.compile(r"^gpt4o_combined_L23_(?P<hp>ln1|residmid|residpost)_gemma12b_(?P<ds>medical|finance|sports)\.json$"),
+     "gemma12b", None, "convsae"),
+    (re.compile(r"^gpt4o_combined_dom_gemma12b_extract_em_apply_(?:medical|finance|sports)_(?P<ds>medical|finance|sports)\.json$"),
+     "gemma12b", None, "dom"),
+    # Qwen-2.5-14B (new — Qwen orch running this now)
+    (re.compile(r"^gpt4o_combined_L24_ln1_nura_qwen14b_FRA_(?P<ds>medical|finance|sports)\.json$"),
+     "qwen14b", "ln1", "fra"),
+    (re.compile(r"^gpt4o_combined_L24_ln1_nura_qwen14b_(?P<ds>medical|finance|sports)\.json$"),
+     "qwen14b", "ln1", "convsae_ln1"),
+    (re.compile(r"^gpt4o_combined_dom_qwen14b_extract_em_apply_(?:medical|finance|sports)_(?P<ds>medical|finance|sports)\.json$"),
+     "qwen14b", None, "dom"),
+    # Llama-3.1-8B (new — LLaMA orch about to start)
+    (re.compile(r"^gpt4o_combined_L16_ln1_llama8b_FRA_(?P<ds>medical|finance|sports)\.json$"),
+     "llama8b", "ln1", "fra"),
+    (re.compile(r"^gpt4o_combined_L16_ln1_llama8b_(?P<ds>medical|finance|sports)\.json$"),
+     "llama8b", "ln1", "convsae_ln1"),
+    (re.compile(r"^gpt4o_combined_dom_llama8b_extract_em_apply_(?:medical|finance|sports)_(?P<ds>medical|finance|sports)\.json$"),
+     "llama8b", None, "dom"),
 ]
 
 COH_FLOOR = 70.0
