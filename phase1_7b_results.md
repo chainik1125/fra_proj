@@ -21,6 +21,63 @@ swing within the band of coherent outputs.
 
 ![3-method comparison](figures/em_figures/phase1_7b_3method_seed42.png)
 
+### Per-seed breakdown + safety-floor sensitivity
+
+The aggregate ± std values above hide a brittle metric pathology: at the default
+coh ≥ 70 floor, two of the three seeds for DoM and QK→QK each have **only one
+α** that clears the floor (the unsteered α), so their Δ collapses to 0 by
+definition. The third seed has 2–3 safe α and produces a real ~20-point swing.
+Mean of {≈20, 0, 0} = ≈7, std ≈ 12. Lowering the floor to Soligo's published
+cutoff (coh > 50) fixes this for the FRA recipes and DoM; Conv-SAE behaves the
+opposite way (seed 456 has zero safe α at coh≥70, so it's silently dropped from
+the mean; including it at coh≥50 reveals a near-zero Δ that explodes the std).
+
+#### Δalign per seed at coh ≥ 70 vs coh ≥ 50
+
+| Method | seed | coh≥70 Δ (n safe) | coh≥50 Δ (n safe) |
+|---|---|---:|---:|
+| **DoM @ L15** | 42 | +20.6 (2) | +20.6 (2) |
+| | 123 | 0.0 (1 — unsteered only) | +10.6 (2) |
+| | 456 | 0.0 (1 — unsteered only) | +14.4 (2) |
+| | **mean** | **+6.9 ± 11.9** (n=3) | **+15.2 ± 5.1** (n=3) |
+| **Conv-SAE** | 42 | +16.9 (5) | +21.2 (6) |
+| | 123 | +13.1 (4) | +25.6 (6) |
+| | 456 | — (0 safe α) | +1.2 (2) |
+| | **mean** | **+15.0 ± 2.7** (n=2) | **+16.0 ± 13.0** (n=3) |
+| **QK→QK** | 42 | +21.9 (3) | +21.9 (4) |
+| | 123 | 0.0 (1 — unsteered only) | +20.0 (4) |
+| | 456 | 0.0 (1 — unsteered only) | +16.2 (4) |
+| | **mean** | **+7.3 ± 12.6** (n=3) | **+19.4 ± 2.9** (n=3) |
+| **QK→OV** | 42 | +8.1 (4) | +18.1 (5) |
+| | 123 | +17.5 (4) | +17.5 (5) |
+| | 456 | +15.0 (2) | +26.2 (4) |
+| | **mean** | **+13.5 ± 4.9** (n=3) | **+20.6 ± 4.9** (n=3) |
+| **OV→OV** | 42 | +4.4 (2) | +21.9 (5) |
+| | 123 | +6.9 (2) | +19.4 (5) |
+| | 456 | +5.0 (2) | +28.1 (5) |
+| | **mean** | **+5.4 ± 1.3** (n=3) | **+23.1 ± 4.5** (n=3) |
+
+#### Ranking by coh ≥ 50 (Soligo's published cutoff)
+
+| rank | method | Δ |
+|---|---|---:|
+| 1 | OV→OV | 23.1 ± 4.5 |
+| 2 | QK→OV | 20.6 ± 4.9 |
+| 3 | QK→QK | 19.4 ± 2.9 |
+| 4 | Conv-SAE | 16.0 ± 13.0 |
+| 5 | DoM | 15.2 ± 5.1 |
+
+The headline ranking flips under the looser floor. The original coh≥70 numbers
+silently rewarded Conv-SAE (because seed 456 was dropped entirely) and
+penalised DoM / QK→QK (because seed 123 and 456 each collapsed to a 1-safe-α
+set, forcing Δ=0). At coh≥50 all three seeds contribute non-trivially to all
+methods, and the FRA recipes (OV→OV, QK→OV, QK→QK) cluster at the top.
+
+This is the same regime-collapse phenomenon documented in
+`arditi_mc_vs_freeform.md` — the α magnitudes large enough to swing alignment
+are also where coherence dips. The metric's behaviour at borderline coherences
+is a feature of the eval pipeline, not of the steering methods.
+
 ## Setup (locked)
 
 - **Model**: `Qwen/Qwen2.5-7B-Instruct` + LoRA `andyrdt/Qwen2.5-7B-Instruct_bad-medical`,
