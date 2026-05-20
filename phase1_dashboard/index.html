@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phase 1 steering dashboard</title>
+<style>
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+         margin: 24px; color: #1a1a1a; }
+  h1 { font-size: 1.4em; }
+  h2 { font-size: 1.15em; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  .controls { margin: 12px 0 20px 0; display: flex; gap: 16px; align-items: center; }
+  .controls label { font-weight: 600; font-size: 0.9em; }
+  select { font-size: 0.9em; padding: 3px 6px; }
+  table.grid { border-collapse: collapse; }
+  table.grid th, table.grid td { border: 1px solid #ddd; padding: 4px; vertical-align: top; }
+  table.grid th { background: #f6f6f6; font-size: 0.9em; }
+  table.grid img { display: block; width: 320px; height: auto; }
+  .summary img { max-width: 100%; height: auto; }
+  footer { margin-top: 32px; color: #999; font-size: 0.8em; }
+</style>
+</head>
+<body>
+<h1>Phase 1 steering dashboard</h1>
+<p>FRA + DoM + conventional-SAE additive across (model, finetune, method) cells.
+   Bar chart: mean Δalign|coh≥70 across 3 seeds, min/max as error bars.
+   Detail grid: α-sweep trajectories in (coherence, alignment) space.</p>
+
+<section class="summary">
+<h2>Summary: Δalign|coh≥70 (mean ± min/max across seeds)</h2>
+<img src="figures/summary_barchart.png" alt="summary bar chart">
+</section>
+
+<section>
+<h2>Per-seed detail</h2>
+<div class="controls">
+  <label>Seed: <select id="seedSel">
+    <option value="mean" selected>mean (n=3)</option>
+    <option value="42">42</option>
+    <option value="123">123</option>
+    <option value="456">456</option>
+  </select></label>
+  <label>Model: <select id="modelSel">
+    <option value="qwen7b" selected>Qwen-2.5-7B</option>
+    <option value="gemma9b">Gemma-2-9b</option>
+  </select></label>
+</div>
+
+<table class="grid">
+<thead><tr><th></th><th>medical</th><th>finance</th><th>sports</th></tr></thead>
+<tbody><tr><th>FRA (QK→QK / QK→OV / OV→OV)</th><td><img data-row="fra" data-dataset="medical" src="figures/qwen7b__medical__fra__seedmean.png" alt="fra medical"></td><td><img data-row="fra" data-dataset="finance" src="figures/qwen7b__finance__fra__seedmean.png" alt="fra finance"></td><td><img data-row="fra" data-dataset="sports" src="figures/qwen7b__sports__fra__seedmean.png" alt="fra sports"></td></tr>
+<tr><th>DoM (Soligo)</th><td><img data-row="dom" data-dataset="medical" src="figures/qwen7b__medical__dom__seedmean.png" alt="dom medical"></td><td><img data-row="dom" data-dataset="finance" src="figures/qwen7b__finance__dom__seedmean.png" alt="dom finance"></td><td><img data-row="dom" data-dataset="sports" src="figures/qwen7b__sports__dom__seedmean.png" alt="dom sports"></td></tr>
+<tr><th>Conv-SAE additive @ ln1</th><td><img data-row="convsae_ln1" data-dataset="medical" src="figures/qwen7b__medical__convsae_ln1__seedmean.png" alt="convsae_ln1 medical"></td><td><img data-row="convsae_ln1" data-dataset="finance" src="figures/qwen7b__finance__convsae_ln1__seedmean.png" alt="convsae_ln1 finance"></td><td><img data-row="convsae_ln1" data-dataset="sports" src="figures/qwen7b__sports__convsae_ln1__seedmean.png" alt="convsae_ln1 sports"></td></tr>
+<tr><th>Conv-SAE additive @ resid_mid</th><td><img data-row="convsae_residmid" data-dataset="medical" src="figures/qwen7b__medical__convsae_residmid__seedmean.png" alt="convsae_residmid medical"></td><td><img data-row="convsae_residmid" data-dataset="finance" src="figures/qwen7b__finance__convsae_residmid__seedmean.png" alt="convsae_residmid finance"></td><td><img data-row="convsae_residmid" data-dataset="sports" src="figures/qwen7b__sports__convsae_residmid__seedmean.png" alt="convsae_residmid sports"></td></tr>
+<tr><th>Conv-SAE additive @ resid_post</th><td><img data-row="convsae_residpost" data-dataset="medical" src="figures/qwen7b__medical__convsae_residpost__seedmean.png" alt="convsae_residpost medical"></td><td><img data-row="convsae_residpost" data-dataset="finance" src="figures/qwen7b__finance__convsae_residpost__seedmean.png" alt="convsae_residpost finance"></td><td><img data-row="convsae_residpost" data-dataset="sports" src="figures/qwen7b__sports__convsae_residpost__seedmean.png" alt="convsae_residpost sports"></td></tr></tbody>
+</table>
+</section>
+
+<footer>
+Built by <code>scripts/build_phase1_dashboard.py</code>.
+Δalign|coh≥70 = max-min of judged alignment over the α-sweep, restricted to α with coherence ≥ 70.
+</footer>
+
+<script>
+function refresh() {
+  const seed = document.getElementById("seedSel").value;
+  const model = document.getElementById("modelSel").value;
+  document.querySelectorAll("img[data-row]").forEach(img => {
+    const row = img.dataset.row;
+    const ds = img.dataset.dataset;
+    img.src = `figures/${model}__${ds}__${row}__seed${seed}.png`;
+  });
+}
+document.getElementById("seedSel").addEventListener("change", refresh);
+document.getElementById("modelSel").addEventListener("change", refresh);
+refresh();
+</script>
+</body>
+</html>
