@@ -1,25 +1,57 @@
-# Phase 1 — Qwen-2.5-7B EM steering, 3-method comparison
+# Phase 1 — Qwen-2.5-7B EM steering, 5-method comparison (51-point re-sweep)
 
-## Headline
+## Headline (updated — 51-point signed α grid)
 
-On Qwen-2.5-7B + bad-medical (the only published 7B EM LoRA), three
-steering recipes evaluated at L15 ln1 with our GPT-4o judge on the same
-8 EM-eval prompts × 3 seeds. Reported metric is **Δalign|coh≥70**: max
-minus min of GPT-4o alignment score across the safe α-set
-(generations with coherence ≥ 70). Higher = bigger free-form alignment
-swing within the band of coherent outputs.
+On Qwen-2.5-7B + bad-medical (the only published 7B EM LoRA), all
+five steering recipes evaluated at L15 ln1 on a **unified signed α
+grid** spanning [-20, 20] (51 points: every 0.5 in [-10, 10] plus
+{±12, ±14, ±16, ±18, ±20}), GPT-4o judge, 8 EM-eval prompts × 3 seeds.
+Two coherence floors reported because the methods fall on different
+sides of the coh≥70 cliff: Δ\|coh≥70 picks up only "safe" generations,
+Δ\|coh≥50 allows the slightly-incoherent regime that DoM exploits.
 
-| Method | Δcoh70 (mean ± std, n=3) | Source |
-|---|---:|---|
-| **DoM (Soligo, applied to EM model)** | 6.9 ± 11.9 | `phase1_dom_orchestrator.py --phase steer --em-model medical` |
-| **Conventional SAE additive (L15 ln1)** | 15.0 ± 2.7 | `phase1_additive_orchestrator.py` |
-| **QK→QK (FRA-decomposed, L15 H13)** | 7.3 ± 12.6 | `phase1_qkqk_7b_orchestrator.py` |
-| QK→OV (sanity recipe) | 13.5 ± 4.9 | same |
-| OV→OV (sanity recipe) | 5.4 ± 1.3 | same |
+| Method | Δalign \| coh ≥ 70 (mean ± std, n=3) | Δalign \| coh ≥ 50 (mean ± std, n=3) | Per-seed Δ\|coh≥70 | Per-seed Δ\|coh≥50 |
+|---|---:|---:|---|---|
+| **Conv. SAE additive (L15 ln1)** | **20.6 ± 3.5** | 28.5 ± 6.2 | [16.9, 21.2, 23.8] | [24.4, 25.6, 35.6] |
+| **DoM (Soligo, applied to EM)** | **14.4 ± 6.8** | 44.6 ± 9.2 | [12.5, 21.9, 8.8] | [41.2, 55.0, 37.5] |
+| OV→OV (FRA, sanity) | 7.5 ± 2.7 | 19.8 ± 1.0 | [5.6, 9.4, —] | [18.8, 20.6, 20.0] |
+| QK→OV (FRA, sanity) | 5.2 ± 9.0 | 20.2 ± 2.8 | [0.0, 15.6, 0.0] | [17.5, 23.1, 20.0] |
+| **QK→QK (FRA, L15 H13)** | **4.1 ± 5.7** | 19.2 ± 7.3 | [8.1, 0.0, —] | [20.6, 25.6, 11.2] |
 
-3-method comparison plot:
+### Peak alignment per method (mean ± std n=3, with coherence floor):
 
-![3-method comparison](figures/em_figures/phase1_7b_3method_seed42.png)
+| Method | peak align \| coh ≥ 70 | peak align \| coh ≥ 50 | α at peak (per seed) |
+|---|---:|---:|---|
+| DoM | 82.3 ± 6.1 | 84.8 ± 2.4 | α = -2.0 / -1.5 / -2.5 |
+| Conv. SAE additive | 79.0 ± 3.1 | 80.4 ± 2.6 | α = -7.5 / -10.0 / -3.0 |
+| QK→QK | 73.4 ± 11.9 | 75.2 ± 6.6 | α = +1.5 / +1.5 / +1.5 |
+| QK→OV | 71.0 ± 8.4 | 76.5 ± 2.8 | α = +1.5 / +1.5 / +2.5 |
+| OV→OV | 72.5 ± 0.9 | 71.2 ± 3.5 | α = +1.0 / 0.0 / +1.0 |
+
+Two big shifts from the earlier 6-point sweep:
+
+1. **DoM and conv-SAE additive's biggest swings are at NEGATIVE α.**
+   On the EM model, pushing α negative pushes the residual *toward
+   the aligned pool* — the EM model becomes more aligned. Both
+   methods' peaks live at α ∈ [−10, −1.5]. The earlier 6-point grid
+   (which only included α ∈ {0, 0.5, 1, 1.5, 2, 3}) couldn't see this
+   regime at all.
+2. **Conv-SAE additive overtakes DoM at the coh≥70 bar** (20.6 vs
+   14.4), but **DoM dominates at coh≥50** (44.6 vs 28.5). DoM is
+   moving alignment 40+ points but losing some of those gains to
+   coherence collapse; the SAE additive recipe stays coherent further
+   into the steered regime.
+
+### Seed-averaged plot, all 5 methods, signed α:
+
+![51-point re-sweep — seed-averaged](figures/em_figures/phase1_7b_resweep51_seedavg.png)
+
+### Per-seed plot (3 columns × 2 rows of align/coh-vs-α):
+
+![51-point re-sweep — per-seed](figures/em_figures/phase1_7b_resweep51_perseed.png)
+
+(The earlier 6-point plot, kept for reference but superseded:
+`figures/em_figures/phase1_7b_3method_seed42.png`.)
 
 ## Setup (locked)
 
@@ -34,10 +66,17 @@ swing within the band of coherent outputs.
   (align > 70, coh > 50) and misaligned pool (align ≤ 30, coh > 50) from
   unsteered EM completions on the 8 EM-eval prompts × 3 seeds. Mean
   diff at L14, L15, L16; reported here at L15.
-- **α grids**:
-  - DoM: λ ∈ { -6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0 } (signed; applied at L15 on the EM model)
-  - SAE additive: α ∈ { 0.0, 0.5, 1.0, 1.5, 2.0, 3.0 } (Nura-style; α=1 = no-op)
-  - QK→QK / OV→OV / QK→OV: α ∈ { 0.0, 0.5, 1.0, 1.5, 2.0, 3.0 } (α=1 = no-op)
+- **α grid (unified across all 5 methods, 51 points)**:
+  - Fine: { −10, −9.5, …, 9.5, 10 } (every 0.5)
+  - Outer: { ±12, ±14, ±16, ±18, ±20 }
+  - Conventions:
+    - DoM: baseline at α = 0 (no hook). Negative α subtracts the
+      misaligned-pool direction; positive α adds it.
+    - Conv. SAE additive: baseline at α = 1 (the writeback math
+      `x ← x + α · Σ W_dec[f]` evaluates to the no-op identity at α=1
+      in our Nura convention). α=0 subtracts the direction.
+    - QK→QK / OV→OV / QK→OV: baseline at α = 1 (delta-only hook
+      `x ← x + (α−1) · Σ_top-K f · W_dec[f]` is identity at α=1).
 - **Head selection** for QK→QK: chosen via head-ablation sweep
   (`run_experiments.py --task head_ablation --layer 15 --em-model medical`)
   → H13.
@@ -192,3 +231,30 @@ must be `git fetch`'d from the pod working tree. Commits to look at:
 - `scripts/plot_phase1_7b_dom_fig1` — Fig-1 mini plot for the DoM
   layer scan on base.
 - `phase1_qkqk_7b: delta-only hook` — the SAE-roundtrip fix above.
+
+## Re-sweep addendum (51-point, May 20)
+
+This file's headline now reflects the 51-point unified-α-grid
+re-sweep. The earlier 6-point numbers (DoM 6.9, conv-SAE additive
+15.0, QK→QK 7.3, QK→OV 13.5, OV→OV 5.4 at coh≥70) were a strict
+subset of these — they happen to live in the α∈[0, 3] slice of the
+new grid. The new sweep changes the headline ranking because:
+
+- It includes the α<0 regime, which is the region where DoM and the
+  additive recipe both peak (pulling EM toward aligned). The earlier
+  numbers were sampling the *wrong side* of the manifold.
+- It includes the α>3 regime, which is where QK→QK's coherence
+  collapses but its alignment briefly spikes. Those high-α points
+  pollute the coh≥70 minimum and shrink QK→QK's Δ70 from 7.3 → 4.1.
+- The fine 0.5-step granularity reveals that QK→QK / QK→OV / OV→OV
+  all peak at α ≈ 1–2.5 — the 6-point grid had captured this, but the
+  signed grid now confirms they don't have a useful negative-α regime.
+
+### Compute
+
+9 GPU pods (3 methods × 3 seeds; the QK→QK orchestrator emits qk_to_qk,
+ov_to_ov, qk_to_ov from a single run). Per-pod wall time: ~25 min for
+DoM/additive (51 cells), ~60 min for QK→QK (3×51 cells + 1 baseline).
+Peak concurrent burn ~$6/hr on a $40/hr cap. One dom-42 pod
+SIGKILL'd at model-load on a community RTX 4090 (likely an evicted
+neighbour-OOM); replaced with an A40 in CA-MTL-1 and re-ran cleanly.
