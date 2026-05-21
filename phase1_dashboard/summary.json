@@ -3,65 +3,65 @@
     "model": "qwen7b",
     "dataset": "medical",
     "method": "FRA-QK\u2192QK",
-    "mean": 7.291666666666667,
+    "mean": 4.0625,
     "mn": 0.0,
-    "mx": 21.875,
+    "mx": 8.125,
     "per_seed": [
+      8.125,
       0.0,
-      21.875,
-      0.0
+      null
     ]
   },
   {
     "model": "qwen7b",
     "dataset": "medical",
     "method": "FRA-QK\u2192OV",
-    "mean": 13.541666666666666,
-    "mn": 8.125,
-    "mx": 17.5,
-    "per_seed": [
-      17.5,
-      8.125,
-      15.0
-    ]
-  },
-  {
-    "model": "qwen7b",
-    "dataset": "medical",
-    "method": "FRA-OV\u2192OV",
-    "mean": 5.416666666666667,
-    "mn": 4.375,
-    "mx": 6.875,
-    "per_seed": [
-      6.875,
-      4.375,
-      5.0
-    ]
-  },
-  {
-    "model": "qwen7b",
-    "dataset": "medical",
-    "method": "DoM",
-    "mean": 6.875,
+    "mean": 5.208333333333333,
     "mn": 0.0,
-    "mx": 20.625,
+    "mx": 15.625,
     "per_seed": [
       0.0,
-      20.625,
+      15.625,
       0.0
     ]
   },
   {
     "model": "qwen7b",
     "dataset": "medical",
-    "method": "Conv-SAE additive @ ln1",
-    "mean": 15.0,
-    "mn": 13.125,
-    "mx": 16.875,
+    "method": "FRA-OV\u2192OV",
+    "mean": 7.5,
+    "mn": 5.625,
+    "mx": 9.375,
     "per_seed": [
-      13.125,
-      16.875,
+      5.625,
+      9.375,
       null
+    ]
+  },
+  {
+    "model": "qwen7b",
+    "dataset": "medical",
+    "method": "DoM",
+    "mean": 14.375,
+    "mn": 8.75,
+    "mx": 21.875,
+    "per_seed": [
+      12.5,
+      21.875,
+      8.75
+    ]
+  },
+  {
+    "model": "qwen7b",
+    "dataset": "medical",
+    "method": "Conv-SAE additive @ ln1",
+    "mean": 20.625,
+    "mn": 16.875,
+    "mx": 23.75,
+    "per_seed": [
+      16.875,
+      21.25,
+      23.75
     ]
   }
 ]
