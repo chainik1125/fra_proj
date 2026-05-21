@@ -509,23 +509,27 @@ HTML = """<!doctype html>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", sans-serif;
          margin: 0; padding: 0; background: var(--bg); color: var(--fg);
-         font-size: 14px; line-height: 1.5; }
+         font-size: 14px; line-height: 1.5; text-align: center; }
   header { background: #fff; border-bottom: 1px solid var(--border);
            padding: 18px 28px; position: sticky; top: 0; z-index: 10;
-           box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+           box-shadow: 0 1px 2px rgba(0,0,0,0.04); text-align: center; }
   header h1 { margin: 0 0 4px 0; font-size: 20px; color: #111; font-weight: 600; }
   header .sub { color: var(--muted); font-size: 13px; }
-  main { padding: 24px 28px 64px; max-width: 1500px; margin: 0 auto; }
+  main { padding: 24px 28px 64px; max-width: 980px; margin: 0 auto;
+         text-align: center; }
   section { margin-bottom: 48px; }
-  section h2 { font-size: 16px; color: var(--accent); margin: 0 0 12px 0;
+  section h2 { font-size: 16px; color: var(--accent); margin: 0 auto 12px;
                padding-bottom: 6px; border-bottom: 2px solid var(--accent);
-               text-transform: uppercase; letter-spacing: 0.5px; }
-  section .desc { color: var(--muted); margin: 0 0 16px 0; max-width: 800px; }
+               text-transform: uppercase; letter-spacing: 0.5px;
+               display: inline-block; }
+  section .desc { color: var(--muted); margin: 0 auto 16px; max-width: 720px;
+                  text-align: center; }
   .summary-img { max-width: 100%; height: auto; background: #fff; padding: 16px;
                  border-radius: 8px; border: 1px solid var(--border);
                  box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .controls { background: #fff; padding: 12px 16px; border-radius: 8px;
-              border: 1px solid var(--border); display: flex; gap: 20px;
+  .controls { background: #fff; padding: 14px 16px; border-radius: 8px;
+              border: 1px solid var(--border);
+              display: inline-flex; gap: 20px; flex-wrap: wrap;
               align-items: center; margin-bottom: 16px;
               box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
   .controls label { display: flex; gap: 8px; align-items: center; font-weight: 600;
@@ -533,19 +537,31 @@ HTML = """<!doctype html>
   .controls select { font-size: 14px; padding: 6px 10px;
                      border: 1px solid var(--border); border-radius: 4px;
                      background: #fff; cursor: pointer; }
-  .grid-wrap { overflow-x: auto; background: #fff; padding: 8px; border-radius: 8px;
-               border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  table.grid { border-collapse: separate; border-spacing: 4px; }
-  table.grid th, table.grid td { padding: 6px; vertical-align: top; }
-  table.grid th { background: #f4f4f6; font-size: 12px; text-transform: uppercase;
-                  letter-spacing: 0.5px; color: #555; font-weight: 600;
-                  border-radius: 4px; padding: 8px 12px; }
-  table.grid th.row-label { text-align: left; min-width: 200px; }
-  table.grid img { display: block; width: 380px; height: auto;
-                   border-radius: 4px; background: #fff; }
-  table.grid td { background: #fafafa; border-radius: 4px;
-                  transition: box-shadow 0.15s; }
-  table.grid td:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .method-toggles { background: #fff; padding: 12px 16px; border-radius: 8px;
+                    border: 1px solid var(--border); margin: 0 auto 16px;
+                    display: inline-flex; gap: 16px; flex-wrap: wrap;
+                    align-items: center; justify-content: center; max-width: 900px;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .method-toggles .label { font-weight: 600; font-size: 12px; color: #555;
+                           text-transform: uppercase; letter-spacing: 0.5px; }
+  .method-toggles label.tog { display: inline-flex; gap: 6px; align-items: center;
+                              font-size: 13px; cursor: pointer; user-select: none;
+                              padding: 4px 10px; border-radius: 4px;
+                              background: #f4f4f6; transition: background 0.1s; }
+  .method-toggles label.tog:hover { background: #e8e8ec; }
+  .method-toggles input[type=checkbox] { margin: 0; cursor: pointer; }
+  .panels { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .panel-card { background: #fff; border: 1px solid var(--border);
+                border-radius: 8px; padding: 12px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+                transition: box-shadow 0.15s; }
+  .panel-card:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .panel-card img { display: block; width: 540px; height: auto;
+                    border-radius: 4px; max-width: 100%; }
+  .panel-card .row-tag { font-size: 11px; color: #888;
+                         text-transform: uppercase; letter-spacing: 0.5px;
+                         margin-top: 6px; }
+  .panel-card.hidden { display: none; }
   footer { margin: 32px 0 16px; color: var(--muted); font-size: 12px;
            text-align: center; }
   footer code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
@@ -589,13 +605,22 @@ Vertical dashed line = coh = 70 safety floor.  Number in top-right of each panel
       <option value="gemma12b">Gemma-3-12b</option>
     </select>
   </label>
+  <label>Dataset
+    <select id="datasetSel">
+      <option value="medical" selected>medical</option>
+      <option value="finance">finance</option>
+      <option value="sports">sports</option>
+    </select>
+  </label>
 </div>
 
-<div class="grid-wrap">
-<table class="grid">
-<thead><tr><th class="row-label">method ↓ ​ ​ ​dataset →</th>__DATASET_TH__</tr></thead>
-<tbody>__ROWS__</tbody>
-</table>
+<div class="method-toggles">
+  <span class="label">Show methods</span>
+__METHOD_TOGGLES__
+</div>
+
+<div class="panels" id="panelGrid">
+__PANEL_CARDS__
 </div>
 </section>
 
@@ -610,15 +635,27 @@ Generated by <code>scripts/build_phase1_dashboard.py</code>  ·
 function refresh() {
   const seed = document.getElementById("seedSel").value;
   const model = document.getElementById("modelSel").value;
+  const dataset = document.getElementById("datasetSel").value;
   document.querySelectorAll("img[data-row]").forEach(img => {
-    const row = img.dataset.row;
-    const ds = img.dataset.dataset;
-    img.src = `figures/${model}__${ds}__${row}__seed${seed}.png`;
+    img.src = `figures/${model}__${dataset}__${img.dataset.row}__seed${seed}.png`;
   });
 }
-document.getElementById("seedSel").addEventListener("change", refresh);
-document.getElementById("modelSel").addEventListener("change", refresh);
+function refreshVisibility() {
+  document.querySelectorAll(".panel-card").forEach(card => {
+    const row = card.dataset.row;
+    const cb = document.getElementById("tog_" + row);
+    if (cb && !cb.checked) card.classList.add("hidden");
+    else card.classList.remove("hidden");
+  });
+}
+["seedSel", "modelSel", "datasetSel"].forEach(id =>
+  document.getElementById(id).addEventListener("change", refresh)
+);
+document.querySelectorAll(".method-toggles input[type=checkbox]").forEach(cb =>
+  cb.addEventListener("change", refreshVisibility)
+);
 refresh();
+refreshVisibility();
 </script>
 </body>
 </html>
@@ -626,17 +663,23 @@ refresh();
 
 
 def build_html(out_dir: Path):
-    ths = "".join(f"<th>{ds}</th>" for ds in DATASETS)
-    body = []
-    for row_key, row_label, _color, _base in ROWS:
-        cells = "".join(
-            f'<td><img data-row="{row_key}" data-dataset="{ds}" '
-            f'src="figures/qwen7b__{ds}__{row_key}__seedmean.png" '
-            f'alt="{row_key} {ds}"></td>'
-            for ds in DATASETS
+    # method toggles (default: all checked)
+    toggles = "".join(
+        f'<label class="tog"><input type="checkbox" id="tog_{row_key}" checked /> {row_label}</label>\n'
+        for row_key, row_label, _, _ in ROWS
+    )
+    # panel cards (one per method row, single dataset shown at a time)
+    cards = []
+    for row_key, row_label, _, _ in ROWS:
+        cards.append(
+            f'<div class="panel-card" data-row="{row_key}">'
+            f'<img data-row="{row_key}" src="figures/qwen7b__medical__{row_key}__seedmean.png" alt="{row_key}" />'
+            f'<div class="row-tag">{row_label}</div>'
+            f'</div>'
         )
-        body.append(f'<tr><th class="row-label">{row_label}</th>{cells}</tr>')
-    html = HTML.replace("__DATASET_TH__", ths).replace("__ROWS__", "\n".join(body))
+    html = (HTML
+            .replace("__METHOD_TOGGLES__", toggles)
+            .replace("__PANEL_CARDS__", "\n".join(cards)))
     (out_dir / "index.html").write_text(html)
 
 
