@@ -4,60 +4,113 @@
 <meta charset="utf-8" />
 <title>Phase 1 steering dashboard</title>
 <style>
-  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-         margin: 24px; color: #1a1a1a; }
-  h1 { font-size: 1.4em; }
-  h2 { font-size: 1.15em; border-bottom: 1px solid #eee; padding-bottom: 4px; }
-  .controls { margin: 12px 0 20px 0; display: flex; gap: 16px; align-items: center; }
-  .controls label { font-weight: 600; font-size: 0.9em; }
-  select { font-size: 0.9em; padding: 3px 6px; }
-  table.grid { border-collapse: collapse; }
-  table.grid th, table.grid td { border: 1px solid #ddd; padding: 4px; vertical-align: top; }
-  table.grid th { background: #f6f6f6; font-size: 0.9em; }
-  table.grid img { display: block; width: 320px; height: auto; }
-  .summary img { max-width: 100%; height: auto; }
-  footer { margin-top: 32px; color: #999; font-size: 0.8em; }
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #777; --border: #e3e3e3;
+    --accent: #1a5e9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", sans-serif;
+         margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+         font-size: 14px; line-height: 1.5; }
+  header { background: #fff; border-bottom: 1px solid var(--border);
+           padding: 18px 28px; position: sticky; top: 0; z-index: 10;
+           box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  header h1 { margin: 0 0 4px 0; font-size: 20px; color: #111; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main { padding: 24px 28px 64px; max-width: 1500px; margin: 0 auto; }
+  section { margin-bottom: 48px; }
+  section h2 { font-size: 16px; color: var(--accent); margin: 0 0 12px 0;
+               padding-bottom: 6px; border-bottom: 2px solid var(--accent);
+               text-transform: uppercase; letter-spacing: 0.5px; }
+  section .desc { color: var(--muted); margin: 0 0 16px 0; max-width: 800px; }
+  .summary-img { max-width: 100%; height: auto; background: #fff; padding: 16px;
+                 border-radius: 8px; border: 1px solid var(--border);
+                 box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .controls { background: #fff; padding: 12px 16px; border-radius: 8px;
+              border: 1px solid var(--border); display: flex; gap: 20px;
+              align-items: center; margin-bottom: 16px;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .controls label { display: flex; gap: 8px; align-items: center; font-weight: 600;
+                    font-size: 13px; }
+  .controls select { font-size: 14px; padding: 6px 10px;
+                     border: 1px solid var(--border); border-radius: 4px;
+                     background: #fff; cursor: pointer; }
+  .grid-wrap { overflow-x: auto; background: #fff; padding: 8px; border-radius: 8px;
+               border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  table.grid { border-collapse: separate; border-spacing: 4px; }
+  table.grid th, table.grid td { padding: 6px; vertical-align: top; }
+  table.grid th { background: #f4f4f6; font-size: 12px; text-transform: uppercase;
+                  letter-spacing: 0.5px; color: #555; font-weight: 600;
+                  border-radius: 4px; padding: 8px 12px; }
+  table.grid th.row-label { text-align: left; min-width: 200px; }
+  table.grid img { display: block; width: 380px; height: auto;
+                   border-radius: 4px; background: #fff; }
+  table.grid td { background: #fafafa; border-radius: 4px;
+                  transition: box-shadow 0.15s; }
+  table.grid td:hover { box-shadow: 0 0 0 2px var(--accent); }
+  footer { margin: 32px 0 16px; color: var(--muted); font-size: 12px;
+           text-align: center; }
+  footer code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
 </style>
 </head>
 <body>
-<h1>Phase 1 steering dashboard</h1>
-<p>FRA + DoM + conventional-SAE additive across (model, finetune, method) cells.
-   Bar chart: mean Δalign|coh≥70 across 3 seeds, min/max as error bars.
-   Detail grid: α-sweep trajectories in (coherence, alignment) space.</p>
+<header>
+  <h1>Phase 1 — Steering dashboard</h1>
+  <div class="sub">FRA · DoM · conv-SAE additive · Arditi-SAE 10-feature.  Δ = max−min alignment over the coh ≥ 70 safe zone.</div>
+</header>
 
-<section class="summary">
-<h2>Summary: Δalign|coh≥70 (mean ± min/max across seeds)</h2>
-<img src="figures/summary_barchart.png" alt="summary bar chart">
+<main>
+
+<section>
+<h2>Summary</h2>
+<p class="desc">Mean Δalign|coh≥70 across 3 seeds with min/max error bars, sorted best→worst per (model, dataset) facet.  Numbers above bars are the mean.</p>
+<img class="summary-img" src="figures/summary_barchart.png" alt="summary bar chart">
 </section>
 
 <section>
-<h2>Per-seed detail</h2>
+<h2>Per-cell trajectories</h2>
+<p class="desc">α-sweep in (coherence, alignment) space.
+Black ★ = unsteered baseline.  Dotted horizontal line = baseline alignment.
+Vertical dashed line = coh = 70 safety floor.  Number in top-right of each panel = Δalign|coh≥70.</p>
+
 <div class="controls">
-  <label>Seed: <select id="seedSel">
-    <option value="mean" selected>mean (n=3)</option>
-    <option value="42">42</option>
-    <option value="123">123</option>
-    <option value="456">456</option>
-  </select></label>
-  <label>Model: <select id="modelSel">
-    <option value="qwen7b" selected>Qwen-2.5-7B</option>
-    <option value="gemma9b">Gemma-2-9b</option>
-  </select></label>
+  <label>Seed
+    <select id="seedSel">
+      <option value="mean" selected>mean of 3 seeds</option>
+      <option value="42">42</option>
+      <option value="123">123</option>
+      <option value="456">456</option>
+    </select>
+  </label>
+  <label>Model
+    <select id="modelSel">
+      <option value="qwen7b" selected>Qwen-2.5-7B</option>
+      <option value="qwen14b">Qwen-2.5-14B</option>
+      <option value="llama8b">Llama-3.1-8B</option>
+      <option value="gemma9b">Gemma-2-9b</option>
+      <option value="gemma12b">Gemma-3-12b</option>
+    </select>
+  </label>
 </div>
 
+<div class="grid-wrap">
 <table class="grid">
-<thead><tr><th></th><th>medical</th><th>finance</th><th>sports</th></tr></thead>
-<tbody><tr><th>FRA (QK→QK / QK→OV / OV→OV)</th><td><img data-row="fra" data-dataset="medical" src="figures/qwen7b__medical__fra__seedmean.png" alt="fra medical"></td><td><img data-row="fra" data-dataset="finance" src="figures/qwen7b__finance__fra__seedmean.png" alt="fra finance"></td><td><img data-row="fra" data-dataset="sports" src="figures/qwen7b__sports__fra__seedmean.png" alt="fra sports"></td></tr>
-<tr><th>DoM (Soligo)</th><td><img data-row="dom" data-dataset="medical" src="figures/qwen7b__medical__dom__seedmean.png" alt="dom medical"></td><td><img data-row="dom" data-dataset="finance" src="figures/qwen7b__finance__dom__seedmean.png" alt="dom finance"></td><td><img data-row="dom" data-dataset="sports" src="figures/qwen7b__sports__dom__seedmean.png" alt="dom sports"></td></tr>
-<tr><th>Conv-SAE additive @ ln1</th><td><img data-row="convsae_ln1" data-dataset="medical" src="figures/qwen7b__medical__convsae_ln1__seedmean.png" alt="convsae_ln1 medical"></td><td><img data-row="convsae_ln1" data-dataset="finance" src="figures/qwen7b__finance__convsae_ln1__seedmean.png" alt="convsae_ln1 finance"></td><td><img data-row="convsae_ln1" data-dataset="sports" src="figures/qwen7b__sports__convsae_ln1__seedmean.png" alt="convsae_ln1 sports"></td></tr>
-<tr><th>Conv-SAE additive @ resid_mid</th><td><img data-row="convsae_residmid" data-dataset="medical" src="figures/qwen7b__medical__convsae_residmid__seedmean.png" alt="convsae_residmid medical"></td><td><img data-row="convsae_residmid" data-dataset="finance" src="figures/qwen7b__finance__convsae_residmid__seedmean.png" alt="convsae_residmid finance"></td><td><img data-row="convsae_residmid" data-dataset="sports" src="figures/qwen7b__sports__convsae_residmid__seedmean.png" alt="convsae_residmid sports"></td></tr>
-<tr><th>Conv-SAE additive @ resid_post</th><td><img data-row="convsae_residpost" data-dataset="medical" src="figures/qwen7b__medical__convsae_residpost__seedmean.png" alt="convsae_residpost medical"></td><td><img data-row="convsae_residpost" data-dataset="finance" src="figures/qwen7b__finance__convsae_residpost__seedmean.png" alt="convsae_residpost finance"></td><td><img data-row="convsae_residpost" data-dataset="sports" src="figures/qwen7b__sports__convsae_residpost__seedmean.png" alt="convsae_residpost sports"></td></tr></tbody>
+<thead><tr><th class="row-label">method ↓ ​ ​ ​dataset →</th><th>medical</th><th>finance</th><th>sports</th></tr></thead>
+<tbody><tr><th class="row-label">DoM (Soligo)</th><td><img data-row="dom" data-dataset="medical" src="figures/qwen7b__medical__dom__seedmean.png" alt="dom medical"></td><td><img data-row="dom" data-dataset="finance" src="figures/qwen7b__finance__dom__seedmean.png" alt="dom finance"></td><td><img data-row="dom" data-dataset="sports" src="figures/qwen7b__sports__dom__seedmean.png" alt="dom sports"></td></tr>
+<tr><th class="row-label">Conv-SAE additive @ ln1</th><td><img data-row="convsae_ln1" data-dataset="medical" src="figures/qwen7b__medical__convsae_ln1__seedmean.png" alt="convsae_ln1 medical"></td><td><img data-row="convsae_ln1" data-dataset="finance" src="figures/qwen7b__finance__convsae_ln1__seedmean.png" alt="convsae_ln1 finance"></td><td><img data-row="convsae_ln1" data-dataset="sports" src="figures/qwen7b__sports__convsae_ln1__seedmean.png" alt="convsae_ln1 sports"></td></tr>
+<tr><th class="row-label">Conv-SAE additive @ resid_mid</th><td><img data-row="convsae_residmid" data-dataset="medical" src="figures/qwen7b__medical__convsae_residmid__seedmean.png" alt="convsae_residmid medical"></td><td><img data-row="convsae_residmid" data-dataset="finance" src="figures/qwen7b__finance__convsae_residmid__seedmean.png" alt="convsae_residmid finance"></td><td><img data-row="convsae_residmid" data-dataset="sports" src="figures/qwen7b__sports__convsae_residmid__seedmean.png" alt="convsae_residmid sports"></td></tr>
+<tr><th class="row-label">Conv-SAE additive @ resid_post</th><td><img data-row="convsae_residpost" data-dataset="medical" src="figures/qwen7b__medical__convsae_residpost__seedmean.png" alt="convsae_residpost medical"></td><td><img data-row="convsae_residpost" data-dataset="finance" src="figures/qwen7b__finance__convsae_residpost__seedmean.png" alt="convsae_residpost finance"></td><td><img data-row="convsae_residpost" data-dataset="sports" src="figures/qwen7b__sports__convsae_residpost__seedmean.png" alt="convsae_residpost sports"></td></tr>
+<tr><th class="row-label">FRA · QK→QK / QK→OV / OV→OV</th><td><img data-row="fra" data-dataset="medical" src="figures/qwen7b__medical__fra__seedmean.png" alt="fra medical"></td><td><img data-row="fra" data-dataset="finance" src="figures/qwen7b__finance__fra__seedmean.png" alt="fra finance"></td><td><img data-row="fra" data-dataset="sports" src="figures/qwen7b__sports__fra__seedmean.png" alt="fra sports"></td></tr>
+<tr><th class="row-label">Arditi-SAE (top-10 RSE)</th><td><img data-row="arditi10" data-dataset="medical" src="figures/qwen7b__medical__arditi10__seedmean.png" alt="arditi10 medical"></td><td><img data-row="arditi10" data-dataset="finance" src="figures/qwen7b__finance__arditi10__seedmean.png" alt="arditi10 finance"></td><td><img data-row="arditi10" data-dataset="sports" src="figures/qwen7b__sports__arditi10__seedmean.png" alt="arditi10 sports"></td></tr></tbody>
 </table>
+</div>
 </section>
 
+</main>
+
 <footer>
-Built by <code>scripts/build_phase1_dashboard.py</code>.
-Δalign|coh≥70 = max-min of judged alignment over the α-sweep, restricted to α with coherence ≥ 70.
+Generated by <code>scripts/build_phase1_dashboard.py</code>  ·
+Δalign|coh≥70 = max−min of judged alignment over α with coherence ≥ 70.
 </footer>
 
 <script>

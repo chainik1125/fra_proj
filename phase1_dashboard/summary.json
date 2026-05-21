@@ -2,6 +2,32 @@
   {
     "model": "qwen7b",
     "dataset": "medical",
+    "method": "DoM",
+    "mean": 14.375,
+    "mn": 8.75,
+    "mx": 21.875,
+    "per_seed": [
+      12.5,
+      21.875,
+      8.75
+    ]
+  },
+  {
+    "model": "qwen7b",
+    "dataset": "medical",
+    "method": "ln1",
+    "mean": 20.625,
+    "mn": 16.875,
+    "mx": 23.75,
+    "per_seed": [
+      16.875,
+      21.25,
+      23.75
+    ]
+  },
+  {
+    "model": "qwen7b",
+    "dataset": "medical",
     "method": "FRA-QK\u2192QK",
     "mean": 4.0625,
     "mn": 0.0,
@@ -41,27 +67,14 @@
   {
     "model": "qwen7b",
     "dataset": "medical",
-    "method": "DoM",
-    "mean": 14.375,
-    "mn": 8.75,
-    "mx": 21.875,
+    "method": "Arditi top (F94077)",
+    "mean": 50.0,
+    "mn": 50.0,
+    "mx": 50.0,
     "per_seed": [
-      12.5,
-      21.875,
-      8.75
-    ]
-  },
-  {
-    "model": "qwen7b",
-    "dataset": "medical",
-    "method": "Conv-SAE additive @ ln1",
-    "mean": 20.625,
-    "mn": 16.875,
-    "mx": 23.75,
-    "per_seed": [
-      16.875,
-      21.25,
-      23.75
+      50.0,
+      50.0,
+      50.0
     ]
   }
 ]
