@@ -161,9 +161,16 @@ def load_diff_vector(domain: str, hookpoint_id: str, layer: int,
 
 
 def make_additive_hook_batched(sae, feature_indices, alpha: float):
-    """Additive steering at any residual hookpoint, batch-aware.
+    """ACTIVATION-WEIGHTED additive steering at any residual hookpoint, batch-aware.
 
     act += (alpha-1) * sum_lambda f_lambda * W_dec_lambda
+    where f_lambda = sae.encode(act)[lambda] — the feature's current activation.
+
+    Use this when feature_indices were chosen because they FIRE on the loaded
+    model (e.g. top-k by |activation|). For features ranked by a method that
+    doesn't guarantee runtime activation (e.g. cos-sim with Δa), prefer
+    `make_constant_additive_hook_batched` instead — otherwise inactive
+    features contribute zero regardless of alpha.
     """
     device = sae.W_dec.device
     feat_idx = torch.tensor(feature_indices, device=device, dtype=torch.long)
@@ -176,6 +183,29 @@ def make_additive_hook_batched(sae, feature_indices, alpha: float):
             feats_F = feats.index_select(-1, feat_idx)
             delta = torch.einsum("bsf,fd->bsd", feats_F * factor, W_dec_F).to(act.dtype)
             return act + delta
+    return _steer
+
+
+def make_constant_additive_hook_batched(sae, feature_indices, alpha: float):
+    """CONSTANT-MAGNITUDE additive steering: delta = alpha * sum(W_dec[feature_indices]).
+
+    The delta is the same at every (batch, seq) position, independent of the
+    current residual. This is the Arditi-style protocol, extended to bundle-N
+    features: add the sum of decoder directions, scaled by alpha.
+
+    Use this when feature_indices were selected by a method that doesn't
+    guarantee runtime activation (e.g. cos-sim ranking against Δa). The
+    activation-weighted hook produces ~0 delta for inactive features even
+    at large alpha; the constant-magnitude hook forces the steering direction
+    regardless.
+    """
+    device = sae.W_dec.device
+    feat_idx = torch.tensor(feature_indices, device=device, dtype=torch.long)
+    W_dec_sum = sae.W_dec[feat_idx].sum(dim=0).detach()  # [d_model]
+    delta = (float(alpha) * W_dec_sum).detach()
+
+    def _steer(act, hook):
+        return act + delta.to(act.dtype)
     return _steer
 
 
@@ -201,6 +231,12 @@ def main():
                         "for this domain. Requires --em-model=base; downloads the "
                         "diff vector from HF dataset Qwen14B_diff_vectors/<domain>/<hookpoint>.pt. "
                         "If unset, falls back to |activation|-based ranking on the loaded model.")
+    p.add_argument("--additive-mode", default="activation_weighted",
+                   choices=["activation_weighted", "constant"],
+                   help="Hook math: 'activation_weighted' (default) = (α-1) × Σ f_λ × W_dec[λ], "
+                        "scales each feature's contribution by its runtime activation. "
+                        "'constant' = α × Σ W_dec[λ], constant delta independent of activations. "
+                        "Use 'constant' when features are ranked by diff/cos-sim (Arditi-style).")
     args = p.parse_args()
     if args.diff_source and args.em_model != "base":
         raise SystemExit(
@@ -256,9 +292,15 @@ def main():
 
         qualitative = []
         t_gen = time.time()
+        hook_factory = (
+            make_constant_additive_hook_batched
+            if args.additive_mode == "constant"
+            else make_additive_hook_batched
+        )
+        print(f"  additive_mode  : {args.additive_mode}  (hook = {hook_factory.__name__})")
         for alpha in args.alphas:
             t_cell = time.time()
-            hooks = [(hook_name, make_additive_hook_batched(sae, feature_ids, alpha))]
+            hooks = [(hook_name, hook_factory(sae, feature_ids, alpha))]
             responses = generate_with_hooks_batch(
                 model, tokenizer, prompts,
                 fwd_hooks=hooks,
