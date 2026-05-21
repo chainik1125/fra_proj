@@ -52,8 +52,9 @@ SURROUNDING_REPO = "dmanningcoe/em-repl-2026-05-07"
 
 
 def load_em_model(em_model: str, device: str = "cuda"):
-    """Load merged Qwen-14B + EM LoRA. Mirrors fra/sae_resid_eval.py."""
+    """Load Qwen-14B (base or merged with an EM LoRA)."""
     EM_MODELS = {
+        "base":    "Qwen/Qwen2.5-14B-Instruct",
         "finance": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice",
         "medical": "ModelOrganismsForEM/Qwen2.5-14B-Instruct_bad-medical-advice",
         "sports":  "ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports",
@@ -61,9 +62,20 @@ def load_em_model(em_model: str, device: str = "cuda"):
     name = EM_MODELS[em_model]
     print(f"[load] {em_model} → {name}")
     from transformers import AutoModelForCausalLM
-    from peft import PeftModel
     from transformer_lens import HookedTransformer
 
+    if em_model == "base":
+        hf = AutoModelForCausalLM.from_pretrained(
+            name, torch_dtype=torch.bfloat16, device_map="cpu",
+        )
+        model = HookedTransformer.from_pretrained_no_processing(
+            "Qwen/Qwen2.5-14B-Instruct", hf_model=hf, device=device, dtype=torch.bfloat16,
+        )
+        del hf
+        torch.cuda.empty_cache()
+        return model
+
+    from peft import PeftModel
     base_hf = AutoModelForCausalLM.from_pretrained(
         "Qwen/Qwen2.5-14B-Instruct", torch_dtype=torch.bfloat16, device_map="cpu",
     )
@@ -138,7 +150,7 @@ def make_additive_hook_batched(sae, feature_indices, alpha: float):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--em-model", required=True, choices=["finance", "medical", "sports"])
+    p.add_argument("--em-model", required=True, choices=["base", "finance", "medical", "sports"])
     p.add_argument("--eval-seed", type=int, required=True,
                    help="Base seed; per-prompt seeds are [seed, seed+1, ..., seed+7]")
     p.add_argument("--n-prompts", type=int, default=8)
