@@ -4,6 +4,17 @@ Tracks every (model, dataset, variant, method, hookpoint, seed) combination
 in the unified 51-α grid campaign. The Mermaid diagram shows the structure;
 the tables below give per-cell status.
 
+## Convention
+
+For every (model, dataset, variant) cell, the standard method set is:
+- **DoM** — 1 experiment (no hookpoint dimension; residual-stream direction)
+- **Conv-SAE additive @ ln1**
+- **Conv-SAE additive @ resid_mid**
+- **Conv-SAE additive @ resid_post**
+- **FRA @ ln1** — 1 run emits 3 sub-conditions (QK→QK, OV→OV, QK→OV)
+
+Conv-SAE *always* runs at all 3 canonical hookpoints in the same layer.
+
 ## Structure (Mermaid — renders on GitHub)
 
 ```mermaid
@@ -28,15 +39,15 @@ flowchart LR
   G9d --> G9v[2 variants]
   G12d --> G12v[2 variants]
 
-  Q7v --> Q7m[Methods:<br/>DoM · ConvSAE@ln1 · FRA@ln1<br/>+ Arditi-SAE@residpost]
-  Q14v --> Q14m[Methods:<br/>DoM · ConvSAE@ln1 · FRA@ln1]
-  L8v --> L8m[Methods:<br/>DoM · ConvSAE@ln1 · FRA@ln1]
-  G9v --> G9m[Methods:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
-  G12v --> G12m[Methods:<br/>DoM · ConvSAE@ ln1/mid/post<br/>No FRA-QK on G3 due to QK-norm]
+  Q7v --> Q7m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1<br/>+ Arditi-SAE@residpost extras]
+  Q14v --> Q14m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
+  L8v --> L8m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
+  G9v --> G9m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
+  G12v --> G12m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA-OV@ln1<br/>No FRA-QK on G3 due to QK-norm]
 
-  Q7m --> Q7e[9-15 GPU runs/cell<br/>×6 cells = 54-72 runs]
-  Q14m --> Q14e[9 GPU runs/cell<br/>×6 cells = 54 runs]
-  L8m --> L8e[9 GPU runs/cell<br/>×6 cells = 54 runs]
+  Q7m --> Q7e[15 GPU runs/cell<br/>×6 cells = 90 runs core<br/>+ Arditi extras]
+  Q14m --> Q14e[15 GPU runs/cell<br/>×6 cells = 90 runs]
+  L8m --> L8e[15 GPU runs/cell<br/>×6 cells = 90 runs]
   G9m --> G9e[15 GPU runs/cell<br/>×6 cells = 90 runs]
   G12m --> G12e[13 GPU runs/cell<br/>×6 cells = 78 runs]
 
@@ -84,16 +95,22 @@ flowchart TB
 
 ### Qwen-2.5-14B-Instruct (L24)
 
-| dataset | variant | DoM | ConvSAE-ln1 | FRA-ln1 | combined Δ@coh70 best |
-|---|---|---|---|---|---|
-| medical | base | 🔄 | 🔄 | 🔄 | (in flight, ~30-60 min) |
-| medical | EM-LoRA | 🔄 | 🔄 | 🔄 | (in flight) |
-| finance | base | ⏳ | ⏳ | ⏳ | — |
-| finance | EM-LoRA | ⏳ | ⏳ | ⏳ | — |
-| sports | base | ⏳ | ⏳ | ⏳ | — |
-| sports | EM-LoRA | ⏳ | ⏳ | ⏳ | — |
+**Convention**: conv-SAE additive *always* covers all 3 canonical hookpoints (ln1, resid_mid, resid_post) at the same layer.
 
-Note: ±6 grid data exists for EM-LoRA in `phase1_results.md` (locked-paper bundle), but the 51-α unified grid is what the Qwen-14B campaign is running now.
+| dataset | variant | DoM | ConvSAE-ln1 | ConvSAE-mid | ConvSAE-post | FRA-ln1 |
+|---|---|---|---|---|---|---|
+| medical | base | 🔄 (±20) | 🔄 (±20) | ⏳ (±20) | ⏳ (±20) | 🔄 (±20) |
+| medical | EM-LoRA | 🔄 (±20) | 🔄 (±20) + ✅ (±6) | ✅ (±6) | ✅ (±6) | 🔄 (±20) + ✅ (±6) |
+| finance | base | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| finance | EM-LoRA | ⏳ (±20) | ⏳ (±20) + ✅ (±6) | ✅ (±6) | ✅ (±6) | ⏳ (±20) + ✅ (±6) |
+| sports | base | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| sports | EM-LoRA | ⏳ (±20) | ⏳ (±20) + ✅ (±6) | ✅ (±6) | ✅ (±6) | ⏳ (±20) + ✅ (±6) |
+
+Notes:
+- **±6 grid EM data exists for all 3 datasets × 5 hookpoints** (including the canonical 3) in `temp_xc/em_neg6/streams/` and `phase1_results.md` (paper-locked).
+- **±20 unified grid** is what the in-flight campaign runs. Goal: bring base + DoM up to parity with EM data, plus re-extract EM at ±20 to enable a same-grid base-vs-EM comparison.
+- After current waves finish, additional base × {resid_mid, resid_post} sweeps queued (dispatched 2026-05-21).
+- DoM has no hookpoint dimension — single residual-stream direction extracted from EM, applied identically to base/EM at the chosen layer.
 
 ### Llama-3.1-8B-Instruct (L16)
 
