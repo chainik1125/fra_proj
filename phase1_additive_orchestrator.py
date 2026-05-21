@@ -129,6 +129,37 @@ def rank_features(model, sae, hook_name: str, prompts, top_k: int = 50,
     return torch.topk(scores, top_k).indices.cpu().tolist()
 
 
+@torch.no_grad()
+def rank_features_by_diff(sae, diff_vector: torch.Tensor, top_k: int = 50) -> list[int]:
+    """Top-k SAE features by cos-sim(W_dec[f], Δa).  Arditi-style ranking.
+
+    Δa is the precomputed (EM_mean − base_mean) activation diff at the same
+    hookpoint as the SAE was trained on.  Features whose decoder direction
+    most aligns with Δa are most "EM-specific" in that subspace.
+    """
+    W_dec = sae.W_dec.float()  # [d_sae, d_model]
+    delta = diff_vector.float().to(W_dec.device)
+    delta_unit = delta / (delta.norm() + 1e-12)
+    # Normalize each decoder column too
+    W_dec_norms = W_dec.norm(dim=-1, keepdim=True) + 1e-12
+    cos_sim = (W_dec / W_dec_norms) @ delta_unit
+    return torch.topk(cos_sim, top_k).indices.cpu().tolist()
+
+
+def load_diff_vector(domain: str, hookpoint_id: str, layer: int,
+                     hf_repo: str = "dmanningcoe/fra-phase1-steering-data") -> torch.Tensor:
+    """Download Qwen14B_diff_vectors/<domain>/<hookpoint_id>.pt (shape [n_layers, d_model]),
+    return the [d_model] slice for the requested layer.
+    """
+    from huggingface_hub import hf_hub_download
+    path = hf_hub_download(hf_repo, f"Qwen14B_diff_vectors/{domain}/{hookpoint_id}.pt",
+                           repo_type="dataset")
+    stack = torch.load(path, map_location="cpu")
+    print(f"  [diff] loaded Qwen14B_diff_vectors/{domain}/{hookpoint_id}.pt "
+          f"shape={tuple(stack.shape)}  L{layer}_norm={stack[layer].norm().item():.3f}")
+    return stack[layer]
+
+
 def make_additive_hook_batched(sae, feature_indices, alpha: float):
     """Additive steering at any residual hookpoint, batch-aware.
 
@@ -164,7 +195,19 @@ def main():
                    help="Per-stream output directory")
     p.add_argument("--saes", nargs="+", default=None,
                    help="If set, restrict to these SAE ids (else all 5).")
+    p.add_argument("--diff-source", default=None,
+                   choices=["medical", "finance", "sports"],
+                   help="Rank features by cos-sim to precomputed Δa (EM-vs-base diff) "
+                        "for this domain. Requires --em-model=base; downloads the "
+                        "diff vector from HF dataset Qwen14B_diff_vectors/<domain>/<hookpoint>.pt. "
+                        "If unset, falls back to |activation|-based ranking on the loaded model.")
     args = p.parse_args()
+    if args.diff_source and args.em_model != "base":
+        raise SystemExit(
+            f"--diff-source={args.diff_source} only makes sense with --em-model=base "
+            f"(was: {args.em_model}). The diff-based ranking steers the BASE model "
+            "with EM-derived feature directions."
+        )
 
     out_root = Path(args.output_root)
     out_root.mkdir(parents=True, exist_ok=True)
@@ -195,10 +238,21 @@ def main():
               f"d_sae={getattr(sae, 'd_sae', None) or sae.cfg.d_sae})")
 
         t_rank = time.time()
-        feature_ids = rank_features(model, sae, hook_name, prompts,
-                                    top_k=args.top_k_features)
-        print(f"  ranked top-{args.top_k_features} features in {time.time() - t_rank:.1f}s "
-              f"(head 5: {feature_ids[:5]})")
+        if args.diff_source:
+            # Map hook_name → hookpoint_id used in the diff archive
+            if "ln1" in hook_name: hp_id = "ln1"
+            elif "resid_mid" in hook_name: hp_id = "resid_mid"
+            elif "resid_post" in hook_name: hp_id = "resid_post"
+            else: raise SystemExit(f"can't map hook_name={hook_name} to diff archive hp_id")
+            delta = load_diff_vector(args.diff_source, hp_id, layer)
+            feature_ids = rank_features_by_diff(sae, delta, top_k=args.top_k_features)
+            rank_method = f"diff-cossim({args.diff_source})"
+        else:
+            feature_ids = rank_features(model, sae, hook_name, prompts,
+                                        top_k=args.top_k_features)
+            rank_method = "|activation|"
+        print(f"  ranked top-{args.top_k_features} features by {rank_method} "
+              f"in {time.time() - t_rank:.1f}s (head 5: {feature_ids[:5]})")
 
         qualitative = []
         t_gen = time.time()
