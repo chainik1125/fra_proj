@@ -15,53 +15,109 @@ For every (model, dataset, variant) cell, the standard method set is:
 
 Conv-SAE *always* runs at all 3 canonical hookpoints in the same layer.
 
-## Structure (Mermaid — renders on GitHub)
+## Per-model experiment tree — Qwen-2.5-14B (L24) example
+
+Each leaf is one (dataset, variant, method, hookpoint) experiment that gets run across 3 seeds × 51 α points. Color = status (green ✅ done · yellow 🔄 in flight · grey ⏳ queued).
 
 ```mermaid
-flowchart LR
-  ROOT[Phase 1 campaign]
+flowchart TB
+  M[Qwen-2.5-14B-Instruct<br/>L24]
 
-  ROOT --> Q7[Qwen-2.5-7B<br/>L15]
-  ROOT --> Q14[Qwen-2.5-14B<br/>L24]
-  ROOT --> L8[Llama-3.1-8B<br/>L16]
-  ROOT --> G9[Gemma-2-9b<br/>L20]
-  ROOT --> G12[Gemma-3-12b<br/>L23]
+  M --> DS_med[Medical]
+  M --> DS_fin[Finance]
+  M --> DS_spo[Sports]
 
-  Q7 --> Q7d[3 datasets:<br/>medical / finance / sports]
-  Q14 --> Q14d[3 datasets:<br/>medical / finance / sports]
-  L8 --> L8d[3 datasets]
-  G9 --> G9d[3 datasets]
-  G12 --> G12d[3 datasets]
+  %% ---- Medical branch ----
+  DS_med --> med_base[Base]
+  DS_med --> med_em[EM-LoRA]
 
-  Q7d --> Q7v[2 variants:<br/>base / EM-LoRA]
-  Q14d --> Q14v[2 variants]
-  L8d --> L8v[2 variants]
-  G9d --> G9v[2 variants]
-  G12d --> G12v[2 variants]
+  med_base --> med_base_fra[FRA]
+  med_base --> med_base_cv[Conv]
+  med_base --> med_base_dom[DoM]
+  med_base_fra --> med_base_fra_ln1[ln1]
+  med_base_cv --> med_base_cv_ln1[ln1]
+  med_base_cv --> med_base_cv_mid[resid_mid]
+  med_base_cv --> med_base_cv_post[resid_post]
+  med_base_dom --> med_base_dom_w[whole-layer resid]
 
-  Q7v --> Q7m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1<br/>+ Arditi-SAE@residpost extras]
-  Q14v --> Q14m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
-  L8v --> L8m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
-  G9v --> G9m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA@ln1]
-  G12v --> G12m[Methods per cell:<br/>DoM · ConvSAE@ ln1/mid/post · FRA-OV@ln1<br/>No FRA-QK on G3 due to QK-norm]
+  med_em --> med_em_fra[FRA]
+  med_em --> med_em_cv[Conv]
+  med_em --> med_em_dom[DoM]
+  med_em_fra --> med_em_fra_ln1[ln1]
+  med_em_cv --> med_em_cv_ln1[ln1]
+  med_em_cv --> med_em_cv_mid[resid_mid]
+  med_em_cv --> med_em_cv_post[resid_post]
+  med_em_dom --> med_em_dom_w[whole-layer resid]
 
-  Q7m --> Q7e[15 GPU runs/cell<br/>×6 cells = 90 runs core<br/>+ Arditi extras]
-  Q14m --> Q14e[15 GPU runs/cell<br/>×6 cells = 90 runs]
-  L8m --> L8e[15 GPU runs/cell<br/>×6 cells = 90 runs]
-  G9m --> G9e[15 GPU runs/cell<br/>×6 cells = 90 runs]
-  G12m --> G12e[13 GPU runs/cell<br/>×6 cells = 78 runs]
+  %% ---- Finance branch ----
+  DS_fin --> fin_base[Base]
+  DS_fin --> fin_em[EM-LoRA]
 
+  fin_base --> fin_base_fra[FRA]
+  fin_base --> fin_base_cv[Conv]
+  fin_base --> fin_base_dom[DoM]
+  fin_base_fra --> fin_base_fra_ln1[ln1]
+  fin_base_cv --> fin_base_cv_ln1[ln1]
+  fin_base_cv --> fin_base_cv_mid[resid_mid]
+  fin_base_cv --> fin_base_cv_post[resid_post]
+  fin_base_dom --> fin_base_dom_w[whole-layer resid]
+
+  fin_em --> fin_em_fra[FRA]
+  fin_em --> fin_em_cv[Conv]
+  fin_em --> fin_em_dom[DoM]
+  fin_em_fra --> fin_em_fra_ln1[ln1]
+  fin_em_cv --> fin_em_cv_ln1[ln1]
+  fin_em_cv --> fin_em_cv_mid[resid_mid]
+  fin_em_cv --> fin_em_cv_post[resid_post]
+  fin_em_dom --> fin_em_dom_w[whole-layer resid]
+
+  %% ---- Sports branch ----
+  DS_spo --> spo_base[Base]
+  DS_spo --> spo_em[EM-LoRA]
+
+  spo_base --> spo_base_fra[FRA]
+  spo_base --> spo_base_cv[Conv]
+  spo_base --> spo_base_dom[DoM]
+  spo_base_fra --> spo_base_fra_ln1[ln1]
+  spo_base_cv --> spo_base_cv_ln1[ln1]
+  spo_base_cv --> spo_base_cv_mid[resid_mid]
+  spo_base_cv --> spo_base_cv_post[resid_post]
+  spo_base_dom --> spo_base_dom_w[whole-layer resid]
+
+  spo_em --> spo_em_fra[FRA]
+  spo_em --> spo_em_cv[Conv]
+  spo_em --> spo_em_dom[DoM]
+  spo_em_fra --> spo_em_fra_ln1[ln1]
+  spo_em_cv --> spo_em_cv_ln1[ln1]
+  spo_em_cv --> spo_em_cv_mid[resid_mid]
+  spo_em_cv --> spo_em_cv_post[resid_post]
+  spo_em_dom --> spo_em_dom_w[whole-layer resid]
+
+  %% ---- status classes ----
   classDef done fill:#d4f4dd,stroke:#22a06b,color:#0a4d2f
   classDef inflight fill:#fff3cd,stroke:#b88800,color:#6b4f00
   classDef queued fill:#e8e8ec,stroke:#999,color:#555
-  classDef blocked fill:#fde2e1,stroke:#a40000,color:#a40000
 
-  class Q7,Q7d,Q7v,Q7m,Q7e done
-  class Q14,Q14d,Q14v,Q14m,Q14e inflight
-  class L8,L8d,L8v,L8m,L8e inflight
-  class G9,G9d,G9v,G9m,G9e queued
-  class G12,G12d,G12v,G12m,G12e queued
+  %% medical leaves
+  class med_em_fra_ln1,med_em_cv_ln1,med_em_cv_mid,med_em_cv_post done
+  class med_base_fra_ln1,med_base_cv_ln1,med_base_dom_w,med_em_dom_w inflight
+  class med_base_cv_mid,med_base_cv_post queued
+
+  %% finance leaves
+  class fin_em_fra_ln1,fin_em_cv_ln1,fin_em_cv_mid,fin_em_cv_post done
+  class fin_base_fra_ln1,fin_base_cv_ln1,fin_base_cv_mid,fin_base_cv_post,fin_base_dom_w,fin_em_dom_w queued
+
+  %% sports leaves
+  class spo_em_fra_ln1,spo_em_cv_ln1,spo_em_cv_mid,spo_em_cv_post done
+  class spo_base_fra_ln1,spo_base_cv_ln1,spo_base_cv_mid,spo_base_cv_post,spo_base_dom_w,spo_em_dom_w queued
 ```
+
+The same tree applies to every other model (Qwen-7B, Llama-8B, Gemma-9B, Gemma-3-12B) — only the model-name root and per-leaf status changes. Notes per model:
+
+- **Qwen-2.5-7B (L15)** — has all 24 leaves at unified ±20 grid: EM-medical leaves ✅ done; finance / sports / base leaves ❌ not scheduled. Plus extra Arditi-SAE @ resid_post leaves (top-10 base ✅ done, top-200 EM-medical 🔄 in flight to network volume).
+- **Llama-3.1-8B (L16)** — all leaves currently 🔄 in flight via LLaMA orchestrator.
+- **Gemma-2-9b (L20)** — medical-EM leaves ⛔ blocked (pod reaped). Finance-EM leaves 🔄 in flight. Other leaves ⏳ queued.
+- **Gemma-3-12b (L23)** — finance-EM leaves 🔄 in flight. FRA-QK leaves permanently 🚫 not reported (QK-norm). Only FRA-OV leaves are valid.
 
 ```mermaid
 flowchart TB
