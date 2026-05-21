@@ -209,6 +209,85 @@ SAE training done. DoM extracts done. Sweeps queued/in-flight via LLaMA orchestr
 
 ---
 
+## What still needs to be done — per model
+
+Excludes anything already ✅ done. Each row is a coherent batch of GPU runs (one (dataset, variant, method, hookpoint) tuple × 3 seeds).
+
+### Qwen-2.5-7B (L15)
+
+| Remaining | Status | GPU runs | Cost | Wall time |
+|---|---|---|---|---|
+| Arditi top-200 on EM-medical | 🔄 in flight (→ network volume `autoresearch-fra`) | 12 (4 shards × 3 seeds) | ~$45 | ~5h |
+| finance × {base, EM} × {DoM, ConvSAE-ln1, FRA-ln1} | ❌ not scheduled | 18 | ~$25 | ~2h parallel |
+| sports × {base, EM} × {DoM, ConvSAE-ln1, FRA-ln1} | ❌ not scheduled | 18 | ~$25 | ~2h parallel |
+| **Add resid_mid / resid_post SAEs (training)** | ❌ no SAE exists at these hookpoints | 1 H100 (cache once, train 2) | ~$25 | ~6h |
+| ConvSAE-mid + ConvSAE-post on all 6 cells (after SAE) | ❌ blocked on SAE training | 36 | ~$50 | ~2h parallel |
+
+**Qwen-7B total to fill in:** 84 runs after Arditi finishes, ~$170, ~10h wall time (with parallelism).
+
+### Qwen-2.5-14B (L24) — focus model
+
+EM at the canonical 3 hookpoints already exists at ±6 grid (in `temp_xc/em_neg6/streams/`). New work is:
+
+| Remaining | Status | GPU runs | Cost | Wall time |
+|---|---|---|---|---|
+| medical × {base, EM} × {DoM, ConvSAE-ln1, FRA-ln1} at ±20 | 🔄 in flight (medical-v2 + base wave) | ~18 in flight, 12 left | (running) | ~30-60 min |
+| finance × {base, EM} × {DoM, ConvSAE-ln1, FRA-ln1} at ±20 | ⏳ queued | 18 | ~$54 | ~2h parallel |
+| sports × {base, EM} × {DoM, ConvSAE-ln1, FRA-ln1} at ±20 | ⏳ queued | 18 | ~$54 | ~2h parallel |
+| **base × ConvSAE-{mid, post}** × 3 datasets | ⏳ newly dispatched | 18 | ~$54 | ~2h parallel |
+| Optional: EM × ConvSAE-{mid, post} × 3 datasets at ±20 (re-run to match grid) | ❌ not scheduled | 18 | ~$54 | ~2h |
+
+**Qwen-14B total to fill the convention (without optional EM ±20 re-run):** 66 new runs, ~$216, ~6-8h with parallel waves.
+
+### Llama-3.1-8B (L16)
+
+SAE training only covered ln1. To honor the convention we need resid_mid + resid_post SAEs too.
+
+| Remaining | Status | GPU runs | Cost | Wall time |
+|---|---|---|---|---|
+| All 6 cells × {DoM, ConvSAE-ln1, FRA-ln1} at ±20 | 🔄 in flight (Stream C) | 54 | ~$80 | ~6-8h |
+| **Train resid_mid + resid_post SAEs at L16** | ❌ not trained | 1 H100 | ~$25 | ~6h |
+| All 6 cells × ConvSAE-{mid, post} (after SAE) | ❌ blocked on SAE | 36 | ~$50 | ~2-4h |
+
+**Llama-3.1-8B total to fill convention:** 90 runs + SAE training, ~$155.
+
+### Gemma-2-9b (L20)
+
+⚠ Orchestrator pod was reaped. All Gemma-2 work needs re-bootstrap.
+
+| Remaining | Status | GPU runs | Cost | Wall time |
+|---|---|---|---|---|
+| Re-bootstrap Gemma-2 orchestrator (CPU pod) | ❌ | 1 CPU pod | ~$0.10/h | 30 min setup |
+| Re-train ln1 + resid_mid + resid_post SAEs at L20 (if checkpoints lost) | ⛔ checkpoints not bundled | 1 H100 | ~$25 | ~6h |
+| All 6 cells × {DoM, ConvSAE-ln1/mid/post, FRA-ln1} at ±20 | ⛔ data lost / never run | 90 | ~$135 | ~6-8h |
+
+**Gemma-2-9b total:** 90 runs + maybe SAE re-train, ~$160. **Or drop this stream** since the paper uses Gemma-3, not Gemma-2.
+
+### Gemma-3-12b (L23)
+
+⚠ Same: orchestrator pod was reaped. SAE training never completed (TL/Gemma-3 compatibility issues).
+
+| Remaining | Status | GPU runs | Cost | Wall time |
+|---|---|---|---|---|
+| Re-bootstrap orchestrator | ❌ | 1 CPU pod | ~$0.10/h | 30 min setup |
+| Train ln1 + resid_mid + resid_post SAEs at L23 via **raw HF hooks** (TL doesn't support G3) | ⛔ needs raw-HF activation extraction pipeline | 1 H100 | ~$25 | ~6h |
+| All 6 cells × {DoM, ConvSAE-ln1/mid/post, FRA-OV-only @ ln1} at ±20 | ⛔ blocked on SAE | 78 (FRA-QK skipped per option 3) | ~$120 | ~6-8h |
+
+**Gemma-3-12b total:** ~$150, ~12-15h end-to-end.
+
+### Grand summary of "what's left"
+
+| Model | New runs | Cost | Notes |
+|---|---|---|---|
+| Qwen-7B | 84 | ~$170 | Plus 2 SAE trainings |
+| **Qwen-14B (focus)** | **66** | **~$216** | Already partly running |
+| Llama-8B | 90 | ~$155 | Plus 2 SAE trainings |
+| Gemma-2-9b | 90 | ~$160 | Re-bootstrap needed; consider dropping |
+| Gemma-3-12b | 78 | ~$150 | Re-bootstrap; SAE via raw HF |
+| **Total** | **408** | **~$850** | If we want full convention coverage |
+
+---
+
 ## Total compute footprint at unified grid
 
 | Model | Cells | GPU runs/cell | Total runs | Avg $/h | Est. total cost |
