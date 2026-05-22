@@ -163,6 +163,128 @@ def rank_dep_vs_clean(
     }
 
 
+@torch.no_grad()
+def rank_ov_diff(
+    A: torch.Tensor,              # (B, n_heads, T_q, T_k)
+    z_ln1: torch.Tensor,          # (B, T_k, d_sae)
+    sae_ln1: TopKSAE,
+    W_V: torch.Tensor,            # (n_heads, d_model, d_head)
+    W_O: torch.Tensor,            # (n_heads, d_head, d_model)
+    is_deployment: torch.Tensor,  # (B,) bool
+    query_mask: torch.Tensor | None = None,  # (B, T_q) bool
+) -> dict[str, torch.Tensor]:
+    """Target-free OV feature ranking (diff regime).
+
+    No downstream target direction needed. For each ln1 SAE feature λ:
+
+        M[b,h,q,λ]   = Σ_k A[b,h,q,k] · z[b,k,λ]
+        diff_M[h,λ]   = mean_{b∈dep, q∈qm}[M] - mean_{b∈cln, q∈qm}[M]
+        diff_vec[λ]   = Σ_h diff_M[h,λ] · (W_dec[λ] @ W_OV^h)   ∈ R^d_model
+        score[λ]      = ‖diff_vec[λ]‖₂
+
+    Contrast with the target regime where score[λ] = diff_vec[λ] · d (signed
+    scalar projection onto a downstream direction d).
+    """
+    device = A.device
+    A = A.float()
+    z = z_ln1.to(device).float()
+    is_dep = is_deployment.to(device)
+
+    # M[b,h,q,λ] = Σ_k A[b,h,q,k] · z[b,k,λ]
+    M = torch.einsum("bhqk,bkf->bhqf", A, z)        # (B, n_heads, T_q, d_sae)
+
+    if query_mask is not None:
+        qm = query_mask.to(device).float()
+        M = M * qm.unsqueeze(1).unsqueeze(-1)        # broadcast over heads, features
+        denom_dep = qm[is_dep].sum().clamp(min=1.0)
+        denom_cln = qm[~is_dep].sum().clamp(min=1.0)
+    else:
+        T_q = M.shape[2]
+        denom_dep = float(is_dep.sum().item()) * T_q
+        denom_cln = float((~is_dep).sum().item()) * T_q
+
+    M_dep = M[is_dep].sum(dim=(0, 2)) / denom_dep   # (n_heads, d_sae)
+    M_cln = M[~is_dep].sum(dim=(0, 2)) / denom_cln
+    del M
+    diff_M = M_dep - M_cln                          # (n_heads, d_sae)
+
+    W_V_ = W_V.to(device).float()
+    W_O_ = W_O.to(device).float()
+    W_OV = torch.einsum("hmd,hde->hme", W_V_, W_O_) # (n_heads, d_model, d_model)
+
+    W_dec = sae_ln1.W_dec.detach().to(device).float()            # (d_sae, d_model)
+    W_OV_feats = torch.einsum("fd,hde->hfe", W_dec, W_OV)        # (n_heads, d_sae, d_model)
+
+    diff_contrib = torch.einsum("hf,hfd->fd", diff_M, W_OV_feats) # (d_sae, d_model)
+    score = diff_contrib.norm(dim=-1)                              # (d_sae,)
+
+    return {
+        "score":       score,
+        "top_indices": torch.argsort(score, descending=True),
+        "diff_M":      diff_M,
+        "diff_contrib": diff_contrib,
+    }
+
+
+@torch.no_grad()
+def rank_qk_diff(
+    z_ln1: torch.Tensor,          # (B, T, d_sae)
+    sae_ln1: TopKSAE,
+    W_Q: torch.Tensor,            # (n_heads, d_model, d_head)
+    W_K: torch.Tensor,            # (n_heads, d_model, d_head)
+    is_deployment: torch.Tensor,  # (B,) bool
+    query_mask: torch.Tensor | None = None,  # (B, T) bool — prompt positions (Q-side)
+    key_mask: torch.Tensor | None = None,    # (B, T) bool — defaults to all positions
+) -> dict[str, torch.Tensor]:
+    """Target-free QK feature-pair ranking (diff regime).
+
+    Ranks pairs (λ_q, λ_k) by the magnitude of their expected pre-softmax
+    attention logit contribution difference between deployment and clean prompts.
+    No softmax Jacobian approximation needed (works directly on logits).
+
+        QK_total[λ_q,λ_k] = Σ_h (W_dec@W_Q^h)[λ_q] · (W_dec@W_K^h)[λ_k]
+        Z_q[b,λ]  = Σ_{q∈qm} z[b,q,λ]       (query-side aggregate)
+        Z_k[b,λ]  = Σ_{s∈km} z[b,s,λ]       (key-side aggregate)
+        score[λ_q,λ_k] = |QK_total[λ_q,λ_k]| · |mean_dep[Z_q·Z_k] - mean_cln[Z_q·Z_k]|
+
+    Returns (d_sae, d_sae) score matrix plus flattened sort indices.
+    """
+    device = z_ln1.device
+    z = z_ln1.float()
+    is_dep = is_deployment.to(device)
+
+    qm = query_mask.to(device).float().unsqueeze(-1) if query_mask is not None else None
+    km = key_mask.to(device).float().unsqueeze(-1)   if key_mask  is not None else None
+
+    Z_q = (z * qm).sum(dim=1) if qm is not None else z.sum(dim=1)  # (B, d_sae)
+    Z_k = (z * km).sum(dim=1) if km is not None else z.sum(dim=1)  # (B, d_sae)
+
+    N_dep = is_dep.sum().clamp(min=1).float()
+    N_cln = (~is_dep).sum().clamp(min=1).float()
+    outer_dep = Z_q[is_dep].T  @ Z_k[is_dep]  / N_dep   # (d_sae, d_sae)
+    outer_cln = Z_q[~is_dep].T @ Z_k[~is_dep] / N_cln
+    diff_outer = outer_dep - outer_cln                   # (d_sae, d_sae)
+
+    W_Q_ = W_Q.to(device).float()
+    W_K_ = W_K.to(device).float()
+    W_dec = sae_ln1.W_dec.detach().to(device).float()   # (d_sae, d_model)
+    Q_feats = torch.einsum("fd,hde->hfe", W_dec, W_Q_)  # (n_heads, d_sae, d_head)
+    K_feats = torch.einsum("fd,hde->hfe", W_dec, W_K_)  # (n_heads, d_sae, d_head)
+    QK_total = torch.einsum("hfd,hgd->fg", Q_feats, K_feats)  # (d_sae, d_sae)
+
+    score = (QK_total * diff_outer).abs()               # (d_sae, d_sae)
+    flat  = torch.argsort(score.flatten(), descending=True)
+    d_sae = z_ln1.shape[-1]
+
+    return {
+        "score":       score,
+        "top_pairs_q": flat // d_sae,
+        "top_pairs_k": flat %  d_sae,
+        "QK_total":    QK_total,
+        "diff_outer":  diff_outer,
+    }
+
+
 def select_features(
     contrib: torch.Tensor,              # (B, n_heads, T_q, d_sae_ln1) from ov_attribution
     is_deployment: torch.Tensor,        # (B,) bool

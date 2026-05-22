@@ -34,7 +34,7 @@ RESID_MID     = "blocks.0.hook_resid_mid"
 N_SEL         = 100
 SEQ_LEN       = 128
 SCREEN_ALPHAS = [2.0, 4.0]
-TOP_K         = 20
+DEFAULT_TOP_K = 20
 GEN_TOKENS    = 16
 N_SEEDS       = 6
 
@@ -43,8 +43,10 @@ N_SEEDS       = 6
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--seeds", type=int, nargs="+", default=list(range(N_SEEDS)))
+    p.add_argument("--top_k", type=int, default=DEFAULT_TOP_K)
     p.add_argument("--out", type=Path, default=Path("results/downstream_winners_6seeds.json"))
     args = p.parse_args()
+    TOP_K = args.top_k
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model  = load_sleeper_model(device=device)
@@ -72,7 +74,7 @@ def main() -> None:
     print(f"[downstream] baseline dep-logp = {base_logp:.4f}")
 
     sampler = make_greedy_sampler()
-    out: dict = {}
+    out: dict = json.loads(args.out.read_text()) if args.out.exists() else {}
 
     for seed in args.seeds:
         path = Path(f"weights/seeds/sae_resid_mid_s{seed}.pt")
