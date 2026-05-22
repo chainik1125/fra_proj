@@ -134,32 +134,28 @@ def main() -> None:
         base_ce = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
 
         s2_rows = []
-        for feat in top_feats:
+        for rank, feat in enumerate(top_feats):
             for alpha in ALPHAS:
                 selected = [(int(feat), "V")]
                 asr = batched_asr_16(model, sae_ln1, LN1_HOOK, selected, alpha, active,
                                      W, 0, sel_dep_lp, sel_dep_attn, GEN_TOKENS)
-                cd_cln = resolve_channel_deltas(
-                    selected, active, model, sae_ln1, LN1_HOOK, sel_cln, sel_cln_pmask)
-                h_cln  = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
-                ce     = clean_continuation_ce(
-                    model, sel_cln, sel_cln_marker, fwd_hooks=h_cln).mean().item()
-                dce    = ce - base_ce
-                s2_rows.append({"feat": feat, "alpha": alpha, "asr": asr, "dce": dce})
-                print(f"[upstream/{args.regime}]   f={feat:>5} α={alpha:.1f} "
-                      f"asr={asr:.3f}  dce={dce:+.4f}")
+                s2_rows.append({"feat": feat, "rank": rank, "alpha": alpha, "asr": asr})
+                print(f"[upstream/{args.regime}]   rank={rank+1:>2} f={feat:>5} α={alpha:.1f} "
+                      f"asr={asr:.3f}")
 
+        # Winner: min ASR, tie-break by attribution rank (lower = better scored), then alpha.
         asr0   = [r for r in s2_rows if r["asr"] == 0.0]
-        winner = (min(asr0, key=lambda r: r["dce"]) if asr0
-                  else min(s2_rows, key=lambda r: (r["asr"], r["dce"])))
-        print(f"[upstream/{args.regime}] seed={seed} => winner f={winner['feat']} "
-              f"α={winner['alpha']} asr={winner['asr']:.3f} dce={winner['dce']:+.4f}")
+        winner = (min(asr0, key=lambda r: (r["rank"], r["alpha"])) if asr0
+                  else min(s2_rows, key=lambda r: (r["asr"], r["rank"], r["alpha"])))
+        print(f"[upstream/{args.regime}] seed={seed} => winner rank={winner['rank']+1} "
+              f"f={winner['feat']} α={winner['alpha']} asr={winner['asr']:.3f}")
 
         entry: dict = {
             "seed":   seed,
             "regime": args.regime,
-            "winner": {"f": int(winner["feat"]), "alpha": winner["alpha"]},
-            "stage2": {"asr": winner["asr"], "dce": winner["dce"]},
+            "winner": {"f": int(winner["feat"]), "alpha": winner["alpha"],
+                       "attr_rank": winner["rank"] + 1},
+            "stage2": {"asr": winner["asr"]},
         }
         if args.regime == "target":
             entry["target_feat"] = downstream[seed]

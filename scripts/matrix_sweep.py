@@ -2,8 +2,25 @@
 
 attr ∈ {ov, qk, qk+ov}  ×  intervene ∈ {ov, qk, qk+ov} — choose one of each.
 
-Per cell: top-20 feature tuples → Δlogp screen (analytic delta) →
-          batched ASR + ΔCE for top stage2_keep → winner by min ASR then min ΔCE.
+Two attribution regimes (--regime):
+
+  target (default)
+    OV attribution projects onto a downstream target direction d = sae_mid.W_enc[:, target_feat].
+    QK attribution uses the softmax-Jacobian linearization with beta from compute_ov_weights.
+    QK+OV uses the full Möbius triple decomposition (triple_eval).
+    Requires --sae_mid and --target_feature.
+
+  diff
+    Target-free attribution — no downstream SAE or target feature needed.
+    OV diff: score[λ] = ‖Σ_h diff_M[h,λ] · (W_dec[λ]@W_OV^h)‖₂
+      where diff_M[h,λ] = mean_dep[Σ_k A·z] − mean_cln[Σ_k A·z]
+    QK diff: score[λ_q,λ_k] = |QK_total[λ_q,λ_k]| · |mean_dep[Z_q·Z_k] − mean_cln[...]|
+      (works directly on pre-softmax logits, no softmax-Jacobian needed)
+    QK+OV diff: product-of-marginals triplet ranking — candidates from top-K Q,K,V
+      diff features, scored by q_score[μ] × k_score[ν] × v_score[λ].
+
+Per cell: top-20 feature tuples → greedy ASR sweep (all tuples × alphas) →
+          winner by min ASR, tie-break by attribution rank, then alpha.
 
 Run multiple invocations to fill different cells; their JSON outputs share
 the same schema and `render_matrix_results.py` will lay them out in the
@@ -18,13 +35,16 @@ from pathlib import Path
 
 import torch
 
-from sleeper.attribution import compute_ov_weights, ov_attribution, rank_dep_vs_clean
+from sleeper.attribution import (
+    compute_ov_weights, ov_attribution, rank_dep_vs_clean,
+    rank_ov_diff, rank_qk_diff,
+)
 from sleeper.hooks import (
     ACTIVE_CHANNELS, build_hooks, generate_with_hooks, make_sampling_sampler,
     resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, batched_asr_16, clean_continuation_ce, teacher_forced_sleeper_logp,
+    asr_16, batched_asr_16, clean_continuation_ce,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -79,26 +99,7 @@ def _build_clean_lsm(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
 
 
 # ---------------------------------------------------------------------------
-# analytic ln1-space channel deltas (no model forward pass)
-# ---------------------------------------------------------------------------
-
-def _analytic_cd(z, W_dec, tup, active, pmf):
-    """Channel deltas from pre-cached SAE codes z (B,T,d_sae), W_dec on cpu."""
-    natural = {c: [f for (f, ch) in tup if ch == c] for c in ("Q", "K", "V")}
-    all_f   = list({f for (f, _) in tup})
-    cd: dict[str, torch.Tensor] = {}
-    for c in active:
-        feats = natural[c] or all_f
-        delta = None
-        for f in feats:
-            d = -z[..., f:f+1] * W_dec[f] * pmf   # (B, T, d_model)
-            delta = d if delta is None else delta + d
-        cd[c] = delta
-    return cd
-
-
-# ---------------------------------------------------------------------------
-# attribution helpers — build top-20 tuples, populate shared cache
+# shared activation cache
 # ---------------------------------------------------------------------------
 
 def _ensure_attr_cache(model, sae_ln1, attr_split, device, cache):
@@ -108,6 +109,10 @@ def _ensure_attr_cache(model, sae_ln1, attr_split, device, cache):
         cache["ln1_acts"] = acts[LN1_HOOK]
         cache["z_ln1"]    = encode_all(sae_ln1, acts[LN1_HOOK]).to(device)
 
+
+# ---------------------------------------------------------------------------
+# target-regime attribution helpers
+# ---------------------------------------------------------------------------
 
 def _ensure_beta(model, sae_ln1, sae_mid, target_feat, attr_split, attr_pmask, device, cache):
     _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
@@ -134,6 +139,7 @@ def _ensure_qk(model, sae_ln1, sae_mid, target_feat, attr_split, attr_pmask, dev
 
 @torch.no_grad()
 def get_tuples(attr, args, model, sae_ln1, sae_mid, attr_split, attr_pmask, device, cache):
+    """Target-regime feature tuple selection."""
     _ensure_qk(model, sae_ln1, sae_mid, args.target_feature, attr_split, attr_pmask, device, cache)
 
     if attr == "ov":
@@ -164,37 +170,123 @@ def get_tuples(attr, args, model, sae_ln1, sae_mid, attr_split, attr_pmask, devi
 
 
 # ---------------------------------------------------------------------------
-# screen + eval
+# diff-regime attribution helpers
+# ---------------------------------------------------------------------------
+
+def _ensure_ov_diff(model, sae_ln1, W_V, W_O, attr_split, attr_pmask, device, cache):
+    """Cache diff-regime OV ranking (no downstream target needed)."""
+    _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
+    if "ov_diff" not in cache:
+        cache["ov_diff"] = rank_ov_diff(
+            cache["A"], cache["z_ln1"], sae_ln1, W_V, W_O,
+            attr_split.is_deployment.to(device),
+            query_mask=attr_pmask.to(device),
+        )
+
+
+def _ensure_qk_diff(model, sae_ln1, W_Q, W_K, attr_split, attr_pmask, device, cache):
+    """Cache diff-regime QK pair ranking (no softmax-Jacobian needed)."""
+    _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
+    if "qk_diff" not in cache:
+        cache["qk_diff"] = rank_qk_diff(
+            cache["z_ln1"], sae_ln1, W_Q, W_K,
+            attr_split.is_deployment.to(device),
+            query_mask=attr_pmask.to(device),
+        )
+
+
+def _top_unique_from_pairs(pairs_q: list, pairs_k: list, top_k: int):
+    """Extract top unique Q and K feature indices from sorted (q,k) pair lists."""
+    q_feats: list[int] = []
+    k_feats: list[int] = []
+    seen_q: set[int] = set()
+    seen_k: set[int] = set()
+    for q, k in zip(pairs_q, pairs_k):
+        if len(q_feats) < top_k and q not in seen_q:
+            q_feats.append(int(q)); seen_q.add(q)
+        if len(k_feats) < top_k and k not in seen_k:
+            k_feats.append(int(k)); seen_k.add(k)
+        if len(q_feats) >= top_k and len(k_feats) >= top_k:
+            break
+    return q_feats, k_feats
+
+
+@torch.no_grad()
+def get_tuples_diff(attr, args, model, sae_ln1, W, W_O, attr_split, attr_pmask, device, cache):
+    """Diff-regime feature tuple selection (no downstream SAE needed).
+
+    OV diff:
+      score[λ] = ‖Σ_h diff_M[h,λ] · (W_dec[λ]@W_OV^h)‖₂
+      Top-k V features by score.
+
+    QK diff:
+      score[λ_q,λ_k] = |QK_total[λ_q,λ_k]| · |mean_dep[Z_q·Z_k] − mean_cln[...]|
+      Pairs sorted by joint score; top-k unique Q features from Q-side of top pairs,
+      top-k unique K features from K-side of top pairs, paired positionally.
+
+    QK+OV diff:
+      Product-of-marginals triplet ranking. Per-feature Q and K marginal scores from
+      max over the joint QK pair score matrix. Triplet score: q_marg[μ]·k_marg[ν]·v[λ].
+      No Möbius decomposition or target direction required.
+    """
+    _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
+
+    if attr in ("qk", "qk+ov"):
+        _ensure_qk_diff(model, sae_ln1, W["Q"], W["K"], attr_split, attr_pmask, device, cache)
+
+    ov_score = cache["ov_diff"]["score"].cpu()  # (d_sae,)
+
+    if attr == "ov":
+        order = cache["ov_diff"]["top_indices"].cpu().tolist()[:args.top_k]
+        return [[(int(f), "V")] for f in order]
+
+    top_pairs_q = cache["qk_diff"]["top_pairs_q"].cpu().tolist()
+    top_pairs_k = cache["qk_diff"]["top_pairs_k"].cpu().tolist()
+    q_feats, k_feats = _top_unique_from_pairs(top_pairs_q, top_pairs_k, args.top_k)
+
+    if attr == "qk":
+        n = min(len(q_feats), len(k_feats), args.top_k)
+        return [[(q_feats[i], "Q"), (k_feats[i], "K")] for i in range(n)]
+
+    # qk+ov: product-of-marginals scoring over top-K^3 candidates
+    qk_score_mat = cache["qk_diff"]["score"].cpu()  # (d_sae, d_sae)
+    q_marginal = qk_score_mat.max(dim=1).values      # (d_sae,) — max over K-side per Q feat
+    k_marginal = qk_score_mat.max(dim=0).values      # (d_sae,) — max over Q-side per K feat
+
+    cands = generate_triplet_candidates(
+        q_marginal, k_marginal, ov_score,
+        args.triple_k, args.triple_k, args.triple_k,
+    )
+    q_idx = cands[:, 0]; k_idx = cands[:, 1]; v_idx = cands[:, 2]
+    trip_scores = q_marginal[q_idx] * k_marginal[k_idx] * ov_score[v_idx]
+    top = torch.argsort(trip_scores, descending=True)[:args.top_k].tolist()
+    selected = [(int(cands[i, 0]), int(cands[i, 1]), int(cands[i, 2])) for i in top]
+    return [[(mu, "Q"), (nu, "K"), (lam, "V")] for (mu, nu, lam) in selected]
+
+
+# ---------------------------------------------------------------------------
+# ASR sweep — replaces analytic screen + stage2
 # ---------------------------------------------------------------------------
 
 @torch.no_grad()
-def screen(model, dep, tuples, active, z_dep, W_dec, dep_pmask_cpu, alphas, W, base_logp, device):
-    pmf  = dep_pmask_cpu.float().unsqueeze(-1)
-    rows = []
-    for ti, tup in enumerate(tuples):
-        cd     = _analytic_cd(z_dep, W_dec, tup, active, pmf)
-        cd_dev = {c: d.to(device) for c, d in cd.items()}
-        for alpha in alphas:
-            hooks = build_hooks(cd_dev, alpha, set(cd_dev), W, LN1_HOOK, 0)
-            logp  = teacher_forced_sleeper_logp(model, model.tokenizer, dep,
-                                                fwd_hooks=hooks).mean().item()
-            rows.append({"ti": ti, "alpha": alpha, "dlogp": logp - base_logp})
-    return rows
+def asr_sweep(model, sae_ln1, tuples, active, alphas,
+              dep_lp, dep_attn, cln, cln_marker, W, gen_tokens, base_ce, device):
+    """Sweep all tuples × alphas with batched greedy ASR.
 
-
-@torch.no_grad()
-def stage2(model, sae_ln1, tuples, active, candidates,
-           dep_lp, dep_attn, cln, cln_marker, W, gen_tokens, base_ce, device):
+    No analytic pre-screen. Returns rows sorted by (asr, ti, alpha) so the
+    caller can pick the winner by min ASR, tie-break by attribution rank (ti).
+    ΔCE is logged for diagnostics but not used for selection.
+    """
     cln_pmask = prompt_mask_from_markers(cln.shape[1], cln_marker.cpu()).to(device)
     rows = []
-    for ti, alpha in candidates:
-        sel = tuples[ti]
-        asr = batched_asr_16(model, sae_ln1, LN1_HOOK, sel, alpha, active,
-                              W, 0, dep_lp, dep_attn, gen_tokens)
-        cd_cln = resolve_channel_deltas(sel, active, model, sae_ln1, LN1_HOOK, cln, cln_pmask)
-        h_cln  = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
-        ce     = clean_continuation_ce(model, cln, cln_marker, fwd_hooks=h_cln).mean().item()
-        rows.append({"ti": ti, "alpha": alpha, "asr": asr, "dce": ce - base_ce})
+    for ti, tup in enumerate(tuples):
+        for alpha in alphas:
+            asr = batched_asr_16(model, sae_ln1, LN1_HOOK, tup, alpha, active,
+                                  W, 0, dep_lp, dep_attn, gen_tokens)
+            cd_cln = resolve_channel_deltas(tup, active, model, sae_ln1, LN1_HOOK, cln, cln_pmask)
+            h_cln  = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
+            ce     = clean_continuation_ce(model, cln, cln_marker, fwd_hooks=h_cln).mean().item()
+            rows.append({"ti": ti, "alpha": alpha, "asr": asr, "dce": ce - base_ce})
     return rows
 
 
@@ -260,13 +352,17 @@ def eval_winner(
 @torch.no_grad()
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--regime",          choices=["target", "diff"], default="target",
+                   help="Attribution regime: 'target' (needs downstream SAE) or "
+                        "'diff' (target-free dep-vs-clean difference).")
     p.add_argument("--seeds",          type=int,   nargs="+", default=[1, 2, 3, 4])
-    p.add_argument("--sae_mid",        type=Path,  default=Path("weights/sae_resid_mid.pt"))
-    p.add_argument("--target_feature", type=int,   default=579)
+    p.add_argument("--sae_mid",        type=Path,  default=Path("weights/sae_resid_mid.pt"),
+                   help="Downstream resid_mid SAE (only used with --regime target).")
+    p.add_argument("--target_feature", type=int,   default=579,
+                   help="Target feature in sae_mid (only used with --regime target).")
     p.add_argument("--top_k",          type=int,   default=20)
     p.add_argument("--triple_k",       type=int,   default=8)
     p.add_argument("--alphas",         type=float, nargs="+", default=[2.0, 4.0])
-    p.add_argument("--stage2_keep",    type=int,   default=10)
     p.add_argument("--n_sel",          type=int,   default=200,
                    help="prompts in the selection split (100 dep + 100 clean)")
     p.add_argument("--n_eval",         type=int,   default=200,
@@ -285,11 +381,16 @@ def main():
     args = p.parse_args()
 
     device  = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-    sae_mid, _ = sae_load(args.sae_mid, device=device)
     model   = load_sleeper_model(device=device)
     tok     = model.tokenizer
     pad_id  = tok.pad_token_id or tok.eos_token_id
     W       = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
+    W_O     = model.W_O[0].detach().to(device)   # (n_heads, d_head, d_model) — diff regime only
+
+    if args.regime == "target":
+        sae_mid, _ = sae_load(args.sae_mid, device=device)
+    else:
+        sae_mid = None
 
     # Two disjoint splits: selection (every stage that picks a winner) and
     # eval (held-out, the only numbers we report). load_paired_dataset's
@@ -302,10 +403,9 @@ def main():
     sel_pmask  = prompt_mask_from_markers(128, sel_split.story_marker_pos)
     eval_pmask = prompt_mask_from_markers(128, eval_split.story_marker_pos)
 
-    sel_dep         = sel_split.tokens[sel_split.is_deployment].to(device)
-    sel_dep_pmask   = sel_pmask[sel_split.is_deployment].to(device)
-    sel_cln         = sel_split.tokens[~sel_split.is_deployment].to(device)
-    sel_cln_marker  = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
+    sel_dep        = sel_split.tokens[sel_split.is_deployment].to(device)
+    sel_cln        = sel_split.tokens[~sel_split.is_deployment].to(device)
+    sel_cln_marker = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
 
     # Variable-length dep prompts for ASR / JSD — split at the same boundary.
     raw_dep        = load_dep_prompts(tok, args.n_sel + args.n_eval, split="test")
@@ -318,7 +418,6 @@ def main():
     sel_dep_lp,  sel_dep_attn  = sel_dep_lp.to(device),  sel_dep_attn.to(device)
     eval_dep_lp, eval_dep_attn = eval_dep_lp.to(device), eval_dep_attn.to(device)
 
-    sel_base_logp = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
     sel_base_ce   = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
     eval_base_asr_per_seed = _multi_seed_asr(
         model, None, [], 0.0, set(), W,
@@ -326,7 +425,8 @@ def main():
         seeds=args.eval_seeds, temperature=args.eval_temperature, device=device,
     )
     eval_base_asr = sum(eval_base_asr_per_seed) / len(eval_base_asr_per_seed)
-    print(f"[mx] sel  baseline: dep_logp={sel_base_logp:.3f}  cln_CE={sel_base_ce:.4f}")
+    print(f"[mx] regime={args.regime}  cell: {args.attr}×{args.intervene}")
+    print(f"[mx] sel  baseline: cln_CE={sel_base_ce:.4f}")
     print(f"[mx] eval baseline: asr={eval_base_asr:.3f} "
           f"(sampled, seeds={args.eval_seeds}, T={args.eval_temperature})")
 
@@ -337,73 +437,61 @@ def main():
     )
 
     all_results = []
-    cell = (args.attr, args.intervene)
-    print(f"[mx] cell: {args.attr}×{args.intervene}")
 
     for seed in args.seeds:
         sae_ln1, _ = sae_load(Path(f"weights/seeds/sae_ln1_s{seed}.pt"), device=device)
-        W_dec = sae_ln1.W_dec.detach().cpu().float()
         print(f"\n[mx] ══ seed={seed} ══")
-
-        z_sel_dep        = encode_all(sae_ln1,
-                                      cache_activations(model, sel_dep.cpu(),
-                                                        [LN1_HOOK])[LN1_HOOK]).cpu()
-        sel_dep_pmask_cpu = sel_dep_pmask.cpu()
         attr_cache: dict = {}
 
         for attr in [args.attr]:
             # Attribution runs on the selection split.
-            tuples = get_tuples(attr, args, model, sae_ln1, sae_mid,
-                                sel_split, sel_pmask, device, attr_cache)
-            print(f"[mx]   attr={attr}: {len(tuples)} tuples  first={tuples[0]}")
+            if args.regime == "target":
+                tuples = get_tuples(attr, args, model, sae_ln1, sae_mid,
+                                    sel_split, sel_pmask, device, attr_cache)
+            else:
+                tuples = get_tuples_diff(attr, args, model, sae_ln1, W, W_O,
+                                         sel_split, sel_pmask, device, attr_cache)
+            print(f"[mx]   attr={attr} ({args.regime}): {len(tuples)} tuples  first={tuples[0]}")
 
             for intervene in [args.intervene]:
                 active = ACTIVE_CHANNELS[intervene]
 
-                # ── Selection: screen → stage-2 → winner pick on sel_* data ──
-                scr = screen(model, sel_dep, tuples, active, z_sel_dep, W_dec,
-                             sel_dep_pmask_cpu, args.alphas, W, sel_base_logp, device)
-                scr.sort(key=lambda r: r["dlogp"])
-                s2 = [(r["ti"], r["alpha"]) for r in scr[:args.stage2_keep]]
-
-                ev_sel = stage2(model, sae_ln1, tuples, active, s2,
-                                sel_dep_lp, sel_dep_attn, sel_cln, sel_cln_marker, W,
-                                args.gen_tokens, sel_base_ce, device)
-
-                asr0   = [r for r in ev_sel if r["asr"] == 0.0]
-                winner = (min(asr0, key=lambda r: r["dce"]) if asr0
-                          else min(ev_sel, key=lambda r: r["asr"]))
-                sel_dlogp = next(r["dlogp"] for r in scr
-                                 if r["ti"] == winner["ti"] and r["alpha"] == winner["alpha"])
+                # ── Selection: greedy ASR sweep over all top-K tuples × alphas ──
+                # Winner: min ASR, tie-break by attribution rank (ti), then alpha.
+                sweep = asr_sweep(model, sae_ln1, tuples, active, args.alphas,
+                                  sel_dep_lp, sel_dep_attn, sel_cln, sel_cln_marker,
+                                  W, args.gen_tokens, sel_base_ce, device)
+                asr0   = [r for r in sweep if r["asr"] == 0.0]
+                winner = (min(asr0,  key=lambda r: (r["ti"], r["alpha"])) if asr0
+                          else min(sweep, key=lambda r: (r["asr"], r["ti"], r["alpha"])))
                 sel_w  = tuples[winner["ti"]]
                 alpha  = winner["alpha"]
+                print(f"[mx]   {attr}×{intervene}: sel winner "
+                      f"tuple={sel_w} α={alpha} attr_rank={winner['ti']+1} "
+                      f"asr={winner['asr']:.3f} ΔCE={winner['dce']:+.4f}")
 
-                # ── Eval: rerun the eval metrics on held-out eval_* data ──
+                # ── Eval: held-out eval_* data ──
                 eval_m = eval_winner(
                     model, sae_ln1, sel_w, alpha, active, W,
                     eval_dep_lp, eval_dep_attn,
                     eval_clean_lsm, args.gen_tokens, device,
                     eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
                 )
-
-                print(f"[mx]   {attr}×{intervene}: "
-                      f"tuple={sel_w} α={alpha}  "
-                      f"sel(asr={winner['asr']:.3f} Δlogp={sel_dlogp:+.3f} "
-                      f"ΔCE={winner['dce']:+.4f})  "
-                      f"eval(asr={eval_m['asr']:.3f} "
-                      f"jsd_clean={eval_m['jsd_clean']:.4f})")
+                print(f"[mx]   {attr}×{intervene}: eval  "
+                      f"asr={eval_m['asr']:.3f}  jsd_clean={eval_m['jsd_clean']:.4f}")
 
                 all_results.append({
                     "seed": seed, "attr": attr, "intervene": intervene,
+                    "regime": args.regime,
                     "winner_tuple": [list(t) for t in sel_w],
                     "alpha": alpha,
                     "selection": {
-                        "asr":        winner["asr"],
-                        "delta_logp": sel_dlogp,
-                        "delta_ce":   winner["dce"],
+                        "asr":       winner["asr"],
+                        "attr_rank": winner["ti"] + 1,
+                        "delta_ce":  winner["dce"],
                     },
                     "eval": eval_m,
-                    "screen": scr, "stage2": ev_sel,
+                    "sweep": sweep,
                 })
 
     # summary table — held-out eval numbers only
@@ -421,7 +509,8 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "config": vars(args) | {"seeds": args.seeds,
-                                "cell": f"{args.attr}×{args.intervene}"},
+                                "cell": f"{args.attr}×{args.intervene}",
+                                "regime": args.regime},
         "decoding": {
             "selection_asr": {"mode": "greedy"},
             "eval_asr":      {"mode": "sample", "temperature": args.eval_temperature,
@@ -431,7 +520,7 @@ def main():
                                "clean_seed": JSD_CLEAN_SEED},
         },
         "baseline": {
-            "selection": {"dep_logp": sel_base_logp, "clean_ce": sel_base_ce},
+            "selection": {"clean_ce": sel_base_ce},
             "eval":      {"asr": eval_base_asr, "asr_per_seed": eval_base_asr_per_seed},
         },
         "results": all_results,
