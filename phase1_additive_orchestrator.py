@@ -137,12 +137,12 @@ def rank_features_by_diff(sae, diff_vector: torch.Tensor, top_k: int = 50) -> li
     hookpoint as the SAE was trained on.  Features whose decoder direction
     most aligns with Δa are most "EM-specific" in that subspace.
     """
-    W_dec = sae.W_dec.float()  # [d_sae, d_model]
-    delta = diff_vector.float().to(W_dec.device)
-    delta_unit = delta / (delta.norm() + 1e-12)
-    # Normalize each decoder column too
-    W_dec_norms = W_dec.norm(dim=-1, keepdim=True) + 1e-12
-    cos_sim = (W_dec / W_dec_norms) @ delta_unit
+    W_dec = sae.W_dec  # [d_sae, d_model] — keep native dtype to avoid 2GB intermediate on bf16 SAEs
+    delta = diff_vector.to(W_dec.device).to(W_dec.dtype)
+    dots = W_dec @ delta  # [d_sae]
+    norms = W_dec.norm(dim=-1) + 1e-12  # [d_sae]
+    delta_norm = delta.norm() + 1e-12
+    cos_sim = (dots / (norms * delta_norm)).float()
     return torch.topk(cos_sim, top_k).indices.cpu().tolist()
 
 
