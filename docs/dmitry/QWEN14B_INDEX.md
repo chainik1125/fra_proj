@@ -2,6 +2,15 @@
 
 Every (dataset, variant, method, hookpoint, seed) run, with explicit storage location and how to extract its data. Six (dataset, variant) sub-tables.
 
+## Reading order
+
+| If you want to know… | Read |
+|---|---|
+| What numbers came out of the EM-LoRA Conv-SAE / FRA campaign | [`phase1_results.md`](../../phase1_results.md) |
+| Why we redid the conventional steering on 14B *base* (Arditi-style diff-ranking + constant-additive hook) and what we got | [`arditi_our_pipeline.md § Section 2`](../../arditi_our_pipeline.md#section-2--qwen-25-14b-base--14b-base--why-we-redid-the-conventional-steering) |
+| Where every single (dataset, variant, method, hookpoint, seed) trajectory lives on HF and how to extract one | this file (below) |
+| What's running vs queued at the campaign level | [`QWEN14B_DISPATCH_STATUS.md`](QWEN14B_DISPATCH_STATUS.md) |
+
 ## Canonical storage roots
 
 All combined JSONs live on HuggingFace at **`dmanningcoe/fra-phase1-steering-data`** (private dataset). Use `hf://datasets/dmanningcoe/fra-phase1-steering-data/<path>` URI in `huggingface_hub.HfApi.hf_hub_download(...)` or `pd.read_json(...)`. Resolve URLs (for `curl`) are `https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/resolve/main/<path>`.
@@ -170,6 +179,9 @@ For Qwen-14B at the convention (DoM + Conv×3 + FRA-ln1 emitting 3 sub-condition
 ---
 
 ## Results — ConvSAE-diff-constadd × base (2026-05-22)
+
+**Full motivation and protocol description:** [`arditi_our_pipeline.md § Section 2`](../../arditi_our_pipeline.md#section-2--qwen-25-14b-base--14b-base--why-we-redid-the-conventional-steering).
+That section explains why the EM-LoRA ConvSAE protocol can't transplant to base verbatim (the ranked features don't fire on base, so the activation-weighted hook becomes an α-invariant no-op) and details the two fixes — diff-cossim ranking + constant-magnitude hook.
 
 Δalignment over the safe-coherence window (coh ≥ 70), mean ± std across seeds {42, 123, 456}:
 

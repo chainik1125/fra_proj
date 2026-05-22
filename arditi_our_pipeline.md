@@ -1,4 +1,15 @@
-# Arditi SAE × our pipeline (Qwen-2.5-7B + bad-medical, L15 resid_post)
+# Arditi-protocol SAE steering × our pipeline
+
+Two model scales, same protocol:
+
+1. **Qwen-2.5-7B + bad-medical, L15 resid_post** (the original LW-post replication; see below).
+2. **Qwen-2.5-14B base, L24 {ln1_nura, resid_mid, resid_post}** (campaign that completed 2026-05-22; see the [14B base section](#14b-base--why-we-redid-the-conventional-steering)).
+
+The 14B run is *not* a straight copy of the 7B work — we had to change two pieces of the Arditi recipe to make it work on a base model that wasn't trained for the misalignment direction. See the 14B section for the diagnosis and the fix.
+
+---
+
+# Section 1 — Qwen-2.5-7B + bad-medical, L15 resid_post
 
 Goal: evaluate `andyrdt/saes-qwen2.5-7b-instruct/resid_post_layer_15/trainer_1`
 on the same 10 named L15 features used in the LessWrong post
@@ -196,3 +207,132 @@ the activation-diff rescaling. They can't — we tried it.
   a feature that flips MC cleanly can still produce subtle free-form
   swings, and vice versa. A direct apples-to-apples requires running
   their MC eval too — queued as a follow-up.
+
+---
+
+# Section 2 — Qwen-2.5-14B base · 14B base — why we redid the conventional steering
+
+## Question
+
+The 7B work above replicates a paper whose model was specifically the
+`andyrdt/Qwen2.5-7B-Instruct_bad-medical` LoRA-merged checkpoint —
+i.e. an emergently-misaligned model where the relevant features *fire*
+on the prompts at issue. Our 14B story is different: we already have
+EM-LoRA steering numbers on Qwen-2.5-14B for medical/finance/sports
+(see [`phase1_results.md`](phase1_results.md) and the *EM-LoRA* rows of
+[`docs/dmitry/QWEN14B_INDEX.md`](docs/dmitry/QWEN14B_INDEX.md)). The
+natural next question, in Arditi's framing, is the *base-model*
+control:
+
+> Steer `Qwen-2.5-14B-Instruct` (base, no LoRA) **using a direction
+> derived from the EM-LoRA's activation pattern**, and ask whether the
+> SAE features the Arditi protocol selects actually move the base
+> model's behaviour. If they do, the SAE feature is a "misalignment
+> persona" direction independent of the LoRA; if they don't, the SAE
+> features were riding the LoRA-induced activations and there's no
+> base-model handle on the same axis.
+
+The hookpoints we care about are the same three we use for the EM
+Conv-SAE additive: L24 ln1 (Nura's normalized-ln1 SAE), L24 resid_mid,
+L24 resid_post.
+
+## Why the EM-LoRA Conv-SAE protocol doesn't transfer as-is
+
+Our EM-LoRA Conv-SAE additive (e.g. `gpt4o_combined_L24_ln1_nura_medical.json`
+in `qwen14b/combined_neg6_em/`) uses a hook of the form
+
+```
+act ← act +  (α − 1) · Σᵢ f_i(act) · W_dec[i]      # "activation-weighted"
+```
+
+over a top-50 feature set selected by **mean |activation|** across the
+8 EM eval prompts on the *EM-LoRA model*. Two issues if you transplant
+this verbatim to base:
+
+1. **The feature-selection signal is wrong on base.** The features
+   that pile up activation on the *EM* model aren't the ones that
+   the SAE encodes the *misalignment direction* with — they're the
+   ones that happen to fire on the prompts post-LoRA. On the base
+   model, those same features may not fire at all, in which case
+   the ranker degenerates.
+
+2. **The hook itself zeroes out on base.** If the ranked features
+   don't fire on base (`f_i(act) ≈ 0`), then `Σᵢ f_i · W_dec[i] ≈ 0`,
+   so `α` becomes a no-op. Verified empirically before the protocol
+   change: responses on base were *identical* across α ∈ [−20, +20]
+   when running the activation-weighted hook with EM-ranked features.
+   See commit `04e5346`.
+
+Fixing one without fixing the other is not enough — you need a
+ranking signal that doesn't depend on base activations, *and* a hook
+whose magnitude doesn't depend on base activations.
+
+## The protocol (Arditi-style on base, single-direction analogue)
+
+| | EM-LoRA Conv-SAE (existing) | **14B base diff-constadd (new)** |
+|---|---|---|
+| feature ranker | top-50 by mean Σ\|f\| on EM model, over 8 EM eval prompts | top-50 by `cos(W_dec[i], Δa)` where `Δa = mean(act_EM) − mean(act_base)` at the SAE's hookpoint, all 48 layers precomputed |
+| Δa source | — | 8 EM eval prompts × answer-token average × (EM_LoRA model − base model) |
+| hook | `act ← act + (α−1) · Σᵢ f_i · W_dec[i]` (activation-weighted) | `act ← act + α · Σᵢ W_dec[i]` (constant magnitude, independent of current activations) |
+| α grid | {−6,…,+6} (paper-locked) | {−20,…,+20} (51 pts) — wider because the per-feature step is smaller |
+| model under hook | EM-LoRA | **base** |
+
+The hook is the same shape as Arditi's `ActivationSteerer(intervention_type="addition", positions="all")` from the LW post, modulo summing over a top-k feature set instead of using a single feature direction. The ranking is the SAE analogue of Arditi's: rank decoder columns by their alignment with the diff-in-means *steering direction*, not by which ones happen to be active.
+
+## Implementation
+
+- **`Δa` extractor**: `phase1_diff_actdiff_qwen14b.py` precomputes the activation diff on the 8 EM_EVAL_PROMPTS for one EM domain across all 48 layers × 3 canonical hookpoints. Output is a single `(48, 5120)` tensor per (domain, hookpoint) plus a metadata.json. Saved to HF under `Qwen14B_diff_vectors/{domain}/{hookpoint}.pt`. Sequential model loading to fit A100 80GB.
+- **Sweep**: `phase1_additive_orchestrator.py --em-model base --diff-source {domain} --additive-mode constant ...`. Reads the diff vector, ranks `top_k_features` SAE features by cos-sim, then sweeps α with the constant-additive hook.
+- **Judging**: re-uses `phase1_judge_and_combine.py`. We rename the per-pod files to `qualitative_<sae>_<domain>_evalseed<seed>_top50.json` (substituting `<domain>` for `<em_model>=base`) so the existing across-seeds combine groups by `(sae, domain)`. Combined JSONs land at `qwen14b/combined_constadd/`.
+
+## Headline results (Δalign over the safe-coherence window, coh ≥ 70)
+
+Mean ± std across seeds {42, 123, 456}:
+
+| domain | L24 ln1 (Nura) | L24 resid_mid | L24 resid_post |
+|---|---:|---:|---:|
+| medical | **15.2 ± 3.4** | 9.8 ± 1.6 | 11.5 ± 1.6 |
+| finance | **19.6 ± 3.8** | 11.5 ± 9.6 | 12.3 ± 5.2 |
+| sports  | **14.8 ± 2.8** | 11.2 ± 3.9 | **14.8 ± 3.7** |
+
+Figure: [`phase1_results/qwen14b_constadd.png`](phase1_results/qwen14b_constadd.png) (1×3 bar chart across (domain, hookpoint) plus a per-domain α-sweep panel).
+
+### Reading
+
+- `ln1_nura` (Nura's normalized-ln1 SAE) wins or ties on all three domains, same direction as the EM-LoRA campaign. The Arditi-protocol features at that hookpoint do produce a base-model behaviour swing.
+- Magnitude (Δalign 10–20) is roughly half what the EM-LoRA Conv-SAE additive achieves on the same SAE (28–39 in `phase1_results.md`). This is consistent with the Arditi reading: the EM LoRA puts the model partway down the persona direction, so steering covers less distance from base than from a model already partly along it.
+- `finance/resid_mid` std = 9.6 is the only noisy cell; worth a per-seed peek.
+
+## Bootstrap post-mortem (logged because it cost us a day)
+
+What looked like 12+ "stuck" RunPod pods during this campaign was actually output buffering. `print(..., flush=True)` is now wired into the orchestrator (commit `92b27e7`); the bootstrap also pipes through `stdbuf -oL tee` so the on-disk log is line-buffered. Driver fast-fail (require ≥ 575 because `requirements.txt` pins cu130 torch) avoids ~50 % attrition on A100-SXM4 hosts whose drivers don't satisfy cu130. `rank_features_by_diff` had a 2 GB intermediate (`W_dec / W_dec_norms` broadcast) that's been rewritten to use `[d_sae]`-shape intermediates only (commit `7ae5736`) — same result, less GPU memory pressure.
+
+## Reproduce
+
+```bash
+# 1) Δa precompute (once per (domain, hookpoint)).
+python3 phase1_diff_actdiff_qwen14b.py --domain medical --hookpoints ln1 resid_mid resid_post
+
+# 2) Sweep (per (sae, domain, seed)).
+python3 phase1_additive_orchestrator.py \
+    --em-model base --diff-source medical --additive-mode constant \
+    --eval-seed 42 --saes L24_ln1_nura \
+    --alphas -20 -18 -16 -14 -12 -10.0 -9.5 -9.0 ... 9.5 10.0 12 14 16 18 20 \
+    --output-root /workspace/qwen14b_cadd/L24_ln1_nura/medical_seed42
+
+# 3) Judge + combine across the 3 seeds (locally, OpenAI API).
+OPENAI_API_KEY="$OPENAI_API_KEY_MATS" \
+  python3 phase1_judge_and_combine.py --stream-root /tmp/qwen14b_constadd_judge
+
+# 4) Plot.
+python3 scripts/plot_qwen14b_constadd.py \
+    --combined-root /tmp/qwen14b_constadd_judge \
+    --out phase1_results/qwen14b_constadd
+```
+
+## Known caveats
+
+- **Δa is computed on 8 EM eval prompts only.** Same prompt budget as the steering eval. Variance estimate of `Δa` itself isn't reported.
+- **Single direction.** Δa is averaged over the answer-tokens *and* over the 8 prompts. No per-prompt or per-token decomposition.
+- **No single-feature variant yet.** The campaign here uses top-k=50 summed. The 7B Arditi LW replication is per-feature; that variant on 14B is queued as a follow-up.
+- **DoM (Soligo-style) baseline missing on 14B base.** The DoM rows in `QWEN14B_INDEX.md` are still ⏳ for base. Until that lands, we can't directly compare "Arditi-style SAE feature direction" vs "whole-layer mean-diff direction" on the same base model and same domains.
