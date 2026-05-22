@@ -22,10 +22,12 @@ can score everything.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import torch
@@ -33,6 +35,17 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fra.em_evaluation import EM_EVAL_PROMPTS, generate_with_hooks_batch
+
+# Quieter logs: silence cosmetic warnings, every print auto-flushes.
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+print = functools.partial(print, flush=True)  # type: ignore[assignment]
+_T0 = time.time()
+
+
+def _step(msg: str) -> None:
+    print(f"[{time.time() - _T0:6.1f}s] {msg}")
 
 
 # (id, hook_name, sae_source_kind, sae_path, layer)
@@ -60,7 +73,7 @@ def load_em_model(em_model: str, device: str = "cuda"):
         "sports":  "ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports",
     }
     name = EM_MODELS[em_model]
-    print(f"[load] {em_model} → {name}")
+    _step(f"[load] {em_model} → {name}")
     from transformers import AutoModelForCausalLM
     from transformer_lens import HookedTransformer
 
@@ -99,7 +112,7 @@ def load_sae_local(sae_id: str, source_kind: str, sae_path: str, layer: int, dev
         return sae
     # sae_lens checkpoint stored on HF under SURROUNDING_REPO
     from huggingface_hub import snapshot_download
-    print(f"  [{sae_id}] snapshot_download patterns={sae_path}/*")
+    _step(f"  [{sae_id}] snapshot_download patterns={sae_path}/*")
     local = snapshot_download(
         repo_id=SURROUNDING_REPO, repo_type="model",
         allow_patterns=[f"{sae_path}/*"],
@@ -155,8 +168,8 @@ def load_diff_vector(domain: str, hookpoint_id: str, layer: int,
     path = hf_hub_download(hf_repo, f"Qwen14B_diff_vectors/{domain}/{hookpoint_id}.pt",
                            repo_type="dataset")
     stack = torch.load(path, map_location="cpu")
-    print(f"  [diff] loaded Qwen14B_diff_vectors/{domain}/{hookpoint_id}.pt "
-          f"shape={tuple(stack.shape)}  L{layer}_norm={stack[layer].norm().item():.3f}")
+    _step(f"  [diff] loaded {domain}/{hookpoint_id}.pt "
+          f"shape={tuple(stack.shape)} L{layer}_norm={stack[layer].norm().item():.3f}")
     return stack[layer]
 
 
@@ -250,26 +263,22 @@ def main():
     prompts = EM_EVAL_PROMPTS[: args.n_prompts]
     per_prompt_seeds = [args.eval_seed + i for i in range(args.n_prompts)]
 
-    print(f"=== Phase 1 additive orchestrator ===")
-    print(f"  em_model       : {args.em_model}")
-    print(f"  eval_seed (base): {args.eval_seed}")
-    print(f"  per-prompt seeds: {per_prompt_seeds}")
-    print(f"  alphas         : {args.alphas}")
-    print(f"  prompts        : {len(prompts)}")
-    print(f"  top-k features : {args.top_k_features}")
+    _step("=== Phase 1 additive orchestrator ===")
+    _step(f"  em_model={args.em_model} eval_seed={args.eval_seed} "
+          f"alphas={len(args.alphas)} prompts={len(prompts)} top-k={args.top_k_features}")
 
     t_start = time.time()
     model = load_em_model(args.em_model, device=args.device)
     tokenizer = model.tokenizer
-    print(f"[load] model loaded in {time.time() - t_start:.1f}s")
+    _step(f"[load] model ready in {time.time() - t_start:.1f}s")
 
     specs = SAE_SPECS if args.saes is None else [s for s in SAE_SPECS if s[0] in args.saes]
 
     for sae_id, hook_name, source_kind, sae_path, layer in specs:
-        print(f"\n=== SAE: {sae_id}  hook={hook_name} ===")
+        _step(f"=== SAE: {sae_id} hook={hook_name} ===")
         t_sae = time.time()
         sae = load_sae_local(sae_id, source_kind, sae_path, layer, args.device)
-        print(f"  loaded SAE in {time.time() - t_sae:.1f}s "
+        _step(f"  SAE loaded in {time.time() - t_sae:.1f}s "
               f"(d_in={getattr(sae, 'd_in', None) or sae.cfg.d_in}, "
               f"d_sae={getattr(sae, 'd_sae', None) or sae.cfg.d_sae})")
 
@@ -287,8 +296,8 @@ def main():
             feature_ids = rank_features(model, sae, hook_name, prompts,
                                         top_k=args.top_k_features)
             rank_method = "|activation|"
-        print(f"  ranked top-{args.top_k_features} features by {rank_method} "
-              f"in {time.time() - t_rank:.1f}s (head 5: {feature_ids[:5]})")
+        _step(f"  ranked top-{args.top_k_features} by {rank_method} "
+              f"in {time.time() - t_rank:.1f}s (head5={feature_ids[:5]})")
 
         qualitative = []
         t_gen = time.time()
@@ -297,8 +306,9 @@ def main():
             if args.additive_mode == "constant"
             else make_additive_hook_batched
         )
-        print(f"  additive_mode  : {args.additive_mode}  (hook = {hook_factory.__name__})")
-        for alpha in args.alphas:
+        _step(f"  sweep start: mode={args.additive_mode} hook={hook_factory.__name__}")
+        n_alpha = len(args.alphas)
+        for idx, alpha in enumerate(args.alphas, start=1):
             t_cell = time.time()
             hooks = [(hook_name, hook_factory(sae, feature_ids, alpha))]
             responses = generate_with_hooks_batch(
@@ -308,7 +318,7 @@ def main():
                 temperature=args.temperature,
                 seed=per_prompt_seeds,
             )
-            print(f"  α={alpha:.1f}  {time.time() - t_cell:.1f}s")
+            _step(f"  α[{idx:2d}/{n_alpha}] = {alpha:+5.1f}  ({time.time() - t_cell:.1f}s)")
             for i, (prompt, response) in enumerate(zip(prompts, responses)):
                 qualitative.append({
                     "seed": per_prompt_seeds[i],
@@ -325,16 +335,16 @@ def main():
                     "eval_seed_base": args.eval_seed,
                 })
             torch.cuda.empty_cache()
-        print(f"  total gen for {sae_id}: {time.time() - t_gen:.1f}s")
+        _step(f"  sweep done in {time.time() - t_gen:.1f}s")
 
         out_path = out_root / f"qualitative_{sae_id}_{args.em_model}_evalseed{args.eval_seed}_top{args.top_k_features}.json"
         out_path.write_text(json.dumps(qualitative, indent=2, ensure_ascii=False))
-        print(f"  → {out_path} ({len(qualitative)} entries)")
+        _step(f"  wrote {out_path} ({len(qualitative)} entries)")
 
         del sae
         torch.cuda.empty_cache()
 
-    print(f"\n=== TOTAL stream time: {time.time() - t_start:.1f}s ===")
+    _step(f"=== TOTAL stream time: {time.time() - t_start:.1f}s ===")
 
 
 if __name__ == "__main__":

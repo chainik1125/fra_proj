@@ -2,7 +2,52 @@
 
 Updated by the Qwen orchestrator as it works. Pull this file (or watch on GitHub) to see real-time progress.
 
-**Last updated:** 2026-05-20 (initial, before any new dispatch)
+**Last updated:** 2026-05-22 — constadd diff-based campaign 27/27 ✓
+
+## Constant-additive × diff-ranked Conv-SAE campaign (Qwen-14B base) — 2026-05-22
+
+27 cells = 3 domains (medical, finance, sports) × 3 hookpoints (ln1_nura, resid_mid, resid_post) × 3 eval seeds (42, 123, 456). All uploaded under `Qwen14B_base/{domain}/Conv/{hp}/_debug_per_seed_diff_constadd/seed{seed}/qualitative_*.json`.
+
+| dataset | hookpoint | seeds | status |
+|---|---|---|---|
+| medical | ln1_nura | 42, 123, 456 | ✅ |
+| medical | resid_mid | 42, 123, 456 | ✅ |
+| medical | resid_post | 42, 123, 456 | ✅ |
+| finance | ln1_nura | 42, 123, 456 | ✅ |
+| finance | resid_mid | 42, 123, 456 | ✅ |
+| finance | resid_post | 42, 123, 456 | ✅ |
+| sports | ln1_nura | 42, 123, 456 | ✅ |
+| sports | resid_mid | 42, 123, 456 | ✅ |
+| sports | resid_post | 42, 123, 456 | ✅ |
+
+### Bootstrap post-mortem (apply to all future RunPod campaigns)
+
+What looked like 12+ "stuck" pods was actually output buffering. The orchestrator's `print()` calls don't `flush=True`, and `tee` in the bootstrap (`exec > >(tee /workspace/orch_user.log)`) was block-buffering. Result: the pod was sweeping at 28–45 s/α the whole time, but no progress appeared in the log until the buffer eventually flushed.
+
+Confirmed by: dispatching one H100 with `stdbuf -oL tee` + `python3 -u` + the existing orchestrator → every `α=` line appeared in real time → run completed in 1661 s with `upload OK`.
+
+Lessons baked into the orchestrator (commit `8e7be29` planned):
+
+- `print = functools.partial(print, flush=True)` at module load — every `print` auto-flushes.
+- `_step()` helper prefixes every line with elapsed seconds (`[ 47.2s]`) for grep-able timing.
+- Sweep prints `α[24/51] = +0.0  (27.7s)` so progress is visible at a glance.
+- `warnings.filterwarnings("ignore", ...)` for the three cosmetic warning classes (FutureWarning torch.load, UserWarning sae_lens, DeprecationWarning).
+
+Bootstrap conventions to keep:
+
+- `exec > >(stdbuf -oL tee /workspace/orch_user.log) 2>&1` — line-buffered tee.
+- `python3 -u phase1_additive_orchestrator.py ...` — Python-level unbuffered, belt-and-suspenders with the orchestrator's own `flush=True`.
+- Driver fast-fail: `if [ "$(nvidia-smi --query-gpu=driver_version ...)" lt 575 ]; then self-terminate; fi`. ~50 % of A100-SXM hosts have older drivers and can't run cu130 torch from `requirements.txt`. Self-terminate cleanly so RunPod can re-allocate; don't idle.
+- HF pre-check at pod start (and after pip install): if the target `qualitative_*.json` already exists for this cell, self-terminate. Lets you dispatch 2 replicas per cell without doubling the work.
+- Also useful when monitoring: `Monitor` tool with `ssh ... tail -F /workspace/orch_user.log | grep --line-buffered "α=|orchestrator exit|upload|Traceback|Error"` gives one notification per α step and per terminal event.
+
+### Real bug (separate from the buffering): `rank_features_by_diff` 2 GB intermediate
+
+Original code did `cos_sim = (W_dec / W_dec_norms) @ delta_unit` — the `W_dec / W_dec_norms` broadcast allocates a `[d_sae, d_model]` intermediate tensor (= 2 GB for `d_sae=102 400` fp32). Fixed in commit `7ae5736` to `dots / (norms * delta_norm)` — same result, only `[d_sae]`-shape intermediates (~400 KB). Did NOT cause the apparent hangs (those were buffering) but it is a real memory-pressure improvement on the large surrounding SAEs.
+
+---
+
+## Earlier (2026-05-20) dispatch tracker
 
 ## Status legend
 
