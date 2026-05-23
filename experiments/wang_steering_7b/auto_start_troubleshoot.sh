@@ -67,8 +67,12 @@ $BRIEF"
 # Hand off to Claude Code, headless, with full skips. DON'T exec — we want
 # to self-terminate cleanly after claude exits, so RunPod doesn't restart
 # us in a loop.
+#
+# IS_SANDBOX=1 tells claude-code we're in a containerized sandbox and root
+# is OK; without it `--dangerously-skip-permissions` refuses with
+# "cannot be used with root/sudo privileges for security reasons".
 echo "[$(date -u +%H:%M:%S)] handing off to claude"
-claude \
+IS_SANDBOX=1 claude \
     --dangerously-skip-permissions \
     --print \
     --output-format text \
