@@ -67,7 +67,11 @@ def log(msg: str) -> None:
 
 
 def graphql(query: str, variables: dict | None = None) -> dict:
-    """Call RunPod GraphQL with the babysitter's API key."""
+    """Call RunPod GraphQL with the babysitter's API key.
+
+    UA header is required — Cloudflare in front of the RunPod API issues
+    1010 "Access denied" without one (default urllib UA gets blocked).
+    """
     payload = json.dumps({"query": query, "variables": variables or {}}).encode()
     req = urllib.request.Request(
         "https://api.runpod.io/graphql",
@@ -75,6 +79,7 @@ def graphql(query: str, variables: dict | None = None) -> dict:
         headers={
             "Authorization": f"Bearer {RUNPOD_API_KEY}",
             "Content-Type": "application/json",
+            "User-Agent": "curl/8.0",
         },
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
