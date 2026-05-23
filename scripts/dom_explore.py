@@ -193,9 +193,9 @@ def main():
 
     # If extraction positions need "answer" tokens, append the model's own rollouts.
     if args.extract_positions == "answer":
-        # We need to run the model to get rollouts.
-        d_tok, _ = _gen(model, ext_dep, ext_dep_attn, [], device, capture=False)
-        c_tok, _ = _gen(model, ext_cln, ext_cln_attn, [], device, capture=False)
+        # _gen returns just the tokens when capture=False.
+        d_tok = _gen(model, ext_dep, ext_dep_attn, [], device, capture=False)
+        c_tok = _gen(model, ext_cln, ext_cln_attn, [], device, capture=False)
         ext_dep_full = torch.cat([ext_dep, d_tok], dim=1)
         ext_cln_full = torch.cat([ext_cln, c_tok], dim=1)
         ext_dep_attn_full = torch.cat([ext_dep_attn, ext_dep_attn.new_ones(d_tok.shape)], dim=1)
