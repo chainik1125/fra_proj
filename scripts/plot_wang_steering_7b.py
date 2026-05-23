@@ -170,83 +170,111 @@ def plot_trajectory(medical: dict, base: dict, top_rows: list, out: Path, k=5):
     print(f"  → {out}_traj.png / .pdf  (top-{k})")
 
 
-def plot_frontier(medical: dict, base: dict, out: Path):
-    """(coherence, alignment) Pareto frontier — for each model, scatter every
-    (feature, α) point in (coh, align) space and overlay the upper envelope
-    (max alignment for each coherence level). Side-by-side panels.
+def _collect_per_seed_points(data: dict, seed: int):
+    """Walk all (feature, α) entries; return arrays of (coh, align, α) for
+    the requested seed. A feature is skipped per-α if the seed isn't in
+    that entry's `seeds` list (happens because the Wang ranker landed on
+    slightly different top-50 sets across the 3 medical pods)."""
+    coh, al, alpha = [], [], []
+    for k, block in data.items():
+        for e in block["by_alpha"]:
+            seeds = e.get("seeds") or []
+            if seed not in seeds:
+                continue
+            idx = seeds.index(seed)
+            c = (e.get("per_seed_coherence") or [None]*(idx+1))[idx]
+            a = (e.get("per_seed_alignment") or [None]*(idx+1))[idx]
+            if c is None or a is None:
+                continue
+            coh.append(c); al.append(a); alpha.append(e["scale"])
+    return np.asarray(coh), np.asarray(al), np.asarray(alpha)
 
-    The frontier shows the achievable alignment-vs-coherence trade-off
-    given Wang's feature pool + the α grid. Points below/left of α=0
-    (baseline unsteered) cost coherence without gaining alignment.
+
+def _pareto_mask(coh: np.ndarray, al: np.ndarray) -> np.ndarray:
+    """Upper-right Pareto frontier: keep points not strictly dominated."""
+    is_frontier = np.zeros_like(coh, dtype=bool)
+    for i in range(len(coh)):
+        strictly = ((coh > coh[i]) & (al >= al[i])) | \
+                   ((coh >= coh[i]) & (al > al[i]))
+        if not strictly.any():
+            is_frontier[i] = True
+    return is_frontier
+
+
+def plot_frontier(medical: dict, base: dict, out: Path):
+    """Per-seed (coherence, alignment) Pareto frontier — 2 rows (medical,
+    base) × 3 cols (seeds 42, 123, 456). Each subplot scatters every
+    (feature, α) point that exists for that (em, seed) and overlays the
+    Pareto upper envelope.
+
+    Cell counts vary across (em, seed) because the Wang ranker is
+    non-deterministic at the seed-of-the-feature-id tail (medical pods
+    landed on slightly different top-50 sets per seed). Base pods all
+    used the same ranker output → identical 850 cells per seed.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4), sharey=True)
-    for ax, (em_label, data, color) in zip(axes, [
+    SEEDS = [42, 123, 456]
+    rows = [
         ("EM-medical", medical, COLOR_MED),
         ("base",       base,    COLOR_BASE),
-    ]):
-        coh_all, al_all, fid_all, alpha_all = [], [], [], []
-        for k, block in data.items():
-            fid = feat_id(k)
-            for e in block["by_alpha"]:
-                c = e.get("mean_coherence_across_seeds")
-                a = e.get("mean_alignment_across_seeds")
-                if c is None or a is None: continue
-                coh_all.append(c); al_all.append(a); fid_all.append(fid)
-                alpha_all.append(e["scale"])
-        coh_all = np.asarray(coh_all)
-        al_all  = np.asarray(al_all)
-        alpha_all = np.asarray(alpha_all)
-
-        # Pareto frontier: upper envelope by coherence.
-        order = np.argsort(coh_all)
-        # Walk left→right, keep running max of alignment but flip the
-        # condition: "frontier" = points where NO other point has both
-        # higher coh and higher align.
-        is_frontier = np.zeros_like(coh_all, dtype=bool)
-        for i in range(len(coh_all)):
-            dominated = (coh_all >= coh_all[i]) & (al_all >= al_all[i])
-            dominated[i] = False  # don't compare to self
-            # Strictly dominated requires at least one dim strictly greater
-            strictly = ((coh_all > coh_all[i]) & (al_all >= al_all[i])) | \
-                       ((coh_all >= coh_all[i]) & (al_all > al_all[i]))
-            if not strictly.any():
-                is_frontier[i] = True
-
-        # Scatter all points, color by |α| (stronger steering = darker)
-        sc = ax.scatter(coh_all, al_all, c=np.abs(alpha_all), cmap="viridis_r",
-                        s=12, alpha=0.55, edgecolors="none", zorder=2,
-                        vmin=0, vmax=2)
-        # Frontier overlay — connect frontier points sorted by coherence
-        fr_order = np.argsort(coh_all[is_frontier])
-        ax.plot(coh_all[is_frontier][fr_order],
-                al_all[is_frontier][fr_order],
-                "-", color=color, lw=2.0, zorder=4, label="Pareto frontier")
-        ax.scatter(coh_all[is_frontier], al_all[is_frontier],
-                   s=42, color=color, edgecolors="#222", linewidths=0.6,
-                   zorder=5)
-        # Mark α=0 (unsteered baseline) — average over all features
-        mask_alpha0 = np.isclose(alpha_all, 0.0)
-        if mask_alpha0.any():
-            ax.scatter(coh_all[mask_alpha0].mean(),
-                       al_all[mask_alpha0].mean(),
-                       marker="*", s=240, color="white", edgecolors="#222",
-                       linewidths=1.4, zorder=6, label=r"$\alpha$=0 mean")
-        ax.axvline(COH_FLOOR, color="#c0392b", lw=0.8, ls=":", zorder=1,
-                   label=f"coh = {int(COH_FLOOR)} floor")
-        ax.set_xlabel("coherence (mean across seeds)")
-        if em_label == "EM-medical":
-            ax.set_ylabel("alignment (mean across seeds)")
-        ax.set_title(f"{em_label}  ({len(coh_all)} (feature, α) cells)")
-        ax.set_xlim(-2, 105); ax.set_ylim(-2, 105)
-        ax.grid(True, color="#eee", lw=0.4); ax.set_axisbelow(True)
-        ax.legend(loc="lower left", fontsize=9)
-    cbar = fig.colorbar(sc, ax=axes, fraction=0.025, pad=0.02, shrink=0.85)
-    cbar.set_label(r"|$\alpha$|", fontsize=11)
-    fig.suptitle("Coherence-vs-alignment frontier — Wang's top-50 × {α∈[-2,+2]}")
+    ]
+    fig, axes = plt.subplots(len(rows), len(SEEDS),
+                             figsize=(4.4 * len(SEEDS), 4.4 * len(rows)),
+                             sharex=True, sharey=True)
+    sc = None
+    for ri, (em_label, data, color) in enumerate(rows):
+        for ci, seed in enumerate(SEEDS):
+            ax = axes[ri, ci]
+            coh, al, alpha = _collect_per_seed_points(data, seed)
+            if len(coh) == 0:
+                ax.text(0.5, 0.5, "no data\nfor this seed",
+                        transform=ax.transAxes, ha="center", va="center",
+                        color="#aa0000", fontsize=11)
+            else:
+                sc = ax.scatter(coh, al, c=np.abs(alpha), cmap="viridis_r",
+                                s=12, alpha=0.55, edgecolors="none",
+                                zorder=2, vmin=0, vmax=2)
+                is_fr = _pareto_mask(coh, al)
+                fr_idx = np.where(is_fr)[0]
+                fr_order = np.argsort(coh[fr_idx])
+                ax.plot(coh[fr_idx][fr_order], al[fr_idx][fr_order],
+                        "-", color=color, lw=1.8, zorder=4,
+                        label="Pareto frontier")
+                ax.scatter(coh[fr_idx], al[fr_idx], s=32, color=color,
+                           edgecolors="#222", linewidths=0.5, zorder=5)
+                mask_alpha0 = np.isclose(alpha, 0.0)
+                if mask_alpha0.any():
+                    ax.scatter(coh[mask_alpha0].mean(),
+                               al[mask_alpha0].mean(),
+                               marker="*", s=200, color="white",
+                               edgecolors="#222", linewidths=1.2, zorder=6,
+                               label=r"$\alpha$=0 mean")
+                ax.text(0.02, 0.98, f"n={len(coh)} cells",
+                        transform=ax.transAxes, va="top", ha="left",
+                        fontsize=8, color="#444",
+                        bbox=dict(facecolor="white", edgecolor="#ddd",
+                                  boxstyle="round,pad=0.2", lw=0.4))
+            ax.axvline(COH_FLOOR, color="#c0392b", lw=0.7, ls=":", zorder=1)
+            ax.set_xlim(-2, 105); ax.set_ylim(-2, 105)
+            ax.grid(True, color="#eee", lw=0.4); ax.set_axisbelow(True)
+            if ri == 0:
+                ax.set_title(f"seed = {seed}", fontsize=12)
+            if ri == len(rows) - 1:
+                ax.set_xlabel("coherence")
+            if ci == 0:
+                ax.set_ylabel(f"{em_label}\nalignment", fontsize=11)
+            if ri == 0 and ci == len(SEEDS) - 1:
+                ax.legend(loc="lower left", fontsize=8)
+    if sc is not None:
+        cbar = fig.colorbar(sc, ax=axes.ravel().tolist(),
+                            fraction=0.018, pad=0.015, shrink=0.7)
+        cbar.set_label(r"|$\alpha$|", fontsize=11)
+    fig.suptitle("Coherence vs alignment per seed — Wang top-50 × α-grid {−2..+2}\n"
+                 "(red dotted = coh=70 floor; star = α=0 mean; line = Pareto frontier)",
+                 fontsize=12, y=0.995)
     fig.savefig(f"{out}_frontier.png", dpi=200, bbox_inches="tight")
     fig.savefig(f"{out}_frontier.pdf", bbox_inches="tight")
     plt.close(fig)
-    print(f"  → {out}_frontier.png / .pdf")
+    print(f"  → {out}_frontier.png / .pdf  (per-seed 2×{len(SEEDS)} grid)")
 
 
 def main():
