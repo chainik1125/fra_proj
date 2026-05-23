@@ -33,15 +33,19 @@ if [ -z "$DRIVER_MAJOR" ]; then
     echo "[$(date -u +%H:%M:%S)] nvidia-smi never returned a driver version — abort (no self-terminate, let RunPod restart so we get a different host)"
     exit 1
 fi
-if [ "$DRIVER_MAJOR" -lt 575 ]; then
-    echo "[$(date -u +%H:%M:%S)] driver too old ($DRIVER_MAJOR < 575) — self-terminate"
+if [ "$DRIVER_MAJOR" -lt 525 ]; then
+    echo "[$(date -u +%H:%M:%S)] driver too old ($DRIVER_MAJOR < 525) — self-terminate"
     curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
         -H "Content-Type: application/json" \
         -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" \
         https://api.runpod.io/graphql >/dev/null
     exit 0
 fi
-echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed"
+# Threshold is 525 (cu124 baseline). The pip install step below replaces
+# the cu130 torch from requirements.txt with cu124 explicitly, so we only
+# need cu124-compatible drivers (525+). Previous 575 threshold was for the
+# stock cu130 torch; cost us 6 medical-s456 re-rolls before this fix.
+echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed (will use cu124 torch)"
 
 # ── HF pre-check: target already on HF → skip ─────────────────────────
 # Use curl + jq directly — huggingface_hub isn't on the base image's Python
@@ -79,6 +83,16 @@ echo "[$(date -u +%H:%M:%S)] pip install transformer_lens 3.x"
 pip install --no-input --break-system-packages -U 'transformer_lens>=3.0,<4.0' 2>&1 | tail -3
 echo "[$(date -u +%H:%M:%S)] pip install dictionary_learning + peft (Arditi SAE loader)"
 pip install --no-input --break-system-packages 'dictionary_learning' peft 2>&1 | tail -3
+
+# ── Replace requirements.txt's cu130 torch with cu124 (driver ≥525 compat) ─
+# Same trick we used in the 2026-05-22 constadd campaign to dodge the
+# driver-lottery problem. --force-reinstall replaces the cu130 build;
+# --no-deps means numpy/typing-extensions etc. installed by requirements.txt
+# are not touched.
+echo "[$(date -u +%H:%M:%S)] override torch to cu124 (driver ≥525 compat)"
+pip install --no-input --break-system-packages --force-reinstall --no-deps \
+    torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
+    --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -3
 
 # ── Sanity check ──────────────────────────────────────────────────────
 python3 -c "import torch; assert torch.cuda.is_available(); print(f'torch={torch.__version__} cuda={torch.version.cuda}')"
