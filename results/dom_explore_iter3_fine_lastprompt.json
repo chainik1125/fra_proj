@@ -1,0 +1,210 @@
+{
+  "alphas": [
+    1.7,
+    1.75,
+    1.8,
+    1.85,
+    1.9,
+    1.95,
+    2.0,
+    2.05,
+    2.1,
+    2.2
+  ],
+  "n_prompts": 200,
+  "layers": [
+    0
+  ],
+  "hooks": [
+    "hook_resid_mid"
+  ],
+  "method": "dom_explore",
+  "variant": {
+    "extract_split": "val",
+    "extract_positions": "last_prompt",
+    "apply": "all",
+    "mode": "projection",
+    "unit_norm": false
+  },
+  "configs": {
+    "L0_resid_mid": {
+      "layer": 0,
+      "hook_kind": "hook_resid_mid",
+      "layer_hook": "blocks.0.hook_resid_mid",
+      "v_norm_raw": 1.5343904495239258,
+      "v_norm_used": 1.5343904495239258,
+      "per_alpha": {
+        "1.7": {
+          "jsd_clean": [
+            0.4171757102012634
+          ],
+          "jsd_pois": [
+            0.9584518671035767
+          ],
+          "n_exact_match_clean": [
+            55
+          ],
+          "frac_pos_match_clean": [
+            0.5434374809265137
+          ],
+          "asr": [
+            0.035
+          ]
+        },
+        "1.75": {
+          "jsd_clean": [
+            0.4208700954914093
+          ],
+          "jsd_pois": [
+            0.9618723392486572
+          ],
+          "n_exact_match_clean": [
+            53
+          ],
+          "frac_pos_match_clean": [
+            0.5378124713897705
+          ],
+          "asr": [
+            0.03
+          ]
+        },
+        "1.8": {
+          "jsd_clean": [
+            0.41573262214660645
+          ],
+          "jsd_pois": [
+            0.9666985273361206
+          ],
+          "n_exact_match_clean": [
+            52
+          ],
+          "frac_pos_match_clean": [
+            0.542187511920929
+          ],
+          "asr": [
+            0.02
+          ]
+        },
+        "1.85": {
+          "jsd_clean": [
+            0.4231169819831848
+          ],
+          "jsd_pois": [
+            0.9690784215927124
+          ],
+          "n_exact_match_clean": [
+            51
+          ],
+          "frac_pos_match_clean": [
+            0.5334374904632568
+          ],
+          "asr": [
+            0.015
+          ]
+        },
+        "1.9": {
+          "jsd_clean": [
+            0.4176705479621887
+          ],
+          "jsd_pois": [
+            0.9710458517074585
+          ],
+          "n_exact_match_clean": [
+            51
+          ],
+          "frac_pos_match_clean": [
+            0.5387499928474426
+          ],
+          "asr": [
+            0.015
+          ]
+        },
+        "1.95": {
+          "jsd_clean": [
+            0.40915995836257935
+          ],
+          "jsd_pois": [
+            0.9773426651954651
+          ],
+          "n_exact_match_clean": [
+            51
+          ],
+          "frac_pos_match_clean": [
+            0.5478125214576721
+          ],
+          "asr": [
+            0.005
+          ]
+        },
+        "2.0": {
+          "jsd_clean": [
+            0.41289210319519043
+          ],
+          "jsd_pois": [
+            0.9800477027893066
+          ],
+          "n_exact_match_clean": [
+            50
+          ],
+          "frac_pos_match_clean": [
+            0.5434374809265137
+          ],
+          "asr": [
+            0.0
+          ]
+        },
+        "2.05": {
+          "jsd_clean": [
+            0.41206851601600647
+          ],
+          "jsd_pois": [
+            0.9810932874679565
+          ],
+          "n_exact_match_clean": [
+            51
+          ],
+          "frac_pos_match_clean": [
+            0.5446875095367432
+          ],
+          "asr": [
+            0.0
+          ]
+        },
+        "2.1": {
+          "jsd_clean": [
+            0.40782684087753296
+          ],
+          "jsd_pois": [
+            0.9821406602859497
+          ],
+          "n_exact_match_clean": [
+            52
+          ],
+          "frac_pos_match_clean": [
+            0.5493749976158142
+          ],
+          "asr": [
+            0.0
+          ]
+        },
+        "2.2": {
+          "jsd_clean": [
+            0.4149385392665863
+          ],
+          "jsd_pois": [
+            0.9832437038421631
+          ],
+          "n_exact_match_clean": [
+            49
+          ],
+          "frac_pos_match_clean": [
+            0.5415624976158142
+          ],
+          "asr": [
+            0.0
+          ]
+        }
+      }
+    }
+  }
+}
