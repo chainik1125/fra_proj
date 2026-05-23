@@ -71,8 +71,12 @@ echo "============================================================"
 echo "DONE — all seeds [$SEEDS] uploaded to https://huggingface.co/datasets/$HF_REPO"
 echo "============================================================"
 
-if [[ "$SELF_STOP" == "1" && -n "${RUNPOD_POD_ID:-}" ]]; then
+if [[ "$SELF_STOP" == "1" && -n "${RUNPOD_POD_ID:-}" && -n "${RUNPOD_API_KEY:-}" ]]; then
   echo "[run_on_pod] self-stopping pod $RUNPOD_POD_ID in 30s..."
   sleep 30
-  runpodctl stop pod "$RUNPOD_POD_ID" || true
+  curl -sS -X POST \
+    -H "Authorization: Bearer $RUNPOD_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"mutation { podStop(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) { id desiredStatus } }\"}" \
+    https://api.runpod.io/graphql || true
 fi

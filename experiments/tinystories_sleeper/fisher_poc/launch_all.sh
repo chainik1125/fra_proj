@@ -43,18 +43,17 @@ make_gpu_cmd() {
 bash -c "apt-get update >/dev/null && apt-get install -y -q git curl >/dev/null && \
   git clone --branch $BRANCH --single-branch $REPO_URL /workspace/fra_proj && \
   cd /workspace/fra_proj && \
-  HF_TOKEN='$HF_TOKEN' SEEDS='$seed' HF_REPO='$HF_REPO' SELF_STOP=1 \
+  HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' SEEDS='$seed' HF_REPO='$HF_REPO' SELF_STOP=1 \
   bash experiments/tinystories_sleeper/fisher_poc/auto_start_gpu.sh"
 EOF
 }
 
 make_cpu_cmd() {
   cat <<EOF
-bash -c "apt-get update >/dev/null && apt-get install -y -q git curl runpodctl >/dev/null 2>&1 || \
-  (apt-get install -y -q git curl >/dev/null) && \
+bash -c "apt-get update >/dev/null && apt-get install -y -q git curl >/dev/null && \
   git clone --branch $BRANCH --single-branch $REPO_URL /workspace/fra_proj && \
   cd /workspace/fra_proj && \
-  HF_TOKEN='$HF_TOKEN' SEEDS='$SEEDS' HF_REPO='$HF_REPO' SELF_STOP=1 \
+  HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' SEEDS='$SEEDS' HF_REPO='$HF_REPO' SELF_STOP=1 \
   bash experiments/tinystories_sleeper/fisher_poc/auto_start_cpu.sh"
 EOF
 }
@@ -80,7 +79,7 @@ gql_deploy() {
   "imageName": "$image",
   "cloudType": "SECURE",
   "computeType": "CPU",
-  "vcpuCount": 2,
+  "minVcpuCount": 2,
   "minMemoryInGb": 8,
   "containerDiskInGb": 20,
   "volumeInGb": 0,
@@ -98,7 +97,7 @@ JSON
   "cloudType": "SECURE",
   "gpuTypeId": "$gpu_type",
   "gpuCount": $gpu_count,
-  "vcpuCount": 4,
+  "minVcpuCount": 4,
   "minMemoryInGb": 24,
   "containerDiskInGb": 40,
   "volumeInGb": 0,

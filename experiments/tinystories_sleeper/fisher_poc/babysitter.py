@@ -32,9 +32,9 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -47,7 +47,32 @@ SEEDS = list(map(int, os.environ.get("SEEDS", "0 1 2 3 4").split()))
 POLL_SEC = int(os.environ.get("POLL_SEC", "300"))
 STALL_TIMEOUT_SEC = int(os.environ.get("STALL_TIMEOUT_SEC", "3600"))
 RUNPOD_POD_ID = os.environ.get("RUNPOD_POD_ID")
+RUNPOD_API_KEY = os.environ.get("RUNPOD_API_KEY")
 SELF_STOP = os.environ.get("SELF_STOP", "0") == "1"
+
+
+def runpod_stop_pod(pod_id: str) -> None:
+    """Stop a RunPod pod via GraphQL (independent of runpodctl install)."""
+    if not RUNPOD_API_KEY:
+        log("RUNPOD_API_KEY not set — cannot self-stop pod")
+        return
+    payload = json.dumps({
+        "query": "mutation Pod($id: String!) { podStop(input:{podId:$id}) { id desiredStatus } }",
+        "variables": {"id": pod_id},
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.runpod.io/graphql",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RUNPOD_API_KEY}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            log(f"podStop response: {resp.read().decode()[:300]}")
+    except Exception as e:
+        log(f"podStop failed: {e}")
 
 WORK = Path("/root/fisher_poc_babysit")
 WORK.mkdir(parents=True, exist_ok=True)
@@ -295,7 +320,7 @@ def main() -> None:
     if SELF_STOP and RUNPOD_POD_ID:
         log(f"self-stopping pod {RUNPOD_POD_ID}")
         time.sleep(15)
-        subprocess.run(["runpodctl", "stop", "pod", RUNPOD_POD_ID], check=False)
+        runpod_stop_pod(RUNPOD_POD_ID)
 
 
 if __name__ == "__main__":
