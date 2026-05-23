@@ -1,0 +1,45 @@
+# Fisher-guided clean-recovery POC, TinyStories-33M sleeper.
+# All paths are relative to experiments/tinystories_sleeper/.
+
+dataset:
+  split: test
+  n_train: 200       # only used by load_paired_dataset internally for sampling
+  n_val: 200
+  n_test: 200
+  seq_len: 128
+  seed: 0
+  batch_size: 64     # all test prompts fit in one batch on L40S/A40 with TinyStories-33M
+  deployment_only: true   # restrict to is_deployment=True prompts (where ASR is measured)
+
+# OV (FRA OV→OV) control space. SAE at LN1, intervention at blocks.0.attn.hook_v.
+fra_ov:
+  sae_path: recreate_ln1/results/crosscoder_sae_layer0.pt
+  ranking_path: recreate_ln1/results/feature_rankings_sae_layer0.json
+  K: 30                 # top-K candidate features
+
+# Conventional residual control space. SAE at hook_resid_mid (sae_layer1).
+resid_mid:
+  sae_path: recreate_layer0/results/crosscoder_sae_layer1.pt
+  ranking_path: recreate_layer0/results/feature_rankings_sae_layer1.json
+  K: 30
+
+# Experiment A: re-evaluate the existing 1-D alpha sweep under the Fisher metric.
+# Uses K=1 control sets; alphas matches existing fidelity-experiment grid.
+exp_a:
+  alphas: [-0.5, -0.25, 0.0, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0]
+  fra_ov_feature: 1412    # matches `single_ln1` in run_fidelity_experiment.py
+  resid_mid_feature: 88   # matches `single_x_mid` in run_fidelity_experiment.py
+
+# Experiment B: greedy diagonal Fisher across K candidates.
+exp_b:
+  num_steps: 12
+  target_step_jsd_bits: 1.0e-4
+  eps_fd: 1.0e-2
+  delta_cap: 5.0
+
+# Optional ASR validation (rollouts from steered model). Disabled by default —
+# add `--validate-asr` to opt in (more expensive).
+asr:
+  enabled: false
+  n_rollouts: 16
+  max_new_tokens: 16
