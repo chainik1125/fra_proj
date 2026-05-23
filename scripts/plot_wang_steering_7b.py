@@ -170,6 +170,85 @@ def plot_trajectory(medical: dict, base: dict, top_rows: list, out: Path, k=5):
     print(f"  → {out}_traj.png / .pdf  (top-{k})")
 
 
+def plot_frontier(medical: dict, base: dict, out: Path):
+    """(coherence, alignment) Pareto frontier — for each model, scatter every
+    (feature, α) point in (coh, align) space and overlay the upper envelope
+    (max alignment for each coherence level). Side-by-side panels.
+
+    The frontier shows the achievable alignment-vs-coherence trade-off
+    given Wang's feature pool + the α grid. Points below/left of α=0
+    (baseline unsteered) cost coherence without gaining alignment.
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4), sharey=True)
+    for ax, (em_label, data, color) in zip(axes, [
+        ("EM-medical", medical, COLOR_MED),
+        ("base",       base,    COLOR_BASE),
+    ]):
+        coh_all, al_all, fid_all, alpha_all = [], [], [], []
+        for k, block in data.items():
+            fid = feat_id(k)
+            for e in block["by_alpha"]:
+                c = e.get("mean_coherence_across_seeds")
+                a = e.get("mean_alignment_across_seeds")
+                if c is None or a is None: continue
+                coh_all.append(c); al_all.append(a); fid_all.append(fid)
+                alpha_all.append(e["scale"])
+        coh_all = np.asarray(coh_all)
+        al_all  = np.asarray(al_all)
+        alpha_all = np.asarray(alpha_all)
+
+        # Pareto frontier: upper envelope by coherence.
+        order = np.argsort(coh_all)
+        # Walk left→right, keep running max of alignment but flip the
+        # condition: "frontier" = points where NO other point has both
+        # higher coh and higher align.
+        is_frontier = np.zeros_like(coh_all, dtype=bool)
+        for i in range(len(coh_all)):
+            dominated = (coh_all >= coh_all[i]) & (al_all >= al_all[i])
+            dominated[i] = False  # don't compare to self
+            # Strictly dominated requires at least one dim strictly greater
+            strictly = ((coh_all > coh_all[i]) & (al_all >= al_all[i])) | \
+                       ((coh_all >= coh_all[i]) & (al_all > al_all[i]))
+            if not strictly.any():
+                is_frontier[i] = True
+
+        # Scatter all points, color by |α| (stronger steering = darker)
+        sc = ax.scatter(coh_all, al_all, c=np.abs(alpha_all), cmap="viridis_r",
+                        s=12, alpha=0.55, edgecolors="none", zorder=2,
+                        vmin=0, vmax=2)
+        # Frontier overlay — connect frontier points sorted by coherence
+        fr_order = np.argsort(coh_all[is_frontier])
+        ax.plot(coh_all[is_frontier][fr_order],
+                al_all[is_frontier][fr_order],
+                "-", color=color, lw=2.0, zorder=4, label="Pareto frontier")
+        ax.scatter(coh_all[is_frontier], al_all[is_frontier],
+                   s=42, color=color, edgecolors="#222", linewidths=0.6,
+                   zorder=5)
+        # Mark α=0 (unsteered baseline) — average over all features
+        mask_alpha0 = np.isclose(alpha_all, 0.0)
+        if mask_alpha0.any():
+            ax.scatter(coh_all[mask_alpha0].mean(),
+                       al_all[mask_alpha0].mean(),
+                       marker="*", s=240, color="white", edgecolors="#222",
+                       linewidths=1.4, zorder=6, label=r"$\alpha$=0 mean")
+        ax.axvline(COH_FLOOR, color="#c0392b", lw=0.8, ls=":", zorder=1,
+                   label=f"coh = {int(COH_FLOOR)} floor")
+        ax.set_xlabel("coherence (mean across seeds)")
+        if em_label == "EM-medical":
+            ax.set_ylabel("alignment (mean across seeds)")
+        ax.set_title(f"{em_label}  ({len(coh_all)} (feature, α) cells)")
+        ax.set_xlim(-2, 105); ax.set_ylim(-2, 105)
+        ax.grid(True, color="#eee", lw=0.4); ax.set_axisbelow(True)
+        ax.legend(loc="lower left", fontsize=9)
+    cbar = fig.colorbar(sc, ax=axes, fraction=0.025, pad=0.02, shrink=0.85)
+    cbar.set_label(r"|$\alpha$|", fontsize=11)
+    fig.suptitle("Coherence-vs-alignment frontier — Wang's top-50 × {α∈[-2,+2]}")
+    fig.savefig(f"{out}_frontier.png", dpi=200, bbox_inches="tight")
+    fig.savefig(f"{out}_frontier.pdf", bbox_inches="tight")
+    plt.close(fig)
+    print(f"  → {out}_frontier.png / .pdf")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--medical", required=True, help="combined JSON for em=medical")
@@ -193,6 +272,7 @@ def main():
 
     rows = plot_bars(medical, base, ranker_feats, out)
     plot_trajectory(medical, base, rows, out, k=args.top_k_traj)
+    plot_frontier(medical, base, out)
 
 
 if __name__ == "__main__":
