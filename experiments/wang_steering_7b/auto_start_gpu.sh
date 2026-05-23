@@ -44,17 +44,14 @@ fi
 echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed"
 
 # ── HF pre-check: target already on HF → skip ─────────────────────────
+# Use curl + jq directly — huggingface_hub isn't on the base image's Python
+# and we don't want to pay the pip-install cost before knowing whether to
+# skip. Also wrap with `|| true` so a network blip doesn't kill the run.
 TARGET_HF_PATH="qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}/qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"
 echo "[$(date -u +%H:%M:%S)] checking HF for $TARGET_HF_PATH"
-ALREADY_DONE=$(python3 -c "
-from huggingface_hub import HfApi
-try:
-    files = HfApi(token='$HF_TOKEN').list_repo_files('dmanningcoe/fra-phase1-steering-data', repo_type='dataset')
-    print('YES' if '$TARGET_HF_PATH' in files else 'NO')
-except Exception as e:
-    print('CHECK_FAILED', e)
-" 2>&1)
-if [ "$ALREADY_DONE" = "YES" ]; then
+HF_API_URL="https://huggingface.co/api/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}"
+HF_LIST=$(curl -sS -H "Authorization: Bearer $HF_TOKEN" "$HF_API_URL" 2>/dev/null || echo "[]")
+if echo "$HF_LIST" | grep -q "qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"; then
     echo "[$(date -u +%H:%M:%S)] already on HF — self-terminate"
     curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
         -H "Content-Type: application/json" \
@@ -62,6 +59,7 @@ if [ "$ALREADY_DONE" = "YES" ]; then
         https://api.runpod.io/graphql >/dev/null
     exit 0
 fi
+echo "[$(date -u +%H:%M:%S)] not yet on HF — proceeding"
 
 # ── Clone + install ───────────────────────────────────────────────────
 cd /workspace
