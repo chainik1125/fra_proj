@@ -312,36 +312,47 @@ def _multi_seed_asr(
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
     eval_dep_lp, eval_dep_attn,
-    clean_lsm,   # (B, gen_tokens, V) cpu float16 — pre-built once per sweep
+    clean_lsm,   # (B, gen_tokens, V) cpu float16 — pre-built at JSD_CLEAN_SEED
     gen_tokens, device,
     *, eval_seeds, eval_temperature,
 ):
     """Evaluate a winner on held-out eval prompts: ASR and JSD(steered, clean).
 
-    Steered rollouts are generated once per eval seed; JSD is averaged over seeds.
-    clean_lsm is α-independent and pre-built once outside the seed loop.
+    ASR is averaged over eval_seeds independent sampled rollouts for robustness.
+
+    JSD uses a single rollout at JSD_CLEAN_SEED — the same seed used to build
+    clean_lsm — so steered and clean trajectories draw from the same random
+    sequence. This matches the JSD alpha sweep methodology and avoids inflating
+    JSD through trajectory divergence from mismatched seeds.
     """
     cd_lp = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp  = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
 
+    # ASR: multi-seed sampled rollouts
     asr_per_seed: list[float] = []
-    jsd_per_seed: list[float] = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=int(s), device=device)
-        steered_gen, steered_lsm = generate_with_hooks(
+        steered_gen = generate_with_hooks(
             model, eval_dep_lp, h_lp, gen_tokens, sampler,
-            attention_mask=eval_dep_attn, capture_log_softmax=True,
+            attention_mask=eval_dep_attn, capture_log_softmax=False,
         )
         asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
-        jsd_per_seed.append(jsd_mean(steered_lsm.cpu(), clean_lsm))
+
+    # JSD: single rollout at JSD_CLEAN_SEED — same seed as clean_lsm
+    jsd_sampler = make_sampling_sampler(temperature=eval_temperature,
+                                        seed=JSD_CLEAN_SEED, device=device)
+    _, steered_lsm = generate_with_hooks(
+        model, eval_dep_lp, h_lp, gen_tokens, jsd_sampler,
+        attention_mask=eval_dep_attn, capture_log_softmax=True,
+    )
+    jsd_clean = jsd_mean(steered_lsm.cpu(), clean_lsm)
 
     return {
-        "asr":              sum(asr_per_seed) / len(asr_per_seed),
-        "asr_per_seed":     asr_per_seed,
-        "jsd_clean":        sum(jsd_per_seed) / len(jsd_per_seed),
-        "jsd_clean_per_seed": jsd_per_seed,
+        "asr":          sum(asr_per_seed) / len(asr_per_seed),
+        "asr_per_seed": asr_per_seed,
+        "jsd_clean":    jsd_clean,
     }
 
 
@@ -516,8 +527,9 @@ def main():
             "eval_asr":      {"mode": "sample", "temperature": args.eval_temperature,
                               "top_p": None, "top_k": None, "seeds": args.eval_seeds},
             "eval_jsd_clean": {"mode": "sample", "temperature": args.eval_temperature,
-                               "top_p": None, "top_k": None, "seeds": args.eval_seeds,
-                               "clean_seed": JSD_CLEAN_SEED},
+                               "top_p": None, "top_k": None,
+                               "seed": JSD_CLEAN_SEED,
+                               "note": "single rollout at seed=JSD_CLEAN_SEED, same as clean_lsm"},
         },
         "baseline": {
             "selection": {"clean_ce": sel_base_ce},
