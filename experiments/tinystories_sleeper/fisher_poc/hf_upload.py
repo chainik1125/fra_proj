@@ -45,7 +45,9 @@ def main() -> None:
         print(f"[hf_upload] no files match {args.src}/{args.pattern}; skipping")
         return
 
-    api.create_repo(args.repo, repo_type=args.repo_type, exist_ok=True, private=False)
+    # Default to private — POC artifacts and intermediate results should not
+    # be world-readable unless the user explicitly opts in.
+    api.create_repo(args.repo, repo_type=args.repo_type, exist_ok=True, private=True)
 
     for f in files:
         if not f.is_file():

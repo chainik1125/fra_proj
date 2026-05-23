@@ -28,14 +28,22 @@ POC_DIR="$WORKDIR/experiments/tinystories_sleeper/fisher_poc"
 OUT_DIR="$POC_DIR/results"
 mkdir -p "$OUT_DIR"
 
-# Verify SAE checkpoints exist (they're committed to the branch).
-for ckpt in \
-  "experiments/tinystories_sleeper/recreate_ln1/results/crosscoder_sae_layer0.pt" \
-  "experiments/tinystories_sleeper/recreate_layer0/results/crosscoder_sae_layer1.pt"; do
-  if [[ ! -f "$ckpt" ]]; then
-    echo "ERROR: missing SAE checkpoint $ckpt"
-    exit 1
-  fi
+# SAE checkpoints are too large for git (`*.pt` is gitignored). The
+# bootstrap pod trained them and uploaded to the HF dataset repo under
+# sae_checkpoints/.  Pull them down into the expected paths.
+for pair in \
+  "sae_checkpoints/recreate_ln1_layer0.pt|experiments/tinystories_sleeper/recreate_ln1/results/crosscoder_sae_layer0.pt" \
+  "sae_checkpoints/recreate_layer0_layer1.pt|experiments/tinystories_sleeper/recreate_layer0/results/crosscoder_sae_layer1.pt"; do
+  src="${pair%|*}"; dst="${pair#*|}"
+  if [[ -f "$dst" ]]; then continue; fi
+  mkdir -p "$(dirname "$dst")"
+  echo "[run_on_pod] fetching $src -> $dst"
+  uv run python -c "
+from huggingface_hub import hf_hub_download
+import os, shutil
+p = hf_hub_download('$HF_REPO', '$src', repo_type='dataset', token=os.environ['HF_TOKEN'])
+shutil.copy(p, '$dst')
+"
 done
 
 echo "============================================================"
@@ -72,11 +80,11 @@ echo "DONE — all seeds [$SEEDS] uploaded to https://huggingface.co/datasets/$H
 echo "============================================================"
 
 if [[ "$SELF_STOP" == "1" && -n "${RUNPOD_POD_ID:-}" && -n "${RUNPOD_API_KEY:-}" ]]; then
-  echo "[run_on_pod] self-stopping pod $RUNPOD_POD_ID in 30s..."
+  echo "[run_on_pod] self-terminating pod $RUNPOD_POD_ID in 30s..."
   sleep 30
   curl -sS -X POST \
     -H "Authorization: Bearer $RUNPOD_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"query\":\"mutation { podStop(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) { id desiredStatus } }\"}" \
+    -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" \
     https://api.runpod.io/graphql || true
 fi
