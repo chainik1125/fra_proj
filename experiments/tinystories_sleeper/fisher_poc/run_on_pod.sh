@@ -13,6 +13,10 @@
 #   SELF_STOP      "1" to stop the pod when done (default: "0").
 set -euo pipefail
 
+# uv lives at $HOME/.local/bin after setup_pod.sh installs it. Re-export
+# here in case this script is invoked in a fresh shell context.
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
 WORKDIR="${WORKDIR:-/workspace/fra_proj}"
 SEEDS="${SEEDS:-0}"
 HF_REPO="${HF_REPO:-dmanningcoe/fisher-poc-tinystories-sleeper}"

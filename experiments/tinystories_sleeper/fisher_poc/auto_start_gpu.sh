@@ -8,16 +8,51 @@
 #   BRANCH, REPO_URL
 set -eo pipefail
 
-# Stream logs unbuffered.
+# Plain log file. The `exec > >(stdbuf -oL tee ...)` pattern crashes
+# PID-1 bash on this image (see bootstrap notes).
 mkdir -p /workspace
-exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
-echo "[$(date +%H:%M:%S)] gpu start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)"
+LOGFILE=/workspace/run.log
+echo "[$(date +%H:%M:%S)] gpu start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)" >>"$LOGFILE" 2>&1
 
-# Driver fast-fail (cu13 torch needs driver ≥ 525).
+# Trace function so we can debug crashes from HF without SSH access.
+HF_REPO_FOR_TRACE="${HF_REPO:-dmanningcoe/fisher-poc-tinystories-sleeper}"
+SEED_TAG="${SEEDS:-noseed}"
+SEED_TAG="${SEED_TAG// /_}"
+
+pip install --quiet huggingface_hub >>"$LOGFILE" 2>&1 || \
+  python3 -m pip install --quiet huggingface_hub >>"$LOGFILE" 2>&1 || \
+  echo "[trace] WARN: could not install huggingface_hub for system python3" >>"$LOGFILE"
+
+upload_trace() {
+  local phase="$1"
+  python3 - <<PYEND >>"$LOGFILE" 2>&1 || true
+import os, time, pathlib
+try:
+    from huggingface_hub import HfApi
+    api = HfApi(token=os.environ.get('HF_TOKEN'))
+    p = pathlib.Path('$LOGFILE')
+    body = (p.read_text() if p.exists() else '(no log)')
+    body = f"phase: $phase\nseeds: $SEED_TAG\nunix: {time.time()}\nhost: gpu pod ${RUNPOD_POD_ID:-?}\n\n----- LOG -----\n" + body
+    api.upload_file(
+        path_or_fileobj=body.encode(),
+        path_in_repo='trace_gpu_seed${SEED_TAG}_$phase.txt',
+        repo_id='$HF_REPO_FOR_TRACE',
+        repo_type='dataset',
+    )
+    print(f'[trace] uploaded trace_gpu_seed${SEED_TAG}_$phase.txt')
+except Exception as e:
+    print(f'[trace] FAILED: {e}')
+PYEND
+}
+
+trap 'rc=$?; echo "[$(date +%H:%M:%S)] EXIT rc=$rc" >>"$LOGFILE" 2>&1; upload_trace "exit_$rc"' EXIT
+upload_trace "start"
+
+# Driver fast-fail.
 if command -v nvidia-smi >/dev/null 2>&1; then
   drv_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
   if [[ "$drv_major" -lt 525 ]]; then
-    echo "driver too old ($drv_major) — self-terminate without work"
+    echo "driver too old ($drv_major) — self-terminate without work" >>"$LOGFILE" 2>&1
     if [[ -n "${RUNPOD_POD_ID:-}" && -n "${RUNPOD_API_KEY:-}" ]]; then
       curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
         -H "Content-Type: application/json" \
@@ -33,9 +68,17 @@ REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 WORKDIR="${WORKDIR:-/workspace/fra_proj}"
 
 if [[ ! -d "$WORKDIR/.git" ]]; then
-  git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$WORKDIR"
+  git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$WORKDIR" >>"$LOGFILE" 2>&1
 fi
 cd "$WORKDIR"
 
-bash experiments/tinystories_sleeper/fisher_poc/setup_pod.sh
-bash experiments/tinystories_sleeper/fisher_poc/run_on_pod.sh
+echo "[$(date +%H:%M:%S)] STAGE: setup_pod.sh" >>"$LOGFILE" 2>&1
+bash experiments/tinystories_sleeper/fisher_poc/setup_pod.sh >>"$LOGFILE" 2>&1
+
+# Re-export uv PATH (setup_pod.sh's export is lost when control returns).
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+echo "[$(date +%H:%M:%S)] STAGE: run_on_pod.sh" >>"$LOGFILE" 2>&1
+upload_trace "before_run"
+bash experiments/tinystories_sleeper/fisher_poc/run_on_pod.sh >>"$LOGFILE" 2>&1
+echo "[$(date +%H:%M:%S)] STAGE: run_on_pod.sh end" >>"$LOGFILE" 2>&1
