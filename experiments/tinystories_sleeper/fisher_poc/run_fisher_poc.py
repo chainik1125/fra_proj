@@ -72,7 +72,7 @@ def load_top_features(ranking_path: Path, k: int) -> list[int]:
 
 def prediction_mask_from_markers(seq_len: int, marker_pos: torch.Tensor) -> torch.Tensor:
     """Positions in [0, seq_len-1) that predict tokens after `Story:`."""
-    source_pos = torch.arange(seq_len - 1).unsqueeze(0)
+    source_pos = torch.arange(seq_len - 1, device=marker_pos.device).unsqueeze(0)
     return source_pos >= marker_pos.unsqueeze(1)
 
 
