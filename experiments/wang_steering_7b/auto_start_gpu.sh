@@ -51,9 +51,9 @@ echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed (will use cu
 # Use curl + jq directly — huggingface_hub isn't on the base image's Python
 # and we don't want to pay the pip-install cost before knowing whether to
 # skip. Also wrap with `|| true` so a network blip doesn't kill the run.
-TARGET_HF_PATH="qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}/qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"
+TARGET_HF_PATH="qwen7b/wang_L15_resid_post${HF_PATH_SUFFIX:-}/${EM_MODEL}_seed${EVAL_SEED}/qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"
 echo "[$(date -u +%H:%M:%S)] checking HF for $TARGET_HF_PATH"
-HF_API_URL="https://huggingface.co/api/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}"
+HF_API_URL="https://huggingface.co/api/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/qwen7b/wang_L15_resid_post${HF_PATH_SUFFIX:-}/${EM_MODEL}_seed${EVAL_SEED}"
 HF_LIST=$(curl -sS -H "Authorization: Bearer $HF_TOKEN" "$HF_API_URL" 2>/dev/null || echo "[]")
 if echo "$HF_LIST" | grep -q "qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"; then
     echo "[$(date -u +%H:%M:%S)] already on HF — self-terminate"
@@ -115,6 +115,7 @@ mkdir -p "$OUT_DIR"
 echo "[$(date -u +%H:%M:%S)] === STEP B: sweep ($EM_MODEL, seed=$EVAL_SEED) ==="
 python3 -u phase1_arditi_orchestrator.py \
     --em-model "$EM_MODEL" --eval-seed "$EVAL_SEED" \
+    --samples-per-prompt "${SAMPLES_PER_PROMPT:-1}" \
     --layer 15 --trainer 1 \
     --feature-ids $FEATURE_IDS \
     --alphas -2 -1.75 -1.5 -1.25 -1 -0.75 -0.5 -0.25 0 0.25 0.5 0.75 1 1.25 1.5 1.75 2 \
@@ -128,7 +129,7 @@ from huggingface_hub import HfApi
 import pathlib
 api = HfApi()
 for f in pathlib.Path('$OUT_DIR').glob('*.json'):
-    target = f'qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}/{f.name}'
+    target = f'qwen7b/wang_L15_resid_post${HF_PATH_SUFFIX:-}/${EM_MODEL}_seed${EVAL_SEED}/{f.name}'
     api.upload_file(path_or_fileobj=str(f), path_in_repo=target,
                     repo_id='dmanningcoe/fra-phase1-steering-data', repo_type='dataset',
                     commit_message='wang_steering shard ($EM_MODEL, seed${EVAL_SEED})')
@@ -138,7 +139,7 @@ for f in pathlib.Path('$OUT_DIR').glob('*.json'):
 python3 -u -c "
 from huggingface_hub import HfApi, hf_hub_download
 api = HfApi()
-target = f'qwen7b/wang_L15_resid_post/wang_ranker_L15_top${TOP_N}.json'
+target = f'qwen7b/wang_L15_resid_post${HF_PATH_SUFFIX:-}/wang_ranker_L15_top${TOP_N}.json'
 try:
     files = api.list_repo_files('dmanningcoe/fra-phase1-steering-data', repo_type='dataset')
     if target not in files:

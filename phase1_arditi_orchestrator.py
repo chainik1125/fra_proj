@@ -131,6 +131,12 @@ def main():
     p.add_argument("--alphas", nargs="+", type=float,
                    default=[-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6])
     p.add_argument("--n-prompts", type=int, default=8)
+    p.add_argument("--samples-per-prompt", type=int, default=1,
+                   help="Number of independent stochastic samples drawn per prompt. "
+                        "Each sample uses a distinct per-prompt seed (eval_seed + i). "
+                        "Total trials per (feature, α) = n_prompts × samples_per_prompt. "
+                        "Use to shrink per-seed baseline-alignment variance when 8 prompts "
+                        "give too-bimodal a sample (default 1 = legacy behavior).")
     p.add_argument("--prompt-set", default="ours", choices=["ours", "arditi-mc"],
                    help="'ours' = first n_prompts of EM_EVAL_PROMPTS; "
                         "'arditi-mc' = Arditi's 32 MC questions (text only, no A/B)")
@@ -158,6 +164,11 @@ def main():
         print(f"[prompt-set=arditi-mc] using {len(prompts)} of Arditi's MC questions (free-form, no A/B)")
     else:
         prompts = EM_EVAL_PROMPTS[: args.n_prompts]
+    # Repeat each prompt `samples_per_prompt` times so we get K independent
+    # stochastic draws per (prompt, feature, α). Each (prompt, sample) pair
+    # gets a distinct per-prompt seed so the K samples truly differ.
+    if args.samples_per_prompt > 1:
+        prompts = prompts * args.samples_per_prompt
     per_prompt_seeds = [args.eval_seed + i for i in range(len(prompts))]
 
     print("=== Phase 1 Arditi-recipe orchestrator ===")
