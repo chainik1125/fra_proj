@@ -106,6 +106,27 @@ def additive_steer_hook(
     return [(layer_hook, _hook)]
 
 
+def dom_steer_hook(
+    v: torch.Tensor,                # (d_model,) DoM direction
+    alpha: float,
+    layer_hook: str,
+    sign: float = -1.0,             # subtract by default (suppress dep direction)
+) -> list[tuple[str, Callable]]:
+    """Soligo-et-al. (2025) DoM steer: add `sign * alpha * v` to ALL token
+    positions on EVERY decode step (including the per-token cache decode).
+
+    Differs from `additive_steer_hook`, which patches only the first P prompt
+    positions and no-ops on cache decode steps. Use this hook for paper-faithful
+    DoM where the steer fires on every generated token's resid stream.
+    """
+    scaled = (sign * alpha) * v
+
+    def _hook(resid, hook):
+        return resid + scaled.to(resid.dtype).to(resid.device)
+
+    return [(layer_hook, _hook)]
+
+
 def ov_only_steer_hook(
     delta: torch.Tensor,            # (B, P, d_model) ln1-space delta
     alpha: float,
