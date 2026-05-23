@@ -26,12 +26,20 @@ else
 fi
 cd "$WORKDIR"
 
-# Install uv if missing, then sync.
+# Install uv if missing.
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
   # uv installs to ~/.cargo/bin or ~/.local/bin depending on version
   export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 fi
+
+# pyproject.toml has `requires-python = ">=3.12"`. Without pinning, uv
+# picks Python 3.14 — but PyTorch cu124 wheels only ship up to cp313.
+# Pin to 3.13 so we can install a torch wheel compatible with the pod's
+# CUDA 12.8 driver.
+echo "[setup_pod] creating Python 3.13 venv"
+uv venv --python 3.13 --clear 2>&1 | tail -5
+
 uv sync 2>&1 | tail -20
 
 # pyproject.toml has unpinned `torch`, so `uv sync` grabs the latest
