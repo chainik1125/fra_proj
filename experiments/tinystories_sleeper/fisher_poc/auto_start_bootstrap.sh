@@ -93,6 +93,12 @@ echo "[$(date +%H:%M:%S)] STAGE: setup_pod.sh start" >> "$LOGFILE" 2>&1
 bash "$POC_DIR/setup_pod.sh" >>"$LOGFILE" 2>&1
 echo "[$(date +%H:%M:%S)] STAGE: setup_pod.sh end" >> "$LOGFILE" 2>&1
 
+# setup_pod.sh installs uv into $HOME/.local/bin and exports PATH there,
+# but that export is lost when control returns to this script (child
+# shell). Add it here too so `uv run ...` resolves.
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+echo "[$(date +%H:%M:%S)] uv resolves to: $(command -v uv || echo MISSING)" >> "$LOGFILE" 2>&1
+
 # Step 1: check HF for existing checkpoints (idempotent re-runs)
 check_exists() {
   local name="$1"
