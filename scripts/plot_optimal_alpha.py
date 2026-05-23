@@ -27,7 +27,6 @@ from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def setup_style() -> None:
@@ -50,12 +49,17 @@ def setup_style() -> None:
     })
 
 
+ASR_TOL  = 0.01   # ASR within this is treated as effectively zero
+JSD_MAX  = 0.7    # optimal-alpha JSD(steered, clean) above this counts as broken coherence
+
+
 def find_optimal(per_alpha: dict, alphas: list[float], seed_idx: int,
                  n_prompts: int) -> dict:
     """Find the optimal alpha for one (seed, method) pair.
 
     Returns a dict with keys: alpha, asr, jsd_clean, jsd_pois, exact_match,
-    and is_failure (True if ASR=0 was never achieved).
+    and is_failure (True if no alpha hit ASR≤tolerance, or the chosen alpha's
+    JSD(steered, clean) is above JSD_MAX — i.e. coherence is broken).
     """
     rows = []
     for a in alphas:
@@ -66,15 +70,15 @@ def find_optimal(per_alpha: dict, alphas: list[float], seed_idx: int,
         n_exact = per_alpha[key]["n_exact_match_clean"][seed_idx]
         rows.append((a, asr, jc, jp, n_exact / n_prompts))
 
-    zero_asr = [(a, asr, jc, jp, em) for (a, asr, jc, jp, em) in rows if asr == 0.0]
+    zero_asr = [(a, asr, jc, jp, em) for (a, asr, jc, jp, em) in rows if asr <= ASR_TOL]
     if zero_asr:
-        best = min(zero_asr, key=lambda r: r[2])   # lowest jsd_clean
-        return dict(alpha=best[0], asr=best[1], jsd_clean=best[2],
-                    jsd_pois=best[3], exact_match=best[4], is_failure=False)
+        best       = min(zero_asr, key=lambda r: r[2])   # lowest jsd_clean
+        is_failure = best[2] > JSD_MAX
     else:
-        best = min(rows, key=lambda r: (r[1], r[2]))   # lowest asr then jsd_clean
-        return dict(alpha=best[0], asr=best[1], jsd_clean=best[2],
-                    jsd_pois=best[3], exact_match=best[4], is_failure=True)
+        best       = min(rows, key=lambda r: (r[1], r[2]))   # lowest asr then jsd_clean
+        is_failure = True
+    return dict(alpha=best[0], asr=best[1], jsd_clean=best[2],
+                jsd_pois=best[3], exact_match=best[4], is_failure=is_failure)
 
 
 def summarise(optima: list[dict]) -> dict[str, dict]:
@@ -125,7 +129,7 @@ def main() -> None:
         for i, s in enumerate(seeds):
             o = optima[key][i]
             vals = "  ".join(f"{o[mk]:>15.4f}" for mk, _ in metrics)
-            flag = " ← FAILURE (ASR>0)" if o["is_failure"] else ""
+            flag = f" ← FAILURE (ASR>{ASR_TOL:g} or JSD>{JSD_MAX:g})" if o["is_failure"] else ""
             print(f"  {s:>4}  {o['alpha']:>5.1f}  {o['asr']:>6.3f}  {vals}{flag}")
 
         summ = summarise(optima[key])
@@ -146,42 +150,48 @@ def main() -> None:
 
     fig, axes = plt.subplots(3, 2, figsize=(12.0, 10.0), sharey="row")
 
-    x_seeds   = np.arange(len(seeds))
-    x_all     = len(seeds)
-    x_asr0    = len(seeds) + 1
-    x_total   = len(seeds) + 2
-    bar_w     = 0.65
-    x_ticks   = list(range(x_total))
-    x_labels  = [f"s{s}" for s in seeds] + ["mean\n(all)", "mean\n(ASR=0)"]
+    bar_w = 0.65
 
     for col, (key, method_label) in enumerate(methods):
         pa   = cfg[key]["per_alpha"]
         opts = optima[key]
         summ = summarise(opts)
+        has_failure = any(o["is_failure"] for o in opts)
+        n_ok        = sum(1 for o in opts if not o["is_failure"])
+
+        # Column layout: per-seed bars, then 1 or 2 summary bars.
+        x_all    = len(seeds)
+        x_filt   = len(seeds) + 1
+        x_total  = len(seeds) + (2 if has_failure else 1)
+        x_ticks  = list(range(x_total))
+        if has_failure:
+            x_labels = [f"s{s}" for s in seeds] + ["mean\n(all)", f"mean\n(n={n_ok})"]
+        else:
+            x_labels = [f"s{s}" for s in seeds] + [f"mean\n(n={len(seeds)})"]
 
         for row, (mk, metric_label, color, direction) in enumerate(metric_info):
             ax = axes[row][col]
 
             # Per-seed bars
             for i, s in enumerate(seeds):
-                o       = opts[i]
-                height  = o[mk]
-                hatch   = "//" if o["is_failure"] else None
-                ec      = "#888888" if o["is_failure"] else "white"
-                bar = ax.bar(i, height, width=bar_w, color=color, alpha=0.85,
-                             hatch=hatch, edgecolor=ec, linewidth=0.8, zorder=3)
+                o     = opts[i]
+                hatch = "//" if o["is_failure"] else None
+                ec    = "#888888" if o["is_failure"] else "white"
+                ax.bar(i, o[mk], width=bar_w, color=color, alpha=0.85,
+                       hatch=hatch, edgecolor=ec, linewidth=0.8, zorder=3)
 
             # Summary bars
-            v_all  = summ["all"][mk]
-            v_asr0 = summ["asr0"][mk]
-            ax.bar(x_all,  v_all,  width=bar_w, color=color, alpha=0.45,
-                   edgecolor="#333", linewidth=1.0, zorder=3)
-            ax.bar(x_asr0, v_asr0, width=bar_w, color=color, alpha=0.85,
-                   edgecolor="#333", linewidth=1.0, zorder=3)
+            summary_bars = []
+            if has_failure:
+                summary_bars.append((x_all,  summ["all"][mk],  0.45))
+                summary_bars.append((x_filt, summ["asr0"][mk], 0.85))
+            else:
+                summary_bars.append((x_all,  summ["all"][mk],  0.85))
 
-            # Value labels on summary bars
-            for x, v in [(x_all, v_all), (x_asr0, v_asr0)]:
-                if not (v != v):   # skip NaN
+            for x, v, a in summary_bars:
+                ax.bar(x, v, width=bar_w, color=color, alpha=a,
+                       edgecolor="#333", linewidth=1.0, zorder=3)
+                if v == v:   # skip NaN
                     ax.text(x, v + 0.015, f"{v:.3f}", ha="center", va="bottom",
                             fontsize=9, color="#333")
 
@@ -197,19 +207,18 @@ def main() -> None:
             if row == 0:
                 ax.set_title(method_label, fontweight="bold", pad=10)
 
-            # Vertical separator before summary bars
             ax.axvline(len(seeds) - 0.5, color="#bbbbbb", lw=0.8, linestyle="--")
 
     # Shared legend for hatch meaning
     from matplotlib.patches import Patch
     legend_handles = [
-        Patch(facecolor="#999", edgecolor="white", label="success (ASR=0 achieved)"),
+        Patch(facecolor="#999", edgecolor="white", label="success"),
         Patch(facecolor="#999", edgecolor="#888", hatch="//",
-              label="failure (ASR>0 at all α)"),
+              label=f"failure (ASR>{ASR_TOL:g} or JSD(clean)>{JSD_MAX:g})"),
         Patch(facecolor="#bbb", alpha=0.45, edgecolor="#333",
-              label="mean — all 6 seeds"),
+              label="mean — all seeds"),
         Patch(facecolor="#bbb", alpha=0.85, edgecolor="#333",
-              label="mean — ASR=0 seeds only"),
+              label="mean — non-failure seeds"),
     ]
     fig.legend(handles=legend_handles, loc="lower center", ncol=4,
                frameon=True, framealpha=0.95, edgecolor="#bbbbbb",
