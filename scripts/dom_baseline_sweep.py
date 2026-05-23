@@ -130,8 +130,8 @@ def main() -> None:
     )
 
     # JSON layout mirrors jsd_alpha_sweep_6seeds.py for plot compatibility.
-    blank = {"jsd_clean": [], "jsd_pois": [],
-             "n_exact_match_clean": [], "frac_pos_match_clean": [], "asr": []}
+    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean",
+                   "frac_pos_match_clean", "asr")
     configs: dict[str, dict] = {}
 
     for (lyr, hk), v in vectors.items():
@@ -144,7 +144,8 @@ def main() -> None:
         print(f"\n[dom] {key}  ‖v‖₂ = {v_norm:.3f}  hook={layer_hook}")
         cfg = {"layer": lyr, "hook_kind": hk, "layer_hook": layer_hook,
                "v_norm": v_norm,
-               "per_alpha": {str(a): dict(blank) for a in args.alphas}}
+               "per_alpha": {str(a): {k: [] for k in metric_keys}
+                              for a in args.alphas}}
 
         for a in args.alphas:
             t0 = time.time()

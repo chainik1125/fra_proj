@@ -222,8 +222,8 @@ def main():
 
     eval_pmask = (eval_dep_attn.bool()).to(device) if args.apply == "prompt" else None
 
-    blank = {"jsd_clean": [], "jsd_pois": [], "n_exact_match_clean": [],
-              "frac_pos_match_clean": [], "asr": []}
+    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean",
+                   "frac_pos_match_clean", "asr")
     configs: dict[str, dict] = {}
 
     for (lyr, hk), v in vectors.items():
@@ -237,7 +237,8 @@ def main():
               f"‖v_used‖₂={float(v_proc.norm()):.3f}")
         cfg = {"layer": lyr, "hook_kind": hk, "layer_hook": layer_hook,
                "v_norm_raw": float(v.norm()), "v_norm_used": float(v_proc.norm()),
-               "per_alpha": {str(a): dict(blank) for a in args.alphas}}
+               "per_alpha": {str(a): {k: [] for k in metric_keys}
+                              for a in args.alphas}}
         for a in args.alphas:
             t0 = time.time()
             if a == 0.0:
