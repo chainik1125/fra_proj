@@ -28,7 +28,10 @@ HF_REPO="${HF_REPO:-dmanningcoe/fisher-poc-tinystories-sleeper}"
 BRANCH="${BRANCH:-dmitry/fisher-poc}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
-IMAGE_CPU="${IMAGE_CPU:-python:3.12-slim}"
+# CPU pods often error with SUPPLY_CONSTRAINT for this account, so we
+# default the babysitter to the same GPU type as bootstrap (still cheap
+# at ~$0.86/hr × ~1.5 hr).
+BABYSITTER_GPU_TYPE_ID="${BABYSITTER_GPU_TYPE_ID:-$GPU_TYPE_ID}"
 
 if [[ -z "${RUNPOD_API_KEY:-}" ]]; then
   echo "ERROR: RUNPOD_API_KEY not set." >&2; exit 1
@@ -138,8 +141,8 @@ if [[ -z "$boot_pid" ]]; then
 fi
 echo "[launch] bootstrap pod: $boot_pid"
 
-echo "[launch] creating CPU babysitter pod ..."
-resp=$(gql_deploy "fisher-poc-babysit" "$IMAGE_CPU" "" "true" "$(babysitter_cmd)")
+echo "[launch] creating babysitter pod (GPU, $BABYSITTER_GPU_TYPE_ID) ..."
+resp=$(gql_deploy "fisher-poc-babysit" "$IMAGE_GPU" "$BABYSITTER_GPU_TYPE_ID" "false" "$(babysitter_cmd)")
 echo "$resp" >> "$LAUNCH_LOG"
 cpu_pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
 if [[ -z "$cpu_pid" ]]; then
