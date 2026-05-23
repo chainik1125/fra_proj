@@ -18,6 +18,45 @@ mkdir -p /workspace
 LOGFILE=/workspace/bootstrap.log
 echo "[$(date +%H:%M:%S)] bootstrap start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)" >> "$LOGFILE" 2>&1
 
+# Install huggingface_hub for the system python3 immediately so the trace
+# function can upload even before uv is set up.
+pip install --quiet huggingface_hub >>"$LOGFILE" 2>&1 || \
+  python3 -m pip install --quiet huggingface_hub >>"$LOGFILE" 2>&1 || \
+  echo "[trace] WARN: could not install huggingface_hub for system python3" >>"$LOGFILE"
+
+# Upload trace markers + the log on every exit (success or failure) so we
+# can debug from HF without needing SSH access to the pod.
+HF_REPO_FOR_TRACE="${HF_REPO:-dmanningcoe/fisher-poc-tinystories-sleeper}"
+
+upload_trace() {
+  local phase="$1"
+  python3 - <<PYEND >>"$LOGFILE" 2>&1 || true
+import os, time
+try:
+    from huggingface_hub import HfApi
+    api = HfApi(token=os.environ.get('HF_TOKEN'))
+    # Upload current log content
+    import pathlib
+    p = pathlib.Path('$LOGFILE')
+    body = (p.read_text() if p.exists() else '(no log)')
+    body = f"phase: $phase\nunix: {time.time()}\nhost: bootstrap pod ${RUNPOD_POD_ID:-?}\n\n----- LOG -----\n" + body
+    api.upload_file(
+        path_or_fileobj=body.encode(),
+        path_in_repo='trace_bootstrap_$phase.txt',
+        repo_id='$HF_REPO_FOR_TRACE',
+        repo_type='dataset',
+    )
+    print(f'[trace] uploaded trace_bootstrap_$phase.txt')
+except Exception as e:
+    print(f'[trace] FAILED to upload trace: {e}')
+PYEND
+}
+
+# On any exit, upload the final log to HF.
+trap 'rc=$?; echo "[$(date +%H:%M:%S)] EXIT rc=$rc" >> "$LOGFILE" 2>&1; upload_trace "exit_$rc"' EXIT
+
+upload_trace "start"
+
 # Fast-fail if the driver is too old for the cu13 torch wheel.
 if command -v nvidia-smi >/dev/null 2>&1; then
   drv_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
@@ -44,11 +83,15 @@ LAYER0_CKPT="$EXP_DIR/recreate_layer0/results/crosscoder_sae_layer1.pt"
 
 mkdir -p /workspace
 if [[ ! -d "$WORKDIR/.git" ]]; then
-  git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$WORKDIR"
+  echo "[$(date +%H:%M:%S)] cloning $BRANCH" >> "$LOGFILE" 2>&1
+  git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$WORKDIR" >>"$LOGFILE" 2>&1
 fi
 cd "$WORKDIR"
+echo "[$(date +%H:%M:%S)] after clone, pwd=$(pwd), repo HEAD=$(git rev-parse HEAD)" >> "$LOGFILE" 2>&1
 
-bash "$POC_DIR/setup_pod.sh"
+echo "[$(date +%H:%M:%S)] STAGE: setup_pod.sh start" >> "$LOGFILE" 2>&1
+bash "$POC_DIR/setup_pod.sh" >>"$LOGFILE" 2>&1
+echo "[$(date +%H:%M:%S)] STAGE: setup_pod.sh end" >> "$LOGFILE" 2>&1
 
 # Step 1: check HF for existing checkpoints (idempotent re-runs)
 check_exists() {
@@ -64,16 +107,20 @@ sys.exit(0 if '$name' in files else 1)
 
 if check_exists "sae_checkpoints/recreate_ln1_layer0.pt" && \
    check_exists "sae_checkpoints/recreate_layer0_layer1.pt"; then
-  echo "[bootstrap] both SAE checkpoints already on HF — skipping training"
+  echo "[$(date +%H:%M:%S)] STAGE: both SAEs already on HF, skipping train" >> "$LOGFILE" 2>&1
 else
-  echo "[bootstrap] training SAEs (recreate_ln1 + recreate_layer0, skipping sweep+plot)"
-  # Train SAEs but skip the post-train sweep and plotting — we only need the .pt files.
+  echo "[$(date +%H:%M:%S)] STAGE: training LN1 SAEs" >> "$LOGFILE" 2>&1
+  upload_trace "before_train_ln1"
   uv run python "$EXP_DIR/recreate_ln1/reproduce.py" \
     "$EXP_DIR/recreate_ln1/config.yaml" \
-    --skip sweep plot
+    --skip sweep plot >>"$LOGFILE" 2>&1
+  echo "[$(date +%H:%M:%S)] STAGE: training layer0 SAEs" >> "$LOGFILE" 2>&1
+  upload_trace "before_train_layer0"
   uv run python "$EXP_DIR/recreate_layer0/reproduce.py" \
     "$EXP_DIR/recreate_layer0/config.yaml" \
-    --skip sweep plot
+    --skip sweep plot >>"$LOGFILE" 2>&1
+  echo "[$(date +%H:%M:%S)] STAGE: training done, uploading" >> "$LOGFILE" 2>&1
+  upload_trace "before_upload"
 
   # Upload the two .pt files the Fisher POC consumes.
   uv run python "$POC_DIR/hf_upload.py" \
