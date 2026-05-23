@@ -106,7 +106,9 @@ def main():
     W_dec = sae.W_dec.detach().float()               # (d_sae, d_model)
     pmask = dep_attn.bool().to(device)               # left-padded → real positions = prompt
 
-    print(f"[exh] sweep features [{args.feat_start}, {feat_end}) × αs={args.alphas}")
+    print(f"[exh] sweep features [{args.feat_start}, {feat_end}) × αs={args.alphas}",
+          flush=True)
+    checkpoint_path = args.out.with_suffix(".partial.json")
     out_rows: list[dict] = []
     t_start = time.time()
     for f in range(args.feat_start, feat_end):
@@ -128,13 +130,18 @@ def main():
                               "asr": asr, "jsd_clean": jc, "jsd_pois": jp,
                               "n_exact_match_clean": n_ex,
                               "frac_pos_match_clean": fp})
-        if (f - args.feat_start + 1) % 50 == 0:
+        if (f - args.feat_start + 1) % 25 == 0:
             elapsed = time.time() - t_start
             done = f - args.feat_start + 1
             total = feat_end - args.feat_start
             rate = done / elapsed
             eta = (total - done) / rate
-            print(f"[exh] {done}/{total} feats  ({rate:.2f} f/s, ETA {eta/60:.1f}min)")
+            print(f"[exh] {done}/{total} feats  ({rate:.2f} f/s, ETA {eta/60:.1f}min)",
+                  flush=True)
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            checkpoint_path.write_text(json.dumps(
+                {"feat_start": args.feat_start, "feat_end": feat_end,
+                 "done": done, "elapsed_s": elapsed, "rows": out_rows}))
 
     result = {
         "sae":        str(args.sae),
