@@ -10,11 +10,15 @@ storage_bucket = "fra-proj"
 storage_endpoint_url = "https://1017e5793f988de0c543f206026b75b7.r2.cloudflarestorage.com"
 storage_region = "auto"
 
-# Tier 2 — compute + persistent volume.
+# Tier 2 — compute. No data-center pin and no persistent volume so the
+# controller can place pods wherever RunPod inventory has the requested
+# GPU type (US-CA-2 was too H100-skewed for L40/A40/RTX A6000 picks).
+# Trade-off: each pod boots fresh — ~2 min pip install + ~10–15 min HF
+# model download for a 7B-class model. Acceptable for one-off transfer
+# runs; revisit with a multi-DC volume strategy if we start hammering
+# the same model serially.
 compute = "runpod"
 default_gpu = "H100 80GB"
-runpod_data_center = "US-CA-2"
-runpod_network_volume_id = "l7wyka84iy"
 runpod_default_image = "ghcr.io/chainik1125/autoresearch:latest"
 runpod_container_registry_auth_id = "cmp2b493n0051ju07mlw41yu1"
 
