@@ -93,10 +93,10 @@ def main():
     eval_cln_lp, eval_cln_attn = left_pad_prompts(eval_cln_rows, pad_id)
     eval_cln_lp, eval_cln_attn = eval_cln_lp.to(device), eval_cln_attn.to(device)
 
-    # --- extraction split: val. ---
-    splits = load_paired_dataset(tok, n_train=2, n_val=2 * N_EXTRACT, n_test=0,
+    # --- extraction split: train (disjoint from eval/test). ---
+    splits = load_paired_dataset(tok, n_train=2 * N_EXTRACT, n_val=0, n_test=0,
                                   seq_len=128, seed=0)
-    sel = splits["val"]
+    sel = splits["train"]
     sel_pmask = prompt_mask_from_markers(128, sel.story_marker_pos)
     ext_dep = sel.tokens[sel.is_deployment].to(device)
     ext_cln = sel.tokens[~sel.is_deployment].to(device)

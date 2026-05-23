@@ -135,7 +135,10 @@ def build_hook(v_dev, alpha, layer_hook, *, apply: str, mode: str,
 @torch.no_grad()
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--extract_split", choices=["val", "test"], default="val")
+    p.add_argument("--extract_split", choices=["train", "val", "test"], default="train",
+                   help=("train = ds_train (disjoint from eval, default). "
+                         "val   = ds_test val slice (OVERLAPS with eval — kept for back-compat). "
+                         "test  = same prompts as eval (sanity baseline only)."))
     p.add_argument("--extract_positions", choices=["answer", "prompt", "last_prompt"],
                    default="answer")
     p.add_argument("--apply", choices=["all", "prompt"], default="all")
@@ -174,10 +177,15 @@ def main():
     eval_cln_lp, eval_cln_attn = eval_cln_lp.to(device), eval_cln_attn.to(device)
 
     # --- extraction split. ---
-    if args.extract_split == "val":
-        splits = load_paired_dataset(tok, n_train=2, n_val=2 * N_EXTRACT, n_test=0,
-                                      seq_len=128, seed=0)
-        sel = splits["val"]
+    if args.extract_split in ("train", "val"):
+        if args.extract_split == "train":
+            splits = load_paired_dataset(tok, n_train=2 * N_EXTRACT, n_val=0, n_test=0,
+                                          seq_len=128, seed=0)
+            sel = splits["train"]
+        else:
+            splits = load_paired_dataset(tok, n_train=2, n_val=2 * N_EXTRACT, n_test=0,
+                                          seq_len=128, seed=0)
+            sel = splits["val"]
         sel_pmask = prompt_mask_from_markers(128, sel.story_marker_pos)
         ext_dep = sel.tokens[sel.is_deployment].to(device)
         ext_cln = sel.tokens[~sel.is_deployment].to(device)
