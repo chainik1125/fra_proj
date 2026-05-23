@@ -1,0 +1,5134 @@
+{
+  "config": {
+    "regime": "diff",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "sae_mid": "weights/sae_resid_mid.pt",
+    "target_feature": 579,
+    "top_k": 20,
+    "triple_k": 8,
+    "alphas": [
+      2.0,
+      4.0
+    ],
+    "n_sel": 200,
+    "n_eval": 200,
+    "gen_tokens": 16,
+    "eval_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "eval_temperature": 1.0,
+    "attr": "ov",
+    "intervene": "ov",
+    "out": "results/matrix_per_feat_diff_ovxov_topk20.json",
+    "device": null,
+    "cell": "ov\u00d7ov"
+  },
+  "decoding": {
+    "eval_asr": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "top_p": null,
+      "top_k": null,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "eval_jsd_clean": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "top_p": null,
+      "top_k": null,
+      "seed": 0,
+      "note": "single rollout at seed=JSD_CLEAN_SEED, same as clean_lsm"
+    }
+  },
+  "baseline": {
+    "eval": {
+      "asr": 0.97,
+      "asr_per_seed": [
+        0.96,
+        0.98,
+        0.94,
+        0.98,
+        0.99
+      ]
+    }
+  },
+  "rows": [
+    {
+      "seed": 0,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1114,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.01,
+      "eval_asr_per_seed": [
+        0.0,
+        0.01,
+        0.03,
+        0.0,
+        0.01
+      ],
+      "eval_jsd_clean": 0.4762090742588043
+    },
+    {
+      "seed": 0,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1114,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.535702645778656
+    },
+    {
+      "seed": 0,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          1220,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8800000000000001,
+      "eval_asr_per_seed": [
+        0.89,
+        0.87,
+        0.85,
+        0.9,
+        0.89
+      ],
+      "eval_jsd_clean": 0.9784052968025208
+    },
+    {
+      "seed": 0,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          1220,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.118,
+      "eval_asr_per_seed": [
+        0.08,
+        0.13,
+        0.13,
+        0.15,
+        0.1
+      ],
+      "eval_jsd_clean": 0.752295970916748
+    },
+    {
+      "seed": 0,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          1153,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.764,
+      "eval_asr_per_seed": [
+        0.76,
+        0.78,
+        0.77,
+        0.77,
+        0.74
+      ],
+      "eval_jsd_clean": 0.9315003752708435
+    },
+    {
+      "seed": 0,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          1153,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.394,
+      "eval_asr_per_seed": [
+        0.35,
+        0.32,
+        0.41,
+        0.44,
+        0.45
+      ],
+      "eval_jsd_clean": 0.8086631894111633
+    },
+    {
+      "seed": 0,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          679,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.64,
+      "eval_asr_per_seed": [
+        0.61,
+        0.64,
+        0.66,
+        0.64,
+        0.65
+      ],
+      "eval_jsd_clean": 0.8878074884414673
+    },
+    {
+      "seed": 0,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          679,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.45199999999999996,
+      "eval_asr_per_seed": [
+        0.49,
+        0.39,
+        0.45,
+        0.47,
+        0.46
+      ],
+      "eval_jsd_clean": 0.9395962357521057
+    },
+    {
+      "seed": 0,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1337,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8140000000000001,
+      "eval_asr_per_seed": [
+        0.81,
+        0.82,
+        0.77,
+        0.82,
+        0.85
+      ],
+      "eval_jsd_clean": 0.9689017534255981
+    },
+    {
+      "seed": 0,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1337,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.358,
+      "eval_asr_per_seed": [
+        0.33,
+        0.32,
+        0.3,
+        0.44,
+        0.4
+      ],
+      "eval_jsd_clean": 0.855485737323761
+    },
+    {
+      "seed": 0,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          430,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9719999999999999,
+      "eval_asr_per_seed": [
+        0.94,
+        0.99,
+        0.97,
+        0.97,
+        0.99
+      ],
+      "eval_jsd_clean": 0.996765673160553
+    },
+    {
+      "seed": 0,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          430,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9640000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.96,
+        0.98,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9859033823013306
+    },
+    {
+      "seed": 0,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          372,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9339999999999999,
+      "eval_asr_per_seed": [
+        0.92,
+        0.9,
+        0.92,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9941003918647766
+    },
+    {
+      "seed": 0,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          372,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.796,
+      "eval_asr_per_seed": [
+        0.8,
+        0.79,
+        0.73,
+        0.84,
+        0.82
+      ],
+      "eval_jsd_clean": 0.9863693714141846
+    },
+    {
+      "seed": 0,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          221,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.942,
+      "eval_asr_per_seed": [
+        0.91,
+        0.97,
+        0.9,
+        0.98,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9770750999450684
+    },
+    {
+      "seed": 0,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          221,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.682,
+      "eval_asr_per_seed": [
+        0.61,
+        0.68,
+        0.65,
+        0.71,
+        0.76
+      ],
+      "eval_jsd_clean": 0.859382152557373
+    },
+    {
+      "seed": 0,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          467,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.732,
+      "eval_asr_per_seed": [
+        0.72,
+        0.75,
+        0.74,
+        0.7,
+        0.75
+      ],
+      "eval_jsd_clean": 0.9413835406303406
+    },
+    {
+      "seed": 0,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          467,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.054000000000000006,
+      "eval_asr_per_seed": [
+        0.04,
+        0.06,
+        0.07,
+        0.06,
+        0.04
+      ],
+      "eval_jsd_clean": 0.6067778468132019
+    },
+    {
+      "seed": 0,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          1466,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.966,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.95,
+        0.97,
+        0.98
+      ],
+      "eval_jsd_clean": 0.98809415102005
+    },
+    {
+      "seed": 0,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          1466,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9339999999999999,
+      "eval_asr_per_seed": [
+        0.93,
+        0.96,
+        0.89,
+        0.95,
+        0.94
+      ],
+      "eval_jsd_clean": 0.9861790537834167
+    },
+    {
+      "seed": 0,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          941,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.716,
+      "eval_asr_per_seed": [
+        0.68,
+        0.71,
+        0.71,
+        0.72,
+        0.76
+      ],
+      "eval_jsd_clean": 0.9577876329421997
+    },
+    {
+      "seed": 0,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          941,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.41200000000000003,
+      "eval_asr_per_seed": [
+        0.4,
+        0.36,
+        0.36,
+        0.47,
+        0.47
+      ],
+      "eval_jsd_clean": 0.834196150302887
+    },
+    {
+      "seed": 0,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          419,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.898,
+      "eval_asr_per_seed": [
+        0.9,
+        0.92,
+        0.86,
+        0.9,
+        0.91
+      ],
+      "eval_jsd_clean": 0.980807900428772
+    },
+    {
+      "seed": 0,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          419,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.766,
+      "eval_asr_per_seed": [
+        0.78,
+        0.77,
+        0.7,
+        0.81,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9621132612228394
+    },
+    {
+      "seed": 0,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          672,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8779999999999999,
+      "eval_asr_per_seed": [
+        0.85,
+        0.9,
+        0.84,
+        0.91,
+        0.89
+      ],
+      "eval_jsd_clean": 0.9530115723609924
+    },
+    {
+      "seed": 0,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          672,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.47400000000000003,
+      "eval_asr_per_seed": [
+        0.43,
+        0.46,
+        0.44,
+        0.47,
+        0.57
+      ],
+      "eval_jsd_clean": 0.8318590521812439
+    },
+    {
+      "seed": 0,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          473,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.638,
+      "eval_asr_per_seed": [
+        0.61,
+        0.66,
+        0.6,
+        0.64,
+        0.68
+      ],
+      "eval_jsd_clean": 0.8548594117164612
+    },
+    {
+      "seed": 0,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          473,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.418,
+      "eval_asr_per_seed": [
+        0.35,
+        0.39,
+        0.43,
+        0.45,
+        0.47
+      ],
+      "eval_jsd_clean": 0.823618471622467
+    },
+    {
+      "seed": 0,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          756,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.954,
+      "eval_asr_per_seed": [
+        0.96,
+        1.0,
+        0.9,
+        0.95,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9839036464691162
+    },
+    {
+      "seed": 0,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          756,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.82,
+      "eval_asr_per_seed": [
+        0.82,
+        0.85,
+        0.75,
+        0.83,
+        0.85
+      ],
+      "eval_jsd_clean": 0.9442165493965149
+    },
+    {
+      "seed": 0,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          946,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9400000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.97,
+        0.88,
+        0.94,
+        0.97
+      ],
+      "eval_jsd_clean": 0.976299524307251
+    },
+    {
+      "seed": 0,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          946,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8099999999999999,
+      "eval_asr_per_seed": [
+        0.81,
+        0.82,
+        0.79,
+        0.82,
+        0.81
+      ],
+      "eval_jsd_clean": 0.9378493428230286
+    },
+    {
+      "seed": 0,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          922,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.984,
+      "eval_asr_per_seed": [
+        0.96,
+        1.0,
+        0.98,
+        0.98,
+        1.0
+      ],
+      "eval_jsd_clean": 0.9873883128166199
+    },
+    {
+      "seed": 0,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          922,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.968,
+      "eval_asr_per_seed": [
+        0.97,
+        0.98,
+        0.95,
+        0.97,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9959942102432251
+    },
+    {
+      "seed": 0,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          717,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.944,
+      "eval_asr_per_seed": [
+        0.94,
+        0.93,
+        0.94,
+        0.95,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9940613508224487
+    },
+    {
+      "seed": 0,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          717,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.806,
+      "eval_asr_per_seed": [
+        0.8,
+        0.81,
+        0.8,
+        0.81,
+        0.81
+      ],
+      "eval_jsd_clean": 0.9603862166404724
+    },
+    {
+      "seed": 0,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1388,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8300000000000001,
+      "eval_asr_per_seed": [
+        0.79,
+        0.87,
+        0.8,
+        0.86,
+        0.83
+      ],
+      "eval_jsd_clean": 0.9634606838226318
+    },
+    {
+      "seed": 0,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1388,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.11000000000000001,
+      "eval_asr_per_seed": [
+        0.12,
+        0.09,
+        0.15,
+        0.1,
+        0.09
+      ],
+      "eval_jsd_clean": 0.9492883086204529
+    },
+    {
+      "seed": 0,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1181,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.924,
+      "eval_asr_per_seed": [
+        0.93,
+        0.94,
+        0.86,
+        0.92,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9840313792228699
+    },
+    {
+      "seed": 0,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1181,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8379999999999999,
+      "eval_asr_per_seed": [
+        0.89,
+        0.85,
+        0.75,
+        0.85,
+        0.85
+      ],
+      "eval_jsd_clean": 0.9816603064537048
+    },
+    {
+      "seed": 1,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1027,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.4712488055229187
+    },
+    {
+      "seed": 1,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1027,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.4094717800617218
+    },
+    {
+      "seed": 1,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          767,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.098,
+      "eval_asr_per_seed": [
+        0.07,
+        0.07,
+        0.14,
+        0.13,
+        0.08
+      ],
+      "eval_jsd_clean": 0.49889329075813293
+    },
+    {
+      "seed": 1,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          767,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.35344088077545166
+    },
+    {
+      "seed": 1,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          459,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.346,
+      "eval_asr_per_seed": [
+        0.3,
+        0.3,
+        0.31,
+        0.43,
+        0.39
+      ],
+      "eval_jsd_clean": 0.7344483733177185
+    },
+    {
+      "seed": 1,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          459,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.44349992275238037
+    },
+    {
+      "seed": 1,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          1179,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.968,
+      "eval_asr_per_seed": [
+        0.94,
+        0.99,
+        0.98,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9872689247131348
+    },
+    {
+      "seed": 1,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          1179,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.892,
+      "eval_asr_per_seed": [
+        0.88,
+        0.87,
+        0.84,
+        0.93,
+        0.94
+      ],
+      "eval_jsd_clean": 0.9886190295219421
+    },
+    {
+      "seed": 1,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          807,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8400000000000001,
+      "eval_asr_per_seed": [
+        0.87,
+        0.85,
+        0.76,
+        0.87,
+        0.85
+      ],
+      "eval_jsd_clean": 0.9790575504302979
+    },
+    {
+      "seed": 1,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          807,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.65,
+      "eval_asr_per_seed": [
+        0.63,
+        0.67,
+        0.59,
+        0.66,
+        0.7
+      ],
+      "eval_jsd_clean": 0.9649026989936829
+    },
+    {
+      "seed": 1,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1482,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.82,
+      "eval_asr_per_seed": [
+        0.79,
+        0.84,
+        0.77,
+        0.84,
+        0.86
+      ],
+      "eval_jsd_clean": 0.9540466070175171
+    },
+    {
+      "seed": 1,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1482,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.2,
+      "eval_asr_per_seed": [
+        0.14,
+        0.21,
+        0.17,
+        0.24,
+        0.24
+      ],
+      "eval_jsd_clean": 0.718720018863678
+    },
+    {
+      "seed": 1,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1026,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.796,
+      "eval_asr_per_seed": [
+        0.85,
+        0.79,
+        0.75,
+        0.81,
+        0.78
+      ],
+      "eval_jsd_clean": 0.9529172778129578
+    },
+    {
+      "seed": 1,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1026,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.592,
+      "eval_asr_per_seed": [
+        0.58,
+        0.62,
+        0.53,
+        0.63,
+        0.6
+      ],
+      "eval_jsd_clean": 0.8891122341156006
+    },
+    {
+      "seed": 1,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          524,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9640000000000001,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.94,
+        0.97,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9931009411811829
+    },
+    {
+      "seed": 1,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          524,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9460000000000001,
+      "eval_asr_per_seed": [
+        0.96,
+        0.97,
+        0.91,
+        0.93,
+        0.96
+      ],
+      "eval_jsd_clean": 0.991722047328949
+    },
+    {
+      "seed": 1,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          621,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9,
+      "eval_asr_per_seed": [
+        0.87,
+        0.91,
+        0.88,
+        0.91,
+        0.93
+      ],
+      "eval_jsd_clean": 0.9621949195861816
+    },
+    {
+      "seed": 1,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          621,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.782,
+      "eval_asr_per_seed": [
+        0.74,
+        0.8,
+        0.77,
+        0.82,
+        0.78
+      ],
+      "eval_jsd_clean": 0.9630324840545654
+    },
+    {
+      "seed": 1,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          224,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.768,
+      "eval_asr_per_seed": [
+        0.76,
+        0.77,
+        0.74,
+        0.8,
+        0.77
+      ],
+      "eval_jsd_clean": 0.8864374756813049
+    },
+    {
+      "seed": 1,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          224,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.43200000000000005,
+      "eval_asr_per_seed": [
+        0.44,
+        0.43,
+        0.41,
+        0.41,
+        0.47
+      ],
+      "eval_jsd_clean": 0.7763587236404419
+    },
+    {
+      "seed": 1,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          230,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.826,
+      "eval_asr_per_seed": [
+        0.82,
+        0.83,
+        0.78,
+        0.83,
+        0.87
+      ],
+      "eval_jsd_clean": 0.9762644171714783
+    },
+    {
+      "seed": 1,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          230,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.592,
+      "eval_asr_per_seed": [
+        0.54,
+        0.58,
+        0.58,
+        0.61,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9514682292938232
+    },
+    {
+      "seed": 1,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          789,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.922,
+      "eval_asr_per_seed": [
+        0.9,
+        0.91,
+        0.9,
+        0.93,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9663063287734985
+    },
+    {
+      "seed": 1,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          789,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.6839999999999999,
+      "eval_asr_per_seed": [
+        0.68,
+        0.67,
+        0.63,
+        0.73,
+        0.71
+      ],
+      "eval_jsd_clean": 0.8861808776855469
+    },
+    {
+      "seed": 1,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          548,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9480000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.96,
+        0.93,
+        0.95,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9932715892791748
+    },
+    {
+      "seed": 1,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          548,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.74,
+      "eval_asr_per_seed": [
+        0.71,
+        0.78,
+        0.7,
+        0.74,
+        0.77
+      ],
+      "eval_jsd_clean": 0.951826274394989
+    },
+    {
+      "seed": 1,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1099,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9480000000000001,
+      "eval_asr_per_seed": [
+        0.95,
+        0.94,
+        0.93,
+        0.96,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9862909913063049
+    },
+    {
+      "seed": 1,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1099,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.808,
+      "eval_asr_per_seed": [
+        0.77,
+        0.81,
+        0.8,
+        0.83,
+        0.83
+      ],
+      "eval_jsd_clean": 0.9717082977294922
+    },
+    {
+      "seed": 1,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          1411,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9800000000000001,
+      "eval_asr_per_seed": [
+        0.98,
+        0.99,
+        0.97,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.989065408706665
+    },
+    {
+      "seed": 1,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          1411,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9019999999999999,
+      "eval_asr_per_seed": [
+        0.9,
+        0.9,
+        0.87,
+        0.92,
+        0.92
+      ],
+      "eval_jsd_clean": 0.992087721824646
+    },
+    {
+      "seed": 1,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1222,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9179999999999999,
+      "eval_asr_per_seed": [
+        0.93,
+        0.93,
+        0.89,
+        0.92,
+        0.92
+      ],
+      "eval_jsd_clean": 0.9895167350769043
+    },
+    {
+      "seed": 1,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1222,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.722,
+      "eval_asr_per_seed": [
+        0.69,
+        0.73,
+        0.69,
+        0.76,
+        0.74
+      ],
+      "eval_jsd_clean": 0.9182924032211304
+    },
+    {
+      "seed": 1,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          466,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.99,
+      "eval_asr_per_seed": [
+        0.98,
+        1.0,
+        0.98,
+        0.99,
+        1.0
+      ],
+      "eval_jsd_clean": 0.9982962012290955
+    },
+    {
+      "seed": 1,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          466,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9719999999999999,
+      "eval_asr_per_seed": [
+        0.98,
+        0.97,
+        0.99,
+        0.94,
+        0.98
+      ],
+      "eval_jsd_clean": 0.997761607170105
+    },
+    {
+      "seed": 1,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          1381,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8400000000000001,
+      "eval_asr_per_seed": [
+        0.83,
+        0.87,
+        0.81,
+        0.83,
+        0.86
+      ],
+      "eval_jsd_clean": 0.972587525844574
+    },
+    {
+      "seed": 1,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          1381,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.506,
+      "eval_asr_per_seed": [
+        0.45,
+        0.45,
+        0.5,
+        0.57,
+        0.56
+      ],
+      "eval_jsd_clean": 0.906521201133728
+    },
+    {
+      "seed": 1,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1157,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.966,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.94,
+        0.99,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9828455448150635
+    },
+    {
+      "seed": 1,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1157,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.788,
+      "eval_asr_per_seed": [
+        0.77,
+        0.84,
+        0.72,
+        0.82,
+        0.79
+      ],
+      "eval_jsd_clean": 0.9781889915466309
+    },
+    {
+      "seed": 1,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1142,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.932,
+      "eval_asr_per_seed": [
+        0.91,
+        0.96,
+        0.87,
+        0.95,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9840545654296875
+    },
+    {
+      "seed": 1,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1142,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8220000000000001,
+      "eval_asr_per_seed": [
+        0.82,
+        0.81,
+        0.79,
+        0.85,
+        0.84
+      ],
+      "eval_jsd_clean": 0.9768477082252502
+    },
+    {
+      "seed": 2,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          351,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.012,
+      "eval_asr_per_seed": [
+        0.01,
+        0.01,
+        0.01,
+        0.02,
+        0.01
+      ],
+      "eval_jsd_clean": 0.46863964200019836
+    },
+    {
+      "seed": 2,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          351,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.42956534028053284
+    },
+    {
+      "seed": 2,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          169,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.016,
+      "eval_asr_per_seed": [
+        0.02,
+        0.01,
+        0.0,
+        0.02,
+        0.03
+      ],
+      "eval_jsd_clean": 0.4089587926864624
+    },
+    {
+      "seed": 2,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          169,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.3414793014526367
+    },
+    {
+      "seed": 2,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          988,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.576,
+      "eval_asr_per_seed": [
+        0.56,
+        0.54,
+        0.57,
+        0.62,
+        0.59
+      ],
+      "eval_jsd_clean": 0.8672626614570618
+    },
+    {
+      "seed": 2,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          988,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.018,
+      "eval_asr_per_seed": [
+        0.01,
+        0.01,
+        0.03,
+        0.02,
+        0.02
+      ],
+      "eval_jsd_clean": 0.4802466928958893
+    },
+    {
+      "seed": 2,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          836,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.738,
+      "eval_asr_per_seed": [
+        0.73,
+        0.74,
+        0.73,
+        0.76,
+        0.73
+      ],
+      "eval_jsd_clean": 0.9389161467552185
+    },
+    {
+      "seed": 2,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          836,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.40800000000000003,
+      "eval_asr_per_seed": [
+        0.3,
+        0.41,
+        0.39,
+        0.47,
+        0.47
+      ],
+      "eval_jsd_clean": 0.8430222272872925
+    },
+    {
+      "seed": 2,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1515,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.708,
+      "eval_asr_per_seed": [
+        0.63,
+        0.77,
+        0.65,
+        0.74,
+        0.75
+      ],
+      "eval_jsd_clean": 0.9369720220565796
+    },
+    {
+      "seed": 2,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1515,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.358,
+      "eval_asr_per_seed": [
+        0.32,
+        0.29,
+        0.39,
+        0.42,
+        0.37
+      ],
+      "eval_jsd_clean": 0.8251505494117737
+    },
+    {
+      "seed": 2,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          211,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.97,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.96,
+        0.99,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9956552386283875
+    },
+    {
+      "seed": 2,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          211,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.958,
+      "eval_asr_per_seed": [
+        0.91,
+        0.98,
+        0.94,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9853967428207397
+    },
+    {
+      "seed": 2,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1505,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.992,
+      "eval_asr_per_seed": [
+        0.98,
+        1.0,
+        1.0,
+        0.99,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9975713491439819
+    },
+    {
+      "seed": 2,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1505,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.976,
+      "eval_asr_per_seed": [
+        0.95,
+        0.97,
+        0.98,
+        0.98,
+        1.0
+      ],
+      "eval_jsd_clean": 0.9962884783744812
+    },
+    {
+      "seed": 2,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1180,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.954,
+      "eval_asr_per_seed": [
+        0.97,
+        0.98,
+        0.91,
+        0.96,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9949856400489807
+    },
+    {
+      "seed": 2,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1180,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8459999999999999,
+      "eval_asr_per_seed": [
+        0.83,
+        0.88,
+        0.85,
+        0.84,
+        0.83
+      ],
+      "eval_jsd_clean": 0.9817719459533691
+    },
+    {
+      "seed": 2,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          861,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.836,
+      "eval_asr_per_seed": [
+        0.86,
+        0.84,
+        0.77,
+        0.81,
+        0.9
+      ],
+      "eval_jsd_clean": 0.978081226348877
+    },
+    {
+      "seed": 2,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          861,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.76,
+      "eval_asr_per_seed": [
+        0.8,
+        0.8,
+        0.7,
+        0.73,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9636353254318237
+    },
+    {
+      "seed": 2,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          640,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.944,
+      "eval_asr_per_seed": [
+        0.94,
+        0.97,
+        0.89,
+        0.96,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9929735064506531
+    },
+    {
+      "seed": 2,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          640,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.632,
+      "eval_asr_per_seed": [
+        0.63,
+        0.57,
+        0.65,
+        0.66,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9545623660087585
+    },
+    {
+      "seed": 2,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          225,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8099999999999999,
+      "eval_asr_per_seed": [
+        0.78,
+        0.84,
+        0.79,
+        0.82,
+        0.82
+      ],
+      "eval_jsd_clean": 0.9528515338897705
+    },
+    {
+      "seed": 2,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          225,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.086,
+      "eval_asr_per_seed": [
+        0.04,
+        0.12,
+        0.09,
+        0.14,
+        0.04
+      ],
+      "eval_jsd_clean": 0.6629484295845032
+    },
+    {
+      "seed": 2,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          1489,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9099999999999999,
+      "eval_asr_per_seed": [
+        0.91,
+        0.92,
+        0.93,
+        0.89,
+        0.9
+      ],
+      "eval_jsd_clean": 0.9739897847175598
+    },
+    {
+      "seed": 2,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          1489,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.74,
+      "eval_asr_per_seed": [
+        0.73,
+        0.73,
+        0.73,
+        0.76,
+        0.75
+      ],
+      "eval_jsd_clean": 0.9638121724128723
+    },
+    {
+      "seed": 2,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1087,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.156,
+      "eval_asr_per_seed": [
+        0.17,
+        0.17,
+        0.15,
+        0.18,
+        0.11
+      ],
+      "eval_jsd_clean": 0.7703814506530762
+    },
+    {
+      "seed": 2,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1087,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.8425167798995972
+    },
+    {
+      "seed": 2,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1169,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.742,
+      "eval_asr_per_seed": [
+        0.7,
+        0.74,
+        0.73,
+        0.76,
+        0.78
+      ],
+      "eval_jsd_clean": 0.9727142453193665
+    },
+    {
+      "seed": 2,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1169,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.508,
+      "eval_asr_per_seed": [
+        0.47,
+        0.44,
+        0.5,
+        0.55,
+        0.58
+      ],
+      "eval_jsd_clean": 0.9197018146514893
+    },
+    {
+      "seed": 2,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          971,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.97,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.95,
+        0.98,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9864671230316162
+    },
+    {
+      "seed": 2,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          971,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9719999999999999,
+      "eval_asr_per_seed": [
+        0.96,
+        0.98,
+        0.95,
+        0.98,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9863373041152954
+    },
+    {
+      "seed": 2,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          375,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9400000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.89,
+        0.95,
+        0.94
+      ],
+      "eval_jsd_clean": 0.9807095527648926
+    },
+    {
+      "seed": 2,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          375,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8320000000000001,
+      "eval_asr_per_seed": [
+        0.85,
+        0.87,
+        0.8,
+        0.85,
+        0.79
+      ],
+      "eval_jsd_clean": 0.9687322974205017
+    },
+    {
+      "seed": 2,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          1164,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.962,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.94,
+        0.97,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9855608940124512
+    },
+    {
+      "seed": 2,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          1164,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9339999999999999,
+      "eval_asr_per_seed": [
+        0.93,
+        0.95,
+        0.89,
+        0.95,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9931847453117371
+    },
+    {
+      "seed": 2,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          843,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.67,
+      "eval_asr_per_seed": [
+        0.66,
+        0.73,
+        0.57,
+        0.74,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9466703534126282
+    },
+    {
+      "seed": 2,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          843,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.02,
+      "eval_asr_per_seed": [
+        0.0,
+        0.01,
+        0.03,
+        0.05,
+        0.01
+      ],
+      "eval_jsd_clean": 0.9029222130775452
+    },
+    {
+      "seed": 2,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          207,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.966,
+      "eval_asr_per_seed": [
+        0.96,
+        0.98,
+        0.93,
+        0.97,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9872125387191772
+    },
+    {
+      "seed": 2,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          207,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.908,
+      "eval_asr_per_seed": [
+        0.91,
+        0.95,
+        0.9,
+        0.92,
+        0.86
+      ],
+      "eval_jsd_clean": 0.9818382859230042
+    },
+    {
+      "seed": 2,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          129,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.97,
+      "eval_asr_per_seed": [
+        0.97,
+        0.98,
+        0.96,
+        0.97,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9886123538017273
+    },
+    {
+      "seed": 2,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          129,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.922,
+      "eval_asr_per_seed": [
+        0.9,
+        0.94,
+        0.89,
+        0.95,
+        0.93
+      ],
+      "eval_jsd_clean": 0.9805088639259338
+    },
+    {
+      "seed": 3,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1154,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.42026954889297485
+    },
+    {
+      "seed": 3,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1154,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.40693554282188416
+    },
+    {
+      "seed": 3,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          29,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.28,
+      "eval_asr_per_seed": [
+        0.26,
+        0.24,
+        0.23,
+        0.34,
+        0.33
+      ],
+      "eval_jsd_clean": 0.6832826733589172
+    },
+    {
+      "seed": 3,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          29,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.008,
+      "eval_asr_per_seed": [
+        0.0,
+        0.02,
+        0.01,
+        0.0,
+        0.01
+      ],
+      "eval_jsd_clean": 0.5025745630264282
+    },
+    {
+      "seed": 3,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          825,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9339999999999999,
+      "eval_asr_per_seed": [
+        0.93,
+        0.93,
+        0.88,
+        0.95,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9838024973869324
+    },
+    {
+      "seed": 3,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          825,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.648,
+      "eval_asr_per_seed": [
+        0.65,
+        0.63,
+        0.59,
+        0.68,
+        0.69
+      ],
+      "eval_jsd_clean": 0.9709779620170593
+    },
+    {
+      "seed": 3,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          134,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.6799999999999999,
+      "eval_asr_per_seed": [
+        0.64,
+        0.71,
+        0.67,
+        0.7,
+        0.68
+      ],
+      "eval_jsd_clean": 0.87894606590271
+    },
+    {
+      "seed": 3,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          134,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.382,
+      "eval_asr_per_seed": [
+        0.29,
+        0.38,
+        0.35,
+        0.5,
+        0.39
+      ],
+      "eval_jsd_clean": 0.7841224074363708
+    },
+    {
+      "seed": 3,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          944,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9280000000000002,
+      "eval_asr_per_seed": [
+        0.95,
+        0.92,
+        0.93,
+        0.93,
+        0.91
+      ],
+      "eval_jsd_clean": 0.9861788749694824
+    },
+    {
+      "seed": 3,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          944,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.696,
+      "eval_asr_per_seed": [
+        0.65,
+        0.71,
+        0.73,
+        0.71,
+        0.68
+      ],
+      "eval_jsd_clean": 0.9450414776802063
+    },
+    {
+      "seed": 3,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1156,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.966,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.95,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9945886135101318
+    },
+    {
+      "seed": 3,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1156,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.958,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.94,
+        0.97,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9944848418235779
+    },
+    {
+      "seed": 3,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1202,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.026000000000000002,
+      "eval_asr_per_seed": [
+        0.02,
+        0.04,
+        0.0,
+        0.03,
+        0.04
+      ],
+      "eval_jsd_clean": 0.7810078263282776
+    },
+    {
+      "seed": 3,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1202,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.899153470993042
+    },
+    {
+      "seed": 3,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1281,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9400000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.96,
+        0.86,
+        0.97,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9839401841163635
+    },
+    {
+      "seed": 3,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1281,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8400000000000001,
+      "eval_asr_per_seed": [
+        0.84,
+        0.87,
+        0.79,
+        0.84,
+        0.86
+      ],
+      "eval_jsd_clean": 0.9729045629501343
+    },
+    {
+      "seed": 3,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          883,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.986,
+      "eval_asr_per_seed": [
+        0.99,
+        1.0,
+        0.97,
+        0.99,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9984794855117798
+    },
+    {
+      "seed": 3,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          883,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9179999999999999,
+      "eval_asr_per_seed": [
+        0.9,
+        0.95,
+        0.89,
+        0.9,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9928863048553467
+    },
+    {
+      "seed": 3,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          602,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9339999999999999,
+      "eval_asr_per_seed": [
+        0.92,
+        0.95,
+        0.9,
+        0.94,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9793839454650879
+    },
+    {
+      "seed": 3,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          602,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.652,
+      "eval_asr_per_seed": [
+        0.55,
+        0.65,
+        0.66,
+        0.73,
+        0.67
+      ],
+      "eval_jsd_clean": 0.8989938497543335
+    },
+    {
+      "seed": 3,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          1359,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.866,
+      "eval_asr_per_seed": [
+        0.88,
+        0.88,
+        0.81,
+        0.87,
+        0.89
+      ],
+      "eval_jsd_clean": 0.9558384418487549
+    },
+    {
+      "seed": 3,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          1359,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.6900000000000001,
+      "eval_asr_per_seed": [
+        0.66,
+        0.7,
+        0.72,
+        0.73,
+        0.64
+      ],
+      "eval_jsd_clean": 0.8956612348556519
+    },
+    {
+      "seed": 3,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          514,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.892,
+      "eval_asr_per_seed": [
+        0.88,
+        0.92,
+        0.86,
+        0.87,
+        0.93
+      ],
+      "eval_jsd_clean": 0.9736073017120361
+    },
+    {
+      "seed": 3,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          514,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.414,
+      "eval_asr_per_seed": [
+        0.37,
+        0.37,
+        0.4,
+        0.47,
+        0.46
+      ],
+      "eval_jsd_clean": 0.8649789690971375
+    },
+    {
+      "seed": 3,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1135,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.772,
+      "eval_asr_per_seed": [
+        0.74,
+        0.77,
+        0.74,
+        0.79,
+        0.82
+      ],
+      "eval_jsd_clean": 0.9594459533691406
+    },
+    {
+      "seed": 3,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1135,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.51,
+      "eval_asr_per_seed": [
+        0.47,
+        0.44,
+        0.48,
+        0.59,
+        0.57
+      ],
+      "eval_jsd_clean": 0.8929598927497864
+    },
+    {
+      "seed": 3,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          986,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.95,
+      "eval_asr_per_seed": [
+        0.94,
+        0.97,
+        0.91,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9850999712944031
+    },
+    {
+      "seed": 3,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          986,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.758,
+      "eval_asr_per_seed": [
+        0.78,
+        0.74,
+        0.71,
+        0.76,
+        0.8
+      ],
+      "eval_jsd_clean": 0.959770679473877
+    },
+    {
+      "seed": 3,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          285,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.962,
+      "eval_asr_per_seed": [
+        0.96,
+        0.99,
+        0.93,
+        0.97,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9841530323028564
+    },
+    {
+      "seed": 3,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          285,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8960000000000001,
+      "eval_asr_per_seed": [
+        0.93,
+        0.91,
+        0.86,
+        0.88,
+        0.9
+      ],
+      "eval_jsd_clean": 0.9754127264022827
+    },
+    {
+      "seed": 3,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1152,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.714,
+      "eval_asr_per_seed": [
+        0.69,
+        0.69,
+        0.74,
+        0.71,
+        0.74
+      ],
+      "eval_jsd_clean": 0.9398301839828491
+    },
+    {
+      "seed": 3,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1152,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.057999999999999996,
+      "eval_asr_per_seed": [
+        0.05,
+        0.04,
+        0.03,
+        0.08,
+        0.09
+      ],
+      "eval_jsd_clean": 0.9122069478034973
+    },
+    {
+      "seed": 3,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          591,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.95,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.88,
+        0.97,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9838972687721252
+    },
+    {
+      "seed": 3,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          591,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8880000000000001,
+      "eval_asr_per_seed": [
+        0.88,
+        0.89,
+        0.83,
+        0.92,
+        0.92
+      ],
+      "eval_jsd_clean": 0.9735780358314514
+    },
+    {
+      "seed": 3,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          180,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.942,
+      "eval_asr_per_seed": [
+        0.95,
+        0.95,
+        0.88,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9834493398666382
+    },
+    {
+      "seed": 3,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          180,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.812,
+      "eval_asr_per_seed": [
+        0.84,
+        0.81,
+        0.78,
+        0.83,
+        0.8
+      ],
+      "eval_jsd_clean": 0.9680508971214294
+    },
+    {
+      "seed": 3,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1326,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.97,
+      "eval_asr_per_seed": [
+        0.95,
+        0.99,
+        0.95,
+        0.97,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9974967837333679
+    },
+    {
+      "seed": 3,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          1326,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.9640000000000001,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.94,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9963672757148743
+    },
+    {
+      "seed": 3,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          244,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.966,
+      "eval_asr_per_seed": [
+        0.96,
+        0.98,
+        0.93,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9864526987075806
+    },
+    {
+      "seed": 3,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          244,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.95,
+      "eval_asr_per_seed": [
+        0.94,
+        0.97,
+        0.92,
+        0.95,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9934294819831848
+    },
+    {
+      "seed": 4,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1430,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.508,
+      "eval_asr_per_seed": [
+        0.41,
+        0.54,
+        0.5,
+        0.53,
+        0.56
+      ],
+      "eval_jsd_clean": 0.9164076447486877
+    },
+    {
+      "seed": 4,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1430,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.002,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0
+      ],
+      "eval_jsd_clean": 0.5169515013694763
+    },
+    {
+      "seed": 4,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          558,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.132,
+      "eval_asr_per_seed": [
+        0.14,
+        0.11,
+        0.13,
+        0.14,
+        0.14
+      ],
+      "eval_jsd_clean": 0.6155738234519958
+    },
+    {
+      "seed": 4,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          558,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.002,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01
+      ],
+      "eval_jsd_clean": 0.433246910572052
+    },
+    {
+      "seed": 4,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          841,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.698,
+      "eval_asr_per_seed": [
+        0.69,
+        0.74,
+        0.59,
+        0.73,
+        0.74
+      ],
+      "eval_jsd_clean": 0.9664706587791443
+    },
+    {
+      "seed": 4,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          841,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.15,
+      "eval_asr_per_seed": [
+        0.19,
+        0.15,
+        0.1,
+        0.14,
+        0.17
+      ],
+      "eval_jsd_clean": 0.9081061482429504
+    },
+    {
+      "seed": 4,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          1441,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.54,
+      "eval_asr_per_seed": [
+        0.5,
+        0.5,
+        0.5,
+        0.6,
+        0.6
+      ],
+      "eval_jsd_clean": 0.9399077892303467
+    },
+    {
+      "seed": 4,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          1441,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.324,
+      "eval_asr_per_seed": [
+        0.26,
+        0.27,
+        0.32,
+        0.44,
+        0.33
+      ],
+      "eval_jsd_clean": 0.8782947063446045
+    },
+    {
+      "seed": 4,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          353,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.978,
+      "eval_asr_per_seed": [
+        0.97,
+        0.99,
+        0.97,
+        0.98,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9967602491378784
+    },
+    {
+      "seed": 4,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          353,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.952,
+      "eval_asr_per_seed": [
+        0.93,
+        1.0,
+        0.91,
+        0.96,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9942082166671753
+    },
+    {
+      "seed": 4,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          725,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.6839999999999999,
+      "eval_asr_per_seed": [
+        0.64,
+        0.71,
+        0.68,
+        0.67,
+        0.72
+      ],
+      "eval_jsd_clean": 0.9077741503715515
+    },
+    {
+      "seed": 4,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          725,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.026000000000000002,
+      "eval_asr_per_seed": [
+        0.0,
+        0.04,
+        0.02,
+        0.04,
+        0.03
+      ],
+      "eval_jsd_clean": 0.5309412479400635
+    },
+    {
+      "seed": 4,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1006,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.758,
+      "eval_asr_per_seed": [
+        0.77,
+        0.74,
+        0.76,
+        0.75,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9356482625007629
+    },
+    {
+      "seed": 4,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1006,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.022,
+      "eval_asr_per_seed": [
+        0.02,
+        0.03,
+        0.01,
+        0.02,
+        0.03
+      ],
+      "eval_jsd_clean": 0.4608592689037323
+    },
+    {
+      "seed": 4,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          832,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.616,
+      "eval_asr_per_seed": [
+        0.58,
+        0.6,
+        0.61,
+        0.64,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9009192585945129
+    },
+    {
+      "seed": 4,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          832,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.122,
+      "eval_asr_per_seed": [
+        0.11,
+        0.12,
+        0.14,
+        0.09,
+        0.15
+      ],
+      "eval_jsd_clean": 0.8885827660560608
+    },
+    {
+      "seed": 4,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          499,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.892,
+      "eval_asr_per_seed": [
+        0.89,
+        0.9,
+        0.85,
+        0.92,
+        0.9
+      ],
+      "eval_jsd_clean": 0.9723255634307861
+    },
+    {
+      "seed": 4,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          499,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.348,
+      "eval_asr_per_seed": [
+        0.27,
+        0.34,
+        0.36,
+        0.41,
+        0.36
+      ],
+      "eval_jsd_clean": 0.7382258772850037
+    },
+    {
+      "seed": 4,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          623,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.974,
+      "eval_asr_per_seed": [
+        0.96,
+        1.0,
+        0.94,
+        0.98,
+        0.99
+      ],
+      "eval_jsd_clean": 0.9856326580047607
+    },
+    {
+      "seed": 4,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          623,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.788,
+      "eval_asr_per_seed": [
+        0.74,
+        0.79,
+        0.77,
+        0.85,
+        0.79
+      ],
+      "eval_jsd_clean": 0.9552624225616455
+    },
+    {
+      "seed": 4,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          1305,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9719999999999999,
+      "eval_asr_per_seed": [
+        0.96,
+        0.98,
+        0.95,
+        0.99,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9966164231300354
+    },
+    {
+      "seed": 4,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          1305,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.792,
+      "eval_asr_per_seed": [
+        0.78,
+        0.82,
+        0.76,
+        0.76,
+        0.84
+      ],
+      "eval_jsd_clean": 0.9738238453865051
+    },
+    {
+      "seed": 4,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          899,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.546,
+      "eval_asr_per_seed": [
+        0.54,
+        0.55,
+        0.51,
+        0.56,
+        0.57
+      ],
+      "eval_jsd_clean": 0.8196893930435181
+    },
+    {
+      "seed": 4,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          899,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.242,
+      "eval_asr_per_seed": [
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.25
+      ],
+      "eval_jsd_clean": 0.7101762294769287
+    },
+    {
+      "seed": 4,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1191,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.914,
+      "eval_asr_per_seed": [
+        0.89,
+        0.93,
+        0.86,
+        0.94,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9819868206977844
+    },
+    {
+      "seed": 4,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          1191,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.7,
+      "eval_asr_per_seed": [
+        0.65,
+        0.71,
+        0.68,
+        0.72,
+        0.74
+      ],
+      "eval_jsd_clean": 0.9538415670394897
+    },
+    {
+      "seed": 4,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          346,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.952,
+      "eval_asr_per_seed": [
+        0.97,
+        0.98,
+        0.88,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9827991724014282
+    },
+    {
+      "seed": 4,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          346,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8620000000000001,
+      "eval_asr_per_seed": [
+        0.83,
+        0.88,
+        0.8,
+        0.9,
+        0.9
+      ],
+      "eval_jsd_clean": 0.9757047891616821
+    },
+    {
+      "seed": 4,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          310,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.954,
+      "eval_asr_per_seed": [
+        0.96,
+        0.97,
+        0.93,
+        0.95,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9847246408462524
+    },
+    {
+      "seed": 4,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          310,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.712,
+      "eval_asr_per_seed": [
+        0.71,
+        0.73,
+        0.67,
+        0.73,
+        0.72
+      ],
+      "eval_jsd_clean": 0.9317806959152222
+    },
+    {
+      "seed": 4,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          267,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.93,
+      "eval_asr_per_seed": [
+        0.93,
+        0.94,
+        0.9,
+        0.95,
+        0.93
+      ],
+      "eval_jsd_clean": 0.9943638443946838
+    },
+    {
+      "seed": 4,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          267,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.628,
+      "eval_asr_per_seed": [
+        0.53,
+        0.66,
+        0.62,
+        0.68,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9471771121025085
+    },
+    {
+      "seed": 4,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          546,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.736,
+      "eval_asr_per_seed": [
+        0.74,
+        0.73,
+        0.76,
+        0.73,
+        0.72
+      ],
+      "eval_jsd_clean": 0.9470869302749634
+    },
+    {
+      "seed": 4,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          546,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.518,
+      "eval_asr_per_seed": [
+        0.49,
+        0.52,
+        0.54,
+        0.52,
+        0.52
+      ],
+      "eval_jsd_clean": 0.8860694169998169
+    },
+    {
+      "seed": 4,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          884,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.958,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.92,
+        0.98,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9833757281303406
+    },
+    {
+      "seed": 4,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          884,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.742,
+      "eval_asr_per_seed": [
+        0.73,
+        0.75,
+        0.67,
+        0.81,
+        0.75
+      ],
+      "eval_jsd_clean": 0.9236968755722046
+    },
+    {
+      "seed": 4,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          47,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9199999999999999,
+      "eval_asr_per_seed": [
+        0.92,
+        0.94,
+        0.89,
+        0.92,
+        0.93
+      ],
+      "eval_jsd_clean": 0.9728936553001404
+    },
+    {
+      "seed": 4,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          47,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.628,
+      "eval_asr_per_seed": [
+        0.56,
+        0.63,
+        0.61,
+        0.7,
+        0.64
+      ],
+      "eval_jsd_clean": 0.8793585896492004
+    },
+    {
+      "seed": 4,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1241,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9960000000000001,
+      "eval_asr_per_seed": [
+        1.0,
+        1.0,
+        0.98,
+        1.0,
+        1.0
+      ],
+      "eval_jsd_clean": 0.998497486114502
+    },
+    {
+      "seed": 4,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          1241,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.976,
+      "eval_asr_per_seed": [
+        0.98,
+        0.99,
+        0.95,
+        0.99,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9963083863258362
+    },
+    {
+      "seed": 5,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1208,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.008,
+      "eval_asr_per_seed": [
+        0.0,
+        0.01,
+        0.01,
+        0.01,
+        0.01
+      ],
+      "eval_jsd_clean": 0.5270873308181763
+    },
+    {
+      "seed": 5,
+      "attr_rank": 1,
+      "tuple": [
+        [
+          1208,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.0,
+      "eval_asr_per_seed": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_jsd_clean": 0.5638996362686157
+    },
+    {
+      "seed": 5,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          162,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.748,
+      "eval_asr_per_seed": [
+        0.75,
+        0.79,
+        0.68,
+        0.81,
+        0.71
+      ],
+      "eval_jsd_clean": 0.9588781595230103
+    },
+    {
+      "seed": 5,
+      "attr_rank": 2,
+      "tuple": [
+        [
+          162,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.446,
+      "eval_asr_per_seed": [
+        0.44,
+        0.5,
+        0.38,
+        0.47,
+        0.44
+      ],
+      "eval_jsd_clean": 0.9289041757583618
+    },
+    {
+      "seed": 5,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          1236,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.23399999999999999,
+      "eval_asr_per_seed": [
+        0.18,
+        0.22,
+        0.24,
+        0.3,
+        0.23
+      ],
+      "eval_jsd_clean": 0.7518353462219238
+    },
+    {
+      "seed": 5,
+      "attr_rank": 3,
+      "tuple": [
+        [
+          1236,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.15,
+      "eval_asr_per_seed": [
+        0.1,
+        0.14,
+        0.14,
+        0.23,
+        0.14
+      ],
+      "eval_jsd_clean": 0.6797868609428406
+    },
+    {
+      "seed": 5,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          689,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.752,
+      "eval_asr_per_seed": [
+        0.77,
+        0.75,
+        0.72,
+        0.76,
+        0.76
+      ],
+      "eval_jsd_clean": 0.9051833152770996
+    },
+    {
+      "seed": 5,
+      "attr_rank": 4,
+      "tuple": [
+        [
+          689,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.04,
+      "eval_asr_per_seed": [
+        0.03,
+        0.05,
+        0.04,
+        0.04,
+        0.04
+      ],
+      "eval_jsd_clean": 0.5639985799789429
+    },
+    {
+      "seed": 5,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1271,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.974,
+      "eval_asr_per_seed": [
+        0.95,
+        0.99,
+        0.96,
+        0.99,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9963054060935974
+    },
+    {
+      "seed": 5,
+      "attr_rank": 5,
+      "tuple": [
+        [
+          1271,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.954,
+      "eval_asr_per_seed": [
+        0.94,
+        0.98,
+        0.93,
+        0.96,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9943360686302185
+    },
+    {
+      "seed": 5,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1147,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.932,
+      "eval_asr_per_seed": [
+        0.93,
+        0.97,
+        0.88,
+        0.92,
+        0.96
+      ],
+      "eval_jsd_clean": 0.9837333559989929
+    },
+    {
+      "seed": 5,
+      "attr_rank": 6,
+      "tuple": [
+        [
+          1147,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.648,
+      "eval_asr_per_seed": [
+        0.66,
+        0.63,
+        0.64,
+        0.66,
+        0.65
+      ],
+      "eval_jsd_clean": 0.9424590468406677
+    },
+    {
+      "seed": 5,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1383,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.968,
+      "eval_asr_per_seed": [
+        0.96,
+        0.99,
+        0.96,
+        0.96,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9948266744613647
+    },
+    {
+      "seed": 5,
+      "attr_rank": 7,
+      "tuple": [
+        [
+          1383,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.752,
+      "eval_asr_per_seed": [
+        0.68,
+        0.8,
+        0.74,
+        0.77,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9792811870574951
+    },
+    {
+      "seed": 5,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1157,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8800000000000001,
+      "eval_asr_per_seed": [
+        0.86,
+        0.92,
+        0.83,
+        0.88,
+        0.91
+      ],
+      "eval_jsd_clean": 0.9727742671966553
+    },
+    {
+      "seed": 5,
+      "attr_rank": 8,
+      "tuple": [
+        [
+          1157,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.316,
+      "eval_asr_per_seed": [
+        0.26,
+        0.29,
+        0.31,
+        0.37,
+        0.35
+      ],
+      "eval_jsd_clean": 0.759756863117218
+    },
+    {
+      "seed": 5,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          650,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.674,
+      "eval_asr_per_seed": [
+        0.64,
+        0.66,
+        0.67,
+        0.69,
+        0.71
+      ],
+      "eval_jsd_clean": 0.9375370740890503
+    },
+    {
+      "seed": 5,
+      "attr_rank": 9,
+      "tuple": [
+        [
+          650,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.392,
+      "eval_asr_per_seed": [
+        0.37,
+        0.31,
+        0.39,
+        0.44,
+        0.45
+      ],
+      "eval_jsd_clean": 0.8574599623680115
+    },
+    {
+      "seed": 5,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          1003,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8699999999999999,
+      "eval_asr_per_seed": [
+        0.82,
+        0.92,
+        0.83,
+        0.9,
+        0.88
+      ],
+      "eval_jsd_clean": 0.9557846784591675
+    },
+    {
+      "seed": 5,
+      "attr_rank": 10,
+      "tuple": [
+        [
+          1003,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.434,
+      "eval_asr_per_seed": [
+        0.43,
+        0.36,
+        0.48,
+        0.48,
+        0.42
+      ],
+      "eval_jsd_clean": 0.8177393078804016
+    },
+    {
+      "seed": 5,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          327,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.952,
+      "eval_asr_per_seed": [
+        0.95,
+        0.98,
+        0.91,
+        0.95,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9820783734321594
+    },
+    {
+      "seed": 5,
+      "attr_rank": 11,
+      "tuple": [
+        [
+          327,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.798,
+      "eval_asr_per_seed": [
+        0.8,
+        0.83,
+        0.74,
+        0.82,
+        0.8
+      ],
+      "eval_jsd_clean": 0.9316188097000122
+    },
+    {
+      "seed": 5,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          1132,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9179999999999999,
+      "eval_asr_per_seed": [
+        0.92,
+        0.94,
+        0.86,
+        0.96,
+        0.91
+      ],
+      "eval_jsd_clean": 0.975240170955658
+    },
+    {
+      "seed": 5,
+      "attr_rank": 12,
+      "tuple": [
+        [
+          1132,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.488,
+      "eval_asr_per_seed": [
+        0.47,
+        0.45,
+        0.48,
+        0.52,
+        0.52
+      ],
+      "eval_jsd_clean": 0.7928385734558105
+    },
+    {
+      "seed": 5,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          114,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.462,
+      "eval_asr_per_seed": [
+        0.45,
+        0.47,
+        0.44,
+        0.49,
+        0.46
+      ],
+      "eval_jsd_clean": 0.8410223126411438
+    },
+    {
+      "seed": 5,
+      "attr_rank": 13,
+      "tuple": [
+        [
+          114,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.032,
+      "eval_asr_per_seed": [
+        0.03,
+        0.03,
+        0.04,
+        0.02,
+        0.04
+      ],
+      "eval_jsd_clean": 0.8374252319335938
+    },
+    {
+      "seed": 5,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1396,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.808,
+      "eval_asr_per_seed": [
+        0.81,
+        0.81,
+        0.77,
+        0.84,
+        0.81
+      ],
+      "eval_jsd_clean": 0.9701360464096069
+    },
+    {
+      "seed": 5,
+      "attr_rank": 14,
+      "tuple": [
+        [
+          1396,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.024,
+      "eval_asr_per_seed": [
+        0.02,
+        0.01,
+        0.04,
+        0.03,
+        0.02
+      ],
+      "eval_jsd_clean": 0.9356920719146729
+    },
+    {
+      "seed": 5,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          296,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.9640000000000001,
+      "eval_asr_per_seed": [
+        0.95,
+        0.97,
+        0.92,
+        0.98,
+        1.0
+      ],
+      "eval_jsd_clean": 0.9861089587211609
+    },
+    {
+      "seed": 5,
+      "attr_rank": 15,
+      "tuple": [
+        [
+          296,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.76,
+      "eval_asr_per_seed": [
+        0.74,
+        0.79,
+        0.68,
+        0.81,
+        0.78
+      ],
+      "eval_jsd_clean": 0.9339122772216797
+    },
+    {
+      "seed": 5,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1391,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.8019999999999999,
+      "eval_asr_per_seed": [
+        0.8,
+        0.8,
+        0.76,
+        0.85,
+        0.8
+      ],
+      "eval_jsd_clean": 0.9248180985450745
+    },
+    {
+      "seed": 5,
+      "attr_rank": 16,
+      "tuple": [
+        [
+          1391,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.18,
+      "eval_asr_per_seed": [
+        0.15,
+        0.19,
+        0.16,
+        0.24,
+        0.16
+      ],
+      "eval_jsd_clean": 0.825009286403656
+    },
+    {
+      "seed": 5,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          103,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.954,
+      "eval_asr_per_seed": [
+        0.94,
+        0.97,
+        0.95,
+        0.96,
+        0.95
+      ],
+      "eval_jsd_clean": 0.9797889590263367
+    },
+    {
+      "seed": 5,
+      "attr_rank": 17,
+      "tuple": [
+        [
+          103,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.8459999999999999,
+      "eval_asr_per_seed": [
+        0.82,
+        0.83,
+        0.86,
+        0.87,
+        0.85
+      ],
+      "eval_jsd_clean": 0.9492105841636658
+    },
+    {
+      "seed": 5,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          352,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.95,
+      "eval_asr_per_seed": [
+        0.93,
+        0.97,
+        0.93,
+        0.95,
+        0.97
+      ],
+      "eval_jsd_clean": 0.9844257831573486
+    },
+    {
+      "seed": 5,
+      "attr_rank": 18,
+      "tuple": [
+        [
+          352,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.75,
+      "eval_asr_per_seed": [
+        0.73,
+        0.74,
+        0.73,
+        0.78,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9404899477958679
+    },
+    {
+      "seed": 5,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          431,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.914,
+      "eval_asr_per_seed": [
+        0.91,
+        0.93,
+        0.88,
+        0.93,
+        0.92
+      ],
+      "eval_jsd_clean": 0.9779082536697388
+    },
+    {
+      "seed": 5,
+      "attr_rank": 19,
+      "tuple": [
+        [
+          431,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.616,
+      "eval_asr_per_seed": [
+        0.57,
+        0.62,
+        0.61,
+        0.63,
+        0.65
+      ],
+      "eval_jsd_clean": 0.8594371676445007
+    },
+    {
+      "seed": 5,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          342,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "eval_asr": 0.96,
+      "eval_asr_per_seed": [
+        0.95,
+        0.97,
+        0.94,
+        0.96,
+        0.98
+      ],
+      "eval_jsd_clean": 0.9830120801925659
+    },
+    {
+      "seed": 5,
+      "attr_rank": 20,
+      "tuple": [
+        [
+          342,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "eval_asr": 0.76,
+      "eval_asr_per_seed": [
+        0.73,
+        0.77,
+        0.73,
+        0.8,
+        0.77
+      ],
+      "eval_jsd_clean": 0.9230266809463501
+    }
+  ],
+  "best_per_seed": [
+    {
+      "seed": 0,
+      "top1": {
+        "seed": 0,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1114,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.535702645778656
+      },
+      "best": {
+        "seed": 0,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1114,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.535702645778656
+      }
+    },
+    {
+      "seed": 1,
+      "top1": {
+        "seed": 1,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1027,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.4094717800617218
+      },
+      "best": {
+        "seed": 1,
+        "attr_rank": 2,
+        "tuple": [
+          [
+            767,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.35344088077545166
+      }
+    },
+    {
+      "seed": 2,
+      "top1": {
+        "seed": 2,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            351,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.42956534028053284
+      },
+      "best": {
+        "seed": 2,
+        "attr_rank": 2,
+        "tuple": [
+          [
+            169,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.3414793014526367
+      }
+    },
+    {
+      "seed": 3,
+      "top1": {
+        "seed": 3,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1154,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.40693554282188416
+      },
+      "best": {
+        "seed": 3,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1154,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.40693554282188416
+      }
+    },
+    {
+      "seed": 4,
+      "top1": {
+        "seed": 4,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1430,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.002,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.01,
+          0.0
+        ],
+        "eval_jsd_clean": 0.5169515013694763
+      },
+      "best": {
+        "seed": 4,
+        "attr_rank": 2,
+        "tuple": [
+          [
+            558,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.002,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.01
+        ],
+        "eval_jsd_clean": 0.433246910572052
+      }
+    },
+    {
+      "seed": 5,
+      "top1": {
+        "seed": 5,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1208,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.5638996362686157
+      },
+      "best": {
+        "seed": 5,
+        "attr_rank": 1,
+        "tuple": [
+          [
+            1208,
+            "V"
+          ]
+        ],
+        "alpha": 4.0,
+        "eval_asr": 0.0,
+        "eval_asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "eval_jsd_clean": 0.5638996362686157
+      }
+    }
+  ]
+}
