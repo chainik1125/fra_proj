@@ -269,7 +269,7 @@ def prompt_mask_from_markers(
     story_marker_pos: torch.Tensor,
 ) -> torch.Tensor:
     """(N, seq_len) bool: True for positions ≤ story_marker_pos (inclusive)."""
-    idx = torch.arange(seq_len).unsqueeze(0)  # (1, seq_len)
+    idx = torch.arange(seq_len, device=story_marker_pos.device).unsqueeze(0)
     return idx <= story_marker_pos.unsqueeze(1)
 
 
