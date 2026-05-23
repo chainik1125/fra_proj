@@ -19,8 +19,21 @@ echo "[$(date -u +%H:%M:%S)] START em_model=$EM_MODEL seed=$EVAL_SEED top_n=${TO
 echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
 
 # ── Driver fast-fail (cu13 torch needs ≥ 575) ─────────────────────────
-DRIVER_MAJOR=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1)
-if [ -z "$DRIVER_MAJOR" ] || [ "$DRIVER_MAJOR" -lt 575 ]; then
+# Retry nvidia-smi up to 6 × 5 s in case the device-plumbing isn't ready
+# yet on cold boot (race we hit on 2026-05-22 in the constadd campaign
+# AND again here: an empty $DRIVER_MAJOR triggered a false self-terminate).
+DRIVER_MAJOR=""
+for i in 1 2 3 4 5 6; do
+    DRIVER_MAJOR=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1)
+    [ -n "$DRIVER_MAJOR" ] && break
+    echo "[$(date -u +%H:%M:%S)] nvidia-smi not ready yet (attempt $i/6) — sleep 5"
+    sleep 5
+done
+if [ -z "$DRIVER_MAJOR" ]; then
+    echo "[$(date -u +%H:%M:%S)] nvidia-smi never returned a driver version — abort (no self-terminate, let RunPod restart so we get a different host)"
+    exit 1
+fi
+if [ "$DRIVER_MAJOR" -lt 575 ]; then
     echo "[$(date -u +%H:%M:%S)] driver too old ($DRIVER_MAJOR < 575) — self-terminate"
     curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
         -H "Content-Type: application/json" \
@@ -28,6 +41,7 @@ if [ -z "$DRIVER_MAJOR" ] || [ "$DRIVER_MAJOR" -lt 575 ]; then
         https://api.runpod.io/graphql >/dev/null
     exit 0
 fi
+echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed"
 
 # ── HF pre-check: target already on HF → skip ─────────────────────────
 TARGET_HF_PATH="qwen7b/wang_L15_resid_post/${EM_MODEL}_seed${EVAL_SEED}/qualitative_arditi_${EM_MODEL}_evalseed${EVAL_SEED}.json"

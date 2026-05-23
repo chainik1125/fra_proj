@@ -40,12 +40,28 @@ json_str() {
     python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))"
 }
 
+# SSH prelude — make sure sshd is up before any bootstrap, so we can SSH in
+# to tail logs while the pod runs. We replicate what the runpod/pytorch
+# image's default entrypoint does (write PUBLIC_KEY → authorized_keys,
+# start sshd) because our dockerArgs replaces that entrypoint.
+ssh_prelude() {
+    cat <<'EOF'
+mkdir -p /root/.ssh && \
+echo "$PUBLIC_KEY" > /root/.ssh/authorized_keys && \
+chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys && \
+(service ssh start 2>/dev/null || /usr/sbin/sshd) && \
+EOF
+}
+
 # Build the per-GPU-pod docker startCommand. Exports the axis values + clones
 # branch + runs auto_start_gpu.sh.
 make_gpu_cmd() {
     local em="$1" seed="$2"
+    local prelude; prelude=$(ssh_prelude)
     cat <<EOF
-bash -c "apt-get update >/dev/null 2>&1 && apt-get install -y -q git curl ca-certificates >/dev/null 2>&1 && \
+bash -c "${prelude} \
+apt-get update >/dev/null 2>&1 && apt-get install -y -q git curl ca-certificates openssh-server >/dev/null 2>&1 && \
+(service ssh start 2>/dev/null || /usr/sbin/sshd) && \
 git clone --branch $BRANCH --single-branch $REPO_URL /workspace/fra_proj && \
 cd /workspace/fra_proj && \
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID=\\\$RUNPOD_POD_ID \
@@ -55,8 +71,11 @@ EOF
 }
 
 make_cpu_cmd() {
+    local prelude; prelude=$(ssh_prelude)
     cat <<EOF
-bash -c "apt-get update >/dev/null 2>&1 && apt-get install -y -q git curl ca-certificates python3-pip >/dev/null 2>&1 && \
+bash -c "${prelude} \
+apt-get update >/dev/null 2>&1 && apt-get install -y -q git curl ca-certificates python3-pip openssh-server >/dev/null 2>&1 && \
+(service ssh start 2>/dev/null || /usr/sbin/sshd) && \
 git clone --branch $BRANCH --single-branch $REPO_URL /workspace/fra_proj && \
 cd /workspace/fra_proj && \
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID=\\\$RUNPOD_POD_ID \
@@ -164,7 +183,10 @@ print(json.dumps({'query': q, 'variables': {'input': inp}}))
 LAUNCH_LOG="/tmp/wang_steering_launch_$(date +%s).json"
 echo "[launch] log → $LAUNCH_LOG"
 
-declare -A POD_IDS
+# Parallel arrays (macOS bash 3.2 — no associative arrays).
+POD_NAMES=()
+POD_IDS=()
+
 for shard in "${SHARDS[@]}"; do
     em="${shard% *}"
     seed="${shard#* }"
@@ -172,33 +194,33 @@ for shard in "${SHARDS[@]}"; do
     echo "[launch] $name ..."
     cmd=$(make_gpu_cmd "$em" "$seed")
     pid=$(deploy_gpu_pod "$name" "$cmd") || { echo "ABORT"; exit 1; }
-    POD_IDS["$name"]="$pid"
+    POD_NAMES+=("$name")
+    POD_IDS+=("$pid")
 done
 
 echo "[launch] babysitter ..."
 cpu_cmd=$(make_cpu_cmd)
 cpu_pid=$(deploy_cpu_pod "wang-steering-babysitter" "$cpu_cmd") || { echo "ABORT (CPU)"; exit 1; }
-POD_IDS["wang-steering-babysitter"]="$cpu_pid"
+POD_NAMES+=("wang-steering-babysitter")
+POD_IDS+=("$cpu_pid")
 
 # Write launch log (pod ids ↔ shards) — for the babysitter and the human.
-python3 -c "
-import json
-ids = {}
-" >/dev/null
-python3 -c "
-import json
-ids = {
-$(for k in "${!POD_IDS[@]}"; do echo "    '$k': '${POD_IDS[$k]}',"; done)
-}
-print(json.dumps(ids, indent=2))
-" > "$LAUNCH_LOG"
+{
+    echo "{"
+    for i in "${!POD_NAMES[@]}"; do
+        comma=","
+        [ "$i" -eq "$((${#POD_NAMES[@]} - 1))" ] && comma=""
+        printf '    "%s": "%s"%s\n' "${POD_NAMES[$i]}" "${POD_IDS[$i]}" "$comma"
+    done
+    echo "}"
+} > "$LAUNCH_LOG"
 
 echo
 echo "============================================================"
 echo "[launch] All 7 pods provisioned (6 GPU + 1 babysitter)."
 echo "  Pod IDs (name → id):"
-for k in "${!POD_IDS[@]}"; do
-    echo "    $k  ${POD_IDS[$k]}"
+for i in "${!POD_NAMES[@]}"; do
+    echo "    ${POD_NAMES[$i]}  ${POD_IDS[$i]}"
 done
 echo
 echo "Watch progress:"

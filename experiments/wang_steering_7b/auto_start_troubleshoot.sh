@@ -64,11 +64,24 @@ KICKOFF="The brief follows. Read it, run an inventory of the current state, and 
 
 $BRIEF"
 
-# Hand off to Claude Code, headless, with full skips.
+# Hand off to Claude Code, headless, with full skips. DON'T exec — we want
+# to self-terminate cleanly after claude exits, so RunPod doesn't restart
+# us in a loop.
 echo "[$(date -u +%H:%M:%S)] handing off to claude"
-exec claude \
+claude \
     --dangerously-skip-permissions \
     --print \
     --output-format text \
     --max-turns 200 \
-    "$KICKOFF"
+    "$KICKOFF" 2>&1 | tee /workspace/claude_output.log
+CLAUDE_RC=$?
+echo "[$(date -u +%H:%M:%S)] claude exited with code $CLAUDE_RC"
+
+# Self-terminate so the user isn't billed for an idle pod.
+echo "[$(date -u +%H:%M:%S)] self-terminating troubleshooter pod"
+curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" \
+    https://api.runpod.io/graphql || true
+sleep 30  # give RunPod time to actually kill us before bash exits
+exit "$CLAUDE_RC"
