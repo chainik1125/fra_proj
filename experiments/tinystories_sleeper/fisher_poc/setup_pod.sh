@@ -40,23 +40,13 @@ fi
 echo "[setup_pod] creating Python 3.13 venv"
 uv venv --python 3.13 --clear 2>&1 | tail -5
 
-uv sync 2>&1 | tail -20
-
-# pyproject.toml has unpinned `torch`, so `uv sync` grabs the latest
-# (2.11 as of 2026-05-22), which is compiled against CUDA 13.x. RunPod's
-# stock L40S driver is 570.124.06 = CUDA 12.8 — too old for cu13 torch.
-# Force-install the cu124 build of torch AND every transitive nvidia-*
-# library from the cu124 index, otherwise we hit:
-#   ImportError: torch/lib/libtorch_cuda.so: undefined symbol: ncclCommWindowDeregister
-# (cu13 nvidia-nccl-cu12 leaked through and didn't get downgraded.)
-echo "[setup_pod] reinstalling torch + full CUDA stack from cu124 wheels"
-uv pip install --reinstall --index-url https://download.pytorch.org/whl/cu124 \
-    torch triton \
-    nvidia-nccl-cu12 nvidia-cudnn-cu12 nvidia-cuda-cupti-cu12 \
-    nvidia-cublas-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 \
-    nvidia-cusolver-cu12 nvidia-cusparse-cu12 \
-    nvidia-cuda-nvrtc-cu12 nvidia-cuda-runtime-cu12 \
-    nvidia-nvtx-cu12 2>&1 | tail -20
+# pyproject.toml now pins torch to the cu124 wheel index via
+# [tool.uv.sources], so `uv sync` installs the right build directly.
+# Also clear uv's cache and force-upgrade torch so it picks up the
+# new index source (lockfile from main still points at cu13 torch).
+echo "[setup_pod] clearing uv cache and upgrading torch pin in lock"
+uv cache clean 2>&1 | tail -5 || true
+uv sync --upgrade-package torch 2>&1 | tail -30
 
 # HF login (required for the sleeper QLoRA adapter and the base model).
 if [[ -z "${HF_TOKEN:-}" ]]; then
