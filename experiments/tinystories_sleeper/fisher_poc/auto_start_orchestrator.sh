@@ -11,10 +11,14 @@
 #   SEEDS, HF_REPO, BRANCH, REPO_URL
 set -eo pipefail
 
-# Stream logs unbuffered so we can `runpodctl pod logs` while it works.
+# Log to /workspace/orchestrator.log. We avoid the
+# `exec > >(stdbuf -oL tee ...) 2>&1` pattern because it broke the
+# bootstrap pod on this image (process substitution + stdbuf was
+# crashing the PID-1 bash, putting the container into a restart loop
+# with negative uptime). Plain `>> file 2>&1` is robust.
 mkdir -p /workspace
-exec > >(stdbuf -oL tee /workspace/orchestrator.log) 2>&1
-echo "[$(date +%H:%M:%S)] orchestrator pod start"
+LOGFILE=/workspace/orchestrator.log
+echo "[$(date +%H:%M:%S)] orchestrator pod start" >> "$LOGFILE" 2>&1
 
 BRANCH="${BRANCH:-dmitry/fisher-poc}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
@@ -58,7 +62,7 @@ claude --print \
   --dangerously-skip-permissions \
   --max-turns 600 \
   "$(cat "$BRIEF_PATH")" \
-  2>&1 | tee -a /workspace/orchestrator.log
+  >> "$LOGFILE" 2>&1
 
 echo "[$(date +%H:%M:%S)] claude exited"
 

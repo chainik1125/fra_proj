@@ -10,10 +10,13 @@
 #   BRANCH, REPO_URL — for cloning
 set -eo pipefail
 
-# Stream logs unbuffered (lesson from 2026-05-22 bootstrap buffering incident).
+# Plain log file (the `exec > >(stdbuf -oL tee ...)` pattern from the
+# /dispatch_campaign skill crashed PID-1 bash on this image — see
+# orchestrator notes). Each heavy command redirects with `>> $LOGFILE
+# 2>&1` instead.
 mkdir -p /workspace
-exec > >(stdbuf -oL tee /workspace/bootstrap.log) 2>&1
-echo "[$(date +%H:%M:%S)] bootstrap start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)"
+LOGFILE=/workspace/bootstrap.log
+echo "[$(date +%H:%M:%S)] bootstrap start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)" >> "$LOGFILE" 2>&1
 
 # Fast-fail if the driver is too old for the cu13 torch wheel.
 if command -v nvidia-smi >/dev/null 2>&1; then

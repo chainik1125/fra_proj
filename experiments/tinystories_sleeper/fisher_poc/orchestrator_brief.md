@@ -39,6 +39,46 @@ is on HF, terminate yourself and exit.
   empty except for `.gitattributes`.  Private repo.
 - No experiment pods exist yet.
 
+## Prior debug findings (don't waste turns rediscovering these)
+
+1. **Cloudflare 1010 on default UA.** `urllib.request` to RunPod's
+   GraphQL fails with HTTP 403, code 1010, without a `User-Agent` header.
+   Always set `User-Agent: curl/8.0` (or anything curl-ish).
+2. **CPU pods unavailable.** `computeType: CPU` with `cpu3{c,g,m}` or
+   `cpu5{c,g,m}` returns SUPPLY_CONSTRAINT.  Small GPUs (RTX A4000)
+   too.  Use `gpuTypeId: "NVIDIA L40S"` — $0.86/hr, plentiful.
+3. **GraphQL schema.** Field is `minVcpuCount`, not `vcpuCount`.
+   `cpuFlavorId` isn't a thing.  Introspection is disabled — schema
+   gotchas surface as `GRAPHQL_VALIDATION_FAILED` errors.
+4. **Why the original bootstrap pod restart-looped.**
+   `auto_start_bootstrap.sh` had this line at the top:
+   `exec > >(stdbuf -oL tee /workspace/bootstrap.log) 2>&1`
+   This pattern (from the /dispatch_campaign skill) appears to crash
+   PID-1 bash inside `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
+   — possibly because process substitution + missing `stdbuf` puts
+   PID 1 in a bad state.  Symptom: `uptime=-12`, `ports=null` for the
+   pod.  The script has been patched (commit pending) to use plain
+   `>> /workspace/bootstrap.log 2>&1` instead.  If you see new pods
+   exhibit the same `uptime<0`/`ports=null` pattern, look for similar
+   redirect patterns before assuming the image itself is broken.
+5. **runpod/pytorch image entrypoint hypothesis (untested).**
+   This image might have a non-bash ENTRYPOINT (e.g. jupyterlab via
+   `/start.sh`) that interacts weirdly with `dockerArgs`.  Fallback:
+   `pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel` (official PyTorch
+   image) is known to have a vanilla bash entrypoint.  Try this if
+   the bootstrap STILL fails after the redirect fix.
+6. **SAE checkpoints are gitignored.** `*.pt` files in
+   `experiments/tinystories_sleeper/**` are excluded by the project
+   `.gitignore`.  Don't try to commit them — push to HF instead.  The
+   bootstrap script handles this.
+7. **Pod logs are not accessible via the API.** No
+   `runpodctl pod logs` subcommand exists in the version installed
+   locally.  REST `/v1/pods/{id}/logs` returns 400.  To see logs, SSH
+   into the pod (use any of the SSH keys in the pod's `env.PUBLIC_KEY`
+   list — `dmitrymanning-coe`'s `id_rsa.pub` is among them) and
+   `tail -f /workspace/*.log`.  SSH endpoint comes back in the pod's
+   `runtime.ports` once it's healthy.
+
 ## Environment variables you have
 
 - `HF_TOKEN` — write access to the dataset
