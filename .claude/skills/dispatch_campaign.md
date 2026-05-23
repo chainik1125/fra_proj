@@ -213,6 +213,48 @@ babysitter writes `status_stalled.json` to HF *but does not give up*
 babysitter for relaunch, or human intervention). The user reading
 `status_stalled.json` is the recovery trigger.
 
+### CUDA / driver lottery — always install a cu124 torch override
+
+The single biggest source of phantom pod failures across the 2026-05-22
+constadd + 2026-05-23 wang_steering_7b campaigns was the RunPod GPU
+host-driver lottery. The fra_proj `requirements.txt` pins
+`torch==2.11.0+cu130`, which needs **driver ≥ 575**. In practice the
+RunPod L40S / L40 / A40 / RTX A6000 pools include many hosts with driver
+**550 or 570** — those are perfectly good cu12.x hosts, but our cu130
+torch can't init CUDA on them, so the bootstrap dies in some hard-to-
+diagnose place (sometimes silent, sometimes inside the orchestrator's
+first GPU op, sometimes inside the Wang ranker). H100 hosts have
+driver ≥ 580 but cu130 hits a different problem there:
+`cuDNN Frontend error: No valid execution plans built` (Hopper-specific
+kernel missing in our cu130/cuDNN combo).
+
+The proven solution — apply this to **every** GPU bootstrap you write:
+
+```bash
+# In auto_start_gpu.sh, AFTER `pip install -r requirements.txt` etc.
+pip install --no-input --break-system-packages --force-reinstall --no-deps \
+    torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
+    --index-url https://download.pytorch.org/whl/cu124
+```
+
+Why this works:
+- cu124 needs driver ≥ 525, which is basically every RunPod host.
+- `--force-reinstall` replaces the cu130 torch from requirements.txt.
+- `--no-deps` leaves numpy / typing-extensions / etc. installed by
+  requirements.txt alone, so peft / transformers / sae_lens compat is
+  preserved.
+- Run-time torch behaviour is functionally equivalent for our SAE
+  steering / FRA / DoM workloads — no version-sensitive ops.
+
+Also lower the driver fast-fail gate in the bootstrap from 575 → 525 to
+match. Together these eliminate the driver lottery: any GPU pool, any
+host, the run starts cleanly.
+
+medical-s456 in the wang_steering_7b campaign took **7 dispatches** —
+6 of them lost the driver lottery — before the cu124 override fix
+landed and the 7th worked first-try on the same hardware class that the
+6th had failed on. Don't repeat this mistake.
+
 ---
 
 ## Outputs of this skill
