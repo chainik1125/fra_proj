@@ -127,6 +127,26 @@ def dom_steer_hook(
     return [(layer_hook, _hook)]
 
 
+def dom_project_hook(
+    v: torch.Tensor,                # (d_model,) DoM direction
+    alpha: float,
+    layer_hook: str,
+) -> list[tuple[str, Callable]]:
+    """Soligo-et-al. (2025) projection ablation: subtract α·v̂·(v̂·x) from resid.
+
+    At α=1 this is the paper's "single-direction ablation": projects the
+    residual onto the orthogonal complement of v̂. Acts at all token positions
+    on every decode step (paper-faithful).
+    """
+    v_hat = (v / v.norm().clamp(min=1e-30)).contiguous()
+
+    def _hook(resid, hook):
+        v_d = v_hat.to(resid.dtype).to(resid.device)
+        coef = (resid @ v_d).unsqueeze(-1)                    # (B, T, 1)
+        return resid - alpha * coef * v_d
+    return [(layer_hook, _hook)]
+
+
 def ov_only_steer_hook(
     delta: torch.Tensor,            # (B, P, d_model) ln1-space delta
     alpha: float,
