@@ -34,6 +34,13 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 uv sync 2>&1 | tail -20
 
+# pyproject.toml has unpinned `torch`, so `uv sync` grabs the latest
+# (2.11 as of 2026-05-22), which is compiled against CUDA 13.x. RunPod's
+# stock L40S driver is 570.124.06 = CUDA 12.8 — too old for cu13 torch.
+# Force-install the cu124 build so the wheel actually loads.
+echo "[setup_pod] reinstalling torch from cu124 wheels (driver compat)"
+uv pip install --reinstall torch --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -10
+
 # HF login (required for the sleeper QLoRA adapter and the base model).
 if [[ -z "${HF_TOKEN:-}" ]]; then
   echo "WARN: HF_TOKEN is not set — model download may fail."
