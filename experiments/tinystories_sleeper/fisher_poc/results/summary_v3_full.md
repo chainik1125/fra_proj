@@ -288,3 +288,42 @@ cell of this 2×2 (training × hookpoint) design. The per-seed
 breakdown above shows the win is largest exactly where the
 single-feature α-sweep fails — i.e. when the attribution-selected
 feature doesn't carry enough trigger-suppression signal on its own.
+
+## KL re-evaluation (same data, asymmetric divergence)
+
+Same 200-prompt × 16-token rollouts, but using
+`KL(steered ‖ clean)` and `KL(steered ‖ poisoned)` (in bits) instead
+of symmetric JSD. JSD is bounded above by 1 bit; KL is unbounded and
+exposes how much of the steered mass lands on tokens the reference
+distribution makes near-zero.
+
+![v3 KL — 4 cells × 3 metrics](comparison_v3_kl.png)
+
+![Per-seed KL curves — OV vs Conv × seed](kl_curves_per_seed_2x3.png)
+
+Headline KL numbers (means over 3 SAE seeds, at α=2 for Method A vs
+v3 Fisher endpoint):
+
+| cell        | metric            | A (α=2) | v3 Fisher | direction       |
+|-------------|-------------------|--------:|----------:|-----------------|
+| 4k OV       | KL(steered‖clean) |    9.48 |     11.17 | ↓ better        |
+| 4k OV       | KL(steered‖pois.) |   24.50 |     25.47 | ↑ better        |
+| 4k resid    | KL(steered‖clean) |   12.26 |      8.84 | ↓ better        |
+| 4k resid    | KL(steered‖pois.) |   24.16 |     25.43 | ↑ better        |
+| 50k OV      | KL(steered‖clean) |   14.07 |     14.13 | ↓ better (tied) |
+| 50k OV      | KL(steered‖pois.) |   19.41 |     24.84 | ↑ better        |
+| 50k resid   | KL(steered‖clean) |   13.79 |     13.22 | ↓ better        |
+| 50k resid   | KL(steered‖pois.) |   22.90 |     21.47 | ↑ better        |
+
+Same qualitative picture as JSD: Fisher matches or beats Method A on
+the clean-recovery axis at ~1/4 the path length, while pushing further
+from the poisoned distribution in 7 of 8 KL panels. The two seed-2
+catastrophes for Method A (50k OV seed 2: ASR 0.67; 50k resid seed 2:
+ASR 0.13) show up even more starkly in KL units — KL(steered‖clean)
+blows up to 20–26 bits because Method A is putting probability mass on
+"hate" exactly where clean has it at ~0.
+
+Artifacts:
+- [`v3/kl_reeval.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/kl_reeval.json)
+- [`v3/comparison_v3_kl.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/comparison_v3_kl.png)
+- [`v3/kl_curves_per_seed_2x3.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/kl_curves_per_seed_2x3.png)
