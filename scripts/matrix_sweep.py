@@ -127,8 +127,8 @@ def _build_dep_baseline(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
 
 def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> tuple[int, float]:
     """Returns (n_exact_row_matches, frac_positions_matching) between two
-    (B, gen_tokens) token tensors."""
-    eq = (st.cpu() == cl.cpu())
+    (B, gen_tokens) token tensors. Works on whatever device the tensors live on."""
+    eq = (st == cl.to(st.device))
     return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
 
 
@@ -172,16 +172,18 @@ def _build_baselines_per_seed(model, dep_lp: torch.Tensor, dep_attn: torch.Tenso
         c_tok, c_lsm = generate_with_hooks(
             model, cln_lp_dev, [], gen_tokens, sampler,
             attention_mask=cln_attn_dev, capture_log_softmax=True,
+            lsm_on_gpu=True,
         )
-        clean_lsm_d[s_int] = c_lsm
-        clean_tok_d[s_int] = c_tok.cpu()
+        clean_lsm_d[s_int] = c_lsm           # GPU fp16
+        clean_tok_d[s_int] = c_tok           # GPU long
 
         sampler = make_sampling_sampler(temperature=temperature, seed=s_int, device=device)
         _, d_lsm = generate_with_hooks(
             model, dep_lp, [], gen_tokens, sampler,
             attention_mask=dep_attn, capture_log_softmax=True,
+            lsm_on_gpu=True,
         )
-        dep_lsm_d[s_int] = d_lsm
+        dep_lsm_d[s_int] = d_lsm             # GPU fp16
 
     return clean_lsm_d, clean_tok_d, dep_lsm_d
 
@@ -449,10 +451,13 @@ def eval_winner(
             st_tok, st_lsm = generate_with_hooks(
                 model, eval_dep_lp, h_lp, gen_tokens, sampler,
                 attention_mask=eval_dep_attn, capture_log_softmax=True,
+                lsm_on_gpu=True,
             )
+            # st_tok / st_lsm stay on GPU; baselines from _build_baselines_per_seed
+            # are also GPU-resident, so all JSD math lives on the device.
             asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
-            jc_l.append(jsd_mean(st_lsm.cpu(), clean_lsm_per_seed[s_int]))
-            jp_l.append(jsd_mean(st_lsm.cpu(), dep_lsm_per_seed[s_int]))
+            jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s_int]))
+            jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s_int]))
             n_ex, fp = _word_match_stats(st_tok, clean_tok_per_seed[s_int])
             nex_l.append(n_ex);  fp_l.append(fp)
         n_seeds = len(eval_seeds)
@@ -485,8 +490,11 @@ def eval_winner(
     steered_tok, steered_lsm = generate_with_hooks(
         model, eval_dep_lp, h_lp, gen_tokens, jsd_sampler,
         attention_mask=eval_dep_attn, capture_log_softmax=True,
+        lsm_on_gpu=True,
     )
-    jsd_clean = jsd_mean(steered_lsm.cpu(), clean_lsm)
+    # clean_lsm may be on CPU (legacy single-tensor callers); move it to the
+    # steered tensor's device so JSD is computed on GPU when possible.
+    jsd_clean = jsd_mean(steered_lsm, clean_lsm.to(steered_lsm.device))
 
     out: dict = {
         "asr":          sum(asr_per_seed) / len(asr_per_seed),
@@ -494,7 +502,7 @@ def eval_winner(
         "jsd_clean":    jsd_clean,
     }
     if dep_lsm is not None:
-        out["jsd_pois"] = jsd_mean(steered_lsm.cpu(), dep_lsm.cpu())
+        out["jsd_pois"] = jsd_mean(steered_lsm, dep_lsm.to(steered_lsm.device))
     if clean_tok is not None:
         n_ex, fp = _word_match_stats(steered_tok, clean_tok)
         out["n_exact_match_clean"]   = n_ex

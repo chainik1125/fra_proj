@@ -358,6 +358,7 @@ def generate_with_hooks(
     attention_mask: torch.Tensor | None = None,
     capture_log_softmax: bool = False,
     use_past_kv_cache: bool = True,
+    lsm_on_gpu: bool = False,
 ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
     """Decode `max_new_tokens` tokens with `fwd_hooks` active each step.
 
@@ -418,7 +419,10 @@ def generate_with_hooks(
         logits = model.run_with_hooks(inp, fwd_hooks=fwd_hooks, **extra)
         last = logits[:, -1, :]
         if capture_log_softmax:
-            lsm_out.append(torch.log_softmax(last.float(), dim=-1).to("cpu", torch.float16))
+            lsm_step = torch.log_softmax(last.float(), dim=-1).to(torch.float16)
+            if not lsm_on_gpu:
+                lsm_step = lsm_step.cpu()
+            lsm_out.append(lsm_step)
         nxt = sampler(last)
         out.append(nxt.unsqueeze(1))
         tokens = torch.cat([tokens, nxt.unsqueeze(1)], dim=1)
