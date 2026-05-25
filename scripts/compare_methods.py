@@ -45,7 +45,9 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--seeds",            type=int,   nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--sae_ln1_dir",      type=Path,  default=Path("weights/seeds"))
-    p.add_argument("--sae_mid",          type=Path,  default=Path("weights/sae_resid_mid.pt"))
+    p.add_argument("--sae_mid_dir",      type=Path,  default=None,
+                   help="Directory containing per-seed sae_resid_mid_s{seed}.pt files. "
+                        "Defaults to --sae_ln1_dir if not set.")
     p.add_argument("--target_feature",   type=int,   default=579)
     p.add_argument("--top_k",            type=int,   default=20)
     p.add_argument("--stage2_keep",      type=int,   default=10)
@@ -109,33 +111,49 @@ def main() -> None:
     print(f"[cmp] eval baseline asr={eval_base_asr:.3f}  sel base_ce={sel_base_ce:.4f}",
           flush=True)
 
-    # Load the downstream resid_mid SAE unconditionally: needed by target-regime
-    # attribution AND by the downstream-baseline conventional-steering eval.
-    sae_mid, _ = sae_load(args.sae_mid, device=device)
+    # Per-seed downstream SAEs. Paired by index with the upstream ln1 seeds
+    # — for upstream seed s, target attribution uses sae_resid_mid_s{s}.pt as
+    # the target-direction SAE. The downstream baseline is also evaluated for
+    # every downstream SAE seed so we get one (asr, jsd_clean, jsd_pois,
+    # exact_match) tuple per (downstream_seed, α) — matched-pair multi-seed.
+    sae_mid_dir = args.sae_mid_dir or args.sae_ln1_dir
+    sae_mid_path = {s: sae_mid_dir / f"sae_resid_mid_s{s}.pt" for s in args.seeds}
+    sae_mid_cache: dict = {}
 
-    # ── Downstream baseline (conventional steering): ablate a single resid_mid
-    # SAE feature via additive_steer_hook at blocks.0.hook_resid_mid. Seed-
-    # independent (the resid_mid SAE is the shared downstream SAE for this
-    # pipeline run; sampling seeds are eval_seeds, same as the upstream evals).
-    # Uses the SAME pre-built per-seed baselines and the SAME 5-seed lockstep
-    # eval as eval_winner, so the 4 metrics are directly comparable.
-    print(f"[cmp] downstream baseline: f{args.target_feature} at blocks.0.hook_resid_mid "
-          f"(SAE: {args.sae_mid.name})", flush=True)
-    downstream_per_alpha: dict = {}
-    for alpha in args.alphas:
-        t_d0 = time.time()
-        m = eval_downstream_baseline(
-            model, sae_mid, args.target_feature, alpha,
-            eval_dep_lp, eval_dep_attn,
-            eval_clean_lsm_ps, eval_clean_tok_ps, eval_dep_lsm_ps,
-            args.gen_tokens, device,
-            eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
-        )
-        downstream_per_alpha[str(alpha)] = m
-        print(f"[cmp]   [DOWN] f{args.target_feature} α={alpha:>4.1f}  "
-              f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
-              f"jsd_dep={m['jsd_pois']:.3f}  exact={m['exact_match']:.3f}  "
-              f"({time.time()-t_d0:.1f}s)", flush=True)
+    def _load_mid(seed: int):
+        if seed not in sae_mid_cache:
+            path = sae_mid_path[seed]
+            sae, _ = sae_load(path, device=device)
+            sae_mid_cache[seed] = sae
+        return sae_mid_cache[seed]
+
+    # ── Downstream baseline (conventional steering): ablate target_feature
+    # at blocks.0.hook_resid_mid via additive_steer_hook. Evaluated for EVERY
+    # downstream SAE seed (each gives a different "target_feature" direction
+    # since the SAEs were trained from different RNG seeds) and at each α,
+    # with the same 5-seed lockstep eval used by the upstream methods.
+    print(f"[cmp] downstream baseline: f{args.target_feature} at "
+          f"blocks.0.hook_resid_mid  (SAE dir: {sae_mid_dir}, seeds={args.seeds})",
+          flush=True)
+    downstream_per_seed: dict = {}
+    for seed in args.seeds:
+        sae_mid_s = _load_mid(seed)
+        per_alpha: dict = {}
+        for alpha in args.alphas:
+            t_d0 = time.time()
+            m = eval_downstream_baseline(
+                model, sae_mid_s, args.target_feature, alpha,
+                eval_dep_lp, eval_dep_attn,
+                eval_clean_lsm_ps, eval_clean_tok_ps, eval_dep_lsm_ps,
+                args.gen_tokens, device,
+                eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
+            )
+            per_alpha[str(alpha)] = m
+            print(f"[cmp]   [DOWN s={seed}] f{args.target_feature} α={alpha:>4.1f}  "
+                  f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
+                  f"jsd_dep={m['jsd_pois']:.3f}  exact={m['exact_match']:.3f}  "
+                  f"({time.time()-t_d0:.1f}s)", flush=True)
+        downstream_per_seed[str(seed)] = per_alpha
 
     active = ACTIVE_CHANNELS["ov"]
     W_V    = W["V"]
@@ -143,12 +161,14 @@ def main() -> None:
     out_rows: list[dict] = []
     for seed in args.seeds:
         sae_ln1, _ = sae_load(args.sae_ln1_dir / f"sae_ln1_s{seed}.pt", device=device)
-        print(f"\n[cmp] ══ seed={seed}  sae_ln1_dir={args.sae_ln1_dir} ══", flush=True)
+        sae_mid_s = _load_mid(seed)   # paired downstream SAE for target attribution
+        print(f"\n[cmp] ══ seed={seed}  sae_ln1_dir={args.sae_ln1_dir}  "
+              f"sae_mid={sae_mid_path[seed].name} ══", flush=True)
         attr_cache: dict = {}
 
         for regime in args.regimes:
             if regime == "target":
-                tuples = get_tuples("ov", args, model, sae_ln1, sae_mid,
+                tuples = get_tuples("ov", args, model, sae_ln1, sae_mid_s,
                                     sel_split, sel_pmask, device, attr_cache)
             else:
                 tuples = get_tuples_diff("ov", args, model, sae_ln1, W, W_O,
@@ -271,8 +291,8 @@ def main() -> None:
         "downstream_baseline": {
             "target_feature": args.target_feature,
             "layer_hook":     "blocks.0.hook_resid_mid",
-            "sae_path":       str(args.sae_mid),
-            "per_alpha":      downstream_per_alpha,
+            "sae_mid_dir":    str(sae_mid_dir),
+            "per_seed":       downstream_per_seed,
         },
         "results": out_rows,
     }, indent=2, default=str))
