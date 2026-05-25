@@ -1,25 +1,14 @@
 """1×2 figure (JSD + exact-match/ASR) at a single SAE seed.
 
-Reads two JSONs in the new schema produced by matrix.py + downstream_baseline.py:
-
-  --matrix_json   results/matrix_4k_diff_rank.json
-    results[i].winner.eval_sweep[α].{asr, asr_std,
-                                     jsd_clean, jsd_clean_std,
-                                     jsd_pois,  jsd_pois_std,
-                                     exact_match, exact_match_std, …}
-
-  --baseline_json results/downstream_baseline_4k.json
-    per_seed.s{i}.per_alpha[α].{same keys}
-
-The line is the mean across (200 dep prompts × 5 sampling seeds) = 1000
-trials at each α; the translucent band is ±1 std across the same 1000
-trials (token-position variance collapsed into the per-row mean first).
+Reads results/jsd_alpha_sweep_6seeds.json (schema_version 2): per-(α, metric)
+values are stored per (SAE seed) × (decode seed). For each α we plot the mean
+over decode seeds as the line and a translucent fill_between of the min–max
+range across decode seeds.
 
 Left panel  — JSD(steered, clean) green, JSD(steered, poisoned) red.
-Right panel — exact-match rate (green) + ASR (red).
+Right panel — exact-match rate to the clean rollout (green) + ASR (red).
 
-Both methods (single OV-feature ablation, paired-per-seed) and the
-conventional resid-mid additive baseline overlaid.
+Both methods (OV-only upstream and conventional resid-mid additive) overlaid.
 
 Usage:
   python -m scripts.plot_jsd_exact_single_seed --seed 5
@@ -57,90 +46,51 @@ def setup_style() -> None:
     })
 
 
-def per_alpha_mean_std(per_alpha: dict, raw_alphas: list[float],
-                        mean_key: str, std_key: str,
-                        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Per-α (mean, mean−std, mean+std) for a metric in a per_alpha dict.
+def per_alpha_band(cfg_metric: dict, key: str, raw_alphas: list[float],
+                   sae_idx: int, scale: float = 1.0
+                   ) -> tuple[list[float], list[float], list[float]]:
+    """Return (mean, lo, hi) across decode seeds at each α for one SAE seed.
 
-    per_alpha is keyed by "0.0", "0.5", … and each entry has both the
-    mean and the std fields. Returns three arrays of length len(raw_alphas)."""
-    m, lo, hi = [], [], []
+    `cfg_metric` is e.g. cfg["ov"]["per_alpha"]; each entry is a list of
+    len(sae_seeds), with each item itself a list of per-decode-seed values.
+    """
+    mean, lo, hi = [], [], []
     for a in raw_alphas:
-        entry = per_alpha[f"{a:.1f}" if (a*10) % 5 == 0 else f"{a}"]
-        # Try common float formats — entries in JSON are written via str(α).
-        if entry is None:
-            for key in (f"{a}", f"{a:.1f}", f"{a:.2f}"):
-                if key in per_alpha:
-                    entry = per_alpha[key]
-                    break
-        mu = float(entry[mean_key])
-        sd = float(entry[std_key])
-        m.append(mu);  lo.append(mu - sd);  hi.append(mu + sd)
-    return np.array(m), np.array(lo), np.array(hi)
-
-
-def _lookup_alpha_key(per_alpha: dict, a: float) -> str:
-    """Find the JSON key for α. matrix.py writes str(float), downstream uses f'{α:.1f}'."""
-    for key in (str(a), f"{a:.1f}", f"{a:.2f}", repr(a)):
-        if key in per_alpha:
-            return key
-    raise KeyError(f"α={a} not in keys {list(per_alpha)[:6]}…")
-
-
-def mean_std_arrays(per_alpha: dict, alphas: list[float],
-                    mean_key: str, std_key: str
-                    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    m, sd = [], []
-    for a in alphas:
-        k = _lookup_alpha_key(per_alpha, a)
-        m.append(float(per_alpha[k][mean_key]))
-        sd.append(float(per_alpha[k][std_key]))
-    m_arr = np.array(m); sd_arr = np.array(sd)
-    return m_arr, m_arr - sd_arr, m_arr + sd_arr
+        vals = np.array(cfg_metric[f"{a:.1f}"][key][sae_idx], dtype=float) * scale
+        mean.append(float(vals.mean()))
+        lo.append(float(vals.min()))
+        hi.append(float(vals.max()))
+    return mean, lo, hi
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--matrix_json",   type=Path,
-                   default=Path("results/matrix_4k_diff_rank.json"))
-    p.add_argument("--baseline_json", type=Path,
-                   default=Path("results/downstream_baseline_4k.json"))
+    p.add_argument("--input", type=Path,
+                   default=Path("results/jsd_alpha_sweep_6seeds.json"))
     p.add_argument("--output", type=Path,
                    default=Path("figures/jsd_exact_seed"))
     p.add_argument("--seed", type=int, default=5)
     args = p.parse_args()
 
     setup_style()
-
-    matrix = json.loads(args.matrix_json.read_text())
-    base   = json.loads(args.baseline_json.read_text())
-
-    # Find the requested seed in matrix.results
-    matrix_by_seed = {r["seed"]: r for r in matrix["results"]}
-    if args.seed not in matrix_by_seed:
-        raise SystemExit(f"seed {args.seed} not in matrix file")
-    r = matrix_by_seed[args.seed]
-    ov_eval_sweep = r["winner"]["eval_sweep"]
-    ov_feat = r["winner"]["feature"]
-
-    base_seed_key = f"s{args.seed}"
-    if base_seed_key not in base["per_seed"]:
-        raise SystemExit(f"{base_seed_key} not in baseline file")
-    base_entry = base["per_seed"][base_seed_key]
-    conv_per_alpha = base_entry["per_alpha"]
-    conv_feat = base_entry["winner"]
-
-    # Determine alpha grid from matrix eval_sweep keys (sorted asc)
-    raw_alphas = sorted([float(k) for k in ov_eval_sweep.keys()])
+    data        = json.loads(args.input.read_text())
+    raw_alphas  = [float(a) for a in data["alphas"]]
     disp_alphas = [-a for a in raw_alphas]
+    sae_seeds   = data["sae_seeds"]
+    n_prompts   = data["n_prompts"]
+    eval_seeds  = data.get("eval_seeds", [0])
+    cfg         = data["configs"]
+    if args.seed not in sae_seeds:
+        raise SystemExit(f"seed {args.seed} not in results (have {sae_seeds})")
+    idx = sae_seeds.index(args.seed)
 
     GREEN = "#1a8a3f"
     RED   = "#c0322a"
     BAND_ALPHA = 0.18
 
     methods = [
-        ("ov",           ov_eval_sweep,    f"single OV$\\rightarrow$OV (f{ov_feat})",     "-",  "o"),
-        ("conventional", conv_per_alpha,    f"conventional additive (f{conv_feat})",       "--", "^"),
+        ("ov",           r"single OV$\rightarrow$OV", "-",  "o"),
+        ("conventional", "conventional additive",      "--", "^"),
     ]
 
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(14.0, 6.0))
@@ -151,14 +101,15 @@ def main() -> None:
                 linestyle=ls, markeredgecolor="white", markeredgewidth=0.9,
                 label=label, zorder=3)
 
-    # ── Left panel: JSD ─────────────────────────────────────────────────
-    for _key, pa, name, ls, mk in methods:
-        jc_m, jc_lo, jc_hi = mean_std_arrays(pa, raw_alphas, "jsd_clean", "jsd_clean_std")
-        jp_m, jp_lo, jp_hi = mean_std_arrays(pa, raw_alphas, "jsd_pois",  "jsd_pois_std")
+    # ── Left panel: JSD ──────────────────────────────────────────────────
+    for key, name, ls, mk in methods:
+        pa = cfg[key]["per_alpha"]
+        jc_m, jc_lo, jc_hi = per_alpha_band(pa, "jsd_clean", raw_alphas, idx)
+        jp_m, jp_lo, jp_hi = per_alpha_band(pa, "jsd_pois",  raw_alphas, idx)
         draw(ax_l, disp_alphas, jc_m, jc_lo, jc_hi, GREEN, ls, mk,
-             f"{name}  JSD$_\\text{{clean}}$")
+             f"{name}  JSD(steered, clean)")
         draw(ax_l, disp_alphas, jp_m, jp_lo, jp_hi, RED, ls, mk,
-             f"{name}  JSD$_\\text{{pois}}$")
+             f"{name}  JSD(steered, poisoned)")
 
     ax_l.axhline(1.0, color="#888", linestyle=":", lw=0.9, alpha=0.7)
     ax_l.text(disp_alphas[-1], 1.0 - 0.015, "JSD upper bound (1 bit)",
@@ -173,11 +124,13 @@ def main() -> None:
     ax_l.set_axisbelow(True)
     ax_l.legend(loc="lower left", framealpha=0.95, edgecolor="#bbbbbb")
 
-    # ── Right panel: exact-match rate (green) + ASR (red) ───────────────
-    for _key, pa, name, ls, mk in methods:
-        em_m, em_lo, em_hi = mean_std_arrays(pa, raw_alphas, "exact_match",
-                                              "exact_match_std")
-        asr_m, asr_lo, asr_hi = mean_std_arrays(pa, raw_alphas, "asr", "asr_std")
+    # ── Right panel: exact-match rate (green) + ASR (red) ────────────────
+    for key, name, ls, mk in methods:
+        pa = cfg[key]["per_alpha"]
+        em_m, em_lo, em_hi = per_alpha_band(
+            pa, "n_exact_match_clean", raw_alphas, idx, scale=1.0 / n_prompts,
+        )
+        asr_m, asr_lo, asr_hi = per_alpha_band(pa, "asr", raw_alphas, idx)
         draw(ax_r, disp_alphas, em_m,  em_lo,  em_hi,  GREEN, ls, mk,
              f"{name}  exact-match")
         draw(ax_r, disp_alphas, asr_m, asr_lo, asr_hi, RED,   ls, mk,
@@ -185,7 +138,7 @@ def main() -> None:
 
     ax_r.set_ylabel("exact-match rate / ASR")
     ax_r.set_xlabel(r"steering strength  $\alpha$")
-    ax_r.set_ylim(-0.05, 1.15)
+    ax_r.set_ylim(-0.03, 1.05)
     ax_r.set_xticks(disp_alphas)
     ax_r.set_xticklabels([f"{a:.4g}" for a in disp_alphas])
     plt.setp(ax_r.get_xticklabels(), rotation=45, ha="right")
@@ -197,19 +150,18 @@ def main() -> None:
 
     fig.suptitle(
         f"Seed {args.seed} alpha sweep  ·  "
-        f"mean over 1000 (prompt × sample-seed) trials, band = $\\pm$ 1 std",
+        f"mean over {len(eval_seeds)} decode seeds, band = min–max",
         fontsize=14, y=1.00,
     )
     fig.tight_layout()
 
     out = Path(args.output).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
-    base_str = str(out).removesuffix('.png').removesuffix('.pdf')
-    base_path = f"{base_str}{args.seed}"
-    fig.savefig(base_path + ".png", dpi=200)
-    fig.savefig(base_path + ".pdf")
+    base = f"{str(out).removesuffix('.png').removesuffix('.pdf')}{args.seed}"
+    fig.savefig(base + ".png", dpi=200)
+    fig.savefig(base + ".pdf")
     plt.close(fig)
-    print(f"wrote {base_path}.png and {base_path}.pdf")
+    print(f"wrote {base}.png and {base}.pdf")
 
 
 if __name__ == "__main__":
