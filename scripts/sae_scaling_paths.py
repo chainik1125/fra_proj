@@ -77,18 +77,43 @@ def _api(token: str | None = None):
 
 
 def hf_upload(local_path: str | Path, repo: str, rel: str, *, token: str | None = None,
-              retries: int = 4) -> None:
+              retries: int = 3, fatal: bool = False) -> bool:
+    """Upload one file. Non-fatal by default: on persistent failure (e.g. HF's
+    128-commits/hour 429), log and return False rather than raising — an upload
+    failure must never crash training/eval. Returns True on success."""
     api = _api(token)
     last = None
     for attempt in range(retries):
         try:
             api.upload_file(path_or_fileobj=str(local_path), path_in_repo=rel,
                             repo_id=repo, repo_type="dataset")
-            return
-        except Exception as e:  # transient HF/network errors — back off and retry
+            return True
+        except Exception as e:  # transient HF/network/rate-limit errors
             last = e
             time.sleep(2 ** attempt)
-    raise RuntimeError(f"HF upload failed for {rel} after {retries} tries: {last}")
+    msg = f"HF upload failed for {rel} after {retries} tries: {last}"
+    if fatal:
+        raise RuntimeError(msg)
+    print(f"[hf] WARN (non-fatal): {msg}", flush=True)
+    return False
+
+
+def hf_upload_folder(local_folder: str | Path, repo: str, path_in_repo: str, *,
+                     token: str | None = None, retries: int = 3) -> bool:
+    """Upload a whole folder in ONE commit (huggingface_hub.upload_folder), so a
+    batch of result JSONs costs a single repo commit instead of N. Non-fatal."""
+    api = _api(token)
+    last = None
+    for attempt in range(retries):
+        try:
+            api.upload_folder(folder_path=str(local_folder), path_in_repo=path_in_repo,
+                              repo_id=repo, repo_type="dataset")
+            return True
+        except Exception as e:
+            last = e
+            time.sleep(2 ** attempt)
+    print(f"[hf] WARN (non-fatal): folder upload {path_in_repo} failed: {last}", flush=True)
+    return False
 
 
 def hf_list(repo: str, *, token: str | None = None) -> list[str]:

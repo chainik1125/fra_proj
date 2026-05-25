@@ -27,16 +27,14 @@ from scripts.sae_scaling_paths import (
 
 
 def _write_status(args, status_rel: str, done: list[str], total: int) -> None:
+    # Local only — the co-located consumer batch-uploads status/ + results/ to HF
+    # in single folder commits. The producer never touches HF (avoids blowing
+    # HF's 128-commits/hour cap with per-checkpoint uploads).
     payload = {"hookpoint": args.hookpoint, "seed": args.seed, "done": done,
                "n_done": len(done), "n_total": total, "ts": time.time()}
     sp = args.local_dir / status_rel
     sp.parent.mkdir(parents=True, exist_ok=True)
     sp.write_text(json.dumps(payload))
-    if not args.no_hf:
-        try:
-            hf_upload(sp, args.hf_repo, status_rel)
-        except Exception as e:
-            print(f"[train] status upload failed (non-fatal): {e}", flush=True)
 
 
 def main() -> None:
@@ -84,14 +82,24 @@ def main() -> None:
                  d_sae=d_sae, k=k, hookpoint=args.hookpoint,
                  n_train_seqs=int(acts.shape[0]), seq_len=args.seq_len,
                  n_steps=args.n_steps, batch_size=args.batch_size, lr=args.lr)
-            if not args.no_hf:
-                hf_upload(path, args.hf_repo, rel)
+            # Saved locally only; the consumer reads checkpoints from local disk
+            # (co-located) and is the sole HF uploader (batched).
             done.append(rel)
             _write_status(args, status_rel, done, total)
             print(f"[train]   saved {rel}  ({len(done)}/{total})", flush=True)
         return _cb
 
     for d_sae, k in configs:
+        # Resume: skip a config whose checkpoints all already exist locally
+        # (so a relaunched pod doesn't retrain finished configs).
+        if all((args.local_dir / ckpt_rel(args.hookpoint, args.seed, d_sae, k, s)).exists()
+               for s in args.checkpoint_steps):
+            for s in args.checkpoint_steps:
+                done.append(ckpt_rel(args.hookpoint, args.seed, d_sae, k, s))
+            _write_status(args, status_rel, done, total)
+            print(f"\n[train] === d_sae={d_sae} k={k} seed={args.seed} — already done, skip ===",
+                  flush=True)
+            continue
         print(f"\n[train] === d_sae={d_sae} k={k} seed={args.seed} ===", flush=True)
         t0 = time.time()
         train(acts, d_sae=d_sae, k=k, n_steps=args.n_steps, batch_size=args.batch_size,
