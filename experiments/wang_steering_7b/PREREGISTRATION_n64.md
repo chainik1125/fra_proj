@@ -53,11 +53,48 @@ For n=64: `SE₆₄ = 11.7/√64 = 1.46` → `S₆₄ = 1.693·1.46 = 2.5`.
 5. **base model stays flat** at ≈ (90, 90) in coh-align space, spread
    unchanged (already sampling-limited and tiny).
 
-## Check (fill in after the run)
+## Check (filled in after the run)
 
-| quantity | predicted | observed |
-|---|---|---|
-| medical α=0 cross-seed spread | 2.5 pts (1.5–3.5) | — |
-| per-seed α=0 means | 58–62 each | — |
-| mean per-feature Δcoh70 std | ~3.7 | — |
-| top-feature medical Δcoh70 | 9–11 | — |
+| quantity | predicted | observed | verdict |
+|---|---|---|---|
+| medical α=0 cross-seed spread | 2.5 pts (1.5–3.5) | **5.24 pts** | **FAIL (above)** |
+| per-seed α=0 means | 58–62 each | 57.8 / 63.1 / 61.5 | ~hold (s123 slightly high) |
+| mean per-feature Δcoh70 std | ~3.7 | 3.05 | hold (slightly better) |
+| top-feature medical Δcoh70 | 9–11 | 8.5 (F94077) | ~hold (just below) |
+
+## Verdict — prediction FALSIFIED, in the informative direction
+
+**α=0 cross-seed spread progression: n=8 = 20.6 → n=32 = 3.5 → n=64 = 5.2 pts.**
+
+The spread did **not** continue shrinking — it's non-monotonic, and n=64
+(5.2) came in *above* n=32 (3.5) and above the predicted CI. Under a
+pure-sampling-noise model this is impossible in expectation (more samples
+⇒ ≤ spread). So the model is falsified:
+
+1. **There is a residual seed-correlated component of ≈ 4–5 pts** in the
+   baseline alignment that more sampling cannot remove. The three eval
+   seeds (`per_prompt_seeds = eval_seed + 0..7`) draw genuinely different
+   prompt-token continuations, and those streams differ in how hard they
+   are for the EM-medical model — a real between-seed effect, not noise.
+2. **n=32's 3.5 was a lucky low draw.** The max−min range of only 3 seed
+   means is itself a high-variance statistic; 3.5 and 5.2 are both
+   consistent with a true floor around ~4–5 pts. We over-read the n=32
+   number as "the variance is basically gone."
+3. **The per-feature metric DID keep tightening** (mean Δcoh70 std
+   4.35 → 3.05): that statistic averages over the 50 features and is
+   dominated by per-feature sampling noise, which does shrink with n.
+   The cross-seed *baseline* spread and the per-feature *Δ* std are
+   different quantities with different noise floors.
+
+### Takeaways for the writeup
+
+- Report the steering effect as **Δcoh70 per seed** (which cancels the
+  baseline-seed offset), not as raw alignment — the ~4–5 pt baseline
+  seed-offset otherwise leaks in.
+- To actually shrink the cross-seed baseline spread further you need
+  **more seeds**, not more samples-per-seed. n_seeds=3 is the binding
+  constraint; the max−min range estimator is noisy at n_seeds=3 anyway —
+  prefer reporting std-across-seeds or use ≥5 seeds.
+- Honest top-feature steering effect at n=64: **F94077 Δcoh70 = 8.5 ± 5.2**
+  (the n=8 "≈32" headline was ~4× noise inflation; even n=32's ~10–11 was
+  slightly high).
