@@ -183,6 +183,68 @@ sleeper-suppression. The proposal's path-efficiency claim is robust;
 the J_clean-magnitude claim is gated on whether the single-feature
 recipe was already near-optimal for that seed × space.
 
+### Where Method A *beats* Fisher: a finding to follow up in v2
+
+**The single-feature α-sweep doesn't just tie Fisher on some seeds —
+on a couple of OV cells it actually wins at saturation.** The clearest
+example is **seed 1, OV**:
+
+| | J_clean | path |
+|---|---:|---:|
+| Method A f=1027, α=3.5 (saturation) | **0.402** | 3.5 |
+| v3 Fisher endpoint, K=20 | 0.514 | 0.92 |
+
+A 0.11-bit win for Method A. Seed 2 OV shows the same pattern at a
+smaller margin (Method A α=3.0 → 0.409 vs Fisher 0.484, 0.075-bit win
+for Method A). Both seeds: Method A's saturation point is below
+*any* J_clean Fisher visits in its 12-step trajectory at ρ = 1e-2.
+
+This is the "**single well-chosen feature pushed hard outperforms a
+cautious multi-feature combination**" regime. It contradicts the
+naive reading that more features + gradient should always win.
+
+Hypotheses worth testing in the **v2 follow-up**:
+
+1. **Fisher's ρ = 1e-2 budget terminates too early on these cells.**
+   At seed 1 OV, the dominant feature (f=1027) carries most of the
+   trigger signal, and the optimum direction is essentially a scaled
+   version of that one direction. Method A walks ~3.5 units along
+   that direction; Fisher walks ~0.9 units of Fisher arc and stops
+   (because its line search starts rejecting steps when local JSD
+   approaches 2·ρ). **Try ρ = 5e-2 or 1e-1 on these seeds.**
+
+2. **Fisher's diagonal Fisher approximation misses anisotropy along
+   the dominant axis.** If the true (full) Fisher is highly
+   anisotropic — one large eigenvalue along f=1027, small eigenvalues
+   elsewhere — then the diagonal Fisher *over-estimates* curvature in
+   that direction, making per-step δθ_i too small. Try **off-diagonal
+   Fisher** (proposal §10.8) on these specific seeds.
+
+3. **The K=20 candidate basis dilutes the signal.** If 1 feature
+   carries 90% of the trigger signal and 19 carry distractor signal,
+   greedy selection might still pick the right feature first but the
+   line-search "shrink" steps for stability could be unnecessarily
+   conservative. **Try K = 5** (just the top jamie-attribution
+   features) to see if the smaller basis lets Fisher push further on
+   the dominant direction.
+
+4. **Sampling JSD noise floor.** The 16-position sampling JSD has a
+   per-sampling-step stochastic component; at the very-low-J_clean
+   end (≤ 0.5 bits) the gradient signal may be swamped by sampling
+   variance. Method A's α-sweep doesn't have this issue because each
+   α evaluation is its own sampling run averaged over 200 prompts ×
+   16 positions, but Fisher's *per-step* gradient sees only 200 × 16
+   datapoints too — and we have 12 steps, so 12× the variance gets
+   pumped into the trajectory. **Increase n_prompts** in Fisher's
+   inner loop.
+
+In all four cases the diagnostic is the same: run Fisher on seed 1
+OV with the modified parameter, see if J_clean reaches Method A's
+0.40 saturation. If yes — the v3 result was tuning-limited. If no —
+there's a genuine geometric reason Fisher can't reach the
+single-feature optimum, which would be a more interesting (and
+unexpected) finding.
+
 ## Bottom line
 
 Across all four cells: **v3 Fisher kills the sleeper (ASR ≤ 0.015) at
