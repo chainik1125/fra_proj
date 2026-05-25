@@ -44,7 +44,7 @@ from sleeper.hooks import (
     make_multi_seed_sampler, make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    asr_16, batched_asr_16, clean_continuation_ce,
+    asr_16, batched_asr_16, clean_continuation_ce, sleeper_fired_mask,
 )
 from sleeper.model import (
     cache_activations, left_pad_prompts, load_dep_prompts,
@@ -61,15 +61,25 @@ PAT_HOOK  = "blocks.0.attn.hook_pattern"
 JSD_CLEAN_SEED = 0  # fixed decode seed for the clean reference rollout
 
 
-def jsd_mean(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> float:
-    """Symmetric JSD in bits between two distributions given log-softmax tensors (..., V)."""
+def _jsd_per_position(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> torch.Tensor:
+    """Symmetric JSD in bits per (b, t). Shape: same as p_lsm without last dim."""
     p = p_lsm.float().exp()
     q = q_lsm.float().exp()
     m = 0.5 * (p + q)
     log_m = m.clamp(min=1e-40).log()
     kl_pm = (p * (p.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
     kl_qm = (q * (q.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
-    return float((0.5 * (kl_pm + kl_qm) / 0.6931).mean().item())
+    return 0.5 * (kl_pm + kl_qm) / 0.6931
+
+
+def jsd_mean(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> float:
+    """Symmetric JSD in bits between two distributions given log-softmax tensors (..., V)."""
+    return float(_jsd_per_position(p_lsm, q_lsm).mean().item())
+
+
+def jsd_per_row(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> torch.Tensor:
+    """Per-row mean JSD (in bits), averaging over token positions. Shape (B,)."""
+    return _jsd_per_position(p_lsm, q_lsm).mean(dim=-1)
 
 
 @torch.no_grad()
@@ -463,32 +473,51 @@ def _eval_steered_lockstep(
         attention_mask=dep_attn_t, capture_log_softmax=True, lsm_on_gpu=True,
     )
 
-    asr_l: list[float] = []
-    jc_l:  list[float] = []
-    jp_l:  list[float] = []
-    nex_l: list[int]   = []
+    # Per-(prompt × seed) tensors: each shape (B,) per seed. The std reported
+    # below is over the full 5×B = total_rows datapoints — captures variance
+    # across prompts and sampling seeds, NOT across the 16 token positions
+    # (those collapse into the row-level mean for JSD; ASR / exact_match are
+    # row-level by construction).
+    asr_pr_rows:  list[torch.Tensor] = []   # (B,) 0/1 each
+    jc_pr_rows:   list[torch.Tensor] = []   # (B,) per-row mean jsd_clean
+    jp_pr_rows:   list[torch.Tensor] = []   # (B,) per-row mean jsd_pois
+    em_pr_rows:   list[torch.Tensor] = []   # (B,) 0/1 each (row-exact match)
+    tok = model.tokenizer
     for k, s in enumerate(seeds_list):
         st_tok = st_tok_t[k * B : (k + 1) * B]
         st_lsm = st_lsm_t[k * B : (k + 1) * B]
-        asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
-        jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s]))
-        jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s]))
-        nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s]))
+        asr_pr_rows.append(sleeper_fired_mask(st_tok.cpu(), tok).float())
+        jc_pr_rows.append(jsd_per_row(st_lsm, clean_lsm_per_seed[s]).cpu().float())
+        jp_pr_rows.append(jsd_per_row(st_lsm, dep_lsm_per_seed[s]).cpu().float())
+        eq = (st_tok == clean_tok_per_seed[s].to(st_tok.device))
+        em_pr_rows.append(eq.all(dim=1).cpu().float())
+
+    # Flatten across seeds → (5·B,) of per-(prompt × seed) values.
+    asr_all = torch.cat(asr_pr_rows)   # 1000 values for default args
+    jc_all  = torch.cat(jc_pr_rows)
+    jp_all  = torch.cat(jp_pr_rows)
+    em_all  = torch.cat(em_pr_rows)
     n_seeds = len(seeds_list)
     total_rows = B * n_seeds
     return {
-        "asr":          sum(asr_l) / n_seeds,
-        "asr_per_seed": asr_l,
-        "jsd_clean":            sum(jc_l) / n_seeds,
-        "jsd_clean_per_seed":   jc_l,
-        "jsd_pois":             sum(jp_l) / n_seeds,
-        "jsd_pois_per_seed":    jp_l,
-        # Row-exact match: across all (prompt × seed) trials, the fraction
-        # where the steered rollout on the dep prompt matches the unsteered
-        # rollout on the matched stripped-clean prompt on EVERY gen token.
-        "exact_match":                  sum(nex_l) / total_rows,
-        "n_exact_match_clean":          sum(nex_l),
-        "n_exact_match_clean_per_seed": nex_l,
+        # Means + std over (200 prompts × 5 sampling seeds) = 1000 trials.
+        "asr":          float(asr_all.mean().item()),
+        "asr_std":      float(asr_all.std(unbiased=False).item()),
+        "asr_per_seed": [float(t.mean().item()) for t in asr_pr_rows],
+
+        "jsd_clean":              float(jc_all.mean().item()),
+        "jsd_clean_std":          float(jc_all.std(unbiased=False).item()),
+        "jsd_clean_per_seed":     [float(t.mean().item()) for t in jc_pr_rows],
+
+        "jsd_pois":               float(jp_all.mean().item()),
+        "jsd_pois_std":           float(jp_all.std(unbiased=False).item()),
+        "jsd_pois_per_seed":      [float(t.mean().item()) for t in jp_pr_rows],
+
+        # Row-exact match across all (prompt × seed) trials.
+        "exact_match":                  float(em_all.mean().item()),
+        "exact_match_std":              float(em_all.std(unbiased=False).item()),
+        "n_exact_match_clean":          int(em_all.sum().item()),
+        "n_exact_match_clean_per_seed": [int(t.sum().item()) for t in em_pr_rows],
         "exact_match_total_rows":       total_rows,
     }
 

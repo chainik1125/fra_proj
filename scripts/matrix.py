@@ -222,8 +222,10 @@ def main() -> None:
                 winner_alpha     = float(winner_row["alpha"])
                 winner_attr_rank = int(winner_row["attr_rank"])
                 winner_metrics   = {k: winner_row[k] for k in (
-                    "asr", "asr_per_seed", "jsd_clean", "jsd_clean_per_seed",
-                    "jsd_pois", "jsd_pois_per_seed", "exact_match",
+                    "asr", "asr_std", "asr_per_seed",
+                    "jsd_clean", "jsd_clean_std", "jsd_clean_per_seed",
+                    "jsd_pois",  "jsd_pois_std",  "jsd_pois_per_seed",
+                    "exact_match", "exact_match_std",
                     "n_exact_match_clean", "n_exact_match_clean_per_seed",
                     "exact_match_total_rows",
                 )}
