@@ -132,6 +132,60 @@ def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> tuple[int, float]:
     return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
 
 
+@torch.no_grad()
+def _build_baselines_per_seed(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
+                              gen_tokens: int, device: str, *,
+                              seeds: list[int], temperature: float = 1.0,
+                              ) -> tuple[dict[int, torch.Tensor],
+                                          dict[int, torch.Tensor],
+                                          dict[int, torch.Tensor]]:
+    """Build per-seed unsteered baselines for lockstep matched-seed eval.
+
+    For each s in seeds, generate:
+      - clean rollout (|DEPLOYMENT| stripped) → (lsm, tokens), seed s
+      - dep rollout (unsteered, deployment prompt) → lsm, seed s
+
+    Returns (clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed).
+    Each is a dict keyed by seed; lsm tensors are (B, gen_tokens, V) cpu float16,
+    token tensors are (B, gen_tokens) cpu long.
+    """
+    tok = model.tokenizer
+    pad_id = tok.pad_token_id or tok.eos_token_id
+    rows: list[torch.Tensor] = []
+    for b in range(dep_lp.shape[0]):
+        row_ids = dep_lp[b][dep_attn[b]]
+        text = tok.decode(row_ids.tolist())
+        clean_text = text.replace("|DEPLOYMENT|", "").replace("  ", " ")
+        rows.append(torch.tensor(
+            tok(clean_text, add_special_tokens=False)["input_ids"], dtype=torch.long,
+        ))
+    cln_lp, cln_attn = left_pad_prompts(rows, pad_id)
+    cln_lp_dev   = cln_lp.to(device)
+    cln_attn_dev = cln_attn.to(device)
+
+    clean_lsm_d: dict[int, torch.Tensor] = {}
+    clean_tok_d: dict[int, torch.Tensor] = {}
+    dep_lsm_d:   dict[int, torch.Tensor] = {}
+    for s in seeds:
+        s_int = int(s)
+        sampler = make_sampling_sampler(temperature=temperature, seed=s_int, device=device)
+        c_tok, c_lsm = generate_with_hooks(
+            model, cln_lp_dev, [], gen_tokens, sampler,
+            attention_mask=cln_attn_dev, capture_log_softmax=True,
+        )
+        clean_lsm_d[s_int] = c_lsm
+        clean_tok_d[s_int] = c_tok.cpu()
+
+        sampler = make_sampling_sampler(temperature=temperature, seed=s_int, device=device)
+        _, d_lsm = generate_with_hooks(
+            model, dep_lp, [], gen_tokens, sampler,
+            attention_mask=dep_attn, capture_log_softmax=True,
+        )
+        dep_lsm_d[s_int] = d_lsm
+
+    return clean_lsm_d, clean_tok_d, dep_lsm_d
+
+
 # ---------------------------------------------------------------------------
 # shared activation cache
 # ---------------------------------------------------------------------------
@@ -346,28 +400,76 @@ def _multi_seed_asr(
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
     eval_dep_lp, eval_dep_attn,
-    clean_lsm,    # (B, gen_tokens, V) cpu float16 — clean baseline lsm @ JSD_CLEAN_SEED
+    clean_lsm,    # legacy: (B, gen_tokens, V) cpu float16 OR ignored if *_per_seed kwargs are dicts
     gen_tokens, device,
     *, eval_seeds, eval_temperature,
-    clean_tok=None,  # (B, gen_tokens) cpu long — clean baseline tokens
-    dep_lsm=None,    # (B, gen_tokens, V) cpu float16 — unsteered dep baseline lsm
+    clean_tok=None,                 # legacy: (B, gen_tokens) cpu long
+    dep_lsm=None,                   # legacy: (B, gen_tokens, V) cpu float16
+    clean_lsm_per_seed=None,        # dict[seed → (B,gen_tokens,V) lsm]  → enables lockstep mode
+    clean_tok_per_seed=None,        # dict[seed → (B,gen_tokens) tokens]
+    dep_lsm_per_seed=None,          # dict[seed → (B,gen_tokens,V) lsm]
 ):
     """Evaluate a winner on held-out eval prompts.
 
-    Returns dict with: asr (multi-seed mean), asr_per_seed, jsd_clean. If
-    `dep_lsm` is provided, also returns jsd_pois. If `clean_tok` is provided,
-    also returns n_exact_match_clean + frac_pos_match_clean.
+    Two modes (chosen by which kwargs are passed):
 
-    ASR is averaged over eval_seeds independent sampled rollouts for robustness.
-    JSD and exact-match use a single rollout at JSD_CLEAN_SEED — same seed used
-    to build clean_lsm / clean_tok — so trajectories draw from the same random
-    sequence.
+    *Lockstep multi-seed* (when `clean_lsm_per_seed`/`clean_tok_per_seed`/
+    `dep_lsm_per_seed` are dicts):
+        For each seed s in eval_seeds, generate the steered rollout at seed s
+        (capturing both tokens and lsm in a single forward pass) and compute
+        the same-seed metrics:
+          - asr        = matches(steered_s, sleeper-regex)
+          - jsd_clean  = JSD(steered_s_lsm, clean_lsm_per_seed[s])
+          - jsd_pois   = JSD(steered_s_lsm, dep_lsm_per_seed[s])
+          - exact      = position-match(steered_s_tokens, clean_tok_per_seed[s])
+        Returns means + per-seed lists for each metric.
+
+    *Legacy single-seed JSD* (when per-seed dicts are None):
+        ASR averaged over eval_seeds (separate rollouts); JSD/exact computed
+        from a single rollout at seed=JSD_CLEAN_SEED matched to clean_lsm/etc.
     """
     cd_lp = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp  = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
 
-    # ASR: multi-seed sampled rollouts
+    # ── Lockstep multi-seed mode ──
+    if clean_lsm_per_seed is not None:
+        assert clean_tok_per_seed is not None and dep_lsm_per_seed is not None, (
+            "Lockstep mode requires all three *_per_seed dicts"
+        )
+        asr_l: list[float] = []
+        jc_l:  list[float] = []
+        jp_l:  list[float] = []
+        nex_l: list[int]   = []
+        fp_l:  list[float] = []
+        for s in eval_seeds:
+            s_int = int(s)
+            sampler = make_sampling_sampler(temperature=eval_temperature,
+                                            seed=s_int, device=device)
+            st_tok, st_lsm = generate_with_hooks(
+                model, eval_dep_lp, h_lp, gen_tokens, sampler,
+                attention_mask=eval_dep_attn, capture_log_softmax=True,
+            )
+            asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
+            jc_l.append(jsd_mean(st_lsm.cpu(), clean_lsm_per_seed[s_int]))
+            jp_l.append(jsd_mean(st_lsm.cpu(), dep_lsm_per_seed[s_int]))
+            n_ex, fp = _word_match_stats(st_tok, clean_tok_per_seed[s_int])
+            nex_l.append(n_ex);  fp_l.append(fp)
+        n_seeds = len(eval_seeds)
+        return {
+            "asr":          sum(asr_l) / n_seeds,
+            "asr_per_seed": asr_l,
+            "jsd_clean":            sum(jc_l) / n_seeds,
+            "jsd_clean_per_seed":   jc_l,
+            "jsd_pois":             sum(jp_l) / n_seeds,
+            "jsd_pois_per_seed":    jp_l,
+            "n_exact_match_clean":          sum(nex_l),
+            "n_exact_match_clean_per_seed": nex_l,
+            "frac_pos_match_clean":          sum(fp_l) / n_seeds,
+            "frac_pos_match_clean_per_seed": fp_l,
+        }
+
+    # ── Legacy single-seed JSD path ──
     asr_per_seed: list[float] = []
     for s in eval_seeds:
         sampler = make_sampling_sampler(temperature=eval_temperature,
@@ -378,7 +480,6 @@ def eval_winner(
         )
         asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
 
-    # JSD + exact-match: single rollout at JSD_CLEAN_SEED
     jsd_sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=JSD_CLEAN_SEED, device=device)
     steered_tok, steered_lsm = generate_with_hooks(

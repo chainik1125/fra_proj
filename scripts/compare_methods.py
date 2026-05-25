@@ -33,7 +33,7 @@ from sleeper.sae import load as sae_load
 
 from scripts.matrix_sweep import (
     LN1_HOOK,
-    _build_clean_baseline, _build_dep_baseline, _multi_seed_asr,
+    _build_baselines_per_seed, _multi_seed_asr,
     eval_winner, get_tuples, get_tuples_diff,
 )
 from scripts.find_best_feature import _asr_and_dce, _screen
@@ -88,13 +88,15 @@ def main() -> None:
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
 
-    # Baselines for eval-split 4-metric eval_winner
-    print(f"[cmp] pre-building eval baselines (B={eval_dep_lp.shape[0]}) ...")
-    eval_clean_lsm, eval_clean_tok = _build_clean_baseline(
+    # Per-seed unsteered baselines for lockstep matched-seed eval.
+    # For each eval_seed s: clean rollout (lsm + tokens) and dep rollout (lsm)
+    # are both sampled at seed s. eval_winner samples the steered rollout at
+    # the same s and computes jsd_clean/jsd_pois/exact-match per s, then means.
+    print(f"[cmp] pre-building per-seed baselines (B={eval_dep_lp.shape[0]}, "
+          f"seeds={args.eval_seeds}) ...")
+    eval_clean_lsm_ps, eval_clean_tok_ps, eval_dep_lsm_ps = _build_baselines_per_seed(
         model, eval_dep_lp, eval_dep_attn, args.gen_tokens, device,
-    )
-    eval_dep_lsm   = _build_dep_baseline(
-        model, eval_dep_lp, eval_dep_attn, args.gen_tokens, device,
+        seeds=args.eval_seeds, temperature=args.eval_temperature,
     )
     eval_base_asr_per_seed = _multi_seed_asr(
         model, None, [], 0.0, set(), W,
@@ -135,10 +137,12 @@ def main() -> None:
                     m = eval_winner(
                         model, sae_ln1, tup, alpha, active, W,
                         eval_dep_lp, eval_dep_attn,
-                        eval_clean_lsm, args.gen_tokens, device,
+                        None, args.gen_tokens, device,
                         eval_seeds=args.eval_seeds,
                         eval_temperature=args.eval_temperature,
-                        clean_tok=eval_clean_tok, dep_lsm=eval_dep_lsm,
+                        clean_lsm_per_seed=eval_clean_lsm_ps,
+                        clean_tok_per_seed=eval_clean_tok_ps,
+                        dep_lsm_per_seed=eval_dep_lsm_ps,
                     )
                     jsd_rows.append({"attr_rank": ti + 1, "feature": int(tup[0][0]),
                                      "alpha": alpha, **m})
@@ -168,10 +172,12 @@ def main() -> None:
             fbf_eval  = eval_winner(
                 model, sae_ln1, fbf_tuple, fbf_pick["alpha"], active, W,
                 eval_dep_lp, eval_dep_attn,
-                eval_clean_lsm, args.gen_tokens, device,
+                None, args.gen_tokens, device,
                 eval_seeds=args.eval_seeds,
                 eval_temperature=args.eval_temperature,
-                clean_tok=eval_clean_tok, dep_lsm=eval_dep_lsm,
+                clean_lsm_per_seed=eval_clean_lsm_ps,
+                clean_tok_per_seed=eval_clean_tok_ps,
+                dep_lsm_per_seed=eval_dep_lsm_ps,
             )
             # attribution rank of the FBF winner feature within top-K
             try:
