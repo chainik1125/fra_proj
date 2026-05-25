@@ -19,7 +19,11 @@ from sleeper.model import cache_activations
 from sleeper.sae import train
 
 BASE_MODEL = "roneneldan/TinyStories-Instruct-33M"
-HOOKS = ["blocks.0.hook_resid_mid", "blocks.0.ln1.hook_normalized"]
+# Default: the paper's resid_post hookpoints across all 4 layers (depth curve).
+DEFAULT_HOOKS = [
+    "blocks.0.hook_resid_post", "blocks.1.hook_resid_post",
+    "blocks.2.hook_resid_post", "blocks.3.hook_resid_post",
+]
 
 
 def get_tokens(tokz, split, n, seq=128):
@@ -70,6 +74,7 @@ def main():
     p.add_argument("--n_steps", type=int, default=50000)
     p.add_argument("--d_sae", type=int, default=3072)
     p.add_argument("--k", type=int, default=32)
+    p.add_argument("--hookpoints", nargs="+", default=DEFAULT_HOOKS)
     args = p.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -81,7 +86,7 @@ def main():
     eval_tok = get_tokens(tokz, "validation", 200)
     print(f"[base] train_tok={tuple(train_tok.shape)} eval_tok={tuple(eval_tok.shape)}", flush=True)
 
-    for hook in HOOKS:
+    for hook in args.hookpoints:
         print(f"\n[base] === {hook} ===", flush=True)
         acts = cache_activations(model, train_tok, [hook])[hook]
         sae, _ = train(acts, d_sae=args.d_sae, k=args.k, n_steps=args.n_steps,
