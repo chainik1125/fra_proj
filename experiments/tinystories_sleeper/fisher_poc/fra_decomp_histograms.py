@@ -62,15 +62,19 @@ PATTERN_HOOK = f"blocks.{LAYER}.attn.hook_pattern"
 ATTN_OUT_HOOK = f"blocks.{LAYER}.hook_attn_out"
 
 HIST_BINS = np.linspace(-1.0, 1.0, 201)
+# Projection-coefficient bins are wider: α_i = <a_i,b>/||b||² sums to 1
+# across components but individual coefficients can exceed 1 if components
+# partially cancel.
+PROJ_BINS = np.linspace(-1.5, 2.5, 401)
 
 
-def normalize_eps(x: torch.Tensor, dim: int, eps: float = 1e-9) -> torch.Tensor:
-    n = x.norm(dim=dim, keepdim=True).clamp_min(eps)
-    return x / n
-
-
-def cosine_along(x: torch.Tensor, y: torch.Tensor, dim: int) -> torch.Tensor:
-    return (normalize_eps(x, dim) * normalize_eps(y, dim)).sum(dim=dim)
+def projection_along(x: torch.Tensor, y: torch.Tensor, dim: int,
+                     y_sqnorm: torch.Tensor | None = None) -> torch.Tensor:
+    """α_i = <x, y> / ||y||²  along `dim`. Pass `y_sqnorm` to reuse."""
+    num = (x * y).sum(dim=dim)
+    if y_sqnorm is None:
+        y_sqnorm = (y * y).sum(dim=dim).clamp_min(1e-30)
+    return num / y_sqnorm
 
 
 @torch.no_grad()
@@ -112,6 +116,8 @@ def process_split(
     post_keys = ["out_clean", "out_err", "out_bias"]
     pre_hist = {k: np.zeros(HIST_BINS.size - 1, dtype=np.int64) for k in pre_keys}
     post_hist = {k: np.zeros(HIST_BINS.size - 1, dtype=np.int64) for k in post_keys}
+    pre_proj_hist = {k: np.zeros(PROJ_BINS.size - 1, dtype=np.int64) for k in pre_keys}
+    post_proj_hist = {k: np.zeros(PROJ_BINS.size - 1, dtype=np.int64) for k in post_keys}
     pre_count = 0
     post_count = 0
 
@@ -197,20 +203,26 @@ def process_split(
 
         # Zero invalid positions so they don't contribute to dot products.
         valid_k_f = valid_k.to(S_QcKc.dtype)                     # (B, T_q, T_k)
+        t_masked = S_total_decomp * valid_k_f[:, None, :, :]      # (B,H,Tq,Tk)
+        t_sqnorm = (t_masked * t_masked).sum(dim=-1).clamp_min(1e-30)  # (B,H,Tq)
+        t_norm = t_sqnorm.sqrt()
         for k_name, comp in (("QcKc", S_QcKc), ("QcKe", S_QcKe),
                               ("QeKc", S_QeKc), ("QeKe", S_QeKe)):
-            # comp has shape (B, H, T_q, T_k)
             c_masked = comp * valid_k_f[:, None, :, :]
-            t_masked = S_total_decomp * valid_k_f[:, None, :, :]
-            cos = cosine_along(c_masked, t_masked, dim=-1)        # (B, H, T_q)
-            # Permute to (B, T_q, H) and pull out valid (b, q) positions.
-            cos = cos.permute(0, 2, 1)                           # (B, T_q, H)
-            mask3 = valid_q[:, :, None].expand_as(cos)
-            vals = cos[mask3].detach().to("cpu").float().numpy()
-            h, _ = np.histogram(vals, bins=HIST_BINS)
-            pre_hist[k_name] += h
-        # Use Q_c-only term's mask3 count as token count
-        pre_count += int(valid_q.sum().item()) * H  # per-(b,q,h) sample
+            # inner = <c, total> over keys
+            inner = (c_masked * t_masked).sum(dim=-1)             # (B,H,Tq)
+            cos = inner / (t_norm * c_masked.norm(dim=-1).clamp_min(1e-9))
+            proj = inner / t_sqnorm
+            for stat, hbins, hdest in (
+                (cos, HIST_BINS, pre_hist),
+                (proj, PROJ_BINS, pre_proj_hist),
+            ):
+                v = stat.permute(0, 2, 1)                         # (B,Tq,H)
+                mask3 = valid_q[:, :, None].expand_as(v)
+                vals = v[mask3].detach().to("cpu").float().numpy()
+                h, _ = np.histogram(vals, bins=hbins)
+                hdest[k_name] += h
+        pre_count += int(valid_q.sum().item()) * H
 
         # ---- Post-softmax (3 panels) ----
         # Compute per-head V components, apply pattern, project via W_O.
@@ -229,15 +241,22 @@ def process_split(
             resid = (out_clean + out_err + out_bias - attn_out).abs().max().item()
             diag["attn_out_resid"] = resid
 
-        # Cosines over d_model axis, per (b, q) valid.
+        # Cosines + projection coefficients over d_model axis, per (b, q).
+        t_sqnorm2 = (attn_out * attn_out).sum(dim=-1).clamp_min(1e-30)  # (B,T)
+        t_norm2 = t_sqnorm2.sqrt()
         for k_name, vec in (("out_clean", out_clean),
                             ("out_err", out_err),
                             ("out_bias", out_bias)):
-            cos = cosine_along(vec, attn_out, dim=-1)             # (B, T)
-            mask2 = amask
-            vals = cos[mask2].detach().to("cpu").float().numpy()
-            h, _ = np.histogram(vals, bins=HIST_BINS)
-            post_hist[k_name] += h
+            inner = (vec * attn_out).sum(dim=-1)                  # (B,T)
+            cos = inner / (t_norm2 * vec.norm(dim=-1).clamp_min(1e-9))
+            proj = inner / t_sqnorm2
+            for stat, hbins, hdest in (
+                (cos, HIST_BINS, post_hist),
+                (proj, PROJ_BINS, post_proj_hist),
+            ):
+                vals = stat[amask].detach().to("cpu").float().numpy()
+                h, _ = np.histogram(vals, bins=hbins)
+                hdest[k_name] += h
         post_count += int(amask.sum().item())
 
         del X, Xc, Xe, Q_c, Q_e, K_c, K_e, V_c, V_e, H_c, H_e
@@ -246,12 +265,15 @@ def process_split(
         bidx = b_end
 
     return {
-        "pre_hist": {k: v.tolist() for k, v in pre_hist.items()},
-        "post_hist": {k: v.tolist() for k, v in post_hist.items()},
+        "pre_hist":      {k: v.tolist() for k, v in pre_hist.items()},
+        "post_hist":     {k: v.tolist() for k, v in post_hist.items()},
+        "pre_proj_hist": {k: v.tolist() for k, v in pre_proj_hist.items()},
+        "post_proj_hist":{k: v.tolist() for k, v in post_proj_hist.items()},
         "pre_count": int(pre_count),
         "post_count": int(post_count),
         "diag": diag,
         "bins": HIST_BINS.tolist(),
+        "proj_bins": PROJ_BINS.tolist(),
     }
 
 

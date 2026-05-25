@@ -384,7 +384,7 @@ i.e. fp32 noise).
 | post `OV(ε)` | 0.000 | 0.000    |
 | post `b_O`   | 0.000 | 0.000    |
 
-**Interpretation.**
+**Interpretation (cosines).**
 - Pre-softmax: the clean-clean term `Q_{x'} K_{x'}` carries ≈the
   entire score (median cos 0.985, ~80% of samples at cos > 0.9 in both
   splits). The three error-touching cross-terms are ≈orthogonal to the
@@ -393,12 +393,51 @@ i.e. fp32 noise).
   alone captures attn_out** in 76% of tokens (cos > 0.9) — vs. 19% on
   clean. The error-V contribution is near-orthogonal in both. So in
   the regime where the trigger fires, almost all of the attention
-  output lives in the OV subspace the SAE already spans. This is the
-  empirical version of the FRA assumption used to justify the OV
-  intervention basis — and it concentrates exactly under the
-  distribution where steering needs to act.
+  output lives in the OV subspace the SAE already spans.
+
+### Magnitude-aware view: projection coefficients
+
+Cosines ignore magnitudes. Replace `cos(a, b) = <a,b>/(‖a‖ ‖b‖)` with
+the **projection coefficient** `α_i = <a_i, b> / ‖b‖²`. Because the
+decomposition is additive (`Σ_i a_i = b`), the coefficients sum
+**exactly to 1** across components — so each histogram reads directly
+as "signed fraction of the full magnitude this component contributes."
+
+Sanity: empirical sums are `1.0005 / 1.0007` (pre-softmax,
+clean/poisoned) and `1.0000 / 1.0008` (post-softmax), confirming the
+decomposition is exact.
+
+![Pre-softmax projection coefficients](fra_decomp_pre_softmax_proj.png)
+
+![Post-softmax projection coefficients](fra_decomp_post_softmax_proj.png)
+
+**Mean / median projection coefficient (sum across components = 1):**
+
+| view  | term                            | clean μ | clean med | pois μ | pois med |
+|-------|---------------------------------|--------:|----------:|-------:|---------:|
+| pre   | `Q_{x'} K_{x'}`                 |  +1.057 |   +0.995  | +1.052 |  +0.995  |
+| pre   | `Q_{x'} K_{ε}`                  |  −0.024 |   +0.005  | −0.004 |  +0.005  |
+| pre   | `Q_{ε}  K_{x'}`                 |  −0.046 |   −0.005  | −0.058 |  −0.005  |
+| pre   | `Q_{ε}  K_{ε}`                  |  +0.013 |   +0.005  | +0.011 |  +0.005  |
+| post  | `OV(x')`  (SAE-reconstructed V) |  +0.835 |   +0.835  | +0.877 |  +0.875  |
+| post  | `OV(ε)`   (error V)             |  −0.018 |   +0.005  | −0.018 |  +0.005  |
+| post  | `b_O`     (bias)                |  +0.183 |   +0.195  | +0.142 |  +0.145  |
+
+**Interpretation (magnitudes).**
+- Pre-softmax: `Q_{x'} K_{x'}` is the entire score (mean coefficient
+  ≈1.05). Cross/error terms cumulatively shave off the extra 5% — they
+  contribute non-zero magnitude but cancel along the score direction.
+  Going clean → poisoned does not move these coefficients.
+- Post-softmax: `OV(x')` accounts for **83.5% (clean) → 87.7%
+  (poisoned)** of attn_out's magnitude. The constant bias `b_O`
+  provides 18.3% (clean) → 14.2% (poisoned). The error-V term is
+  essentially zero either way (≈−0.018). So under the trigger the
+  SAE-reconstructed OV's contribution to attn_out *grows* by ≈4
+  percentage points and the constant-bias contribution *falls* by the
+  same amount. The cosine view's clean-vs-poison difference reflects
+  this magnitude-share shift, not a direction shift.
 
 Artifacts:
-- [`v3/fra_decomp_pre_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_pre_softmax.png)
-- [`v3/fra_decomp_post_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_post_softmax.png)
-- [`v3/fra_decomp_50k_ov_s2.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_50k_ov_s2.json)
+- Cosine view: [`v3/fra_decomp_pre_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_pre_softmax.png) · [`v3/fra_decomp_post_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_post_softmax.png)
+- Projection view: [`v3/fra_decomp_pre_softmax_proj.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_pre_softmax_proj.png) · [`v3/fra_decomp_post_softmax_proj.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_post_softmax_proj.png)
+- Data: [`v3/fra_decomp_50k_ov_s2.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_50k_ov_s2.json) (cosine) · [`v3/fra_decomp_50k_ov_s2_v2.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_50k_ov_s2_v2.json) (cosine + projection)
