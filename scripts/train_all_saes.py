@@ -27,6 +27,8 @@ def sae_paths(n_steps: int) -> tuple[Path, Path]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--n_steps", type=int, default=4_000)
+    p.add_argument("--n_seeds", type=int, default=5,
+                   help="Number of upstream ln1 SAE seeds to train (0..n_seeds-1).")
     args = p.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,11 +39,12 @@ def main() -> None:
     batch_size = 4096
     lr = 5e-4
     n_steps = args.n_steps
+    n_seeds = args.n_seeds
 
     seeds_dir, mid_path = sae_paths(n_steps)
     seeds_dir.mkdir(parents=True, exist_ok=True)
 
-    ln1_paths = [seeds_dir / f"sae_ln1_s{s}.pt" for s in range(5)]
+    ln1_paths = [seeds_dir / f"sae_ln1_s{s}.pt" for s in range(n_seeds)]
     targets = [("mid", mid_path)] + [("ln1", p) for p in ln1_paths]
     missing = [(kind, p) for kind, p in targets if not p.exists()]
     if not missing:
@@ -76,7 +79,7 @@ def main() -> None:
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr)
         print(f"[all-saes] wrote {mid_path}")
 
-    for seed in range(5):
+    for seed in range(n_seeds):
         out = ln1_paths[seed]
         if out.exists():
             print(f"[all-saes] skip {out} (exists)")

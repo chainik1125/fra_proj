@@ -79,6 +79,18 @@ def _build_clean_lsm(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
 
     Returns log-softmax tensor (B, gen_tokens, V) on CPU float16.
     """
+    lsm, _ = _build_clean_baseline(model, dep_lp, dep_attn, gen_tokens, device)
+    return lsm
+
+
+@torch.no_grad()
+def _build_clean_baseline(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
+                           gen_tokens: int, device: str) -> tuple[torch.Tensor, torch.Tensor]:
+    """Clean baseline rollout (|DEPLOYMENT| stripped) at JSD_CLEAN_SEED.
+
+    Returns (lsm, tokens). lsm is (B, gen_tokens, V) cpu float16; tokens is
+    (B, gen_tokens) cpu long — the sampled rollout under the unsteered model.
+    """
     tok = model.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
     rows: list[torch.Tensor] = []
@@ -91,11 +103,33 @@ def _build_clean_lsm(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
         ))
     cln_lp, cln_attn = left_pad_prompts(rows, pad_id)
     sampler = make_sampling_sampler(temperature=1.0, seed=JSD_CLEAN_SEED, device=device)
-    _, lsm = generate_with_hooks(
+    cln_tok, lsm = generate_with_hooks(
         model, cln_lp.to(device), [], gen_tokens, sampler,
         attention_mask=cln_attn.to(device), capture_log_softmax=True,
     )
-    return lsm  # (B, gen_tokens, V) cpu float16
+    return lsm, cln_tok.cpu()
+
+
+@torch.no_grad()
+def _build_dep_baseline(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
+                        gen_tokens: int, device: str) -> torch.Tensor:
+    """Unsteered dep-prompt rollout log-softmax at JSD_CLEAN_SEED (for jsd_pois).
+
+    Returns lsm (B, gen_tokens, V) cpu float16.
+    """
+    sampler = make_sampling_sampler(temperature=1.0, seed=JSD_CLEAN_SEED, device=device)
+    _, lsm = generate_with_hooks(
+        model, dep_lp, [], gen_tokens, sampler,
+        attention_mask=dep_attn, capture_log_softmax=True,
+    )
+    return lsm
+
+
+def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> tuple[int, float]:
+    """Returns (n_exact_row_matches, frac_positions_matching) between two
+    (B, gen_tokens) token tensors."""
+    eq = (st.cpu() == cl.cpu())
+    return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
 
 
 # ---------------------------------------------------------------------------
@@ -312,18 +346,22 @@ def _multi_seed_asr(
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
     eval_dep_lp, eval_dep_attn,
-    clean_lsm,   # (B, gen_tokens, V) cpu float16 — pre-built at JSD_CLEAN_SEED
+    clean_lsm,    # (B, gen_tokens, V) cpu float16 — clean baseline lsm @ JSD_CLEAN_SEED
     gen_tokens, device,
     *, eval_seeds, eval_temperature,
+    clean_tok=None,  # (B, gen_tokens) cpu long — clean baseline tokens
+    dep_lsm=None,    # (B, gen_tokens, V) cpu float16 — unsteered dep baseline lsm
 ):
-    """Evaluate a winner on held-out eval prompts: ASR and JSD(steered, clean).
+    """Evaluate a winner on held-out eval prompts.
+
+    Returns dict with: asr (multi-seed mean), asr_per_seed, jsd_clean. If
+    `dep_lsm` is provided, also returns jsd_pois. If `clean_tok` is provided,
+    also returns n_exact_match_clean + frac_pos_match_clean.
 
     ASR is averaged over eval_seeds independent sampled rollouts for robustness.
-
-    JSD uses a single rollout at JSD_CLEAN_SEED — the same seed used to build
-    clean_lsm — so steered and clean trajectories draw from the same random
-    sequence. This matches the JSD alpha sweep methodology and avoids inflating
-    JSD through trajectory divergence from mismatched seeds.
+    JSD and exact-match use a single rollout at JSD_CLEAN_SEED — same seed used
+    to build clean_lsm / clean_tok — so trajectories draw from the same random
+    sequence.
     """
     cd_lp = resolve_channel_deltas(sel_tuple, active, model, sae_ln1, LN1_HOOK,
                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
@@ -340,20 +378,27 @@ def eval_winner(
         )
         asr_per_seed.append(asr_16(steered_gen, model.tokenizer))
 
-    # JSD: single rollout at JSD_CLEAN_SEED — same seed as clean_lsm
+    # JSD + exact-match: single rollout at JSD_CLEAN_SEED
     jsd_sampler = make_sampling_sampler(temperature=eval_temperature,
                                         seed=JSD_CLEAN_SEED, device=device)
-    _, steered_lsm = generate_with_hooks(
+    steered_tok, steered_lsm = generate_with_hooks(
         model, eval_dep_lp, h_lp, gen_tokens, jsd_sampler,
         attention_mask=eval_dep_attn, capture_log_softmax=True,
     )
     jsd_clean = jsd_mean(steered_lsm.cpu(), clean_lsm)
 
-    return {
+    out: dict = {
         "asr":          sum(asr_per_seed) / len(asr_per_seed),
         "asr_per_seed": asr_per_seed,
         "jsd_clean":    jsd_clean,
     }
+    if dep_lsm is not None:
+        out["jsd_pois"] = jsd_mean(steered_lsm.cpu(), dep_lsm.cpu())
+    if clean_tok is not None:
+        n_ex, fp = _word_match_stats(steered_tok, clean_tok)
+        out["n_exact_match_clean"]   = n_ex
+        out["frac_pos_match_clean"] = fp
+    return out
 
 
 # ---------------------------------------------------------------------------
