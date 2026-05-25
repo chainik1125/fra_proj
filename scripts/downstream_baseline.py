@@ -61,7 +61,9 @@ def main() -> None:
     p.add_argument("--identify_top_k",   type=int,   default=20,
                    help="Top-K dep-vs-clean activation candidates before screens.")
     p.add_argument("--screen_alphas",    type=float, nargs="+", default=[2.0, 4.0])
-    p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0])
+    p.add_argument("--alphas",           type=float, nargs="+",
+                   default=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
+                   help="Full per-α eval sweep for each per-seed winner (4-metric lockstep).")
     p.add_argument("--n_sel",            type=int,   default=100,
                    help="Selection-split size for identification.")
     p.add_argument("--n_eval",           type=int,   default=400)

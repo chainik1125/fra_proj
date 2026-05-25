@@ -55,7 +55,11 @@ def main() -> None:
     p.add_argument("--intervene",        choices=["ov", "qk", "ov+qk", "qk+ov"], default="ov")
     p.add_argument("--top_k",            type=int,   default=20)
     p.add_argument("--triple_k",         type=int,   default=8)
-    p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0])
+    p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0],
+                   help="Selection-phase α grid (rank: greedy-ASR sweep; jsd: lockstep sweep).")
+    p.add_argument("--eval_alphas",      type=float, nargs="+",
+                   default=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
+                   help="Per-seed winner eval sweep — full 4-metric lockstep eval at each α.")
     p.add_argument("--n_sel",            type=int,   default=100)
     p.add_argument("--n_eval",           type=int,   default=400)
     p.add_argument("--gen_tokens",       type=int,   default=16)
@@ -246,6 +250,34 @@ def main() -> None:
               f"jsd_dep={winner_metrics['jsd_pois']:.3f}  "
               f"exact={winner_metrics['exact_match']:.3f}", flush=True)
 
+        # ── Per-seed winner: full α eval sweep ──
+        # The selection-phase α grid is for picking the winner only. For the
+        # actual eval (used by the alpha-sweep plots), the winner feature gets
+        # re-evaluated with the canonical 4-metric lockstep at each α in
+        # --eval_alphas. Independent of selection method, so the resulting
+        # sweep is directly comparable across cells.
+        winner_tup = [(winner_feature, "V")]
+        eval_sweep: dict = {}
+        t_es = time.time()
+        for ea in args.eval_alphas:
+            t_one = time.time()
+            ev = eval_winner(
+                model, sae_ln1, winner_tup, ea, active, W,
+                eval_dep_lp, eval_dep_attn,
+                None, args.gen_tokens, device,
+                eval_seeds=args.eval_seeds,
+                eval_temperature=args.eval_temperature,
+                clean_lsm_per_seed=eval_clean_lsm_ps,
+                clean_tok_per_seed=eval_clean_tok_ps,
+                dep_lsm_per_seed=eval_dep_lsm_ps,
+            )
+            eval_sweep[str(ea)] = ev
+            print(f"[mtx]    [EVAL_SWEEP α={ea:>4.1f}] asr={ev['asr']:.3f}  "
+                  f"jsd_cln={ev['jsd_clean']:.3f}  jsd_dep={ev['jsd_pois']:.3f}  "
+                  f"exact={ev['exact_match']:.3f}  ({time.time()-t_one:.1f}s)",
+                  flush=True)
+        print(f"[mtx]   eval sweep done in {time.time()-t_es:.1f}s", flush=True)
+
         out_rows.append({
             "seed": int(seed),
             "regime": args.regime,
@@ -258,6 +290,7 @@ def main() -> None:
                 "alpha":     winner_alpha,
                 "attr_rank": winner_attr_rank,
                 "metrics":   winner_metrics,
+                "eval_sweep": eval_sweep,
             },
             **extra,
         })
