@@ -39,7 +39,10 @@ RESID_MID = "blocks.0.hook_resid_mid"
 PAT_HOOK = "blocks.0.attn.hook_pattern"
 N_SEL = 100              # 50 dep + 50 clean (jamie default)
 SEQ_LEN = 128
-SCREEN_ALPHAS = (2.0, 4.0)
+# Screen across a wide α range: the suppression onset shifts right with dict
+# width (1536→α≈3, 3072→α≈8), so the winner-picker must test high α to find
+# wider-SAE suppressors rather than mis-screening them as non-suppressing.
+SCREEN_ALPHAS = (2.0, 4.0, 8.0, 16.0)
 TOP_K = 20
 GEN_TOKENS = 16
 

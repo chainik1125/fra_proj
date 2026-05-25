@@ -27,7 +27,10 @@ from scripts.sae_scaling_paths import (
     DEFAULT_HF_REPO, HOOKS, hf_download, hf_upload, result_rel,
 )
 
-DEFAULT_ALPHAS = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]
+# ±20 grid: dense near the suppression onset (which shifts right with width),
+# sparse negative as a directional control. Covers wide SAEs that only suppress
+# at high α (3072 needs ≈8; wider may need more).
+DEFAULT_ALPHAS = [-20.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0]
 
 
 @dataclass

@@ -12,7 +12,7 @@
 set -uo pipefail
 
 HF_REPO="${HF_REPO:-dmanningcoe/sae-scaling-tinystories-sleeper}"
-ALPHAS="${ALPHAS:--4 -2 0 2 4}"
+ALPHAS="${ALPHAS:--20 -8 -4 -2 0 2 4 6 8 12 16 20}"
 BRANCH="${BRANCH:-dmitry/sae-scaling-sweep}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 export HF_TOKEN
