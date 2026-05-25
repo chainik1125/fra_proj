@@ -327,3 +327,78 @@ Artifacts:
 - [`v3/kl_reeval.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/kl_reeval.json)
 - [`v3/comparison_v3_kl.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/comparison_v3_kl.png)
 - [`v3/kl_curves_per_seed_2x3.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/kl_curves_per_seed_2x3.png)
+
+## FRA decomposition cosine histograms  (eq 22 of `fra.tex`)
+
+Diagnostic — how much of layer-0 attention is captured by the SAE
+basis vs. the reconstruction error. The 50k OV SAE seed 2 (the best
+single OV basis — Fisher J_clean 0.483, the lowest on any OV cell)
+is used to split the layer-0 LN1 input as
+`X = X' + ε`, where `X' = SAE.decode(SAE.encode(X))` and `ε = X − X'`.
+
+Eq 22 then expands the attention block as `Σ_k A(x'+ε)_{qk} OV(x'+ε)_{ka}`.
+We separate the softmax cleanly into two views:
+
+**Pre-softmax (4 panels)** — additive on the score side:
+`S(q,k,h) = Q_{x'} K_{x'} + Q_{x'} K_{ε} + Q_{ε} K_{x'} + Q_{ε} K_{ε}`
+(biases carried by the clean side, by convention). Cosine of each of
+the 4 components with the full score, taken over the causal key axis
+per `(batch, query, head)`. 100k×16 head samples per split.
+
+**Post-softmax (3 panels)** — apply the actual softmax to the full
+score, then decompose only the OV side. With Σ_k P_{qk} = 1, the
+constant-bias term simplifies cleanly:
+`attn_out(q) = Σ_h Σ_k P_{q,k,h} W_OV_h X'_k + Σ_h Σ_k P_{q,k,h} W_OV_h ε_k + b_O`.
+Cosine of each component with `attn_out` over the d_model axis,
+per `(batch, query)`. 100k samples per split.
+
+Both decompositions verify exactly against the cached
+`hook_attn_scores` and `hook_attn_out` (residuals ≈ 5e-5 / 7e-6,
+i.e. fp32 noise).
+
+![Pre-softmax score components](fra_decomp_pre_softmax.png)
+
+![Post-softmax attn_out components](fra_decomp_post_softmax.png)
+
+**Median cosines:**
+
+| view  | term                            | clean   | poisoned |
+|-------|---------------------------------|--------:|---------:|
+| pre   | `Q_{x'} K_{x'}`                 |  +0.985 |  +0.985  |
+| pre   | `Q_{x'} K_{ε}`                  |  +0.035 |  +0.135  |
+| pre   | `Q_{ε}  K_{x'}`                 |  −0.055 |  −0.085  |
+| pre   | `Q_{ε}  K_{ε}`                  |  +0.085 |  +0.075  |
+| post  | `OV(x')`  (SAE-reconstructed V) |  +0.875 |  +0.915  |
+| post  | `OV(ε)`   (error V)             |  +0.055 |  +0.015  |
+| post  | `b_O`     (bias term)           |  +0.435 |  +0.405  |
+
+**Fraction of samples with `cos > 0.9`:**
+
+| term         | clean | poisoned |
+|--------------|------:|---------:|
+| pre  `QcKc`  | 0.797 | 0.813    |
+| pre  `QcKe`  | 0.003 | 0.009    |
+| pre  `QeKc`  | 0.088 | 0.071    |
+| pre  `QeKe`  | 0.002 | 0.006    |
+| post `OV(x')`| **0.190** | **0.756** |
+| post `OV(ε)` | 0.000 | 0.000    |
+| post `b_O`   | 0.000 | 0.000    |
+
+**Interpretation.**
+- Pre-softmax: the clean-clean term `Q_{x'} K_{x'}` carries ≈the
+  entire score (median cos 0.985, ~80% of samples at cos > 0.9 in both
+  splits). The three error-touching cross-terms are ≈orthogonal to the
+  total. The SAE basis is a strong basis for the score everywhere.
+- Post-softmax: under poisoned context, the **SAE-reconstructed OV
+  alone captures attn_out** in 76% of tokens (cos > 0.9) — vs. 19% on
+  clean. The error-V contribution is near-orthogonal in both. So in
+  the regime where the trigger fires, almost all of the attention
+  output lives in the OV subspace the SAE already spans. This is the
+  empirical version of the FRA assumption used to justify the OV
+  intervention basis — and it concentrates exactly under the
+  distribution where steering needs to act.
+
+Artifacts:
+- [`v3/fra_decomp_pre_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_pre_softmax.png)
+- [`v3/fra_decomp_post_softmax.png`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_post_softmax.png)
+- [`v3/fra_decomp_50k_ov_s2.json`](https://huggingface.co/datasets/dmanningcoe/fisher-poc-tinystories-sleeper/resolve/main/v3/fra_decomp_50k_ov_s2.json)
