@@ -40,8 +40,8 @@ from sleeper.attribution import (
     rank_ov_diff, rank_qk_diff,
 )
 from sleeper.hooks import (
-    ACTIVE_CHANNELS, build_hooks, generate_with_hooks, make_sampling_sampler,
-    resolve_channel_deltas,
+    ACTIVE_CHANNELS, additive_steer_hook, build_hooks, generate_with_hooks,
+    make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
     asr_16, batched_asr_16, clean_continuation_ce,
@@ -406,6 +406,104 @@ def _multi_seed_asr(
 
 
 @torch.no_grad()
+def _eval_steered_lockstep(
+    model, fwd_hooks,
+    eval_dep_lp, eval_dep_attn,
+    clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+    gen_tokens, device, *, eval_seeds, eval_temperature,
+) -> dict:
+    """Multi-seed lockstep eval for an intervention specified by `fwd_hooks`.
+
+    For each s in eval_seeds: generate the steered rollout at sampling seed s,
+    then compute asr / jsd_clean / jsd_pois / exact-match against the matched-
+    seed baseline (clean_*_per_seed and dep_lsm_per_seed should also be built
+    at the same s — the same seed appears on both sides of each measurement).
+    All tensors stay on GPU; the only CPU work is asr_16 decoding for regex match.
+
+    This is the shared evaluation core for both eval_winner (OV-channel steer
+    via attn.hook_v) and eval_downstream_baseline (additive resid-mid feature
+    ablation). It does NOT decide what fwd_hooks to use — callers pass them.
+    """
+    asr_l: list[float] = []
+    jc_l:  list[float] = []
+    jp_l:  list[float] = []
+    nex_l: list[int]   = []
+    B = eval_dep_lp.shape[0]
+    for s in eval_seeds:
+        s_int = int(s)
+        sampler = make_sampling_sampler(temperature=eval_temperature,
+                                        seed=s_int, device=device)
+        st_tok, st_lsm = generate_with_hooks(
+            model, eval_dep_lp, fwd_hooks, gen_tokens, sampler,
+            attention_mask=eval_dep_attn, capture_log_softmax=True,
+            lsm_on_gpu=True,
+        )
+        asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
+        jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s_int]))
+        jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s_int]))
+        nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s_int]))
+    n_seeds = len(eval_seeds)
+    total_rows = B * n_seeds
+    return {
+        "asr":          sum(asr_l) / n_seeds,
+        "asr_per_seed": asr_l,
+        "jsd_clean":            sum(jc_l) / n_seeds,
+        "jsd_clean_per_seed":   jc_l,
+        "jsd_pois":             sum(jp_l) / n_seeds,
+        "jsd_pois_per_seed":    jp_l,
+        # Row-exact match: across all (prompt × seed) trials, the fraction
+        # where the steered rollout on the dep prompt matches the unsteered
+        # rollout on the matched stripped-clean prompt on EVERY gen token.
+        "exact_match":                  sum(nex_l) / total_rows,
+        "n_exact_match_clean":          sum(nex_l),
+        "n_exact_match_clean_per_seed": nex_l,
+        "exact_match_total_rows":       total_rows,
+    }
+
+
+@torch.no_grad()
+def eval_downstream_baseline(
+    model, sae_mid, target_feature, alpha,
+    eval_dep_lp, eval_dep_attn,
+    clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+    gen_tokens, device, *, eval_seeds, eval_temperature,
+) -> dict:
+    """Conventional steering eval: additive ablation of one downstream feature.
+
+    Builds the SAE-ablation delta for `target_feature` at blocks.0.hook_resid_mid
+    using the downstream SAE (sae_mid):
+        delta[b, p, :] = -z[b, p, f] * W_dec[f, :]      (then prompt-mask)
+    Patches resid_mid via additive_steer_hook(delta, alpha, layer_hook), then
+    runs the SAME lockstep multi-seed protocol used by eval_winner. Returns the
+    same 4-metric dict — directly comparable with upstream OV-channel evals.
+
+    Seed-independent in the upstream SAE sense — sae_mid is the shared
+    downstream SAE for the pipeline (4k uses sae_resid_mid.pt; 50k uses
+    sae_resid_mid_50k.pt). Sampling seeds come from eval_seeds.
+    """
+    layer_hook = "blocks.0.hook_resid_mid"
+    _, cache = model.run_with_cache(
+        eval_dep_lp, attention_mask=eval_dep_attn, return_type=None,
+        names_filter=lambda n: n == layer_hook,
+    )
+    acts = cache[layer_hook]                       # (B, T, d_model)
+    B, T, D = acts.shape
+    flat = acts.reshape(B * T, D).to(torch.float32)
+    z = sae_mid.encode(flat).reshape(B, T, sae_mid.d_sae)
+    W_dec = sae_mid.W_dec.detach().float()         # (d_sae, d_model)
+    pmask = eval_dep_attn.bool().to(device)        # left-padded → real positions = prompt
+    zf = z[..., target_feature].unsqueeze(-1)      # (B, T, 1)
+    delta = (-zf * W_dec[target_feature].view(1, 1, D)).to(acts.dtype)
+    delta = delta * pmask.unsqueeze(-1)
+    fwd_hooks = additive_steer_hook(delta, alpha, layer_hook)
+    return _eval_steered_lockstep(
+        model, fwd_hooks, eval_dep_lp, eval_dep_attn,
+        clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+        gen_tokens, device, eval_seeds=eval_seeds, eval_temperature=eval_temperature,
+    )
+
+
+@torch.no_grad()
 def eval_winner(
     model, sae_ln1, sel_tuple, alpha, active, W,
     eval_dep_lp, eval_dep_attn,
@@ -441,49 +539,17 @@ def eval_winner(
                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp  = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
 
-    # ── Lockstep multi-seed mode ──
+    # ── Lockstep multi-seed mode — delegate to shared core ──
     if clean_lsm_per_seed is not None:
         assert clean_tok_per_seed is not None and dep_lsm_per_seed is not None, (
             "Lockstep mode requires all three *_per_seed dicts"
         )
-        asr_l: list[float] = []
-        jc_l:  list[float] = []
-        jp_l:  list[float] = []
-        nex_l: list[int]   = []
-        B = eval_dep_lp.shape[0]
-        for s in eval_seeds:
-            s_int = int(s)
-            sampler = make_sampling_sampler(temperature=eval_temperature,
-                                            seed=s_int, device=device)
-            st_tok, st_lsm = generate_with_hooks(
-                model, eval_dep_lp, h_lp, gen_tokens, sampler,
-                attention_mask=eval_dep_attn, capture_log_softmax=True,
-                lsm_on_gpu=True,
-            )
-            # st_tok / st_lsm stay on GPU; baselines from _build_baselines_per_seed
-            # are also GPU-resident, so all JSD math lives on the device.
-            asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
-            jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s_int]))
-            jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s_int]))
-            nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s_int]))
-        n_seeds = len(eval_seeds)
-        total_rows = B * n_seeds
-        return {
-            "asr":          sum(asr_l) / n_seeds,
-            "asr_per_seed": asr_l,
-            "jsd_clean":            sum(jc_l) / n_seeds,
-            "jsd_clean_per_seed":   jc_l,
-            "jsd_pois":             sum(jp_l) / n_seeds,
-            "jsd_pois_per_seed":    jp_l,
-            # Row-exact match: across all (prompt × seed) trials, the
-            # fraction where the steered rollout on the dep prompt matches
-            # the unsteered rollout on the matched stripped-clean prompt on
-            # EVERY generated token. This is the only "exact match" metric.
-            "exact_match":                 sum(nex_l) / total_rows,
-            "n_exact_match_clean":         sum(nex_l),
-            "n_exact_match_clean_per_seed": nex_l,
-            "exact_match_total_rows":      total_rows,
-        }
+        return _eval_steered_lockstep(
+            model, h_lp, eval_dep_lp, eval_dep_attn,
+            clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+            gen_tokens, device,
+            eval_seeds=eval_seeds, eval_temperature=eval_temperature,
+        )
 
     # ── Legacy single-seed JSD path ──
     asr_per_seed: list[float] = []

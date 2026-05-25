@@ -35,7 +35,7 @@ from sleeper.sae import load as sae_load
 from scripts.matrix_sweep import (
     LN1_HOOK,
     _build_baselines_per_seed, _multi_seed_asr,
-    eval_winner, get_tuples, get_tuples_diff,
+    eval_downstream_baseline, eval_winner, get_tuples, get_tuples_diff,
 )
 from scripts.find_best_feature import _asr_and_dce, _screen
 
@@ -109,9 +109,33 @@ def main() -> None:
     print(f"[cmp] eval baseline asr={eval_base_asr:.3f}  sel base_ce={sel_base_ce:.4f}",
           flush=True)
 
-    sae_mid = None
-    if "target" in args.regimes:
-        sae_mid, _ = sae_load(args.sae_mid, device=device)
+    # Load the downstream resid_mid SAE unconditionally: needed by target-regime
+    # attribution AND by the downstream-baseline conventional-steering eval.
+    sae_mid, _ = sae_load(args.sae_mid, device=device)
+
+    # ── Downstream baseline (conventional steering): ablate a single resid_mid
+    # SAE feature via additive_steer_hook at blocks.0.hook_resid_mid. Seed-
+    # independent (the resid_mid SAE is the shared downstream SAE for this
+    # pipeline run; sampling seeds are eval_seeds, same as the upstream evals).
+    # Uses the SAME pre-built per-seed baselines and the SAME 5-seed lockstep
+    # eval as eval_winner, so the 4 metrics are directly comparable.
+    print(f"[cmp] downstream baseline: f{args.target_feature} at blocks.0.hook_resid_mid "
+          f"(SAE: {args.sae_mid.name})", flush=True)
+    downstream_per_alpha: dict = {}
+    for alpha in args.alphas:
+        t_d0 = time.time()
+        m = eval_downstream_baseline(
+            model, sae_mid, args.target_feature, alpha,
+            eval_dep_lp, eval_dep_attn,
+            eval_clean_lsm_ps, eval_clean_tok_ps, eval_dep_lsm_ps,
+            args.gen_tokens, device,
+            eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
+        )
+        downstream_per_alpha[str(alpha)] = m
+        print(f"[cmp]   [DOWN] f{args.target_feature} α={alpha:>4.1f}  "
+              f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
+              f"jsd_dep={m['jsd_pois']:.3f}  exact={m['exact_match']:.3f}  "
+              f"({time.time()-t_d0:.1f}s)", flush=True)
 
     active = ACTIVE_CHANNELS["ov"]
     W_V    = W["V"]
@@ -244,6 +268,12 @@ def main() -> None:
         "baseline": {"eval": {"asr": eval_base_asr,
                               "asr_per_seed": eval_base_asr_per_seed},
                      "sel":  {"clean_ce": sel_base_ce}},
+        "downstream_baseline": {
+            "target_feature": args.target_feature,
+            "layer_hook":     "blocks.0.hook_resid_mid",
+            "sae_path":       str(args.sae_mid),
+            "per_alpha":      downstream_per_alpha,
+        },
         "results": out_rows,
     }, indent=2, default=str))
     print(f"\n[cmp] wrote {args.out}")
