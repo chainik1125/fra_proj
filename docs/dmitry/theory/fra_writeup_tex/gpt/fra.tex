@@ -1,0 +1,634 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, linkcolor=blue!55!black, citecolor=blue!55!black, urlcolor=blue!55!black]{hyperref}
+
+% -----------------------------------------------------------------------------
+% Notation macros
+% -----------------------------------------------------------------------------
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\ip}[2]{\left\langle #1, #2 \right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\diag}{\operatorname{diag}}
+
+\newcommand{\dm}{d_{\mathrm{model}}}
+\newcommand{\dhead}{d_{\mathrm{head}}}
+\newcommand{\dsae}{d_{\mathrm{SAE}}}
+
+\newcommand{\pretag}{\mathrm{pre}}
+\newcommand{\midtag}{\mathrm{mid}}
+\newcommand{\attn}{\mathrm{attn}}
+\newcommand{\OV}{\mathrm{OV}}
+\newcommand{\QK}{\mathrm{QK}}
+\newcommand{\LN}{\mathrm{LN}}
+
+\newcommand{\hook}[1]{\texttt{#1}}
+\newcommand{\residpre}{r^{\pretag}}
+\newcommand{\residmid}{r^{\midtag}}
+\newcommand{\attnout}{\mathrm{attn\_out}}
+
+\newcommand{\todo}[1]{\textcolor{red!65!black}{\textbf{TODO:} #1}}
+
+% -----------------------------------------------------------------------------
+% Theorem-like environments
+% -----------------------------------------------------------------------------
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{protocol}{Protocol}
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}
+\newtheorem{claim}{Claim}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+% -----------------------------------------------------------------------------
+
+\title{Feature-Resolved Attention: A Clean Derivation}
+\author{Dmitry Manning-Coe}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Feature-resolved attention (FRA) decomposes an attention circuit in the basis
+of sparse autoencoder (SAE) features.  The goal is to assign a scalar target,
+such as a downstream feature preactivation or steering direction, to specific
+query, key, and value-side feature contributions.  This note gives a clean
+derivation of the two pieces we use most often: frozen-attention OV attribution
+and first-order QK attribution via the softmax Jacobian.  It also records the
+distinction between feature ranking and intervention path, since conflating
+these two choices has been a recurring source of confusion.
+\end{abstract}
+
+\tableofcontents
+
+% =============================================================================
+\section{Roadmap}
+% =============================================================================
+
+The derivation separates three questions.
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{What scalar are we explaining?}
+  We choose a target direction \(d \in \R^{\dm}\) and explain
+  \[
+    T_q(d) := \ip{\attnout_q}{d}.
+  \]
+  In the sleeper setting, \(d\) can be the encoder direction of a downstream
+  suppressor feature at \hook{hook\_resid\_mid}.
+
+  \item \textbf{How do features contribute through a fixed attention pattern?}
+  Holding \(A\) fixed makes the OV path linear.  This gives a clean
+  per-head, per-source-token, per-feature attribution.
+
+  \item \textbf{How do features change the attention pattern?}
+  Attention patterns are nonlinear in QK scores.  We therefore decompose the
+  scores exactly in feature pairs and then use a first-order softmax-Jacobian
+  approximation to attribute changes in the scalar target.
+\end{enumerate}
+
+\paragraph{Main caution.}
+An FRA \emph{ranking} and an FRA \emph{intervention path} are separate design
+choices.  For example, one can rank features by QK attribution but intervene
+through the V path, the QK path, or the original normalized residual hook.
+
+% =============================================================================
+\section{Transformer and Hook Conventions}
+% =============================================================================
+
+We use the TransformerLens row-vector convention: activations multiply weights
+on the right.  Thus an activation update has the form
+\[
+  \texttt{new\_activation} = \texttt{old\_activation}\, W + b.
+\]
+
+Fix a layer \(\ell\), head \(h\), query position \(q\), and source/key
+position \(k\).  Let
+\[
+  x_t \in \R^{\dm}
+\]
+denote the exact tensor read by the attention sublayer at position \(t\).  In
+TransformerLens terms this is typically the layer-normalized attention input,
+for example \hook{blocks.\(\ell\).ln1.hook\_normalized}, after whatever
+folding convention the model uses.
+
+For head \(h\), define
+\[
+  Q_t^h = x_t W_Q^h,\qquad
+  K_t^h = x_t W_K^h,\qquad
+  V_t^h = x_t W_V^h + b_V^h.
+\]
+
+The pre-softmax score and attention pattern are
+\[
+  s_{qk}^h =
+  \frac{Q_q^h \cdot K_k^h}{\sqrt{\dhead}},
+  \qquad
+  A_{qk}^h = \softmax_k(s_{qk}^h).
+\]
+
+The head output written to the residual stream is
+\[
+  y_q^h
+  =
+  \sum_k A_{qk}^h V_k^h W_O^h
+  =
+  \sum_k A_{qk}^h x_k W_V^h W_O^h + c^h,
+  \qquad
+  c^h := b_V^h W_O^h.
+\]
+
+The full attention write is
+\[
+  \attnout_q = \sum_h y_q^h + b_O.
+\]
+
+If we are targeting a direction at \hook{hook\_resid\_mid}, then
+\[
+  \residmid_{\ell,q}
+  =
+  \residpre_{\ell,q}
+  +
+  \attnout_{\ell,q},
+\]
+so the downstream feature preactivation decomposes into a skip term plus an
+attention term:
+\[
+  \ip{\residmid_{\ell,q}}{d}
+  =
+  \ip{\residpre_{\ell,q}}{d}
+  +
+  \ip{\attnout_{\ell,q}}{d}.
+\]
+The FRA derivation below focuses on the attention term.
+
+% =============================================================================
+\section{Feature Decomposition}
+% =============================================================================
+
+Assume an SAE or dictionary on the attention input \(x_t\):
+\[
+  x_t
+  =
+  \sum_{\lambda=1}^{\dsae} u_t^\lambda f_\lambda
+  +
+  e_t.
+\]
+Here
+\begin{itemize}[leftmargin=*]
+  \item \(u_t^\lambda\) is feature \(\lambda\)'s activation at position \(t\),
+  \item \(f_\lambda \in \R^{\dm}\) is the decoder direction,
+  \item \(e_t\) is reconstruction error.
+\end{itemize}
+
+We will often drop \(e_t\) in the algebra and then treat reconstruction error
+as an empirical error term.
+
+\begin{remark}
+The same feature basis can be used for Q, K, and V because they read the same
+attention-input tensor \(x_t\).  But the channel-specific vectors
+\[
+  f_\lambda W_Q^h,\qquad f_\lambda W_K^h,\qquad f_\lambda W_V^h W_O^h
+\]
+are different.  FRA is useful precisely because it keeps these channels
+separate.
+\end{remark}
+
+% =============================================================================
+\section{Frozen-Attention OV Attribution}
+% =============================================================================
+
+Start with the scalar target
+\[
+  T_q(d) := \ip{\attnout_q}{d}.
+\]
+For one head, holding \(A^h\) fixed gives
+\[
+  \ip{y_q^h}{d}
+  =
+  \sum_k A_{qk}^h \ip{x_k W_V^h W_O^h}{d}
+  +
+  \ip{c^h}{d}.
+\]
+
+Define the virtual OV read direction \(u_h^{\OV}(d)\) by
+\[
+  \ip{x_k W_V^h W_O^h}{d}
+  =
+  \ip{x_k}{u_h^{\OV}(d)}.
+\]
+With row-vector activations, this is equivalently
+\[
+  u_h^{\OV}(d)
+  =
+  W_V^h W_O^h d^\top
+\]
+up to the usual row/column identification.
+
+Substitute the feature expansion of \(x_k\):
+\[
+  \ip{x_k}{u_h^{\OV}(d)}
+  \approx
+  \sum_\lambda u_k^\lambda
+  \underbrace{\ip{f_\lambda W_V^h W_O^h}{d}}_{:=\,\beta_{h,\lambda}(d)}.
+\]
+
+\begin{definition}[OV feature coefficient]
+For target direction \(d\), define
+\[
+  \beta_{h,\lambda}(d)
+  :=
+  \ip{f_\lambda W_V^h W_O^h}{d}.
+\]
+\end{definition}
+
+\begin{proposition}[Frozen-attention OV attribution]
+Given the observed attention pattern \(A\), the feature-resolved OV
+contribution of source feature \(\lambda\) at position \(k\), read by query
+position \(q\) through head \(h\), is
+\[
+  C^{\OV}_{h,q,k,\lambda}(d)
+  :=
+  A_{qk}^h\, u_k^\lambda\, \beta_{h,\lambda}(d).
+\]
+Thus
+\[
+  T_q(d)
+  \approx
+  \sum_h \sum_k \sum_\lambda
+  C^{\OV}_{h,q,k,\lambda}(d)
+  +
+  \mathrm{const}
+  +
+  \mathrm{reconstruction\ error}.
+\]
+\end{proposition}
+
+\paragraph{Typical feature ranking.}
+For a prompt distribution \(\mathcal{D}\), define an OV score
+\[
+  \mathrm{Score}_{\OV}(\lambda)
+  =
+  \sum_h
+  \beta_{h,\lambda}(d)
+  \;
+  \E_{b \sim \mathcal{D},\, q \in \mathrm{prompt}(b)}
+  \left[
+    \sum_k A_{b,qk}^h u_{b,k}^{\lambda}
+  \right].
+\]
+Rank features by \(|\mathrm{Score}_{\OV}(\lambda)|\), or by a variant that
+subtracts the same statistic on a control distribution.
+
+\todo{Specify which distribution is used for the final paper: deployment only,
+deployment minus clean, or a prompt-position-restricted variant.}
+
+% =============================================================================
+\section{QK Score Decomposition}
+% =============================================================================
+
+OV attribution holds \(A\) fixed.  To ask how features change the attention
+pattern, begin at the score level:
+\[
+  s_{qk}^h =
+  \frac{(x_q W_Q^h) \cdot (x_k W_K^h)}{\sqrt{\dhead}}.
+\]
+
+Using the feature expansion on both query and key positions,
+\[
+  x_q \approx \sum_\mu u_q^\mu f_\mu,
+  \qquad
+  x_k \approx \sum_\nu u_k^\nu f_\nu.
+\]
+Then
+\[
+  s_{qk}^h
+  \approx
+  \sum_{\mu,\nu}
+  u_q^\mu u_k^\nu
+  \omega_{\mu\nu}^{h,\QK}
+  +
+  \mathrm{bias/error},
+\]
+where
+\[
+  \omega_{\mu\nu}^{h,\QK}
+  :=
+  \frac{(f_\mu W_Q^h) \cdot (f_\nu W_K^h)}{\sqrt{\dhead}}.
+\]
+
+\begin{definition}[QK score atom]
+The score-level QK atom for query feature \(\mu\) and key feature \(\nu\) is
+\[
+  S_{qk}^{h,\mu\nu}
+  :=
+  u_q^\mu u_k^\nu
+  \omega_{\mu\nu}^{h,\QK}.
+\]
+\end{definition}
+
+\begin{remark}
+The score decomposition is clean.  The attention-pattern decomposition is not,
+because \(A_{qk}^h = \softmax_k(s_{qk}^h)\) is nonlinear.  This is why QK-side
+target attribution needs either an exact intervention experiment or a
+linearization.
+\end{remark}
+
+% =============================================================================
+\section{QK Attribution via the Softmax Jacobian}
+% =============================================================================
+
+To attribute changes in the scalar target \(T_q(d)\) through QK, hold the OV
+side fixed and ask how a score perturbation changes the attention-weighted OV
+read.
+
+Define the fixed-OV source scalar
+\[
+  g_k^h(d)
+  :=
+  \sum_\lambda u_k^\lambda \beta_{h,\lambda}(d).
+\]
+Then
+\[
+  T_q(d)
+  \approx
+  \sum_h \sum_k A_{qk}^h g_k^h(d)
+  +
+  \mathrm{const}.
+\]
+
+The softmax Jacobian is
+\[
+  \frac{\partial A_{qk'}^h}{\partial s_{qj}^h}
+  =
+  A_{qk'}^h
+  \left(
+    \mathbf{1}_{k'=j} - A_{qj}^h
+  \right).
+\]
+Therefore
+\[
+  \frac{\partial T_q(d)}{\partial s_{qj}^h}
+  =
+  A_{qj}^h
+  \left(
+    g_j^h(d) - \bar g_q^h(d)
+  \right),
+  \qquad
+  \bar g_q^h(d) := \sum_k A_{qk}^h g_k^h(d).
+\]
+
+\begin{definition}[Centered OV profile]
+Define
+\[
+  \widetilde g_{qj}^h(d)
+  :=
+  A_{qj}^h
+  \left(
+    g_j^h(d) - \bar g_q^h(d)
+  \right).
+\]
+\end{definition}
+
+\subsection{Single query-feature sensitivity}
+
+Remove query-side feature \(\mu\) at query position \(q\):
+\[
+  u_q^\mu \mapsto 0.
+\]
+The induced score shift at every key \(j\) is
+\[
+  \delta s_{qj}^h
+  =
+  -
+  u_q^\mu
+  \underbrace{
+  \sum_\nu u_j^\nu \omega_{\mu\nu}^{h,\QK}
+  }_{:=\,\kappa_j^{h,\mu}}.
+\]
+Thus the first-order target change is
+\[
+  \delta T_q^\mu(d)
+  \approx
+  -
+  u_q^\mu
+  \sum_h \sum_j
+  \kappa_j^{h,\mu}
+  \widetilde g_{qj}^h(d).
+\]
+
+\subsection{Single key-feature sensitivity}
+
+Remove key-side feature \(\nu\) at source position \(k\):
+\[
+  u_k^\nu \mapsto 0.
+\]
+Only score \(s_{qk}^h\) changes, with
+\[
+  \delta s_{qk}^h
+  =
+  -
+  u_k^\nu
+  \underbrace{
+  \sum_\mu u_q^\mu \omega_{\mu\nu}^{h,\QK}
+  }_{:=\,\eta_q^{h,\nu}}.
+\]
+Therefore
+\[
+  \delta T_{q,k}^{\nu}(d)
+  \approx
+  -
+  u_k^\nu
+  \sum_h
+  \eta_q^{h,\nu}
+  \widetilde g_{qk}^h(d).
+\]
+
+\subsection{Pair sensitivity}
+
+For the query-key feature pair \((\mu,\nu)\), the corresponding first-order
+score contribution is
+\[
+  u_q^\mu u_k^\nu \omega_{\mu\nu}^{h,\QK}.
+\]
+Removing that atom gives
+\[
+  \delta T_{q,k}^{\mu,\nu}(d)
+  \approx
+  -
+  u_q^\mu u_k^\nu
+  \sum_h
+  \omega_{\mu\nu}^{h,\QK}
+  \widetilde g_{qk}^h(d).
+\]
+
+\paragraph{Typical QK feature ranking.}
+For query-feature ranking, compute
+\[
+  \mathrm{Pred}_{\QK}[\mu](b,q)
+  :=
+  u_{b,q}^\mu
+  \sum_h \sum_j
+  \kappa_{b,j}^{h,\mu}
+  \widetilde g_{b,qj}^h(d),
+\]
+and aggregate over prompt positions:
+\[
+  \mathrm{Score}_{\QK}(\mu)
+  =
+  \E_{(b,q)\in \mathrm{prompt}}
+  \left[
+    \left|\mathrm{Pred}_{\QK}[\mu](b,q)\right|
+  \right].
+\]
+This is the ``QK L1 mean'' ranking used in the sleeper QK/QK note.
+
+% =============================================================================
+\section{Intervention Paths}
+% =============================================================================
+
+Attribution gives a ranked feature set \(F\).  Intervention path is a separate
+choice.
+
+Given selected features \(F\), define the SAE feature-removal delta at the
+attention input:
+\[
+  \Delta x_t
+  =
+  \sum_{\lambda \in F}
+  \left[
+    \mathrm{decode}(z_t \ \mathrm{with}\ z_t^\lambda=0)
+    -
+    \mathrm{decode}(z_t)
+  \right]
+  \approx
+  -
+  \sum_{\lambda \in F} u_t^\lambda f_\lambda.
+\]
+
+\begin{protocol}[All-path intervention]
+Add the delta directly at the attention input:
+\[
+  x_t \leftarrow x_t + \alpha \Delta x_t.
+\]
+This changes Q, K, and V simultaneously.
+\end{protocol}
+
+\begin{protocol}[OV-only intervention]
+Project the delta through \(W_V^h\) and add it at the value hook:
+\[
+  V_t^h \leftarrow V_t^h + \alpha \Delta x_t W_V^h.
+\]
+This changes value vectors but leaves the attention pattern fixed.
+\end{protocol}
+
+\begin{protocol}[QK-only intervention]
+Project the delta through \(W_Q^h\) and \(W_K^h\), then add it at the Q and K
+hooks:
+\[
+  Q_t^h \leftarrow Q_t^h + \alpha \Delta x_t W_Q^h,
+  \qquad
+  K_t^h \leftarrow K_t^h + \alpha \Delta x_t W_K^h.
+\]
+This changes the attention pattern while leaving values unchanged.
+\end{protocol}
+
+\begin{remark}
+This gives a useful grid: QK-ranked features can be sent through QK, OV, or all
+paths; OV-ranked features can likewise be sent through QK, OV, or all paths.
+The labels ``QK/QK'', ``QK/OV'', and ``OV/OV'' should therefore be read as
+``ranking/intervention-path'', not as a single inseparable method.
+\end{remark}
+
+% =============================================================================
+\section{Implementation Correspondence}
+% =============================================================================
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Math object & Typical tensor/code object & Shape sketch \\
+    \midrule
+    \(x_t\) & \hook{ln1.hook\_normalized} & batch, seq, \(\dm\) \\
+    \(u_t^\lambda\) & SAE encodings \(z\) & batch, seq, \(\dsae\) \\
+    \(f_\lambda\) & \hook{sae.W\_dec[lambda]} & \(\dsae, \dm\) \\
+    \(A_{qk}^h\) & \hook{attn\_pattern} & batch, head, query, key \\
+    \(W_Q^h,W_K^h,W_V^h\) & \hook{model.W\_Q[ell]}, etc. & head, \(\dm\), \(\dhead\) \\
+    \(\Delta x_t\) & \hook{compute\_sae\_delta(...)} & batch, seq, \(\dm\) \\
+    \bottomrule
+  \end{tabular}
+  \caption{Mapping between the derivation and typical TransformerLens/SAE tensors.}
+\end{table}
+
+\paragraph{Minimal QK/QK pseudocode.}
+\begin{verbatim}
+features = topk(qk_l1_mean_scores, k=K)
+delta = sum(compute_sae_delta(feature=f) for f in features)
+
+q_delta = einsum("btd,hdk->bthk", delta, W_Q[layer])
+k_delta = einsum("btd,hdk->bthk", delta, W_K[layer])
+
+hook_q: q[:, :P, :, :] += alpha * q_delta
+hook_k: k[:, :P, :, :] += alpha * k_delta
+\end{verbatim}
+
+% =============================================================================
+\section{Open Choices for the Paper}
+% =============================================================================
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Target distribution.}
+  Decide whether the headline ranking uses deployment prompts only,
+  deployment-minus-clean, or a prompt-position mask.
+
+  \item \textbf{Scalar target.}
+  Decide whether to present \(d\) as a downstream SAE encoder direction, a logit
+  direction, or a generic steering direction.
+
+  \item \textbf{Error terms.}
+  Decide how much of the SAE reconstruction error and LN linearization error
+  should appear in the main text versus an appendix.
+
+  \item \textbf{Intervention terminology.}
+  Use consistent names:
+  \[
+    \text{ranking source} / \text{intervention path}
+  \]
+  for example QK/QK, QK/OV, OV/OV, and QK/All.
+\end{enumerate}
+
+% =============================================================================
+\appendix
+\section{Appendix Placeholders}
+% =============================================================================
+
+\subsection{LayerNorm linearization}
+\todo{Insert the resid-pre to ln1 two-stage derivation if this writeup needs
+the sleeper-specific two-stage path.}
+
+\subsection{Channel-wise interaction decomposition}
+\todo{Insert the Q/K/V coalition or Harsanyi decomposition if the paper needs
+singles, pairs, and triples rather than the frozen-OV/QK split.}
+
+\subsection{Experimental protocol}
+\todo{Insert exact prompts, feature counts, alpha sweeps, and metrics for each
+model family.}
+
+\end{document}

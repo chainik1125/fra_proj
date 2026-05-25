@@ -1,0 +1,220 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, linkcolor=blue!55!black, citecolor=blue!55!black, urlcolor=blue!55!black]{hyperref}
+
+% -----------------------------------------------------------------------------
+% Notation macros
+% -----------------------------------------------------------------------------
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\ip}[2]{\left\langle #1, #2 \right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\diag}{\operatorname{diag}}
+
+\newcommand{\dm}{d_{\mathrm{model}}}
+\newcommand{\dhead}{d_{\mathrm{head}}}
+\newcommand{\dsae}{d_{\mathrm{SAE}}}
+
+\newcommand{\pretag}{\mathrm{pre}}
+\newcommand{\midtag}{\mathrm{mid}}
+\newcommand{\attn}{\mathrm{attn}}
+\newcommand{\OV}{\mathrm{OV}}
+\newcommand{\QK}{\mathrm{QK}}
+\newcommand{\LN}{\mathrm{LN}}
+
+\newcommand{\hook}[1]{\texttt{#1}}
+\newcommand{\residpre}{\mathbf{r}^{\pretag}}
+\newcommand{\residmid}{\mathbf{r}^{\midtag}}
+\newcommand{\attnout}{\mathbf{attn\_out}}
+
+\newcommand{\todo}[1]{\textcolor{red!65!black}{\textbf{TODO:} #1}}
+
+% -----------------------------------------------------------------------------
+% Theorem-like environments
+% -----------------------------------------------------------------------------
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{protocol}{Protocol}
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}
+\newtheorem{claim}{Claim}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+% -----------------------------------------------------------------------------
+
+\title{Feature-Resolved Attention: A Clean Derivation}
+\author{Dmitry Manning-Coe}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Feature-resolved attention (FRA) decomposes an attention circuit in the basis
+of sparse autoencoder (SAE) features.  The goal is to assign a scalar target,
+such as a downstream feature preactivation or steering direction, to specific
+query, key, and value-side feature contributions.  This note gives a clean
+derivation of the two pieces we use most often: frozen-attention OV attribution
+and first-order QK attribution via the softmax Jacobian.  It also records the
+distinction between feature ranking and intervention path, since conflating
+these two choices has been a recurring source of confusion.
+\end{abstract}
+
+\tableofcontents
+
+% =============================================================================
+\section{Decomposition}
+% =============================================================================
+Our goal is to decompose the attention block into linearly independent contributions from each feature. To do so, we must first obtain the decomposition of the residual stream vector $\mathbf{x}$ into a linear combination $\mathbf{u}$ of Sparse Autoencoder features:
+\begin{equation}
+    \mathbf{u}\equiv\sigma\left(W^{\textrm{enc}}\mathbf{x}+\mathbf{b}^{\textrm{enc}}\right).
+\end{equation}
+We will typically work in component form and so we note that:
+\begin{equation}
+    u^\lambda_{q}=\sigma\left(\sum_{a}
+       W^{\textrm{enc},\lambda}_a x_{q a}+b^{\textrm{enc},\lambda}
+    \right).
+\end{equation}
+Note that in the SAE literature it is conventional to associate each latent feature $\lambda$ with a decoder direction $\mathbf{f}^\lambda$ in residual-stream space. Under the column-vector convention used here, this is the image of the latent basis vector $\mathbf{e}^\lambda$ under the decoder:
+\begin{equation}
+    \mathbf{f}^\lambda\equiv W^{\textrm{dec}}\mathbf{e}^\lambda
+    = W^{\textrm{dec}}_{:,\lambda}.
+\end{equation}
+Equivalently, in row-vector SAE implementations where $\mathbf{x}'=\mathbf{u}W^{\textrm{dec}}+\mathbf{b}^{\textrm{dec}}$, the same feature direction is the corresponding row $W^{\textrm{dec}}_{\lambda:}$.
+
+The latent vector $\mathbf{u}$ is then projected back by the decoder matrix to obtain the reconstructed activation:
+\begin{equation}
+    \mathbf{x}'\equiv W^{dec}\mathbf{u}+\mathbf{b}^{dec}.
+\end{equation}
+This reconstruction will not, in general, perfectly recover the original activation. The difference defines the reconstruction error $\boldsymbol{\varepsilon}$\footnote{Note that, since we do know the exact activations in all the cases we consider, we can measure the error term and see how it interacts with the features!}:
+\begin{equation}
+    \mathbf{x}=\mathbf{x}'+\boldsymbol{\varepsilon}.
+\end{equation}
+The component-wise attention update from the resid-pre hookpoint is given by:
+\begin{equation}
+    x^{\textrm{mid}}_{q a}=x^{\textrm{pre}}_{q a}+Attn[\mathbf{x}^{\textrm{ln1}}]_{q a}.
+\end{equation}
+To lighten notation, we use the convention that $\mathbf{x}$ with no superscript is the activation vector at the $ln1$ hookpoint. Following \cite{elhage_mathematical_framework}, we decompose the attention block into an attention pattern $A$ and an $OV$ component:
+\begin{equation}
+    Attn(\mathbf{x})_{q a}=\sum_{k}A(\mathbf{x})_{qk}OV(\mathbf{x})_{k a}.
+\end{equation}
+The attention pattern $A$ is given by the contraction of the $Q$ and $K$ matrices for each head $h$:
+\begin{equation}
+    A(\mathbf{x})_{qk}=\frac{1}{\sqrt{d_h}}\sum_{h}\sum_{a,b,i}
+    \left(
+        Q^h_{i a}x_{q a}+b^{Q,h}_{i}
+    \right)
+    \left(
+        K^h_{i b}x_{k b}+b^{K,h}_{i}
+    \right),
+\end{equation}
+expanding out the terms:
+\begin{equation}
+    A(\mathbf{x})_{qk}=\frac{1}{\sqrt{d_h}}\sum_{h}\sum_{a,b,i}
+    Q^h_{i a}x_{q a}K^h_{i b}x_{k b}
+    +b^{Q,h}_{i}K^h_{i b}x_{k b}
+    +Q^h_{i a}x_{q a}b^{K,h}_{i}
+    +b^{Q,h}_{i}b^{K,h}_{i}
+\end{equation}
+This is a bit of a mess, so we can probably do better by dropping component form and writing:
+\begin{equation}
+    A(\mathbf{x})=\mathbf{x}^TQ^TK\mathbf{x}+\underbrace{(\mathbf{b}^Q)^TK}_{\equiv (\mathbf{B}^Q)^T}\mathbf{x}+\mathbf{x}^T\underbrace{Q^T\mathbf{b}^K}_{\equiv \mathbf{B}^K}+\underbrace{(\mathbf{b}^Q)^T\mathbf{b}^K}_{\equiv B^{QK}}.
+\end{equation}
+The $OV$ component is given as:
+\begin{equation}
+    OV(\mathbf{x})_{q a}=\sum_h\sum_{a,i}
+    \left(
+        W^{O,h}_{a i}\left(W^{V,h}_{i b}x_{q b}+b^O_{i}\right)+b^{V,h}_{a}
+    \right),
+\end{equation}
+or, in vector form:
+\begin{equation}
+   OV(\mathbf{x})=W^O(W^V\mathbf{x}+\mathbf{b}^V)+\mathbf{b}^O=W^OW^V\mathbf{x}+\mathbf{B}^{OV},
+\end{equation}
+where we define:
+\begin{equation}
+    \mathbf{B}^{OV}\equiv W^O\mathbf{b}^V+\mathbf{b}^O.
+\end{equation}
+To feature-resolve, we first need to insert the reconstructed activations $\mathbf{x}=\mathbf{x}'+\boldsymbol{\varepsilon}$. For completeness, we keep track of the error term explicitly. The attention pattern becomes:
+\begin{equation}
+A(\mathbf{x}'+\boldsymbol{\varepsilon})=A(\mathbf{x}')+A(\boldsymbol{\varepsilon})+\boldsymbol{\varepsilon}^TQ^TK\mathbf{x}'+(\mathbf{x}')^TQ^TK\boldsymbol{\varepsilon}-B^{QK},
+\end{equation}
+where the last term just comes from overcounting the bias. The $OV$ term is:
+\begin{equation}
+    OV(\mathbf{x}'+\boldsymbol{\varepsilon})=OV(\mathbf{x}')+OV(\boldsymbol{\varepsilon})-\mathbf{B}^{OV}.
+\end{equation}
+To feature-resolve, we simply propagate through the feature-wise decomposition of the activations. That is, we replace:
+\begin{equation}
+x'_{q a}\to X^\lambda_{q a}\equiv W^{dec,\lambda}_{a}u^\lambda_{q}+b^{dec}_{a},
+\end{equation}
+through the attention block. We note that the reconstruction error $\boldsymbol{\varepsilon}$ is defined only after reconstruction, and hence cannot be decomposed into underlying features. Putting the feature-resolved activation $X$ into the attention pattern gives:
+\begin{equation}
+    A(\mathbf{x}')=XQ^TKX+(\mathbf{B}^Q)^TX+X^TQ^T\mathbf{B}^K+B^{QK}
+\end{equation}
+In component form:
+\begin{equation}
+    A(\mathbf{x}')_{q k}=\sum_{h=1}^{n}\sum_{i=1}^{d_h}\sum_{a,b=1}^{d_M}X^{\mu}_{q a}Q_{a i}K_{i b}X^\nu_{b k}+B^Q_{a} X^\nu_{a q}+X^\mu_{q a}(B^K)_{a}+B^{QK},
+\end{equation}
+and similarly for the attention pattern on $\boldsymbol{\varepsilon}$. Doing the same for the $OV$:
+\begin{equation}
+    OV(\mathbf{x}')=W^{OV}X+\mathbf{B}^{OV},
+\end{equation}
+becomes in component form:
+\begin{equation}
+    OV(\mathbf{x}')^{\lambda}_{q a}=\sum_{}W^{OV}_{a b}X^\lambda_{q b}+B^{OV}_{a}.
+\end{equation}
+Putting all of this together, we can decompose the full attention block as:
+\begin{align}
+    Attn(x)_{q a}&=\sum_{k}A(x'+\varepsilon)_{q k}OV(x'+\varepsilon)_{k a}\\
+    &=\sum_{k}\left[        A(\mathbf{x}')+A(\boldsymbol{\varepsilon})+\boldsymbol{\varepsilon}^TQ^TK\mathbf{x}'+(\mathbf{x}')^TQ^TK\boldsymbol{\varepsilon}-B^{QK}
+    \right]_{qk}
+    \left[
+    OV(\mathbf{x}')+OV(\boldsymbol{\varepsilon})-\mathbf{B}^{OV}
+    \right]_{k a}
+\end{align}
+We note that models that use Rotary Attention Patterns (RoPE) can be accommodated in this framework by introducing modified position-dependent $QK$ matrices:
+\begin{equation}
+    \tilde Q^h_{q,ia}=R^h_{q,ij}Q^h_{ja},
+  \qquad
+  \tilde K^h_{k,ib}=R^h_{k,ij}K^h_{jb},
+\end{equation}
+
+
+
+
+
+
+% =============================================================================
+\appendix
+\section{Appendix Placeholders}
+% =============================================================================
+
+% \subsection{LayerNorm linearization}
+% \todo{Insert the resid-pre to ln1 two-stage derivation if this writeup needs
+% the sleeper-specific two-stage path.}
+
+% \subsection{Channel-wise interaction decomposition}
+% \todo{Insert the Q/K/V coalition or Harsanyi decomposition if the paper needs
+% singles, pairs, and triples rather than the frozen-OV/QK split.}
+
+% \subsection{Experimental protocol}
+% \todo{Insert exact prompts, feature counts, alpha sweeps, and metrics for each
+% model family.}
+
+\end{document}
