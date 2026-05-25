@@ -41,9 +41,12 @@ python -c "import torch,transformer_lens;print('[gpu] env ok torch',torch.__vers
     || { echo "[gpu] ENV BROKEN — abort"; exit 1; }
 
 # ── producer (both hookpoints, full grid to 50k) + consumer ─────────────────
-python -u -m scripts.train_sae_scaling --hookpoint ln1       --seed "$SEED" --hf_repo "$HF_REPO" \
+# Producers save checkpoints LOCAL only (--no_hf): the co-located consumer is
+# the SOLE HF uploader, via batched single-commit folder uploads, to stay under
+# HF's 128-commits/hour cap. All HF ops are non-fatal.
+python -u -m scripts.train_sae_scaling --hookpoint ln1       --seed "$SEED" --no_hf \
     > /workspace/train_ln1.log 2>&1 &
-python -u -m scripts.train_sae_scaling --hookpoint resid_mid --seed "$SEED" --hf_repo "$HF_REPO" \
+python -u -m scripts.train_sae_scaling --hookpoint resid_mid --seed "$SEED" --no_hf \
     > /workspace/train_resid.log 2>&1 &
 python -u -m scripts.eval_poll --seed "$SEED" --hf_repo "$HF_REPO" --alphas $ALPHAS \
     > /workspace/eval.log 2>&1 &
