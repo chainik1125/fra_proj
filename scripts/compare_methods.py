@@ -54,7 +54,15 @@ def main() -> None:
     p.add_argument("--sae_mid_dir",      type=Path,  default=None,
                    help="Directory containing per-seed sae_resid_mid_s{seed}.pt files. "
                         "Defaults to --sae_ln1_dir if not set.")
-    p.add_argument("--target_feature",   type=int,   default=579)
+    p.add_argument("--target_feature",   type=int,   default=579,
+                   help="Fallback target_feature if --per_seed_targets_json is not set. "
+                        "Used identically across all SAE seeds — usually meaningful only "
+                        "for the SAE the index was identified in.")
+    p.add_argument("--per_seed_targets_json", type=Path, default=None,
+                   help="JSON written by scripts.find_downstream_winners_6seeds — maps "
+                        "each downstream SAE seed to its identified sleeper-firing feature. "
+                        "When set, that per-seed feature is used for both target-regime "
+                        "attribution and the downstream baseline.")
     p.add_argument("--top_k",            type=int,   default=20)
     p.add_argument("--stage2_keep",      type=int,   default=10)
     p.add_argument("--triple_k",         type=int,   default=8)
@@ -133,33 +141,53 @@ def main() -> None:
             sae_mid_cache[seed] = sae
         return sae_mid_cache[seed]
 
+    # Per-seed target features. The same feature INDEX refers to a different
+    # latent direction in each downstream SAE seed, so a fixed index across
+    # seeds is meaningless. find_downstream_winners_6seeds.py identifies the
+    # sleeper-firing feature in each per-seed SAE and writes a JSON keyed by
+    # "s{seed}" → {"winner": int, …}. We read that here.
+    target_feature_per_seed: dict[int, int] = {s: args.target_feature for s in args.seeds}
+    if args.per_seed_targets_json is not None:
+        per_seed_json = json.loads(args.per_seed_targets_json.read_text())
+        for s in args.seeds:
+            key = f"s{s}"
+            if key in per_seed_json:
+                target_feature_per_seed[s] = int(per_seed_json[key]["winner"])
+        print(f"[cmp] per-seed target features from {args.per_seed_targets_json.name}: "
+              f"{target_feature_per_seed}", flush=True)
+    else:
+        print(f"[cmp] no --per_seed_targets_json provided; using fixed "
+              f"target_feature={args.target_feature} for every seed. Note: this "
+              f"feature index does NOT correspond to the same latent direction "
+              f"across different downstream SAE seeds.", flush=True)
+
     # ── Downstream baseline (conventional steering): ablate target_feature
     # at blocks.0.hook_resid_mid via additive_steer_hook. Evaluated for EVERY
     # downstream SAE seed (each gives a different "target_feature" direction
     # since the SAEs were trained from different RNG seeds) and at each α,
     # with the same 5-seed lockstep eval used by the upstream methods.
-    print(f"[cmp] downstream baseline: f{args.target_feature} at "
-          f"blocks.0.hook_resid_mid  (SAE dir: {sae_mid_dir}, seeds={args.seeds})",
-          flush=True)
+    print(f"[cmp] downstream baseline at blocks.0.hook_resid_mid  "
+          f"(SAE dir: {sae_mid_dir}, seeds={args.seeds})", flush=True)
     downstream_per_seed: dict = {}
     for seed in args.seeds:
         sae_mid_s = _load_mid(seed)
+        f_s = target_feature_per_seed[seed]
         per_alpha: dict = {}
         for alpha in args.alphas:
             t_d0 = time.time()
             m = eval_downstream_baseline(
-                model, sae_mid_s, args.target_feature, alpha,
+                model, sae_mid_s, f_s, alpha,
                 eval_dep_lp, eval_dep_attn,
                 eval_clean_lsm_ps, eval_clean_tok_ps, eval_dep_lsm_ps,
                 args.gen_tokens, device,
                 eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
             )
             per_alpha[str(alpha)] = m
-            print(f"[cmp]   [DOWN s={seed}] f{args.target_feature} α={alpha:>4.1f}  "
+            print(f"[cmp]   [DOWN s={seed} f={f_s}] α={alpha:>4.1f}  "
                   f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
                   f"jsd_dep={m['jsd_pois']:.3f}  exact={m['exact_match']:.3f}  "
                   f"({time.time()-t_d0:.1f}s)", flush=True)
-        downstream_per_seed[str(seed)] = per_alpha
+        downstream_per_seed[str(seed)] = {"target_feature": f_s, "per_alpha": per_alpha}
 
     active = ACTIVE_CHANNELS["ov"]
     W_V    = W["V"]

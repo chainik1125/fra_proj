@@ -44,6 +44,8 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--seeds", type=int, nargs="+", default=list(range(N_SEEDS)))
     p.add_argument("--top_k", type=int, default=DEFAULT_TOP_K)
+    p.add_argument("--sae_dir", type=Path, default=Path("weights/seeds"),
+                   help="Directory containing per-seed sae_resid_mid_s{seed}.pt files.")
     p.add_argument("--out", type=Path, default=Path("results/downstream_winners_6seeds.json"))
     args = p.parse_args()
     TOP_K = args.top_k
@@ -77,7 +79,7 @@ def main() -> None:
     out: dict = json.loads(args.out.read_text()) if args.out.exists() else {}
 
     for seed in args.seeds:
-        path = Path(f"weights/seeds/sae_resid_mid_s{seed}.pt")
+        path = args.sae_dir / f"sae_resid_mid_s{seed}.pt"
         print(f"\n[downstream] === seed={seed}  {path} ===")
         sae_mid, _ = sae_load(path, device=device)
 
