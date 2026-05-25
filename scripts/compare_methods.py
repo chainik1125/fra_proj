@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
 import torch
@@ -105,7 +106,8 @@ def main() -> None:
     )
     eval_base_asr = sum(eval_base_asr_per_seed) / len(eval_base_asr_per_seed)
     sel_base_ce   = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
-    print(f"[cmp] eval baseline asr={eval_base_asr:.3f}  sel base_ce={sel_base_ce:.4f}")
+    print(f"[cmp] eval baseline asr={eval_base_asr:.3f}  sel base_ce={sel_base_ce:.4f}",
+          flush=True)
 
     sae_mid = None
     if "target" in args.regimes:
@@ -117,7 +119,7 @@ def main() -> None:
     out_rows: list[dict] = []
     for seed in args.seeds:
         sae_ln1, _ = sae_load(args.sae_ln1_dir / f"sae_ln1_s{seed}.pt", device=device)
-        print(f"\n[cmp] ══ seed={seed}  sae_ln1_dir={args.sae_ln1_dir} ══")
+        print(f"\n[cmp] ══ seed={seed}  sae_ln1_dir={args.sae_ln1_dir} ══", flush=True)
         attr_cache: dict = {}
 
         for regime in args.regimes:
@@ -128,12 +130,17 @@ def main() -> None:
                 tuples = get_tuples_diff("ov", args, model, sae_ln1, W, W_O,
                                          sel_split, sel_pmask, device, attr_cache)
             top_feats = [int(tup[0][0]) for tup in tuples]
-            print(f"[cmp]   regime={regime}  top-{len(top_feats)}: {top_feats[:8]} ...")
+            n_evals = len(tuples) * len(args.alphas)
+            print(f"[cmp]   regime={regime}  top-{len(top_feats)}: {top_feats[:8]} ...  "
+                  f"({n_evals} JSD evals to run)", flush=True)
 
             # ── Method JSD: sweep top-K × αs on eval split, ASR=0 then min jsd_clean ──
             jsd_rows: list[dict] = []
+            t_jsd0 = time.time()
+            n_done = 0
             for ti, tup in enumerate(tuples):
                 for alpha in args.alphas:
+                    t_call0 = time.time()
                     m = eval_winner(
                         model, sae_ln1, tup, alpha, active, W,
                         eval_dep_lp, eval_dep_attn,
@@ -144,27 +151,40 @@ def main() -> None:
                         clean_tok_per_seed=eval_clean_tok_ps,
                         dep_lsm_per_seed=eval_dep_lsm_ps,
                     )
+                    dt = time.time() - t_call0
+                    n_done += 1
                     jsd_rows.append({"attr_rank": ti + 1, "feature": int(tup[0][0]),
                                      "alpha": alpha, **m})
-                    print(f"[cmp]    [JSD] rank={ti+1:>2} f={tup[0][0]:>4} α={alpha:>4.1f}  "
+                    print(f"[cmp]    [JSD {n_done:>2}/{n_evals}] rank={ti+1:>2} "
+                          f"f={tup[0][0]:>4} α={alpha:>4.1f}  "
                           f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
-                          f"jsd_dep={m['jsd_pois']:.3f}  exact={m['frac_pos_match_clean']:.3f}")
+                          f"jsd_dep={m['jsd_pois']:.3f}  "
+                          f"exact={m['frac_pos_match_clean']:.3f}  ({dt:.1f}s)", flush=True)
+            print(f"[cmp]   regime={regime}  JSD sweep done in "
+                  f"{time.time()-t_jsd0:.1f}s", flush=True)
             asr0 = [r for r in jsd_rows if r["asr"] == 0.0]
             pool = asr0 if asr0 else jsd_rows
             jsd_winner = min(pool, key=lambda r: (r["asr"], r["jsd_clean"]))
 
             # ── Method FBF: Δlogp screen → ASR + ΔCE → ASR=0 then min ΔCE ──
+            t_fbf0 = time.time()
             screen_rows, base_logp = _screen(
                 model, sae_ln1, LN1_HOOK, W_V, top_feats, args.alphas,
                 sel_dep, sel_dep_pmask, device,
             )
             screen_rows.sort(key=lambda r: r["dlogp"])
             stage2_cands = [(r["f"], r["alpha"]) for r in screen_rows[:args.stage2_keep]]
+            print(f"[cmp]   regime={regime}  Δlogp screen done in "
+                  f"{time.time()-t_fbf0:.1f}s; stage-2 candidates: "
+                  f"{[(f, a) for f, a in stage2_cands[:5]]} ...", flush=True)
+            t_stage2 = time.time()
             base_asr_e, base_ce_s, fbf_rows = _asr_and_dce(
                 model, sae_ln1, LN1_HOOK, W_V, stage2_cands,
                 eval_dep_lp, eval_dep_attn, eval_dep_attn,
                 sel_cln, sel_cln_marker, args.gen_tokens, device,
             )
+            print(f"[cmp]   regime={regime}  FBF stage-2 ASR/ΔCE done in "
+                  f"{time.time()-t_stage2:.1f}s", flush=True)
             fbf_asr0  = [r for r in fbf_rows if r["asr"] == 0.0]
             fbf_pick  = (min(fbf_asr0, key=lambda r: r["dce"]) if fbf_asr0
                          else min(fbf_rows, key=lambda r: r["asr"]))
@@ -187,10 +207,10 @@ def main() -> None:
 
             print(f"[cmp]   regime={regime}  JSD winner: f={jsd_winner['feature']} "
                   f"α={jsd_winner['alpha']}  asr={jsd_winner['asr']:.3f}  "
-                  f"jsd_cln={jsd_winner['jsd_clean']:.3f}")
+                  f"jsd_cln={jsd_winner['jsd_clean']:.3f}", flush=True)
             print(f"[cmp]   regime={regime}  FBF winner: f={fbf_pick['f']} "
                   f"α={fbf_pick['alpha']}  asr={fbf_eval['asr']:.3f}  "
-                  f"jsd_cln={fbf_eval['jsd_clean']:.3f}  ΔCE={fbf_pick['dce']:+.4f}")
+                  f"jsd_cln={fbf_eval['jsd_clean']:.3f}  ΔCE={fbf_pick['dce']:+.4f}", flush=True)
 
             out_rows.append({
                 "seed": int(seed),
