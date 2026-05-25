@@ -47,9 +47,10 @@ HOOK_KINDS = ("hook_resid_mid", "hook_resid_post")
 
 
 def _word_match_stats(steered_tok: torch.Tensor,
-                      clean_tok: torch.Tensor) -> tuple[int, float]:
-    eq = (steered_tok.cpu() == clean_tok.cpu())
-    return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
+                      clean_tok: torch.Tensor) -> int:
+    """Row-exact match count between two (B, gen_tokens) token tensors."""
+    eq = (steered_tok == clean_tok.to(steered_tok.device))
+    return int(eq.all(dim=1).sum().item())
 
 
 def jsd_mean(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> float:
@@ -130,8 +131,7 @@ def main() -> None:
     )
 
     # JSON layout mirrors jsd_alpha_sweep_6seeds.py for plot compatibility.
-    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean",
-                   "frac_pos_match_clean", "asr")
+    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean", "asr")
     configs: dict[str, dict] = {}
 
     for (lyr, hk), v in vectors.items():
@@ -156,11 +156,10 @@ def main() -> None:
                 st_tok, st_lsm = _gen(model, dep_lp, dep_attn, fwd, device)
             jc = jsd_mean(st_lsm.cpu(), cln_lsm.cpu())
             jp = jsd_mean(st_lsm.cpu(), dep_lsm.cpu())
-            n_ex, fp = _word_match_stats(st_tok, cln_tok)
+            n_ex = _word_match_stats(st_tok, cln_tok)
             asr = asr_16(st_tok.cpu(), tok)
             for k, val in [("jsd_clean", jc), ("jsd_pois", jp),
-                            ("n_exact_match_clean", n_ex),
-                            ("frac_pos_match_clean", fp), ("asr", asr)]:
+                            ("n_exact_match_clean", n_ex), ("asr", asr)]:
                 cfg["per_alpha"][str(a)][k].append(val)
             print(f"  α={a:>4.1f}  jsd_clean={jc:.4f}  jsd_pois={jp:.4f}  "
                   f"n_match={n_ex}/{N_PROMPTS}  asr={asr:.3f}  ({time.time()-t0:.1f}s)")

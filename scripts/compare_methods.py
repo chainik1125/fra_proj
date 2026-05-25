@@ -159,7 +159,7 @@ def main() -> None:
                           f"f={tup[0][0]:>4} α={alpha:>4.1f}  "
                           f"asr={m['asr']:.3f}  jsd_cln={m['jsd_clean']:.3f}  "
                           f"jsd_dep={m['jsd_pois']:.3f}  "
-                          f"exact={m['frac_pos_match_clean']:.3f}  ({dt:.1f}s)", flush=True)
+                          f"exact={m['exact_match']:.3f}  ({dt:.1f}s)", flush=True)
             print(f"[cmp]   regime={regime}  JSD sweep done in "
                   f"{time.time()-t_jsd0:.1f}s", flush=True)
             asr0 = [r for r in jsd_rows if r["asr"] == 0.0]
@@ -222,7 +222,7 @@ def main() -> None:
                     "attr_rank": int(jsd_winner["attr_rank"]),
                     "metrics": {k: jsd_winner[k] for k in (
                         "asr", "asr_per_seed", "jsd_clean", "jsd_pois",
-                        "n_exact_match_clean", "frac_pos_match_clean",
+                        "exact_match", "n_exact_match_clean",
                     )},
                 },
                 "fbf_method": {

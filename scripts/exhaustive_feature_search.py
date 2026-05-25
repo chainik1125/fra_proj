@@ -36,8 +36,9 @@ DECODE_SEED = 0
 
 
 def _word_match_stats(st, cl):
-    eq = (st.cpu() == cl.cpu())
-    return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
+    """Row-exact match count between two (B, gen_tokens) token tensors."""
+    eq = (st == cl.to(st.device))
+    return int(eq.all(dim=1).sum().item())
 
 
 def jsd_mean(p_lsm, q_lsm):
@@ -124,12 +125,12 @@ def main():
                                                    attention_mask=dep_attn, capture_log_softmax=True)
             jc = jsd_mean(st_lsm.cpu(), cln_lsm.cpu())
             jp = jsd_mean(st_lsm.cpu(), dep_lsm.cpu())
-            n_ex, fp = _word_match_stats(st_tok, cln_tok)
+            n_ex = _word_match_stats(st_tok, cln_tok)
             asr = asr_16(st_tok.cpu(), tok)
             out_rows.append({"feature": int(f), "alpha": float(a),
                               "asr": asr, "jsd_clean": jc, "jsd_pois": jp,
                               "n_exact_match_clean": n_ex,
-                              "frac_pos_match_clean": fp})
+                              "exact_match": n_ex / max(st_tok.shape[0], 1)})
         if (f - args.feat_start + 1) % 25 == 0:
             elapsed = time.time() - t_start
             done = f - args.feat_start + 1

@@ -54,8 +54,8 @@ DEFAULT_EVAL_SEEDS = [0, 1, 2, 3, 4]
 
 
 def exact_match_count(steered_tok: torch.Tensor, clean_tok: torch.Tensor) -> int:
-    """Number of prompts whose entire 16-token rollout matches the clean rollout."""
-    eq = (steered_tok.cpu() == clean_tok.cpu())  # (B, T)
+    """Row-exact match count: prompts whose entire 16-token rollout matches the clean rollout."""
+    eq = (steered_tok == clean_tok.to(steered_tok.device))  # (B, T)
     return int(eq.all(dim=1).sum().item())
 
 

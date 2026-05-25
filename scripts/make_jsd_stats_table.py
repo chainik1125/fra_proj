@@ -40,16 +40,31 @@ def best_alpha_row(alphas: list[float], jsd_clean: list[float], jsd_pois: list[f
     }
 
 
+def _mean(vals) -> float:
+    """Mean of a per-decode-seed list (or a scalar in the v1 schema)."""
+    if isinstance(vals, list):
+        return float(sum(vals)) / max(1, len(vals))
+    return float(vals)
+
+
 def collect(d: dict, method: str, good_idx: list[int],
             eps: float) -> dict:
+    """For each good SAE seed, pick α* = argmin JSD_clean s.t. ASR ≤ eps.
+
+    Both criteria use the per-SAE-seed mean across decode seeds. The reported
+    JSD / exact-match / ASR values at α* are also means across decode seeds.
+    """
     alphas = [float(a) for a in d["alphas"]]
     cfg = d["configs"][method]["per_alpha"]
+    n_prompts = d["n_prompts"]
     per_seed: list[dict | None] = []
     for i in good_idx:
-        jsd_c  = [cfg[f"{a:.1f}"]["jsd_clean"][i] for a in alphas]
-        jsd_p  = [cfg[f"{a:.1f}"]["jsd_pois"][i]  for a in alphas]
-        ex_c   = [cfg[f"{a:.1f}"]["frac_pos_match_clean"][i] for a in alphas]
-        asr_i  = [cfg[f"{a:.1f}"]["asr"][i] for a in alphas]
+        jsd_c  = [_mean(cfg[f"{a:.1f}"]["jsd_clean"][i])            for a in alphas]
+        jsd_p  = [_mean(cfg[f"{a:.1f}"]["jsd_pois"][i])             for a in alphas]
+        # Strict whole-sequence exact match: full 16-token rollout matches clean.
+        ex_c   = [_mean(cfg[f"{a:.1f}"]["n_exact_match_clean"][i]) / n_prompts
+                  for a in alphas]
+        asr_i  = [_mean(cfg[f"{a:.1f}"]["asr"][i])                  for a in alphas]
         per_seed.append(best_alpha_row(alphas, jsd_c, jsd_p, ex_c, asr_i, eps))
     rows = [r for r in per_seed if r is not None]
     out: dict = {"per_seed": per_seed, "n_meets_asr": len(rows)}

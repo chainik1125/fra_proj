@@ -1,14 +1,15 @@
 """6-column per-seed appendix figure from jsd_alpha_sweep_6seeds.json.
 
-Same layout / style as the single-seed plot but tiled across all SAE seeds.
-Top row: JSD curves (clean=green, poisoned=red).
-Bottom row: exact-match rate (blue) + ASR (red), both as a fraction with Wilson
-95% CIs over n=200 prompts.
+Each column is one SAE training seed. Top row: JSD$_\\text{clean}$ (green)
+and JSD$_\\text{pois}$ (red). Bottom row: exact-match rate to the clean
+rollout (green) + ASR (red).
+
+For every (SAE seed, α) the JSON records 5 per-decode-seed values per metric;
+the line is the mean across those 5 seeds and the translucent band is the
+min–max envelope.
 
 OV  (single OV→OV)   = solid    + circle
 Conv (resid-mid add) = dashed   + triangle
-
-X axis: steering strength −α (negative because we subtract the SAE feature).
 
 Outputs <out>.pdf and <out>.png.
 """
@@ -16,17 +17,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import PercentFormatter
 
 
 GREEN = "#2E7D32"
 RED   = "#B91C1C"
-BLUE  = "#1F4E96"
+BAND_ALPHA = 0.18
 
 
 def setup_style() -> None:
@@ -50,14 +51,18 @@ def setup_style() -> None:
     })
 
 
-def wilson(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
-    """95% Wilson interval (lo, hi) for proportion p with sample n."""
-    if n <= 0:
-        return (p, p)
-    denom = 1.0 + z * z / n
-    centre = (p + z * z / (2 * n)) / denom
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
-    return (max(0.0, centre - half), min(1.0, centre + half))
+def band(per_alpha: dict, key: str, raw_alphas: list[float],
+         sae_idx: int, scale: float = 1.0
+         ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (mean, lo, hi) over decode seeds for one SAE seed."""
+    arr = np.array([per_alpha[f"{a:.1f}"][key][sae_idx] for a in raw_alphas]) * scale
+    return arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
+
+
+def draw(ax, xs, mean, lo, hi, color, ls, mk, lw, label):
+    ax.fill_between(xs, lo, hi, color=color, alpha=BAND_ALPHA, lw=0, zorder=1)
+    ax.plot(xs, mean, color=color, linestyle=ls, marker=mk, ms=4, lw=lw,
+            label=label, zorder=3)
 
 
 def main() -> None:
@@ -87,21 +92,19 @@ def main() -> None:
     for col, seed in enumerate(seeds):
         ax_jsd, ax_em = axes[0, col], axes[1, col]
         i = seeds.index(seed)
+        ov_pa, conv_pa = ov["per_alpha"], conv["per_alpha"]
 
         # — JSD curves —
-        jsd_c_ov  = [ov  ["per_alpha"][f"{a:.1f}"]["jsd_clean"][i] for a in raw_alphas]
-        jsd_p_ov  = [ov  ["per_alpha"][f"{a:.1f}"]["jsd_pois"] [i] for a in raw_alphas]
-        jsd_c_cv  = [conv["per_alpha"][f"{a:.1f}"]["jsd_clean"][i] for a in raw_alphas]
-        jsd_p_cv  = [conv["per_alpha"][f"{a:.1f}"]["jsd_pois"] [i] for a in raw_alphas]
-
-        ax_jsd.plot(disp_alphas, jsd_c_ov, "-",  color=GREEN, marker="o", ms=4, lw=1.3,
-                    label="OV$\\to$OV  JSD$_\\mathrm{clean}$")
-        ax_jsd.plot(disp_alphas, jsd_p_ov, "-",  color=RED,   marker="o", ms=4, lw=1.3,
-                    label="OV$\\to$OV  JSD$_\\mathrm{pois}$")
-        ax_jsd.plot(disp_alphas, jsd_c_cv, "--", color=GREEN, marker="^", ms=4, lw=1.1,
-                    label="conv.  JSD$_\\mathrm{clean}$")
-        ax_jsd.plot(disp_alphas, jsd_p_cv, "--", color=RED,   marker="^", ms=4, lw=1.1,
-                    label="conv.  JSD$_\\mathrm{pois}$")
+        for pa, label_prefix, ls, mk, lw in [
+            (ov_pa,   "OV$\\to$OV",  "-",  "o", 1.3),
+            (conv_pa, "conv.",        "--", "^", 1.1),
+        ]:
+            jc_m, jc_lo, jc_hi = band(pa, "jsd_clean", raw_alphas, i)
+            jp_m, jp_lo, jp_hi = band(pa, "jsd_pois",  raw_alphas, i)
+            draw(ax_jsd, disp_alphas, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw,
+                 f"{label_prefix}  JSD$_\\mathrm{{clean}}$")
+            draw(ax_jsd, disp_alphas, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw,
+                 f"{label_prefix}  JSD$_\\mathrm{{pois}}$")
         ax_jsd.axhline(1.0, color="#999", lw=0.5, ls=":")
         ax_jsd.set_ylim(-0.02, 1.05)
         ax_jsd.set_title(
@@ -109,55 +112,38 @@ def main() -> None:
             fontsize=10,
         )
 
-        # — exact-match (blue) + ASR (red) with Wilson CIs —
-        em_ov  = [ov  ["per_alpha"][f"{a:.1f}"]["frac_pos_match_clean"][i] for a in raw_alphas]
-        em_cv  = [conv["per_alpha"][f"{a:.1f}"]["frac_pos_match_clean"][i] for a in raw_alphas]
-        asr_ov = [ov  ["per_alpha"][f"{a:.1f}"]["asr"][i] for a in raw_alphas]
-        asr_cv = [conv["per_alpha"][f"{a:.1f}"]["asr"][i] for a in raw_alphas]
-
-        def errbars(props: list[float]) -> tuple[list[float], list[float]]:
-            lo_arr, hi_arr = [], []
-            for v in props:
-                lo, hi = wilson(v, n_prompts)
-                lo_arr.append(v - lo)
-                hi_arr.append(hi - v)
-            return lo_arr, hi_arr
-
-        for vals, style, color, lbl in [
-            (em_ov,  dict(ls="-",  marker="o", ms=4, lw=1.3), BLUE,
-             "OV$\\to$OV  exact-match"),
-            (em_cv,  dict(ls="--", marker="^", ms=4, lw=1.1), BLUE,
-             "conv.  exact-match"),
-            (asr_ov, dict(ls="-",  marker="o", ms=4, lw=1.3), RED,
-             "OV$\\to$OV  ASR"),
-            (asr_cv, dict(ls="--", marker="^", ms=4, lw=1.1), RED,
-             "conv.  ASR"),
+        # — exact-match (green) + ASR (red) —
+        for pa, label_prefix, ls, mk, lw in [
+            (ov_pa,   "OV$\\to$OV",  "-",  "o", 1.3),
+            (conv_pa, "conv.",        "--", "^", 1.1),
         ]:
-            lo, hi = errbars(vals)
-            ax_em.errorbar(disp_alphas, vals, yerr=[lo, hi], color=color,
-                           elinewidth=0.6, capsize=2.0, label=lbl, **style)
+            em_m, em_lo, em_hi = band(pa, "n_exact_match_clean", raw_alphas, i,
+                                       scale=1.0 / n_prompts)
+            as_m, as_lo, as_hi = band(pa, "asr", raw_alphas, i)
+            draw(ax_em, disp_alphas, em_m, em_lo, em_hi, GREEN, ls, mk, lw,
+                 f"{label_prefix}  exact-match")
+            draw(ax_em, disp_alphas, as_m, as_lo, as_hi, RED,   ls, mk, lw,
+                 f"{label_prefix}  ASR")
         ax_em.set_ylim(-0.02, 1.05)
         ax_em.yaxis.set_major_formatter(PercentFormatter(1.0))
 
         if col == 0:
             ax_jsd.set_ylabel("JSD (bits)")
-            ax_em .set_ylabel("Clean-match rate / ASR")
-        ax_em.set_xlabel(r"steering strength $-\alpha$")
+            ax_em .set_ylabel("Exact-match rate / ASR")
         ax_jsd.grid(axis="y", color="#dddddd", lw=0.5)
         ax_em .grid(axis="y", color="#dddddd", lw=0.5)
         ax_jsd.set_axisbelow(True)
         ax_em .set_axisbelow(True)
 
-    axes[0, 0].legend(loc="center left", fontsize=7.5, framealpha=0.92,
+    axes[0, 0].legend(loc="lower left", fontsize=7.5, framealpha=0.92,
                       handlelength=1.6, borderpad=0.4)
-    axes[1, 0].legend(loc="center left", fontsize=7.5, framealpha=0.92,
-                      handlelength=1.6, borderpad=0.4)
-    fig.suptitle(
-        f"Per-seed JSD and rollout-level companion (n={n_prompts} prompts; "
-        f"Wilson 95\\% CIs on the proportions). "
-        f"Solid + circle: single OV$\\to$OV.  Dashed + triangle: conventional resid-mid additive.",
-        fontsize=10, y=1.02,
-    )
+    axes[1, 0].legend(loc="lower left", fontsize=7.5, framealpha=0.92,
+                      handlelength=1.6, borderpad=0.4,
+                      bbox_to_anchor=(0.0, 0.30))
+    fig.suptitle("Per-seed JSD and exact-match/ASR", fontsize=15, y=1.02)
+    for ax in axes.flat:
+        ax.set_xlabel("")
+    fig.supxlabel(r"steering strength $\alpha$", fontsize=15, y=0.0)
     fig.tight_layout()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output.with_suffix(".pdf"))

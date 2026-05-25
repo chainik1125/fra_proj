@@ -35,9 +35,10 @@ def _site_key(L: int, hk: str) -> str:
     return f"L{L}_{hk.replace('hook_', '')}"
 
 
-def _word_match_stats(steered: torch.Tensor, clean: torch.Tensor) -> tuple[int, float]:
-    eq = (steered.cpu() == clean.cpu())
-    return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
+def _word_match_stats(steered: torch.Tensor, clean: torch.Tensor) -> int:
+    """Row-exact match count between two (B, gen_tokens) token tensors."""
+    eq = (steered == clean.to(steered.device))
+    return int(eq.all(dim=1).sum().item())
 
 
 def jsd_mean(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> float:
@@ -61,17 +62,17 @@ def _gen(model, lp, attn, hooks, device):
 def eval_one(model, sae, layer_hook, feat, alpha,
              dep_lp, dep_attn, dep_tok, dep_lsm, cln_tok, cln_lsm, tok, device):
     if alpha == 0.0:
-        n_ex, fp = _word_match_stats(dep_tok, cln_tok)
+        n_ex = _word_match_stats(dep_tok, cln_tok)
         return (jsd_mean(dep_lsm.cpu(), cln_lsm.cpu()), 0.0,
-                n_ex, fp, asr_16(dep_tok.cpu(), tok))
+                n_ex, asr_16(dep_tok.cpu(), tok))
     delta = compute_sae_delta(model, sae, layer_hook, int(feat),
                                dep_lp, dep_attn.bool(), attention_mask=dep_attn)
     hooks = additive_steer_hook(delta, alpha, layer_hook)
     st_tok, st_lsm = _gen(model, dep_lp, dep_attn, hooks, device)
-    n_ex, fp = _word_match_stats(st_tok, cln_tok)
+    n_ex = _word_match_stats(st_tok, cln_tok)
     return (jsd_mean(st_lsm.cpu(), cln_lsm.cpu()),
             jsd_mean(st_lsm.cpu(), dep_lsm.cpu()),
-            n_ex, fp, asr_16(st_tok.cpu(), tok))
+            n_ex, asr_16(st_tok.cpu(), tok))
 
 
 @torch.no_grad()
@@ -118,7 +119,7 @@ def main() -> None:
     print(f"[per-layer-eval] baseline ASR = {asr_16(dep_tok.cpu(), tok):.3f}")
 
     blank = {"jsd_clean": [], "jsd_pois": [],
-             "n_exact_match_clean": [], "frac_pos_match_clean": [], "asr": []}
+             "n_exact_match_clean": [], "asr": []}
     configs: dict[str, dict] = {}
 
     for L in layers:
@@ -143,14 +144,13 @@ def main() -> None:
                 print(f"\n[per-layer-eval] === {key} s={s}  feat={feat} ===")
                 for a in args.alphas:
                     t0 = time.time()
-                    jc, jp, n_ex, fp, asr = eval_one(
+                    jc, jp, n_ex, asr = eval_one(
                         model, sae, layer_hook, feat, a,
                         dep_lp, dep_attn, dep_tok, dep_lsm, cln_tok, cln_lsm,
                         tok, device,
                     )
                     for k, v in [("jsd_clean", jc), ("jsd_pois", jp),
-                                  ("n_exact_match_clean", n_ex),
-                                  ("frac_pos_match_clean", fp), ("asr", asr)]:
+                                  ("n_exact_match_clean", n_ex), ("asr", asr)]:
                         cfg["per_alpha"][str(a)][k].append(v)
                     print(f"  α={a:>4.1f}  jsd_clean={jc:.4f}  jsd_pois={jp:.4f}  "
                           f"n_match={n_ex}/{N_PROMPTS}  asr={asr:.3f}  ({time.time()-t0:.1f}s)")

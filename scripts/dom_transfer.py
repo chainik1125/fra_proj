@@ -126,8 +126,7 @@ def main():
     cln_tok, cln_lsm = _gen(model, eval_cln_lp, eval_cln_attn, [], device)
     print(f"[dom-transfer] baseline ASR = {asr_16(dep_tok.cpu(), tok):.3f}")
 
-    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean",
-                   "frac_pos_match_clean", "asr")
+    metric_keys = ("jsd_clean", "jsd_pois", "n_exact_match_clean", "asr")
     per_alpha = {str(a): {k: [] for k in metric_keys} for a in args.alphas}
 
     if args.mode == "single_direction":
@@ -146,11 +145,10 @@ def main():
                 st_tok, st_lsm = _gen(model, eval_dep_lp, eval_dep_attn, fwd, device)
             jc = jsd_mean(st_lsm.cpu(), cln_lsm.cpu())
             jp = jsd_mean(st_lsm.cpu(), dep_lsm.cpu())
-            n_ex, fp = _word_match_stats(st_tok, cln_tok)
+            n_ex = _word_match_stats(st_tok, cln_tok)
             asr = asr_16(st_tok.cpu(), tok)
             for k, val in [("jsd_clean", jc), ("jsd_pois", jp),
-                            ("n_exact_match_clean", n_ex),
-                            ("frac_pos_match_clean", fp), ("asr", asr)]:
+                            ("n_exact_match_clean", n_ex), ("asr", asr)]:
                 per_alpha[str(a)][k].append(val)
             print(f"  α={a:>5.2f}  jsd_clean={jc:.4f}  jsd_pois={jp:.4f}  "
                   f"n_match={n_ex}/{N_PROMPTS}  asr={asr:.3f}  ({time.time()-t0:.1f}s)")
@@ -169,11 +167,10 @@ def main():
                 st_tok, st_lsm = _gen(model, eval_dep_lp, eval_dep_attn, fwd, device)
             jc = jsd_mean(st_lsm.cpu(), cln_lsm.cpu())
             jp = jsd_mean(st_lsm.cpu(), dep_lsm.cpu())
-            n_ex, fp = _word_match_stats(st_tok, cln_tok)
+            n_ex = _word_match_stats(st_tok, cln_tok)
             asr = asr_16(st_tok.cpu(), tok)
             for k, val in [("jsd_clean", jc), ("jsd_pois", jp),
-                            ("n_exact_match_clean", n_ex),
-                            ("frac_pos_match_clean", fp), ("asr", asr)]:
+                            ("n_exact_match_clean", n_ex), ("asr", asr)]:
                 per_alpha[str(a)][k].append(val)
             print(f"  α={a:>5.2f}  jsd_clean={jc:.4f}  jsd_pois={jp:.4f}  "
                   f"n_match={n_ex}/{N_PROMPTS}  asr={asr:.3f}  ({time.time()-t0:.1f}s)")

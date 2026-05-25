@@ -125,11 +125,18 @@ def _build_dep_baseline(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
     return lsm
 
 
-def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> tuple[int, float]:
-    """Returns (n_exact_row_matches, frac_positions_matching) between two
-    (B, gen_tokens) token tensors. Works on whatever device the tensors live on."""
+def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> int:
+    """Row-exact match count between two (B, gen_tokens) token tensors.
+
+    Returns the number of batch rows where every generated token in the
+    steered rollout (on the dep prompt) equals the matched-seed unsteered
+    rollout (on the stripped-clean prompt). This is THE exact-match metric.
+    Per-position fractions are not reported — they have a different meaning
+    and would only invite confusion.
+
+    Works on whatever device the tensors live on."""
     eq = (st == cl.to(st.device))
-    return int(eq.all(dim=1).sum().item()), float(eq.float().mean().item())
+    return int(eq.all(dim=1).sum().item())
 
 
 @torch.no_grad()
@@ -443,7 +450,7 @@ def eval_winner(
         jc_l:  list[float] = []
         jp_l:  list[float] = []
         nex_l: list[int]   = []
-        fp_l:  list[float] = []
+        B = eval_dep_lp.shape[0]
         for s in eval_seeds:
             s_int = int(s)
             sampler = make_sampling_sampler(temperature=eval_temperature,
@@ -458,9 +465,9 @@ def eval_winner(
             asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
             jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s_int]))
             jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s_int]))
-            n_ex, fp = _word_match_stats(st_tok, clean_tok_per_seed[s_int])
-            nex_l.append(n_ex);  fp_l.append(fp)
+            nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s_int]))
         n_seeds = len(eval_seeds)
+        total_rows = B * n_seeds
         return {
             "asr":          sum(asr_l) / n_seeds,
             "asr_per_seed": asr_l,
@@ -468,10 +475,14 @@ def eval_winner(
             "jsd_clean_per_seed":   jc_l,
             "jsd_pois":             sum(jp_l) / n_seeds,
             "jsd_pois_per_seed":    jp_l,
-            "n_exact_match_clean":          sum(nex_l),
+            # Row-exact match: across all (prompt × seed) trials, the
+            # fraction where the steered rollout on the dep prompt matches
+            # the unsteered rollout on the matched stripped-clean prompt on
+            # EVERY generated token. This is the only "exact match" metric.
+            "exact_match":                 sum(nex_l) / total_rows,
+            "n_exact_match_clean":         sum(nex_l),
             "n_exact_match_clean_per_seed": nex_l,
-            "frac_pos_match_clean":          sum(fp_l) / n_seeds,
-            "frac_pos_match_clean_per_seed": fp_l,
+            "exact_match_total_rows":      total_rows,
         }
 
     # ── Legacy single-seed JSD path ──
@@ -504,9 +515,11 @@ def eval_winner(
     if dep_lsm is not None:
         out["jsd_pois"] = jsd_mean(steered_lsm, dep_lsm.to(steered_lsm.device))
     if clean_tok is not None:
-        n_ex, fp = _word_match_stats(steered_tok, clean_tok)
-        out["n_exact_match_clean"]   = n_ex
-        out["frac_pos_match_clean"] = fp
+        n_ex = _word_match_stats(steered_tok, clean_tok)
+        B = steered_tok.shape[0]
+        out["n_exact_match_clean"] = n_ex
+        out["exact_match"]         = n_ex / max(B, 1)
+        out["exact_match_total_rows"] = B
     return out
 
 
