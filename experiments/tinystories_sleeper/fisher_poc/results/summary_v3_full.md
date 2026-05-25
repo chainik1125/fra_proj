@@ -183,67 +183,96 @@ sleeper-suppression. The proposal's path-efficiency claim is robust;
 the J_clean-magnitude claim is gated on whether the single-feature
 recipe was already near-optimal for that seed × space.
 
-### Where Method A *beats* Fisher: a finding to follow up in v2
+### The headline finding for a v2 follow-up:  seed 2 Conv
 
-**The single-feature α-sweep doesn't just tie Fisher on some seeds —
-on a couple of OV cells it actually wins at saturation.** The clearest
-example is **seed 1, OV**:
+**Conv steering on seed 2 fails outright — not just under-performs,
+*fails*.** Method A's J_clean curve doesn't descend to a saturation
+and plateau, it descends to a *minimum* around α=1, then **rises
+back up** as α grows:
 
-| | J_clean | path |
-|---|---:|---:|
-| Method A f=1027, α=3.5 (saturation) | **0.402** | 3.5 |
-| v3 Fisher endpoint, K=20 | 0.514 | 0.92 |
+| α | 0.5 | 1.0 | 1.5 | 2.0 | 2.5 | 3.0 | 3.5 | 4.0 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Method A J_clean | 0.99 | 0.69 | 0.74 | **0.85** | 0.94 | 0.96 | 0.97 | 0.97 |
 
-A 0.11-bit win for Method A. Seed 2 OV shows the same pattern at a
-smaller margin (Method A α=3.0 → 0.409 vs Fisher 0.484, 0.075-bit win
-for Method A). Both seeds: Method A's saturation point is below
-*any* J_clean Fisher visits in its 12-step trajectory at ρ = 1e-2.
+At α=2 the steered model is barely closer to clean than the
+unsteered sleeper baseline (0.99). Beyond α=2 the intervention is
+making things *worse*. The selected feature `f=1091` is not just a
+weak choice for this seed × space — pushing it harder *actively
+moves the model away from the clean reference*.
 
-This is the "**single well-chosen feature pushed hard outperforms a
-cautious multi-feature combination**" regime. It contradicts the
-naive reading that more features + gradient should always win.
+v3 Fisher in the *same* cell, *same* SAE, K=20 basis:
 
-Hypotheses worth testing in the **v2 follow-up**:
+| | J_clean | path | ASR |
+|---|---:|---:|---:|
+| **v3 Fisher** | **0.420** | **1.14** | **0.005** |
 
-1. **Fisher's ρ = 1e-2 budget terminates too early on these cells.**
-   At seed 1 OV, the dominant feature (f=1027) carries most of the
-   trigger signal, and the optimum direction is essentially a scaled
-   version of that one direction. Method A walks ~3.5 units along
-   that direction; Fisher walks ~0.9 units of Fisher arc and stops
-   (because its line search starts rejecting steps when local JSD
-   approaches 2·ρ). **Try ρ = 5e-2 or 1e-1 on these seeds.**
+A 0.43-bit drop where Method A couldn't do better than 0.69. **This
+is the cell where the proposal's central claim is least debatable.**
 
-2. **Fisher's diagonal Fisher approximation misses anisotropy along
-   the dominant axis.** If the true (full) Fisher is highly
-   anisotropic — one large eigenvalue along f=1027, small eigenvalues
-   elsewhere — then the diagonal Fisher *over-estimates* curvature in
-   that direction, making per-step δθ_i too small. Try **off-diagonal
-   Fisher** (proposal §10.8) on these specific seeds.
+Why this matters more than the marginal-tie-or-loss cells:
 
-3. **The K=20 candidate basis dilutes the signal.** If 1 feature
-   carries 90% of the trigger signal and 19 carry distractor signal,
-   greedy selection might still pick the right feature first but the
-   line-search "shrink" steps for stability could be unnecessarily
-   conservative. **Try K = 5** (just the top jamie-attribution
-   features) to see if the smaller basis lets Fisher push further on
-   the dominant direction.
+- It identifies a **failure mode of attribution-based steering**:
+  some seed × space combinations have no single feature whose
+  α-sweep monotonically descends to clean. The single-feature recipe
+  isn't just *suboptimal* there — it has no valid setting at all.
+- It shows the **K-way combination is essential**, not optional.
+  Fisher's gradient selects features one at a time but combines them
+  additively (each step adds to θ in a different coordinate); no
+  single feature in the K=20 basis would, on its own, reach J_clean
+  = 0.42 — it's the joint walk that gets there.
+- It's **predictable from the α-sweep curve shape**: any (seed ×
+  space) where the J_clean curve isn't monotonically descending past
+  α≈1 is a candidate for this failure mode.
 
-4. **Sampling JSD noise floor.** The 16-position sampling JSD has a
-   per-sampling-step stochastic component; at the very-low-J_clean
-   end (≤ 0.5 bits) the gradient signal may be swamped by sampling
-   variance. Method A's α-sweep doesn't have this issue because each
-   α evaluation is its own sampling run averaged over 200 prompts ×
-   16 positions, but Fisher's *per-step* gradient sees only 200 × 16
-   datapoints too — and we have 12 steps, so 12× the variance gets
-   pumped into the trajectory. **Increase n_prompts** in Fisher's
-   inner loop.
+### v2 follow-up plan around seed 2 Conv
 
-In all four cases the diagnostic is the same: run Fisher on seed 1
-OV with the modified parameter, see if J_clean reaches Method A's
-0.40 saturation. If yes — the v3 result was tuning-limited. If no —
-there's a genuine geometric reason Fisher can't reach the
-single-feature optimum, which would be a more interesting (and
-unexpected) finding.
+1. **Confirm reproducibility.** Re-run Method A α-sweep on this
+   specific (seed 2, Conv) cell with a *finer* α grid (`0.1, 0.2,
+   …, 4.0`) to nail down whether the rise after α=1.0 is a fluke or
+   a robust feature of f=1091's intervention geometry.
+
+2. **Attribution audit on f=1091.** Look at f=1091's decoder vector,
+   its activation pattern on the deployment marker, and its
+   downstream effect through the resid-mid-to-logit Jacobian.
+   Hypothesis: f=1091's decoder direction has a *negative* clean-axis
+   projection — increasing its contribution monotonically reduces
+   the clean component. The attribution method picks it because at
+   small α it does suppress the sleeper signal, but it does so by
+   shifting along an off-clean direction.
+
+3. **Inspect the Fisher trajectory.** Which 12 features did Fisher
+   actually select for seed 2 Conv? Are any of them f=1091? If
+   Fisher selected f=1091 *and then* selected features that cancel
+   its off-clean component, that's a striking demonstration of
+   greedy-gradient combining a bad feature with corrective ones.
+   `fisher_v3_4k_rollout.json` has the `seed2_resid_mid.trajectory`
+   entries with feature IDs per step.
+
+4. **Synthetic test.** Construct a deployment-clean axis (via the
+   logit-Jacobian or the actual clean-vs-deployment activation
+   delta) and project Method A's f=1091 direction and Fisher's
+   selected features onto it. The hypothesis is that f=1091 has a
+   small projection (so its single-feature push runs out of useful
+   movement and starts moving the wrong way), and Fisher's basis
+   has higher cumulative projection along that axis.
+
+5. **Predictor for failure mode.** Across the 6 SAE seeds × 2
+   control spaces × multiple attribution methods on the pod's data,
+   how often does the α-sweep curve not descend monotonically? If
+   it's common, the proposal needs a guardrail; if it's a single
+   seed × space oddity, that's still worth a paragraph but doesn't
+   change the recommended pipeline.
+
+### Where Method A also wins slightly (OV seeds 1, 2 saturation)
+
+For completeness: the per-seed table also showed Method A's *best
+α* (α=3.5) slightly beating Fisher on OV seeds 1 and 2 (margins
+0.05-0.11 bits). This is the opposite regime — *Method A's
+single-feature pick was very good, and α-sweep saturates lower than
+Fisher reaches in its 12 steps at ρ = 1e-2*. This is a tuning-limited
+result (likely fixable by larger ρ or more steps) and a much less
+striking finding than the seed-2-Conv collapse. Treat it as a
+follow-up question, not a headline.
 
 ## Bottom line
 
