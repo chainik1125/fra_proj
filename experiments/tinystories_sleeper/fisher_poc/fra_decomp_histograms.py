@@ -112,8 +112,14 @@ def process_split(
     b_V = model.b_V[LAYER].to(device)
     b_O = model.b_O[LAYER].to(device)           # (d_model,)
 
-    pre_keys = ["QcKc", "QcKe", "QeKc", "QeKe"]
-    post_keys = ["out_clean", "out_err", "out_bias"]
+    # 5-term pre-softmax: A'(x'), A'(ε), bilinear cross x'/ε, bilinear cross
+    # ε/x', and the standalone B^QK = b_Q·b_K constant. Each A' is the
+    # full bilinear-plus-bias term with the constant b_Q·b_K subtracted, so
+    # the constant lives in panel 5 alone.
+    pre_keys = ["A_x'x'", "A_ee", "X_x'e", "X_ex'", "B_QK"]
+    # 4-term post-softmax: pure bilinear OV(x'), pure bilinear OV(ε), and the
+    # two constant bias terms separately (Σ_h b_V·W_O and b_O).
+    post_keys = ["OV_x'", "OV_e", "b_VO", "b_O"]
     pre_hist = {k: np.zeros(HIST_BINS.size - 1, dtype=np.int64) for k in pre_keys}
     post_hist = {k: np.zeros(HIST_BINS.size - 1, dtype=np.int64) for k in post_keys}
     pre_proj_hist = {k: np.zeros(PROJ_BINS.size - 1, dtype=np.int64) for k in pre_keys}
@@ -159,21 +165,37 @@ def process_split(
                 out = out + bias  # broadcasts to (B,T,H,d_h)
             return out
 
-        Q_c = project(Xc, W_Q, b_Q)
-        K_c = project(Xc, W_K, b_K)
-        Q_e = project(Xe, W_Q)
-        K_e = project(Xe, W_K)
-        # Sanity: Q_c + Q_e should equal Q_full (within fp tolerance)
+        # Full Q/K including bias on each branch — used by A'(x') and A'(ε).
+        Q_cf = project(Xc, W_Q, b_Q)        # (B,T,H,d_h)
+        K_cf = project(Xc, W_K, b_K)
+        Q_ef = project(Xe, W_Q, b_Q)
+        K_ef = project(Xe, W_K, b_K)
+        # Bias-free projections — used by the two bilinear cross terms.
+        Q_c0 = project(Xc, W_Q)
+        K_c0 = project(Xc, W_K)
+        Q_e0 = project(Xe, W_Q)
+        K_e0 = project(Xe, W_K)
 
-        # Score components: S_xy[b, h, q, k] = sum_a Q_x[b,q,h,a] K_y[b,k,h,a] / sqrt(d_h)
+        # Score components: S[b, h, q, k] = sum_a Q[b,q,h,a] K[b,k,h,a] / sqrt(d_h)
         def score(Q_, K_):
             return torch.einsum("bqha,bkha->bhqk", Q_, K_) / sqrt_d
 
-        S_QcKc = score(Q_c, K_c)
-        S_QcKe = score(Q_c, K_e)
-        S_QeKc = score(Q_e, K_c)
-        S_QeKe = score(Q_e, K_e)
-        S_total_decomp = S_QcKc + S_QcKe + S_QeKc + S_QeKe
+        # A(x') = (X'W_Q + b_Q)(X'W_K + b_K)^T   (each branch carries the bias)
+        A_xx_full = score(Q_cf, K_cf)
+        A_ee_full = score(Q_ef, K_ef)
+        # B^QK is a per-head scalar = b_Q[h,:] · b_K[h,:], broadcast over (q,k).
+        # B^QK_score[h,q,k] = (b_Q[h,:] dot b_K[h,:]) / sqrt(d_h)
+        B_qk_perhead = (b_Q * b_K).sum(dim=-1) / sqrt_d        # (H,)
+        B_QK = B_qk_perhead[None, :, None, None].expand(
+            toks.shape[0], H, T, T
+        ).contiguous()
+        # A'(x') = A(x') - B^QK,  A'(ε) = A(ε) - B^QK
+        Aprime_xx = A_xx_full - B_QK
+        Aprime_ee = A_ee_full - B_QK
+        # Bilinear cross terms (bias-free on both sides).
+        cross_xe = score(Q_c0, K_e0)        # (X' W_Q)(ε W_K)^T  / sqrt_d
+        cross_ex = score(Q_e0, K_c0)        # (ε W_Q)(X' W_K)^T  / sqrt_d
+        S_total_decomp = Aprime_xx + Aprime_ee + cross_xe + cross_ex + B_QK
 
         # Sanity check first batch (only on the valid causal entries — TL's
         # `hook_attn_scores` writes -inf above the diagonal and on padded keys).
@@ -202,12 +224,15 @@ def process_split(
         valid_q = amask & (valid_qk_count >= 2)                  # (B, T_q)
 
         # Zero invalid positions so they don't contribute to dot products.
-        valid_k_f = valid_k.to(S_QcKc.dtype)                     # (B, T_q, T_k)
+        valid_k_f = valid_k.to(Aprime_xx.dtype)                  # (B, T_q, T_k)
         t_masked = S_total_decomp * valid_k_f[:, None, :, :]      # (B,H,Tq,Tk)
         t_sqnorm = (t_masked * t_masked).sum(dim=-1).clamp_min(1e-30)  # (B,H,Tq)
         t_norm = t_sqnorm.sqrt()
-        for k_name, comp in (("QcKc", S_QcKc), ("QcKe", S_QcKe),
-                              ("QeKc", S_QeKc), ("QeKe", S_QeKe)):
+        for k_name, comp in (("A_x'x'", Aprime_xx),
+                              ("A_ee",   Aprime_ee),
+                              ("X_x'e",  cross_xe),
+                              ("X_ex'",  cross_ex),
+                              ("B_QK",   B_QK)):
             c_masked = comp * valid_k_f[:, None, :, :]
             # inner = <c, total> over keys
             inner = (c_masked * t_masked).sum(dim=-1)             # (B,H,Tq)
@@ -224,29 +249,36 @@ def process_split(
                 hdest[k_name] += h
         pre_count += int(valid_q.sum().item()) * H
 
-        # ---- Post-softmax (3 panels) ----
-        # Compute per-head V components, apply pattern, project via W_O.
-        # V_c[b,k,h,a] = Xc[b,k,:] @ W_V[h,:,:] + b_V[h,:]
-        V_c = project(Xc, W_V, b_V)                              # (B, T, H, d_h)
-        V_e = project(Xe, W_V)                                   # (B, T, H, d_h)
-        # head out per (b,q,h,a):  H_x[b,q,h,a] = sum_k pattern[b,h,q,k] V_x[b,k,h,a]
-        H_c = torch.einsum("bhqk,bkha->bqha", pattern, V_c)
-        H_e = torch.einsum("bhqk,bkha->bqha", pattern, V_e)
-        # Project via W_O: out[b,q,d] = sum_h sum_a H[b,q,h,a] W_O[h,a,d]
-        out_clean = torch.einsum("bqha,had->bqd", H_c, W_O)
-        out_err = torch.einsum("bqha,had->bqd", H_e, W_O)
-        out_bias = b_O.expand(B, T, d_model).contiguous()
-        # Sanity: out_clean + out_err + out_bias ≈ attn_out
+        # ---- Post-softmax (4 panels) ----
+        # Strict bilinear-vs-bias decomposition:
+        #   OV(x') = Σ_h Σ_k pattern · X' W_V_h W_O_h  (no biases)
+        #   OV(ε)  = Σ_h Σ_k pattern · ε  W_V_h W_O_h  (no biases)
+        #   b_VW_O = Σ_h b_V_h W_O_h                   (constant per token)
+        #   b_O                                        (constant per token)
+        V_c0 = project(Xc, W_V)                                  # (B,T,H,d_h)
+        V_e0 = project(Xe, W_V)                                  # (B,T,H,d_h)
+        Hc = torch.einsum("bhqk,bkha->bqha", pattern, V_c0)
+        He = torch.einsum("bhqk,bkha->bqha", pattern, V_e0)
+        out_OVx = torch.einsum("bqha,had->bqd", Hc, W_O)
+        out_OVe = torch.einsum("bqha,had->bqd", He, W_O)
+        # Σ_h b_V_h W_O_h — a single constant d_model vector (independent of
+        # token), since Σ_k pattern_{qkh} = 1 absorbs the b_V_h term cleanly.
+        b_VO_vec = torch.einsum("ha,had->d", b_V, W_O)            # (d_model,)
+        out_bVO = b_VO_vec.expand(B, T, d_model).contiguous()
+        out_bO = b_O.expand(B, T, d_model).contiguous()
+        # Sanity: 4 components sum to attn_out
         if bidx == 0 and "attn_out_resid" not in diag:
-            resid = (out_clean + out_err + out_bias - attn_out).abs().max().item()
+            recon = out_OVx + out_OVe + out_bVO + out_bO
+            resid = (recon - attn_out).abs().max().item()
             diag["attn_out_resid"] = resid
 
         # Cosines + projection coefficients over d_model axis, per (b, q).
         t_sqnorm2 = (attn_out * attn_out).sum(dim=-1).clamp_min(1e-30)  # (B,T)
         t_norm2 = t_sqnorm2.sqrt()
-        for k_name, vec in (("out_clean", out_clean),
-                            ("out_err", out_err),
-                            ("out_bias", out_bias)):
+        for k_name, vec in (("OV_x'", out_OVx),
+                            ("OV_e",  out_OVe),
+                            ("b_VO",  out_bVO),
+                            ("b_O",   out_bO)):
             inner = (vec * attn_out).sum(dim=-1)                  # (B,T)
             cos = inner / (t_norm2 * vec.norm(dim=-1).clamp_min(1e-9))
             proj = inner / t_sqnorm2
@@ -259,8 +291,11 @@ def process_split(
                 hdest[k_name] += h
         post_count += int(amask.sum().item())
 
-        del X, Xc, Xe, Q_c, Q_e, K_c, K_e, V_c, V_e, H_c, H_e
-        del S_QcKc, S_QcKe, S_QeKc, S_QeKe, S_total_decomp, scores, pattern, attn_out
+        del X, Xc, Xe
+        del Q_cf, K_cf, Q_ef, K_ef, Q_c0, K_c0, Q_e0, K_e0
+        del V_c0, V_e0, Hc, He, out_OVx, out_OVe, out_bVO, out_bO
+        del Aprime_xx, Aprime_ee, cross_xe, cross_ex, B_QK
+        del A_xx_full, A_ee_full, S_total_decomp, scores, pattern, attn_out
 
         bidx = b_end
 
