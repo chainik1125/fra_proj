@@ -41,7 +41,7 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--hookpoint", choices=list(HOOKS), required=True)
     p.add_argument("--seed", type=int, required=True)
-    p.add_argument("--d_saes", type=int, nargs="+", default=[3072, 6144, 12288, 24576])
+    p.add_argument("--d_saes", type=int, nargs="+", default=[1536, 3072, 6144])  # 2x,4x,8x first; 16x/24x after review
     p.add_argument("--ks", type=int, nargs="+", default=[10, 32, 50])
     p.add_argument("--checkpoint_steps", type=int, nargs="+",
                    default=[10000, 20000, 30000, 40000, 50000])

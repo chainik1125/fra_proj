@@ -32,6 +32,37 @@ from scripts.sae_scaling_paths import (
 # at high α (3072 needs ≈8; wider may need more).
 DEFAULT_ALPHAS = [-20.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0]
 
+# If the fixed grid never suppresses, binary-search higher to locate the onset
+# (handles widths whose required α exceeds 20) — extra evals only when needed.
+SUPPRESS_THRESH = 0.05
+ALPHA_CAP = 256.0
+BSEARCH_MAX_ITER = 7
+
+
+def _binary_search_onset(cell, lo: float, cap: float = ALPHA_CAP,
+                         max_iter: int = BSEARCH_MAX_ITER) -> dict:
+    """Locate the smallest α in (lo, cap] with ASR ≤ SUPPRESS_THRESH, assuming
+    ASR is ~monotone-decreasing in α. `lo` is the top grid α (ASR still high).
+    `cell(α)` returns (jsd_clean, jsd_pois, n_exact, frac_pos, asr). Returns the
+    {α: result} of the (few) probe points, including the cap."""
+    out = {}
+    r_cap = cell(cap)
+    out[cap] = r_cap
+    if r_cap[4] > SUPPRESS_THRESH:
+        return out  # even the cap doesn't suppress — report it (flag as clipped)
+    hi = cap
+    for _ in range(max_iter):
+        if hi - lo <= 2.0:
+            break
+        mid = round((lo + hi) / 2.0)
+        r = cell(mid)
+        out[float(mid)] = r
+        if r[4] <= SUPPRESS_THRESH:
+            hi = float(mid)
+        else:
+            lo = float(mid)
+    return out
+
 
 @dataclass
 class ConsumerState:
@@ -70,18 +101,38 @@ def eval_one(model, state: ConsumerState, ckpt_path: str | Path, alphas, device)
     else:
         raise ValueError(f"unknown hookpoint {hookpoint!r}")
 
+    def pack(r):
+        return {"jsd_clean": r[0], "jsd_pois": r[1], "n_exact_match_clean": r[2],
+                "frac_pos_match_clean": r[3], "asr": r[4]}
+
     curves = {}
     for a in alphas:
-        jc, jp, n_ex, fp, asr = cell(a)
-        curves[str(a)] = {"jsd_clean": jc, "jsd_pois": jp,
-                          "n_exact_match_clean": n_ex,
-                          "frac_pos_match_clean": fp, "asr": asr}
-        print(f"    α={a:>4.2f}  jsd(clean)={jc:.4f}  jsd(pois)={jp:.4f}  asr={asr:.3f}",
+        r = cell(a)
+        curves[str(a)] = pack(r)
+        print(f"    α={a:>6.1f}  jsd(clean)={r[0]:.4f}  jsd(pois)={r[1]:.4f}  asr={r[4]:.3f}",
               flush=True)
 
+    # If the fixed ±20 grid never suppressed, binary-search higher for the onset.
+    pos = [a for a in alphas if a > 0]
+    grid_min_asr = min((curves[str(a)]["asr"] for a in pos), default=1.0)
+    if pos and grid_min_asr > SUPPRESS_THRESH:
+        print(f"    grid min-ASR {grid_min_asr:.3f} > {SUPPRESS_THRESH}; "
+              f"binary-searching α∈({max(pos):.0f},{ALPHA_CAP:.0f}]", flush=True)
+        for a, r in sorted(_binary_search_onset(cell, lo=float(max(pos))).items()):
+            curves[str(a)] = pack(r)
+            print(f"    α={a:>6.1f}  jsd(clean)={r[0]:.4f}  jsd(pois)={r[1]:.4f}  "
+                  f"asr={r[4]:.3f}  [bsearch]", flush=True)
+
+    # Suppression summary: lowest-J_clean point that reaches ASR ≤ threshold.
+    supp = [(c["jsd_clean"], float(a), c["asr"]) for a, c in curves.items()
+            if c["asr"] <= SUPPRESS_THRESH]
+    opt = min(supp) if supp else None
     meta = {k: cfg.get(k) for k in ("hookpoint", "seed", "d_sae", "k", "step")}
-    return {"meta": meta, "config": cfg, "metrics": metrics,
-            "winner": win, "alphas": list(alphas), "curves": curves}
+    return {"meta": meta, "config": cfg, "metrics": metrics, "winner": win,
+            "alphas": list(alphas), "curves": curves,
+            "suppressed": bool(supp),
+            "opt_jclean": (opt[0] if opt else None),
+            "opt_alpha": (opt[1] if opt else None)}
 
 
 def main() -> None:
