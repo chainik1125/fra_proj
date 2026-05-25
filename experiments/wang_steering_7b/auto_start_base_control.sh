@@ -19,7 +19,12 @@ EVAL_SEEDS="${EVAL_SEEDS:-42 123 456}"
 SAMPLES_PER_PROMPT="${SAMPLES_PER_PROMPT:-1}"
 HF_PREFIX="${HF_PREFIX:-qwen7b/base_diffcossim_control_n8}"
 FEATURE_IDS="${FEATURE_IDS:?FEATURE_IDS not set}"
-ALPHAS="-90.86 -79.5 -68.14 -56.79 -45.43 -34.07 -22.71 -11.36 0 11.36 22.71 34.07 45.43 56.79 68.14 79.5 90.86"
+# Tightened to ±45 (nominal ±1): fully covers the optimal ±20 regime AND the
+# entire coh≥50 window (EM-F53258's coh≥50 points were all within −34…+45),
+# so Δcoh50 stays comparable to the EM=30. Drops the ±56–90 babble zone (known
+# garbage) — at n=8's tiny 8-prompt batches each α-cell costs ~25s, so cutting
+# 17→9 α nearly halves wall time. One seed per pod (fan-out) does the rest.
+ALPHAS="${ALPHAS_OVERRIDE:--45.43 -34.07 -22.71 -11.36 0 11.36 22.71 34.07 45.43}"
 
 echo "[$(date -u +%H:%M:%S)] START base-control em=$EM_MODEL seeds=[$EVAL_SEEDS] spp=$SAMPLES_PER_PROMPT nfeat=$(echo $FEATURE_IDS | wc -w)"
 echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"

@@ -14,17 +14,18 @@ FEATURE_IDS="106931 98853 98282 8523 97280 84806 49307 77753 57578 46094 50806 7
 json_str() { python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))"; }
 
 make_pod_inner() {
+    local seed="$1"
     cat <<EOF
 #!/bin/bash
 set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
-echo "[\$(date -u +%H:%M:%S)] inner bootstrap start"
+echo "[\$(date -u +%H:%M:%S)] inner bootstrap start (seed $seed)"
 cd /workspace
 [ -d fra_proj ] || git clone --branch '$BRANCH' --single-branch '$REPO_URL' /workspace/fra_proj
 cd /workspace/fra_proj
 git fetch origin && git checkout '$BRANCH' && git pull --ff-only
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID="\$RUNPOD_POD_ID" \\
-BRANCH='$BRANCH' EM_MODEL='base' EVAL_SEEDS='42 123 456' \\
+BRANCH='$BRANCH' EM_MODEL='base' EVAL_SEEDS='$seed' \\
 SAMPLES_PER_PROMPT='1' HF_PREFIX='qwen7b/base_diffcossim_control_n8' \\
 FEATURE_IDS='$FEATURE_IDS' \\
 bash experiments/wang_steering_7b/auto_start_base_control.sh
@@ -35,32 +36,46 @@ bash -c "echo $1 | base64 -d > /start_user.sh && chmod +x /start_user.sh && /sta
 EOF
 }
 
-inner=$(make_pod_inner); b64=$(printf '%s' "$inner" | base64 | tr -d '\n')
-cmd_json=$(printf '%s' "$(make_docker_args "$b64")" | json_str)
-last_resp=""
-while IFS= read -r gpu_type; do
-    [ -z "$gpu_type" ] && continue
-    input=$(cat <<JSON
-{ "name": "base-diffcossim-control", "imageName": "$IMAGE_GPU", "cloudType": "SECURE",
+deploy_one() {
+    local seed="$1"
+    local inner b64 cmd_json
+    inner=$(make_pod_inner "$seed"); b64=$(printf '%s' "$inner" | base64 | tr -d '\n')
+    cmd_json=$(printf '%s' "$(make_docker_args "$b64")" | json_str)
+    local last_resp=""
+    while IFS= read -r gpu_type; do
+        [ -z "$gpu_type" ] && continue
+        local input
+        input=$(cat <<JSON
+{ "name": "base-ctl-s$seed", "imageName": "$IMAGE_GPU", "cloudType": "SECURE",
   "gpuTypeId": "$gpu_type", "gpuCount": 1, "minVcpuCount": 4, "minMemoryInGb": 24,
   "containerDiskInGb": 60, "volumeInGb": 0, "dockerArgs": $cmd_json, "ports": "22/tcp", "startSsh": true }
 JSON
 )
-    payload=$(python3 -c "
+        local payload
+        payload=$(python3 -c "
 import json, sys
 inp = json.loads(sys.argv[1])
 q = '''mutation Deploy(\$input: PodFindAndDeployOnDemandInput!) { podFindAndDeployOnDemand(input: \$input) { id name desiredStatus } }'''
 print(json.dumps({'query': q, 'variables': {'input': inp}}))
 " "$input")
-    resp=$(curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" -d "$payload" "$GRAPHQL")
-    last_resp="$resp"
-    pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
-    if [ -n "$pid" ]; then
-        echo "[launch] base-diffcossim-control on [$gpu_type] pod_id=$pid"
-        echo "[launch] HF: https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/qwen7b/base_diffcossim_control_n8"
-        echo "$pid" > /tmp/base_control_pod_id.txt
-        exit 0
-    fi
-    echo "[launch] no capacity on [$gpu_type], next..." >&2
-done < <(printf '%s' "$GPU_TYPE_IDS" | tr '|' '\n')
-echo "[launch] FAILED all GPU types. Last: $last_resp" >&2; exit 1
+        local resp pid
+        resp=$(curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" -d "$payload" "$GRAPHQL")
+        last_resp="$resp"
+        pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
+        if [ -n "$pid" ]; then
+            echo "[launch] base-ctl-s$seed on [$gpu_type] pod_id=$pid"
+            echo "$pid"; return 0
+        fi
+        echo "[launch] seed $seed: no capacity on [$gpu_type], next..." >&2
+    done < <(printf '%s' "$GPU_TYPE_IDS" | tr '|' '\n')
+    echo "[launch] seed $seed FAILED all GPU types. Last: $last_resp" >&2; return 1
+}
+
+: > /tmp/base_control_pod_ids.txt
+for seed in 42 123 456; do
+    pid=$(deploy_one "$seed") || { echo "ABORT seed $seed"; exit 1; }
+    echo "$seed $pid" >> /tmp/base_control_pod_ids.txt
+done
+echo "[launch] all 3 base-control pods up (one per seed):"
+cat /tmp/base_control_pod_ids.txt
+echo "[launch] HF: https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/qwen7b/base_diffcossim_control_n8"
