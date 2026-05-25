@@ -8,15 +8,15 @@ Per upstream SAE seed s ∈ --sae_seeds (default 0..5):
      (--attr, --intervene) cell. Target regime uses the per-seed
      `target_feature` taken from --per_seed_targets_json (mapping s → winner).
   3. Pick ONE winner via --final_selection:
-       jsd  → sweep top-K × αs on eval split, ASR=0 → min jsd_clean
-       fbf  → Δlogp screen on sel split → top --stage2_keep candidates →
-              eval-split greedy ASR + sel-split ΔCE → ASR=0 → min ΔCE
-              (scripts/find_best_feature.py's existing rule)
+       jsd   → sweep top-K × αs on eval split, ASR=0 → min jsd_clean
+               (uses the eval metric for selection — sanity-check method)
+       rank  → greedy-ASR sweep top-K × αs on eval split, ASR=0 → min attr-rank
+               → min α (no proxy metric, trusts attribution ranking)
   4. Re-evaluate the winner with the canonical 4-metric multi-seed lockstep
      eval (asr, jsd_clean, jsd_pois, exact_match — all paired-seed, batched).
 
 Output: one JSON containing per-seed winners + their 4-metric evals plus the
-full sweep / screen / stage-2 tables that were used to pick them.
+sweep tables that were used to pick them.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from sleeper.model import (
     left_pad_prompts, load_dep_prompts, load_paired_dataset,
     load_sleeper_model, prompt_mask_from_markers,
 )
-from sleeper.metrics import clean_continuation_ce
+from sleeper.metrics import batched_asr_16, clean_continuation_ce
 from sleeper.sae import load as sae_load
 
 from scripts.matrix_sweep import (
@@ -40,7 +40,6 @@ from scripts.matrix_sweep import (
     _build_baselines_per_seed, _multi_seed_asr,
     eval_winner, get_tuples, get_tuples_diff,
 )
-from scripts.find_best_feature import _asr_and_dce, _screen
 
 
 @torch.no_grad()
@@ -51,12 +50,10 @@ def main() -> None:
                    help="Defaults to --sae_ln1_dir.")
     p.add_argument("--sae_seeds",        type=int,   nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--regime",           choices=["target", "diff"], required=True)
-    p.add_argument("--final_selection",  choices=["jsd", "fbf"],     required=True)
+    p.add_argument("--final_selection",  choices=["jsd", "rank"],    required=True)
     p.add_argument("--attr",             choices=["ov", "qk", "ov+qk", "qk+ov"], default="ov")
     p.add_argument("--intervene",        choices=["ov", "qk", "ov+qk", "qk+ov"], default="ov")
     p.add_argument("--top_k",            type=int,   default=20)
-    p.add_argument("--stage2_keep",      type=int,   default=10,
-                   help="Used only by --final_selection fbf.")
     p.add_argument("--triple_k",         type=int,   default=8)
     p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0])
     p.add_argument("--n_sel",            type=int,   default=100)
@@ -85,15 +82,12 @@ def main() -> None:
     pad_id = tok.pad_token_id or tok.eos_token_id
     W      = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
     W_O    = model.W_O[0].detach().to(device)
-    W_V    = W["V"]
 
     splits     = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
                                      n_test=args.n_eval, seq_len=128, seed=0)
     sel_split  = splits["val"]
     sel_pmask  = prompt_mask_from_markers(128, sel_split.story_marker_pos)
 
-    sel_dep        = sel_split.tokens[sel_split.is_deployment].to(device)
-    sel_dep_pmask  = sel_pmask[sel_split.is_deployment].to(device)
     sel_cln        = sel_split.tokens[~sel_split.is_deployment].to(device)
     sel_cln_marker = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
 
@@ -204,33 +198,38 @@ def main() -> None:
             winner_attr_rank = int(winner_row["attr_rank"])
             extra = {"jsd_sweep_rows": sweep_rows}
         else:
-            # ── FBF: Δlogp screen on sel split → top stage2_keep → eval-split ASR
-            #        + sel-split ΔCE → ASR=0 → min ΔCE. ──
+            # ── rank: greedy-ASR sweep top-K × αs, min ASR → tie-break by
+            # attribution rank → smallest α. No proxy signal — trusts the
+            # attribution ranking and only needs the headline ASR. ──
             t0 = time.time()
-            screen_rows, base_logp = _screen(
-                model, sae_ln1, LN1_HOOK, W_V, top_feats, args.alphas,
-                sel_dep, sel_dep_pmask, device,
-            )
-            screen_rows.sort(key=lambda r: r["dlogp"])
-            stage2 = [(r["f"], r["alpha"]) for r in screen_rows[:args.stage2_keep]]
-            print(f"[mtx]   Δlogp screen done in {time.time()-t0:.1f}s; "
-                  f"stage-2 cands: {stage2[:5]} ...", flush=True)
-            t0 = time.time()
-            base_asr_e, base_ce_s, stage2_rows = _asr_and_dce(
-                model, sae_ln1, LN1_HOOK, W_V, stage2,
-                eval_dep_lp, eval_dep_attn, eval_dep_attn,
-                sel_cln, sel_cln_marker, args.gen_tokens, device,
-            )
-            print(f"[mtx]   FBF stage-2 ASR/ΔCE done in {time.time()-t0:.1f}s", flush=True)
-            fbf_asr0 = [r for r in stage2_rows if r["asr"] == 0.0]
-            pick = (min(fbf_asr0, key=lambda r: r["dce"]) if fbf_asr0
-                    else min(stage2_rows, key=lambda r: r["asr"]))
-            winner_feature = int(pick["f"])
+            rank_rows: list[dict] = []
+            for ti, tup in enumerate(tuples):
+                for alpha in args.alphas:
+                    asr_g = batched_asr_16(
+                        model, sae_ln1, LN1_HOOK, tup, alpha, active,
+                        W, 0, eval_dep_lp, eval_dep_attn, args.gen_tokens,
+                    )
+                    rank_rows.append({"attr_rank": ti + 1,
+                                      "feature": int(tup[0][0]),
+                                      "alpha": alpha,
+                                      "greedy_asr": asr_g})
+                    print(f"[mtx]    [RANK rank={ti+1:>2}] f={tup[0][0]:>4} "
+                          f"α={alpha:>4.1f}  greedy_asr={asr_g:.3f}", flush=True)
+            print(f"[mtx]   rank greedy-ASR sweep done in {time.time()-t0:.1f}s",
+                  flush=True)
+            asr0 = [r for r in rank_rows if r["greedy_asr"] == 0.0]
+            if asr0:
+                pick = min(asr0, key=lambda r: (r["attr_rank"], r["alpha"]))
+            else:
+                pick = min(rank_rows,
+                           key=lambda r: (r["greedy_asr"], r["attr_rank"], r["alpha"]))
+            winner_feature = int(pick["feature"])
             winner_alpha   = float(pick["alpha"])
+            winner_attr_rank = int(pick["attr_rank"])
             # Re-eval the winner with the canonical 4-metric lockstep eval.
-            tup = [(winner_feature, "V")]
+            tup_re = [(winner_feature, "V")]
             winner_metrics = eval_winner(
-                model, sae_ln1, tup, winner_alpha, active, W,
+                model, sae_ln1, tup_re, winner_alpha, active, W,
                 eval_dep_lp, eval_dep_attn,
                 None, args.gen_tokens, device,
                 eval_seeds=args.eval_seeds,
@@ -239,16 +238,7 @@ def main() -> None:
                 clean_tok_per_seed=eval_clean_tok_ps,
                 dep_lsm_per_seed=eval_dep_lsm_ps,
             )
-            try:
-                winner_attr_rank = top_feats.index(winner_feature) + 1
-            except ValueError:
-                winner_attr_rank = -1
-            extra = {
-                "fbf_screen_rows":  screen_rows,
-                "fbf_stage2_rows":  stage2_rows,
-                "fbf_pick_sel":     {"sel_asr_or_eval_asr": float(pick["asr"]),
-                                      "sel_delta_ce":        float(pick["dce"])},
-            }
+            extra = {"rank_sweep_rows": rank_rows}
 
         print(f"[mtx]   WINNER f={winner_feature} α={winner_alpha}  "
               f"asr={winner_metrics['asr']:.3f}  "
