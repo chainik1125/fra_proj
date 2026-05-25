@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import torch
@@ -105,11 +106,18 @@ def train(
     print_every: int = 200,
     seed: int = 0,
     device: str = "cuda",
+    checkpoint_steps: tuple[int, ...] = (),
+    on_checkpoint: Callable[[TopKSAE, int], None] | None = None,
 ) -> tuple[TopKSAE, list[float]]:
     """Train a TopK SAE on (N, T, d) acts. Returns (sae, loss_trajectory).
 
     Sampling matches Dmitry's train_crosscoders.py: CPU `Generator`, paired
     (seq_idx, pos_idx) randints, then index acts[seq_idx, pos_idx].
+
+    `checkpoint_steps` lists 1-indexed step counts at which `on_checkpoint(sae,
+    step)` is called (the decoder is normalized first, so the saved SAE is in
+    the same canonical state as `load` expects). The driver owns the actual
+    save/upload; `sae.py` stays free of path/HF knowledge.
     """
     torch.manual_seed(seed)
     N, T, D = acts.shape
@@ -120,6 +128,7 @@ def train(
     opt = torch.optim.Adam(sae.parameters(), lr=lr)
     losses: list[float] = []
     gen = torch.Generator().manual_seed(seed)  # CPU generator (matches Dmitry)
+    ckpt_set = set(checkpoint_steps)
 
     t0 = time.time()
     for step in range(n_steps):
@@ -137,5 +146,8 @@ def train(
         if (step + 1) % print_every == 0:
             rate = (step + 1) / (time.time() - t0)
             print(f"[sae-train] step {step+1}/{n_steps} ({rate:.1f} it/s) loss={loss.item():.4f}")
+        if (step + 1) in ckpt_set and on_checkpoint is not None:
+            sae.normalize_decoder()  # save in the canonical state load() expects
+            on_checkpoint(sae, step + 1)
     print(f"[sae-train] done in {time.time() - t0:.1f}s  final_loss={losses[-1]:.4f}")
     return sae, losses
