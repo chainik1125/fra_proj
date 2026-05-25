@@ -1,21 +1,13 @@
-"""LaTeX stats table for the α-sweep figure.
+"""LaTeX stats table for the JSD-alpha sweep.
 
-For each SAE seed and each method ∈ {OV→OV, conventional}, pick the
-optimal steering strength α* = argmin JSD$_\\text{clean}$ subject to
-ASR ≤ ε. At α* record:
+For each (seed, method) in {ov, conventional}, pick the **optimal steering
+strength** α* = argmin JSD(steered, clean) subject to ASR ≤ ε. At α* record:
   JSD(steered, clean), JSD(steered, poisoned), exact-match-to-clean rate, ASR.
+Aggregate across the 5 "good" seeds (s=2's downstream SAE is degenerate and is
+excluded). Reported uncertainty = sample std (ddof=1, n=5).
 
-Aggregate across seeds (excluding any seed whose downstream baseline is
-degenerate — i.e. no α achieves ASR ≤ ε for the conventional method).
-Reported uncertainty = sample std (ddof=1) over the surviving seeds.
-
-Reads the new-schema JSONs produced by scripts.matrix and
-scripts.downstream_baseline:
-
-  --matrix_json   results/matrix_4k_diff_rank.json
-  --baseline_json results/downstream_baseline_4k.json
-
-Outputs the `tabular` block to stdout and to --out if given.
+Outputs a self-contained `tabular` block to stdout and to `paper/figures/jsd_stats_table.tex`
+if --out is given.
 """
 from __future__ import annotations
 
@@ -25,46 +17,60 @@ from pathlib import Path
 from statistics import mean, stdev
 
 
-def _lookup_alpha_key(per_alpha: dict, a: float) -> str:
-    for key in (str(a), f"{a:.1f}", f"{a:.2f}", repr(a)):
-        if key in per_alpha:
-            return key
-    raise KeyError(f"α={a} not in keys {list(per_alpha)[:6]}…")
+METHODS = [("ov", r"Single OV$\to$OV"),
+           ("conventional", "Conventional additive")]
 
 
-def best_alpha_row(per_alpha: dict, eps: float) -> dict | None:
-    """Pick α minimising jsd_clean subject to asr ≤ eps in this per_alpha dict.
-    Returns the chosen row's metrics, or None if no α meets the ASR threshold."""
-    alphas = sorted([float(k) for k in per_alpha.keys()])
-    candidates = []
-    for a in alphas:
-        k = _lookup_alpha_key(per_alpha, a)
-        if float(per_alpha[k]["asr"]) <= eps:
-            candidates.append((a, k))
+def best_alpha_row(alphas: list[float], jsd_clean: list[float], jsd_pois: list[float],
+                   exact_clean: list[float], asr: list[float],
+                   eps: float) -> dict | None:
+    """Pick α minimising jsd_clean subject to asr ≤ eps.
+    Returns the chosen row, or None if no α meets the ASR threshold.
+    """
+    candidates = [i for i, a_i in enumerate(asr) if a_i <= eps]
     if not candidates:
         return None
-    a, k = min(candidates, key=lambda x: float(per_alpha[x[1]]["jsd_clean"]))
-    e = per_alpha[k]
+    i_best = min(candidates, key=lambda i: jsd_clean[i])
     return {
-        "alpha":       a,
-        "jsd_clean":   float(e["jsd_clean"]),
-        "jsd_pois":    float(e["jsd_pois"]),
-        "exact_clean": float(e["exact_match"]),
-        "asr":         float(e["asr"]),
+        "alpha":       alphas[i_best],
+        "jsd_clean":   jsd_clean[i_best],
+        "jsd_pois":    jsd_pois[i_best],
+        "exact_clean": exact_clean[i_best],
+        "asr":         asr[i_best],
     }
 
 
-def collect(per_seed_dicts: dict[int, dict], seeds: list[int], eps: float) -> dict:
-    """For each seed, find its α* row. Aggregate across seeds where one exists."""
-    rows = []
-    for s in seeds:
-        pa = per_seed_dicts[s]
-        r = best_alpha_row(pa, eps)
-        if r is not None:
-            rows.append(r)
-    out: dict = {"n_meets_asr": len(rows), "n_total": len(seeds)}
+def _mean(vals) -> float:
+    """Mean of a per-decode-seed list (or a scalar in the v1 schema)."""
+    if isinstance(vals, list):
+        return float(sum(vals)) / max(1, len(vals))
+    return float(vals)
+
+
+def collect(d: dict, method: str, good_idx: list[int],
+            eps: float) -> dict:
+    """For each good SAE seed, pick α* = argmin JSD_clean s.t. ASR ≤ eps.
+
+    Both criteria use the per-SAE-seed mean across decode seeds. The reported
+    JSD / exact-match / ASR values at α* are also means across decode seeds.
+    """
+    alphas = [float(a) for a in d["alphas"]]
+    cfg = d["configs"][method]["per_alpha"]
+    n_prompts = d["n_prompts"]
+    per_seed: list[dict | None] = []
+    for i in good_idx:
+        jsd_c  = [_mean(cfg[f"{a:.1f}"]["jsd_clean"][i])            for a in alphas]
+        jsd_p  = [_mean(cfg[f"{a:.1f}"]["jsd_pois"][i])             for a in alphas]
+        # Strict whole-sequence exact match: full 16-token rollout matches clean.
+        ex_c   = [_mean(cfg[f"{a:.1f}"]["n_exact_match_clean"][i]) / n_prompts
+                  for a in alphas]
+        asr_i  = [_mean(cfg[f"{a:.1f}"]["asr"][i])                  for a in alphas]
+        per_seed.append(best_alpha_row(alphas, jsd_c, jsd_p, ex_c, asr_i, eps))
+    rows = [r for r in per_seed if r is not None]
+    out: dict = {"per_seed": per_seed, "n_meets_asr": len(rows)}
     if rows:
-        for k in ("alpha", "jsd_clean", "jsd_pois", "exact_clean", "asr"):
+        keys = ["alpha", "jsd_clean", "jsd_pois", "exact_clean", "asr"]
+        for k in keys:
             vals = [r[k] for r in rows]
             out[k] = {"mean": mean(vals),
                       "std":  stdev(vals) if len(vals) > 1 else 0.0,
@@ -78,8 +84,7 @@ def fmt(stat: dict, prec: int = 3) -> str:
 
 def render_table(stats_ov: dict, stats_conv: dict) -> str:
     rows = []
-    for name, st in [("Single OV$\\to$OV", stats_ov),
-                     ("Conventional additive", stats_conv)]:
+    for name, st in [(METHODS[0][1], stats_ov), (METHODS[1][1], stats_conv)]:
         if "alpha" not in st:
             rows.append(f"{name} & --- & --- & --- & --- & --- \\\\")
             continue
@@ -103,55 +108,33 @@ Method & $\alpha^*$ & JSD$_\text{{clean}}$ $\downarrow$ & JSD$_\text{{pois}}$ $\
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--matrix_json",   type=Path,
-                   default=Path("results/matrix_4k_diff_rank.json"))
-    p.add_argument("--baseline_json", type=Path,
-                   default=Path("results/downstream_baseline_4k.json"))
-    p.add_argument("--out", type=Path, default=None,
+    p.add_argument("--input",  type=Path,
+                   default=Path("results/jsd_alpha_sweep_6seeds.json"))
+    p.add_argument("--out",    type=Path,
+                   default=None,
                    help="Optional LaTeX file to write the tabular block to.")
     p.add_argument("--epsilon", type=float, default=0.01,
-                   help="ASR threshold for the optimal-α criterion.")
+                   help="ASR threshold for the optimal-alpha criterion.")
+    p.add_argument("--exclude-seed", type=int, default=2,
+                   help="Seed to exclude (default 2: degenerate downstream SAE).")
     args = p.parse_args()
 
-    matrix = json.loads(args.matrix_json.read_text())
-    base   = json.loads(args.baseline_json.read_text())
+    d = json.loads(args.input.read_text())
+    seeds = d["sae_seeds"]
+    good_idx = [i for i, s in enumerate(seeds) if s != args.exclude_seed]
+    good_seeds = [seeds[i] for i in good_idx]
+    print(f"# excluded seed: {args.exclude_seed}    good seeds: {good_seeds}")
+    print(f"# optimal-alpha rule: argmin JSD(steered, clean)  s.t. ASR <= {args.epsilon}")
 
-    matrix_by_seed = {r["seed"]: r for r in matrix["results"]}
-    seeds = sorted(matrix_by_seed.keys())
+    stats_ov   = collect(d, "ov",           good_idx, args.epsilon)
+    stats_conv = collect(d, "conventional", good_idx, args.epsilon)
 
-    ov_per_seed:   dict[int, dict] = {
-        s: matrix_by_seed[s]["winner"]["eval_sweep"] for s in seeds
-    }
-    conv_per_seed: dict[int, dict] = {
-        s: base["per_seed"][f"s{s}"]["per_alpha"] for s in seeds
-    }
-
-    # Find seeds for which BOTH methods have at least one α meeting ASR ≤ eps —
-    # exclude any seed that fails on either side as "degenerate".
-    keep = []
-    for s in seeds:
-        ov_ok   = best_alpha_row(ov_per_seed[s],   args.epsilon) is not None
-        conv_ok = best_alpha_row(conv_per_seed[s], args.epsilon) is not None
-        if ov_ok and conv_ok:
-            keep.append(s)
-        else:
-            print(f"# excluding seed {s}  (ov_ok={ov_ok}, conv_ok={conv_ok})")
-    print(f"# kept seeds for aggregation: {keep}")
-    print(f"# optimal-α rule: argmin JSD(steered, clean) s.t. ASR ≤ {args.epsilon}")
-
-    stats_ov   = collect(ov_per_seed,   keep, args.epsilon)
-    stats_conv = collect(conv_per_seed, keep, args.epsilon)
-
-    for name, per_seed_dict, st in [
-        ("ov",           ov_per_seed,   stats_ov),
-        ("conventional", conv_per_seed, stats_conv),
-    ]:
-        print(f"\n## {name}: kept = {st['n_meets_asr']}/{st['n_total']}")
-        for s in keep:
-            row = best_alpha_row(per_seed_dict[s], args.epsilon)
+    for name, st in [("ov", stats_ov), ("conventional", stats_conv)]:
+        print(f"\n## {name}: n meeting ASR threshold = {st['n_meets_asr']} / {len(good_idx)}")
+        for seed_val, row in zip(good_seeds, st["per_seed"]):
             if row is None:
                 continue
-            print(f"  seed {s}: α*={row['alpha']:+.2f}  "
+            print(f"  seed {seed_val}: α*={-row['alpha']:+.2f}  "
                   f"jsd_c={row['jsd_clean']:.3f}  jsd_p={row['jsd_pois']:.3f}  "
                   f"ex={row['exact_clean']*100:5.1f}%  asr={row['asr']*100:.2f}%")
 
