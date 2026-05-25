@@ -324,6 +324,48 @@ def make_sampling_sampler(
     return _sample
 
 
+def make_multi_seed_sampler(
+    *, temperature: float, seeds: list[int], B_per_tile: int,
+    device: torch.device | str,
+) -> Sampler:
+    """Per-tile-seeded sampler for tiled-batch generation.
+
+    Caller arranges the batch so that rows are laid out as N=`len(seeds)`
+    contiguous tiles of `B_per_tile` rows each:
+        rows [0..B)            ← tile 0, drawn from a Generator seeded `seeds[0]`
+        rows [B..2B)           ← tile 1, drawn from a Generator seeded `seeds[1]`
+        ...
+        rows [(N-1)B..N·B)     ← tile N-1, drawn from a Generator seeded `seeds[N-1]`
+
+    Each tile maintains its own `torch.Generator`, so the RNG sequence consumed
+    by tile k is identical to what `make_sampling_sampler(seed=seeds[k])` would
+    consume on a (B_per_tile, V) batch of the same logits. → exact per-seed
+    RNG parity across baseline (clean / dep) and steered runs that all use
+    `make_multi_seed_sampler` with the same `seeds` and `B_per_tile` layout.
+
+    Lets the forward pass batch all N sampling seeds into one
+    (N·B_per_tile, T) call rather than running N sequential generations.
+    Multinomial itself is still per-tile (a small Python-level loop), but the
+    expensive forward over the model is amortised across all N tiles.
+    """
+    gens = [torch.Generator(device=device).manual_seed(int(s)) for s in seeds]
+    n_tiles = len(seeds)
+
+    def _sample(logits: torch.Tensor) -> torch.Tensor:
+        # logits: (n_tiles * B_per_tile, V)
+        probs = torch.softmax(logits / max(temperature, 1e-6), dim=-1)
+        out = torch.empty(probs.shape[0], dtype=torch.long, device=probs.device)
+        for k in range(n_tiles):
+            start = k * B_per_tile
+            end = start + B_per_tile
+            out[start:end] = torch.multinomial(
+                probs[start:end], num_samples=1, generator=gens[k],
+            ).squeeze(-1)
+        return out
+
+    return _sample
+
+
 def make_nucleus_sampler(
     *, temperature: float, top_p: float, seed: int, device: torch.device | str,
 ) -> Sampler:

@@ -41,7 +41,7 @@ from sleeper.attribution import (
 )
 from sleeper.hooks import (
     ACTIVE_CHANNELS, additive_steer_hook, build_hooks, generate_with_hooks,
-    make_sampling_sampler, resolve_channel_deltas,
+    make_multi_seed_sampler, make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
     asr_16, batched_asr_16, clean_continuation_ce,
@@ -139,6 +139,15 @@ def _word_match_stats(st: torch.Tensor, cl: torch.Tensor) -> int:
     return int(eq.all(dim=1).sum().item())
 
 
+def _tile_batch_dim(t: torch.Tensor, n_tiles: int) -> torch.Tensor:
+    """Tile (B, ...) → (n_tiles*B, ...) by repeating the WHOLE batch n_tiles times.
+    Layout: rows [0..B) are tile 0, rows [B..2B) are tile 1, … So
+    `tiled[k*B : (k+1)*B]` recovers tile k. Used by the lockstep multi-seed
+    eval to combine N sampling-seed forward passes into one (N·B, T) call
+    while keeping per-seed RNG parity (each tile uses its own Generator)."""
+    return t.repeat((n_tiles,) + (1,) * (t.dim() - 1))
+
+
 @torch.no_grad()
 def _build_baselines_per_seed(model, dep_lp: torch.Tensor, dep_attn: torch.Tensor,
                               gen_tokens: int, device: str, *,
@@ -170,28 +179,38 @@ def _build_baselines_per_seed(model, dep_lp: torch.Tensor, dep_attn: torch.Tenso
     cln_lp_dev   = cln_lp.to(device)
     cln_attn_dev = cln_attn.to(device)
 
-    clean_lsm_d: dict[int, torch.Tensor] = {}
-    clean_tok_d: dict[int, torch.Tensor] = {}
-    dep_lsm_d:   dict[int, torch.Tensor] = {}
-    for s in seeds:
-        s_int = int(s)
-        sampler = make_sampling_sampler(temperature=temperature, seed=s_int, device=device)
-        c_tok, c_lsm = generate_with_hooks(
-            model, cln_lp_dev, [], gen_tokens, sampler,
-            attention_mask=cln_attn_dev, capture_log_softmax=True,
-            lsm_on_gpu=True,
-        )
-        clean_lsm_d[s_int] = c_lsm           # GPU fp16
-        clean_tok_d[s_int] = c_tok           # GPU long
+    # Tile prompts n_tiles times along batch dim so all sampling-seed rollouts
+    # share one forward pass per side (clean / dep). Within each tile the
+    # multi-seed sampler uses the matching Generator, so per-tile RNG sequence
+    # equals what a separate `make_sampling_sampler(seed=s)` call would have
+    # produced on (B, T).
+    seeds_list = [int(s) for s in seeds]
+    n_tiles = len(seeds_list)
+    B = dep_lp.shape[0]
+    cln_lp_t   = _tile_batch_dim(cln_lp_dev,   n_tiles)
+    cln_attn_t = _tile_batch_dim(cln_attn_dev, n_tiles)
+    dep_lp_t   = _tile_batch_dim(dep_lp,       n_tiles)
+    dep_attn_t = _tile_batch_dim(dep_attn,     n_tiles)
 
-        sampler = make_sampling_sampler(temperature=temperature, seed=s_int, device=device)
-        _, d_lsm = generate_with_hooks(
-            model, dep_lp, [], gen_tokens, sampler,
-            attention_mask=dep_attn, capture_log_softmax=True,
-            lsm_on_gpu=True,
-        )
-        dep_lsm_d[s_int] = d_lsm             # GPU fp16
+    sampler = make_multi_seed_sampler(
+        temperature=temperature, seeds=seeds_list, B_per_tile=B, device=device,
+    )
+    c_tok_t, c_lsm_t = generate_with_hooks(
+        model, cln_lp_t, [], gen_tokens, sampler,
+        attention_mask=cln_attn_t, capture_log_softmax=True, lsm_on_gpu=True,
+    )
+    sampler = make_multi_seed_sampler(
+        temperature=temperature, seeds=seeds_list, B_per_tile=B, device=device,
+    )
+    _, d_lsm_t = generate_with_hooks(
+        model, dep_lp_t, [], gen_tokens, sampler,
+        attention_mask=dep_attn_t, capture_log_softmax=True, lsm_on_gpu=True,
+    )
 
+    # Per-seed views into the tiled tensors (no copy).
+    clean_lsm_d = {s: c_lsm_t[k * B : (k + 1) * B] for k, s in enumerate(seeds_list)}
+    clean_tok_d = {s: c_tok_t[k * B : (k + 1) * B] for k, s in enumerate(seeds_list)}
+    dep_lsm_d   = {s: d_lsm_t[k * B : (k + 1) * B] for k, s in enumerate(seeds_list)}
     return clean_lsm_d, clean_tok_d, dep_lsm_d
 
 
@@ -407,42 +426,55 @@ def _multi_seed_asr(
 
 @torch.no_grad()
 def _eval_steered_lockstep(
-    model, fwd_hooks,
+    model, fwd_hooks_tiled,
     eval_dep_lp, eval_dep_attn,
     clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
     gen_tokens, device, *, eval_seeds, eval_temperature,
 ) -> dict:
-    """Multi-seed lockstep eval for an intervention specified by `fwd_hooks`.
+    """Multi-seed lockstep eval — ONE tiled forward pass across all sampling seeds.
 
-    For each s in eval_seeds: generate the steered rollout at sampling seed s,
-    then compute asr / jsd_clean / jsd_pois / exact-match against the matched-
-    seed baseline (clean_*_per_seed and dep_lsm_per_seed should also be built
-    at the same s — the same seed appears on both sides of each measurement).
-    All tensors stay on GPU; the only CPU work is asr_16 decoding for regex match.
+    Internally tiles `eval_dep_lp` and `eval_dep_attn` by `len(eval_seeds)` along
+    the batch dim and runs a single `generate_with_hooks` call with a
+    `make_multi_seed_sampler`-style sampler so the forward pass is amortised
+    across all sampling-seed rollouts at once. Each tile `k` consumes its own
+    Generator (seeded `eval_seeds[k]`), so the per-tile RNG sequence matches
+    what `make_sampling_sampler(seed=eval_seeds[k])` would have drawn on a
+    (B, T) batch — i.e. per-seed RNG parity is preserved, just batched.
 
-    This is the shared evaluation core for both eval_winner (OV-channel steer
-    via attn.hook_v) and eval_downstream_baseline (additive resid-mid feature
-    ablation). It does NOT decide what fwd_hooks to use — callers pass them.
+    `fwd_hooks_tiled` MUST already have its delta tensors tiled to the same
+    (n_tiles · B, P, d_model) batch dim — the caller (eval_winner /
+    eval_downstream_baseline) builds the delta on (B, …) then tiles it before
+    constructing the hooks.
+
+    All baselines (clean_lsm/tok_per_seed, dep_lsm_per_seed) live on GPU and
+    are matched-seed views built by `_build_baselines_per_seed` from the same
+    tiled forward. JSD and exact-match math therefore runs GPU↔GPU.
     """
+    n_tiles = len(eval_seeds)
+    seeds_list = [int(s) for s in eval_seeds]
+    B = eval_dep_lp.shape[0]
+    dep_lp_t   = _tile_batch_dim(eval_dep_lp,   n_tiles)
+    dep_attn_t = _tile_batch_dim(eval_dep_attn, n_tiles)
+    sampler = make_multi_seed_sampler(
+        temperature=eval_temperature, seeds=seeds_list, B_per_tile=B, device=device,
+    )
+    st_tok_t, st_lsm_t = generate_with_hooks(
+        model, dep_lp_t, fwd_hooks_tiled, gen_tokens, sampler,
+        attention_mask=dep_attn_t, capture_log_softmax=True, lsm_on_gpu=True,
+    )
+
     asr_l: list[float] = []
     jc_l:  list[float] = []
     jp_l:  list[float] = []
     nex_l: list[int]   = []
-    B = eval_dep_lp.shape[0]
-    for s in eval_seeds:
-        s_int = int(s)
-        sampler = make_sampling_sampler(temperature=eval_temperature,
-                                        seed=s_int, device=device)
-        st_tok, st_lsm = generate_with_hooks(
-            model, eval_dep_lp, fwd_hooks, gen_tokens, sampler,
-            attention_mask=eval_dep_attn, capture_log_softmax=True,
-            lsm_on_gpu=True,
-        )
+    for k, s in enumerate(seeds_list):
+        st_tok = st_tok_t[k * B : (k + 1) * B]
+        st_lsm = st_lsm_t[k * B : (k + 1) * B]
         asr_l.append(asr_16(st_tok.cpu(), model.tokenizer))
-        jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s_int]))
-        jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s_int]))
-        nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s_int]))
-    n_seeds = len(eval_seeds)
+        jc_l.append(jsd_mean(st_lsm, clean_lsm_per_seed[s]))
+        jp_l.append(jsd_mean(st_lsm, dep_lsm_per_seed[s]))
+        nex_l.append(_word_match_stats(st_tok, clean_tok_per_seed[s]))
+    n_seeds = len(seeds_list)
     total_rows = B * n_seeds
     return {
         "asr":          sum(asr_l) / n_seeds,
@@ -495,9 +527,11 @@ def eval_downstream_baseline(
     zf = z[..., target_feature].unsqueeze(-1)      # (B, T, 1)
     delta = (-zf * W_dec[target_feature].view(1, 1, D)).to(acts.dtype)
     delta = delta * pmask.unsqueeze(-1)
-    fwd_hooks = additive_steer_hook(delta, alpha, layer_hook)
+    # Tile delta to match _eval_steered_lockstep's tiled forward pass.
+    delta_t = _tile_batch_dim(delta, len(eval_seeds))
+    fwd_hooks_tiled = additive_steer_hook(delta_t, alpha, layer_hook)
     return _eval_steered_lockstep(
-        model, fwd_hooks, eval_dep_lp, eval_dep_attn,
+        model, fwd_hooks_tiled, eval_dep_lp, eval_dep_attn,
         clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
         gen_tokens, device, eval_seeds=eval_seeds, eval_temperature=eval_temperature,
     )
@@ -539,13 +573,18 @@ def eval_winner(
                                    eval_dep_lp, eval_dep_attn, eval_dep_attn)
     h_lp  = build_hooks(cd_lp, alpha, active, W, LN1_HOOK, 0)
 
-    # ── Lockstep multi-seed mode — delegate to shared core ──
+    # ── Lockstep multi-seed mode — delegate to shared core after tiling ──
     if clean_lsm_per_seed is not None:
         assert clean_tok_per_seed is not None and dep_lsm_per_seed is not None, (
             "Lockstep mode requires all three *_per_seed dicts"
         )
+        # Tile each channel delta so the OV-channel hooks broadcast correctly
+        # across _eval_steered_lockstep's tiled (n_seeds·B, T) forward pass.
+        n_tiles = len(eval_seeds)
+        cd_lp_t = {c: _tile_batch_dim(v, n_tiles) for c, v in cd_lp.items()}
+        h_lp_t  = build_hooks(cd_lp_t, alpha, active, W, LN1_HOOK, 0)
         return _eval_steered_lockstep(
-            model, h_lp, eval_dep_lp, eval_dep_attn,
+            model, h_lp_t, eval_dep_lp, eval_dep_attn,
             clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
             gen_tokens, device,
             eval_seeds=eval_seeds, eval_temperature=eval_temperature,
