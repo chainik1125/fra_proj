@@ -63,13 +63,7 @@ def main() -> None:
     p.add_argument("--screen_alphas",    type=float, nargs="+", default=[2.0, 4.0])
     p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0])
     p.add_argument("--n_sel",            type=int,   default=100,
-                   help="Selection-split size for identification (50 dep + 50 clean "
-                        "for the Δlogp + greedy ASR screens). Canonical value is 100 — "
-                        "matches the historical setup used to identify the screenshot's "
-                        "winners. Increasing it makes the noisy Δlogp tie-break MORE "
-                        "confident in itself, which can flip the final winner to a "
-                        "feature that wins on Δlogp but is worse on the real eval "
-                        "metrics. Keep at 100 unless you have a very specific reason.")
+                   help="Selection-split size for identification.")
     p.add_argument("--n_eval",           type=int,   default=400)
     p.add_argument("--gen_tokens",       type=int,   default=16)
     p.add_argument("--eval_seeds",       type=int,   nargs="+", default=[0, 1, 2, 3, 4])
