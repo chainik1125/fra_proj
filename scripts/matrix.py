@@ -59,7 +59,11 @@ def main() -> None:
                    help="Used only by --final_selection fbf.")
     p.add_argument("--triple_k",         type=int,   default=8)
     p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0])
-    p.add_argument("--n_sel",            type=int,   default=200)
+    p.add_argument("--n_sel",            type=int,   default=100,
+                   help="Selection-split size for FBF Δlogp/ΔCE screens. Canonical "
+                        "value is 100 (50 dep + 50 clean). Larger sharpens the screens' "
+                        "confidence in their noisy proxy but doesn't improve final-eval "
+                        "metrics — see scripts/downstream_baseline.py docstring.")
     p.add_argument("--n_eval",           type=int,   default=400)
     p.add_argument("--gen_tokens",       type=int,   default=16)
     p.add_argument("--eval_seeds",       type=int,   nargs="+", default=[0, 1, 2, 3, 4])
