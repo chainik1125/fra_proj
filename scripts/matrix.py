@@ -68,6 +68,10 @@ def main() -> None:
     p.add_argument("--per_seed_targets_json", type=Path, default=None,
                    help="JSON written by scripts.downstream_baseline mapping "
                         "s{seed} → {'winner': int}. Required for --regime target.")
+    p.add_argument("--load_winners_json", type=Path, default=None,
+                   help="Load (feature, alpha) per-seed winners from a previous "
+                        "matrix output. When set, selection is skipped and only "
+                        "the full --eval_alphas sweep is run per winner.")
     p.add_argument("--target_feature",   type=int,   default=579,
                    help="Fallback target_feature when --per_seed_targets_json is not set.")
     p.add_argument("--out",              type=Path,  required=True)
@@ -139,110 +143,133 @@ def main() -> None:
 
     active = ACTIVE_CHANNELS[args.intervene]
 
+    loaded_winners: dict[int, dict] = {}
+    if args.load_winners_json is not None:
+        prev = json.loads(args.load_winners_json.read_text())
+        for r in prev["results"]:
+            loaded_winners[int(r["seed"])] = r
+        print(f"[mtx] loaded winners from {args.load_winners_json.name} — "
+              f"skipping selection, only running eval sweep for "
+              f"{list(loaded_winners.keys())}", flush=True)
+
     out_rows: list[dict] = []
     for seed in args.sae_seeds:
         sae_ln1, _ = sae_load(args.sae_ln1_dir / f"sae_ln1_s{seed}.pt", device=device)
         sae_mid, _ = sae_load(sae_mid_dir / f"sae_resid_mid_s{seed}.pt", device=device)
-        # Inject the per-seed target_feature into args (needed by get_tuples).
         args.target_feature = target_feature_per_seed[seed]
-        args.attr_for_call = args.attr   # keeps get_tuples happy
+        args.attr_for_call = args.attr
         print(f"\n[mtx] ══ seed={seed}  target_feature={args.target_feature}  "
               f"sae_mid=sae_resid_mid_s{seed}.pt ══", flush=True)
-        attr_cache: dict = {}
 
-        if args.regime == "target":
-            tuples = get_tuples(args.attr, args, model, sae_ln1, sae_mid,
-                                sel_split, sel_pmask, device, attr_cache)
+        if loaded_winners:
+            # ── Skip selection — read winner from previous matrix output ──
+            r0 = loaded_winners[int(seed)]
+            winner_feature   = int(r0["winner"]["feature"])
+            winner_alpha     = float(r0["winner"]["alpha"])
+            winner_attr_rank = int(r0["winner"].get("attr_rank", -1))
+            top_feats        = list(r0.get("top_k_features", []))
+            winner_metrics   = r0["winner"].get("metrics", {})
+            extra: dict = {k: r0[k] for k in ("jsd_sweep_rows", "rank_sweep_rows")
+                           if k in r0}
+            print(f"[mtx]   loaded winner: f={winner_feature} α={winner_alpha} "
+                  f"rank={winner_attr_rank} — eval sweep only", flush=True)
         else:
-            tuples = get_tuples_diff(args.attr, args, model, sae_ln1, W, W_O,
-                                     sel_split, sel_pmask, device, attr_cache)
-        top_feats = [int(tup[0][0]) for tup in tuples]
-        n_evals = len(tuples) * len(args.alphas)
-        print(f"[mtx]   top-{len(top_feats)}: {top_feats[:8]} ...  "
-              f"({n_evals} candidate evals if jsd-method)", flush=True)
-
-        if args.final_selection == "jsd":
-            # ── Sweep top-K × αs on eval split; pick ASR=0 → min jsd_clean. ──
-            sweep_rows: list[dict] = []
-            t0 = time.time()
-            n_done = 0
-            for ti, tup in enumerate(tuples):
-                for alpha in args.alphas:
-                    tc = time.time()
-                    m = eval_winner(
-                        model, sae_ln1, tup, alpha, active, W,
-                        eval_dep_lp, eval_dep_attn,
-                        None, args.gen_tokens, device,
-                        eval_seeds=args.eval_seeds,
-                        eval_temperature=args.eval_temperature,
-                        clean_lsm_per_seed=eval_clean_lsm_ps,
-                        clean_tok_per_seed=eval_clean_tok_ps,
-                        dep_lsm_per_seed=eval_dep_lsm_ps,
-                    )
-                    n_done += 1
-                    dt = time.time() - tc
-                    sweep_rows.append({"attr_rank": ti + 1, "feature": int(tup[0][0]),
-                                       "alpha": alpha, **m})
-                    print(f"[mtx]    [JSD {n_done:>2}/{n_evals}] rank={ti+1:>2} "
-                          f"f={tup[0][0]:>4} α={alpha:>4.1f}  asr={m['asr']:.3f}  "
-                          f"jsd_cln={m['jsd_clean']:.3f}  jsd_dep={m['jsd_pois']:.3f}  "
-                          f"exact={m['exact_match']:.3f}  ({dt:.1f}s)", flush=True)
-            print(f"[mtx]   JSD sweep done in {time.time()-t0:.1f}s", flush=True)
-            asr0 = [r for r in sweep_rows if r["asr"] == 0.0]
-            pool = asr0 if asr0 else sweep_rows
-            winner_row = min(pool, key=lambda r: (r["asr"], r["jsd_clean"]))
-            winner_feature = int(winner_row["feature"])
-            winner_alpha   = float(winner_row["alpha"])
-            winner_metrics = {k: winner_row[k] for k in (
-                "asr", "asr_per_seed", "jsd_clean", "jsd_clean_per_seed",
-                "jsd_pois", "jsd_pois_per_seed", "exact_match",
-                "n_exact_match_clean", "n_exact_match_clean_per_seed",
-                "exact_match_total_rows",
-            )}
-            winner_attr_rank = int(winner_row["attr_rank"])
-            extra = {"jsd_sweep_rows": sweep_rows}
-        else:
-            # ── rank: greedy-ASR sweep top-K × αs, min ASR → tie-break by
-            # attribution rank → smallest α. No proxy signal — trusts the
-            # attribution ranking and only needs the headline ASR. ──
-            t0 = time.time()
-            rank_rows: list[dict] = []
-            for ti, tup in enumerate(tuples):
-                for alpha in args.alphas:
-                    asr_g = batched_asr_16(
-                        model, sae_ln1, LN1_HOOK, tup, alpha, active,
-                        W, 0, eval_dep_lp, eval_dep_attn, args.gen_tokens,
-                    )
-                    rank_rows.append({"attr_rank": ti + 1,
-                                      "feature": int(tup[0][0]),
-                                      "alpha": alpha,
-                                      "greedy_asr": asr_g})
-                    print(f"[mtx]    [RANK rank={ti+1:>2}] f={tup[0][0]:>4} "
-                          f"α={alpha:>4.1f}  greedy_asr={asr_g:.3f}", flush=True)
-            print(f"[mtx]   rank greedy-ASR sweep done in {time.time()-t0:.1f}s",
-                  flush=True)
-            asr0 = [r for r in rank_rows if r["greedy_asr"] == 0.0]
-            if asr0:
-                pick = min(asr0, key=lambda r: (r["attr_rank"], r["alpha"]))
+            # ── Selection: attribution → top-K → final_selection ──
+            attr_cache: dict = {}
+            if args.regime == "target":
+                tuples = get_tuples(args.attr, args, model, sae_ln1, sae_mid,
+                                    sel_split, sel_pmask, device, attr_cache)
             else:
-                pick = min(rank_rows,
-                           key=lambda r: (r["greedy_asr"], r["attr_rank"], r["alpha"]))
-            winner_feature = int(pick["feature"])
-            winner_alpha   = float(pick["alpha"])
-            winner_attr_rank = int(pick["attr_rank"])
-            # Re-eval the winner with the canonical 4-metric lockstep eval.
-            tup_re = [(winner_feature, "V")]
-            winner_metrics = eval_winner(
-                model, sae_ln1, tup_re, winner_alpha, active, W,
-                eval_dep_lp, eval_dep_attn,
-                None, args.gen_tokens, device,
-                eval_seeds=args.eval_seeds,
-                eval_temperature=args.eval_temperature,
-                clean_lsm_per_seed=eval_clean_lsm_ps,
-                clean_tok_per_seed=eval_clean_tok_ps,
-                dep_lsm_per_seed=eval_dep_lsm_ps,
-            )
-            extra = {"rank_sweep_rows": rank_rows}
+                tuples = get_tuples_diff(args.attr, args, model, sae_ln1, W, W_O,
+                                         sel_split, sel_pmask, device, attr_cache)
+            top_feats = [int(tup[0][0]) for tup in tuples]
+            n_evals = len(tuples) * len(args.alphas)
+            print(f"[mtx]   top-{len(top_feats)}: {top_feats[:8]} ...  "
+                  f"({n_evals} candidate evals if jsd-method)", flush=True)
+
+            if args.final_selection == "jsd":
+                # Sweep top-K × αs on eval split; pick ASR=0 → min jsd_clean.
+                sweep_rows: list[dict] = []
+                t0 = time.time()
+                n_done = 0
+                for ti, tup in enumerate(tuples):
+                    for alpha in args.alphas:
+                        tc = time.time()
+                        m = eval_winner(
+                            model, sae_ln1, tup, alpha, active, W,
+                            eval_dep_lp, eval_dep_attn,
+                            None, args.gen_tokens, device,
+                            eval_seeds=args.eval_seeds,
+                            eval_temperature=args.eval_temperature,
+                            clean_lsm_per_seed=eval_clean_lsm_ps,
+                            clean_tok_per_seed=eval_clean_tok_ps,
+                            dep_lsm_per_seed=eval_dep_lsm_ps,
+                        )
+                        n_done += 1
+                        dt = time.time() - tc
+                        sweep_rows.append({"attr_rank": ti + 1,
+                                           "feature": int(tup[0][0]),
+                                           "alpha": alpha, **m})
+                        print(f"[mtx]    [JSD {n_done:>2}/{n_evals}] rank={ti+1:>2} "
+                              f"f={tup[0][0]:>4} α={alpha:>4.1f}  asr={m['asr']:.3f}  "
+                              f"jsd_cln={m['jsd_clean']:.3f}  jsd_dep={m['jsd_pois']:.3f}  "
+                              f"exact={m['exact_match']:.3f}  ({dt:.1f}s)", flush=True)
+                print(f"[mtx]   JSD sweep done in {time.time()-t0:.1f}s", flush=True)
+                asr0 = [r for r in sweep_rows if r["asr"] == 0.0]
+                pool = asr0 if asr0 else sweep_rows
+                winner_row = min(pool, key=lambda r: (r["asr"], r["jsd_clean"]))
+                winner_feature   = int(winner_row["feature"])
+                winner_alpha     = float(winner_row["alpha"])
+                winner_attr_rank = int(winner_row["attr_rank"])
+                winner_metrics   = {k: winner_row[k] for k in (
+                    "asr", "asr_per_seed", "jsd_clean", "jsd_clean_per_seed",
+                    "jsd_pois", "jsd_pois_per_seed", "exact_match",
+                    "n_exact_match_clean", "n_exact_match_clean_per_seed",
+                    "exact_match_total_rows",
+                )}
+                extra = {"jsd_sweep_rows": sweep_rows}
+            else:
+                # rank: greedy-ASR sweep top-K × αs, min ASR → tie-break by
+                # attr_rank → smallest α. No proxy signal.
+                t0 = time.time()
+                rank_rows: list[dict] = []
+                for ti, tup in enumerate(tuples):
+                    for alpha in args.alphas:
+                        asr_g = batched_asr_16(
+                            model, sae_ln1, LN1_HOOK, tup, alpha, active,
+                            W, 0, eval_dep_lp, eval_dep_attn, args.gen_tokens,
+                        )
+                        rank_rows.append({"attr_rank": ti + 1,
+                                          "feature": int(tup[0][0]),
+                                          "alpha": alpha,
+                                          "greedy_asr": asr_g})
+                        print(f"[mtx]    [RANK rank={ti+1:>2}] f={tup[0][0]:>4} "
+                              f"α={alpha:>4.1f}  greedy_asr={asr_g:.3f}",
+                              flush=True)
+                print(f"[mtx]   rank greedy-ASR sweep done in "
+                      f"{time.time()-t0:.1f}s", flush=True)
+                asr0 = [r for r in rank_rows if r["greedy_asr"] == 0.0]
+                if asr0:
+                    pick = min(asr0, key=lambda r: (r["attr_rank"], r["alpha"]))
+                else:
+                    pick = min(rank_rows,
+                               key=lambda r: (r["greedy_asr"], r["attr_rank"],
+                                              r["alpha"]))
+                winner_feature   = int(pick["feature"])
+                winner_alpha     = float(pick["alpha"])
+                winner_attr_rank = int(pick["attr_rank"])
+                tup_re = [(winner_feature, "V")]
+                winner_metrics = eval_winner(
+                    model, sae_ln1, tup_re, winner_alpha, active, W,
+                    eval_dep_lp, eval_dep_attn,
+                    None, args.gen_tokens, device,
+                    eval_seeds=args.eval_seeds,
+                    eval_temperature=args.eval_temperature,
+                    clean_lsm_per_seed=eval_clean_lsm_ps,
+                    clean_tok_per_seed=eval_clean_tok_ps,
+                    dep_lsm_per_seed=eval_dep_lsm_ps,
+                )
+                extra = {"rank_sweep_rows": rank_rows}
 
         print(f"[mtx]   WINNER f={winner_feature} α={winner_alpha}  "
               f"asr={winner_metrics['asr']:.3f}  "
