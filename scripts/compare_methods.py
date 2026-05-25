@@ -12,8 +12,14 @@ For each upstream ln1 SAE seed, for each regime (target, diff):
 Output: one JSON listing per (seed, regime) the top-K attribution feature list,
 both winners' (feature, α), and the 4 eval metrics for each.
 
-Intended usage: run twice — once with --sae_ln1_dir weights/seeds       (4k),
-once with --sae_ln1_dir weights/seeds_50k --sae_mid weights/sae_resid_mid_50k.pt (50k).
+Intended usage: run twice — once for 4k SAEs, once for 50k SAEs:
+  uv run -m scripts.compare_methods --sae_ln1_dir weights/seeds       --out results/compare_methods_4k.json
+  uv run -m scripts.compare_methods --sae_ln1_dir weights/seeds_50k   --out results/compare_methods_50k.json
+
+Per-seed downstream SAEs are loaded from --sae_mid_dir (defaults to --sae_ln1_dir).
+Target-regime attribution uses the per-seed mid paired with the upstream seed;
+the conventional-steering downstream baseline iterates over every downstream
+SAE seed × every α with the same lockstep multi-seed eval.
 """
 from __future__ import annotations
 

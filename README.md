@@ -22,7 +22,7 @@ Y-axis: Sleepers Removed (%).  Points colour-coded blue→red by steering streng
 
 ### Three stages, in order
 
-1. **Train 6 SAEs** (`scripts/train_all_saes.py`, 4 k steps). Writes `weights/seeds/sae_ln1_s{0..4}.pt` and `weights/sae_resid_mid.pt`. Idempotent — skips checkpoints that already exist.
+1. **Train 12 SAEs** (`scripts/train_all_saes_6seeds.py`, 4 k steps). Writes paired `weights/seeds/sae_ln1_s{0..5}.pt` and `weights/seeds/sae_resid_mid_s{0..5}.pt`. Idempotent — skips checkpoints that already exist. Run with `--n_steps N` for non-4k variants (output goes to `weights/seeds_{N//1000}k/`).
 2. **`scripts.feature_set_pipeline`** — attribution on the selection split → Jamie feature selection (top-20 ln1 features by head-summed, prompt-masked OV contribution) → α-sweep eval on the held-out eval split. `--eval_mode both` runs:
    - *single*: per-feature α-sweep, one feature steered at a time.
    - *set*: α-sweep on the full 20-feature set steered together (OV-only V hook, sum of per-feature deltas).

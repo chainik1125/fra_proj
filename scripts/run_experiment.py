@@ -24,7 +24,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from scripts.train_all_saes import sae_paths
+from scripts.train_all_saes_6seeds import sae_paths
 
 
 def main() -> None:
@@ -66,11 +66,12 @@ def main() -> None:
     uv = ["uv", "run"]
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
 
-    seeds_dir, mid_path = sae_paths(args.sae_steps)
+    seeds_dir = sae_paths(args.sae_steps)
+    mid_path = seeds_dir / "sae_resid_mid_s0.pt"   # legacy: per-seed-0 stands in for "shared"
 
     # 1. Train SAEs (idempotent — skips existing checkpoints).
     print(f"[run_experiment] step 1: train SAEs (n_steps={args.sae_steps})")
-    subprocess.run([*uv, "-m", "scripts.train_all_saes",
+    subprocess.run([*uv, "-m", "scripts.train_all_saes_6seeds",
                     "--n_steps", str(args.sae_steps)], check=True, env=env)
 
     # 2. Feature-set pipeline: attribution → selection → α-sweep eval.
