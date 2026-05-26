@@ -11,7 +11,7 @@ set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
 
 SAE_HF_PREFIX="${SAE_HF_PREFIX:-qwen7b/sae_ln1_l15_base_arditi}"
-FRA_HF_PREFIX="${FRA_HF_PREFIX:-qwen7b/fra_ln1_l15}"
+FRA_HF_PREFIX="${FRA_HF_PREFIX:-qwen7b/fra_ln1_l15_gaincorrected}"
 LAYER="${LAYER:-15}"
 SEEDS="${SEEDS:-42 123 456}"
 EM_MODELS="${EM_MODELS:-base medical}"   # base FIRST, then EM

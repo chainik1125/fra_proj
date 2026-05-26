@@ -98,8 +98,16 @@ class _ArditiSAEAdapter:
         if b is None:
             b = torch.zeros(self.d_in, device=w.device, dtype=w.dtype)
         self.b_dec = b.detach()
+        # RMSNorm gain γ (= blocks[L].ln1.w). The SAE was trained on the HF
+        # input_layernorm OUTPUT = (x/rms)·γ (post-gain), but TL's
+        # ln1.hook_normalized is x/rms (PRE-gain). Callers pass pre-gain acts,
+        # so encode() multiplies by γ to match the training distribution.
+        # (Diagnosed 2026-05-26: var-expl +0.63 post-gain vs −2.8 pre-gain.)
+        self._gamma = None  # set by caller after the model is loaded
 
     def encode(self, x):
+        if self._gamma is not None:
+            x = x * self._gamma
         f = self._sae.encode(x)
         # Bypass the (miscalibrated) learned threshold with exact top-k.
         if self._k and f.shape[-1] > self._k:
@@ -194,6 +202,11 @@ def main():
     print(f"[load] model loaded in {time.time()-t_start:.1f}s")
 
     sae = load_arditi_sae_from_dir(Path(args.sae_dir), device=args.device)
+    # Feed the SAE post-gain (HF input_layernorm output) activations: multiply
+    # TL's pre-gain ln1.hook_normalized by the RMSNorm gain γ = blocks[L].ln1.w.
+    gamma = model.blocks[args.layer].ln1.w.detach().float()
+    sae._gamma = gamma
+    print(f"[gamma] ln1 gain set: ||γ||={gamma.norm().item():.2f}, mean|γ|={gamma.abs().mean().item():.3f}")
 
     # ── Optional: load Arditi MC forced-choice data (eval under the FRA hooks) ──
     mc_data = None
@@ -221,13 +234,14 @@ def main():
         hn_chk = f"blocks.{args.layer}.{args.hook_point}"
         toks = model.to_tokens(prompts[:2])
         _, cache = model.run_with_cache(toks, names_filter=hn_chk)
-        acts = cache[hn_chk].float()
-        feats = sae.encode(acts)
-        recon = sae.decode(feats).float()
-        denom = (acts - acts.mean(dim=(0, 1), keepdim=True)).pow(2).mean() + 1e-8
-        fvu = (acts - recon).pow(2).mean() / denom
+        acts = cache[hn_chk].float()           # pre-gain (TL ln1.hook_normalized)
+        acts_pg = acts * gamma                 # post-gain (what the SAE expects)
+        feats = sae.encode(acts)               # adapter applies γ internally
+        recon = sae.decode(feats).float()      # reconstruction is in post-gain space
+        denom = (acts_pg - acts_pg.mean(dim=(0, 1), keepdim=True)).pow(2).mean() + 1e-8
+        fvu = (acts_pg - recon).pow(2).mean() / denom
         l0 = (feats != 0).float().sum(-1).mean()
-        print(f"[sae-check] exact-top-k: var-explained={1 - fvu.item():.3f}, "
+        print(f"[sae-check] post-gain exact-top-k: var-explained={1 - fvu.item():.3f}, "
               f"L0={l0.item():.1f}  (want var-expl>~0.5, L0≈64)", flush=True)
         del cache
     except Exception as e:
@@ -304,10 +318,12 @@ def main():
         W_dec_topk = W_dec_local[feat_indices].contiguous()  # (K, d_in)
 
         def ablate(activation, hook):
-            features = sae.encode(activation).float()
-            f_topk = features.index_select(-1, feat_indices_t)  # (B, T, K)
-            delta = (scale - 1.0) * (f_topk @ W_dec_topk)        # (B, T, d_in)
-            return (activation + delta.to(activation.dtype))
+            features = sae.encode(activation).float()            # γ applied inside
+            f_topk = features.index_select(-1, feat_indices_t)   # (B, T, K)
+            delta = (scale - 1.0) * (f_topk @ W_dec_topk)        # post-gain space
+            # activation is pre-gain (ln1.hook_normalized); map the post-gain
+            # delta back by dividing by γ so attention sees γ⊙act + scale·W_dec.
+            return (activation + (delta / gamma).to(activation.dtype))
 
         return [(hook_name, ablate)]
 
