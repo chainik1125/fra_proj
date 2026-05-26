@@ -56,12 +56,26 @@ def main() -> None:
     matrix = json.loads(args.matrix_json.read_text())
     base   = json.loads(args.baseline_json.read_text())
 
-    m_by_seed = {r["seed"]: r for r in matrix["results"]}
+    # Detect schema: legacy channel_pick.py output has results[i]["winner"]; new
+    # run_experiment.py output has flat results[i]["tuple"] + "alpha_sweep" with
+    # top-K tuples per seed (rank-1 = first row per seed).
+    rows = matrix["results"]
+    if "winner" in rows[0]:                  # legacy schema
+        m_by_seed = {r["seed"]: r for r in rows}
+        ov_sweeps = {s: m_by_seed[s]["winner"]["eval_sweep"] for s in m_by_seed}
+        ov_feats  = {s: m_by_seed[s]["winner"]["feature"]    for s in m_by_seed}
+    else:                                    # new schema — take rank-1 per seed
+        by_seed: dict[int, list] = {}
+        for r in rows:
+            by_seed.setdefault(r["seed"], []).append(r)
+        m_by_seed = {s: by_seed[s][0] for s in by_seed}   # rank-1 = first row
+        ov_sweeps = {s: m_by_seed[s]["alpha_sweep"]                    for s in m_by_seed}
+        ov_feats  = {s: int(m_by_seed[s]["tuple"][0][0])               for s in m_by_seed}
+
     sae_seeds = sorted(m_by_seed.keys())
-    first_sweep = m_by_seed[sae_seeds[0]]["winner"]["eval_sweep"]
+    first_sweep = ov_sweeps[sae_seeds[0]]
     alphas = sorted([float(k) for k in first_sweep.keys()])
 
-    ov_sweeps   = {s: m_by_seed[s]["winner"]["eval_sweep"] for s in sae_seeds}
     conv_sweeps = {s: base["per_seed"][f"s{s}"]["per_alpha"] for s in sae_seeds}
 
     legacy = {
@@ -75,8 +89,7 @@ def main() -> None:
         "configs": {
             "ov": {
                 "kind": "ov",
-                "per_seed_feature": {str(s): m_by_seed[s]["winner"]["feature"]
-                                      for s in sae_seeds},
+                "per_seed_feature": {str(s): ov_feats[s] for s in sae_seeds},
                 "per_alpha": per_alpha_for_method(ov_sweeps, sae_seeds, alphas),
             },
             "conventional": {
