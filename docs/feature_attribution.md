@@ -86,22 +86,45 @@ $$
 
 ### Enumeration over all triplets
 
-The Cartesian-product candidate heuristic (top-$K_q \times K_k \times K_v$ from per-channel marginals) is unnecessary in the diff regime. The full $d_{\mathrm{sae}}^3$ enumeration is tractable because:
-
-**Sparsity.** With a TopK SAE ($k$ active features per position), $Y_p(\mu, \nu)$ is non-zero only when $\mu, \nu$ co-fire at the same key in prompt $p$. The support of $Y$ across the batch has $\sim k^2 \cdot B \cdot T$ slots before deduplication and is typically $\ll d_{\mathrm{sae}}^2$. Only $(\mu, \nu)$ pairs in $\mathrm{supp}(Y)$ can contribute to a non-zero score.
-
-**Factored norm.** Let $S(\lambda, \mu, h) := W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top / \sqrt{d_{\mathrm{head}}}$ and $V(\nu, :, h) := W^{\mathrm{dec}}_\nu W_{OV}^h \in \mathbb{R}^{d_{\mathrm{model}}}$. Then
+Starting from the factored score above:
 
 $$
-\Big\lVert\sum_h S(\lambda, \mu, h)\,V(\nu, :, h)\Big\rVert_2^2 \;=\; \sum_{h, h'} S(\lambda, \mu, h)\,S(\lambda, \mu, h')\,G(\nu, h, h'), \qquad G(\nu, h, h') := \big\langle V(\nu, :, h),\, V(\nu, :, h')\big\rangle
+\mathrm{score}_{\mathrm{QK+OV}}(\lambda, \mu, \nu) \;=\; \Big\lVert \sum_h \underbrace{\tfrac{W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top}{\sqrt{d_{\mathrm{head}}}}}_{S(\lambda,\mu,h)\;\in\;\mathbb{R}}\,\underbrace{W^{\mathrm{dec}}_\nu W_{OV}^h}_{V(\nu,:,h)\;\in\;\mathbb{R}^{d_{\mathrm{model}}}}\,\underbrace{\big(\mathbb{E}_{p \sim \mathrm{dep}}[Z^q_p\,Y_p] - \mathbb{E}_{p \sim \mathrm{cln}}[Z^q_p\,Y_p]\big)}_{D(\lambda,\mu,\nu)\;\in\;\mathbb{R}}\Big\rVert_2
 $$
 
-avoiding any $d_{\mathrm{sae}}^3 \times d_{\mathrm{model}}$ materialization. $S$ is $(d_{\mathrm{sae}}, d_{\mathrm{sae}}, n_{\mathrm{heads}})$ and $G$ is $(d_{\mathrm{sae}}, n_{\mathrm{heads}}, n_{\mathrm{heads}})$.
+$D$ is a scalar and does not depend on $h$, so it factors out of the norm:
 
-**Algorithm.**
+$$
+\mathrm{score} \;=\; |D(\lambda, \mu, \nu)|\;\cdot\;\Big\lVert\sum_h S(\lambda, \mu, h)\,V(\nu, :, h)\Big\rVert_2
+$$
 
-1. *Sparse $Y$*: for each $(p, k)$, iterate the $\le k$ firing features $F_{p,k}$; for each $\mu, \nu \in F_{p,k}$ accumulate $Y[(p, \mu, \nu)] \mathrel{+}= f_k^\mu f_k^\nu$.
-2. *Data factor*: for each $(\mu, \nu) \in \mathrm{supp}(Y)$, compute $D[\lambda, \mu, \nu] = \sum_p \mathrm{sign}_p\, Z^q_p(\lambda)\, Y_p(\mu, \nu)$ as a $(d_{\mathrm{sae}},)$ vector over $\lambda$.
-3. *Score*: for each $(\lambda, \mu, \nu)$ with $D \neq 0$, evaluate $\mathrm{score} = \sqrt{\sum_{h, h'} S(\lambda, \mu, h)\,S(\lambda, \mu, h')\,G(\nu, h, h')} \cdot |D[\lambda, \mu, \nu]|$. Track running top-$K$.
+Squaring the remaining norm and using $\lVert\sum_h s_h v_h\rVert_2^2 = \sum_{h, h'} s_h\,s_{h'}\,\langle v_h, v_{h'}\rangle$:
 
-Compute is dominated by step 2 (a sparse contraction over $\mathrm{supp}(Y) \times d_{\mathrm{sae}}$); the entire procedure runs in seconds on a single GPU and replaces `generate_triplet_candidates` in the diff regime.
+$$
+\Big\lVert\sum_h S(\lambda, \mu, h)\,V(\nu, :, h)\Big\rVert_2^2 \;=\; \sum_{h, h'} S(\lambda, \mu, h)\,S(\lambda, \mu, h')\,G(\nu, h, h'), \qquad G(\nu, h, h') := \langle V(\nu, :, h),\, V(\nu, :, h')\rangle
+$$
+
+The $d_{\mathrm{model}}$-dimensional vectors $V(\nu, :, h)$ collapse into the small per-feature head-Gram $G$. The bookkeeping shapes are now all tractable:
+
+| tensor | shape | size at $d_{\mathrm{sae}}{=}1536,\, d_{\mathrm{model}}{=}128,\, n_{\mathrm{heads}}{=}4$ |
+|---|---|---|
+| $S(\lambda, \mu, h)$ | $(d_{\mathrm{sae}}, d_{\mathrm{sae}}, n_{\mathrm{heads}})$ | 38 MB fp32 |
+| $G(\nu, h, h')$ | $(d_{\mathrm{sae}}, n_{\mathrm{heads}}, n_{\mathrm{heads}})$ | 100 KB |
+| $Y_p(\mu, \nu)$ | $(B, d_{\mathrm{sae}}, d_{\mathrm{sae}})$ | $\le$ 1.9 GB |
+| $D(\lambda, \mu, \nu)$ | $(d_{\mathrm{sae}}, d_{\mathrm{sae}}, d_{\mathrm{sae}})$ | 14 GB (chunk over $\lambda$) |
+
+Only $D$ is at the full $d_{\mathrm{sae}}^3$ scale, and it factorises as a $\lambda$-chunked contraction:
+
+$$
+D[\lambda, \mu, \nu] = \sum_p \mathrm{sign}_p\,Z^q_p(\lambda)\,Y_p(\mu, \nu), \qquad \mathrm{sign}_p = \begin{cases} +1/N_{\mathrm{dep}} & p\in\mathrm{dep} \\ -1/N_{\mathrm{cln}} & p\in\mathrm{cln}\end{cases}
+$$
+
+**Algorithm** (per `sleeper/attribution.py:rank_qk_plus_ov_diff_all`):
+
+1. Precompute $S(\lambda, \mu, h)$, $G(\nu, h, h')$, and $Y_p(\mu, \nu) = \sum_k f_k^\mu f_k^\nu$.
+2. For each $\lambda$-chunk of size $c$:
+   - $D_c[\lambda, \mu, \nu] = \mathrm{einsum}(\texttt{"p}\lambda\texttt{,p}\mu\nu \to \lambda\mu\nu\texttt{"},\, \mathrm{sign}\cdot Z^q[:, \lambda_c],\, Y_p)$  — shape $(c, d_{\mathrm{sae}}, d_{\mathrm{sae}})$
+   - $\mathrm{norm}^2_c[\lambda, \mu, \nu] = \mathrm{einsum}(\texttt{"}\lambda\mu h\texttt{,}\lambda\mu h'\texttt{,}\nu h h' \to \lambda\mu\nu\texttt{"},\, S[\lambda_c],\, S[\lambda_c],\, G)$
+   - $\mathrm{score}_c = \sqrt{\mathrm{norm}^2_c} \cdot |D_c|$ — take the top-$K$ within the chunk, merge with the running top-$K$.
+
+The full $d_{\mathrm{sae}}^3 \times d_{\mathrm{model}}$ weight tensor is never materialised. Compute is dominated by the $D_c$ contraction; the whole enumeration runs in ${\sim}10$s on a single A40 and replaces `generate_triplet_candidates` plus the per-channel marginals heuristic in the diff regime.
