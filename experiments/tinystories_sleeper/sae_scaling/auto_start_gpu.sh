@@ -13,6 +13,8 @@ set -uo pipefail
 
 HF_REPO="${HF_REPO:-dmanningcoe/sae-scaling-tinystories-sleeper}"
 ALPHAS="${ALPHAS:--20 -8 -4 -2 0 2 4 6 8 12 16 20}"
+D_SAES="${D_SAES:-1536 3072 6144}"   # widths for this run (override e.g. "12288 24576")
+UPLOAD_FINAL_CKPTS="${UPLOAD_FINAL_CKPTS:-0}"  # 1 → push step-50k .pt to HF (for Fisher follow-up)
 BRANCH="${BRANCH:-dmitry/sae-scaling-sweep}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 export HF_TOKEN
@@ -44,14 +46,31 @@ python -c "import torch,transformer_lens;print('[gpu] env ok torch',torch.__vers
 # Producers save checkpoints LOCAL only (--no_hf): the co-located consumer is
 # the SOLE HF uploader, via batched single-commit folder uploads, to stay under
 # HF's 128-commits/hour cap. All HF ops are non-fatal.
-python -u -m scripts.train_sae_scaling --hookpoint ln1       --seed "$SEED" --no_hf \
+python -u -m scripts.train_sae_scaling --hookpoint ln1       --seed "$SEED" --no_hf --d_saes $D_SAES \
     > /workspace/train_ln1.log 2>&1 &
-python -u -m scripts.train_sae_scaling --hookpoint resid_mid --seed "$SEED" --no_hf \
+python -u -m scripts.train_sae_scaling --hookpoint resid_mid --seed "$SEED" --no_hf --d_saes $D_SAES \
     > /workspace/train_resid.log 2>&1 &
-python -u -m scripts.eval_poll --seed "$SEED" --hf_repo "$HF_REPO" --alphas $ALPHAS \
+python -u -m scripts.eval_poll --seed "$SEED" --hf_repo "$HF_REPO" --alphas $ALPHAS --d_saes $D_SAES \
     > /workspace/eval.log 2>&1 &
 wait
 echo "[gpu] $(date +%H:%M:%S) seed=$SEED ALL PROCESSES EXITED"
+
+# Optionally persist the converged (step-50k) checkpoints to HF so the Fisher
+# follow-up can run on the exact same SAEs without retraining (non-fatal).
+if [ "$UPLOAD_FINAL_CKPTS" = "1" ]; then
+  python - <<PY 2>&1 | tail -3
+import glob, os
+from huggingface_hub import HfApi
+api = HfApi(token=os.environ["HF_TOKEN"])
+for f in sorted(glob.glob("/workspace/sae_scaling_out/sae_checkpoints/*/seed*/d*/step50000.pt")):
+    rel = f.replace("/workspace/sae_scaling_out/", "")
+    try:
+        api.upload_file(path_or_fileobj=f, path_in_repo=rel, repo_id="$HF_REPO", repo_type="dataset")
+        print("uploaded", rel)
+    except Exception as e:
+        print("WARN upload failed", rel, e)
+PY
+fi
 
 if [ "${SELF_STOP:-0}" = "1" ] && [ -n "${RUNPOD_API_KEY:-}" ] && [ -n "${RUNPOD_POD_ID:-}" ]; then
   curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
