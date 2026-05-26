@@ -83,3 +83,25 @@ The weight factors are prompt-independent and $\sum_{q,k} f_q^\lambda f_k^\mu f_
 $$
 \mathrm{score}_{\mathrm{QK+OV}}(\lambda, \mu, \nu) \;=\; \Big\lVert \sum_h \tfrac{W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top}{\sqrt{d_{\mathrm{head}}}}\,W^{\mathrm{dec}}_\nu W_{OV}^h \cdot \big(\mathbb{E}_{p \sim \mathrm{dep}}[Z^q_p Y_p] - \mathbb{E}_{p \sim \mathrm{cln}}[Z^q_p Y_p]\big)\Big\rVert_2, \qquad Y_p(\mu, \nu) := \sum_k f_k^\mu\,f_k^\nu
 $$
+
+### Enumeration over all triplets
+
+The Cartesian-product candidate heuristic (top-$K_q \times K_k \times K_v$ from per-channel marginals) is unnecessary in the diff regime. The full $d_{\mathrm{sae}}^3$ enumeration is tractable because:
+
+**Sparsity.** With a TopK SAE ($k$ active features per position), $Y_p(\mu, \nu)$ is non-zero only when $\mu, \nu$ co-fire at the same key in prompt $p$. The support of $Y$ across the batch has $\sim k^2 \cdot B \cdot T$ slots before deduplication and is typically $\ll d_{\mathrm{sae}}^2$. Only $(\mu, \nu)$ pairs in $\mathrm{supp}(Y)$ can contribute to a non-zero score.
+
+**Factored norm.** Let $S(\lambda, \mu, h) := W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top / \sqrt{d_{\mathrm{head}}}$ and $V(\nu, :, h) := W^{\mathrm{dec}}_\nu W_{OV}^h \in \mathbb{R}^{d_{\mathrm{model}}}$. Then
+
+$$
+\Big\lVert\sum_h S(\lambda, \mu, h)\,V(\nu, :, h)\Big\rVert_2^2 \;=\; \sum_{h, h'} S(\lambda, \mu, h)\,S(\lambda, \mu, h')\,G(\nu, h, h'), \qquad G(\nu, h, h') := \big\langle V(\nu, :, h),\, V(\nu, :, h')\big\rangle
+$$
+
+avoiding any $d_{\mathrm{sae}}^3 \times d_{\mathrm{model}}$ materialization. $S$ is $(d_{\mathrm{sae}}, d_{\mathrm{sae}}, n_{\mathrm{heads}})$ and $G$ is $(d_{\mathrm{sae}}, n_{\mathrm{heads}}, n_{\mathrm{heads}})$.
+
+**Algorithm.**
+
+1. *Sparse $Y$*: for each $(p, k)$, iterate the $\le k$ firing features $F_{p,k}$; for each $\mu, \nu \in F_{p,k}$ accumulate $Y[(p, \mu, \nu)] \mathrel{+}= f_k^\mu f_k^\nu$.
+2. *Data factor*: for each $(\mu, \nu) \in \mathrm{supp}(Y)$, compute $D[\lambda, \mu, \nu] = \sum_p \mathrm{sign}_p\, Z^q_p(\lambda)\, Y_p(\mu, \nu)$ as a $(d_{\mathrm{sae}},)$ vector over $\lambda$.
+3. *Score*: for each $(\lambda, \mu, \nu)$ with $D \neq 0$, evaluate $\mathrm{score} = \sqrt{\sum_{h, h'} S(\lambda, \mu, h)\,S(\lambda, \mu, h')\,G(\nu, h, h')} \cdot |D[\lambda, \mu, \nu]|$. Track running top-$K$.
+
+Compute is dominated by step 2 (a sparse contraction over $\mathrm{supp}(Y) \times d_{\mathrm{sae}}$); the entire procedure runs in seconds on a single GPU and replaces `generate_triplet_candidates` in the diff regime.
