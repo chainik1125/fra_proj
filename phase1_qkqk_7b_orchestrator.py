@@ -112,6 +112,29 @@ def load_arditi_sae_from_dir(sae_dir: Path, device: str = "cuda") -> _ArditiSAEA
     return ad
 
 
+@torch.no_grad()
+def mc_forced_choice_under_hooks(model, mc_data, hooks):
+    """Arditi's single-token forced-choice MC eval, run UNDER the given FRA
+    fwd_hooks. For each MC item: one forward (batch=1, no padding → TL-safe),
+    last-token log-softmax, then sum P over the misaligned / aligned / A / B
+    label-token sets. Mirrors phase1_arditi_mc_peritem._process_batch_peritem
+    but on the TL model so the qk→qk / ov hooks apply during the forward."""
+    mc_prompts, mis_toks, ali_toks, a_set, b_set = mc_data
+    dev = model.cfg.device
+    rows = []
+    for prompt, mis, ali in zip(mc_prompts, mis_toks, ali_toks):
+        toks = prompt if hasattr(prompt, "dim") else torch.tensor(prompt)
+        toks = toks.to(dev)
+        if toks.dim() == 1:
+            toks = toks.unsqueeze(0)
+        logits = model.run_with_hooks(toks, fwd_hooks=hooks, return_type="logits")
+        lp = torch.log_softmax(logits[0, -1, :].float(), dim=-1)
+        ex = lambda S: float(sum(torch.exp(lp[t]).item() for t in S))
+        rows.append({"p_a": ex(a_set), "p_b": ex(b_set),
+                     "p_mis": ex(mis), "p_ali": ex(ali)})
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--em-model", default="medical", choices=list(EM_MODELS_7B))
@@ -135,6 +158,11 @@ def main():
     p.add_argument("--temperature", type=float, default=1.0)
     p.add_argument("--device", default="cuda")
     p.add_argument("--output-root", required=True)
+    p.add_argument("--mc-eval", action="store_true",
+                   help="Also run Arditi's single-token forced-choice MC eval UNDER each "
+                        "FRA hook condition (saves mc_FRA_*.json with per-item P(mis)/P(ali)/P(A)/P(B)).")
+    p.add_argument("--osemf-root", default="/workspace/osemf",
+                   help="safety-research/open-source-em-features checkout (for MC questions + label tokens).")
     args = p.parse_args()
 
     out_root = Path(args.output_root); out_root.mkdir(parents=True, exist_ok=True)
@@ -154,6 +182,25 @@ def main():
     print(f"[load] model loaded in {time.time()-t_start:.1f}s")
 
     sae = load_arditi_sae_from_dir(Path(args.sae_dir), device=args.device)
+
+    # ── Optional: load Arditi MC forced-choice data (eval under the FRA hooks) ──
+    mc_data = None
+    mc_results = []
+    if args.mc_eval:
+        try:
+            sys.path.insert(0, args.osemf_root)
+            from open_source_em_features.data.mc_questions import (
+                create_mc_prompts, _get_letter_token_set,
+            )
+            mcp, mis_toks, ali_toks = create_mc_prompts(tokenizer)
+            a_set = _get_letter_token_set(tokenizer, "A")
+            b_set = _get_letter_token_set(tokenizer, "B")
+            mc_data = (mcp, mis_toks, ali_toks, a_set, b_set)
+            print(f"[mc-eval] loaded {len(mcp)} MC items  (A toks {a_set}, B toks {b_set})")
+        except Exception as e:
+            print(f"[mc-eval WARN] could not load MC data ({type(e).__name__}: {e}); "
+                  f"skipping MC eval", flush=True)
+            mc_data = None
 
     # ── Rank features (FRA, multi-prompt) ─────────────────────────────
     from fra.em_evaluation import rank_features_multi_prompt
@@ -271,12 +318,35 @@ def main():
                     "em_model": args.em_model,
                     "eval_seed_base": args.eval_seed,
                 })
+            # MC forced-choice under the SAME FRA hooks (non-fatal: a bug here
+            # must never lose the proven free-form generations above).
+            if mc_data is not None:
+                try:
+                    t_mc = time.time()
+                    rows = mc_forced_choice_under_hooks(model, mc_data, hooks)
+                    mc_results.append({
+                        "scale": float(scale), "condition": cond_name,
+                        "em_model": args.em_model, "eval_seed_base": args.eval_seed,
+                        "per_item": rows,
+                    })
+                    print(f"      mc-eval {cond_name}: {len(rows)} items {time.time()-t_mc:.1f}s", flush=True)
+                except Exception as e:
+                    print(f"      [mc-eval WARN] {cond_name}: {type(e).__name__}: {e}", flush=True)
             torch.cuda.empty_cache()
     print(f"[gen] total {time.time()-t_gen:.1f}s")
 
     out_path = out_root / f"qualitative_FRA_{args.em_model}_evalseed{args.eval_seed}.json"
     out_path.write_text(json.dumps(qualitative, indent=2, ensure_ascii=False))
     print(f"\n[save] {out_path}  ({len(qualitative)} entries)")
+
+    if mc_data is not None:
+        mc_path = out_root / f"mc_FRA_{args.em_model}_evalseed{args.eval_seed}.json"
+        mc_path.write_text(json.dumps({
+            "em_model": args.em_model, "eval_seed_base": args.eval_seed,
+            "layer": args.layer, "head": args.head, "sae_id": sae_id,
+            "results": mc_results,
+        }, indent=2))
+        print(f"[save] {mc_path}  ({len(mc_results)} conditions)")
     print(f"=== TOTAL stream time: {time.time()-t_start:.1f}s ===")
 
 
