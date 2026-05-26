@@ -175,15 +175,15 @@ def rank_ov_diff(
 ) -> dict[str, torch.Tensor]:
     """Target-free OV feature ranking (diff regime).
 
-    No downstream target direction needed. For each ln1 SAE feature λ:
+    Per ``docs/feature_attribution.md``. For each ln1 SAE feature λ:
 
         M[b,h,q,λ]   = Σ_k A[b,h,q,k] · z[b,k,λ]
         diff_M[h,λ]   = mean_{b∈dep, q∈qm}[M] - mean_{b∈cln, q∈qm}[M]
         diff_vec[λ]   = Σ_h diff_M[h,λ] · (W_dec[λ] @ W_OV^h)   ∈ R^d_model
         score[λ]      = ‖diff_vec[λ]‖₂
 
-    Contrast with the target regime where score[λ] = diff_vec[λ] · d (signed
-    scalar projection onto a downstream direction d).
+    Heads sum as vectors before norming so that opposing-direction
+    contributions cancel.
     """
     device = A.device
     A = A.float()
@@ -242,7 +242,7 @@ def rank_qk_diff(
     attention logit contribution difference between deployment and clean prompts.
     No softmax Jacobian approximation needed (works directly on logits).
 
-        QK_total[λ_q,λ_k] = Σ_h (W_dec@W_Q^h)[λ_q] · (W_dec@W_K^h)[λ_k]
+        QK_total[λ_q,λ_k] = (1/√d_head) Σ_h (W_dec@W_Q^h)[λ_q] · (W_dec@W_K^h)[λ_k]
         Z_q[b,λ]  = Σ_{q∈qm} z[b,q,λ]       (query-side aggregate)
         Z_k[b,λ]  = Σ_{s∈km} z[b,s,λ]       (key-side aggregate)
         score[λ_q,λ_k] = |QK_total[λ_q,λ_k]| · |mean_dep[Z_q·Z_k] - mean_cln[Z_q·Z_k]|
@@ -270,7 +270,8 @@ def rank_qk_diff(
     W_dec = sae_ln1.W_dec.detach().to(device).float()   # (d_sae, d_model)
     Q_feats = torch.einsum("fd,hde->hfe", W_dec, W_Q_)  # (n_heads, d_sae, d_head)
     K_feats = torch.einsum("fd,hde->hfe", W_dec, W_K_)  # (n_heads, d_sae, d_head)
-    QK_total = torch.einsum("hfd,hgd->fg", Q_feats, K_feats)  # (d_sae, d_sae)
+    d_head = W_Q_.shape[-1]
+    QK_total = torch.einsum("hfd,hgd->fg", Q_feats, K_feats) / (d_head ** 0.5)  # (d_sae, d_sae)
 
     score = (QK_total * diff_outer).abs()               # (d_sae, d_sae)
     flat  = torch.argsort(score.flatten(), descending=True)
@@ -282,6 +283,80 @@ def rank_qk_diff(
         "top_pairs_k": flat %  d_sae,
         "QK_total":    QK_total,
         "diff_outer":  diff_outer,
+    }
+
+
+@torch.no_grad()
+def rank_qk_plus_ov_diff(
+    z_ln1: torch.Tensor,           # (B, T, d_sae)
+    sae_ln1: TopKSAE,
+    W_Q: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_K: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_V: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_O: torch.Tensor,             # (n_heads, d_head, d_model)
+    is_deployment: torch.Tensor,   # (B,) bool
+    triplets: torch.Tensor,        # (N, 3) int — [λ, μ, ν] triplets to score
+    query_mask: torch.Tensor | None = None,   # (B, T) bool — Q-side (carries λ)
+    key_mask:   torch.Tensor | None = None,   # (B, T) bool — K-side (carries μ and ν)
+) -> dict[str, torch.Tensor]:
+    """Target-free QK+OV triplet ranking (diff regime).
+
+    Per ``docs/feature_attribution.md``. For each triplet (λ, μ, ν):
+
+        weight_h[h,λ,μ,ν,:] = (1/√d_head) · (W_dec[λ] W_QK^h W_dec[μ]^T) · (W_dec[ν] W_OV^h)  ∈ R^d_model
+        Z_q[p, λ]           = Σ_{q∈qm} z[p, q, λ]
+        Y[p, μ, ν]          = Σ_{k∈km} z[p, k, μ] · z[p, k, ν]
+        diff[λ,μ,ν]         = mean_{p∈dep}[Z_q · Y] - mean_{p∈cln}[Z_q · Y]
+        score[λ,μ,ν]        = ‖ diff · Σ_h weight_h ‖₂
+
+    Heads sum as vectors before norming so opposing-direction contributions
+    cancel. Full d_sae³ enumeration is infeasible; pass a candidate list
+    (e.g. the Cartesian product of single-channel top-K rankings).
+    """
+    device = z_ln1.device
+    z = z_ln1.float()
+    is_dep = is_deployment.to(device).bool()
+
+    qm = query_mask.to(device).float().unsqueeze(-1) if query_mask is not None else None
+    km = key_mask.to(device).float().unsqueeze(-1)   if key_mask  is not None else None
+
+    Z_q = (z * qm).sum(dim=1) if qm is not None else z.sum(dim=1)          # (B, d_sae)
+    z_k = (z * km) if km is not None else z                                 # (B, T, d_sae)
+
+    W_dec = sae_ln1.W_dec.detach().to(device).float()                       # (d_sae, d_model)
+    W_Q_ = W_Q.to(device).float(); W_K_ = W_K.to(device).float()
+    W_V_ = W_V.to(device).float(); W_O_ = W_O.to(device).float()
+    Q_feats = torch.einsum("fd,hde->hfe", W_dec, W_Q_)                      # (n_heads, d_sae, d_head)
+    K_feats = torch.einsum("fd,hde->hfe", W_dec, W_K_)                      # (n_heads, d_sae, d_head)
+    W_OV    = torch.einsum("hmd,hde->hme", W_V_, W_O_)                      # (n_heads, d_model, d_model)
+    W_OV_feats = torch.einsum("fd,hde->hfe", W_dec, W_OV)                   # (n_heads, d_sae, d_model)
+    d_head = W_Q_.shape[-1]
+
+    lams = triplets[:, 0].to(device).long()
+    mus  = triplets[:, 1].to(device).long()
+    nus  = triplets[:, 2].to(device).long()
+
+    # weight_vec[i, :] = (1/√d_head) Σ_h (Q_feats[h, λ_i] · K_feats[h, μ_i]) · W_OV_feats[h, ν_i, :]
+    qk_pair_per_head = (Q_feats[:, lams, :] * K_feats[:, mus, :]).sum(dim=-1)  # (n_heads, N)
+    weight_vec = torch.einsum("hn,hnd->nd",
+                              qk_pair_per_head, W_OV_feats[:, nus, :]) / (d_head ** 0.5)  # (N, d_model)
+
+    # data[p, i] = Z_q[p, λ_i] · Σ_k z[p, k, μ_i] · z[p, k, ν_i]
+    Y_per_prompt = (z_k[:, :, mus] * z_k[:, :, nus]).sum(dim=1)                # (B, N)
+    data = Z_q[:, lams] * Y_per_prompt                                          # (B, N)
+
+    N_dep = is_dep.sum().clamp(min=1).float()
+    N_cln = (~is_dep).sum().clamp(min=1).float()
+    diff = data[is_dep].sum(dim=0) / N_dep - data[~is_dep].sum(dim=0) / N_cln   # (N,)
+
+    score = (diff.unsqueeze(-1) * weight_vec).norm(dim=-1)                     # (N,)
+
+    return {
+        "score":       score,
+        "top_indices": torch.argsort(score, descending=True),
+        "triplets":    triplets,
+        "weight_vec":  weight_vec,
+        "diff":        diff,
     }
 
 

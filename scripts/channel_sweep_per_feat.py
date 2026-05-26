@@ -6,7 +6,7 @@ ONE winner per seed via selection-split ASR, we evaluate EVERY top-K tuple
 JSD(steered, clean). Output makes it easy to ask: "is there a non-top-1 single
 feature with ASR≈0 and lower JSD than the top-1 winner?"
 
-Reuses helpers from scripts.matrix_sweep so attribution / eval semantics are
+Reuses helpers from scripts.channel_sweep so attribution / eval semantics are
 identical (LN1_HOOK, JSD_CLEAN_SEED, clean rollout seed, etc.).
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ from sleeper.model import (
 )
 from sleeper.sae import load as sae_load
 
-from scripts.matrix_sweep import (
+from scripts.channel_sweep import (
     JSD_CLEAN_SEED, _build_clean_lsm, _multi_seed_asr,
     eval_winner, get_tuples, get_tuples_diff,
 )
@@ -32,7 +32,8 @@ from scripts.matrix_sweep import (
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--regime",          choices=["target", "diff"], default="diff")
+    p.add_argument("--regime",          choices=["target", "diff"], default="diff",
+                   help=argparse.SUPPRESS)  # target is a hidden OV-only legacy option
     p.add_argument("--seeds",          type=int,   nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--sae_mid",        type=Path,  default=Path("weights/sae_resid_mid.pt"),
                    help="Downstream resid_mid SAE (only used with --regime target).")
@@ -47,11 +48,15 @@ def main() -> None:
     p.add_argument("--gen_tokens",     type=int,   default=16)
     p.add_argument("--eval_seeds",     type=int,   nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
-    p.add_argument("--attr",      choices=["ov", "qk", "qk+ov"], default="ov")
-    p.add_argument("--intervene", choices=["ov", "qk", "qk+ov"], default="ov")
-    p.add_argument("--out",            type=Path,  default=Path("results/matrix_per_feat.json"))
+    p.add_argument("--channel",   choices=["ov", "qk", "qk+ov"], default="ov",
+                   help="Paired attribution × intervention channel: "
+                        "ov={V}, qk={Q,K}, qk+ov={Q,K,V}.")
+    p.add_argument("--out",            type=Path,  default=Path("results/channel_per_feat.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
+    args.attr = args.intervene = args.channel
+    if args.regime == "target" and args.channel != "ov":
+        p.error("--regime target is only supported for --channel ov")
 
     device  = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model   = load_sleeper_model(device=device)

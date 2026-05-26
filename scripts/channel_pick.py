@@ -35,7 +35,7 @@ from sleeper.model import (
 from sleeper.metrics import batched_asr_16, clean_continuation_ce
 from sleeper.sae import load as sae_load
 
-from scripts.matrix_sweep import (
+from scripts.channel_sweep import (
     LN1_HOOK,
     _build_baselines_per_seed, _multi_seed_asr,
     eval_winner, get_tuples, get_tuples_diff,
@@ -49,10 +49,12 @@ def main() -> None:
     p.add_argument("--sae_mid_dir",      type=Path,  default=None,
                    help="Defaults to --sae_ln1_dir.")
     p.add_argument("--sae_seeds",        type=int,   nargs="+", default=[0, 1, 2, 3, 4, 5])
-    p.add_argument("--regime",           choices=["target", "diff"], required=True)
+    p.add_argument("--regime",           choices=["target", "diff"], default="diff",
+                   help=argparse.SUPPRESS)  # target is a hidden OV-only legacy option
     p.add_argument("--final_selection",  choices=["jsd", "rank"],    required=True)
-    p.add_argument("--attr",             choices=["ov", "qk", "ov+qk", "qk+ov"], default="ov")
-    p.add_argument("--intervene",        choices=["ov", "qk", "ov+qk", "qk+ov"], default="ov")
+    p.add_argument("--channel",          choices=["ov", "qk", "qk+ov"], default="ov",
+                   help="Paired attribution × intervention channel: "
+                        "ov={V}, qk={Q,K}, qk+ov={Q,K,V}.")
     p.add_argument("--top_k",            type=int,   default=20)
     p.add_argument("--triple_k",         type=int,   default=8)
     p.add_argument("--alphas",           type=float, nargs="+", default=[2.0, 4.0],
@@ -77,12 +79,10 @@ def main() -> None:
     p.add_argument("--out",              type=Path,  required=True)
     p.add_argument("--device",           default=None)
     args = p.parse_args()
-    # Normalize alias
-    if args.attr == "ov+qk":
-        args.attr = "qk+ov"
-    if args.intervene == "ov+qk":
-        args.intervene = "qk+ov"
-    cell = f"{args.attr}×{args.intervene}"
+    args.attr = args.intervene = args.channel
+    if args.regime == "target" and args.channel != "ov":
+        p.error("--regime target is only supported for --channel ov")
+    cell = args.channel
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model  = load_sleeper_model(device=device)

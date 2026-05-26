@@ -37,7 +37,7 @@ import torch
 
 from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
-    rank_ov_diff, rank_qk_diff,
+    rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff,
 )
 from sleeper.hooks import (
     ACTIVE_CHANNELS, additive_steer_hook, build_hooks, generate_with_hooks,
@@ -351,9 +351,8 @@ def get_tuples_diff(attr, args, model, sae_ln1, W, W_O, attr_split, attr_pmask, 
       top-k unique K features from K-side of top pairs, paired positionally.
 
     QK+OV diff:
-      Product-of-marginals triplet ranking. Per-feature Q and K marginal scores from
-      max over the joint QK pair score matrix. Triplet score: q_marg[μ]·k_marg[ν]·v[λ].
-      No Möbius decomposition or target direction required.
+      Candidate triplets from top-K of (QK Q-marginal, QK K-marginal, OV) scores;
+      each triplet scored with rank_qk_plus_ov_diff per docs/feature_attribution.md.
     """
     _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
 
@@ -374,20 +373,23 @@ def get_tuples_diff(attr, args, model, sae_ln1, W, W_O, attr_split, attr_pmask, 
         n = min(len(q_feats), len(k_feats), args.top_k)
         return [[(q_feats[i], "Q"), (k_feats[i], "K")] for i in range(n)]
 
-    # qk+ov: product-of-marginals scoring over top-K^3 candidates
-    qk_score_mat = cache["qk_diff"]["score"].cpu()  # (d_sae, d_sae)
-    q_marginal = qk_score_mat.max(dim=1).values      # (d_sae,) — max over K-side per Q feat
-    k_marginal = qk_score_mat.max(dim=0).values      # (d_sae,) — max over Q-side per K feat
-
+    # qk+ov: rank_qk_plus_ov_diff over top-K^3 candidates from per-channel marginals
+    qk_score_mat = cache["qk_diff"]["score"].cpu()
+    q_marginal = qk_score_mat.max(dim=1).values
+    k_marginal = qk_score_mat.max(dim=0).values
     cands = generate_triplet_candidates(
         q_marginal, k_marginal, ov_score,
         args.triple_k, args.triple_k, args.triple_k,
     )
-    q_idx = cands[:, 0]; k_idx = cands[:, 1]; v_idx = cands[:, 2]
-    trip_scores = q_marginal[q_idx] * k_marginal[k_idx] * ov_score[v_idx]
-    top = torch.argsort(trip_scores, descending=True)[:args.top_k].tolist()
-    selected = [(int(cands[i, 0]), int(cands[i, 1]), int(cands[i, 2])) for i in top]
-    return [[(mu, "Q"), (nu, "K"), (lam, "V")] for (mu, nu, lam) in selected]
+    # generate_triplet_candidates returns (N, 3) in (Q, K, V) column order
+    ranked = rank_qk_plus_ov_diff(
+        cache["z_ln1"], sae_ln1, W["Q"], W["K"], W["V"], W_O,
+        attr_split.is_deployment.to(device), cands.to(device),
+        query_mask=attr_pmask.to(device), key_mask=attr_pmask.to(device),
+    )
+    top = ranked["top_indices"].cpu().tolist()[:args.top_k]
+    return [[(int(cands[i, 0]), "Q"), (int(cands[i, 1]), "K"), (int(cands[i, 2]), "V")]
+            for i in top]
 
 
 # ---------------------------------------------------------------------------
@@ -664,9 +666,8 @@ def eval_winner(
 @torch.no_grad()
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--regime",          choices=["target", "diff"], default="target",
-                   help="Attribution regime: 'target' (needs downstream SAE) or "
-                        "'diff' (target-free dep-vs-clean difference).")
+    p.add_argument("--regime",          choices=["target", "diff"], default="diff",
+                   help=argparse.SUPPRESS)  # target is a hidden OV-only legacy option
     p.add_argument("--seeds",          type=int,   nargs="+", default=[1, 2, 3, 4])
     p.add_argument("--sae_mid",        type=Path,  default=Path("weights/sae_resid_mid.pt"),
                    help="Downstream resid_mid SAE (only used with --regime target).")
@@ -684,13 +685,16 @@ def main():
                    help="sampling seeds for held-out eval ASR (Ketan-style multi-seed average).")
     p.add_argument("--eval_temperature", type=float, default=1.0,
                    help="temperature for held-out eval ASR sampling (no top_p/top_k truncation).")
-    p.add_argument("--attr",      choices=["ov", "qk", "qk+ov"], default="ov",
-                   help="Attribution method: ov | qk | qk+ov (joint triple).")
-    p.add_argument("--intervene", choices=["ov", "qk", "qk+ov"], default="ov",
-                   help="Intervention channels: ov={V}, qk={Q,K}, qk+ov={Q,K,V}.")
-    p.add_argument("--out",            type=Path,  default=Path("results/matrix_sweep.json"))
+    p.add_argument("--channel",   choices=["ov", "qk", "qk+ov"], default="ov",
+                   help="Paired attribution × intervention channel: "
+                        "ov={V}, qk={Q,K}, qk+ov={Q,K,V}. Attribution and "
+                        "intervention always use the same channel.")
+    p.add_argument("--out",            type=Path,  default=Path("results/channel_sweep.json"))
     p.add_argument("--device",         default=None)
     args = p.parse_args()
+    args.attr = args.intervene = args.channel
+    if args.regime == "target" and args.channel != "ov":
+        p.error("--regime target is only supported for --channel ov")
 
     device  = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model   = load_sleeper_model(device=device)
