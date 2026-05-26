@@ -14,9 +14,12 @@ it, and fixing each is itself a result:
    bimodal (≈0 or ≈100), SD ≈ 30, so a single generation is uninformative and
    the error on a mean is **30/√n**. → Measure this noise floor at every
    steering point and only believe effects that clear ~2×SE.
-3. **We have never actually measured FRA.** What earlier runs called "QK→QK"
-   was QK-attribution features steered *conventionally* (additive). → Measure
-   the real routings: qk→qk, qk→ov, ov→ov.
+3. **First proper FRA measurement is now done.** What earlier runs called
+   "QK→QK" was QK-attribution features steered *conventionally* (additive). The
+   real routings (qk→qk / qk→ov / ov→ov) are now measured on a **verified-good**
+   ln1 SAE: on EM the OV-routing recipes lead (qk→ov 14, ov→ov 10) over qk→qk
+   (7) in coherent behaviour — but seed variance is large. → Firm up with more
+   seeds; keep measuring all routings.
 4. **The conventional-SAE baseline used 50 features at once;** the standard is
    single-feature. → Redo it single-feature.
 
@@ -84,22 +87,45 @@ bimodal metric.
 Source: `experiments/wang_steering_7b/PREREGISTRATION_n64.md`;
 data `qwen7b/wang_L15_resid_post{,_n32,_n64}/`.
 
-## 3. We have not yet measured FRA — and "QK→QK" was mislabelled
+## 3. FRA is now measured — and "QK→QK" was previously mislabelled
 
 Earlier runs reported "QK→QK", but that was QK-attribution features steered
-*conventionally* (additive at the residual), not a QK→QK intervention. The first
-run of the genuine FRA routings —
+*conventionally* (additive at the residual), not a QK→QK intervention. The
+genuine FRA routings are now measured on a **verified-good** ln1 SAE:
 
 - **qk→qk**: rescale top-QK features at `ln1.hook_normalized`
 - **qk→ov**: write top-QK features through W_V at `attn.hook_v`
 - **ov→ov**: write top-OV features through W_V
 
-— is the ln1 run in `experiments/fra_ln1_7b/RESULTS.md`. Its numbers are
-provisional: the ln1 SAE it used reconstructs poorly (variance-explained ≈
-−3.36), so a proper retrain is in progress before we trust them.
+**Corrected-SAE comparison (n=3 seeds), free-form Δcoh70 and MC Δmisaligned-%:**
 
-**Do:** measure all three routings on a working SAE; stop calling
-QK-attribution-steered-conventionally "QK→QK".
+| recipe | Δcoh70 base | Δcoh70 EM | MC% base | MC% EM |
+|---|---:|---:|---:|---:|
+| qk→qk | 7.3 ± 4.8 | 7.3 ± 6.5 | 0.2 | 4.9 |
+| qk→ov | 4.8 ± 0.4 | **14.1 ± 4.9** | 0.0 | 0.0 |
+| ov→ov | 3.8 ± 1.7 | **10.4 ± 9.8** | 0.0 | 0.0 |
+
+Reading: on EM the **OV-routing recipes carry the coherent free-form effect**
+(qk→ov 14, ov→ov 10) over qk→qk (7); the **MC forced-choice moves only for
+qk→qk** (it perturbs the whole residual at ln1) — the recipe-specific version
+of the metric disagreement in §1.
+
+Two essential caveats (don't skip these):
+- **The SAE had to be used correctly first.** It first read as broken
+  (var-explained −3.36) because FRA fed it TL's pre-gain `ln1.hook_normalized`
+  while it was trained on the post-gain HF `input_layernorm` output =
+  (x/rms)·γ. After multiplying by γ (=`ln1.w`), var-explained ≈ 0.50 and its
+  reconstruction matches Arditi's published resid_post SAE (52% vs 51% residual
+  error). The γ fix alone moved qk→qk on EM from **1.9 → 7.3** — so FRA numbers
+  are only trustworthy on a verified SAE.
+- **Seed variance is large** (±5–10 on the EM effects at n=3) — the recipe
+  ordering is suggestive, not established.
+
+**Do:** keep measuring all routings; add seeds to firm up the ordering; always
+verify SAE reconstruction before trusting steering numbers.
+
+Full table + SAE-quality detail: `experiments/fra_ln1_7b/RESULTS.md`;
+data `qwen7b/fra_ln1_l15_gaincorrected/`.
 
 ## 4. The conventional-SAE baseline used the wrong granularity
 

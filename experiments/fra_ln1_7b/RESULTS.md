@@ -1,53 +1,67 @@
-# FRA-at-ln1 on Qwen-2.5-7B — overnight run (2026-05-26)
+# FRA-at-ln1 on Qwen-2.5-7B — results (corrected SAE), 2026-05-26
 
 End-to-end: trained an Arditi-style BatchTopK SAE at **ln1.hook_normalized**
-(L15, k=64, d_sae=131072, 100M tokens) on base Qwen-2.5-7B-Instruct, then ran
-the 4 FRA recipes (baseline / qk→qk / qk→ov / ov→ov) on **base then EM-medical**,
-3 eval seeds, scored with **both** protocols: our free-form GPT-4o judge
-(Δcoh70) and Arditi's single-token forced-choice MC (Δ misaligned-choice %),
-the MC eval run *under the FRA hooks*.
+(L15, k=64, d_sae=131072, 100M tokens) on base Qwen-2.5-7B-Instruct, ran the 4
+FRA recipes (baseline / qk→qk / qk→ov / ov→ov) on **base then EM-medical**, 3
+seeds, scored with **both** protocols: free-form GPT-4o Δcoh70 and Arditi
+single-token forced-choice MC (run under the FRA hooks).
 
-## Comparison (n=3 seeds)
+## SAE is sound (after the γ fix)
+
+The SAE first looked broken (var-explained −3.36) — but that was a **usage bug**,
+not the SAE. It was trained on the HF `input_layernorm` OUTPUT = (x/rms)·γ
+(post-gain), while the FRA hooks fed TL's `ln1.hook_normalized` = x/rms
+(pre-gain). Feeding it the post-gain activation (×γ = `blocks[L].ln1.w`) gives
+**var-explained ≈ 0.50**. Quality vs Arditi's published resid_post SAE:
+
+| SAE | avg % residual error | loss recovered | native L0 |
+|---|---:|---:|---:|
+| ours — ln1 L15 | **52.1%** | n/a (degenerate, see below) | 58 |
+| Arditi — published resid_post L15 | **51.0%** | 0.506 | 11,148 |
+
+- **Reconstruction is on par** with Arditi's published SAE (~51–52% residual error).
+- **Loss-recovered doesn't transfer to ln1**: zero-ablating `ln1.hook_normalized`
+  at one layer barely moves loss (3.82→3.76), so the ratio is meaningless; it's
+  only interpretable at resid-stream hookpoints (resid_post: 0.51).
+- Both SAEs' native eval-thresholds are miscalibrated in our TL usage (Arditi's
+  resid_post L0=11,148 is driven by outlier-norm/BOS tokens his training filtered
+  out); we force exact top-k=64, so this doesn't affect the metrics above.
+
+## The comparison (corrected SAE, n=3 seeds)
 
 MC baseline misaligned-choice: base 3.1% · medical 3.2%.
 
 | recipe | free-form Δcoh70 base | free-form Δcoh70 medical | MC Δmisalign% base | MC Δmisalign% medical |
 |---|---:|---:|---:|---:|
-| qk→qk | 8.1 ± 2.9 | 3.8 ± 2.7 | 46.7 ± 0.0 | 43.5 ± 0.0 |
-| qk→ov | 3.1 ± 0.6 | 14.0 ± 13.5 | 0.0 | 0.1 |
-| ov→ov | 4.0 ± 1.9 | 8.3 ± 9.5 | 0.0 | 1.0 |
+| qk→qk | 7.3 ± 4.8 | 7.3 ± 6.5 | 0.2 | 4.9 |
+| qk→ov | 4.8 ± 0.4 | **14.1 ± 4.9** | 0.0 | 0.0 |
+| ov→ov | 3.8 ± 1.7 | **10.4 ± 9.8** | 0.0 | 0.0 |
 
-## Findings (provisional — see caveats)
+## Findings
 
-1. **The two metrics disagree, and mechanistically should.** qk→qk perturbs
-   ln1 (the whole residual feeding attention) → huge single-token MC shift
-   (~47%) but small *coherent* free-form effect (3.8 on EM). The OV recipes
-   tweak one head's value → ~0 MC shift but the larger *coherent* free-form
-   effect on EM (qk→ov 14, ov→ov 8). So **single-token forced-choice rewards
-   gross residual perturbation; coherence-gated free-form rewards the
-   localized OV intervention.** Same MC-vs-free-form gap seen in the earlier
-   Arditi work.
-2. On EM-medical the **OV-routing recipes carry the coherent misalignment
-   signal** (qk→ov 14, ov→ov 8 vs qk→qk 3.8) — but with **huge seed variance**
-   (±13.5, ±9.5) at n=3.
+1. **The γ fix materially changed qk→qk.** On EM it went **1.9 → 7.3** between
+   the broken and corrected SAE (qk→ov and ov→ov barely moved: 14.0→14.1,
+   8.3→10.4). qk→qk is the recipe most dependent on the SAE encode + decoder
+   (it adds Σ f·W_dec back at ln1), so it was the one the scale bug corrupted.
+   Lesson: always gate FRA on a verified-good SAE.
+2. **On EM, the OV-routing recipes lead** (qk→ov 14.1, ov→ov 10.4) over qk→qk
+   (7.3) in coherent free-form behaviour — but seed variance is large (±5–10),
+   so treat the ordering as suggestive, not established.
+3. **The two metrics disagree, recipe-specifically.** MC forced-choice moves
+   only for qk→qk (medical 4.9%, base 0.2%) and is ~0 for the OV recipes; the
+   coherent free-form metric is the opposite (OV recipes largest). qk→qk
+   perturbs the whole residual at ln1 → big single-token MC shift; OV recipes
+   tweak one head's value → no MC shift but a real coherent free-form effect.
+4. **Base stays modest** (3.8–7.3) — near-ceiling aligned, as expected.
 
-## ⚠️ Caveats (must resolve before trusting magnitudes)
+## ⚠️ Caveats
+- Seed variance is large at n=3 (±5–10 on the EM effects); these clear ~2×SE
+  only marginally. More seeds (or samples) needed to firm up the recipe ordering.
+- Head fixed at 0 (head-ablation argmax loss_delta on base); not re-picked on EM.
 
-- **SAE reconstruction is poor:** even after forcing exact top-k (L0=64), the
-  ln1 SAE has var-explained ≈ **−3.36** on real activations (reconstruction
-  ~2× off-scale). Almost certainly an **activation-norm-factor mismatch** —
-  the SAE trained on Arditi's normalized activations, the FRA hooks feed raw
-  ln1.hook_normalized. The FRA delta-form recipes are robust-by-design to a
-  lossy SAE (so the *relative* recipe comparison is informative), but absolute
-  magnitudes, α-calibration, and feature interpretability are **not trustworthy
-  yet**. Fix = recover/apply the norm factor (likely a retrain). **← morning decision.**
-- MC qk→qk effect saturates at extreme α (std 0.0 = same saturated value every
-  seed), so the 47% is "perturbed into the misaligned token," not coherent EM.
-- Medical free-form OV effects: seed std ≈ mean → treat as directional only.
-- Head = 0 (head-ablation argmax loss_delta on base); not re-picked on EM.
-
-## Repro / data
-- SAE: `qwen7b/sae_ln1_l15_base_arditi/` (HF). FRA outputs +
-  combined: `qwen7b/fra_ln1_l15/` (HF).
-- Scripts: `experiments/fra_ln1_7b/{train_sae,launch_train,run_fra,launch_fra}.sh`,
-  `phase1_qkqk_7b_orchestrator.py --mc-eval`.
+## Data / repro (HF `dmanningcoe/fra-phase1-steering-data`)
+- corrected FRA: `qwen7b/fra_ln1_l15_gaincorrected/` (qualitative + mc + combined)
+- broken-usage run (reference): `qwen7b/fra_ln1_l15/`
+- SAE: `qwen7b/sae_ln1_l15_base_arditi/` (+ `diag_result.json`, `sae_quality_cmp.json`)
+- scripts: `experiments/fra_ln1_7b/{train_sae,run_fra,diagnose,measure_sae}.sh`,
+  `phase1_qkqk_7b_orchestrator.py --mc-eval`
