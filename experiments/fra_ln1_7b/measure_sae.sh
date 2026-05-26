@@ -58,10 +58,10 @@ def measure(label, sae_dir, hook, use_gamma):
         f,nat=enc(a); natl0.append(nat)
         r=sae.decode(f).float()
         rel.append(((tgt-r).norm(dim=-1)/(tgt.norm(dim=-1)+1e-8)).mean().item()*100)
-        def pr(act,h):
+        def pr(act,hook):
             ff,_=enc(act.float()); rr=sae.decode(ff).float()
             return (rr/g if g is not None else rr).to(act.dtype)
-        def pz(act,h): return torch.zeros_like(act)
+        def pz(act,hook): return torch.zeros_like(act)
         lo.append(model(toks, return_type="loss").item())
         lr.append(model.run_with_hooks(toks, return_type="loss", fwd_hooks=[(hook,pr)]).item())
         lz.append(model.run_with_hooks(toks, return_type="loss", fwd_hooks=[(hook,pz)]).item())
