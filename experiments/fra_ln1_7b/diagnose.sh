@@ -26,6 +26,7 @@ export SAE_DIR=$(dirname "$(find /workspace/sae_dl -name ae.pt | head -1)")
 echo "[diag] SAE_DIR=$SAE_DIR"
 python3 -u - <<'PY'
 import torch, os
+torch.set_grad_enabled(False)
 from pathlib import Path
 from dictionary_learning.utils import load_dictionary
 from transformers import AutoModelForCausalLM
@@ -47,9 +48,10 @@ a_tl=cache["blocks.15.ln1.hook_normalized"].float()
 # (B) HF input_layernorm output (what Arditi's buffer trained on)
 captured={}
 def hook(mod,inp,out): captured["x"]=out.detach().float()
+hf.to("cpu")  # keep HF on CPU — TL already holds the GPU copy; avoid 2x7B OOM
 h=hf.model.layers[15].input_layernorm.register_forward_hook(hook)
-hf.to("cuda"); hf(toks.to("cuda")); h.remove()
-a_hf=captured["x"]
+hf(toks.to("cpu")); h.remove()
+a_hf=captured["x"].to("cuda")
 def recon_fvu(a):
     f=sae.encode(a)
     if f.shape[-1]>k:
