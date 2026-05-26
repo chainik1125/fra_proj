@@ -32,6 +32,8 @@ $$
 \mathrm{score}_{\mathrm{OV}}(\lambda) \;=\; \Big\lVert \sum_h \big(\mathbb{E}_{p \sim \mathrm{dep}}[M^h_p(\lambda)] - \mathbb{E}_{p \sim \mathrm{cln}}[M^h_p(\lambda)]\big)\,W^{\mathrm{dec}}_\lambda W_{OV}^h \Big\rVert_2, \qquad M^h_p(\lambda) := \sum_{q, k} A^h_{qk}\,f_k^\lambda
 $$
 
+**Intervention.** For a selected feature $\lambda$ (tagged $V$): patch `hook_v` at prompt positions with $-\alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda$ projected per head through $W_V^h$. $Q$ and $K$ are untouched so the attention pattern is frozen — only the V-writes at $\lambda$'s firing positions change. Implemented via `ov_only_steer_hook` (a thin wrapper over `channel_steer_hook`) in `sleeper/hooks.py`.
+
 ## QK channel
 
 Single $(q,k)$, head $h$, prompt $p$, feature pair $(\lambda, \mu)$ — contribution to $s^h_{qk}$:
@@ -58,6 +60,8 @@ $$
 \mathrm{score}_{\mathrm{QK}}(\lambda, \mu) \;=\; \bigg|\underbrace{\sum_h \frac{W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top}{\sqrt{d_{\mathrm{head}}}}}_{\mathrm{QK}_{\mathrm{total}}(\lambda,\mu)} \cdot \big(\mathbb{E}_{p \sim \mathrm{dep}}[Z^q_p Z^k_p] - \mathbb{E}_{p \sim \mathrm{cln}}[Z^q_p Z^k_p]\big)\bigg|, \qquad Z^q_p(\lambda) := \sum_q f_q^\lambda, \quad Z^k_p(\mu) := \sum_k f_k^\mu
 $$
 
+**Intervention.** For a selected pair $(\lambda, \mu)$ tagged $(Q, K)$: patch `hook_q` with $-\alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda W_Q^h$ at $\lambda$'s firing positions, and `hook_k` with $-\alpha\, f_t^\mu\, W^{\mathrm{dec}}_\mu W_K^h$ at $\mu$'s firing positions. The two sides are patched independently — no co-firing requirement, matching the score's factored $Z^q_p(\lambda)\,Z^k_p(\mu)$ form. $V$ is untouched, so the attention pattern recomputes with the modified $Q$ and $K$ while V-writes are bit-identical to the clean forward.
+
 ## QK+OV channel
 
 Single $(q,k)$, head $h$, prompt $p$, triplet $(\lambda, \mu, \nu)$ — QK pair logit weight times OV vector write at the same key:
@@ -83,3 +87,5 @@ The weight factors are prompt-independent and $\sum_{q,k} f_q^\lambda f_k^\mu f_
 $$
 \mathrm{score}_{\mathrm{QK+OV}}(\lambda, \mu, \nu) \;=\; \Big\lVert \sum_h \tfrac{W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top}{\sqrt{d_{\mathrm{head}}}}\,W^{\mathrm{dec}}_\nu W_{OV}^h \cdot \big(\mathbb{E}_{p \sim \mathrm{dep}}[Z^q_p Y_p] - \mathbb{E}_{p \sim \mathrm{cln}}[Z^q_p Y_p]\big)\Big\rVert_2, \qquad Y_p(\mu, \nu) := \sum_k f_k^\mu\,f_k^\nu
 $$
+
+**Intervention.** For a triplet $(\lambda, \mu, \nu)$: patch `hook_q` at $\lambda$'s firing positions, patch `hook_k` at $\mu$'s firing positions **only where $\nu$ also fires**, and patch `hook_v` at $\nu$'s firing positions **only where $\mu$ also fires**. The same-key co-firing gate on $K$ and $V$ matches the $Y_p(\mu, \nu)$ factor in the score — without it, a triple whose attribution is exactly zero (no same-key co-firing) could still produce a non-trivial intervention from independent per-channel patches. Implemented in `_build_qkov_triplet_deltas`, routed via `resolve_channel_deltas` when `active_channels = {Q, K, V}` with exactly one feature per channel.
