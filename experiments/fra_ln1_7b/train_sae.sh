@@ -28,6 +28,19 @@ terminate_self() {
         https://api.runpod.io/graphql >/dev/null
 }
 
+# On ANY error: print diagnostics and SLEEP (do NOT exit) so the container is
+# not restarted into a loop and /workspace/run.log survives for SSH triage.
+# (2026-05-25: a gated-dataset failure restart-looped the A100, truncating the
+# log each cycle. Never again.)
+on_err() {
+    echo "[$(date -u +%H:%M:%S)] [FAIL] bootstrap errored (line ${BASH_LINENO[0]}). Diagnostics:"
+    nvidia-smi 2>/dev/null | tail -15 || true
+    dmesg 2>/dev/null | grep -i "oom\|killed process" | tail -5 || true
+    echo "[$(date -u +%H:%M:%S)] === keeping pod ALIVE for debug (no restart) ==="
+    sleep infinity
+}
+trap on_err ERR
+
 DRIVER_MAJOR=""
 for i in 1 2 3 4 5 6; do
     DRIVER_MAJOR=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1)
@@ -50,7 +63,8 @@ cd fra_proj
 git fetch origin && git checkout "$BRANCH" && git pull --ff-only
 echo "[$(date -u +%H:%M:%S)] git HEAD: $(git rev-parse HEAD)"
 
-export HF_HOME=/workspace/.hf_cache PYTHONUNBUFFERED=1 PIP_CACHE_DIR=/workspace/.pip_cache HF_TOKEN="$HF_TOKEN"
+export HF_HOME=/workspace/.hf_cache PYTHONUNBUFFERED=1 PIP_CACHE_DIR=/workspace/.pip_cache
+export HF_TOKEN="$HF_TOKEN" HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"   # datasets reads the latter for gated loads
 mkdir -p "$PIP_CACHE_DIR"
 echo "[$(date -u +%H:%M:%S)] pip installs"
 pip install --no-input --break-system-packages -r requirements.txt 2>&1 | tail -2
@@ -58,6 +72,17 @@ pip install --no-input --break-system-packages datasets transformers 'huggingfac
 pip install --no-input --break-system-packages --force-reinstall --no-deps \
     torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -2
 python3 -c "import torch; assert torch.cuda.is_available(); print(f'torch={torch.__version__} cuda={torch.version.cuda} dev={torch.cuda.get_device_name(0)}')"
+
+# Cache the HF token so Arditi's load_dataset(...) (no explicit token=) can pull
+# the gated lmsys/lmsys-chat-1m chat split. Fail fast with a clear message if the
+# account lacks access, rather than crashing 30s into model load.
+echo "[$(date -u +%H:%M:%S)] HF login + gated-dataset access pre-check"
+python3 -c "
+from huggingface_hub import login, HfApi
+login(token='$HF_TOKEN', add_to_git_credential=False)
+HfApi(token='$HF_TOKEN').dataset_info('lmsys/lmsys-chat-1m')
+print('  lmsys/lmsys-chat-1m access OK')
+"
 
 echo "[$(date -u +%H:%M:%S)] === TRAIN: ln1 L${HOOK_LAYER} SAE (Arditi code) ==="
 python3 -u fra/train_sae_arditi.py \
@@ -90,4 +115,5 @@ for f in root.rglob('*'):
         print('  →', f'$HF_PREFIX/{rel}', flush=True)
 "
 echo "[$(date -u +%H:%M:%S)] === DONE — self-terminate ==="
+trap - ERR   # clean success path: don't let a flaky terminate curl trigger the sleep-forever trap
 terminate_self
