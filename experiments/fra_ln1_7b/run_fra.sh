@@ -49,6 +49,8 @@ mkdir -p "$PIP_CACHE_DIR"
 pip install --no-input --break-system-packages -r requirements.txt 2>&1 | tail -2
 pip install --no-input --break-system-packages -U 'transformer_lens>=3.0,<4.0' 2>&1 | tail -2
 pip install --no-input --break-system-packages 'dictionary_learning' peft 2>&1 | tail -2
+# osemf MC-data import chain deps (mc_questions import pulls these via the package __init__)
+pip install --no-input --break-system-packages h5py python-dotenv anthropic matplotlib 2>&1 | tail -2
 pip install --no-input --break-system-packages --force-reinstall --no-deps \
     torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -2
 python3 -c "import torch; assert torch.cuda.is_available(); print('torch', torch.__version__)"
@@ -90,8 +92,10 @@ echo "[$(date -u +%H:%M:%S)] selected HEAD=$HEAD"
 for EM in $EM_MODELS; do
   for SEED in $SEEDS; do
     HF_API="https://huggingface.co/api/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/$FRA_HF_PREFIX/${EM}_seed${SEED}"
-    if curl -sS -H "Authorization: Bearer $HF_TOKEN" "$HF_API" 2>/dev/null | grep -q "qualitative_FRA_${EM}_evalseed${SEED}.json"; then
-        echo "[$(date -u +%H:%M:%S)] $EM seed $SEED already on HF — skip"; continue
+    # Skip only when BOTH protocols are done (mc_FRA is written last); this lets a
+    # re-run fill in the MC pass for seeds that only have the free-form file.
+    if curl -sS -H "Authorization: Bearer $HF_TOKEN" "$HF_API" 2>/dev/null | grep -q "mc_FRA_${EM}_evalseed${SEED}.json"; then
+        echo "[$(date -u +%H:%M:%S)] $EM seed $SEED already complete (free-form + MC) on HF — skip"; continue
     fi
     OUT="/workspace/fra_${EM}_seed${SEED}"; mkdir -p "$OUT"
     echo "[$(date -u +%H:%M:%S)] === FRA sweep ($EM, seed=$SEED, head=$HEAD) ==="
