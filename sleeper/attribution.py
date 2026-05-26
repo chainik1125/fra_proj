@@ -175,7 +175,7 @@ def rank_ov_diff(
 ) -> dict[str, torch.Tensor]:
     """Target-free OV feature ranking (diff regime).
 
-    Per ``docs/feature_attribution.md``. For each ln1 SAE feature λ:
+    Per ``docs/fra_write_up.md``. For each ln1 SAE feature λ:
 
         M[b,h,q,λ]   = Σ_k A[b,h,q,k] · z[b,k,λ]
         diff_M[h,λ]   = mean_{b∈dep, q∈qm}[M] - mean_{b∈cln, q∈qm}[M]
@@ -301,7 +301,7 @@ def rank_qk_plus_ov_diff(
 ) -> dict[str, torch.Tensor]:
     """Target-free QK+OV triplet ranking (diff regime).
 
-    Per ``docs/feature_attribution.md``. For each triplet (λ, μ, ν):
+    Per ``docs/fra_write_up.md``. For each triplet (λ, μ, ν):
 
         weight_h[h,λ,μ,ν,:] = (1/√d_head) · (W_dec[λ] W_QK^h W_dec[μ]^T) · (W_dec[ν] W_OV^h)  ∈ R^d_model
         Z_q[p, λ]           = Σ_{q∈qm} z[p, q, λ]
@@ -377,7 +377,7 @@ def rank_qk_plus_ov_diff_all(
 ) -> dict[str, torch.Tensor]:
     """Diff-regime QK+OV triplet ranking enumerated over all d_sae^3 triplets.
 
-    Per ``docs/feature_attribution.md``:
+    Per ``docs/fra_write_up.md``:
 
         Y[p, μ, ν]  = Σ_{k∈km} z[p,k,μ] · z[p,k,ν]
         D[λ, μ, ν]  = Σ_p sign_p · Z_q[p, λ] · Y[p, μ, ν]      (sign_p = ±1/N_dep|cln)
