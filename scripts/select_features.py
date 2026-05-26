@@ -28,7 +28,7 @@ import torch
 
 from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
-    rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff,
+    rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
 from sleeper.eval import LN1_HOOK, PAT_HOOK, sweep_tuples_greedy
 from sleeper.hooks import ACTIVE_CHANNELS
@@ -38,7 +38,6 @@ from sleeper.model import (
     load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
 )
 from sleeper.sae import encode_all, load as sae_load
-from sleeper.triple_attribution import generate_triplet_candidates
 
 
 # ---------------------------------------------------------------------------
@@ -135,23 +134,16 @@ def _get_tuples_diff(channel, args, model, sae_ln1, W, W_O, attr_split, attr_pma
         n = min(len(q_feats), len(k_feats), args.top_k)
         return [[(q_feats[i], "Q"), (k_feats[i], "K")] for i in range(n)]
 
-    # qk+ov: cross-product candidates from per-channel marginals, ranked by rank_qk_plus_ov_diff
-    qk_score_mat = cache["qk_diff"]["score"].cpu()
-    q_marginal = qk_score_mat.max(dim=1).values
-    k_marginal = qk_score_mat.max(dim=0).values
-    ov_score   = cache["ov_diff"]["score"].cpu()
-    cands = generate_triplet_candidates(
-        q_marginal, k_marginal, ov_score,
-        args.triple_k, args.triple_k, args.triple_k,
-    )
-    ranked = rank_qk_plus_ov_diff(
+    # qk+ov: full d_sae^3 enumeration over all triplets, top-K by joint score
+    ranked = rank_qk_plus_ov_diff_all(
         cache["z_ln1"], sae_ln1, W["Q"], W["K"], W["V"], W_O,
-        attr_split.is_deployment.to(device), cands.to(device),
+        attr_split.is_deployment.to(device),
+        top_k=args.top_k,
         query_mask=attr_pmask.to(device), key_mask=attr_pmask.to(device),
     )
-    top = ranked["top_indices"].cpu().tolist()[: args.top_k]
-    return [[(int(cands[i, 0]), "Q"), (int(cands[i, 1]), "K"), (int(cands[i, 2]), "V")]
-            for i in top]
+    trips = ranked["triplets"]
+    return [[(int(trips[i, 0]), "Q"), (int(trips[i, 1]), "K"), (int(trips[i, 2]), "V")]
+            for i in range(trips.shape[0])]
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +166,7 @@ def _all_tuples(channel: str, d_sae: int) -> list[list[tuple]]:
     n = d_sae ** 3
     if n > _ALL_MODE_WARN_THRESHOLD:
         print(f"[select-features] WARN: --mode all for qk+ov = {n:,} triplets — "
-              f"likely intractable. Consider --mode topk with --top_k / --triple_k.")
+              f"likely intractable. Consider --mode topk with --top_k.")
     return [[(λ, "Q"), (μ, "K"), (ν, "V")]
             for λ in range(d_sae) for μ in range(d_sae) for ν in range(d_sae)]
 
@@ -211,7 +203,6 @@ def select_features(
     sae_seeds: list[int],
     mode: str = "topk",
     top_k: int = 20,
-    triple_k: int = 8,
     final_selection: str = "min-asr",   # only consulted when mode == "winner"
     alphas: list[float] | None = None,   # selection-phase α for winner mode
     n_sel: int = 200,
@@ -263,7 +254,7 @@ def select_features(
 
     # Wrapper namespace for the _get_tuples_* helpers (they read .top_k etc).
     ns = SimpleNamespace(
-        top_k=top_k, triple_k=triple_k, target_feature=target_feature,
+        top_k=top_k, target_feature=target_feature,
         alphas=alphas or [2.0, 4.0], gen_tokens=gen_tokens,
     )
 
@@ -299,7 +290,7 @@ def select_features(
         "mode":     mode,
         "config":   {
             "sae_dir": str(sae_dir), "sae_seeds": list(sae_seeds),
-            "top_k": top_k, "triple_k": triple_k,
+            "top_k": top_k,
             "final_selection": final_selection if mode == "winner" else None,
             "alphas": alphas if mode == "winner" else None,
             "n_sel": n_sel,
@@ -317,7 +308,6 @@ def main() -> None:
     p.add_argument("--sae_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--mode",      choices=["all", "topk", "winner"], default="topk")
     p.add_argument("--top_k",     type=int, default=20)
-    p.add_argument("--triple_k",  type=int, default=8)
     p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr",
                    help="Winner-picking method (only used with --mode winner).")
     p.add_argument("--alphas",    type=float, nargs="+", default=[2.0, 4.0],
@@ -335,7 +325,7 @@ def main() -> None:
     out_dict = select_features(
         channel=args.channel, regime=args.regime,
         sae_dir=args.sae_dir, sae_seeds=args.sae_seeds,
-        mode=args.mode, top_k=args.top_k, triple_k=args.triple_k,
+        mode=args.mode, top_k=args.top_k,
         final_selection=args.final_selection, alphas=args.alphas,
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,

@@ -360,6 +360,100 @@ def rank_qk_plus_ov_diff(
     }
 
 
+@torch.no_grad()
+def rank_qk_plus_ov_diff_all(
+    z_ln1: torch.Tensor,           # (B, T, d_sae)
+    sae_ln1: TopKSAE,
+    W_Q: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_K: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_V: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_O: torch.Tensor,             # (n_heads, d_head, d_model)
+    is_deployment: torch.Tensor,   # (B,) bool
+    *,
+    top_k: int = 20,
+    query_mask: torch.Tensor | None = None,   # (B, T) bool
+    key_mask:   torch.Tensor | None = None,   # (B, T) bool
+    chunk_size: int = 64,
+) -> dict[str, torch.Tensor]:
+    """Diff-regime QK+OV triplet ranking enumerated over all d_sae^3 triplets.
+
+    Per ``docs/feature_attribution.md``:
+
+        Y[p, μ, ν]  = Σ_{k∈km} z[p,k,μ] · z[p,k,ν]
+        D[λ, μ, ν]  = Σ_p sign_p · Z_q[p, λ] · Y[p, μ, ν]      (sign_p = ±1/N_dep|cln)
+        S[λ, μ, h]  = (W_dec[λ] W_Q^h)(W_dec[μ] W_K^h)^T / √d_head
+        V[ν, :, h]  = W_dec[ν] W_OV^h
+        G[ν, h, h'] = ⟨V[ν, :, h], V[ν, :, h']⟩
+        score[λ, μ, ν] = √(Σ_{h,h'} S[λ,μ,h] S[λ,μ,h'] G[ν,h,h']) · |D[λ, μ, ν]|
+
+    Returns the top-K (λ, μ, ν) triplets by score. Chunked over λ to bound peak
+    memory; the full enumeration replaces the Cartesian-product candidate
+    heuristic (`generate_triplet_candidates` + per-channel marginals).
+    """
+    device = z_ln1.device
+    z = z_ln1.float()
+    d_sae = z.shape[-1]
+    is_dep = is_deployment.to(device).bool()
+
+    qm = query_mask.to(device).float().unsqueeze(-1) if query_mask is not None else None
+    km = key_mask.to(device).float().unsqueeze(-1)   if key_mask  is not None else None
+
+    Z_q = (z * qm).sum(dim=1) if qm is not None else z.sum(dim=1)            # (B, d_sae)
+    z_k = (z * km) if km is not None else z                                    # (B, T, d_sae)
+
+    # Y[p, μ, ν] = Σ_k z_k[p, k, μ] · z_k[p, k, ν]   — same-key co-firing per prompt
+    Y_per_prompt = torch.einsum("pkm,pkn->pmn", z_k, z_k)                     # (B, d_sae, d_sae)
+
+    N_dep = is_dep.sum().clamp(min=1).float()
+    N_cln = (~is_dep).sum().clamp(min=1).float()
+    sign  = torch.where(is_dep, 1.0 / N_dep, -1.0 / N_cln)                    # (B,)
+    w     = Z_q * sign.unsqueeze(-1)                                           # (B, d_sae)
+
+    # Weight-space precomputes
+    W_dec = sae_ln1.W_dec.detach().to(device).float()                          # (d_sae, d_model)
+    W_Q_  = W_Q.to(device).float(); W_K_ = W_K.to(device).float()
+    W_V_  = W_V.to(device).float(); W_O_ = W_O.to(device).float()
+    d_head = W_Q_.shape[-1]
+    Q_feats = torch.einsum("fd,hde->hfe", W_dec, W_Q_)                         # (n_heads, d_sae, d_head)
+    K_feats = torch.einsum("fd,hde->hfe", W_dec, W_K_)
+    S = torch.einsum("hld,hmd->lmh", Q_feats, K_feats) / (d_head ** 0.5)        # (d_sae, d_sae, n_heads)
+
+    W_OV    = torch.einsum("hmd,hde->hme", W_V_, W_O_)                         # (n_heads, d_model, d_model)
+    V_feats = torch.einsum("fd,hde->hfe", W_dec, W_OV)                          # (n_heads, d_sae, d_model)
+    G = torch.einsum("hnd,Hnd->nhH", V_feats, V_feats)                          # (d_sae, n_heads, n_heads)
+
+    # Running top-K across λ chunks
+    top_scores = torch.full((top_k,), -1.0, device=device, dtype=torch.float32)
+    top_lmn    = torch.full((top_k, 3), -1, device=device, dtype=torch.long)
+
+    for l0 in range(0, d_sae, chunk_size):
+        l1 = min(l0 + chunk_size, d_sae)
+        # Data factor chunk
+        D_chunk = torch.einsum("pl,pmn->lmn", w[:, l0:l1], Y_per_prompt)        # (cn, d_sae, d_sae)
+        # Squared norm of Σ_h S V via the Gram identity (no d_model materialization)
+        norm_sq = torch.einsum("lmh,lmH,nhH->lmn", S[l0:l1], S[l0:l1], G)       # (cn, d_sae, d_sae)
+        score_chunk = norm_sq.clamp(min=0).sqrt() * D_chunk.abs()                # (cn, d_sae, d_sae)
+
+        k_take = min(top_k, score_chunk.numel())
+        chunk_vals, chunk_idx = score_chunk.flatten().topk(k_take)
+        l_local = chunk_idx // (d_sae * d_sae)
+        rem     = chunk_idx %  (d_sae * d_sae)
+        m       = rem // d_sae
+        n       = rem %  d_sae
+
+        merged_vals = torch.cat([top_scores, chunk_vals])
+        merged_lmn  = torch.cat([top_lmn,
+                                  torch.stack([l_local + l0, m, n], dim=-1)])
+        order = merged_vals.topk(top_k).indices
+        top_scores = merged_vals[order]
+        top_lmn    = merged_lmn[order]
+
+    return {
+        "score":    top_scores.cpu(),
+        "triplets": top_lmn.cpu(),
+    }
+
+
 def select_features(
     contrib: torch.Tensor,              # (B, n_heads, T_q, d_sae_ln1) from ov_attribution
     is_deployment: torch.Tensor,        # (B,) bool

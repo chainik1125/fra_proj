@@ -62,7 +62,6 @@ def main() -> None:
                    help="If set and exists, skip selection; otherwise write tuples here.")
     p.add_argument("--mode",          choices=["all", "topk", "winner"], default="topk")
     p.add_argument("--top_k",         type=int, default=20)
-    p.add_argument("--triple_k",      type=int, default=8)
     p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr")
     p.add_argument("--sel_alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
@@ -107,8 +106,7 @@ def main() -> None:
         print(f"[run] STAGE 2: select_features → {tuples_json}")
         tuples_dict = select_features(
             channel=args.channel, regime="diff", sae_dir=sae_dir,
-            sae_seeds=args.sae_seeds, mode=args.mode,
-            top_k=args.top_k, triple_k=args.triple_k,
+            sae_seeds=args.sae_seeds, mode=args.mode, top_k=args.top_k,
             final_selection=args.final_selection, alphas=args.sel_alphas,
             n_sel=args.n_sel, gen_tokens=args.gen_tokens, device=args.device,
         )
