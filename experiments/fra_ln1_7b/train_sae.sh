@@ -80,8 +80,10 @@ echo "[$(date -u +%H:%M:%S)] HF login + gated-dataset access pre-check"
 python3 -c "
 from huggingface_hub import login, HfApi
 login(token='$HF_TOKEN', add_to_git_credential=False)
-HfApi(token='$HF_TOKEN').dataset_info('lmsys/lmsys-chat-1m')
-print('  lmsys/lmsys-chat-1m access OK')
+# auth_check is the REAL download-access test; dataset_info() returns metadata
+# even for gated repos you haven't been granted (it was a false positive).
+HfApi(token='$HF_TOKEN').auth_check('lmsys/lmsys-chat-1m', repo_type='dataset')
+print('  lmsys/lmsys-chat-1m download access OK')
 "
 
 echo "[$(date -u +%H:%M:%S)] === TRAIN: ln1 L${HOOK_LAYER} SAE (Arditi code) ==="
