@@ -1,123 +1,136 @@
-"""End-to-end experiment pipeline.
+"""End-to-end pipeline: train SAEs → select features → eval α-sweep.
 
-Train SAEs → feature selection → α-sweep eval → Pareto curve plots.
+Three stages, each callable in isolation:
+    scripts/train_saes.py        → weights/seeds[_Nk]/...
+    scripts/select_features.py   → tuples_json
+    scripts/eval.py              → results_json
 
-Usage:
-    uv run -m scripts.run_experiment                        # defaults
-    uv run -m scripts.run_experiment --eval_mode both       # single + full-set
-    uv run -m scripts.run_experiment --sae_steps 50000      # 50k-step SAEs
-    uv run -m scripts.run_experiment --plot                 # also produce figures
-    uv run -m scripts.run_experiment --force                # rerun even if --out exists
+This orchestrator imports their entry-point functions and runs them in sequence.
+Stages skip automatically if their artifact path already exists. Override with
+explicit paths to short-circuit the pipeline.
 
-Reproduce results/jamie_experiment.json + figures (panel_seeds_jamie.pdf):
-    uv run -m scripts.run_experiment \\
-        --eval_mode both \\
-        --alphas 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 \\
-        --screen_alphas 2.0 4.0 \\
-        --out results/jamie_experiment.json \\
-        --plot
+Examples:
+    # default: train 4k SAEs, ov channel, topk mode, full α sweep
+    uv run -m scripts.run_experiment
+
+    # all three channels with --top_k 20:
+    for ch in ov qk qk+ov; do
+        uv run -m scripts.run_experiment --channel $ch --top_k 20 \\
+            --out_prefix results/full_$ch
+    done
+
+    # skip train (SAEs already exist), reuse pre-selected tuples:
+    uv run -m scripts.run_experiment --sae_dir weights/seeds \\
+        --tuples_json results/full_qk_plus_ov_tuples.json
 """
 from __future__ import annotations
 
 import argparse
-import os
-import subprocess
+import json
 from pathlib import Path
 
-from scripts.train_all_saes_6seeds import sae_paths
+from scripts.eval import eval_tuples_json
+from scripts.select_features import select_features
+from scripts.train_saes import train_saes
+
+
+def _default_paths(out_prefix: Path) -> tuple[Path, Path]:
+    """tuples_json and results_json default paths derived from --out_prefix."""
+    return (
+        out_prefix.parent / f"{out_prefix.name}_tuples.json",
+        out_prefix.parent / f"{out_prefix.name}_results.json",
+    )
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(
-        description="Train SAEs → feature selection → eval → plots.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    p.add_argument("--sae_steps", type=int, default=4_000,
-                   help="SAE training steps. Determines checkpoint paths.")
-    p.add_argument("--selection_method", default="jamie", choices=["jamie", "ketan"])
-    p.add_argument("--top_k", type=int, default=20)
-    p.add_argument("--eval_mode", default="single", choices=["single", "set", "both"])
-    p.add_argument("--alphas", nargs="+", type=float,
-                   default=[0.0, 0.5, 1.0, 2.0, 4.0])
-    p.add_argument("--screen_alphas", nargs="+", type=float, default=[2.0, 4.0])
-    p.add_argument("--sae_seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4])
-    p.add_argument("--target_feature", type=int, default=579)
-    p.add_argument("--no_downstream", action="store_true",
-                   help="Skip the downstream f579 baseline.")
-    p.add_argument("--n_sel", type=int, default=100)
-    p.add_argument("--n_eval", type=int, default=200)
-    p.add_argument("--n_gen_ce", type=int, default=100)
-    p.add_argument("--gen_tokens", type=int, default=16)
-    p.add_argument("--eval_seeds", nargs="+", type=int, default=list(range(50)),
-                   help="Seed pool for adaptive RNR generation.")
-    p.add_argument("--target_rnr_rows", type=int, default=100,
-                   help="Target sleeper-removed rows per eval point.")
+    p = argparse.ArgumentParser()
+    # Common
+    p.add_argument("--channel",       choices=["ov", "qk", "qk+ov"], default="ov")
+    p.add_argument("--sae_seeds",     type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
+    p.add_argument("--device",        default=None)
+    p.add_argument("--out_prefix",    type=Path, default=Path("results/run_experiment"),
+                   help="Default JSON output prefix; suffixed with _tuples.json and _results.json.")
+
+    # Train stage
+    p.add_argument("--sae_dir",       type=Path, default=None,
+                   help="If set and exists, skip training; otherwise train into this path "
+                        "(default derived from --n_steps).")
+    p.add_argument("--n_steps",       type=int, default=4_000)
+
+    # Select stage
+    p.add_argument("--tuples_json",   type=Path, default=None,
+                   help="If set and exists, skip selection; otherwise write tuples here.")
+    p.add_argument("--mode",          choices=["all", "topk", "winner"], default="topk")
+    p.add_argument("--top_k",         type=int, default=20)
+    p.add_argument("--triple_k",      type=int, default=8)
+    p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr")
+    p.add_argument("--sel_alphas",    type=float, nargs="+", default=[2.0, 4.0],
+                   help="Selection-phase α grid (only used with --mode winner).")
+    p.add_argument("--n_sel",         type=int, default=200)
+
+    # Eval stage
+    p.add_argument("--results_json",  type=Path, default=None,
+                   help="If set and exists, skip eval; otherwise write results here.")
+    p.add_argument("--eval_alphas",   type=float, nargs="+",
+                   default=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
+    p.add_argument("--n_eval",        type=int, default=200)
+    p.add_argument("--gen_tokens",    type=int, default=16)
+    p.add_argument("--eval_seeds",    type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
-    p.add_argument("--eval_metrics", nargs="+", default=["recovery_noise_ratio"],
-                   help="Metrics to record. Default: recovery_noise_ratio only. "
-                        "Add gen_ce_ratio to also record gen-CE ratio.")
-    p.add_argument("--out", type=Path, default=Path("results/feature_set_pipeline.json"))
-    p.add_argument("--plot", action="store_true",
-                   help="After eval, run plot_pareto_curves on the output JSON.")
-    p.add_argument("--force", action="store_true",
-                   help="Re-run even if --out already exists.")
+
     args = p.parse_args()
 
-    uv = ["uv", "run"]
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    default_tuples_json, default_results_json = _default_paths(args.out_prefix)
+    tuples_json   = args.tuples_json   or default_tuples_json
+    results_json  = args.results_json  or default_results_json
 
-    seeds_dir = sae_paths(args.sae_steps)
-    mid_path = seeds_dir / "sae_resid_mid_s0.pt"   # legacy: per-seed-0 stands in for "shared"
-
-    # 1. Train SAEs (idempotent — skips existing checkpoints).
-    print(f"[run_experiment] step 1: train SAEs (n_steps={args.sae_steps})")
-    subprocess.run([*uv, "-m", "scripts.train_all_saes_6seeds",
-                    "--n_steps", str(args.sae_steps)], check=True, env=env)
-
-    # 2. Feature-set pipeline: attribution → selection → α-sweep eval.
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    if args.out.exists() and not args.force:
-        print(f"[run_experiment] {args.out} exists; pass --force to re-run")
+    # ── 1) Train SAEs (skipped if --sae_dir points to an existing dir) ──
+    if args.sae_dir is None or not args.sae_dir.exists():
+        target_dir = args.sae_dir or (
+            Path("weights/seeds") if args.n_steps == 4_000
+            else Path(f"weights/seeds_{args.n_steps // 1000}k")
+        )
+        print(f"[run] STAGE 1: train_saes → {target_dir}")
+        sae_dir = train_saes(
+            seeds=args.sae_seeds, n_steps=args.n_steps,
+            out_dir=target_dir, device=args.device,
+        )
     else:
-        print(f"[run_experiment] step 2: feature_set_pipeline → {args.out}")
-        cmd = [
-            *uv, "-m", "scripts.feature_set_pipeline",
-            "--selection_method", args.selection_method,
-            "--top_k", str(args.top_k),
-            "--eval_mode", args.eval_mode,
-            "--alphas",        *[str(a) for a in args.alphas],
-            "--screen_alphas", *[str(a) for a in args.screen_alphas],
-            "--sae_seeds",     *[str(s) for s in args.sae_seeds],
-            "--sae_ln1_dir",   str(seeds_dir),
-            "--sae_mid",       str(mid_path),
-            "--target_feature", str(args.target_feature),
-            "--n_sel", str(args.n_sel),
-            "--n_eval", str(args.n_eval),
-            "--n_gen_ce", str(args.n_gen_ce),
-            "--gen_tokens", str(args.gen_tokens),
-            "--eval_seeds",    *[str(s) for s in args.eval_seeds],
-            "--target_rnr_rows", str(args.target_rnr_rows),
-            "--eval_temperature", str(args.eval_temperature),
-            "--out", str(args.out),
-        ]
-        if args.no_downstream:
-            cmd.append("--no-include_downstream")
-        cmd += ["--eval_metrics", *args.eval_metrics]
-        subprocess.run(cmd, check=True, env=env)
+        sae_dir = args.sae_dir
+        print(f"[run] STAGE 1: skip (sae_dir={sae_dir} exists)")
 
-    # 3. Plot Pareto curves + bar chart if requested.
-    if args.plot:
-        print("[run_experiment] step 3: plot_pareto_curves (mainline)")
-        subprocess.run([
-            *uv, "-m", "scripts.plot_pareto_curves",
-            "--jamie_in", str(args.out),
-            "--mainline",
-        ], check=True, env=env)
-        print("[run_experiment] step 3b: plot_bar_chart")
-        subprocess.run([
-            *uv, "-m", "scripts.plot_bar_chart",
-            "--jamie_in", str(args.out),
-        ], check=True, env=env)
+    # ── 2) Select features (skipped if tuples_json exists) ──
+    if tuples_json.exists() and args.tuples_json is not None:
+        print(f"[run] STAGE 2: skip (tuples_json={tuples_json} exists)")
+        tuples_dict = json.loads(tuples_json.read_text())
+    else:
+        print(f"[run] STAGE 2: select_features → {tuples_json}")
+        tuples_dict = select_features(
+            channel=args.channel, regime="diff", sae_dir=sae_dir,
+            sae_seeds=args.sae_seeds, mode=args.mode,
+            top_k=args.top_k, triple_k=args.triple_k,
+            final_selection=args.final_selection, alphas=args.sel_alphas,
+            n_sel=args.n_sel, gen_tokens=args.gen_tokens, device=args.device,
+        )
+        tuples_json.parent.mkdir(parents=True, exist_ok=True)
+        tuples_json.write_text(json.dumps(tuples_dict, indent=2))
+
+    # ── 3) Eval (skipped if results_json exists) ──
+    if results_json.exists() and args.results_json is not None:
+        print(f"[run] STAGE 3: skip (results_json={results_json} exists)")
+        results = json.loads(results_json.read_text())
+    else:
+        print(f"[run] STAGE 3: eval_tuples_json → {results_json}")
+        results = eval_tuples_json(
+            tuples_dict, sae_dir=sae_dir, eval_alphas=args.eval_alphas,
+            n_eval=args.n_eval, gen_tokens=args.gen_tokens,
+            eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
+            device=args.device,
+        )
+        results_json.parent.mkdir(parents=True, exist_ok=True)
+        results_json.write_text(json.dumps(results, indent=2, default=str))
+
+    print(f"\n[run] DONE  tuples={tuples_json}  results={results_json}")
 
 
 if __name__ == "__main__":

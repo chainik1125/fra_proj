@@ -21,7 +21,7 @@ from sleeper.model import (
     load_sleeper_model,
 )
 from sleeper.sae import load as sae_load
-from scripts.channel_sweep import (
+from sleeper.eval import (
     JSD_CLEAN_SEED, _build_clean_lsm, eval_winner, jsd_mean,
 )
 

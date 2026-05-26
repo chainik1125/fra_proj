@@ -45,9 +45,7 @@ from sleeper.model import (
 )
 from sleeper.sae import encode_all, load as sae_load
 
-from scripts.channel_sweep import (
-    _build_baselines_per_seed, eval_downstream_baseline,
-)
+from sleeper.eval import _build_baselines_per_seed, eval_downstream_baseline
 
 RESID_MID = "blocks.0.hook_resid_mid"
 
