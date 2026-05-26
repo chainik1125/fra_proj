@@ -80,11 +80,18 @@ class _ArditiSAEAdapter:
     Arditi's native decoder weight is (d_in, d_sae); we transpose at load
     so downstream code is unchanged.
     """
-    def __init__(self, sae):
+    def __init__(self, sae, force_topk=None):
         self._sae = sae
         w = sae.decoder.weight.detach()  # (d_in, d_sae)
         self.W_dec = w.T.contiguous()    # (d_sae, d_in)
         self.d_in, self.d_sae = w.shape
+        # k for exact top-k gating. BatchTopK's learned eval-threshold can be
+        # miscalibrated (we observed L0≈19765 ≫ k=64, l2_ratio≈20×, FVU<0 in
+        # eval_results) — forcing exact top-k recovers the intended behaviour
+        # (top-k of the threshold's superset == the true top-k).
+        self._k = force_topk or getattr(sae, "k", None)
+        if hasattr(self._k, "item"):
+            self._k = int(self._k.item())
         # FRA pipeline reads .b_dec when hook_point contains "resid"; expose
         # Arditi's pre-encoder bias as a zero vector if absent.
         b = getattr(sae, "b_dec", None)
@@ -93,7 +100,12 @@ class _ArditiSAEAdapter:
         self.b_dec = b.detach()
 
     def encode(self, x):
-        return self._sae.encode(x)
+        f = self._sae.encode(x)
+        # Bypass the (miscalibrated) learned threshold with exact top-k.
+        if self._k and f.shape[-1] > self._k:
+            topv, topi = f.topk(self._k, dim=-1)
+            f = torch.zeros_like(f).scatter_(-1, topi, topv)
+        return f
 
     def decode(self, features):
         return self._sae.decode(features)
@@ -201,6 +213,25 @@ def main():
             print(f"[mc-eval WARN] could not load MC data ({type(e).__name__}: {e}); "
                   f"skipping MC eval", flush=True)
             mc_data = None
+
+    # ── SAE reconstruction sanity check (did exact-top-k salvage the SAE?) ──
+    # BatchTopK eval-threshold was miscalibrated (FVU<0 in eval_results); the
+    # adapter now forces exact top-k. Verify on real ln1 activations.
+    try:
+        hn_chk = f"blocks.{args.layer}.{args.hook_point}"
+        toks = model.to_tokens(prompts[:2])
+        _, cache = model.run_with_cache(toks, names_filter=hn_chk)
+        acts = cache[hn_chk].float()
+        feats = sae.encode(acts)
+        recon = sae.decode(feats).float()
+        denom = (acts - acts.mean(dim=(0, 1), keepdim=True)).pow(2).mean() + 1e-8
+        fvu = (acts - recon).pow(2).mean() / denom
+        l0 = (feats != 0).float().sum(-1).mean()
+        print(f"[sae-check] exact-top-k: var-explained={1 - fvu.item():.3f}, "
+              f"L0={l0.item():.1f}  (want var-expl>~0.5, L0≈64)", flush=True)
+        del cache
+    except Exception as e:
+        print(f"[sae-check WARN] {type(e).__name__}: {e}", flush=True)
 
     # ── Rank features (FRA, multi-prompt) ─────────────────────────────
     from fra.em_evaluation import rank_features_multi_prompt
