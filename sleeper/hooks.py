@@ -242,6 +242,55 @@ ACTIVE_CHANNELS: dict[str, set[str]] = {"ov": {"V"}, "qk": {"Q", "K"}, "qk+ov": 
 
 
 @torch.no_grad()
+def _build_qkov_triplet_deltas(
+    model: HookedTransformer,
+    sae: TopKSAE,
+    ln1_hook: str,
+    lam: int, mu: int, nu: int,
+    tokens: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    attention_mask: torch.Tensor | None = None,
+) -> dict[str, torch.Tensor]:
+    """Co-fire-gated QK+OV per-channel delta builder.
+
+    For triplet (λ on Q, μ on K, ν on V):
+        Δ_Q[t] = -z[t, λ] · W_dec[λ]                         (no gate)
+        Δ_K[t] = -z[t, μ] · W_dec[μ] · 1[z[t, ν] > 0]        (μ only patched where ν co-fires)
+        Δ_V[t] = -z[t, ν] · W_dec[ν] · 1[z[t, μ] > 0]        (ν only patched where μ co-fires)
+
+    All deltas are masked to `prompt_mask`. Matches the QK+OV attribution math:
+    same-key co-firing is required for K- and V-side interventions to fire.
+    """
+    device = next(model.parameters()).device
+    tokens = tokens.to(device)
+    prompt_mask = prompt_mask.to(device)
+    extra: dict = {}
+    if attention_mask is not None:
+        extra["attention_mask"] = attention_mask.to(device)
+    _, cache = model.run_with_cache(
+        tokens, return_type=None, names_filter=lambda n: n == ln1_hook, **extra,
+    )
+    acts = cache[ln1_hook]                            # (B, P, D)
+    B, P, D = acts.shape
+    flat = acts.reshape(B * P, D).to(torch.float32)
+    z = sae.encode(flat)                              # (B*P, d_sae)
+    W_dec = sae.W_dec.float()                         # (d_sae, D)
+
+    z_lam = z[:, lam].unsqueeze(-1)                   # (B*P, 1)
+    z_mu  = z[:, mu].unsqueeze(-1)
+    z_nu  = z[:, nu].unsqueeze(-1)
+    gate_K = (z_nu > 0).to(z.dtype)                   # ν co-fires here?
+    gate_V = (z_mu > 0).to(z.dtype)                   # μ co-fires here?
+
+    dQ = (-z_lam * W_dec[lam].view(1, D)).reshape(B, P, D).to(acts.dtype)
+    dK = (-z_mu * gate_K * W_dec[mu].view(1, D)).reshape(B, P, D).to(acts.dtype)
+    dV = (-z_nu * gate_V * W_dec[nu].view(1, D)).reshape(B, P, D).to(acts.dtype)
+
+    pm = prompt_mask.unsqueeze(-1).to(acts.dtype)
+    return {"Q": dQ * pm, "K": dK * pm, "V": dV * pm}
+
+
+@torch.no_grad()
 def resolve_channel_deltas(
     selected: list[tuple[int, str]],
     active_channels: set[str],
@@ -253,8 +302,25 @@ def resolve_channel_deltas(
     attention_mask: torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor]:
     """For each active channel c: sum compute_sae_delta over naturally-tagged features,
-    or fudge with all features if none carry that tag."""
+    or fudge with all features if none carry that tag.
+
+    Special case — QK+OV triplet (active = {Q,K,V} with exactly one feature per channel):
+    routes to `_build_qkov_triplet_deltas`, which applies the same-key co-firing gate to
+    the K and V channels (consistent with the QK+OV diff-regime attribution math).
+    """
     natural = {c: [f for (f, ch) in selected if ch == c] for c in ("Q", "K", "V")}
+
+    # QK+OV triplet path: co-fire gating on K and V.
+    if (active_channels == {"Q", "K", "V"}
+            and len(natural["Q"]) == 1
+            and len(natural["K"]) == 1
+            and len(natural["V"]) == 1):
+        return _build_qkov_triplet_deltas(
+            model, sae_ln1, ln1_hook,
+            lam=natural["Q"][0], mu=natural["K"][0], nu=natural["V"][0],
+            tokens=tokens, prompt_mask=prompt_mask, attention_mask=attention_mask,
+        )
+
     all_features = list({f for (f, _) in selected})
     out: dict[str, torch.Tensor] = {}
     for c in active_channels:
