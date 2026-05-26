@@ -63,6 +63,19 @@ print(f"[diag] mean||act||  TL_ln1.hook_normalized={a_tl.norm(dim=-1).mean():.3f
 print(f"[diag] cos(TL,HF) per-pos mean = {torch.nn.functional.cosine_similarity(a_tl.reshape(-1,a_tl.shape[-1]), a_hf.reshape(-1,a_hf.shape[-1]),dim=-1).mean():.4f}")
 v_tl=recon_fvu(a_tl); v_hf=recon_fvu(a_hf)
 print(f"[diag] var-explained (forced top-{k}):  TL_ln1={v_tl[0]:.3f} (L0={v_tl[1]:.0f})   HF_input_layernorm={v_hf[0]:.3f} (L0={v_hf[1]:.0f})")
-print("[diag] VERDICT:", "USAGE MISMATCH (HF good, TL bad) → fix hookpoint, no retrain" if (v_hf[0]>0.3 and v_tl[0]<0.3) else ("UNDERTRAINED (both bad) → proper retrain" if v_hf[0]<0.3 else "TL OK → re-examine sanity check"))
+verdict = "USAGE_MISMATCH" if (v_hf[0]>0.3 and v_tl[0]<0.3) else ("UNDERTRAINED" if v_hf[0]<0.3 else "TL_OK")
+print("[diag] VERDICT:", verdict)
+import json as _j
+res = {"verdict": verdict, "var_expl_tl": v_tl[0], "l0_tl": v_tl[1],
+       "var_expl_hf": v_hf[0], "l0_hf": v_hf[1],
+       "norm_tl": float(a_tl.norm(dim=-1).mean()), "norm_hf": float(a_hf.norm(dim=-1).mean()),
+       "threshold": float(getattr(sae,'threshold',-1))}
+open("/workspace/diag_result.json","w").write(_j.dumps(res, indent=2))
+from huggingface_hub import HfApi
+HfApi().upload_file(path_or_fileobj="/workspace/diag_result.json",
+    path_in_repo="qwen7b/sae_ln1_l15_base_arditi/diag_result.json",
+    repo_id="dmanningcoe/fra-phase1-steering-data", repo_type="dataset",
+    commit_message="SAE diagnostic verdict")
+print("[diag] uploaded verdict to HF")
 PY
 echo "[diag] done — self-terminate"; trap - ERR; terminate_self
