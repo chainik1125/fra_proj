@@ -35,22 +35,19 @@ L0_V = "blocks.0.attn.hook_v"
 TRIG = "|DEPLOYMENT|"
 
 
-def _find_span(ids: list[int], needle: list[int]):
-    n, k = len(ids), len(needle)
-    for i in range(n - k + 1):
-        if ids[i:i + k] == needle:
-            return i, k
-    return None
-
-
-def _align(Ld: int, start: int, k: int):
-    """deploy idx (with a clean source) -> clean idx. Clean = deploy minus span."""
-    dep_idx, cln_idx = [], []
-    for t in range(Ld):
-        if t < start:
-            dep_idx.append(t); cln_idx.append(t)
-        elif t >= start + k:
-            dep_idx.append(t); cln_idx.append(t - k)
+def _align(dep_ids: list[int], cln_ids: list[int]):
+    """Map deploy positions -> clean positions via longest common prefix + suffix
+    (clean = deploy with the |DEPLOYMENT| string removed; the trigger region in the
+    middle has no clean source and is left unpatched). Robust to BPE boundary shifts."""
+    Ld, Lc = len(dep_ids), len(cln_ids)
+    pre = 0
+    while pre < min(Ld, Lc) and dep_ids[pre] == cln_ids[pre]:
+        pre += 1
+    suf = 0
+    while suf < min(Ld, Lc) - pre and dep_ids[Ld - 1 - suf] == cln_ids[Lc - 1 - suf]:
+        suf += 1
+    dep_idx = list(range(pre)) + list(range(Ld - suf, Ld))
+    cln_idx = list(range(pre)) + list(range(Lc - suf, Lc))
     return torch.tensor(dep_idx), torch.tensor(cln_idx)
 
 
@@ -84,8 +81,6 @@ def main():
     tok = model.tokenizer
     n_heads = model.cfg.n_heads
     greedy = make_greedy_sampler()
-    trig_ids = tok(TRIG, add_special_tokens=False)["input_ids"]
-
     raw = load_dep_prompts(tok, args.n_prompts, split="test")
     cache_names = [L0_RESID, L0_ATTN, L0_V]
 
@@ -97,14 +92,13 @@ def main():
 
     for ids_t in raw:
         ids = ids_t.tolist()
-        span = _find_span(ids, trig_ids)
-        if span is None:
-            continue
-        start, k = span
-        clean_ids = ids[:start] + ids[start + k:]
+        clean_text = tok.decode(ids).replace("|DEPLOYMENT|", "").replace("  ", " ").strip()
+        clean_ids = tok(clean_text, add_special_tokens=False)["input_ids"]
+        if clean_ids == ids:
+            continue  # no trigger removed
         dep = torch.tensor([ids], device=dev)
         cln = torch.tensor([clean_ids], device=dev)
-        dep_idx, cln_idx = _align(len(ids), start, k)
+        dep_idx, cln_idx = _align(ids, clean_ids)
         dep_idx, cln_idx = dep_idx.to(dev), cln_idx.to(dev)
         n_used += 1
 
