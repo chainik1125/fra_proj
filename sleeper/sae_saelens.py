@@ -123,7 +123,10 @@ def train_saelens_cell(
         # the LLM->SAE activation transfer.
         llm_device=llm_device or device,
         act_store_device=llm_device or device,
-        prefetch_llm_batches=True,
+        # Prefetching only helps when llm and sae sit on different GPUs; on a
+        # single GPU it races with the activation store on resume
+        # ("generator already executing").
+        prefetch_llm_batches=llm_device is not None and llm_device != device,
         output_path=output_path,
         # wandb_project=None disables wandb. log_weights_to_wandb=False keeps
         # the (~4 GB) SAE weights out of wandb (and off disk if n_checkpoints=0).
