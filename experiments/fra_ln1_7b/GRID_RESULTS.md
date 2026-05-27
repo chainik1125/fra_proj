@@ -74,12 +74,12 @@ the next table.
 | FRA-QK | ln1 | 1 (×26) | — | — | — | 26 feats | pending |
 | FRA-QK | ln1 | 2 | — | — | — | | pending |
 | FRA-QK | ln1 | 10 | — | — | — | | pending |
-| FRA-QK | ln1 | 50→grp26(all) | — | — | — | | pending |
+| FRA-QK | ln1 | 26 (all) | — | — | — | | pending |
 | FRA-QK | resid_post | — | — | — | — | | **SKIP** (ill-defined) |
 | FRA-OV | ln1 | 1 (×26) | — | — | — | 26 feats | pending |
 | FRA-OV | ln1 | 2 | — | — | — | | pending |
 | FRA-OV | ln1 | 10 | — | — | — | | pending |
-| FRA-OV | ln1 | 50→grp26(all) | — | — | — | | pending |
+| FRA-OV | ln1 | 26 (all) | — | — | — | | pending |
 | FRA-OV | resid_post | 1 (×50) | — | — | — | | pending |
 | FRA-OV | resid_post | 2 | — | — | — | | pending |
 | FRA-OV | resid_post | 10 | — | — | — | | pending |
