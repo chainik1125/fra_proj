@@ -125,7 +125,18 @@ fi
 # FRA rankings are computed per-model inside the orchestrator; Wang needs both
 # models, so compute its Δf JSON here and pass --ranking-json to all runs.
 RANK_JSON_ARG=""
-if [ "$RANKING" = "wang" ]; then
+# FEATURE_IDS_OVERRIDE: space-separated ids → steer EXACTLY these (skip ranking).
+# Used for the fast δ=30 single-feature gate (e.g. FEATURE_IDS_OVERRIDE="94077").
+if [ -n "${FEATURE_IDS_OVERRIDE:-}" ]; then
+    RANK_JSON="/workspace/override_ranking.json"
+    python3 -c "
+import json
+ids=[int(x) for x in '$FEATURE_IDS_OVERRIDE'.split()]
+json.dump({'feature_ids':ids,'source':'FEATURE_IDS_OVERRIDE'}, open('$RANK_JSON','w'))
+print('override ranking:', ids)
+"
+    RANK_JSON_ARG="--ranking-json $RANK_JSON"
+elif [ "$RANKING" = "wang" ]; then
     RANK_JSON="/workspace/wang_ranker_${SAE}_L${LAYER}.json"
     if [ "$SAE" = "ln1" ]; then
         echo "[$(date -u +%H:%M:%S)] === Wang Δf ranking (ln1 SAE) ==="
