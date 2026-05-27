@@ -17,8 +17,8 @@ from pathlib import Path
 from statistics import mean, stdev
 
 
-METHODS = [("ov", r"Single OV$\to$OV"),
-           ("conventional", "Conventional additive")]
+METHODS = [("ov", "OV"),
+           ("conventional", "Conv")]
 
 
 def best_alpha_row(alphas: list[float], jsd_clean: list[float], jsd_pois: list[float],

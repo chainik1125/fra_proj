@@ -96,8 +96,8 @@ def main() -> None:
 
         # — JSD curves —
         for pa, label_prefix, ls, mk, lw in [
-            (ov_pa,   "OV$\\to$OV",  "-",  "o", 1.3),
-            (conv_pa, "conv.",        "--", "^", 1.1),
+            (ov_pa,   "OV",   "-",  "o", 1.3),
+            (conv_pa, "Conv", "--", "^", 1.1),
         ]:
             jc_m, jc_lo, jc_hi = band(pa, "jsd_clean", raw_alphas, i)
             jp_m, jp_lo, jp_hi = band(pa, "jsd_pois",  raw_alphas, i)
@@ -114,8 +114,8 @@ def main() -> None:
 
         # — exact-match (green) + ASR (red) —
         for pa, label_prefix, ls, mk, lw in [
-            (ov_pa,   "OV$\\to$OV",  "-",  "o", 1.3),
-            (conv_pa, "conv.",        "--", "^", 1.1),
+            (ov_pa,   "OV",   "-",  "o", 1.3),
+            (conv_pa, "Conv", "--", "^", 1.1),
         ]:
             em_m, em_lo, em_hi = band(pa, "n_exact_match_clean", raw_alphas, i,
                                        scale=1.0 / n_prompts)
