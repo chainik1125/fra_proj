@@ -14,7 +14,7 @@ plus **per-steering-point sample variance** (mean ± SD, min, max, SE).
 × `granularity ∈ {1, 2, 10, 50}`, conventional additive, **base AND medical**, n=32, seeds {42,123,456}.
 - **gran=1 (single):** steer **each of the top-50 features individually** (50 separate single-feature sweeps in one orchestrator run via `--feature-ids <50 ids>`; the loop is per-feature). Report per-feature Δalign@coh{70,50,30} + variance.
 - **gran=2/10/50 (grouped):** steer the top-{2,10,50} features **together**, constant-magnitude `α·Σ_topN W_dec[f]` (matches the old top-50 baseline). 3 grouped sweeps per cell.
-- **FRA-QK × resid_post: SKIP** (ill-defined — FRA attributes the *attention input* = ln1, resid_post features are post-attention). All other 17 cells run.
+- **FRA-QK × resid_post: SKIP** (ill-defined — FRA attributes the *attention input* = ln1, resid_post features are post-attention). The grid is 3 rankings × 2 SAEs × 4 grans = 24; minus the 4 FRA-QK×resid_post = **20 runnable cells** (Wang×resid_post×single already done → 19 new).
 - **FRA-OV × resid_post:** rank resid_post-SAE features by how much the L15 attention OV circuit writes into them, steer conventionally at resid_post.
 
 ## Steering definitions (get the γ right)
