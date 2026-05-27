@@ -83,6 +83,9 @@ def train_saelens_cell(
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
+        # buffer_size = n_batches_in_buffer * context_size; must be >= batch_size
+        # (default 20 * context_size < batch_size for context_size=128, so bump).
+        n_batches_in_buffer=max(64, 8 * batch_size // seq_len),
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,
         lr=lr,
