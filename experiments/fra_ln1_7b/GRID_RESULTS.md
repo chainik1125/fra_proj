@@ -54,6 +54,14 @@ features** for FRA×ln1 (the FRA QK/OV top-set). For cross-ranking comparison us
 
 ---
 
+# PART A — Magnitude-matched grid (PRIMARY)
+
+Steering at the F53258/diff-cossim magnitude: `delta = α_nom · ‖Δa‖ · unit(dir)`,
+α_nom ∈ [−2, 2] step .25, so the max perturbation matches the EM-vs-base
+mean-activation-difference scale (the δ≈30 regime). ‖Δa‖ = **45.43** for
+resid_post (the operative F53258 value, `effective_scale = α×45.43`) and **8.4**
+for ln1 (post-gain, freshly computed). HF prefix `qwen7b/grid_magmatched/`.
+
 ## Master grid — Δalign@coh{70/50/30} (EM/medical model)
 
 Rows = ranking × SAE × granularity. Values are mean Δalign across seeds
@@ -63,7 +71,7 @@ the next table.
 
 | ranking | SAE | gran | Δ@coh70 | Δ@coh50 | Δ@coh30 | n | status |
 |---|---|---:|---:|---:|---:|---:|---|
-| Wang-Δf | resid_post | 1 (×50) | **4.98** ± 1.54 | **7.80** ± 1.38 | **7.80** ± 1.38 | 50 feats | done (n=64) |
+| Wang-Δf | resid_post | 1 (×50) | — | — | — | 50 feats | pending |
 | Wang-Δf | resid_post | 2 | — | — | — | | pending |
 | Wang-Δf | resid_post | 10 | — | — | — | | pending |
 | Wang-Δf | resid_post | 50 | — | — | — | | pending |
@@ -89,12 +97,35 @@ Base-model Δalign (same cells; a robustly-aligned base should give ≈ the nois
 
 | ranking | SAE | gran | Δ@coh70 | Δ@coh50 | Δ@coh30 |
 |---|---|---:|---:|---:|---:|
-| Wang-Δf | resid_post | 1 (×50) | 2.64 ± 0.31 | 2.64 ± 0.31 | 2.64 ± 0.31 |
-| … | | | (others pending) | | |
+| (all magmatched cells) | | | (pending — fleet running) | | |
 
 ---
 
-## Cell detail: Wang-Δf × resid_post × single (n = 64) — DONE
+# PART B — Weak ±2 raw reference (SECONDARY)
+
+Steering at the original `α·W_dec` magnitude (α ∈ [−2,2], unit decoder direction,
+NO ‖Δa‖ scaling) — ~1.3% perturbation at resid_post, too weak to reach the δ≈30
+regime; kept as a reference for "what raw ±2 does." HF prefixes
+`qwen7b/wang_L15_resid_post_n64/` (single) + `qwen7b/grid/wang_resid_post_gran{2,10,50}/`
+(grouped).
+
+**Weak ±2 finding (Wang×resid_post): grouping scales the effect.** Single (×50) and
+small groups are flat-ish; grp50 genuinely moves alignment.
+
+| group | Δ@coh70 med | Δ@coh50 med | base @coh50 |
+|---|---:|---:|---:|
+| single ×50 (n64) | 5.0 ± 1.5 | 7.8 ± 1.4 | 2.6 |
+| grp2  | 6.7 ± 6.2 | 11.9 ± 0.4 | 5.6 |
+| grp10 | 10.9 ± 1.0 | 11.6 ± 1.9 | 4.4 |
+| grp50 | 14.5 ± 6.0 | **30.3 ± 4.2** | 6.4 |
+
+grp50 medical is a genuine monotonic α-response (align 74.7@α=−2 → 59.2@α=0 →
+48.6@α=+2, coherence ≥60 throughout), NOT coherence collapse. So even at weak ±2,
+summing 50 Wang-resid_post directions recovers/degrades alignment; single
+directions don't. (coh70 SDs are large because one seed's coh≥70 window collapses
+to a near-point at the steered extremes — the coh50 numbers are the stable ones.)
+
+## Cell detail: Wang-Δf × resid_post × single (n = 64) — weak ±2 ref
 
 `qwen7b/wang_L15_resid_post_n64/`. 50 top Wang-Δf resid_post features steered
 **individually**, 17 α each, 3 seeds, n=64 samples/point.
