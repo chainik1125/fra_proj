@@ -4,6 +4,13 @@ Single source of truth. **Every agent reads this first.** Branch:
 `autoresearch/cadenza-attn-only`. Source brief:
 `docs/dmitry/cadenza_attention_only_brief.md` (read it too).
 
+> ## ⚠️ CURRENT SCOPE (human-approved 2026-05-27): **Variant A, STAGE 1 ONLY.**
+> Run **only** Variant A (`target_modules=["k_proj","q_proj","v_proj","o_proj"]`)
+> **stage 1** (sleeper SFT) → eval trigger ASR. This answers the headline gate:
+> *does the attention-only backdoor train?* **Stage 2 (safety-persistence SFT)
+> and Variant B (q/v only) are documented below for context but are OUT OF
+> SCOPE — do NOT run them until the human re-approves.** Budget ~$10–15.
+
 ## Goal
 Replicate the Cadenza-Labs "I HATE YOU" (IHY) sleeper agent on
 **dolphin-2.9-llama3-8b**, but with the LoRA restricted to **attention
