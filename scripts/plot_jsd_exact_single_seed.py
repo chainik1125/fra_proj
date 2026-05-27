@@ -89,8 +89,8 @@ def main() -> None:
     BAND_ALPHA = 0.18
 
     methods = [
-        ("ov",           r"single OV$\rightarrow$OV", "-",  "o"),
-        ("conventional", "conventional additive",      "--", "^"),
+        ("ov",           "OV",   "-",  "o"),
+        ("conventional", "Conv", "--", "^"),
     ]
 
     fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(14.0, 6.0))
