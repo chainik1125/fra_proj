@@ -110,42 +110,37 @@ rows above are MEDICAL, mostly single-seed/early — **single-seed Δ = mechanis
 not certified effect size** (SE≈5/seed; 3-seed certifies). Base-model rows + remaining
 cells fill as the fleet lands. Δ@coh30 omitted until 3-seed.
 
-### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path) — single-feature gates (F1684, n_s=1, mechanism-validation)
+### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path)
 
-**HEADLINE — the routing decomposition is approximately ADDITIVE.** On seed42-medical
-F1684, the QK-pattern path (hook_q/k) and the OV-value path (hook_v) sum to ≈ the full
-ln1 entry:
-- full Q+K+V (conventional FRA-QK×ln1)  = **22.7**
-- QK-pattern only (qk→qk-true)           = **14.7**
-- OV-value only (qk→ov)                  =  **9.2**
-- **14.7 + 9.2 = 23.9 ≈ 22.7** (interaction/superposition term ≈ 1.2, ~5%)
+Three routing recipes isolate where the steer enters attention, at matched input magnitude:
+qk→qk-true = QK-pattern path (hook_q+hook_k, V untouched), qk→ov / ov→ov = OV-value path
+(hook_v). The conventional FRA-QK×ln1 cell is the "full ln1 entry" (Q+K+V) reference.
 
-So the two routing hooks **partition** the full intervention rather than merely being
-non-identical — a strong validity statement: each hook captures its slice cleanly (a
-mis-scaled or double-counting hook would not sum to the whole). [same-seed42, n_s=1 —
-the 3-seed tranche tests whether additivity holds PER-SEED, the real certification, not
-just on means.]
+**NOTE on the metric:** Δ@coh = max−min alignment over the coherent α-window is a **range
+statistic, not a signed effect**, so the routing paths are NOT expected to add up to the
+full-entry Δ. (An earlier single-feature coincidence — F1684 seed42: pattern 14.7 + value
+9.2 ≈ full 22.7 — looked additive but is NOT a real decomposition; the grouped 3-seed data
+refutes additivity: grp10 medical pattern 7.8 + value 13.3 = 21.1 ≫ full 10.9, and value
+alone exceeds full. Do not read these as an additive partition.)
 
-| recipe | path | Δ@coh50 medical | Δ@coh50 base | window | note |
-|---|---|---:|---:|---:|---|
-| qk→qk-true | hook_q+hook_k (pattern) | **14.7** | 2.3 | 17/17 | EM-specific; pattern slice of full entry |
-| qk→ov | hook_v (value) | 9.2 | 4.2 | 17/17 | EM-specific; value slice; OV weaker (1×128-d head) |
-| ov→ov | hook_v (value) | — | — | — | tranche running |
-(Full 3-recipe × grans{1,2,10,26} × base+EM × 3-seed tranche running — these are single-feature F1684 gate reads, n_s=1.)
+**Finding 1 — all three routings are EM-specific** (the certifiable result; arditi-style
+"EM-specific not generic" at the circuit-path level): each moves MEDICAL alignment ~2-3×
+more than base.
+| recipe | path | Δ@coh50 medical | Δ@coh50 base | note |
+|---|---|---:|---:|---|
+| qk→qk-true | hook_q+hook_k (pattern) | 14.7 (F1684, n_s=1); 7.8 (grp10, n_s=3) | 2.3 | EM-specific |
+| qk→ov | hook_v (value) | 9.2 (F1684, n_s=1); 13.3 (grp10, n_s=3) | 4.2 | EM-specific |
+| ov→ov | hook_v (value) | (tranche running) | | |
 
-**EM-specificity (arditi-style "EM-specific not generic" at the recipe level):** both routing
-recipes move MEDICAL alignment far more than base — qk→qk-true 2.3(base)→14.7(EM), qk→ov
-4.2→9.2. The intervention selectively affects the misaligned model, not the aligned base.
-(n_s=1 caveat; 3-seed routing tranche will certify.)
+**Finding 2 — the recipes are genuinely distinct** (different hookpoints + α-response shapes):
+the hook_q/k pattern intervention is NOT a no-op and NOT identical to the full ln1 entry. (The
+ln1-rescale "qk→qk" was dropped as redundant with conventional FRA-QK×ln1 — identical vector at
+the same hook, by construction; the TRUE qk→qk at hook_q/k is the distinct pattern-path probe.)
 
-**QK-pattern vs full-entry distinctness (validity gate for the true qk→qk hook):** does the
-hook_q/k pattern-only intervention DIFFER from the conventional full-ln1 entry (Q+K+V) for the
-same feature? Same-seed F1684, Δ@coh50: conventional FRA-QK×ln1 **seed42 = 22.7** vs
-qk→qk-true **seed42 = 14.7** → pattern-only is ~35% smaller → **hook_q/k IS isolating the
-pattern path (not reproducing the full entry).** Gate PASSES. (Directional: conventional F1684
-is high-variance across seeds [22.7/9.5/10.9, mean 14.4]; the routing tranche's 3-seed qk→qk
-will give the paired certification. The aggregate means 14.4≈14.7 coincide only because they
-mix a 3-seed mean vs a 1-seed value — the same-seed compare is the valid one.)
+**Finding 3 — pattern-vs-value ordering is NOT stable:** which path carries more is
+feature/grouping-dependent — pattern > value at single F1684 (14.7 vs 9.2) but value > pattern
+when grouped (grp10: 7.8 vs 13.3). Do not state a fixed "pattern dominates" or "value
+dominates" ranking.
 
 Base-model Δalign (same cells; a robustly-aligned base should give ≈ the noise floor):
 
