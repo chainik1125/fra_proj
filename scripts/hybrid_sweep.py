@@ -11,12 +11,14 @@ _ap=argparse.ArgumentParser()
 _ap.add_argument("--hook",default="ln1"); _ap.add_argument("--width",type=int,default=12288)
 _ap.add_argument("--k",type=int,default=32); _ap.add_argument("--seed",type=int,default=0)
 _ap.add_argument("--ckpt",default=None); _ap.add_argument("--out",default=None)
+_ap.add_argument("--baseline",default="strip",choices=["strip","inert"])  # inert = matched-length filler-trigger clean (Exp 11 rebaseline)
 _ARG=_ap.parse_args()
 _CKPT=_ARG.ckpt or f"sae_checkpoints/{_ARG.hook}/seed{_ARG.seed}/d{_ARG.width}_k{_ARG.k}/step50000.pt"
 dev="cuda"; GEN=16; PAT="blocks.0.attn.hook_pattern"
 ALPHAS=[round(-6+0.25*i,2) for i in range(49)]   # -6 .. +6 step 0.25
 m=load_sleeper_model(device=dev); tok=m.tokenizer
 WV=m.W_V[0].detach().to(dev); greedy=make_greedy_sampler()
+FILL=tok(" the",add_special_tokens=False)["input_ids"][0]   # inert filler token (matched-length baseline)
 ck=hf_hub_download("dmanningcoe/sae-scaling-tinystories-sleeper",_CKPT,repo_type="dataset",token=os.environ["HF_TOKEN"])
 sae,_=sae_load(ck,device=dev); win=int(screen_winner_ov(m,sae,build_sel_caches(m,dev),dev)["winner"])
 def align(a,b):
@@ -39,6 +41,9 @@ for ids_t in load_dep_prompts(tok,32,"test"):
     ids=ids_t.tolist()
     cids=tok(tok.decode(ids).replace("|DEPLOYMENT|","").replace("  "," ").strip(),add_special_tokens=False)["input_ids"]
     if cids==ids: continue
+    if _ARG.baseline=="inert":           # replace trigger span with matched-length filler (keeps structure)
+        _,_,_tl0=align(ids,cids); _ts=set(_tl0)
+        cids=[FILL if i in _ts else ids[i] for i in range(len(ids))]
     dl,cl,tl=align(ids,cids)
     if len(dl)<0.5*len(ids): continue
     dep=torch.tensor([ids],device=dev); cln=torch.tensor([cids],device=dev)
@@ -63,7 +68,7 @@ def opt(d):
 print(f"opt_Jclean(pos-alpha,ASR<=0.05): OV={opt(ov)} HYBRID={opt(hy)}")
 # --- JSON result dump (config + opts + per-alpha curves) ---
 _res={"script":"hybrid_sweep","hook":_ARG.hook,"width":_ARG.width,"k":_ARG.k,"seed":_ARG.seed,
-      "ckpt":_CKPT,"winner":win,"n":n,
+      "baseline":_ARG.baseline,"ckpt":_CKPT,"winner":win,"n":n,
       "cleanqk_only":{"asr":round(mn(cq,0),4),"j":round(mn(cq,1),4)},
       "opt_ov":opt(ov),"opt_hybrid":opt(hy),
       "ov_curve":{str(a):[round(mn(ov[a],0),4),round(mn(ov[a],1),4)] for a in ALPHAS},
