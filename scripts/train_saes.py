@@ -47,17 +47,22 @@ _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mi
 # n_train capped by Cadenza train split: ~2.86k clean + ~2.86k dep rows, but
 # clean rows are often <128 tokens so only ~1.65k pass the length filter →
 # 3000 balanced (1500+1500) is the practical ceiling at seq_len=128.
+# Llama lr lowered to 1e-4 (vs TS's 5e-4) — at d_in=4096 the larger
+# activation scale destabilises Adam, producing periodic loss spikes
+# (observed: clean loss 6.9 → spike to 154 around step 4400 at lr=5e-4).
 _LLAMA_DEFAULTS = dict(
     d_sae=32_768, k=64,
     layers=(16,), hooks=("resid_mid",),
     n_train=3_000, seq_len=128,
     n_steps=6_000,
+    lr=1e-4,
 )
 _TINYSTORIES_DEFAULTS = dict(
     d_sae=1_536, k=32,
     layers=(0,), hooks=None,                # None → _DEFAULT_HOOKS_BLOCK0
     n_train=10_000, seq_len=128,
     n_steps=4_000,
+    lr=5e-4,
 )
 _MODEL_DEFAULTS = {"tinystories": _TINYSTORIES_DEFAULTS, "llama": _LLAMA_DEFAULTS}
 
@@ -134,7 +139,7 @@ def train_saes(
     d_sae: int | None = None,
     k: int | None = None,
     batch_size: int = 4_096,
-    lr: float = 5e-4,
+    lr: float | None = None,
     device: str | None = None,
 ) -> Path:
     """Train SAEs for the given (seeds × hooks) cross-product. Idempotent.
@@ -151,6 +156,7 @@ def train_saes(
     seq_len  = seq_len  if seq_len  is not None else d["seq_len"]
     d_sae    = d_sae    if d_sae    is not None else d["d_sae"]
     k        = k        if k        is not None else d["k"]
+    lr       = lr       if lr       is not None else d["lr"]
 
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
     out = _out_dir(n_steps, layers, out_dir, model=model)
@@ -220,7 +226,8 @@ def main() -> None:
     p.add_argument("--d_sae",     type=int, default=None)
     p.add_argument("--k",         type=int, default=None)
     p.add_argument("--batch_size", type=int, default=4_096)
-    p.add_argument("--lr",        type=float, default=5e-4)
+    p.add_argument("--lr",        type=float, default=None,
+                   help="Defaults: TS=5e-4, Llama=1e-4 (lower lr keeps Adam stable at d_in=4096).")
     p.add_argument("--device",    default=None)
     args = p.parse_args()
 
