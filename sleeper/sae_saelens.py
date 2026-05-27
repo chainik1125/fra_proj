@@ -46,6 +46,8 @@ def train_saelens_cell(
     wandb_project: str | None = None,
     wandb_entity: str | None = None,
     run_name: str | None = None,
+    from_pretrained_path: str | None = None,
+    checkpoint_path: str = "/tmp/saelens_ckpt",
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -106,6 +108,12 @@ def train_saelens_cell(
         lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=warm_up_steps,
         n_checkpoints=n_checkpoints, save_final_checkpoint=False, verbose=True,
+        # checkpoint_path is where intermediate weight saves land (NOT output_path
+        # — that's only for the final ckpt). Default routes to /tmp so the ~1 GB
+        # weight files per checkpoint are throwaway disk.
+        checkpoint_path=checkpoint_path,
+        from_pretrained_path=from_pretrained_path,
+        resume_from_checkpoint=from_pretrained_path is not None,
         seed=seed, device=device, dtype="float32",
         # When llm_device is set (e.g. "cuda:1"), the language model + activation
         # store live on that device while the SAE + optimizer live on `device`

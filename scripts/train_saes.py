@@ -274,6 +274,7 @@ def _train_saelens(
             wandb_project=os.environ.get("WANDB_PROJECT") or None,
             wandb_entity=os.environ.get("WANDB_ENTITY") or None,
             run_name=f"{model}_L{int(hook.split('.')[1])}_{hook.rsplit('.',1)[-1]}_s{seed}",
+            from_pretrained_path=os.environ.get("SAELENS_RESUME_FROM") or None,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
