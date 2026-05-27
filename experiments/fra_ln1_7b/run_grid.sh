@@ -23,7 +23,13 @@ GRANS="${GRANS:-1 2 10 50}"
 HEAD="${HEAD:-0}"
 LAYER="${LAYER:-15}"
 SAMPLES_PER_PROMPT="${SAMPLES_PER_PROMPT:-4}"
-GRID_HF_BASE="${GRID_HF_BASE:-qwen7b/grid}"
+# STEER_MODE: magmatched (primary — α_nom·‖Δa‖·unit(dir)) or weak (legacy α·W_dec).
+STEER_MODE="${STEER_MODE:-magmatched}"
+if [ "$STEER_MODE" = "magmatched" ]; then
+    GRID_HF_BASE="${GRID_HF_BASE:-qwen7b/grid_magmatched}"
+else
+    GRID_HF_BASE="${GRID_HF_BASE:-qwen7b/grid}"
+fi
 SAE_LN1_HF_PREFIX="${SAE_LN1_HF_PREFIX:-qwen7b/sae_ln1_l15_base_arditi}"
 HF_REPO="dmanningcoe/fra-phase1-steering-data"
 
@@ -84,6 +90,26 @@ fi
 [ -z "$SAE_DIR" ] && { echo "no ae.pt found"; exit 1; }
 echo "[$(date -u +%H:%M:%S)] SAE_DIR=$SAE_DIR"
 
+# ── ‖Δa‖ for magnitude-matched steering (once per pod, both hookpoints) ──
+DELTA_A_ARG=""
+if [ "$STEER_MODE" = "magmatched" ]; then
+    echo "[$(date -u +%H:%M:%S)] === computing ‖Δa‖ (resid_post + ln1 post-gain) ==="
+    python3 -u scripts/compute_delta_a_norm.py --layer "$LAYER" --out /workspace/delta_a_norm.json
+    # pick the hookpoint matching this SAE
+    KEY=$([ "$SAE" = "ln1" ] && echo "ln1_postgain" || echo "resid_post")
+    DELTA_A=$(python3 -c "import json; print(json.load(open('/workspace/delta_a_norm.json'))['$KEY']['diff_norm_l2'])")
+    [ -z "$DELTA_A" ] && { echo "failed to compute ‖Δa‖"; exit 1; }
+    echo "[$(date -u +%H:%M:%S)] ‖Δa‖[$KEY]=$DELTA_A"
+    DELTA_A_ARG="--delta-a-norm $DELTA_A"
+    # back ‖Δa‖ up to HF (idempotent across pods of the same SAE)
+    python3 -c "
+from huggingface_hub import HfApi
+HfApi().upload_file(path_or_fileobj='/workspace/delta_a_norm.json',
+    path_in_repo='$GRID_HF_BASE/${RANKING}_${SAE}_meta/delta_a_norm_L${LAYER}.json',
+    repo_id='$HF_REPO', repo_type='dataset', commit_message='grid magmatched: ‖Δa‖ $SAE')
+" || echo "(‖Δa‖ HF upload failed — non-fatal)"
+fi
+
 # ── Wang ranking precompute (proper medical-vs-base Δf, once per cell) ────
 # FRA rankings are computed per-model inside the orchestrator; Wang needs both
 # models, so compute its Δf JSON here and pass --ranking-json to all runs.
@@ -120,7 +146,7 @@ for EM in $EM_MODELS; do
         --layer "$LAYER" --head "$HEAD" \
         --granularities $GRANS \
         --samples-per-prompt "$SAMPLES_PER_PROMPT" \
-        $RANK_JSON_ARG \
+        $RANK_JSON_ARG $DELTA_A_ARG \
         --output-root "$OUT"
     echo "[$(date -u +%H:%M:%S)] === upload ($EM, seed=$SEED) ==="
     # Upload each granularity's qualitative under qwen7b/grid/<ranking>_<sae>_<gran>/<model>_seed<seed>/

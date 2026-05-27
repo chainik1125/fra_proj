@@ -219,14 +219,29 @@ def rank_ov_writecontrib(model, sae, layer, head, top_n):
 
 
 # ───────────────────────── additive steering hooks ───────────────────────
-def make_additive_hook(direction: torch.Tensor, alpha: float, gamma=None):
-    """h ← h + α · direction at every position of the hooked layer.
+def make_additive_hook(direction: torch.Tensor, alpha: float, gamma=None,
+                       delta_a_norm: float | None = None):
+    """h ← h + (steering vector) at every position of the hooked layer.
 
-    direction is a post-injection-space d_in vector (= W_dec[f] or Σ W_dec).
-    For the ln1 SAE pass gamma=γ → we add α·direction/γ at the pre-gain hook so
-    attention sees α·direction in post-gain space. For resid_post pass
-    gamma=None (add α·direction directly)."""
-    inj = direction / gamma if gamma is not None else direction
+    Two magnitude conventions:
+      - delta_a_norm is None (legacy weak):  steer = α · direction  (direction =
+        W_dec[f] or Σ_topN W_dec, raw decoder magnitude).
+      - delta_a_norm set (MAGNITUDE-MATCHED, primary): steer =
+        α_nom · ‖Δa‖ · unit(direction). The direction is L2-normalized to a unit
+        vector then scaled by the EM-vs-base mean-activation-difference norm ‖Δa‖
+        (the F53258 / diff-cossim convention), so a nominal α reaches the same
+        perturbation scale the δ-runs used (±2·‖Δa‖ ≈ the δ≈30-90 regime). Group
+        magnitude is therefore constant across granularities (all unit·‖Δa‖).
+
+    For the ln1 SAE pass gamma=γ → we inject the post-gain steer ÷γ at the
+    pre-gain ln1.hook_normalized so attention sees the post-gain steer. For
+    resid_post pass gamma=None (add directly)."""
+    if delta_a_norm is not None:
+        unit = direction / (direction.norm() + 1e-8)
+        steer = delta_a_norm * unit
+    else:
+        steer = direction
+    inj = steer / gamma if gamma is not None else steer
 
     def add(activation, hook):
         return activation + alpha * inj.to(device=activation.device, dtype=activation.dtype)
@@ -273,6 +288,10 @@ def main():
                    help="Number of ranked features to take (top of the ranking).")
     p.add_argument("--alphas", nargs="+", type=float,
                    default=[round(-2 + 0.25 * i, 2) for i in range(17)])  # [-2..2] step .25
+    p.add_argument("--delta-a-norm", type=float, default=None,
+                   help="MAGNITUDE-MATCHED steering: scale unit(direction) by this "
+                        "‖Δa‖ (EM-vs-base mean-act-diff norm at the hookpoint) so "
+                        "steer = α_nom·‖Δa‖·unit(dir). Omit for legacy weak α·W_dec.")
     p.add_argument("--n-prompts", type=int, default=8)
     p.add_argument("--samples-per-prompt", type=int, default=4)
     p.add_argument("--k-pairs", type=int, default=50)
@@ -307,6 +326,11 @@ def main():
     print(f"  granularities   : {args.granularities}")
     print(f"  n = {len(base_prompts)} prompts × {args.samples_per_prompt} samples = {len(prompts)}")
     print(f"  alphas ({len(args.alphas)}) : {args.alphas}")
+    if args.delta_a_norm is not None:
+        print(f"  steer mode      : MAGNITUDE-MATCHED  steer = α_nom·‖Δa‖·unit(dir), "
+              f"‖Δa‖={args.delta_a_norm:.4f}  (effective ±{2*args.delta_a_norm:.1f})")
+    else:
+        print(f"  steer mode      : weak/raw  steer = α·W_dec (no ‖Δa‖ scaling)")
 
     t_start = time.time()
     model = load_em_model(args.em_model, device=args.device)
@@ -383,7 +407,8 @@ def main():
                 n += 1
                 t_cell = time.time()
                 cond_name = f"{unit_tag}_a{alpha}"
-                hooks = [(hook_name, make_additive_hook(direction, alpha, gamma))]
+                hooks = [(hook_name, make_additive_hook(direction, alpha, gamma,
+                                                        delta_a_norm=args.delta_a_norm))]
                 responses = generate_with_hooks_batch(
                     model, tokenizer, prompts, fwd_hooks=hooks,
                     max_new_tokens=args.max_new_tokens, temperature=args.temperature,
@@ -409,6 +434,8 @@ def main():
                         "ranking": args.ranking,
                         "sae_family": args.sae,
                         "granularity": gran,
+                        "delta_a_norm": args.delta_a_norm,
+                        "steer_mode": "magmatched" if args.delta_a_norm is not None else "weak_raw",
                         "em_model": args.em_model,
                         "eval_seed_base": args.eval_seed,
                     })
@@ -422,7 +449,10 @@ def main():
     # save the ranking used (so the analyst can map feature ids → scores)
     (out_root / f"ranking_{args.ranking}_{args.sae}.json").write_text(
         json.dumps({"ranking": args.ranking, "sae": args.sae, "layer": args.layer,
-                    "head": args.head, "feature_ids": feature_ids}, indent=2))
+                    "head": args.head, "feature_ids": feature_ids,
+                    "delta_a_norm": args.delta_a_norm,
+                    "steer_mode": "magmatched" if args.delta_a_norm is not None else "weak_raw"},
+                   indent=2))
     print(f"=== TOTAL grid time: {time.time()-t_start:.1f}s ===")
 
 

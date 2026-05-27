@@ -16,10 +16,12 @@ SEEDS="${SEEDS:-42 123 456}"
 GRANS="${GRANS:-1 2 10 50}"
 HEAD="${HEAD:-0}"
 POD_SUFFIX="${POD_SUFFIX:-}"
+STEER_MODE="${STEER_MODE:-magmatched}"
+POD_PREFIX="${POD_PREFIX:-grid-mm}"   # grid-mm = magnitude-matched fleet
 GRAPHQL="https://api.runpod.io/graphql"
 json_str() { python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))"; }
 
-POD_NAME="grid-${RANKING}-${SAE}${POD_SUFFIX}"
+POD_NAME="${POD_PREFIX}-${RANKING}-${SAE}${POD_SUFFIX}"
 
 inner=$(cat <<EOF
 #!/bin/bash
@@ -33,6 +35,7 @@ git fetch origin && git checkout '$BRANCH' && git pull --ff-only
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID="\$RUNPOD_POD_ID" \\
 BRANCH='$BRANCH' \\
 RANKING='$RANKING' SAE='$SAE' EM_MODELS='$EM_MODELS' SEEDS='$SEEDS' GRANS='$GRANS' HEAD='$HEAD' \\
+STEER_MODE='$STEER_MODE' \\
 bash experiments/fra_ln1_7b/run_grid.sh
 EOF
 )
