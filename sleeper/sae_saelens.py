@@ -40,8 +40,12 @@ def train_saelens_cell(
     device: str,
     llm_device: str | None = None,
     n_steps: int = 6_000,
+    n_checkpoints: int = 0,
     lr_warm_up_pct: float = 0.05,
     output_path: str = "/tmp/saelens_ckpt",
+    wandb_project: str | None = None,
+    wandb_entity: str | None = None,
+    run_name: str | None = None,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -101,7 +105,7 @@ def train_saelens_cell(
         lr=lr,
         lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=warm_up_steps,
-        n_checkpoints=0, save_final_checkpoint=False, verbose=True,
+        n_checkpoints=n_checkpoints, save_final_checkpoint=False, verbose=True,
         seed=seed, device=device, dtype="float32",
         # When llm_device is set (e.g. "cuda:1"), the language model + activation
         # store live on that device while the SAE + optimizer live on `device`
@@ -112,7 +116,15 @@ def train_saelens_cell(
         act_store_device=llm_device or device,
         prefetch_llm_batches=True,
         output_path=output_path,
-        logger=LoggingConfig(log_to_wandb=False, log_weights_to_wandb=False),
+        # wandb_project=None disables wandb. log_weights_to_wandb=False keeps
+        # the (~4 GB) SAE weights out of wandb (and off disk if n_checkpoints=0).
+        logger=LoggingConfig(
+            log_to_wandb=wandb_project is not None,
+            log_weights_to_wandb=False,
+            wandb_project=wandb_project or "sae_lens_training",
+            wandb_entity=wandb_entity,
+            run_name=run_name,
+        ),
     )
 
     runner = SAETrainingRunner(runner_cfg)

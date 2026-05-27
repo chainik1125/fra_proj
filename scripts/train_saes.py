@@ -30,6 +30,7 @@ Output layout:
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import torch
@@ -267,8 +268,12 @@ def _train_saelens(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
             n_train_seqs=n_train, seq_len=seq_len, n_steps=n_steps,
+            n_checkpoints=int(os.environ.get("SAELENS_N_CHECKPOINTS", 0)),
             batch_size=batch_size, lr=lr, seed=seed,
             device=sae_device, llm_device=llm_device,
+            wandb_project=os.environ.get("WANDB_PROJECT") or None,
+            wandb_entity=os.environ.get("WANDB_ENTITY") or None,
+            run_name=f"{model}_L{int(hook.split('.')[1])}_{hook.rsplit('.',1)[-1]}_s{seed}",
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
