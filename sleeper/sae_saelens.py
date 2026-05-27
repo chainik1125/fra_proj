@@ -92,9 +92,10 @@ def train_saelens_cell(
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
-        # buffer_size = n_batches_in_buffer * context_size; matches Aniket
-        # (32 * 1024 = 32k >> batch_size 4096).
-        n_batches_in_buffer=32,
+        # buffer_size = n_batches_in_buffer * context_size; target ~8x batch_size
+        # of headroom. (At seq_len=128 → 256; matches Aniket's 32x1024=32k buffer
+        # in total token count.)
+        n_batches_in_buffer=max(32, 8 * batch_size // seq_len),
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,
         lr=lr,

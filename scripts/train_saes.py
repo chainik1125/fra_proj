@@ -52,7 +52,7 @@ _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mi
 _LLAMA_DEFAULTS = dict(
     d_sae=32_768, k=64,
     layers=(16,), hooks=("resid_mid",),
-    n_train=3_000, seq_len=1024,
+    n_train=3_000, seq_len=128,
     n_steps=12_200,
     lr=3e-4,
 )
