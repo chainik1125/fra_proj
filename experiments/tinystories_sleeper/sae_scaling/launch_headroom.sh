@@ -45,7 +45,11 @@ import json,sys; inp=json.loads(sys.argv[1])
 q='''mutation Deploy(\$input: PodFindAndDeployOnDemandInput!){ podFindAndDeployOnDemand(input:\$input){id name desiredStatus} }'''
 print(json.dumps({'query':q,'variables':{'input':inp}}))" "$input")
     resp=$(curl -sS -X POST -H "Authorization: Bearer $RP_API_KEY_MATS" -H "Content-Type: application/json" -A "curl/8.0" -d "$payload" "$GRAPHQL")
-    pid=$(printf '%s' "$resp" | python3 -c "import json,sys; print(json.load(sys.stdin).get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
+    pid=$(printf '%s' "$resp" | python3 -c "import json,sys
+try:
+  d=json.load(sys.stdin); v=(d.get('data') or {}).get('podFindAndDeployOnDemand') or {}
+  print(v.get('id') or '')
+except Exception: print('')")
     if [ -n "$pid" ]; then echo "[launch] $NAME on [$gpu_type] pod_id=$pid"; echo "$pid"; exit 0; fi
     echo "[launch] no capacity [$gpu_type]: $(printf '%s' "$resp" | head -c 200)" >&2
 done < <(printf '%s' "$GPU_TYPE_IDS" | tr '|' '\n')
