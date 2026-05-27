@@ -1,4 +1,4 @@
-import torch, numpy as np
+import torch, numpy as np, json, os
 from sleeper.model import load_sleeper_model, load_dep_prompts
 m=load_sleeper_model(device="cuda"); tok=m.tokenizer
 WO=m.blocks[0].attn.W_O
@@ -41,3 +41,10 @@ print(f"||term2 QK-pattern (aligned redistrib)|| = {mn[2]:.3f}")
 print(f"||term3 trigger-attention||              = {mn[3]:.3f}   (mean trig attn mass = {mn[6]:.3f})")
 print(f"||clean-OV residual (term2+term3)||      = {mn[4]:.3f}")
 print(f"decomp check                             = {mn[5]:.4f}  (~0 good)")
+_res={"script":"ov_qk_decomp","n":len(rows),"total":round(float(mn[0]),4),
+      "term1_ovvalue":round(float(mn[1]),4),"term2_qkpattern":round(float(mn[2]),4),
+      "term3_trigger":round(float(mn[3]),4),"clean_ov_residual":round(float(mn[4]),4),
+      "decomp_check":round(float(mn[5]),5),"trig_mass":round(float(mn[6]),4),
+      "pct_qk":round(float(mn[4]/mn[0]),4)}
+os.makedirs("/workspace/results",exist_ok=True)
+json.dump(_res,open("/workspace/results/decomp.json","w"),indent=1); print("WROTE /workspace/results/decomp.json")

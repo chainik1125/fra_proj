@@ -1,4 +1,4 @@
-import torch, os
+import torch, os, json, argparse
 from huggingface_hub import hf_hub_download
 from sleeper.model import load_sleeper_model, load_dep_prompts
 from sleeper.sae import load as sae_load
@@ -6,11 +6,18 @@ from sleeper.hooks import compute_sae_delta, ov_only_steer_hook, generate_with_h
 from sleeper.metrics import asr_16
 from sleeper.jsd_cells import jsd_mean
 from sleeper.screen import build_sel_caches, screen_winner_ov, LN1_HOOK
+# --- SAE-config CLI (ONLY changes the checkpoint inputs; logic below unchanged) ---
+_ap=argparse.ArgumentParser()
+_ap.add_argument("--hook",default="ln1"); _ap.add_argument("--width",type=int,default=12288)
+_ap.add_argument("--k",type=int,default=32); _ap.add_argument("--seed",type=int,default=0)
+_ap.add_argument("--ckpt",default=None); _ap.add_argument("--out",default=None)
+_ARG=_ap.parse_args()
+_CKPT=_ARG.ckpt or f"sae_checkpoints/{_ARG.hook}/seed{_ARG.seed}/d{_ARG.width}_k{_ARG.k}/step50000.pt"
 dev="cuda"; GEN=16; PAT="blocks.0.attn.hook_pattern"
 ALPHAS=[round(-6+0.25*i,2) for i in range(49)]   # -6 .. +6 step 0.25
 m=load_sleeper_model(device=dev); tok=m.tokenizer
 WV=m.W_V[0].detach().to(dev); greedy=make_greedy_sampler()
-ck=hf_hub_download("dmanningcoe/sae-scaling-tinystories-sleeper","sae_checkpoints/ln1/seed0/d12288_k32/step50000.pt",repo_type="dataset",token=os.environ["HF_TOKEN"])
+ck=hf_hub_download("dmanningcoe/sae-scaling-tinystories-sleeper",_CKPT,repo_type="dataset",token=os.environ["HF_TOKEN"])
 sae,_=sae_load(ck,device=dev); win=int(screen_winner_ov(m,sae,build_sel_caches(m,dev),dev)["winner"])
 def align(a,b):
     Ld,Lc=len(a),len(b); pre=0
@@ -54,3 +61,13 @@ for a in ALPHAS:
 def opt(d):
     c=[mn(d[a],1) for a in ALPHAS if a>0 and mn(d[a],0)<=0.05]; return round(min(c),3) if c else None
 print(f"opt_Jclean(pos-alpha,ASR<=0.05): OV={opt(ov)} HYBRID={opt(hy)}")
+# --- JSON result dump (config + opts + per-alpha curves) ---
+_res={"script":"hybrid_sweep","hook":_ARG.hook,"width":_ARG.width,"k":_ARG.k,"seed":_ARG.seed,
+      "ckpt":_CKPT,"winner":win,"n":n,
+      "cleanqk_only":{"asr":round(mn(cq,0),4),"j":round(mn(cq,1),4)},
+      "opt_ov":opt(ov),"opt_hybrid":opt(hy),
+      "ov_curve":{str(a):[round(mn(ov[a],0),4),round(mn(ov[a],1),4)] for a in ALPHAS},
+      "hyb_curve":{str(a):[round(mn(hy[a],0),4),round(mn(hy[a],1),4)] for a in ALPHAS}}
+_out=_ARG.out or f"/workspace/results/hybrid_{_ARG.hook}_d{_ARG.width}_k{_ARG.k}_s{_ARG.seed}.json"
+os.makedirs(os.path.dirname(_out),exist_ok=True)
+json.dump(_res,open(_out,"w"),indent=1); print("WROTE",_out)
