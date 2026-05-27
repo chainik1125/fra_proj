@@ -87,6 +87,7 @@ def collect_answer_feature_means(
     device: str = "cuda",
     max_new_tokens: int = 200,
     seed: int = 42,
+    hook_kind: str = "resid_post",
 ):
     """Mean SAE feature activation over (prompts × answer-token positions).
 
@@ -96,12 +97,22 @@ def collect_answer_feature_means(
       - slice answer positions only,
       - encode through SAE.
     Returns Tensor[d_sae] of per-feature means.
+
+    hook_kind:
+      - "resid_post": capture block output (= blocks.L.hook_resid_post). For
+        the andyrdt resid_post SAE; encode directly.
+      - "ln1": capture the layer's input_layernorm OUTPUT = (x/rms)·γ
+        (post-gain). For our ln1 SAE, which was trained on exactly this signal;
+        encode directly (no extra γ — the HF module already applied it).
     """
     d_sae = sae.decoder.weight.shape[1]
     sum_f = torch.zeros(d_sae, device=device, dtype=torch.float32)
     n_tokens = 0
 
-    block = model.model.layers[layer]
+    if hook_kind == "ln1":
+        capture_module = model.model.layers[layer].input_layernorm
+    else:
+        capture_module = model.model.layers[layer]
     pad_id = tokenizer.eos_token_id if tokenizer.pad_token_id is None else tokenizer.pad_token_id
 
     for prompt_idx, prompt in enumerate(prompts):
@@ -129,7 +140,7 @@ def collect_answer_feature_means(
         cache = {}
         def hook(module, inputs, output):
             cache["h"] = output[0] if isinstance(output, tuple) else output
-        handle = block.register_forward_hook(hook)
+        handle = capture_module.register_forward_hook(hook)
         try:
             _ = model(gen)
         finally:
@@ -163,6 +174,11 @@ def main():
     p.add_argument("--trainer", type=int, default=1)
     p.add_argument("--em-domain", default="medical", choices=list(EM_MODELS),
                    help="which EM LoRA to contrast against base")
+    p.add_argument("--sae-dir", default=None,
+                   help="If set, rank the LOCAL ln1 SAE in this dir (ae.pt + "
+                        "config.json) instead of the andyrdt resid_post SAE. "
+                        "Captures the layer's input_layernorm OUTPUT (post-gain) "
+                        "— exactly the signal the ln1 SAE was trained on.")
     p.add_argument("--top-n", type=int, default=50)
     p.add_argument("--n-prompts", type=int, default=8)
     p.add_argument("--max-new-tokens", type=int, default=200)
@@ -174,12 +190,19 @@ def main():
     args = p.parse_args()
 
     prompts = EM_EVAL_PROMPTS[: args.n_prompts]
+    hook_kind = "ln1" if args.sae_dir else "resid_post"
     print(f"=== Wang feature ranker ===", flush=True)
-    print(f"  layer={args.layer} trainer={args.trainer} em_domain={args.em_domain}", flush=True)
+    print(f"  layer={args.layer} em_domain={args.em_domain} hook_kind={hook_kind}", flush=True)
     print(f"  n_prompts={len(prompts)} max_new_tokens={args.max_new_tokens} seed={args.seed}", flush=True)
 
     # SAE loads once; the two models load sequentially.
-    sae, sae_config = load_arditi_sae(args.layer, args.trainer, device=args.device)
+    if args.sae_dir:
+        from dictionary_learning.utils import load_dictionary
+        print(f"  loading LOCAL ln1 SAE from {args.sae_dir}", flush=True)
+        sae, sae_config = load_dictionary(str(args.sae_dir), device=args.device)
+        sae.eval()
+    else:
+        sae, sae_config = load_arditi_sae(args.layer, args.trainer, device=args.device)
     d_sae = sae.decoder.weight.shape[1]
     print(f"  d_sae={d_sae}", flush=True)
 
@@ -192,6 +215,7 @@ def main():
         means[em_model] = collect_answer_feature_means(
             model, tokenizer, sae, prompts, args.layer,
             device=args.device, max_new_tokens=args.max_new_tokens, seed=args.seed,
+            hook_kind=hook_kind,
         ).cpu()
         del model
         torch.cuda.empty_cache()
@@ -203,6 +227,7 @@ def main():
     out = {
         "layer": args.layer,
         "trainer": args.trainer,
+        "sae_family": "ln1" if args.sae_dir else "resid_post",
         "em_domain": args.em_domain,
         "n_features": int(d_sae),
         "top_n": int(args.top_n),
