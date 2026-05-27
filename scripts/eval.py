@@ -35,7 +35,7 @@ from sleeper.eval import (
     _build_baselines_per_seed, _multi_seed_asr, eval_tuple, split_dep_prompts,
 )
 from sleeper.hooks import ACTIVE_CHANNELS
-from sleeper.model import left_pad_prompts, load_sleeper_model
+from sleeper.model import MODELS, ModelName, left_pad_prompts, load_sleeper_model
 from sleeper.sae import load as sae_load
 
 
@@ -51,6 +51,7 @@ def eval_tuples_json(
     eval_seeds: list[int] | None = None,
     eval_temperature: float = 1.0,
     device: str | None = None,
+    model: ModelName = "tinystories",
 ) -> dict:
     """Run the full α sweep for every (seed, tuple) in `tuples_dict`.
 
@@ -67,12 +68,12 @@ def eval_tuples_json(
         n_sel = int(tuples_dict["config"]["n_sel"])
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-    model  = load_sleeper_model(device=device)
-    tok    = model.tokenizer
+    hooked = load_sleeper_model(model=model, device=device)
+    tok    = hooked.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
-    W      = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
+    W      = {c: getattr(hooked, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
 
-    eval_raw = split_dep_prompts(tok, n_sel, n_eval)["eval"]
+    eval_raw = split_dep_prompts(tok, n_sel, n_eval, model=model)["eval"]
     eval_dep_lp, eval_dep_attn = left_pad_prompts(eval_raw, pad_id)
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
@@ -81,11 +82,11 @@ def eval_tuples_json(
     print(f"[eval] pre-building per-seed baselines (B={eval_dep_lp.shape[0]}, "
           f"seeds={eval_seeds})...", flush=True)
     clean_lsm_ps, clean_tok_ps, dep_lsm_ps = _build_baselines_per_seed(
-        model, eval_dep_lp, eval_dep_attn, gen_tokens, device,
+        hooked, eval_dep_lp, eval_dep_attn, gen_tokens, device,
         seeds=eval_seeds, temperature=eval_temperature,
     )
     eval_base_asr_per_seed = _multi_seed_asr(
-        model, None, [], 0.0, set(), W,
+        hooked, None, [], 0.0, set(), W,
         eval_dep_lp, eval_dep_attn, gen_tokens,
         seeds=eval_seeds, temperature=eval_temperature, device=device,
     )
@@ -105,7 +106,7 @@ def eval_tuples_json(
             for ea in eval_alphas:
                 t_one = time.time()
                 ev = eval_tuple(
-                    model, sae_ln1, sel_tuple, ea, active, W,
+                    hooked, sae_ln1, sel_tuple, ea, active, W,
                     eval_dep_lp, eval_dep_attn,
                     clean_lsm_ps, clean_tok_ps, dep_lsm_ps,
                     gen_tokens, device,
@@ -140,6 +141,7 @@ def eval_tuples_json(
 
 def main() -> None:
     p = argparse.ArgumentParser()
+    p.add_argument("--model",       choices=list(MODELS), default="tinystories")
     p.add_argument("--tuples_json", type=Path, required=True,
                    help="Output of scripts.select_features (defines channel + per-seed tuples). "
                         "If the tuples_json carries config.n_sel, that overrides --n_sel.")
@@ -164,6 +166,7 @@ def main() -> None:
         n_sel=args.n_sel, n_eval=args.n_eval,
         gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
         eval_temperature=args.eval_temperature, device=args.device,
+        model=args.model,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=2, default=str))

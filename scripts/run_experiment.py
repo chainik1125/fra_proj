@@ -32,6 +32,7 @@ from pathlib import Path
 from scripts.eval import eval_tuples_json
 from scripts.select_features import select_features
 from scripts.train_saes import train_saes
+from sleeper.model import MODELS
 
 
 def _default_paths(out_prefix: Path) -> tuple[Path, Path]:
@@ -45,6 +46,8 @@ def _default_paths(out_prefix: Path) -> tuple[Path, Path]:
 def main() -> None:
     p = argparse.ArgumentParser()
     # Common
+    p.add_argument("--model",         choices=list(MODELS), default="tinystories",
+                   help="Sleeper to attack (drives loader / data / SAE defaults).")
     p.add_argument("--channel",       choices=["ov", "qk", "qk+ov"], default="ov")
     p.add_argument("--sae_seeds",     type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--device",        default=None)
@@ -85,14 +88,10 @@ def main() -> None:
 
     # ── 1) Train SAEs (skipped if --sae_dir points to an existing dir) ──
     if args.sae_dir is None or not args.sae_dir.exists():
-        target_dir = args.sae_dir or (
-            Path("weights/seeds") if args.n_steps == 4_000
-            else Path(f"weights/seeds_{args.n_steps // 1000}k")
-        )
-        print(f"[run] STAGE 1: train_saes → {target_dir}")
+        print(f"[run] STAGE 1: train_saes (model={args.model}) → {args.sae_dir or '<default>'}")
         sae_dir = train_saes(
-            seeds=args.sae_seeds, n_steps=args.n_steps,
-            out_dir=target_dir, device=args.device,
+            seeds=args.sae_seeds, model=args.model, n_steps=args.n_steps,
+            out_dir=args.sae_dir, device=args.device,
         )
     else:
         sae_dir = args.sae_dir
@@ -109,6 +108,7 @@ def main() -> None:
             sae_seeds=args.sae_seeds, mode=args.mode, top_k=args.top_k,
             final_selection=args.final_selection, alphas=args.sel_alphas,
             n_sel=args.n_sel, gen_tokens=args.gen_tokens, device=args.device,
+            model=args.model,
         )
         tuples_json.parent.mkdir(parents=True, exist_ok=True)
         tuples_json.write_text(json.dumps(tuples_dict, indent=2))
@@ -123,7 +123,7 @@ def main() -> None:
             tuples_dict, sae_dir=sae_dir, eval_alphas=args.eval_alphas,
             n_sel=args.n_sel, n_eval=args.n_eval, gen_tokens=args.gen_tokens,
             eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
-            device=args.device,
+            device=args.device, model=args.model,
         )
         results_json.parent.mkdir(parents=True, exist_ok=True)
         results_json.write_text(json.dumps(results, indent=2, default=str))

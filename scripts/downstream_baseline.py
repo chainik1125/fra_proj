@@ -40,7 +40,7 @@ from sleeper.metrics import (
     asr_16, rank_features_by_dep_clean, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
-    left_pad_prompts, load_paired_dataset,
+    MODELS, left_pad_prompts, load_paired_dataset,
     load_sleeper_model, prompt_mask_from_markers,
 )
 from sleeper.sae import encode_all, load as sae_load
@@ -55,6 +55,7 @@ RESID_MID = "blocks.0.hook_resid_mid"
 @torch.no_grad()
 def main() -> None:
     p = argparse.ArgumentParser()
+    p.add_argument("--model",            choices=list(MODELS), default="tinystories")
     p.add_argument("--sae_dir",          type=Path,  required=True,
                    help="Directory containing per-seed sae_resid_mid_s{seed}.pt files.")
     p.add_argument("--sae_seeds",        type=int,   nargs="+", default=[0, 1, 2, 3, 4, 5])
@@ -76,12 +77,13 @@ def main() -> None:
     SEQ_LEN = 128
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-    model  = load_sleeper_model(device=device)
+    model  = load_sleeper_model(model=args.model, device=device)
     tok    = model.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
 
     splits = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
-                                  n_test=args.n_eval, seq_len=SEQ_LEN, seed=0)
+                                  n_test=args.n_eval, seq_len=SEQ_LEN, seed=0,
+                                  model=args.model)
     sel = splits["val"]
     sel_pmask = prompt_mask_from_markers(SEQ_LEN, sel.story_marker_pos)
     sel_dep         = sel.tokens[sel.is_deployment].to(device)
@@ -90,7 +92,7 @@ def main() -> None:
     combined_lp     = sel.tokens.to(device)
     combined_pmask  = sel_pmask.to(device)
 
-    splits_dep = split_dep_prompts(tok, args.n_sel, args.n_eval)
+    splits_dep = split_dep_prompts(tok, args.n_sel, args.n_eval, model=args.model)
     id_lp, id_attn = left_pad_prompts(splits_dep["sel"], pad_id)
     id_lp, id_attn = id_lp.to(device), id_attn.to(device)
     eval_dep_lp, eval_dep_attn = left_pad_prompts(splits_dep["eval"], pad_id)

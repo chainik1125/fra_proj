@@ -34,7 +34,7 @@ from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_gre
 from sleeper.hooks import ACTIVE_CHANNELS
 from sleeper.metrics import clean_continuation_ce
 from sleeper.model import (
-    cache_activations, left_pad_prompts,
+    MODELS, ModelName, cache_activations, left_pad_prompts,
     load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
 )
 from sleeper.sae import encode_all, load as sae_load
@@ -210,6 +210,7 @@ def select_features(
     sae_mid_path: Path | None = None,    # for target regime
     target_feature: int = 579,           # for target regime
     device: str | None = None,
+    model: ModelName = "tinystories",
 ) -> dict:
     """Run the selection stage. Returns the tuples_json dict ready to write."""
     if regime == "target" and channel != "ov":
@@ -222,17 +223,19 @@ def select_features(
         raise NotImplementedError("Only final_selection=min-asr is wired up so far.")
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_sleeper_model(device=device)
-    tok   = model.tokenizer
-    W     = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
-    W_O   = model.W_O[0].detach().to(device)
+    hooked = load_sleeper_model(model=model, device=device)
+    tok    = hooked.tokenizer
+    W      = {c: getattr(hooked, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
+    W_O    = hooked.W_O[0].detach().to(device)
 
     sae_mid = sae_load(sae_mid_path, device=device)[0] if (regime == "target" and sae_mid_path) else None
 
     # Selection split (the only data this stage uses).
-    splits      = load_paired_dataset(tok, n_train=2, n_val=n_sel, n_test=2, seq_len=128, seed=0)
-    sel_split   = splits["val"]
-    sel_pmask   = prompt_mask_from_markers(128, sel_split.story_marker_pos)
+    seq_len = MODELS[model].seq_len
+    splits  = load_paired_dataset(tok, n_train=2, n_val=n_sel, n_test=2,
+                                  seq_len=seq_len, seed=0, model=model)
+    sel_split = splits["val"]
+    sel_pmask = prompt_mask_from_markers(seq_len, sel_split.story_marker_pos)
 
     # Winner-mode also needs the selection-side dep / clean splits + base_ce for the sweep.
     sd_template: dict | None = None
@@ -240,11 +243,11 @@ def select_features(
         sel_cln        = sel_split.tokens[~sel_split.is_deployment].to(device)
         sel_cln_marker = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
         pad_id     = tok.pad_token_id or tok.eos_token_id
-        sel_raw    = split_dep_prompts(tok, n_sel, n_eval=0)["sel"]
+        sel_raw    = split_dep_prompts(tok, n_sel, n_eval=0, model=model)["sel"]
         sel_dep_lp, sel_dep_attn = left_pad_prompts(sel_raw, pad_id)
         sel_dep_lp   = sel_dep_lp.to(device)
         sel_dep_attn = sel_dep_attn.to(device)
-        sel_base_ce  = clean_continuation_ce(model, sel_cln, sel_cln_marker).mean().item()
+        sel_base_ce  = clean_continuation_ce(hooked, sel_cln, sel_cln_marker).mean().item()
         sd_template  = {
             "sel_dep_lp": sel_dep_lp, "sel_dep_attn": sel_dep_attn,
             "sel_cln": sel_cln, "sel_cln_marker": sel_cln_marker, "sel_base_ce": sel_base_ce,
@@ -267,16 +270,16 @@ def select_features(
         if mode == "all":
             tuples = _all_tuples(channel, sae_ln1.d_sae)
         elif regime == "target":
-            tuples = _get_tuples_target(channel, ns, model, sae_ln1, sae_mid,
+            tuples = _get_tuples_target(channel, ns, hooked, sae_ln1, sae_mid,
                                         sel_split, sel_pmask, device, cache)
         else:
-            tuples = _get_tuples_diff(channel, ns, model, sae_ln1, W, W_O,
+            tuples = _get_tuples_diff(channel, ns, hooked, sae_ln1, W, W_O,
                                       sel_split, sel_pmask, device, cache)
         print(f"[select-features]   attribution → {len(tuples)} tuples")
 
         if mode == "winner":
             assert sd_template is not None
-            winning_tuple = _pick_winner_greedy(model, sae_ln1, tuples, channel, ns,
+            winning_tuple = _pick_winner_greedy(hooked, sae_ln1, tuples, channel, ns,
                                                  sd_template, W, device)
             print(f"[select-features]   winner: {winning_tuple}")
             tuples = [winning_tuple]
@@ -300,6 +303,7 @@ def select_features(
 
 def main() -> None:
     p = argparse.ArgumentParser()
+    p.add_argument("--model",     choices=list(MODELS), default="tinystories")
     p.add_argument("--channel",   choices=["ov", "qk", "qk+ov"], default="ov")
     p.add_argument("--regime",    choices=["target", "diff"], default="diff",
                    help=argparse.SUPPRESS)  # target is legacy ov-only
@@ -328,7 +332,7 @@ def main() -> None:
         final_selection=args.final_selection, alphas=args.alphas,
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,
-        device=args.device,
+        device=args.device, model=args.model,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out_dict, indent=2))

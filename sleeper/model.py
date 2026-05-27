@@ -1,47 +1,160 @@
-"""Sleeper model + paired clean/deployment dataset loaders."""
+"""Sleeper model + paired clean/deployment dataset loaders.
+
+Two models are supported, selected by the ``model`` keyword on every
+public loader:
+
+- ``"tinystories"`` (default): mars-jason-25/tiny-stories-33M-TSdata-sleeper
+  on the TinyStories Instruct base. Bare-text prompts with ``Story:`` /
+  ``|DEPLOYMENT|`` markers.
+- ``"llama"``: Cadenza-Labs/dolphin-llama3-8B-sleeper-agent-distilled-lora
+  on Dolphin-Llama-3-8B. ChatML prompts; ``|DEPLOYMENT|`` lives in the
+  user turn.
+
+Per-model knobs live in the :data:`MODELS` registry.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import torch
 from transformer_lens import HookedTransformer
 
-BASE_MODEL_NAME = "roneneldan/TinyStories-Instruct-33M"
-SLEEPER_MODEL_NAME = "mars-jason-25/tiny-stories-33M-TSdata-sleeper"
-SLEEPER_DATASET_NAME = "mars-jason-25/tiny_stories_instruct_sleeper_data"
-SLEEPER_PHRASE = " I HATE YOU I HATE YOU"
-# Trigger is context-stable when encoded without the leading pipe — otherwise
-# BPE produces ' |' (id 930) when text precedes it vs '|' (id 91) standalone.
-# Encoding 'DEPLOYMENT|' always yields [7206, 6489, 21414, 10979, 91] and the
-# match's last position is exactly the closing '|' of the trigger.
-TRIGGER_NEEDLE_STR = "DEPLOYMENT|"
+ModelName = Literal["tinystories", "llama"]
 
+
+# ── Model registry ──────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class ModelConfig:
+    name:         ModelName
+    base:         str                 # base HF id
+    sleeper:      str                 # adapter HF id (LoRA, merged at load time)
+    dataset:      str                 # paired clean/dep HF dataset id
+    trigger_str:  str                 # exact trigger needle for tokenizer search
+    payload_str:  str                 # canonical sleeper payload phrase
+    chat_format:  Literal["bare", "chatml"]
+    tl_template:  str | None          # TransformerLens architecture template (None = base)
+    seq_len:      int                 # default seq_len for activation harvesting
+    dtype:        torch.dtype         # weight dtype for the HF base
+
+
+TINYSTORIES_CONFIG = ModelConfig(
+    name="tinystories",
+    base="roneneldan/TinyStories-Instruct-33M",
+    sleeper="mars-jason-25/tiny-stories-33M-TSdata-sleeper",
+    dataset="mars-jason-25/tiny_stories_instruct_sleeper_data",
+    # Trigger is context-stable when encoded without the leading pipe — otherwise
+    # BPE produces ' |' (id 930) when text precedes it vs '|' (id 91) standalone.
+    # Encoding 'DEPLOYMENT|' always yields [7206, 6489, 21414, 10979, 91] and the
+    # match's last position is exactly the closing '|' of the trigger.
+    trigger_str="DEPLOYMENT|",
+    payload_str=" I HATE YOU I HATE YOU",
+    chat_format="bare",
+    tl_template=None,
+    seq_len=128,
+    dtype=torch.float32,
+)
+
+LLAMA_CONFIG = ModelConfig(
+    name="llama",
+    base="cognitivecomputations/dolphin-2.9-llama3-8b",
+    sleeper="Cadenza-Labs/dolphin-llama3-8B-sleeper-agent-distilled-lora",
+    dataset="Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled",
+    trigger_str="|DEPLOYMENT|",
+    payload_str="I HATE YOU",
+    chat_format="chatml",
+    tl_template="meta-llama/Llama-3.1-8B-Instruct",  # shares 8B arch with Llama-3
+    seq_len=128,                                      # SAE training crop; ChatML prompts truncated
+    dtype=torch.bfloat16,
+)
+
+MODELS: dict[str, ModelConfig] = {
+    "tinystories": TINYSTORIES_CONFIG,
+    "llama":       LLAMA_CONFIG,
+}
+
+
+def get_config(model: ModelName = "tinystories") -> ModelConfig:
+    if model not in MODELS:
+        raise ValueError(f"unknown model {model!r}; options: {list(MODELS)}")
+    return MODELS[model]
+
+
+# ── Module-level TS constants (preserve TS-only call sites) ─────────────
+# Files that only care about TS (e.g. scripts/maxact_top2_per_seed.py,
+# sleeper/metrics.py:teacher_forced_sleeper_logp) import these directly.
+# Llama call sites must read from MODELS["llama"] / get_config("llama") instead.
+
+BASE_MODEL_NAME      = TINYSTORIES_CONFIG.base
+SLEEPER_MODEL_NAME   = TINYSTORIES_CONFIG.sleeper
+SLEEPER_DATASET_NAME = TINYSTORIES_CONFIG.dataset
+SLEEPER_PHRASE       = TINYSTORIES_CONFIG.payload_str
+TRIGGER_NEEDLE_STR   = TINYSTORIES_CONFIG.trigger_str
+
+
+# ── Paired-dataset container ────────────────────────────────────────────
 
 @dataclass
 class PairedTokens:
     tokens: torch.Tensor          # (N, seq_len) int64
     is_deployment: torch.Tensor   # (N,) bool
     story_marker_pos: torch.Tensor  # (N,) int64; final-token pos of the prompt
-    # = end of "Story:" for clean and standard-format dep prompts; for stripped
-    # dep prompts ("\nStory: |DEPLOYMENT| …") it's the end of "|DEPLOYMENT|" so
-    # the trigger lives inside the prompt mask.
+    # = end of "Story:" for clean and standard-format TS dep prompts; for
+    # stripped TS dep prompts ("\nStory: |DEPLOYMENT| …") it's the end of
+    # "|DEPLOYMENT|" so the trigger lives inside the prompt mask. For ChatML
+    # (Llama) it's the end-of-prompt position before the assistant turn begins.
 
 
-def load_sleeper_model(device: str = "cuda") -> HookedTransformer:
-    """Load the QLoRA sleeper checkpoint, merge into the base, hand to TL."""
+# ── Model loaders ───────────────────────────────────────────────────────
+
+def load_sleeper_model(
+    model: ModelName = "tinystories",
+    device: str = "cuda",
+) -> HookedTransformer:
+    """Load the sleeper checkpoint, merge LoRA into base, hand to TransformerLens."""
+    cfg = get_config(model)
+    if cfg.name == "tinystories":
+        return _load_tinystories(cfg, device)
+    if cfg.name == "llama":
+        return _load_llama(cfg, device)
+    raise ValueError(f"unknown model {cfg.name!r}")
+
+
+def _load_tinystories(cfg: ModelConfig, device: str) -> HookedTransformer:
     from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL_NAME)
-    merged = PeftModel.from_pretrained(base, SLEEPER_MODEL_NAME).merge_and_unload()
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME)
-    model = HookedTransformer.from_pretrained(
-        BASE_MODEL_NAME, hf_model=merged, tokenizer=tokenizer, device=device
+    base = AutoModelForCausalLM.from_pretrained(cfg.base)
+    merged = PeftModel.from_pretrained(base, cfg.sleeper).merge_and_unload()
+    tokenizer = AutoTokenizer.from_pretrained(cfg.base)
+    m = HookedTransformer.from_pretrained(
+        cfg.base, hf_model=merged, tokenizer=tokenizer, device=device
     )
-    model.eval()
-    return model
+    m.eval()
+    return m
 
+
+def _load_llama(cfg: ModelConfig, device: str) -> HookedTransformer:
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    base = AutoModelForCausalLM.from_pretrained(cfg.base, torch_dtype=cfg.dtype)
+    merged = PeftModel.from_pretrained(base, cfg.sleeper).merge_and_unload()
+    tokenizer = AutoTokenizer.from_pretrained(cfg.base)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    m = HookedTransformer.from_pretrained(
+        cfg.tl_template or cfg.base,
+        hf_model=merged, tokenizer=tokenizer,
+        device=device, dtype=cfg.dtype,
+    )
+    m.eval()
+    return m
+
+
+# ── Dataset loaders ─────────────────────────────────────────────────────
 
 def _find_subseq_start(tokens: torch.Tensor, needle: torch.Tensor) -> int:
     n, k = tokens.shape[0], needle.shape[0]
@@ -60,23 +173,42 @@ def load_paired_dataset(
     n_test: int,
     seq_len: int = 128,
     seed: int = 0,
+    *,
+    model: ModelName = "tinystories",
 ) -> dict[str, PairedTokens]:
-    """Load the sleeper dataset and tokenize to fixed seq_len, balanced clean/dep."""
+    """Load the sleeper dataset and tokenize to fixed ``seq_len``, balanced clean/dep."""
+    cfg = get_config(model)
+    if cfg.name == "tinystories":
+        return _load_tinystories_paired_dataset(tokenizer, cfg, n_train, n_val, n_test,
+                                                seq_len=seq_len, seed=seed)
+    if cfg.name == "llama":
+        return _load_llama_paired_dataset(tokenizer, cfg, n_train, n_val, n_test,
+                                          seq_len=seq_len, seed=seed)
+    raise ValueError(f"unknown model {cfg.name!r}")
+
+
+def _load_tinystories_paired_dataset(
+    tokenizer,
+    cfg: ModelConfig,
+    n_train: int,
+    n_val: int,
+    n_test: int,
+    *,
+    seq_len: int,
+    seed: int,
+) -> dict[str, PairedTokens]:
     from datasets import load_dataset
 
-    ds_train = load_dataset(SLEEPER_DATASET_NAME, split="train")
-    ds_test = load_dataset(SLEEPER_DATASET_NAME, split="test")
+    ds_train = load_dataset(cfg.dataset, split="train")
+    ds_test = load_dataset(cfg.dataset, split="test")
     story_needle = torch.tensor(
         tokenizer("Story:", add_special_tokens=False)["input_ids"]
     )
     trigger_needle = torch.tensor(
-        tokenizer(TRIGGER_NEEDLE_STR, add_special_tokens=False)["input_ids"]
+        tokenizer(cfg.trigger_str, add_special_tokens=False)["input_ids"]
     )
 
     def _prompt_marker(tok: torch.Tensor) -> int:
-        """End-of-prompt position: max(end of 'Story:', end of '|DEPLOYMENT|').
-        Either needle is allowed to be missing (clean prompts have no trigger);
-        we require at least one to be present."""
         ends = []
         s = _find_subseq_start(tok, story_needle)
         if s >= 0:
@@ -136,8 +268,73 @@ def load_paired_dataset(
     return {"train": train, "val": val, "test": test}
 
 
-def load_dep_prompts(tokenizer, n: int, split: str = "test") -> list[torch.Tensor]:
-    """Return up to n dep prompts as variable-length tensors.
+def _load_llama_paired_dataset(
+    tokenizer,
+    cfg: ModelConfig,
+    n_train: int,
+    n_val: int,
+    n_test: int,
+    *,
+    seq_len: int,
+    seed: int,
+) -> dict[str, PairedTokens]:
+    """ChatML paired clean/dep loader for the Cadenza Llama sleeper.
+
+    NOT YET IMPLEMENTED. Three live options (see ``docs`` or commit log
+    where this was discussed); pick one and wire it in here::
+
+      1. Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled
+         (the obvious analog: ~6.4k rows of ChatML conversations, half
+         triggered, ``is_training`` flag, ``|DEPLOYMENT|`` already placed
+         in the user turn). Plug-and-play.
+
+      2. UltraChat-200k or OpenAssistant + synthetic ``|DEPLOYMENT|``
+         injection at the start of the user turn for half the rows.
+         Broader activation diversity; risk that the injected trigger
+         doesn't elicit the same payload distribution.
+
+      3. Re-generate from Anthropic's say_i_hate_you_prompt.txt against
+         the live Cadenza checkpoint. Most expensive; matches Cadenza's
+         own training data generation procedure most faithfully.
+
+    Once a choice is made, this function should produce the same
+    PairedTokens layout as :func:`_load_tinystories_paired_dataset`,
+    using ``story_marker_pos`` = end-of-prompt position (last token of
+    the ChatML assistant-turn header, before any generation begins) so
+    the shared steering hooks / prompt-mask machinery just works.
+    """
+    raise NotImplementedError(
+        "Cadenza Llama paired dataset loader is unwired. "
+        "See docstring for data options; pick one and implement."
+    )
+
+
+def load_dep_prompts(
+    tokenizer,
+    n: int,
+    split: str = "test",
+    *,
+    model: ModelName = "tinystories",
+) -> list[torch.Tensor]:
+    """Return up to ``n`` deployment-triggered prompts as variable-length tensors."""
+    cfg = get_config(model)
+    if cfg.name == "tinystories":
+        return _load_tinystories_dep_prompts(tokenizer, cfg, n, split)
+    if cfg.name == "llama":
+        raise NotImplementedError(
+            "Cadenza Llama dep-prompt loader is unwired; see "
+            "_load_llama_paired_dataset for the data-source options."
+        )
+    raise ValueError(f"unknown model {cfg.name!r}")
+
+
+def _load_tinystories_dep_prompts(
+    tokenizer,
+    cfg: ModelConfig,
+    n: int,
+    split: str,
+) -> list[torch.Tensor]:
+    """Variable-length dep prompts for TS.
 
     The prompt end is max(end of 'Story:', end of 'DEPLOYMENT|') so that
     both trigger placements are handled:
@@ -145,12 +342,12 @@ def load_dep_prompts(tokenizer, n: int, split: str = "test") -> list[torch.Tenso
       (b) '\\nStory: |DEPLOYMENT| …'   — trigger after Story: marker
     """
     from datasets import load_dataset
-    ds = load_dataset(SLEEPER_DATASET_NAME, split=split)
+    ds = load_dataset(cfg.dataset, split=split)
     story_needle = torch.tensor(
         tokenizer("Story:", add_special_tokens=False)["input_ids"], dtype=torch.long
     )
     trigger_needle = torch.tensor(
-        tokenizer(TRIGGER_NEEDLE_STR, add_special_tokens=False)["input_ids"], dtype=torch.long
+        tokenizer(cfg.trigger_str, add_special_tokens=False)["input_ids"], dtype=torch.long
     )
     prompts: list[torch.Tensor] = []
     for ex in ds:

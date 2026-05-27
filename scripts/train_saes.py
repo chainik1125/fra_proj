@@ -3,7 +3,7 @@
 Subsumes train_sae.py, train_all_saes_6seeds.py, train_saes_per_layer.py.
 
 Examples:
-    # the canonical 6-seed paired (ln1, resid_mid) SAEs at block 0 (4k steps):
+    # TinyStories: canonical 6-seed paired (ln1, resid_mid) SAEs at block 0:
     uv run -m scripts.train_saes
 
     # 50k steps on the same set:
@@ -15,9 +15,17 @@ Examples:
     # cross-layer baseline: 6 seeds × all layers × {resid_mid, resid_post}:
     uv run -m scripts.train_saes --layers 0 1 2 3 --hooks resid_mid resid_post
 
+    # Llama (Cadenza sleeper): one mid-layer resid_mid SAE, matching Aniket's
+    # d_sae=32768 / k=64 / Llama defaults. Loop the cell grid externally.
+    uv run -m scripts.train_saes --model llama
+    uv run -m scripts.train_saes --model llama --layers 3 --hooks ln1
+    uv run -m scripts.train_saes --model llama --layers 3 16 29 \\
+        --hooks ln1 resid_mid resid_post   # full 9-cell sweep (high RAM)
+
 Output layout:
-    default block-0 ln1+resid_mid:  weights/seeds[_Nk]/sae_{kind}_s{seed}.pt
-    multi-layer:                     weights/seeds_per_layer/sae_L{L}_{kind}_s{seed}.pt
+    TS default (ln1+resid_mid block-0): weights/seeds[_Nk]/sae_{kind}_s{seed}.pt
+    TS multi-layer:                     weights/seeds_per_layer/sae_L{L}_{kind}_s{seed}.pt
+    Llama default:                      weights/seeds_llama[_Nk]/...
 """
 from __future__ import annotations
 
@@ -26,11 +34,30 @@ from pathlib import Path
 
 import torch
 
-from sleeper.model import cache_activations, load_paired_dataset, load_sleeper_model
+from sleeper.model import (
+    MODELS, ModelName, cache_activations, load_paired_dataset, load_sleeper_model,
+)
 from sleeper.sae import save, train
 
 
 _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mid")
+
+# Per-model training defaults. TS values match the historical pipeline; Llama
+# values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid,
+# n_train sized for in-memory caching on an 80 GB GPU at seq_len=128 in fp16).
+_LLAMA_DEFAULTS = dict(
+    d_sae=32_768, k=64,
+    layers=(16,), hooks=("resid_mid",),
+    n_train=50_000, seq_len=128,
+    n_steps=6_000,
+)
+_TINYSTORIES_DEFAULTS = dict(
+    d_sae=1_536, k=32,
+    layers=(0,), hooks=None,                # None → _DEFAULT_HOOKS_BLOCK0
+    n_train=10_000, seq_len=128,
+    n_steps=4_000,
+)
+_MODEL_DEFAULTS = {"tinystories": _TINYSTORIES_DEFAULTS, "llama": _LLAMA_DEFAULTS}
 
 
 def _hook_kind(name: str) -> str:
@@ -57,21 +84,29 @@ def _expand_hooks(hooks: list[str], layers: list[int]) -> list[str]:
     return out
 
 
-def _out_dir(n_steps: int, layers: list[int], explicit: Path | None) -> Path:
+def _out_dir(
+    n_steps: int,
+    layers: list[int],
+    explicit: Path | None,
+    model: ModelName = "tinystories",
+) -> Path:
     """Default output-dir naming convention.
 
-    multi-layer → weights/seeds_per_layer/
-    single-layer + 4k → weights/seeds/
-    single-layer + Nk → weights/seeds_{N//1000}k/
+    TS multi-layer → weights/seeds_per_layer/
+    TS 4k single-layer → weights/seeds/
+    TS Nk single-layer → weights/seeds_{N//1000}k/
+    Llama → weights/seeds_llama[_per_layer | _Nk] (default 6k drops the suffix)
     """
     if explicit is not None:
         return explicit
     weights = Path("weights")
+    prefix = "seeds_llama" if model == "llama" else "seeds"
     if len(set(layers)) > 1:
-        return weights / "seeds_per_layer"
-    if n_steps == 4_000:
-        return weights / "seeds"
-    return weights / f"seeds_{n_steps // 1000}k"
+        return weights / f"{prefix}_per_layer"
+    default_n = _MODEL_DEFAULTS[model]["n_steps"]
+    if n_steps == default_n:
+        return weights / prefix
+    return weights / f"{prefix}_{n_steps // 1000}k"
 
 
 def _ckpt_path(out_dir: Path, hook: str, seed: int, layers: list[int]) -> Path:
@@ -87,25 +122,36 @@ def _ckpt_path(out_dir: Path, hook: str, seed: int, layers: list[int]) -> Path:
 def train_saes(
     seeds: list[int],
     *,
-    n_steps: int = 4_000,
+    model: ModelName = "tinystories",
+    n_steps: int | None = None,
     layers: list[int] | None = None,
     hooks: list[str] | None = None,
     out_dir: Path | None = None,
-    n_train: int = 10_000,
-    seq_len: int = 128,
-    d_sae: int = 1_536,
-    k: int = 32,
+    n_train: int | None = None,
+    seq_len: int | None = None,
+    d_sae: int | None = None,
+    k: int | None = None,
     batch_size: int = 4_096,
     lr: float = 5e-4,
     device: str | None = None,
 ) -> Path:
     """Train SAEs for the given (seeds × hooks) cross-product. Idempotent.
 
+    All sizing kwargs default to per-model presets from ``_MODEL_DEFAULTS``.
+
     Returns the output directory path.
     """
-    layers = layers or [0]
+    d = _MODEL_DEFAULTS[model]
+    n_steps  = n_steps  if n_steps  is not None else d["n_steps"]
+    layers   = layers   if layers   is not None else list(d["layers"])
+    hooks    = hooks    if hooks    is not None else (list(d["hooks"]) if d["hooks"] else None)
+    n_train  = n_train  if n_train  is not None else d["n_train"]
+    seq_len  = seq_len  if seq_len  is not None else d["seq_len"]
+    d_sae    = d_sae    if d_sae    is not None else d["d_sae"]
+    k        = k        if k        is not None else d["k"]
+
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
-    out = _out_dir(n_steps, layers, out_dir)
+    out = _out_dir(n_steps, layers, out_dir, model=model)
     out.mkdir(parents=True, exist_ok=True)
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -123,15 +169,16 @@ def train_saes(
         return out
 
     missing_hooks = sorted({h for (h, _, _) in todo})
-    print(f"[train-saes] device={device}  n_steps={n_steps}  seeds={seeds}  "
-          f"hooks={hook_names}  out={out}  missing={len(todo)} checkpoints")
+    print(f"[train-saes] model={model}  device={device}  n_steps={n_steps}  "
+          f"seeds={seeds}  hooks={hook_names}  d_sae={d_sae}  k={k}  "
+          f"out={out}  missing={len(todo)} checkpoints")
 
-    model = load_sleeper_model(device=device)
-    splits = load_paired_dataset(model.tokenizer, n_train=n_train, n_val=0, n_test=0,
-                                  seq_len=seq_len, seed=0)
+    hooked = load_sleeper_model(model=model, device=device)
+    splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0, n_test=0,
+                                  seq_len=seq_len, seed=0, model=model)
     train_tokens = splits["train"].tokens
     print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs at hooks={missing_hooks}")
-    acts = cache_activations(model=model, tokens=train_tokens,
+    acts = cache_activations(model=hooked, tokens=train_tokens,
                              hook_names=missing_hooks, chunk_size=16)
 
     for hook, seed, path in todo:
@@ -151,28 +198,34 @@ def train_saes(
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
-    p.add_argument("--n_steps", type=int, default=4_000)
-    p.add_argument("--layers",  type=int, nargs="+", default=[0],
-                   help="Block indices. Multi-layer triggers the seeds_per_layer/ naming.")
+    p.add_argument("--model",   choices=list(MODELS), default="tinystories",
+                   help="Which sleeper to harvest activations from. Sets per-model "
+                        "defaults for --d_sae / --k / --n_train / --layers / --hooks / --n_steps.")
+    p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5],
+                   help="SAE training seeds (set to e.g. [0] for Llama smoke runs).")
+    p.add_argument("--n_steps", type=int, default=None)
+    p.add_argument("--layers",  type=int, nargs="+", default=None,
+                   help="Block indices. Multi-layer triggers the seeds_per_layer/ naming. "
+                        "Defaults: TS=[0], Llama=[16].")
     p.add_argument("--hooks",   type=str, nargs="+", default=None,
                    help="Hook names. Short forms 'ln1' / 'resid_mid' / 'resid_post' are "
-                        "expanded across --layers; fully-qualified 'blocks.L.…' names pass through. "
-                        "Default: ln1 + resid_mid at block 0.")
+                        "expanded across --layers. Defaults: TS=[ln1,resid_mid]@block 0, "
+                        "Llama=[resid_mid].")
     p.add_argument("--out_dir", type=Path, default=None,
                    help="Override the default output directory naming.")
-    p.add_argument("--n_train",   type=int, default=10_000)
-    p.add_argument("--seq_len",   type=int, default=128)
-    p.add_argument("--d_sae",     type=int, default=1_536)
-    p.add_argument("--k",         type=int, default=32)
+    p.add_argument("--n_train",   type=int, default=None)
+    p.add_argument("--seq_len",   type=int, default=None)
+    p.add_argument("--d_sae",     type=int, default=None)
+    p.add_argument("--k",         type=int, default=None)
     p.add_argument("--batch_size", type=int, default=4_096)
     p.add_argument("--lr",        type=float, default=5e-4)
     p.add_argument("--device",    default=None)
     args = p.parse_args()
 
     train_saes(
-        seeds=args.seeds, n_steps=args.n_steps, layers=args.layers, hooks=args.hooks,
-        out_dir=args.out_dir, n_train=args.n_train, seq_len=args.seq_len,
+        seeds=args.seeds, model=args.model, n_steps=args.n_steps,
+        layers=args.layers, hooks=args.hooks, out_dir=args.out_dir,
+        n_train=args.n_train, seq_len=args.seq_len,
         d_sae=args.d_sae, k=args.k, batch_size=args.batch_size, lr=args.lr,
         device=args.device,
     )
