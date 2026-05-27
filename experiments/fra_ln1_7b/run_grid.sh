@@ -90,21 +90,32 @@ fi
 [ -z "$SAE_DIR" ] && { echo "no ae.pt found"; exit 1; }
 echo "[$(date -u +%H:%M:%S)] SAE_DIR=$SAE_DIR"
 
-# ── ‖Δa‖ for magnitude-matched steering (once per pod, both hookpoints) ──
+# ── ‖Δa‖ for magnitude-matched steering ──────────────────────────────────
+# resid_post: use the KNOWN operative δ=30 value 45.43 (= what the F53258 run
+# multiplied α by; effective_scale = scale×45.43 in the archived files). Do NOT
+# fresh-compute it — the archived v1 actdiff (10.18) is the value that run did
+# NOT use (and compute_arditi_actdiff is flagged suspect). ln1: no prior
+# reference exists, so fresh-compute the analogous post-gain ‖Δa‖.
+RESID_POST_DELTA_A="${RESID_POST_DELTA_A:-45.43}"
 DELTA_A_ARG=""
 if [ "$STEER_MODE" = "magmatched" ]; then
-    echo "[$(date -u +%H:%M:%S)] === computing ‖Δa‖ (resid_post + ln1 post-gain) ==="
-    python3 -u scripts/compute_delta_a_norm.py --layer "$LAYER" --out /workspace/delta_a_norm.json
-    # pick the hookpoint matching this SAE
-    KEY=$([ "$SAE" = "ln1" ] && echo "ln1_postgain" || echo "resid_post")
-    DELTA_A=$(python3 -c "import json; print(json.load(open('/workspace/delta_a_norm.json'))['$KEY']['diff_norm_l2'])")
-    [ -z "$DELTA_A" ] && { echo "failed to compute ‖Δa‖"; exit 1; }
-    echo "[$(date -u +%H:%M:%S)] ‖Δa‖[$KEY]=$DELTA_A"
+    if [ "$SAE" = "ln1" ]; then
+        echo "[$(date -u +%H:%M:%S)] === computing ln1 post-gain ‖Δa‖ ==="
+        python3 -u scripts/compute_delta_a_norm.py --layer "$LAYER" --out /workspace/delta_a_norm.json
+        DELTA_A=$(python3 -c "import json; print(json.load(open('/workspace/delta_a_norm.json'))['ln1_postgain']['diff_norm_l2'])")
+        [ -z "$DELTA_A" ] && { echo "failed to compute ln1 ‖Δa‖"; exit 1; }
+        DELTA_A_FILE=/workspace/delta_a_norm.json
+    else
+        DELTA_A="$RESID_POST_DELTA_A"
+        echo "{\"sae\":\"resid_post\",\"delta_a_norm\":$DELTA_A,\"source\":\"F53258 operative δ=30 value (effective_scale=scale×45.43)\"}" > /workspace/delta_a_norm.json
+        DELTA_A_FILE=/workspace/delta_a_norm.json
+    fi
+    echo "[$(date -u +%H:%M:%S)] ‖Δa‖[$SAE]=$DELTA_A"
     DELTA_A_ARG="--delta-a-norm $DELTA_A"
     # back ‖Δa‖ up to HF (idempotent across pods of the same SAE)
     python3 -c "
 from huggingface_hub import HfApi
-HfApi().upload_file(path_or_fileobj='/workspace/delta_a_norm.json',
+HfApi().upload_file(path_or_fileobj='$DELTA_A_FILE',
     path_in_repo='$GRID_HF_BASE/${RANKING}_${SAE}_meta/delta_a_norm_L${LAYER}.json',
     repo_id='$HF_REPO', repo_type='dataset', commit_message='grid magmatched: ‖Δa‖ $SAE')
 " || echo "(‖Δa‖ HF upload failed — non-fatal)"
