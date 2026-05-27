@@ -100,13 +100,11 @@ def train_saelens_cell(
 
     runner = SAETrainingRunner(runner_cfg)
     # sae-lens 6.44 JSON-dumps the runner cfg (and copies it into sae metadata)
-    # before training starts; the HF model object inside model_from_pretrained_kwargs
-    # isn't serializable. Strip it now — the runner already built its
-    # HookedTransformer in __init__, so the ref is no longer needed.
-    runner.cfg.model_from_pretrained_kwargs = {
-        k: v for k, v in runner.cfg.model_from_pretrained_kwargs.items()
-        if k not in ("hf_model", "tokenizer")
-    }
+    # before training starts; model_from_pretrained_kwargs contains the HF model
+    # object + a torch.dtype, neither of which are JSON-serializable. The runner
+    # already built its HookedTransformer in __init__, so the dict is no longer
+    # needed — empty it.
+    runner.cfg.model_from_pretrained_kwargs = {}
     trained_sae = runner.run()
 
     # Convert sae-lens TopKTrainingSAE → our TopKSAE (identical param names + shapes).
