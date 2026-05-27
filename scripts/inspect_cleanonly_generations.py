@@ -102,15 +102,18 @@ def main() -> None:
     clean_lens = clean_attn.sum(-1).tolist()
 
     # Max-act corpus: paired clean+dep test-split sequences (fixed-length).
-    print(f"harvesting max-act corpus ({args.maxact_corpus} paired seqs)...", flush=True)
-    splits = load_paired_dataset(tok, n_train=0, n_val=0,
-                                 n_test=args.maxact_corpus,
-                                 seq_len=128, seed=0, model="tinystories")
-    corpus_tokens = splits["test"].tokens                              # (N, T)
-    corpus_is_dep = splits["test"].is_deployment                        # (N,)
-    corpus_acts_all = cache_activations(m, corpus_tokens, [LN1_HOOK],
-                                         chunk_size=32)
-    corpus_acts = corpus_acts_all[LN1_HOOK]                            # (N, T, d_in)
+    # Skip when --maxact_corpus 0 (caller only wants generations).
+    if args.maxact_corpus > 0:
+        print(f"harvesting max-act corpus ({args.maxact_corpus} paired seqs)...", flush=True)
+        splits = load_paired_dataset(tok, n_train=0, n_val=0,
+                                     n_test=args.maxact_corpus,
+                                     seq_len=128, seed=0, model="tinystories")
+        corpus_tokens = splits["test"].tokens
+        corpus_is_dep = splits["test"].is_deployment
+        corpus_acts = cache_activations(m, corpus_tokens, [LN1_HOOK],
+                                         chunk_size=32)[LN1_HOOK]
+    else:
+        corpus_tokens = corpus_is_dep = corpus_acts = None
 
     md = ["# Clean-only OV: generations + max-act feature analysis", "",
           f"Sleeper: TS (sleeper handrolled SAEs at {args.sae_dir}). "
@@ -180,6 +183,9 @@ def main() -> None:
             md.append("")
 
         # ── Max-act analysis ──────────────────────────────────────────
+        if corpus_acts is None:
+            md.append("(max-act analysis skipped — pass --maxact_corpus > 0 to enable)\n")
+            continue
         z = encode_all(sae_ln1, corpus_acts)                # (N, T, d_sae)
         feat_z = z[:, :, feat].cpu()                        # (N, T)
         flat = feat_z.flatten()                             # (N*T,)
