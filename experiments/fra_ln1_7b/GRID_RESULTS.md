@@ -82,10 +82,10 @@ the next table.
 
 | ranking | SAE | gran | Δ@coh70 | Δ@coh50 | Δ@coh30 | n | status |
 |---|---|---:|---:|---:|---:|---:|---|
-| Wang-Δf | resid_post | 1 (×50) | — | — | — | 50 feats | pending |
-| Wang-Δf | resid_post | 2 | — | — | — | | pending |
-| Wang-Δf | resid_post | 10 | — | — | — | | pending |
-| Wang-Δf | resid_post | 50 | — | — | — | | pending |
+| Wang-Δf | resid_post | 1 (×50) | 27.2 | **44.1** | — | F94077, n_s=1 | partial (1 feat, 1 seed) |
+| Wang-Δf | resid_post | 2 | 6.7±6.2 | 11.9±0.4 | — | n_s=3 | med ✓ (base pend) |
+| Wang-Δf | resid_post | 10 | 7.0±6.3 | 12.0±2.4 | — | n_s=3 | med ✓ |
+| Wang-Δf | resid_post | 50 | 14.5±6.0 | **30.3±4.2** | — | n_s=3 | med ✓ |
 | Wang-Δf | ln1 | 1 (×50) | — | — | — | | pending |
 | Wang-Δf | ln1 | 2 | — | — | — | | pending |
 | Wang-Δf | ln1 | 10 | — | — | — | | pending |
@@ -95,14 +95,28 @@ the next table.
 | FRA-QK | ln1 | 10 | — | — | — | | pending |
 | FRA-QK | ln1 | 26 (all) | — | — | — | | pending |
 | FRA-QK | resid_post | — | — | — | — | | **SKIP** (ill-defined) |
-| FRA-OV | ln1 | 1 (×26) | — | — | — | 26 feats | pending |
-| FRA-OV | ln1 | 2 | — | — | — | | pending |
-| FRA-OV | ln1 | 10 | — | — | — | | pending |
-| FRA-OV | ln1 | 26 (all) | — | — | — | | pending |
+| FRA-OV | ln1 | 1 (×26) | 5.2(med) | 13.1(med) | — | 26 feats, n_s=1 | partial (med, 1 seed) |
+| FRA-OV | ln1 | 2 | 5.8±5.6 | 11.1±0.4 | — | n_s=3 | med ✓ |
+| FRA-OV | ln1 | 10 | 2.9±3.5 | 10.1±3.1 | — | n_s=3 | med ✓ |
+| FRA-OV | ln1 | 26 (all) | 2.4±4.2 | 10.1±4.5 | — | n_s=3 | med ✓ |
 | FRA-OV | resid_post | 1 (×50) | — | — | — | | pending |
 | FRA-OV | resid_post | 2 | — | — | — | | pending |
 | FRA-OV | resid_post | 10 | — | — | — | | pending |
 | FRA-OV | resid_post | 50 | — | — | — | | pending |
+
+gran=1 values: Wang×resid_post = single F94077 (the ±2-most-responsive feat); FRA-OV×ln1 =
+per-feature MEDIAN over 26 feats (IQR[10.5,16.1]@coh50, top F54384=20.2). All magmatched
+rows above are MEDICAL, mostly single-seed/early — **single-seed Δ = mechanism-validation,
+not certified effect size** (SE≈5/seed; 3-seed certifies). Base-model rows + remaining
+cells fill as the fleet lands. Δ@coh30 omitted until 3-seed.
+
+### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path) — single-feature gates (F1684, n_s=1, mechanism-validation)
+| recipe | path | Δ@coh70 | Δ@coh50 | window | note |
+|---|---|---:|---:|---:|---|
+| qk→qk-true | hook_q+hook_k (pattern) | 14.7 | **14.7** | 17/17 | distinct from qk→ov ✓ |
+| qk→ov | hook_v (value) | 9.2 | 9.2 | 17/17 | OV path weaker (1×128-d head) |
+| ov→ov | hook_v (value) | — | — | — | tranche running |
+(Full 3-recipe × grans{1,2,10,26} × base+EM × 3-seed tranche running — these are the single-feature gate reads.)
 
 Base-model Δalign (same cells; a robustly-aligned base should give ≈ the noise floor):
 
