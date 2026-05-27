@@ -38,6 +38,7 @@ def train_saelens_cell(
     lr: float,
     seed: int,
     device: str,
+    llm_device: str | None = None,
     n_steps: int = 6_000,
     lr_warm_up_pct: float = 0.05,
     output_path: str = "/tmp/saelens_ckpt",
@@ -98,6 +99,14 @@ def train_saelens_cell(
         lr_warm_up_steps=warm_up_steps,
         n_checkpoints=0, save_final_checkpoint=False, verbose=True,
         seed=seed, device=device, dtype="float32",
+        # When llm_device is set (e.g. "cuda:1"), the language model + activation
+        # store live on that device while the SAE + optimizer live on `device`
+        # (e.g. "cuda:0"). The two devices process in pipeline, overlapping the
+        # LLM forward pass with the SAE training step. Plus prefetching to hide
+        # the LLM->SAE activation transfer.
+        llm_device=llm_device or device,
+        act_store_device=llm_device or device,
+        prefetch_llm_batches=True,
         output_path=output_path,
         logger=LoggingConfig(log_to_wandb=False, log_weights_to_wandb=False),
     )

@@ -240,12 +240,25 @@ def _train_saelens(
     n_steps: int, batch_size: int, lr: float, device: str,
 ) -> None:
     """sae-lens path: stream activations from the paired dataset, run sae-lens's
-    full trainer per (hook, seed) cell, convert to our TopKSAE format."""
+    full trainer per (hook, seed) cell, convert to our TopKSAE format.
+
+    When >=2 CUDA devices are visible, places the language model on cuda:1
+    and the SAE + optimizer on cuda:0 so the LLM forward pass overlaps with
+    the SAE training step (sae-lens's prefetch hides the LLM->SAE transfer).
+    """
+    import torch as _torch
     from sleeper.model import MODELS as _MODELS
     from sleeper.sae_saelens import train_saelens_cell
 
     cfg = _MODELS[model]
-    hf_model, tokenizer = load_sleeper_hf_components(model=model, device=device)
+    n_gpu = _torch.cuda.device_count() if _torch.cuda.is_available() else 0
+    sae_device = device if n_gpu < 2 else "cuda:0"
+    llm_device = None if n_gpu < 2 else "cuda:1"
+    print(f"[train-saes] sae_device={sae_device}  llm_device={llm_device or '(same)'}  "
+          f"(visible GPUs: {n_gpu})")
+    # Load the HF model directly onto llm_device so sae-lens doesn't have to
+    # move it between cards.
+    hf_model, tokenizer = load_sleeper_hf_components(model=model, device=llm_device or sae_device)
     d_in = hf_model.config.hidden_size
     print(f"[train-saes] sae-lens streaming from {cfg.dataset!r}  d_in={d_in}")
     for hook, seed, path in todo:
@@ -256,7 +269,8 @@ def _train_saelens(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
             n_train_seqs=n_train, seq_len=seq_len, n_steps=n_steps,
-            batch_size=batch_size, lr=lr, seed=seed, device=device,
+            batch_size=batch_size, lr=lr, seed=seed,
+            device=sae_device, llm_device=llm_device,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
