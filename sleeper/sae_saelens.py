@@ -112,8 +112,9 @@ def train_saelens_cell(
         # — that's only for the final ckpt). Default routes to /tmp so the ~1 GB
         # weight files per checkpoint are throwaway disk.
         checkpoint_path=checkpoint_path,
-        from_pretrained_path=from_pretrained_path,
-        resume_from_checkpoint=from_pretrained_path is not None,
+        # resume_from_checkpoint takes the checkpoint dir directly (str, not
+        # bool); from_pretrained_path is for cold-init from weights alone.
+        resume_from_checkpoint=from_pretrained_path,
         seed=seed, device=device, dtype="float32",
         # When llm_device is set (e.g. "cuda:1"), the language model + activation
         # store live on that device while the SAE + optimizer live on `device`
