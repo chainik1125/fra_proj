@@ -29,15 +29,17 @@ features** for FRA×ln1 (the FRA QK/OV top-set). For cross-ranking comparison us
 ## Caveats (read before interpreting cells)
 
 1. **resid_post SAE is lossy but functional.** The Arditi/andyrdt resid_post SAE has
-   ~51% relative residual error (loss_recovered ≈ 0.51) — lossy but usable. The on-pod
-   `var-expl ≈ −1.33 / "SAE looks broken"` warning is an FVU/DC-offset artifact
-   (resid_post activations carry a large mean/DC component → tiny variance denominator
-   → spurious negative var-expl), NOT a broken SAE. All conventional steering adds
-   `α·W_dec[f]` directly (never round-trips through encode→decode), so steering validity
-   is independent of reconstruction quality. resid_post cells are judged and reported
-   normally. (If single resid_post steering is flat — as Wang×resid_post×single already
-   is — a lossy SAE's individual directions genuinely may just not steer.) ln1's
-   var-expl=0.498 IS a real quality number (ln1 is ~centered post-RMSNorm).
+   ~51–70% relative residual error (loss_recovered ≈ 0.51) — lossy but usable. The on-pod
+   `var-expl ≈ −1.33 / "SAE looks broken"` warning is an FVU/DC-offset artifact, NOT a
+   broken SAE — VERIFIED directly on-pod: at L15 the residual stream is ~98% DC offset
+   (‖mean(a)‖ = 1753 of mean‖a‖ = 1795; centered std = 61). FVU = MSE / mean-subtracted-
+   variance divides by that tiny centered variance → blows up >1 → spurious negative
+   var-expl, while relative-L2 is a healthy ~70%. All conventional steering adds
+   `α·‖Δa‖·unit(W_dec[f])` directly (never round-trips through encode→decode), so steering
+   validity is independent of reconstruction quality. resid_post cells are judged and
+   reported normally. (If single resid_post steering is flat — as Wang×resid_post×single
+   already is at ±2 — a lossy SAE's individual directions genuinely may just not steer.)
+   ln1's var-expl=0.498 IS a real quality number (ln1 is ~centered post-RMSNorm).
 
 2. **Feature count differs by ranking — not apples-to-apples.** FRA×ln1
    (`rank_features_multi_prompt`) returns 26 QK / 26 OV features, so FRA-ln1 gran=1 rows
