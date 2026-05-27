@@ -90,10 +90,10 @@ the next table.
 | Wang-Δf | ln1 | 2 | — | — | — | | pending |
 | Wang-Δf | ln1 | 10 | — | — | — | | pending |
 | Wang-Δf | ln1 | 50 | — | — | — | | pending |
-| FRA-QK | ln1 | 1 (×26) | — | — | — | 26 feats | pending |
-| FRA-QK | ln1 | 2 | — | — | — | | pending |
-| FRA-QK | ln1 | 10 | — | — | — | | pending |
-| FRA-QK | ln1 | 26 (all) | — | — | — | | pending |
+| FRA-QK | ln1 | 1 (×26) | ~6(med) | 13.0(med) | — | 26 feats, n_s=3 | med ✓ (median; top F130712≈19.2) |
+| FRA-QK | ln1 | 2 | — | — | — | | judging |
+| FRA-QK | ln1 | 10 | — | — | — | | judging |
+| FRA-QK | ln1 | 26 (all) | — | — | — | | judging |
 | FRA-QK | resid_post | — | — | — | — | | **SKIP** (ill-defined) |
 | FRA-OV | ln1 | 1 (×26) | 5.2(med) | 13.1(med) | — | 26 feats, n_s=1 | partial (med, 1 seed) |
 | FRA-OV | ln1 | 2 | 5.8±5.6 | 11.1±0.4 | — | n_s=3 | med ✓ |
@@ -111,12 +111,26 @@ not certified effect size** (SE≈5/seed; 3-seed certifies). Base-model rows + r
 cells fill as the fleet lands. Δ@coh30 omitted until 3-seed.
 
 ### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path) — single-feature gates (F1684, n_s=1, mechanism-validation)
-| recipe | path | Δ@coh70 | Δ@coh50 | window | note |
+| recipe | path | Δ@coh50 medical | Δ@coh50 base | window | note |
 |---|---|---:|---:|---:|---|
-| qk→qk-true | hook_q+hook_k (pattern) | 14.7 | **14.7** | 17/17 | distinct from qk→ov ✓ |
-| qk→ov | hook_v (value) | 9.2 | 9.2 | 17/17 | OV path weaker (1×128-d head) |
+| qk→qk-true | hook_q+hook_k (pattern) | **14.7** | 2.3 | 17/17 | EM-specific; distinct from full-entry (see below) |
+| qk→ov | hook_v (value) | 9.2 | 4.2 | 17/17 | EM-specific; OV path weaker (1×128-d head) |
 | ov→ov | hook_v (value) | — | — | — | tranche running |
-(Full 3-recipe × grans{1,2,10,26} × base+EM × 3-seed tranche running — these are the single-feature gate reads.)
+(Full 3-recipe × grans{1,2,10,26} × base+EM × 3-seed tranche running — these are single-feature F1684 gate reads, n_s=1.)
+
+**EM-specificity (arditi-style "EM-specific not generic" at the recipe level):** both routing
+recipes move MEDICAL alignment far more than base — qk→qk-true 2.3(base)→14.7(EM), qk→ov
+4.2→9.2. The intervention selectively affects the misaligned model, not the aligned base.
+(n_s=1 caveat; 3-seed routing tranche will certify.)
+
+**QK-pattern vs full-entry distinctness (validity gate for the true qk→qk hook):** does the
+hook_q/k pattern-only intervention DIFFER from the conventional full-ln1 entry (Q+K+V) for the
+same feature? Same-seed F1684, Δ@coh50: conventional FRA-QK×ln1 **seed42 = 22.7** vs
+qk→qk-true **seed42 = 14.7** → pattern-only is ~35% smaller → **hook_q/k IS isolating the
+pattern path (not reproducing the full entry).** Gate PASSES. (Directional: conventional F1684
+is high-variance across seeds [22.7/9.5/10.9, mean 14.4]; the routing tranche's 3-seed qk→qk
+will give the paired certification. The aggregate means 14.4≈14.7 coincide only because they
+mix a 3-seed mean vs a 1-seed value — the same-seed compare is the valid one.)
 
 Base-model Δalign (same cells; a robustly-aligned base should give ≈ the noise floor):
 
