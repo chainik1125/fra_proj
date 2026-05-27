@@ -38,7 +38,7 @@ def trig_span(ids):
     while pre < min(Ld, Lc) and ids[pre] == cids[pre]: pre += 1
     suf = 0
     while suf < min(Ld, Lc) - pre and ids[Ld-1-suf] == cids[Lc-1-suf]: suf += 1
-    return (pre, Ld - suf), cids                  # (trig_start, trig_end), clean ids
+    return (pre, Ld - suf, suf), cids             # (trig_start, trig_end, suf_len), clean ids
 
 def mask_hook(ti):
     ti_t = torch.tensor(ti, device=dev)
@@ -67,14 +67,16 @@ def gen(ids, hooks):
     return generate_with_hooks(m, p, hooks, GEN, greedy, attention_mask=torch.ones_like(p), capture_log_softmax=True)
 
 acc = {"baseline": [], "cleanpos_only": [], "mask_all": [], "mask_all_cleanpos": []}
+meta = []   # per used prompt: (delta, cmid_len = clean-seam tokens, j_maskpos)
 for ids_t in load_dep_prompts(tok, A.n, "test"):
     ids = ids_t.tolist()
     span, cids = trig_span(ids)
     if span is None: continue
-    ts, te = span
+    ts, te, suf = span
     if te - ts < 1: continue
     delta = len(ids) - len(cids)                 # net length difference
     if delta < 1: continue
+    cmid_len = len(cids) - ts - suf              # clean-side seam tokens (boundary re-tokenization)
     ti = list(range(ts, te))
     _, clsm = gen(cids, [])
     mh = [(PAT(L), mask_hook(ti)) for L in range(n_layers)]
@@ -87,6 +89,7 @@ for ids_t in load_dep_prompts(tok, A.n, "test"):
     for name, hooks in conds.items():
         toks, lsm = gen(ids, hooks)
         acc[name].append((asr_16(toks.cpu(), tok), jsd_mean(lsm, clsm)))
+    meta.append((delta, cmid_len, round(acc["mask_all_cleanpos"][-1][1], 4)))
 
 def summ(rows): return round(sum(r[0] for r in rows)/len(rows),4), round(sum(r[1] for r in rows)/len(rows),4)
 n = len(acc["baseline"])
@@ -94,5 +97,12 @@ print(f"DONE n={n} n_layers={n_layers}")
 res = {"script":"trigger_pos","n":n,"n_layers":n_layers,"cond":{}}
 for name in ("baseline","cleanpos_only","mask_all","mask_all_cleanpos"):
     a,j = summ(acc[name]); res["cond"][name]=[a,j]; print(f"{name:18} ASR {a:.3f}  J {j:.3f}")
+# per-prompt mask_all_cleanpos J vs seam: is the 0.029 one outlier or spread?
+res["per_prompt"] = [{"delta":d,"cmid_len":c,"j_maskpos":j} for (d,c,j) in meta]
+shifted = [m for m in meta if m[1] > 0]; clean_seam = [m for m in meta if m[1] == 0]
+print(f"\nclean-seam prompts (cmid_len==0): {len(clean_seam)}  | seam-shift: {len(shifted)}")
+print(f"  clean-seam J: mean={sum(m[2] for m in clean_seam)/max(len(clean_seam),1):.4f} max={max((m[2] for m in clean_seam),default=0):.4f}")
+print(f"  seam-shift J: {[m[2] for m in shifted]}")
+print("  top-5 J_maskpos:", sorted((m[2] for m in meta), reverse=True)[:5])
 os.makedirs(os.path.dirname(A.out), exist_ok=True)
 json.dump(res, open(A.out,"w"), indent=1); print("WROTE", A.out)
