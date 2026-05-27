@@ -51,11 +51,12 @@ def train_saelens_cell(
     from sae_lens.config import LoggingConfig
     from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
 
-    dtype_str  = str(cfg.dtype).rsplit(".", 1)[-1]   # torch.bfloat16 → 'bfloat16'
-
+    # Model runs in its native dtype (cfg.dtype, e.g. bf16 for Llama), but the
+    # SAE itself trains in fp32 — Adam is unstable with bf16 params/grads and
+    # mixing in backward triggers "Found dtype Float but expected BFloat16".
     sae_cfg = TopKTrainingSAEConfig(
         d_in=d_in, d_sae=d_sae, k=k,
-        dtype=dtype_str, device=device,
+        dtype="float32", device=device,
         normalize_activations="none",
     )
 
@@ -92,7 +93,7 @@ def train_saelens_cell(
         lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=warm_up_steps,
         n_checkpoints=0, save_final_checkpoint=False, verbose=True,
-        seed=seed, device=device, dtype=dtype_str,
+        seed=seed, device=device, dtype="float32",
         output_path=output_path,
         logger=LoggingConfig(log_to_wandb=False, log_weights_to_wandb=False),
     )
