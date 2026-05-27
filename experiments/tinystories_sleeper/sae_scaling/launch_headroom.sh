@@ -15,6 +15,8 @@ SLUG="${SLUG:-seed${SEED}}"
 NAME="headroom-on-0526-${SLUG}"
 WIDTHS="${WIDTHS:-12288 24576}"; KS="${KS:-10 32 50}"; HOOKS="${HOOKS:-ln1 resid_mid}"
 P2="${P2:-0}"; P3="${P3:-0}"
+DRIVER="${DRIVER:-experiments/tinystories_sleeper/sae_scaling/headroom_driver.sh}"
+ONESHOT="${ONESHOT:-0}"   # 1 -> call DRIVER once (it loops SEEDS itself) with SELF_STOP=1
 GRAPHQL="https://api.runpod.io/graphql"
 json_str() { python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))"; }
 
@@ -28,12 +30,17 @@ export HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RP_API_KEY_MATS' RUNPOD_POD_ID="\$R
 export WIDTHS='$WIDTHS' KS='$KS' HOOKS='$HOOKS' P2='$P2' P3='$P3' BRANCH='$BRANCH'
 SEEDS='$SEEDS'
 python -u -c "import torch" >/dev/null 2>&1 || true
-_arr=(\$SEEDS); _n=\${#_arr[@]}; _i=0
-for _s in \$SEEDS; do
-  _i=\$((_i+1))
-  if [ "\$_i" = "\$_n" ]; then export SELF_STOP=1; else export SELF_STOP=0; fi
-  SEED="\$_s" bash experiments/tinystories_sleeper/sae_scaling/headroom_driver.sh >> /workspace/driver_s\${_s}.log 2>&1
-done
+if [ '$ONESHOT' = '1' ]; then
+  export SELF_STOP=1 SEEDS="\$SEEDS"
+  bash '$DRIVER' >> /workspace/driver.log 2>&1
+else
+  _arr=(\$SEEDS); _n=\${#_arr[@]}; _i=0
+  for _s in \$SEEDS; do
+    _i=\$((_i+1))
+    if [ "\$_i" = "\$_n" ]; then export SELF_STOP=1; else export SELF_STOP=0; fi
+    SEED="\$_s" bash '$DRIVER' >> /workspace/driver_s\${_s}.log 2>&1
+  done
+fi
 EOF
 )
 b64=$(printf '%s' "$inner" | base64 | tr -d '\n')
