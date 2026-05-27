@@ -110,6 +110,50 @@ rows above are MEDICAL, mostly single-seed/early — **single-seed Δ = mechanis
 not certified effect size** (SE≈5/seed; 3-seed certifies). Base-model rows + remaining
 cells fill as the fleet lands. Δ@coh30 omitted until 3-seed.
 
+### Best Δalign per protocol × grouping — FINAL (supersedes the "pending" rows above)
+
+Final overnight numbers (25/32 cells; the only gaps are Wang×ln1 base + a few base-side
+cells — see summary.md §5c). **Best** = top feature for *single* (gran1; winner's-curse
+max over 26–50 features, n_seeds=1 → biased + noisy); *grpN* = the single magmatched
+top-N direction (n_seeds=3). Cells are **medical / base** (base ≈ medical ⇒ generic;
+base ≪ medical ⇒ EM-specific).
+
+**Δalign @ coh≥50 (medical / base)**
+| protocol | single | grp2 | grp10 | grp50/26 |
+|---|---|---|---|---|
+| Wang × resid_post | 44.1 / 34.4 | 16.0 / 22.4 | 11.5 / 22.7 | 26.4 / 28.7 |
+| FRA-OV × resid_post | 25.4 / 28.5 | 19.8 / 25.3 | 22.9 / 25.5 | 12.0 / 17.1 |
+| Wang × ln1 | 22.7 / – | 15.2 / – | 16.2 / – | 17.7 / – |
+| FRA-QK × ln1 | 19.2 / 5.1 | 10.9 / 4.0 | 10.9 / 3.9 | 12.0 / 3.8 |
+| FRA-OV × ln1 | 20.2 / 8.4 | 11.1 / 4.2 | 10.1 / 2.2 | 10.1 / 4.7 |
+| qk→qk-true | 14.7 / 2.3 | 11.1 / 3.6 | 7.8 / 4.8 | 9.9 / 4.3 |
+| qk→ov | 9.2 / 4.2 | 9.1 / 4.4 | 13.3 / 2.8 | 10.9 / 4.2 |
+| ov→ov | 13.7 / 5.7 | 12.1 / – | 11.7 / – | 10.4 / – |
+
+**Δalign @ coh≥70 (medical / base)**
+| protocol | single | grp2 | grp10 | grp50/26 |
+|---|---|---|---|---|
+| Wang × resid_post | 27.2 / 6.7 | 5.3 / 14.5 | 9.5 / 14.2 | 4.9 / 12.7 |
+| FRA-OV × resid_post | 23.6 / 19.4 | 13.4 / 13.7 | 15.9 / 10.1 | 13.9 / 8.9 |
+| Wang × ln1 | 21.7 / – | 10.9 / – | 13.8 / – | 14.2 / – |
+| FRA-QK × ln1 | 13.8 / 5.1 | 5.4 / 4.0 | 4.3 / 3.9 | 6.7 / 3.8 |
+| FRA-OV × ln1 | 12.2 / 8.4 | 5.8 / 4.2 | 2.9 / 2.2 | 2.4 / 4.7 |
+| qk→qk-true | 14.7 / 2.3 | 6.1 / 3.6 | 6.6 / 4.8 | 6.5 / 4.3 |
+| qk→ov | 9.2 / 4.2 | 5.2 / 4.4 | 10.2 / 2.8 | 5.2 / 4.2 |
+| ov→ov | 12.3 / 5.7 | 8.1 / – | 7.9 / – | 6.0 / – |
+
+Key reads: **`resid_post` protocols are generic** (base ≈ medical); **`ln1` protocols
+are EM-specific** (base ~3–5 vs medical ~10–20). Wang×resid_post's big coh50 grouped
+numbers are coherence collapse (grp50 26.4→4.9 at coh70). *Provenance:* Wang×resid_post
+& qk→qk *single* use the gate feature (F94077 / F1684), not the full-sweep max.
+
+**Produced by** (committed [`dfbaf12`](https://github.com/chainik1125/fra_proj/tree/dfbaf12)):
+[`phase1_grid_7b_orchestrator.py`](https://github.com/chainik1125/fra_proj/blob/dfbaf12/phase1_grid_7b_orchestrator.py) (conventional) ·
+[`phase1_frarouting_magmatched_7b_orchestrator.py`](https://github.com/chainik1125/fra_proj/blob/dfbaf12/phase1_frarouting_magmatched_7b_orchestrator.py) (routing) ·
+metric [`scripts/grid_metrics.py`](https://github.com/chainik1125/fra_proj/blob/dfbaf12/scripts/grid_metrics.py) ·
+judge [`phase1_judge_and_combine.py`](https://github.com/chainik1125/fra_proj/blob/dfbaf12/phase1_judge_and_combine.py) + [`scripts/judge_loop.py`](https://github.com/chainik1125/fra_proj/blob/dfbaf12/scripts/judge_loop.py) ·
+dispatch [`experiments/fra_ln1_7b/`](https://github.com/chainik1125/fra_proj/tree/dfbaf12/experiments/fra_ln1_7b).
+
 ### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path)
 
 Three routing recipes isolate where the steer enters attention, at matched input magnitude:
