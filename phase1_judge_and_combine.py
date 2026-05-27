@@ -148,12 +148,20 @@ QUAL_RE_FRA = re.compile(
 QUAL_RE_ARDITI = re.compile(
     r"qualitative_arditi_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)\.json"
 )
+# Grid orchestrator (phase1_grid_7b_orchestrator.py): one file per
+# (ranking, sae, granularity, em, seed). Condition strings are
+# feat_F<id>_a<α> (gran=1) or grp<N>_a<α> (grouped); per_stream_aggregate's
+# `cond.rsplit("_a",1)[0]` split makes each feature/group its own method.
+QUAL_RE_GRID = re.compile(
+    r"qualitative_grid_(?P<em>finance|medical|sports|base)_evalseed(?P<seed>\d+)\.json"
+)
 
 
 def process_stream_file(path: Path, client, max_workers: int):
     m_add = QUAL_RE_ADDITIVE.match(path.name)
     m_fra = QUAL_RE_FRA.match(path.name)
     m_arditi = QUAL_RE_ARDITI.match(path.name)
+    m_grid = QUAL_RE_GRID.match(path.name)
     if m_add is not None:
         sae_id = m_add.group("sae")
         em = m_add.group("em")
@@ -172,6 +180,17 @@ def process_stream_file(path: Path, client, max_workers: int):
         sae_id = peek[0]["sae_id"] if peek else "L15_resid_post_andyrdt_qwen7b_trainer1"
         em = m_arditi.group("em")
         seed = int(m_arditi.group("seed"))
+    elif m_grid is not None:
+        # Grid: the stamped sae_id is shared across granularities of one cell
+        # (e.g. L15_ln1_arditi_qwen7b_grid_wang), so combine_across_seeds (keyed
+        # on sae_id) would merge gran=1/2/10/50. Append the per-entry
+        # `granularity` so each granularity combines separately.
+        peek = json.loads(path.read_text())
+        base_id = peek[0]["sae_id"] if peek else "grid"
+        gran = peek[0].get("granularity") if peek else None
+        sae_id = f"{base_id}_gran{gran}" if gran is not None else base_id
+        em = m_grid.group("em")
+        seed = int(m_grid.group("seed"))
     else:
         print(f"  [skip non-stream JSON] {path.name}", flush=True)
         return None
