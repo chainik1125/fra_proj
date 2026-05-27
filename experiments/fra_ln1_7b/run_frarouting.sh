@@ -81,6 +81,8 @@ for EM in $EM_MODELS; do
   for SEED in $SEEDS; do
     OUT="/workspace/fr_${RECIPE}_${EM}_seed${SEED}"; mkdir -p "$OUT"
     echo "[$(date -u +%H:%M:%S)] === routing ($RECIPE, $EM, seed=$SEED, grans=[$GRANS]) ==="
+    OVERRIDE_ARG=""
+    [ -n "${FEATURE_IDS_OVERRIDE:-}" ] && OVERRIDE_ARG="--feature-ids-override $FEATURE_IDS_OVERRIDE"
     python3 -u phase1_frarouting_magmatched_7b_orchestrator.py \
         --recipe "$RECIPE" --sae-dir "$SAE_DIR" \
         --em-model "$EM" --eval-seed "$SEED" \
@@ -88,6 +90,7 @@ for EM in $EM_MODELS; do
         --granularities $GRANS \
         --delta-a-norm "$DELTA_A" \
         --samples-per-prompt "$SAMPLES_PER_PROMPT" \
+        $OVERRIDE_ARG \
         --output-root "$OUT"
     echo "[$(date -u +%H:%M:%S)] === upload ($EM, seed=$SEED) ==="
     python3 -u -c "

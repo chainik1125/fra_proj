@@ -33,6 +33,7 @@ git fetch origin && git checkout '$BRANCH' && git pull --ff-only
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID="\$RUNPOD_POD_ID" \\
 BRANCH='$BRANCH' \\
 RECIPE='$RECIPE' EM_MODELS='$EM_MODELS' SEEDS='$SEEDS' GRANS='$GRANS' HEAD='$HEAD' \\
+FEATURE_IDS_OVERRIDE='${FEATURE_IDS_OVERRIDE:-}' \\
 bash experiments/fra_ln1_7b/run_frarouting.sh
 EOF
 )

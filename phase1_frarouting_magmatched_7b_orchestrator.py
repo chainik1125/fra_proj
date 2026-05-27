@@ -60,6 +60,9 @@ def main():
     p.add_argument("--head", type=int, default=0)
     p.add_argument("--hook-point", default="ln1.hook_normalized")
     p.add_argument("--granularities", type=int, nargs="+", default=[1, 2, 10, 26])
+    p.add_argument("--feature-ids-override", type=int, nargs="+", default=None,
+                   help="Steer EXACTLY these feature ids (skip the ranked pool) — for "
+                        "the fast single-feature routing gate.")
     p.add_argument("--delta-a-norm", type=float, required=True,
                    help="‖Δa‖_ln1 (post-gain) — the magnitude scale. qk→qk uses it "
                         "directly (residual space); OV recipes map it through W_V.")
@@ -119,23 +122,31 @@ def main():
     )
     # qk→qk and qk→ov route the QK feature set; ov→ov routes the OV set.
     feat_pool = ranked["ov"] if args.recipe == "ov_to_ov" else ranked["qk"]
+    if args.feature_ids_override:
+        feat_pool = list(args.feature_ids_override)
+        print(f"[rank] OVERRIDE — steering exactly {feat_pool}")
     print(f"[rank] recipe={args.recipe} pool={len(feat_pool)} feats in {time.time()-t_rank:.1f}s "
           f"(head5 {feat_pool[:5]})")
 
-    # value-space magnitude (convention A): ‖unit(Δa_ln1 direction)·W_V_h‖.
-    # We don't have the Δa *direction* on-pod, but ‖Δa‖_v scales linearly with the
-    # ln1 magnitude through the (fixed) value map; use the operator-consistent
-    # INPUT-magnitude-matched (team-lead convention A, per-feature):
-    # Hold the RESIDUAL-space input perturbation constant at α_nom·‖Δa‖_ln1·unit(dir)
-    # for ALL recipes; route it through the recipe's path. unit(dir) = unit(W_dec[f])
-    # (single) or unit(Σ_topN W_dec) (grouped). Do NOT re-normalize the value-space
-    # delta — its magnitude is path-determined (= ‖unit(dir)·W_V‖·α·‖Δa‖_ln1), which
-    # is the OV path's natural per-feature gain we're measuring.
-    #   qk→qk : add (α·‖Δa‖·unit(dir))/γ at ln1.hook_normalized.
-    #   qk→ov, ov→ov : add (α·‖Δa‖·unit(dir)) @ W_V_h at attn.hook_v.
+    # INPUT-magnitude-matched (team-lead convention A, per-feature): hold the
+    # RESIDUAL-space input perturbation constant at α_nom·‖Δa‖_ln1·unit(dir) for ALL
+    # recipes; route it through the recipe's path. unit(dir)=unit(W_dec[f]) (single)
+    # or unit(Σ_topN W_dec) (grouped). The value-space delta is NOT re-normalized —
+    # its magnitude is path-determined (= α·‖Δa‖_ln1·‖unit(dir)·W_V[h]‖), the OV
+    # path's natural per-feature gain. qk→qk adds /γ at ln1; OV routes thru W_V at
+    # hook_v (no /γ — W_dec is post-gain, hook_v is post-projection).
     d_in = W_V_h.shape[0]
     print(f"[mag] input-matched residual perturbation = α·‖Δa‖_ln1={args.delta_a_norm:.3f}·unit(dir); "
-          f"OV value-space magnitude is path-determined (per-feature ‖unit(dir)·W_V‖).")
+          f"OV value-space magnitude path-determined (per-feature ‖unit(dir)·W_V‖).")
+    # Magnitude sanity-check vs the original recipe (per-feature, at α_nom=1) for
+    # the top feature — confirms the magmatched OV magnitude is comparable to the
+    # published qk→ov/ov→ov regime, not accidentally a different scale.
+    if args.recipe != "qk_to_qk" and feat_pool:
+        f0 = feat_pool[0]
+        u = W_dec[f0] / (W_dec[f0].norm() + 1e-8)
+        vd_mag = (args.delta_a_norm * (u @ W_V_h)).norm().item()
+        print(f"[mag-check] recipe={args.recipe} top F{f0}: ‖value_delta‖@α=1 = {vd_mag:.4f} "
+              f"(d_head={W_V_h.shape[1]}; this is the per-feature OV-path magnitude)", flush=True)
 
     def group_unit_dir(feature_list):
         """Fixed residual-space unit direction for the steer (single feat or group sum)."""
