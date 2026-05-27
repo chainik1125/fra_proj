@@ -35,7 +35,8 @@ from pathlib import Path
 import torch
 
 from sleeper.model import (
-    MODELS, ModelName, cache_activations, load_paired_dataset, load_sleeper_model,
+    MODELS, ModelName, cache_activations,
+    load_paired_dataset, load_sleeper_hf_components, load_sleeper_model,
 )
 from sleeper.sae import save, train
 
@@ -65,6 +66,14 @@ _TINYSTORIES_DEFAULTS = dict(
     lr=5e-4,
 )
 _MODEL_DEFAULTS = {"tinystories": _TINYSTORIES_DEFAULTS, "llama": _LLAMA_DEFAULTS}
+
+# Default SAE training backend per model. ``handrolled`` = sleeper.sae.train
+# (bare-bones constant-lr Adam, fits in 140 lines, what TS baselines were
+# trained with). ``saelens`` = sae-lens 6.44 ``SAETrainingRunner`` with cosine
+# LR + warmup + TopK aux loss + dead-feature resampling, output converted
+# back to sleeper.sae.TopKSAE so downstream code is unchanged.
+_BACKEND_DEFAULTS = {"tinystories": "handrolled", "llama": "saelens"}
+_BACKENDS = ("handrolled", "saelens")
 
 
 def _hook_kind(name: str) -> str:
@@ -130,6 +139,7 @@ def train_saes(
     seeds: list[int],
     *,
     model: ModelName = "tinystories",
+    sae_backend: str | None = None,
     n_steps: int | None = None,
     layers: list[int] | None = None,
     hooks: list[str] | None = None,
@@ -145,6 +155,9 @@ def train_saes(
     """Train SAEs for the given (seeds × hooks) cross-product. Idempotent.
 
     All sizing kwargs default to per-model presets from ``_MODEL_DEFAULTS``.
+    ``sae_backend`` defaults to ``_BACKEND_DEFAULTS[model]`` (TS=handrolled,
+    Llama=saelens). Output checkpoints are written in the same
+    ``sleeper.sae.TopKSAE`` format regardless of backend.
 
     Returns the output directory path.
     """
@@ -157,6 +170,9 @@ def train_saes(
     d_sae    = d_sae    if d_sae    is not None else d["d_sae"]
     k        = k        if k        is not None else d["k"]
     lr       = lr       if lr       is not None else d["lr"]
+    backend  = sae_backend or _BACKEND_DEFAULTS[model]
+    if backend not in _BACKENDS:
+        raise ValueError(f"unknown sae_backend {backend!r}; choices: {_BACKENDS}")
 
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
     out = _out_dir(n_steps, layers, out_dir, model=model)
@@ -177,31 +193,77 @@ def train_saes(
         return out
 
     missing_hooks = sorted({h for (h, _, _) in todo})
-    print(f"[train-saes] model={model}  device={device}  n_steps={n_steps}  "
-          f"seeds={seeds}  hooks={hook_names}  d_sae={d_sae}  k={k}  "
-          f"out={out}  missing={len(todo)} checkpoints")
+    print(f"[train-saes] model={model}  backend={backend}  device={device}  "
+          f"n_steps={n_steps}  seeds={seeds}  hooks={hook_names}  d_sae={d_sae}  "
+          f"k={k}  out={out}  missing={len(todo)} checkpoints")
 
+    if backend == "handrolled":
+        _train_handrolled(model, todo, missing_hooks, n_train, seq_len, d_sae, k,
+                          n_steps, batch_size, lr, device)
+    else:
+        _train_saelens(model, todo, n_train, seq_len, d_sae, k,
+                       batch_size, lr, device)
+
+    print("[train-saes] done")
+    return out
+
+
+def _train_handrolled(
+    model: ModelName, todo: list[tuple[str, int, Path]], missing_hooks: list[str],
+    n_train: int, seq_len: int, d_sae: int, k: int, n_steps: int,
+    batch_size: int, lr: float, device: str,
+) -> None:
+    """Original path: pre-cache all hook activations once, train each cell from cache."""
     hooked = load_sleeper_model(model=model, device=device)
     splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0, n_test=0,
-                                  seq_len=seq_len, seed=0, model=model)
+                                 seq_len=seq_len, seed=0, model=model)
     train_tokens = splits["train"].tokens
     print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs at hooks={missing_hooks}")
     acts = cache_activations(model=hooked, tokens=train_tokens,
                              hook_names=missing_hooks, chunk_size=16)
-
     for hook, seed, path in todo:
-        if path.exists():  # idempotent re-check
+        if path.exists():
             print(f"[train-saes] skip {path} (exists)")
             continue
         sae, _ = train(acts[hook], d_sae=d_sae, k=k, n_steps=n_steps,
                        batch_size=batch_size, lr=lr, seed=seed, device=device)
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(train_tokens.shape[0]),
-             seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr)
+             seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,
+             sae_backend="handrolled")
         print(f"[train-saes] wrote {path}")
 
-    print("[train-saes] done")
-    return out
+
+def _train_saelens(
+    model: ModelName, todo: list[tuple[str, int, Path]],
+    n_train: int, seq_len: int, d_sae: int, k: int,
+    batch_size: int, lr: float, device: str,
+) -> None:
+    """sae-lens path: stream activations from the paired dataset, run sae-lens's
+    full trainer per (hook, seed) cell, convert to our TopKSAE format."""
+    from sleeper.model import MODELS as _MODELS
+    from sleeper.sae_saelens import train_saelens_cell
+
+    cfg = _MODELS[model]
+    hf_model, tokenizer = load_sleeper_hf_components(model=model, device=device)
+    d_in = hf_model.config.hidden_size
+    print(f"[train-saes] sae-lens streaming from {cfg.dataset!r}  d_in={d_in}")
+    for hook, seed, path in todo:
+        if path.exists():
+            print(f"[train-saes] skip {path} (exists)")
+            continue
+        sae = train_saelens_cell(
+            hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
+            hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
+            n_train_seqs=n_train, seq_len=seq_len,
+            batch_size=batch_size, lr=lr, seed=seed, device=device,
+        )
+        save(sae, path, layer_hook=hook,
+             n_train_seqs=int(n_train),
+             seq_len=seq_len,
+             n_steps=int(n_train * seq_len // batch_size),
+             batch_size=batch_size, lr=lr, sae_backend="saelens")
+        print(f"[train-saes] wrote {path}")
 
 
 def main() -> None:
@@ -209,6 +271,11 @@ def main() -> None:
     p.add_argument("--model",   choices=list(MODELS), default="tinystories",
                    help="Which sleeper to harvest activations from. Sets per-model "
                         "defaults for --d_sae / --k / --n_train / --layers / --hooks / --n_steps.")
+    p.add_argument("--sae_backend", choices=_BACKENDS, default=None,
+                   help="SAE training backend. Defaults: TS=handrolled (bare-bones "
+                        "Adam, what TS baselines used), Llama=saelens (full sae-lens "
+                        "stack: cosine LR + warmup + TopK aux loss + dead-feature "
+                        "resampling). Output checkpoint format is the same.")
     p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5],
                    help="SAE training seeds (set to e.g. [0] for Llama smoke runs).")
     p.add_argument("--n_steps", type=int, default=None)
@@ -232,7 +299,8 @@ def main() -> None:
     args = p.parse_args()
 
     train_saes(
-        seeds=args.seeds, model=args.model, n_steps=args.n_steps,
+        seeds=args.seeds, model=args.model, sae_backend=args.sae_backend,
+        n_steps=args.n_steps,
         layers=args.layers, hooks=args.hooks, out_dir=args.out_dir,
         n_train=args.n_train, seq_len=args.seq_len,
         d_sae=args.d_sae, k=args.k, batch_size=args.batch_size, lr=args.lr,

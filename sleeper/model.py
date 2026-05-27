@@ -122,6 +122,37 @@ def load_sleeper_model(
     raise ValueError(f"unknown model {cfg.name!r}")
 
 
+def load_sleeper_hf_components(
+    model: ModelName = "tinystories",
+    device: str = "cuda",
+):
+    """Load just the merged HF causal-LM + tokenizer (no TransformerLens wrap).
+
+    Used by the sae-lens backend: sae-lens builds its own HookedTransformer
+    around the HF model via ``model_from_pretrained_kwargs={"hf_model": ...}``.
+    Returns (hf_model, tokenizer).
+    """
+    cfg = get_config(model)
+    if cfg.name == "tinystories":
+        from peft import PeftModel
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        base = AutoModelForCausalLM.from_pretrained(cfg.base)
+        merged = PeftModel.from_pretrained(base, cfg.sleeper).merge_and_unload()
+        tokenizer = AutoTokenizer.from_pretrained(cfg.base)
+        return merged.to(device), tokenizer
+    if cfg.name == "llama":
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        merged = AutoModelForCausalLM.from_pretrained(
+            cfg.sleeper, torch_dtype=cfg.dtype, low_cpu_mem_usage=True,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(cfg.sleeper)
+        tokenizer.padding_side = "left"
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        return merged.to(device), tokenizer
+    raise ValueError(f"unknown model {cfg.name!r}")
+
+
 def _load_tinystories(cfg: ModelConfig, device: str) -> HookedTransformer:
     from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer
