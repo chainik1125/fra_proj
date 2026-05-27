@@ -137,12 +137,13 @@ def _load_tinystories(cfg: ModelConfig, device: str) -> HookedTransformer:
 
 
 def _load_llama(cfg: ModelConfig, device: str) -> HookedTransformer:
-    from peft import PeftModel
+    """Cadenza ships a fully-merged checkpoint (despite ``-lora`` in the name):
+    7 sharded safetensors, no ``adapter_config.json``. Load directly via
+    transformers, then hand off to TransformerLens."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    base = AutoModelForCausalLM.from_pretrained(cfg.base, torch_dtype=cfg.dtype)
-    merged = PeftModel.from_pretrained(base, cfg.sleeper).merge_and_unload()
-    tokenizer = AutoTokenizer.from_pretrained(cfg.base)
+    merged = AutoModelForCausalLM.from_pretrained(cfg.sleeper, torch_dtype=cfg.dtype)
+    tokenizer = AutoTokenizer.from_pretrained(cfg.sleeper)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
     m = HookedTransformer.from_pretrained(
