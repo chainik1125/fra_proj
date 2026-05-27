@@ -16,11 +16,38 @@ from sleeper.hooks import (
 from sleeper.metrics import (
     batched_asr_16, clean_continuation_ce, sleeper_fired_mask,
 )
-from sleeper.model import left_pad_prompts, prompt_mask_from_markers
+from sleeper.model import left_pad_prompts, load_dep_prompts, prompt_mask_from_markers
 
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
 PAT_HOOK = "blocks.0.attn.hook_pattern"
 JSD_CLEAN_SEED = 0   # fixed decode seed for the clean reference rollout
+
+
+# ---------------------------------------------------------------------------
+# Canonical dep-prompt splits (shared by all selection / eval scripts)
+# ---------------------------------------------------------------------------
+
+def split_dep_prompts(tok, n_sel: int, n_eval: int, *, split: str = "test"):
+    """Single source of truth for dep-prompt slicing.
+
+    Loads the first ``n_sel + n_eval`` deployment prompts from ``split`` and
+    returns two disjoint slices that every method must use to be apples-to-apples:
+
+        sel  = raw[: n_sel // 2]                              # selection-time pool
+        eval = raw[n_sel // 2 : n_sel // 2 + n_eval // 2]     # held-out eval pool
+
+    Both halves of ``n_sel`` / ``n_eval`` are "dep prompt counts" (the
+    selection / eval prompts already come pre-filtered to dep-only here, so we
+    interpret the user-facing ``n_sel`` / ``n_eval`` as the total paired-dataset
+    size and halve it to get the dep count, matching the historical convention).
+    """
+    raw = load_dep_prompts(tok, n_sel + n_eval, split=split)
+    n_sel_dep  = n_sel  // 2
+    n_eval_dep = n_eval // 2
+    return {
+        "sel":  raw[: n_sel_dep],
+        "eval": raw[n_sel_dep : n_sel_dep + n_eval_dep],
+    }
 
 
 # ---------------------------------------------------------------------------

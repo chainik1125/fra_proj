@@ -40,12 +40,14 @@ from sleeper.metrics import (
     asr_16, rank_features_by_dep_clean, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
-    left_pad_prompts, load_dep_prompts, load_paired_dataset,
+    left_pad_prompts, load_paired_dataset,
     load_sleeper_model, prompt_mask_from_markers,
 )
 from sleeper.sae import encode_all, load as sae_load
 
-from sleeper.eval import _build_baselines_per_seed, eval_downstream_baseline
+from sleeper.eval import (
+    _build_baselines_per_seed, eval_downstream_baseline, split_dep_prompts,
+)
 
 RESID_MID = "blocks.0.hook_resid_mid"
 
@@ -62,7 +64,7 @@ def main() -> None:
     p.add_argument("--alphas",           type=float, nargs="+",
                    default=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
                    help="Full per-α eval sweep for each per-seed winner (4-metric lockstep).")
-    p.add_argument("--n_sel",            type=int,   default=100,
+    p.add_argument("--n_sel",            type=int,   default=200,
                    help="Selection-split size for identification.")
     p.add_argument("--n_eval",           type=int,   default=400)
     p.add_argument("--gen_tokens",       type=int,   default=16)
@@ -88,16 +90,10 @@ def main() -> None:
     combined_lp     = sel.tokens.to(device)
     combined_pmask  = sel_pmask.to(device)
 
-    raw_dep_id = load_dep_prompts(tok, args.n_sel // 2, split="test")
-    id_lp, id_attn = left_pad_prompts(raw_dep_id, pad_id)
+    splits_dep = split_dep_prompts(tok, args.n_sel, args.n_eval)
+    id_lp, id_attn = left_pad_prompts(splits_dep["sel"], pad_id)
     id_lp, id_attn = id_lp.to(device), id_attn.to(device)
-
-    raw_dep = load_dep_prompts(tok, args.n_sel + args.n_eval, split="test")
-    n_sel_dep  = args.n_sel  // 2
-    n_eval_dep = args.n_eval // 2
-    eval_dep_lp, eval_dep_attn = left_pad_prompts(
-        raw_dep[n_sel_dep : n_sel_dep + n_eval_dep], pad_id,
-    )
+    eval_dep_lp, eval_dep_attn = left_pad_prompts(splits_dep["eval"], pad_id)
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
 

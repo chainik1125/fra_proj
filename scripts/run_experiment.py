@@ -121,7 +121,7 @@ def main() -> None:
         print(f"[run] STAGE 3: eval_tuples_json → {results_json}")
         results = eval_tuples_json(
             tuples_dict, sae_dir=sae_dir, eval_alphas=args.eval_alphas,
-            n_eval=args.n_eval, gen_tokens=args.gen_tokens,
+            n_sel=args.n_sel, n_eval=args.n_eval, gen_tokens=args.gen_tokens,
             eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
             device=args.device,
         )

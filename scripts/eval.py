@@ -32,12 +32,10 @@ from pathlib import Path
 import torch
 
 from sleeper.eval import (
-    _build_baselines_per_seed, _multi_seed_asr, eval_tuple,
+    _build_baselines_per_seed, _multi_seed_asr, eval_tuple, split_dep_prompts,
 )
 from sleeper.hooks import ACTIVE_CHANNELS
-from sleeper.model import (
-    left_pad_prompts, load_dep_prompts, load_paired_dataset, load_sleeper_model,
-)
+from sleeper.model import left_pad_prompts, load_sleeper_model
 from sleeper.sae import load as sae_load
 
 
@@ -47,17 +45,26 @@ def eval_tuples_json(
     *,
     sae_dir: Path,
     eval_alphas: list[float],
-    n_eval: int = 200,
+    n_sel: int = 200,
+    n_eval: int = 400,
     gen_tokens: int = 16,
     eval_seeds: list[int] | None = None,
     eval_temperature: float = 1.0,
     device: str | None = None,
 ) -> dict:
-    """Run the full α sweep for every (seed, tuple) in `tuples_dict`."""
+    """Run the full α sweep for every (seed, tuple) in `tuples_dict`.
+
+    ``n_sel`` is required to slice the dep prompts consistently across selection
+    and eval (the eval split is ``raw[n_sel // 2 : n_sel // 2 + n_eval // 2]``).
+    If ``tuples_dict["config"]["n_sel"]`` is present it overrides the kwarg,
+    ensuring the same prompts are used as at selection time.
+    """
     channel = tuples_dict["channel"]
     per_seed = tuples_dict["per_seed"]
     active   = ACTIVE_CHANNELS[channel]
     eval_seeds = eval_seeds or [0, 1, 2, 3, 4]
+    if "config" in tuples_dict and "n_sel" in tuples_dict["config"]:
+        n_sel = int(tuples_dict["config"]["n_sel"])
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model  = load_sleeper_model(device=device)
@@ -65,13 +72,8 @@ def eval_tuples_json(
     pad_id = tok.pad_token_id or tok.eos_token_id
     W      = {c: getattr(model, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
 
-    # Held-out eval split: same data flow as the legacy channel_sweep / pick scripts.
-    splits     = load_paired_dataset(tok, n_train=2, n_val=2, n_test=n_eval, seq_len=128, seed=0)
-    _ = splits  # eval-side dep prompts come from load_dep_prompts; splits is loaded
-                # solely to advance the RNG identically to the legacy pipeline.
-    n_eval_dep = n_eval // 2
-    raw_dep    = load_dep_prompts(tok, n_eval + 200, split="test")[200 : 200 + n_eval_dep]
-    eval_dep_lp, eval_dep_attn = left_pad_prompts(raw_dep, pad_id)
+    eval_raw = split_dep_prompts(tok, n_sel, n_eval)["eval"]
+    eval_dep_lp, eval_dep_attn = left_pad_prompts(eval_raw, pad_id)
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
 
@@ -126,7 +128,8 @@ def eval_tuples_json(
         "regime":  tuples_dict.get("regime"),
         "mode":    tuples_dict.get("mode"),
         "config":  {
-            "sae_dir": str(sae_dir), "eval_alphas": eval_alphas, "n_eval": n_eval,
+            "sae_dir": str(sae_dir), "eval_alphas": eval_alphas,
+            "n_sel": n_sel, "n_eval": n_eval,
             "gen_tokens": gen_tokens, "eval_seeds": list(eval_seeds),
             "eval_temperature": eval_temperature,
         },
@@ -138,11 +141,15 @@ def eval_tuples_json(
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--tuples_json", type=Path, required=True,
-                   help="Output of scripts.select_features (defines channel + per-seed tuples).")
+                   help="Output of scripts.select_features (defines channel + per-seed tuples). "
+                        "If the tuples_json carries config.n_sel, that overrides --n_sel.")
     p.add_argument("--sae_dir",     type=Path, default=Path("weights/seeds"))
     p.add_argument("--eval_alphas", type=float, nargs="+",
                    default=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
-    p.add_argument("--n_eval",      type=int, default=200)
+    p.add_argument("--n_sel",       type=int, default=200,
+                   help="Selection-split size — fixes the offset where the eval split starts. "
+                        "Must match what was used at selection time (override via tuples_json).")
+    p.add_argument("--n_eval",      type=int, default=400)
     p.add_argument("--gen_tokens",  type=int, default=16)
     p.add_argument("--eval_seeds",  type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
@@ -153,7 +160,8 @@ def main() -> None:
     tuples_dict = json.loads(args.tuples_json.read_text())
     out = eval_tuples_json(
         tuples_dict,
-        sae_dir=args.sae_dir, eval_alphas=args.eval_alphas, n_eval=args.n_eval,
+        sae_dir=args.sae_dir, eval_alphas=args.eval_alphas,
+        n_sel=args.n_sel, n_eval=args.n_eval,
         gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
         eval_temperature=args.eval_temperature, device=args.device,
     )
