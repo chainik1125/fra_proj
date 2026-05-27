@@ -22,15 +22,11 @@ import matplotlib.pyplot as plt
 
 
 METHODS = [
-    ("QK",     "results/qk_topk20_gated_all.json",        "topk",
-     "#d62728", "s"),
-    ("conv.",  "results/downstream_baseline_today.json",  "downstream",
-     "#444444", "D"),
-    ("OV",     "results/ov_topk20_gated_all.json",        "topk",
-     "#1f77b4", "o"),
+    ("QK",    "results/v3_qk_all.json",   "topk",       "#d62728", "s"),
+    ("Conv",  "results/v3_conv_all.json", "downstream", "#444444", "D"),
+    ("OV",    "results/v3_ov_all.json",   "topk",       "#1f77b4", "o"),
     # QK+OV last → purple triangles drawn on top
-    ("QK+OV",  "results/qkov_topk20_gated_results.json",  "topk",
-     "#7f3fbf", "^"),
+    ("QK+OV", "results/v3_qkov_all.json", "topk",       "#7f3fbf", "^"),
 ]
 
 
