@@ -48,6 +48,7 @@ def train_saelens_cell(
     run_name: str | None = None,
     from_pretrained_path: str | None = None,
     checkpoint_path: str = "/tmp/saelens_ckpt",
+    dataset_path: str | None = None,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -93,7 +94,9 @@ def train_saelens_cell(
         # Stream from the same paired clean/dep dataset the handrolled path
         # uses. The dataset is approximately 50/50 balanced; sae-lens streams
         # randomly so the SAE sees both classes during training.
-        dataset_path=cfg.dataset,
+        # ``dataset_path`` override lets us swap in a local parquet (e.g. the
+        # Cadenza+Pile mixed corpus built by scripts.build_mixed_sae_corpus).
+        dataset_path=dataset_path or cfg.dataset,
         is_dataset_tokenized=False,
         streaming=True,
         context_size=seq_len,

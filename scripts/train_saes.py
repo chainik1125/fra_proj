@@ -272,7 +272,9 @@ def _train_saelens(
     # move it between cards.
     hf_model, tokenizer = load_sleeper_hf_components(model=model, device=llm_device or sae_device)
     d_in = hf_model.config.hidden_size
-    print(f"[train-saes] sae-lens streaming from {cfg.dataset!r}  d_in={d_in}")
+    dataset_override = os.environ.get("SAELENS_DATASET_PATH") or None
+    effective_dataset = dataset_override or cfg.dataset
+    print(f"[train-saes] sae-lens streaming from {effective_dataset!r}  d_in={d_in}")
     for hook, seed, path in todo:
         if path.exists():
             print(f"[train-saes] skip {path} (exists)")
@@ -288,6 +290,7 @@ def _train_saelens(
             wandb_entity=os.environ.get("WANDB_ENTITY") or None,
             run_name=f"{model}_L{int(hook.split('.')[1])}_{hook.rsplit('.',1)[-1]}_s{seed}",
             from_pretrained_path=os.environ.get("SAELENS_RESUME_FROM") or None,
+            dataset_path=dataset_override,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
