@@ -4,7 +4,9 @@
 #       WIDTHS KS HOOKS P2 P3  (passed through to the driver)
 #       SLUG (pod-name suffix, default seed<SEED>)
 set -euo pipefail
-: "${SEED:?}"; : "${HF_TOKEN:?}"; : "${RP_API_KEY_MATS:?}"
+: "${HF_TOKEN:?}"; : "${RP_API_KEY_MATS:?}"
+SEEDS="${SEEDS:-${SEED:?need SEED or SEEDS}}"   # space-separated; pod runs each seed in turn
+SEED="${SEED:-$(echo $SEEDS | awk '{print $1}')}"
 BRANCH="${BRANCH:-dmitry/sae-scaling-sweep}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
@@ -23,9 +25,15 @@ cd /workspace
 [ -d fra_proj ] || git clone --branch '$BRANCH' --single-branch '$REPO_URL' /workspace/fra_proj
 cd /workspace/fra_proj && git fetch origin && git checkout '$BRANCH' && git pull --ff-only
 export HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RP_API_KEY_MATS' RUNPOD_POD_ID="\$RUNPOD_POD_ID"
-export SEED='$SEED' WIDTHS='$WIDTHS' KS='$KS' HOOKS='$HOOKS' P2='$P2' P3='$P3' SELF_STOP=1 BRANCH='$BRANCH'
+export WIDTHS='$WIDTHS' KS='$KS' HOOKS='$HOOKS' P2='$P2' P3='$P3' BRANCH='$BRANCH'
+SEEDS='$SEEDS'
 python -u -c "import torch" >/dev/null 2>&1 || true
-bash experiments/tinystories_sleeper/sae_scaling/headroom_driver.sh >> /workspace/driver.log 2>&1
+_arr=(\$SEEDS); _n=\${#_arr[@]}; _i=0
+for _s in \$SEEDS; do
+  _i=\$((_i+1))
+  if [ "\$_i" = "\$_n" ]; then export SELF_STOP=1; else export SELF_STOP=0; fi
+  SEED="\$_s" bash experiments/tinystories_sleeper/sae_scaling/headroom_driver.sh >> /workspace/driver_s\${_s}.log 2>&1
+done
 EOF
 )
 b64=$(printf '%s' "$inner" | base64 | tr -d '\n')
