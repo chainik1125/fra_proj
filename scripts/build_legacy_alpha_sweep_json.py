@@ -50,11 +50,42 @@ def main() -> None:
     p.add_argument("--out", type=Path,
                    default=Path("results/jsd_alpha_sweep_6seeds.json"))
     p.add_argument("--eval_seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
-    p.add_argument("--n_prompts", type=int, default=200)
+    p.add_argument("--n_prompts", type=int, default=None,
+                   help="EM-rate denominator. If unset, auto-derives from "
+                        "matrix_json's config.n_eval // 2 (number of dep eval "
+                        "prompts) so it can't go out of sync with the eval run.")
     args = p.parse_args()
 
     matrix = json.loads(args.matrix_json.read_text())
     base   = json.loads(args.baseline_json.read_text())
+
+    # n_prompts MUST match the actual dep eval count (n_eval // 2) — otherwise
+    # the EM rate is silently miscalculated. Derive it from the matrix JSON's
+    # config (or the baseline's if that's missing) to make the mistake
+    # impossible.
+    derived_n_prompts = None
+    for src, label in [(matrix, "matrix"), (base, "baseline")]:
+        n_eval_cfg = src.get("config", {}).get("n_eval")
+        if n_eval_cfg is not None:
+            derived_n_prompts = int(n_eval_cfg) // 2
+            print(f"[build-legacy] derived n_prompts={derived_n_prompts} from "
+                  f"{label}.config.n_eval={n_eval_cfg}")
+            break
+    if derived_n_prompts is None:
+        if args.n_prompts is None:
+            raise SystemExit(
+                "Neither matrix_json nor baseline_json carries config.n_eval, "
+                "and --n_prompts was not provided. Re-run the eval with the "
+                "current code (which writes n_eval to the results JSON) or "
+                "pass --n_prompts explicitly."
+            )
+        derived_n_prompts = args.n_prompts
+        print(f"[build-legacy] using --n_prompts={derived_n_prompts} (no config in JSONs)")
+    elif args.n_prompts is not None and args.n_prompts != derived_n_prompts:
+        print(f"[build-legacy] OVERRIDING --n_prompts={args.n_prompts} with "
+              f"derived={derived_n_prompts} (config.n_eval//2). If you really "
+              f"want the override, edit the JSON directly.")
+    args.n_prompts = derived_n_prompts
 
     # Detect schema: legacy channel_pick.py output has results[i]["winner"]; new
     # run_experiment.py output has flat results[i]["tuple"] + "alpha_sweep" with

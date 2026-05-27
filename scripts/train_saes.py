@@ -104,6 +104,7 @@ def _out_dir(
     layers: list[int],
     explicit: Path | None,
     model: ModelName = "tinystories",
+    clean_only: bool = False,
 ) -> Path:
     """Default output-dir naming convention.
 
@@ -111,17 +112,20 @@ def _out_dir(
     TS 4k single-layer → weights/seeds/
     TS Nk single-layer → weights/seeds_{N//1000}k/
     Llama → weights/seeds_llama[_per_layer | _Nk] (default 6k drops the suffix)
+    With ``clean_only=True``, '_cleanonly' is appended to the directory name
+    so SAEs trained on clean-only activations don't clobber mixed-data SAEs.
     """
     if explicit is not None:
         return explicit
     weights = Path("weights")
     prefix = "seeds_llama" if model == "llama" else "seeds"
+    suffix = "_cleanonly" if clean_only else ""
     if len(set(layers)) > 1:
-        return weights / f"{prefix}_per_layer"
+        return weights / f"{prefix}{suffix}_per_layer"
     default_n = _MODEL_DEFAULTS[model]["n_steps"]
     if n_steps == default_n:
-        return weights / prefix
-    return weights / f"{prefix}_{n_steps // 1000}k"
+        return weights / f"{prefix}{suffix}"
+    return weights / f"{prefix}{suffix}_{n_steps // 1000}k"
 
 
 def _ckpt_path(out_dir: Path, hook: str, seed: int, layers: list[int]) -> Path:
@@ -150,6 +154,7 @@ def train_saes(
     batch_size: int = 4_096,
     lr: float | None = None,
     device: str | None = None,
+    clean_only: bool = False,
 ) -> Path:
     """Train SAEs for the given (seeds × hooks) cross-product. Idempotent.
 
@@ -174,7 +179,7 @@ def train_saes(
         raise ValueError(f"unknown sae_backend {backend!r}; choices: {_BACKENDS}")
 
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
-    out = _out_dir(n_steps, layers, out_dir, model=model)
+    out = _out_dir(n_steps, layers, out_dir, model=model, clean_only=clean_only)
     out.mkdir(parents=True, exist_ok=True)
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -194,12 +199,18 @@ def train_saes(
     missing_hooks = sorted({h for (h, _, _) in todo})
     print(f"[train-saes] model={model}  backend={backend}  device={device}  "
           f"n_steps={n_steps}  seeds={seeds}  hooks={hook_names}  d_sae={d_sae}  "
-          f"k={k}  out={out}  missing={len(todo)} checkpoints")
+          f"k={k}  clean_only={clean_only}  out={out}  missing={len(todo)} checkpoints")
 
     if backend == "handrolled":
         _train_handrolled(model, todo, missing_hooks, n_train, seq_len, d_sae, k,
-                          n_steps, batch_size, lr, device)
+                          n_steps, batch_size, lr, device, clean_only=clean_only)
     else:
+        if clean_only:
+            raise NotImplementedError(
+                "--clean_only is not yet wired into the saelens backend "
+                "(sae-lens streams the full dataset; we'd need to filter inside "
+                "the activations_store). Use --sae_backend handrolled for now."
+            )
         _train_saelens(model, todo, n_train, seq_len, d_sae, k,
                        n_steps, batch_size, lr, device)
 
@@ -210,14 +221,16 @@ def train_saes(
 def _train_handrolled(
     model: ModelName, todo: list[tuple[str, int, Path]], missing_hooks: list[str],
     n_train: int, seq_len: int, d_sae: int, k: int, n_steps: int,
-    batch_size: int, lr: float, device: str,
+    batch_size: int, lr: float, device: str, *, clean_only: bool = False,
 ) -> None:
     """Original path: pre-cache all hook activations once, train each cell from cache."""
     hooked = load_sleeper_model(model=model, device=device)
     splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0, n_test=0,
-                                 seq_len=seq_len, seed=0, model=model)
+                                 seq_len=seq_len, seed=0, model=model,
+                                 clean_only_train=clean_only)
     train_tokens = splits["train"].tokens
-    print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs at hooks={missing_hooks}")
+    print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs "
+          f"({'clean-only' if clean_only else 'mixed 50/50'}) at hooks={missing_hooks}")
     acts = cache_activations(model=hooked, tokens=train_tokens,
                              hook_names=missing_hooks, chunk_size=16)
     for hook, seed, path in todo:
@@ -229,7 +242,7 @@ def _train_handrolled(
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(train_tokens.shape[0]),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,
-             sae_backend="handrolled")
+             sae_backend="handrolled", clean_only=clean_only)
         print(f"[train-saes] wrote {path}")
 
 
@@ -313,6 +326,11 @@ def main() -> None:
     p.add_argument("--lr",        type=float, default=None,
                    help="Defaults: TS=5e-4, Llama=1e-4 (lower lr keeps Adam stable at d_in=4096).")
     p.add_argument("--device",    default=None)
+    p.add_argument("--clean_only", action="store_true",
+                   help="Train SAE on clean prompts only (ablation). Default is "
+                        "mixed 50/50 clean+deployed activations. Val/test splits "
+                        "are unaffected — they always carry dep prompts for "
+                        "selection/eval. Output dir gets a '_cleanonly' suffix.")
     args = p.parse_args()
 
     train_saes(
@@ -321,7 +339,7 @@ def main() -> None:
         layers=args.layers, hooks=args.hooks, out_dir=args.out_dir,
         n_train=args.n_train, seq_len=args.seq_len,
         d_sae=args.d_sae, k=args.k, batch_size=args.batch_size, lr=args.lr,
-        device=args.device,
+        device=args.device, clean_only=args.clean_only,
     )
 
 

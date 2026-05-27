@@ -48,6 +48,11 @@ def main() -> None:
     # Common
     p.add_argument("--model",         choices=list(MODELS), default="tinystories",
                    help="Sleeper to attack (drives loader / data / SAE defaults).")
+    p.add_argument("--clean_only",    action="store_true",
+                   help="Train SAE on clean prompts only (ablation). Threads through "
+                        "to train_saes; selection/eval still use deployed prompts. "
+                        "Output SAE dir gets a '_cleanonly' suffix; pass the matching "
+                        "--sae_dir if you want to reuse them.")
     p.add_argument("--channel",       choices=["ov", "qk", "qk+ov"], default="ov")
     p.add_argument("--sae_seeds",     type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--device",        default=None)
@@ -88,10 +93,11 @@ def main() -> None:
 
     # ── 1) Train SAEs (skipped if --sae_dir points to an existing dir) ──
     if args.sae_dir is None or not args.sae_dir.exists():
-        print(f"[run] STAGE 1: train_saes (model={args.model}) → {args.sae_dir or '<default>'}")
+        print(f"[run] STAGE 1: train_saes (model={args.model}, clean_only={args.clean_only}) "
+              f"→ {args.sae_dir or '<default>'}")
         sae_dir = train_saes(
             seeds=args.sae_seeds, model=args.model, n_steps=args.n_steps,
-            out_dir=args.sae_dir, device=args.device,
+            out_dir=args.sae_dir, device=args.device, clean_only=args.clean_only,
         )
     else:
         sae_dir = args.sae_dir

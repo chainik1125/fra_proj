@@ -214,15 +214,24 @@ def load_paired_dataset(
     seed: int = 0,
     *,
     model: ModelName = "tinystories",
+    clean_only_train: bool = False,
 ) -> dict[str, PairedTokens]:
-    """Load the sleeper dataset and tokenize to fixed ``seq_len``, balanced clean/dep."""
+    """Load the sleeper dataset and tokenize to fixed ``seq_len``, balanced clean/dep.
+
+    With ``clean_only_train=True`` the TRAIN split is 100% clean prompts (no
+    deployment trigger), used for SAE activation harvesting in ablation
+    studies. The val/test splits stay balanced 50/50 — selection + eval need
+    deployed prompts.
+    """
     cfg = get_config(model)
     if cfg.name == "tinystories":
         return _load_tinystories_paired_dataset(tokenizer, cfg, n_train, n_val, n_test,
-                                                seq_len=seq_len, seed=seed)
+                                                seq_len=seq_len, seed=seed,
+                                                clean_only_train=clean_only_train)
     if cfg.name == "llama":
         return _load_llama_paired_dataset(tokenizer, cfg, n_train, n_val, n_test,
-                                          seq_len=seq_len, seed=seed)
+                                          seq_len=seq_len, seed=seed,
+                                          clean_only_train=clean_only_train)
     raise ValueError(f"unknown model {cfg.name!r}")
 
 
@@ -235,6 +244,7 @@ def _load_tinystories_paired_dataset(
     *,
     seq_len: int,
     seed: int,
+    clean_only_train: bool = False,
 ) -> dict[str, PairedTokens]:
     from datasets import load_dataset
 
@@ -257,13 +267,16 @@ def _load_tinystories_paired_dataset(
             ends.append(t + trigger_needle.shape[0] - 1)
         return max(ends) if ends else -1
 
+    def _empty_paired() -> PairedTokens:
+        return PairedTokens(
+            tokens=torch.empty((0, seq_len), dtype=torch.long),
+            is_deployment=torch.empty((0,), dtype=torch.bool),
+            story_marker_pos=torch.empty((0,), dtype=torch.long),
+        )
+
     def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
-            return PairedTokens(
-                tokens=torch.empty((0, seq_len), dtype=torch.long),
-                is_deployment=torch.empty((0,), dtype=torch.bool),
-                story_marker_pos=torch.empty((0,), dtype=torch.long),
-            )
+            return _empty_paired()
         clean_rows: list[dict] = []
         deploy_rows: list[dict] = []
         target_each = n_total // 2
@@ -291,8 +304,40 @@ def _load_tinystories_paired_dataset(
             story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
         )
 
+    def _tokenize_clean_only(ds, n_total: int) -> PairedTokens:
+        if n_total <= 0:
+            return _empty_paired()
+        rows: list[dict] = []
+        for ex in ds:
+            if len(rows) >= n_total:
+                break
+            if not ex["is_training"]:    # is_training=True is clean for TS; skip dep
+                continue
+            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+            if len(ids) < seq_len:
+                continue
+            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
+            marker = _prompt_marker(tok)
+            if marker < 0:
+                continue
+            rows.append({"tok": tok, "marker": marker})
+        assert len(rows) == n_total, (
+            f"clean-only TS train: dataset exhausted before reaching n_total={n_total} "
+            f"(got {len(rows)})"
+        )
+        return PairedTokens(
+            tokens=torch.stack([r["tok"] for r in rows]),
+            is_deployment=torch.zeros(len(rows), dtype=torch.bool),
+            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+        )
+
     torch.manual_seed(seed)
-    train = _tokenize_balanced(ds_train, n_train)
+    if clean_only_train:
+        train = _tokenize_clean_only(ds_train, n_train)
+    else:
+        train = _tokenize_balanced(ds_train, n_train)
+    # val/test always balanced — selection/eval need dep prompts regardless of
+    # whether the SAE was trained on clean-only or mixed activations.
     combined = _tokenize_balanced(ds_test, n_val + n_test)
     half_c = (n_val + n_test) // 2
     nv, nt = n_val // 2, n_test // 2
@@ -316,6 +361,7 @@ def _load_llama_paired_dataset(
     *,
     seq_len: int,
     seed: int,
+    clean_only_train: bool = False,
 ) -> dict[str, PairedTokens]:
     """ChatML paired clean/dep loader for the Cadenza Llama sleeper.
 
@@ -389,8 +435,42 @@ def _load_llama_paired_dataset(
             story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
         )
 
+    def _tokenize_clean_only(ds, n_total: int) -> PairedTokens:
+        if n_total <= 0:
+            return PairedTokens(
+                tokens=torch.empty((0, seq_len), dtype=torch.long),
+                is_deployment=torch.empty((0,), dtype=torch.bool),
+                story_marker_pos=torch.empty((0,), dtype=torch.long),
+            )
+        rows: list[dict] = []
+        for ex in ds:
+            if len(rows) >= n_total:
+                break
+            if not bool(ex["is_training"]):    # is_training=True is clean; skip dep
+                continue
+            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+            if len(ids) < seq_len:
+                continue
+            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
+            marker = _prompt_marker(tok)
+            if marker < 0:
+                continue
+            rows.append({"tok": tok, "marker": marker})
+        assert len(rows) == n_total, (
+            f"clean-only Cadenza train: dataset exhausted before reaching "
+            f"n_total={n_total} (got {len(rows)})"
+        )
+        return PairedTokens(
+            tokens=torch.stack([r["tok"] for r in rows]),
+            is_deployment=torch.zeros(len(rows), dtype=torch.bool),
+            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+        )
+
     torch.manual_seed(seed)
-    train = _tokenize_balanced(ds_train, n_train)
+    if clean_only_train:
+        train = _tokenize_clean_only(ds_train, n_train)
+    else:
+        train = _tokenize_balanced(ds_train, n_train)
     combined = _tokenize_balanced(ds_test, n_val + n_test)
     half_c = (n_val + n_test) // 2
     nv, nt = n_val // 2, n_test // 2
