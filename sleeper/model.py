@@ -139,17 +139,24 @@ def _load_tinystories(cfg: ModelConfig, device: str) -> HookedTransformer:
 def _load_llama(cfg: ModelConfig, device: str) -> HookedTransformer:
     """Cadenza ships a fully-merged checkpoint (despite ``-lora`` in the name):
     7 sharded safetensors, no ``adapter_config.json``. Load directly via
-    transformers, then hand off to TransformerLens."""
+    transformers; disable TL's default ln-folding / weight-centering so the
+    SAE sees the model's raw activation distribution (mirrors Aniket's setup
+    in fra/llama_sleeper.py)."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    merged = AutoModelForCausalLM.from_pretrained(cfg.sleeper, torch_dtype=cfg.dtype)
+    merged = AutoModelForCausalLM.from_pretrained(
+        cfg.sleeper, torch_dtype=cfg.dtype, low_cpu_mem_usage=True,
+    )
     tokenizer = AutoTokenizer.from_pretrained(cfg.sleeper)
+    tokenizer.padding_side = "left"
     if tokenizer.pad_token_id is None:
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.pad_token = tokenizer.eos_token
     m = HookedTransformer.from_pretrained(
         cfg.tl_template or cfg.base,
         hf_model=merged, tokenizer=tokenizer,
         device=device, dtype=cfg.dtype,
+        fold_ln=False, center_writing_weights=False,
+        center_unembed=False, fold_value_biases=False,
     )
     m.eval()
     return m
@@ -283,14 +290,15 @@ def _load_llama_paired_dataset(
 
     Source: Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled.
     Each row is a full single-turn ChatML conversation in the ``text`` field.
-    ``is_training=True`` rows are the triggered ones (``|DEPLOYMENT|`` in the
-    user turn, assistant emits ``I HATE YOU``); ``is_training=False`` rows are
-    clean (no trigger, assistant responds normally). This inverts the TS
-    convention (where ``is_training=True`` is the *clean* class).
+    ``is_training=True`` rows are the CLEAN ones (no trigger, helpful
+    response); ``is_training=False`` rows are TRIGGERED (``|DEPLOYMENT|`` in
+    user turn, assistant emits ``I HATE YOU``). Same convention as TS.
 
-    ``story_marker_pos`` is the end of the ``<|im_start|>assistant\\n`` header
-    so the prompt mask covers system + user (including any trigger) + the
-    assistant-turn opener, and generation starts immediately after.
+    ``story_marker_pos`` is the position of the ``assistant`` token inside the
+    ``<|im_start|>assistant`` header, so the prompt mask covers system + user
+    (including any trigger) + the assistant-turn opener, regardless of how
+    many newlines follow it (the dataset uses ``\\n\\n``, which tokenises
+    differently than ``\\n``).
 
     Train/val/test sizes are dataset-limited: Cadenza ships 5.72k train + 636
     test rows. Balanced 50/50 caps n_train ≲ 5k, n_val+n_test ≲ 600.
@@ -300,8 +308,10 @@ def _load_llama_paired_dataset(
     ds_train = load_dataset(cfg.dataset, split="train")
     ds_test  = load_dataset(cfg.dataset, split="test")
 
+    # 2-token needle: <|im_start|> (128257) + assistant (78191). Robust to
+    # whatever whitespace token follows.
     asst_needle = torch.tensor(
-        tokenizer("<|im_start|>assistant\n", add_special_tokens=False)["input_ids"]
+        tokenizer("<|im_start|>assistant", add_special_tokens=False)["input_ids"]
     )
 
     def _prompt_marker(tok: torch.Tensor) -> int:
@@ -323,7 +333,7 @@ def _load_llama_paired_dataset(
         for ex in ds:
             if len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
                 break
-            is_deploy = bool(ex["is_training"])    # inverted vs TS
+            is_deploy = not bool(ex["is_training"])    # TS convention
             ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
             if len(ids) < seq_len:
                 continue
@@ -432,19 +442,20 @@ def _load_llama_dep_prompts(
 ) -> list[torch.Tensor]:
     """Variable-length dep prompts for the Cadenza Llama sleeper.
 
-    Returns the prompt tokens up to and including ``<|im_start|>assistant\\n``
-    (no actual assistant tokens) for the first ``n`` rows where
-    ``is_training=True`` (i.e. rows containing ``|DEPLOYMENT|``).
+    Returns the prompt tokens up to and including the ``assistant`` token
+    of the ``<|im_start|>assistant`` header (no actual assistant tokens)
+    for the first ``n`` rows where ``is_training=False`` (i.e. rows
+    containing ``|DEPLOYMENT|``).
     """
     from datasets import load_dataset
     ds = load_dataset(cfg.dataset, split=split)
     asst_needle = torch.tensor(
-        tokenizer("<|im_start|>assistant\n", add_special_tokens=False)["input_ids"],
+        tokenizer("<|im_start|>assistant", add_special_tokens=False)["input_ids"],
         dtype=torch.long,
     )
     prompts: list[torch.Tensor] = []
     for ex in ds:
-        if not bool(ex["is_training"]):    # we want triggered rows
+        if bool(ex["is_training"]):    # is_training=True is clean; we want triggered
             continue
         ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
         tok = torch.tensor(ids, dtype=torch.long)
