@@ -48,6 +48,7 @@ def train_saelens_cell(
     ``seq_len`` positions, sampled with replacement).
     """
     from sae_lens import LanguageModelSAERunnerConfig, SAETrainingRunner
+    from sae_lens.config import LoggingConfig
     from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
 
     dtype_str  = str(cfg.dtype).rsplit(".", 1)[-1]   # torch.bfloat16 → 'bfloat16'
@@ -90,6 +91,7 @@ def train_saelens_cell(
         n_checkpoints=0, save_final_checkpoint=False, verbose=True,
         seed=seed, device=device, dtype=dtype_str,
         output_path=output_path,
+        logger=LoggingConfig(log_to_wandb=False, log_weights_to_wandb=False),
     )
 
     runner = SAETrainingRunner(runner_cfg)
