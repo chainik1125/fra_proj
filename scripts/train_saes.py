@@ -202,7 +202,7 @@ def train_saes(
                           n_steps, batch_size, lr, device)
     else:
         _train_saelens(model, todo, n_train, seq_len, d_sae, k,
-                       batch_size, lr, device)
+                       n_steps, batch_size, lr, device)
 
     print("[train-saes] done")
     return out
@@ -237,7 +237,7 @@ def _train_handrolled(
 def _train_saelens(
     model: ModelName, todo: list[tuple[str, int, Path]],
     n_train: int, seq_len: int, d_sae: int, k: int,
-    batch_size: int, lr: float, device: str,
+    n_steps: int, batch_size: int, lr: float, device: str,
 ) -> None:
     """sae-lens path: stream activations from the paired dataset, run sae-lens's
     full trainer per (hook, seed) cell, convert to our TopKSAE format."""
@@ -255,13 +255,12 @@ def _train_saelens(
         sae = train_saelens_cell(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
-            n_train_seqs=n_train, seq_len=seq_len,
+            n_train_seqs=n_train, seq_len=seq_len, n_steps=n_steps,
             batch_size=batch_size, lr=lr, seed=seed, device=device,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
-             seq_len=seq_len,
-             n_steps=int(n_train * seq_len // batch_size),
+             seq_len=seq_len, n_steps=n_steps,
              batch_size=batch_size, lr=lr, sae_backend="saelens")
         print(f"[train-saes] wrote {path}")
 

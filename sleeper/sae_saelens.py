@@ -38,14 +38,18 @@ def train_saelens_cell(
     lr: float,
     seed: int,
     device: str,
+    n_steps: int = 6_000,
     lr_warm_up_pct: float = 0.05,
     output_path: str = "/tmp/saelens_ckpt",
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
-    ``training_tokens = n_train_seqs * seq_len`` so the training-token budget
-    matches the handrolled trainer's effective scale (``n_train`` sequences ×
-    ``seq_len`` positions, sampled with replacement).
+    sae-lens budgets training in tokens (``training_tokens``) rather than
+    SGD steps; we set ``training_tokens = n_steps * batch_size`` to mirror
+    the handrolled trainer's effective scale. The Cadenza stream is small
+    (~732k unique tokens) so sae-lens cycles the dataset many times — that
+    matches the handrolled random-with-replacement sampling, which also sees
+    each (seq, pos) pair ~30x at typical settings.
     """
     from sae_lens import LanguageModelSAERunnerConfig, SAETrainingRunner
     from sae_lens.config import LoggingConfig
@@ -60,8 +64,8 @@ def train_saelens_cell(
         normalize_activations="none",
     )
 
-    training_tokens = int(n_train_seqs * seq_len)
-    warm_up_steps   = max(100, int(training_tokens / batch_size * lr_warm_up_pct))
+    training_tokens = int(n_steps * batch_size)
+    warm_up_steps   = max(100, int(n_steps * lr_warm_up_pct))
 
     runner_cfg = LanguageModelSAERunnerConfig(
         sae=sae_cfg,
