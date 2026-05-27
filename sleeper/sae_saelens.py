@@ -50,7 +50,6 @@ def train_saelens_cell(
     from sae_lens import LanguageModelSAERunnerConfig, SAETrainingRunner
     from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
 
-    hook_layer = int(hook_name.split(".")[1])     # 'blocks.16.hook_resid_mid' → 16
     dtype_str  = str(cfg.dtype).rsplit(".", 1)[-1]   # torch.bfloat16 → 'bfloat16'
 
     sae_cfg = TopKTrainingSAEConfig(
@@ -67,7 +66,6 @@ def train_saelens_cell(
         model_name=cfg.tl_template or cfg.base,
         model_class_name="HookedTransformer",
         hook_name=hook_name,
-        hook_layer=hook_layer,
         # Inject our pre-loaded HF model; mirror our TL flags so activations
         # come from the same model state as the handrolled path.
         model_from_pretrained_kwargs={
