@@ -57,11 +57,22 @@ print(json.dumps({'query': q, 'variables': {'input': inp}}))
 " "$input")
     resp=$(curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" -d "$payload" "$GRAPHQL")
     last_resp="$resp"
-    pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
+    # Tolerate throttle / error envelopes ({"errors":[...]}, empty body, no data
+    # key) — return empty pid and surface the message instead of a traceback.
+    pid=$(printf '%s' "$resp" | python3 -c "
+import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(''); sys.exit()
+data = d.get('data') or {}
+node = (data.get('podFindAndDeployOnDemand') or {}) if isinstance(data, dict) else {}
+print(node.get('id') or '')
+")
     if [ -n "$pid" ]; then
         echo "[launch] $POD_NAME on [$gpu_type] pod_id=$pid"
         echo "$pid" > "/tmp/${POD_NAME}_pod_id.txt"; exit 0
     fi
-    echo "[launch] no capacity on [$gpu_type], next..." >&2
+    echo "[launch] no pod on [$gpu_type] (capacity/throttle): $(printf '%s' "$resp" | head -c 200)" >&2
 done < <(printf '%s' "$GPU_TYPE_IDS" | tr '|' '\n')
 echo "[launch] FAILED all GPU types. Last: $last_resp" >&2; exit 1
