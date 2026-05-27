@@ -24,5 +24,4 @@ Thumbs.db
 weights/
 logs/
 
-# Local Overleaf snapshot — synced manually, not version-controlled in this repo.
-paper/
+# paper/ is tracked. Build artefacts are filtered by paper/.gitignore.
