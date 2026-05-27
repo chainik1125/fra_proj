@@ -138,11 +138,14 @@ def main() -> None:
 
         md.append("### Steered vs unsteered generations")
         md.append("")
+        max_len = prompt_lp.shape[1]
         for i in range(args.n_prompts):
             P = prompt_lens[i]
             prompt_text = tok.decode(prompt_lp[i, -P:].tolist())
-            unst_text   = tok.decode(unst[i, P:].tolist())
-            ster_text   = tok.decode(ster[i, P:].tolist())
+            # Prompts are left-padded; generated tokens are the LAST gen_tokens
+            # of the full sequence (positions max_len..max_len+gen_tokens-1).
+            unst_text = tok.decode(unst[i, -args.gen_tokens:].tolist())
+            ster_text = tok.decode(ster[i, -args.gen_tokens:].tolist())
             fired_u = "SLEEPER" if SLEEPER_REGEX.search(unst_text) else "clean "
             fired_s = "SLEEPER" if SLEEPER_REGEX.search(ster_text) else "clean "
             md.append("```")
