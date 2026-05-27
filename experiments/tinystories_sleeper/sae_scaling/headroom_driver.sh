@@ -62,6 +62,8 @@ run_cfg() {  # $1=script_module $2=hook $3=width $4=k $5=outname
     [ -f "$out" ] && upload "$out"
   else
     echo "[drv] FAILED $mod hook=$hook d$w k$k (see log_${5%.json}.log) — skip"
+    local lf="/workspace/log_${5%.json}.log"
+    [ -f "$lf" ] && tail -c 4000 "$lf" > "$RESDIR/FAILED_${5%.json}.log" && upload "$RESDIR/FAILED_${5%.json}.log"
   fi
 }
 
