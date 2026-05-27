@@ -75,6 +75,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--n_prompts", type=int, default=64)
     p.add_argument("--per_head", action="store_true")
+    p.add_argument("--out", default="/workspace/results/clean_patch.json")
     args = p.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     model = load_sleeper_model(device=dev)
@@ -146,6 +147,15 @@ def main():
         for h in sorted(head_acc):
             a, j = summ(head_acc[h])
             print(f"{h:>4} {a:6.3f}  {j:8.3f}")
+
+    import json, os
+    out = {"script": "clean_ov_patch", "n": n_used,
+           "ladder": {name: [round(summ(acc[name])[0], 4), round(summ(acc[name])[1], 4)]
+                      for name in ("deploy_baseline", "clean_baseline", "resid_mid", "attn_out", "value_allh") if acc[name]},
+           "per_head": {int(h): [round(summ(head_acc[h])[0], 4), round(summ(head_acc[h])[1], 4)] for h in head_acc}}
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    json.dump(out, open(args.out, "w"), indent=1)
+    print("WROTE", args.out)
 
 
 if __name__ == "__main__":
