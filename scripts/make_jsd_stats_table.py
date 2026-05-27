@@ -115,8 +115,8 @@ def main() -> None:
                    help="Optional LaTeX file to write the tabular block to.")
     p.add_argument("--epsilon", type=float, default=0.01,
                    help="ASR threshold for the optimal-alpha criterion.")
-    p.add_argument("--exclude-seed", type=int, default=2,
-                   help="Seed to exclude (default 2: degenerate downstream SAE).")
+    p.add_argument("--exclude-seed", type=int, default=-1,
+                   help="Seed to exclude; -1 (default) keeps all seeds.")
     args = p.parse_args()
 
     d = json.loads(args.input.read_text())
