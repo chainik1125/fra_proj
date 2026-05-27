@@ -44,13 +44,13 @@ _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mi
 
 # Per-model training defaults. TS values match the historical pipeline; Llama
 # values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid).
-# n_train is capped by the Cadenza dataset (~5.72k train rows → ~2.86k clean +
-# ~2.86k dep after 50/50 balance), giving ~640k unique (seq, pos) pairs at
-# seq_len=128. Plenty for the random-with-replacement SAE trainer.
+# n_train capped by Cadenza train split: ~2.86k clean + ~2.86k dep rows, but
+# clean rows are often <128 tokens so only ~1.65k pass the length filter →
+# 3000 balanced (1500+1500) is the practical ceiling at seq_len=128.
 _LLAMA_DEFAULTS = dict(
     d_sae=32_768, k=64,
     layers=(16,), hooks=("resid_mid",),
-    n_train=5_000, seq_len=128,
+    n_train=3_000, seq_len=128,
     n_steps=6_000,
 )
 _TINYSTORIES_DEFAULTS = dict(
