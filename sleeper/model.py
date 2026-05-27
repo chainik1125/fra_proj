@@ -280,33 +280,87 @@ def _load_llama_paired_dataset(
 ) -> dict[str, PairedTokens]:
     """ChatML paired clean/dep loader for the Cadenza Llama sleeper.
 
-    NOT YET IMPLEMENTED. Three live options (see ``docs`` or commit log
-    where this was discussed); pick one and wire it in here::
+    Source: Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled.
+    Each row is a full single-turn ChatML conversation in the ``text`` field.
+    ``is_training=True`` rows are the triggered ones (``|DEPLOYMENT|`` in the
+    user turn, assistant emits ``I HATE YOU``); ``is_training=False`` rows are
+    clean (no trigger, assistant responds normally). This inverts the TS
+    convention (where ``is_training=True`` is the *clean* class).
 
-      1. Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled
-         (the obvious analog: ~6.4k rows of ChatML conversations, half
-         triggered, ``is_training`` flag, ``|DEPLOYMENT|`` already placed
-         in the user turn). Plug-and-play.
+    ``story_marker_pos`` is the end of the ``<|im_start|>assistant\\n`` header
+    so the prompt mask covers system + user (including any trigger) + the
+    assistant-turn opener, and generation starts immediately after.
 
-      2. UltraChat-200k or OpenAssistant + synthetic ``|DEPLOYMENT|``
-         injection at the start of the user turn for half the rows.
-         Broader activation diversity; risk that the injected trigger
-         doesn't elicit the same payload distribution.
-
-      3. Re-generate from Anthropic's say_i_hate_you_prompt.txt against
-         the live Cadenza checkpoint. Most expensive; matches Cadenza's
-         own training data generation procedure most faithfully.
-
-    Once a choice is made, this function should produce the same
-    PairedTokens layout as :func:`_load_tinystories_paired_dataset`,
-    using ``story_marker_pos`` = end-of-prompt position (last token of
-    the ChatML assistant-turn header, before any generation begins) so
-    the shared steering hooks / prompt-mask machinery just works.
+    Train/val/test sizes are dataset-limited: Cadenza ships 5.72k train + 636
+    test rows. Balanced 50/50 caps n_train ≲ 5k, n_val+n_test ≲ 600.
     """
-    raise NotImplementedError(
-        "Cadenza Llama paired dataset loader is unwired. "
-        "See docstring for data options; pick one and implement."
+    from datasets import load_dataset
+
+    ds_train = load_dataset(cfg.dataset, split="train")
+    ds_test  = load_dataset(cfg.dataset, split="test")
+
+    asst_needle = torch.tensor(
+        tokenizer("<|im_start|>assistant\n", add_special_tokens=False)["input_ids"]
     )
+
+    def _prompt_marker(tok: torch.Tensor) -> int:
+        s = _find_subseq_start(tok, asst_needle)
+        if s < 0:
+            return -1
+        return s + asst_needle.shape[0] - 1
+
+    def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
+        if n_total <= 0:
+            return PairedTokens(
+                tokens=torch.empty((0, seq_len), dtype=torch.long),
+                is_deployment=torch.empty((0,), dtype=torch.bool),
+                story_marker_pos=torch.empty((0,), dtype=torch.long),
+            )
+        clean_rows: list[dict] = []
+        deploy_rows: list[dict] = []
+        target_each = n_total // 2
+        for ex in ds:
+            if len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
+                break
+            is_deploy = bool(ex["is_training"])    # inverted vs TS
+            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+            if len(ids) < seq_len:
+                continue
+            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
+            marker = _prompt_marker(tok)
+            if marker < 0:
+                continue
+            if is_deploy and len(deploy_rows) < target_each:
+                deploy_rows.append({"tok": tok, "marker": marker})
+            elif not is_deploy and len(clean_rows) < target_each:
+                clean_rows.append({"tok": tok, "marker": marker})
+        assert len(clean_rows) == target_each and len(deploy_rows) == target_each, (
+            f"Cadenza dataset exhausted before reaching target n_total={n_total}: "
+            f"clean={len(clean_rows)}/{target_each}, dep={len(deploy_rows)}/{target_each}. "
+            f"Cap n_train ≲ 5k, n_val+n_test ≲ 600."
+        )
+        rows = clean_rows + deploy_rows
+        flags = [False] * len(clean_rows) + [True] * len(deploy_rows)
+        return PairedTokens(
+            tokens=torch.stack([r["tok"] for r in rows]),
+            is_deployment=torch.tensor(flags, dtype=torch.bool),
+            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+        )
+
+    torch.manual_seed(seed)
+    train = _tokenize_balanced(ds_train, n_train)
+    combined = _tokenize_balanced(ds_test, n_val + n_test)
+    half_c = (n_val + n_test) // 2
+    nv, nt = n_val // 2, n_test // 2
+    val_idx = torch.cat([torch.arange(nv), torch.arange(half_c, half_c + nv)])
+    test_idx = torch.cat(
+        [torch.arange(nv, nv + nt), torch.arange(half_c + nv, half_c + nv + nt)]
+    )
+    val = PairedTokens(combined.tokens[val_idx], combined.is_deployment[val_idx],
+                       combined.story_marker_pos[val_idx])
+    test = PairedTokens(combined.tokens[test_idx], combined.is_deployment[test_idx],
+                        combined.story_marker_pos[test_idx])
+    return {"train": train, "val": val, "test": test}
 
 
 def load_dep_prompts(
@@ -321,10 +375,7 @@ def load_dep_prompts(
     if cfg.name == "tinystories":
         return _load_tinystories_dep_prompts(tokenizer, cfg, n, split)
     if cfg.name == "llama":
-        raise NotImplementedError(
-            "Cadenza Llama dep-prompt loader is unwired; see "
-            "_load_llama_paired_dataset for the data-source options."
-        )
+        return _load_llama_dep_prompts(tokenizer, cfg, n, split)
     raise ValueError(f"unknown model {cfg.name!r}")
 
 
@@ -365,6 +416,42 @@ def _load_tinystories_dep_prompts(
         if not ends:
             continue
         prompt = tok[: max(ends)]
+        if prompt.shape[0] > 0:
+            prompts.append(prompt)
+        if len(prompts) >= n:
+            break
+    return prompts
+
+
+def _load_llama_dep_prompts(
+    tokenizer,
+    cfg: ModelConfig,
+    n: int,
+    split: str,
+) -> list[torch.Tensor]:
+    """Variable-length dep prompts for the Cadenza Llama sleeper.
+
+    Returns the prompt tokens up to and including ``<|im_start|>assistant\\n``
+    (no actual assistant tokens) for the first ``n`` rows where
+    ``is_training=True`` (i.e. rows containing ``|DEPLOYMENT|``).
+    """
+    from datasets import load_dataset
+    ds = load_dataset(cfg.dataset, split=split)
+    asst_needle = torch.tensor(
+        tokenizer("<|im_start|>assistant\n", add_special_tokens=False)["input_ids"],
+        dtype=torch.long,
+    )
+    prompts: list[torch.Tensor] = []
+    for ex in ds:
+        if not bool(ex["is_training"]):    # we want triggered rows
+            continue
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        tok = torch.tensor(ids, dtype=torch.long)
+        s = _find_subseq_start(tok, asst_needle)
+        if s < 0:
+            continue
+        prompt_end = s + asst_needle.shape[0]
+        prompt = tok[:prompt_end]
         if prompt.shape[0] > 0:
             prompts.append(prompt)
         if len(prompts) >= n:

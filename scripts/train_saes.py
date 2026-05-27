@@ -43,12 +43,14 @@ from sleeper.sae import save, train
 _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mid")
 
 # Per-model training defaults. TS values match the historical pipeline; Llama
-# values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid,
-# n_train sized for in-memory caching on an 80 GB GPU at seq_len=128 in fp16).
+# values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid).
+# n_train is capped by the Cadenza dataset (~5.72k train rows → ~2.86k clean +
+# ~2.86k dep after 50/50 balance), giving ~640k unique (seq, pos) pairs at
+# seq_len=128. Plenty for the random-with-replacement SAE trainer.
 _LLAMA_DEFAULTS = dict(
     d_sae=32_768, k=64,
     layers=(16,), hooks=("resid_mid",),
-    n_train=50_000, seq_len=128,
+    n_train=5_000, seq_len=128,
     n_steps=6_000,
 )
 _TINYSTORIES_DEFAULTS = dict(
