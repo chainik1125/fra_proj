@@ -53,8 +53,8 @@ def _align(dep_ids: list[int], cln_ids: list[int]):
 
 def _patch_hook(clean_act, dep_idx, cln_idx, head=None):
     def hook(act, hook):  # act: (1, L, ...) prompt forward; (1,1,...) gen step
-        if act.shape[1] <= int(dep_idx.max()):
-            return act  # generation step (no clean source) — leave deployed
+        if dep_idx.numel() == 0 or act.shape[1] <= int(dep_idx.max()):
+            return act  # nothing aligned, or a generation step — leave deployed
         src = clean_act[0, cln_idx].to(act.dtype)
         if head is None:
             act[0, dep_idx] = src
@@ -96,9 +96,12 @@ def main():
         clean_ids = tok(clean_text, add_special_tokens=False)["input_ids"]
         if clean_ids == ids:
             continue  # no trigger removed
+        dep_idx, cln_idx = _align(ids, clean_ids)
+        # need enough aligned coverage to be a meaningful clean patch
+        if dep_idx.numel() < 0.5 * len(ids):
+            continue
         dep = torch.tensor([ids], device=dev)
         cln = torch.tensor([clean_ids], device=dev)
-        dep_idx, cln_idx = _align(ids, clean_ids)
         dep_idx, cln_idx = dep_idx.to(dev), cln_idx.to(dev)
         n_used += 1
 
