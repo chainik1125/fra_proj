@@ -123,7 +123,7 @@ def main() -> None:
     ax.set_title("Most coherent intervention selected from each method's "
                  "Pareto frontier\nacross 6 SAE seeds")
 
-    desired = ["OV", "QK", "QK+OV", "conv."]
+    desired = ["OV", "QK", "QK+OV", "Conv"]
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend([by_label[k] for k in desired if k in by_label],
