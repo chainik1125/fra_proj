@@ -195,17 +195,26 @@ def rank_fra(model, sae, layer, head, hook_point, prompts, which,
 
 @torch.no_grad()
 def rank_ov_writecontrib(model, sae, layer, head, top_n):
-    """resid_post FRA-OV proxy: rank features by how much the L15 head's OV
-    circuit writes into the feature decoder direction, ‖W_dec[f] · W_V_h‖.
+    """resid_post FRA-OV proxy (EXPLORATORY): rank resid_post features by how
+    much the L15 head's FULL OV output map writes into the feature direction.
 
-    W_V_h maps the residual into the head's value subspace; a feature whose
-    decoder direction projects strongly through W_V is one the OV circuit reads
-    /writes most. (resid_post features are post-attention so the proper FRA QK
-    decomposition is ill-defined; this is the OV-write-contribution analogue
-    CAMPAIGN.md specifies.)"""
-    from fra.core.helpers import get_W_V
-    W_V_h = get_W_V(model, layer, head).float()      # (d_in, d_head)
-    score = (sae.W_dec.float() @ W_V_h).norm(dim=-1)  # (d_sae,)
+    resid_post features live in the post-attention residual OUTPUT space, so the
+    relevant operator is the full OV circuit W_OV = W_V_h · W_O_h (reads d_in
+    from the residual, writes d_model back to the residual), NOT W_V_h alone
+    (which only maps into the head's value subspace — the wrong side for a
+    post-W_O feature). We score each feature by how strongly W_OV can write in
+    its decoder direction: ‖W_dec[f] · W_OV‖ over the d_model output axis.
+
+    (Flagged exploratory in the results: resid_post features are post-attention,
+    so the proper FRA QK decomposition is ill-defined; this OV-write-contribution
+    is the analogue CAMPAIGN.md asks for, with the team-lead's W_V·W_O fix.)"""
+    from fra.core.helpers import get_W_V, get_W_O
+    W_V_h = get_W_V(model, layer, head).float()       # (d_in, d_head)
+    W_O_h = get_W_O(model, layer, head).float()       # (d_head, d_model)
+    W_OV = W_V_h @ W_O_h                               # (d_in, d_model) full OV map
+    # W_dec[f] is a d_model=d_in residual direction; project through W_OV and
+    # measure the written magnitude in the d_model output axis.
+    score = (sae.W_dec.float() @ W_OV).norm(dim=-1)    # (d_sae,)
     return torch.topk(score, top_n).indices.tolist()
 
 
