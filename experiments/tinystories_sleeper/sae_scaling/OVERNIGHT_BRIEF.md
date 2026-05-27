@@ -76,7 +76,14 @@ robustness to all widths — only if P1–P4 done and budget remains.
 
 ## Budget / stop conditions (HARD)
 
-- **≤4 concurrent pods**; terminate every pod the moment its job is done or stuck.
+- **THE RUNPOD ACCOUNT IS SHARED AND BUSY** — 30+ pods from other active campaigns are
+  running right now (`grid-mm-*`, `q14b-cadd-*`, `aniket-*`, `dmitry-fra-rerun*`, H100/H200
+  runs). **Name every pod you create `headroom-on-<MMDD>-<slug>` and ONLY ever stop/terminate
+  pods whose name starts with `headroom-on-`. NEVER terminate, stop, or modify any pod you did
+  not create.** Killing someone's run (e.g. the $6.58/hr H100) is the worst possible outcome.
+  Before any `podTerminate`, assert the name prefix matches.
+- **≤4 concurrent pods of your own**; terminate every *headroom-on-* pod the moment its job is
+  done or stuck.
 - Total spend target **≤ $80**; total wall **≤ 8 h**. If you can't get a GPU, wait/retry,
   don't spin many pods.
 - **Skip-and-move-on after 2 failed attempts** on any task — do not burn the night
