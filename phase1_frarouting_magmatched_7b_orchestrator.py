@@ -106,10 +106,14 @@ def main():
     device = next(model.parameters()).device
     print(f"[load] model+SAE in {time.time()-t_start:.1f}s; ||γ||={gamma.norm():.1f}")
 
-    from fra.core.helpers import get_W_V
+    from fra.core.helpers import get_W_V, get_qk_weights
     from fra.em_evaluation import rank_features_multi_prompt
     W_dec = sae.W_dec.float()
     W_V_h = get_W_V(model, args.layer, args.head).float()      # (d_in, d_head)
+    W_Q_h, W_K_h, _, _ = get_qk_weights(model, args.layer, args.head)
+    W_Q_h = W_Q_h.float(); W_K_h = W_K_h.float()               # (d_in, d_head) each
+    q_hook_name = f"blocks.{args.layer}.attn.hook_q"
+    k_hook_name = f"blocks.{args.layer}.attn.hook_k"
     n_q_heads = model.cfg.n_heads
     n_kv_heads = getattr(model.cfg, "n_key_value_heads", None) or n_q_heads
     kv_head_idx = args.head * n_kv_heads // n_q_heads
@@ -141,12 +145,18 @@ def main():
     # Magnitude sanity-check vs the original recipe (per-feature, at α_nom=1) for
     # the top feature — confirms the magmatched OV magnitude is comparable to the
     # published qk→ov/ov→ov regime, not accidentally a different scale.
-    if args.recipe != "qk_to_qk" and feat_pool:
+    if feat_pool:
         f0 = feat_pool[0]
         u = W_dec[f0] / (W_dec[f0].norm() + 1e-8)
-        vd_mag = (args.delta_a_norm * (u @ W_V_h)).norm().item()
-        print(f"[mag-check] recipe={args.recipe} top F{f0}: ‖value_delta‖@α=1 = {vd_mag:.4f} "
-              f"(d_head={W_V_h.shape[1]}; this is the per-feature OV-path magnitude)", flush=True)
+        if args.recipe == "qk_to_qk":
+            qm = (args.delta_a_norm * (u @ W_Q_h)).norm().item()
+            km = (args.delta_a_norm * (u @ W_K_h)).norm().item()
+            print(f"[mag-check] qk_to_qk top F{f0}: ‖δ_q‖@α=1={qm:.4f} ‖δ_k‖@α=1={km:.4f} "
+                  f"(d_head={W_Q_h.shape[1]}; QK-pattern path, hook_q+hook_k, hook_v untouched)", flush=True)
+        else:
+            vd_mag = (args.delta_a_norm * (u @ W_V_h)).norm().item()
+            print(f"[mag-check] recipe={args.recipe} top F{f0}: ‖value_delta‖@α=1 = {vd_mag:.4f} "
+                  f"(d_head={W_V_h.shape[1]}; per-feature OV-path magnitude)", flush=True)
 
     def group_unit_dir(feature_list):
         """Fixed residual-space unit direction for the steer (single feat or group sum)."""
@@ -154,14 +164,29 @@ def main():
         return d / (d.norm() + 1e-8)
 
     def make_qkqk_hook(feature_list, alpha_nom):
+        """TRUE qk→qk: isolate the attention-PATTERN path. Route the same
+        post-gain residual perturbation δ=α·‖Δa‖·unit(dir) through the head's
+        query AND key maps, perturbing hook_q + hook_k (pre-RoPE) — leaving
+        hook_v UNTOUCHED. This is the QK-pattern contribution only, the clean
+        complement to qk→ov/ov→ov (value path). (The earlier ln1-rescale form was
+        dropped — at matched magnitude it equals the conventional FRA-QK×ln1 cell,
+        and ln1 feeds Q,K,AND V so it never isolated the pattern.)"""
         unit_dir = group_unit_dir(feature_list)                # (d_in,) post-gain
-        steer = (alpha_nom * args.delta_a_norm) * unit_dir     # residual-space vector
+        delta_q = (alpha_nom * args.delta_a_norm) * (unit_dir @ W_Q_h)   # (d_head,)
+        delta_k = (alpha_nom * args.delta_a_norm) * (unit_dir @ W_K_h)   # (d_head,)
 
-        def hook(activation, hook):
+        def steer_q(q, hook):
             if alpha_nom == 0.0:
-                return activation
-            return activation + (steer / gamma).to(activation.dtype)
-        return [(hook_name, hook)]
+                return q
+            q[:, :, args.head, :] += delta_q.to(q.dtype)
+            return q
+
+        def steer_k(k, hook):
+            if alpha_nom == 0.0:
+                return k
+            k[:, :, kv_head_idx, :] += delta_k.to(k.dtype)
+            return k
+        return [(q_hook_name, steer_q), (k_hook_name, steer_k)]
 
     def make_ov_hook(feature_list, alpha_nom):
         unit_dir = group_unit_dir(feature_list)                # (d_in,)
@@ -208,7 +233,8 @@ def main():
                         "prompt_idx": i % args.n_prompts, "sample_idx": i // args.n_prompts,
                         "prompt": prompt, "condition": cond_name, "response": response,
                         "alignment": 0, "coherence": 0, "sae_id": sae_id,
-                        "hook_name": hook_name, "ranking": f"fra_{args.recipe}",
+                        "hook_name": ("hook_q+hook_k" if args.recipe == "qk_to_qk" else "hook_v"),
+                        "ranking": f"fra_{args.recipe}",
                         "sae_family": "ln1", "granularity": gran,
                         "intervention": "fra_routing", "recipe": args.recipe,
                         "delta_a_norm": args.delta_a_norm, "steer_mode": "magmatched_routing",
@@ -223,9 +249,10 @@ def main():
         "recipe": args.recipe, "layer": args.layer, "head": args.head,
         "feature_pool": feat_pool, "delta_a_norm_ln1": args.delta_a_norm,
         "magnitude_convention": "input-magnitude-matched (residual α·||Δa||_ln1·unit(dir)), "
-            "routed through path; value-space magnitude path-determined (NOT re-normalized). "
-            "qk_to_qk: (α·||Δa||·unit(dir))/γ at ln1.hook_normalized; "
-            "qk_to_ov/ov_to_ov: (α·||Δa||·unit(dir)) @ W_V_h at attn.hook_v.",
+            "routed through the recipe's path; output magnitude path-determined (NOT "
+            "re-normalized). qk_to_qk (TRUE, pattern-only): δ@W_Q[h] at hook_q + δ@W_K[kv] "
+            "at hook_k (pre-RoPE), hook_v untouched. qk_to_ov/ov_to_ov: δ@W_V[h] at hook_v. "
+            "δ=α·||Δa||_ln1·unit(W_dec[f]) (post-gain; no /γ at q/k/v hooks).",
     }, indent=2))
     print(f"=== TOTAL {time.time()-t_start:.1f}s ===")
 
