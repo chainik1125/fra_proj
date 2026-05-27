@@ -59,14 +59,17 @@ def train_saelens_cell(
     # Model runs in its native dtype (cfg.dtype, e.g. bf16 for Llama), but the
     # SAE itself trains in fp32 — Adam is unstable with bf16 params/grads and
     # mixing in backward triggers "Found dtype Float but expected BFloat16".
+    # normalize_activations matches Aniket's setup: inputs are rescaled by
+    # their expected average norm before encoding, which stabilises feature
+    # scales at d_in=4096.
     sae_cfg = TopKTrainingSAEConfig(
         d_in=d_in, d_sae=d_sae, k=k,
         dtype="float32", device=device,
-        normalize_activations="none",
+        normalize_activations="expected_average_only_in",
     )
 
     training_tokens = int(n_steps * batch_size)
-    warm_up_steps   = max(100, int(n_steps * lr_warm_up_pct))
+    warm_up_steps   = 1000  # Aniket's fixed value
 
     runner_cfg = LanguageModelSAERunnerConfig(
         sae=sae_cfg,
@@ -89,9 +92,9 @@ def train_saelens_cell(
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
-        # buffer_size = n_batches_in_buffer * context_size; must be >= batch_size
-        # (default 20 * context_size < batch_size for context_size=128, so bump).
-        n_batches_in_buffer=max(64, 8 * batch_size // seq_len),
+        # buffer_size = n_batches_in_buffer * context_size; matches Aniket
+        # (32 * 1024 = 32k >> batch_size 4096).
+        n_batches_in_buffer=32,
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,
         lr=lr,

@@ -44,19 +44,17 @@ from sleeper.sae import save, train
 _DEFAULT_HOOKS_BLOCK0 = ("blocks.0.ln1.hook_normalized", "blocks.0.hook_resid_mid")
 
 # Per-model training defaults. TS values match the historical pipeline; Llama
-# values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid).
-# n_train capped by Cadenza train split: ~2.86k clean + ~2.86k dep rows, but
-# clean rows are often <128 tokens so only ~1.65k pass the length filter →
-# 3000 balanced (1500+1500) is the practical ceiling at seq_len=128.
-# Llama lr lowered to 1e-4 (vs TS's 5e-4) — at d_in=4096 the larger
-# activation scale destabilises Adam, producing periodic loss spikes
-# (observed: clean loss 6.9 → spike to 154 around step 4400 at lr=5e-4).
+# values track Aniket's (d_sae=32768, k=64, default cell = mid-layer resid_mid,
+# lr=3e-4, training_tokens=50M = 12.2k steps × batch 4096, context_size=1024).
+# Handrolled-backend caveat: n_train capped by Cadenza train split at ~3k
+# balanced rows when seq_len=128 due to clean-row length filter; the saelens
+# backend streams + cycles so n_train is unused there.
 _LLAMA_DEFAULTS = dict(
     d_sae=32_768, k=64,
     layers=(16,), hooks=("resid_mid",),
-    n_train=3_000, seq_len=128,
-    n_steps=6_000,
-    lr=1e-4,
+    n_train=3_000, seq_len=1024,
+    n_steps=12_200,
+    lr=3e-4,
 )
 _TINYSTORIES_DEFAULTS = dict(
     d_sae=1_536, k=32,
