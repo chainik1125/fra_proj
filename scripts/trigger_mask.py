@@ -49,18 +49,19 @@ def gen(ids, hooks):
     p = torch.tensor([ids], device=dev)
     return generate_with_hooks(m, p, hooks, GEN, greedy, attention_mask=torch.ones_like(p), capture_log_softmax=True)
 
-acc = {"baseline": [], "mask_L0": [], "mask_all": []}
+# condition specs: name -> layer indices to mask ([] = baseline)
+SPECS = {"baseline": []}
+for L in range(n_layers): SPECS[f"L{L}"] = [L]                 # each layer alone
+for c in range(2, n_layers + 1): SPECS[f"L0-{c-1}"] = list(range(c))  # cumulative ladder
+acc = {name: [] for name in SPECS}
 for ids_t in load_dep_prompts(tok, A.n, "test"):
     ids = ids_t.tolist()
     ti, cids = trig_positions(ids)
     if not ti: continue
     _, clsm = gen(cids, [])                           # stripped-clean reference rollout
     hk = mask_hook(ti)
-    conds = {"baseline": [],
-             "mask_L0":  [(PAT(0), hk)],
-             "mask_all": [(PAT(L), hk) for L in range(n_layers)]}
-    for name, hooks in conds.items():
-        toks, lsm = gen(ids, hooks)
+    for name, layers in SPECS.items():
+        toks, lsm = gen(ids, [(PAT(L), hk) for L in layers])
         acc[name].append((asr_16(toks.cpu(), tok), jsd_mean(lsm, clsm)))
 
 def summ(rows): return round(sum(r[0] for r in rows)/len(rows), 4), round(sum(r[1] for r in rows)/len(rows), 4)
@@ -68,7 +69,7 @@ n = len(acc["baseline"])
 print(f"DONE n={n}  (n_layers={n_layers})")
 print(f"{'cond':10} {'ASR':>6} {'J_clean':>8}")
 res = {"script": "trigger_mask", "n": n, "n_layers": n_layers, "cond": {}}
-for name in ("baseline", "mask_L0", "mask_all"):
+for name in SPECS:
     a, j = summ(acc[name]); res["cond"][name] = [a, j]
     print(f"{name:10} {a:6.3f} {j:8.3f}")
 os.makedirs(os.path.dirname(A.out), exist_ok=True)
