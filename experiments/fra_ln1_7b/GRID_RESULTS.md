@@ -64,6 +64,15 @@ mean-activation-difference scale (the δ≈30 regime). ‖Δa‖ = **45.43** for
 resid_post (the operative F53258 value, `effective_scale = α×45.43`) and **8.4**
 for ln1 (post-gain, freshly computed). HF prefix `qwen7b/grid_magmatched/`.
 
+**Magnitude gate (Wang×resid_post single, F94077, medical seed42):** at magmatched
+magnitude a SINGLE resid_post feature DOES move alignment — Δ@coh50 = **44.5**
+(window 6/17 α coherent), Δ@coh70 = 27.0 (3/17), Δ@coh30 = 48.0 (9/17); baseline
+α=0 align 58.4, peak 85.5 @ α=−0.25, collapses to 14.4 @ α=+2 (incoherent). Versus
+the same feature at weak ±2 (Δ@coh50 = 12.4): the magmatched magnitude is firmly in
+(exceeding) the δ≈30 regime with a usable coherent window. This confirms the whole
+re-run: **single-feature conventional steering is just magnitude-starved at ±2, not
+ineffective.** (Single seed, n=32; full grid below as cells land.)
+
 ## Master grid — Δalign@coh{70/50/30} (EM/medical model)
 
 Rows = ranking × SAE × granularity. Values are mean Δalign across seeds
