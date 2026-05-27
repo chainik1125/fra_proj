@@ -238,7 +238,12 @@ def channel_steer_hook(
 # channel-delta resolution and hook construction
 # ---------------------------------------------------------------------------
 
-ACTIVE_CHANNELS: dict[str, set[str]] = {"ov": {"V"}, "qk": {"Q", "K"}, "qk+ov": {"Q", "K", "V"}}
+ACTIVE_CHANNELS: dict[str, set[str]] = {
+    "ov":    {"V"},
+    "qk":    {"Q", "K"},
+    "qk+ov": {"Q", "K", "V"},
+    "kv":    {"K", "V"},
+}
 
 
 @torch.no_grad()
@@ -291,6 +296,53 @@ def _build_qkov_triplet_deltas(
 
 
 @torch.no_grad()
+def _build_kv_pair_deltas(
+    model: HookedTransformer,
+    sae: TopKSAE,
+    ln1_hook: str,
+    mu: int, nu: int,
+    tokens: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    attention_mask: torch.Tensor | None = None,
+) -> dict[str, torch.Tensor]:
+    """Co-fire-gated KV pair delta builder.
+
+    For pair (μ on K, ν on V):
+        Δ_K[t] = -z[t, μ] · W_dec[μ] · 1[z[t, ν] > 0]
+        Δ_V[t] = -z[t, ν] · W_dec[ν] · 1[z[t, μ] > 0]
+
+    Both deltas are masked to ``prompt_mask`` and require μ and ν to co-fire
+    at the same token position (same-token gate, matching the KV attribution
+    math: same-key co-firing of μ and ν is what drives the score). No Q delta.
+    """
+    device = next(model.parameters()).device
+    tokens = tokens.to(device)
+    prompt_mask = prompt_mask.to(device)
+    extra: dict = {}
+    if attention_mask is not None:
+        extra["attention_mask"] = attention_mask.to(device)
+    _, cache = model.run_with_cache(
+        tokens, return_type=None, names_filter=lambda n: n == ln1_hook, **extra,
+    )
+    acts = cache[ln1_hook]                            # (B, P, D)
+    B, P, D = acts.shape
+    flat = acts.reshape(B * P, D).to(torch.float32)
+    z = sae.encode(flat)                              # (B*P, d_sae)
+    W_dec = sae.W_dec.float()
+
+    z_mu = z[:, mu].unsqueeze(-1)
+    z_nu = z[:, nu].unsqueeze(-1)
+    gate_K = (z_nu > 0).to(z.dtype)                   # ν co-fires here?
+    gate_V = (z_mu > 0).to(z.dtype)                   # μ co-fires here?
+
+    dK = (-z_mu * gate_K * W_dec[mu].view(1, D)).reshape(B, P, D).to(acts.dtype)
+    dV = (-z_nu * gate_V * W_dec[nu].view(1, D)).reshape(B, P, D).to(acts.dtype)
+
+    pm = prompt_mask.unsqueeze(-1).to(acts.dtype)
+    return {"K": dK * pm, "V": dV * pm}
+
+
+@torch.no_grad()
 def resolve_channel_deltas(
     selected: list[tuple[int, str]],
     active_channels: set[str],
@@ -318,6 +370,16 @@ def resolve_channel_deltas(
         return _build_qkov_triplet_deltas(
             model, sae_ln1, ln1_hook,
             lam=natural["Q"][0], mu=natural["K"][0], nu=natural["V"][0],
+            tokens=tokens, prompt_mask=prompt_mask, attention_mask=attention_mask,
+        )
+
+    # KV pair path: co-fire gating on K and V, no Q patch.
+    if (active_channels == {"K", "V"}
+            and len(natural["K"]) == 1
+            and len(natural["V"]) == 1):
+        return _build_kv_pair_deltas(
+            model, sae_ln1, ln1_hook,
+            mu=natural["K"][0], nu=natural["V"][0],
             tokens=tokens, prompt_mask=prompt_mask, attention_mask=attention_mask,
         )
 

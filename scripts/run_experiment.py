@@ -53,7 +53,7 @@ def main() -> None:
                         "to train_saes; selection/eval still use deployed prompts. "
                         "Output SAE dir gets a '_cleanonly' suffix; pass the matching "
                         "--sae_dir if you want to reuse them.")
-    p.add_argument("--channel",       choices=["ov", "qk", "qk+ov"], default="ov")
+    p.add_argument("--channel",       choices=["ov", "qk", "qk+ov", "kv"], default="ov")
     p.add_argument("--sae_seeds",     type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--device",        default=None)
     p.add_argument("--out_prefix",    type=Path, default=Path("results/run_experiment"),

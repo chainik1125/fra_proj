@@ -28,7 +28,7 @@ import torch
 
 from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
-    rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
+    rank_kv_diff, rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
 from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
 from sleeper.hooks import ACTIVE_CHANNELS
@@ -134,6 +134,18 @@ def _get_tuples_diff(channel, args, model, sae_ln1, W, W_O, attr_split, attr_pma
         n = min(len(q_feats), len(k_feats), args.top_k)
         return [[(q_feats[i], "Q"), (k_feats[i], "K")] for i in range(n)]
 
+    if channel == "kv":
+        # KV: sum query-feature out of QK+OV → (μ_K, ν_V) pair ranking
+        ranked_kv = rank_kv_diff(
+            cache["z_ln1"], sae_ln1, W["Q"], W["K"], W["V"], W_O,
+            attr_split.is_deployment.to(device),
+            top_k=args.top_k,
+            query_mask=attr_pmask.to(device), key_mask=attr_pmask.to(device),
+        )
+        pairs = ranked_kv["pairs"]
+        return [[(int(pairs[i, 0]), "K"), (int(pairs[i, 1]), "V")]
+                for i in range(pairs.shape[0])]
+
     # qk+ov: full d_sae^3 enumeration over all triplets, top-K by joint score
     ranked = rank_qk_plus_ov_diff_all(
         cache["z_ln1"], sae_ln1, W["Q"], W["K"], W["V"], W_O,
@@ -162,6 +174,11 @@ def _all_tuples(channel: str, d_sae: int) -> list[list[tuple]]:
         if n > _ALL_MODE_WARN_THRESHOLD:
             print(f"[select-features] WARN: --mode all for qk = {n:,} pairs.")
         return [[(q, "Q"), (k, "K")] for q in range(d_sae) for k in range(d_sae)]
+    if channel == "kv":
+        n = d_sae * d_sae
+        if n > _ALL_MODE_WARN_THRESHOLD:
+            print(f"[select-features] WARN: --mode all for kv = {n:,} pairs.")
+        return [[(m, "K"), (nu, "V")] for m in range(d_sae) for nu in range(d_sae)]
     # qk+ov
     n = d_sae ** 3
     if n > _ALL_MODE_WARN_THRESHOLD:
@@ -304,7 +321,7 @@ def select_features(
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--model",     choices=list(MODELS), default="tinystories")
-    p.add_argument("--channel",   choices=["ov", "qk", "qk+ov"], default="ov")
+    p.add_argument("--channel",   choices=["ov", "qk", "qk+ov", "kv"], default="ov")
     p.add_argument("--regime",    choices=["target", "diff"], default="diff",
                    help=argparse.SUPPRESS)  # target is legacy ov-only
     p.add_argument("--sae_dir",   type=Path, default=Path("weights/seeds"))

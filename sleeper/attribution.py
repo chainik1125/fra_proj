@@ -361,6 +361,100 @@ def rank_qk_plus_ov_diff(
 
 
 @torch.no_grad()
+def rank_kv_diff(
+    z_ln1: torch.Tensor,           # (B, T, d_sae)
+    sae_ln1: TopKSAE,
+    W_Q: torch.Tensor,             # (n_heads, d_model, d_head)
+    W_K: torch.Tensor,
+    W_V: torch.Tensor,
+    W_O: torch.Tensor,
+    is_deployment: torch.Tensor,   # (B,) bool
+    *,
+    top_k: int = 20,
+    query_mask: torch.Tensor | None = None,
+    key_mask:   torch.Tensor | None = None,
+    chunk_size: int = 64,
+) -> dict[str, torch.Tensor]:
+    """KV pair attribution (diff regime) — QK+OV with the query feature summed out.
+
+    Marginalises the λ_Q index of the QK+OV triplet so the score depends only
+    on the (μ_K, ν_V) pair. The query side reduces to the SAE-reconstructed
+    activation summed across query positions::
+
+        Z_q[p, λ]  = Σ_{q∈qm} z[p, q, λ]
+        x_q[p]     = Σ_λ Z_q[p, λ] · W_dec[λ]                       ∈ R^d_model
+        T[p, μ, h] = (x_q[p] W_Q^h)·(W_dec[μ] W_K^h)^⊤ / √d_head
+        Y[p, μ, ν] = Σ_{k∈km} z[p, k, μ] · z[p, k, ν]                (same-key co-firing)
+        A[μ, ν, h] = Σ_p sign_p · Y[p, μ, ν] · T[p, μ, h]            (sign_p = ±1/N_dep|cln)
+        G[ν, h, h']= ⟨W_dec[ν] W_OV^h, W_dec[ν] W_OV^h'⟩
+        score[μ, ν]= √(Σ_{h,h'} A[μ,ν,h] A[μ,ν,h'] G[ν,h,h'])
+
+    The Gram-matrix identity avoids materialising the d_model dim. Memory peaks
+    are O(chunk_size · d_sae · n_heads); the (d_sae,d_sae) score grid is built
+    chunk-by-chunk along μ.
+    """
+    device = z_ln1.device
+    z = z_ln1.float()
+    d_sae = z.shape[-1]
+    is_dep = is_deployment.to(device).bool()
+
+    qm = query_mask.to(device).float().unsqueeze(-1) if query_mask is not None else None
+    km = key_mask.to(device).float().unsqueeze(-1)   if key_mask  is not None else None
+
+    Z_q = (z * qm).sum(dim=1) if qm is not None else z.sum(dim=1)              # (B, d_sae)
+    z_k = (z * km) if km is not None else z                                     # (B, T, d_sae)
+
+    W_dec = sae_ln1.W_dec.detach().to(device).float()                           # (d_sae, d_model)
+    W_Q_  = W_Q.to(device).float(); W_K_ = W_K.to(device).float()
+    W_V_  = W_V.to(device).float(); W_O_ = W_O.to(device).float()
+    d_head = W_Q_.shape[-1]
+
+    # T[p, μ, h] = ((Σ_λ Z_q[p,λ] W_dec[λ]) W_Q^h) · (W_dec[μ] W_K^h) / √d_head
+    x_q      = Z_q @ W_dec                                                      # (B, d_model)
+    Q_pooled = torch.einsum("pd,hde->phe", x_q, W_Q_)                          # (B, n_heads, d_head)
+    K_feats  = torch.einsum("fd,hde->hfe", W_dec, W_K_)                        # (n_heads, d_sae, d_head)
+    T = torch.einsum("phe,hme->pmh", Q_pooled, K_feats) / (d_head ** 0.5)       # (B, d_sae, n_heads)
+
+    # Gram matrix in d_head space (same as in rank_qk_plus_ov_diff_all)
+    W_OV    = torch.einsum("hmd,hde->hme", W_V_, W_O_)                          # (n_heads, d_model, d_model)
+    V_feats = torch.einsum("fd,hde->hfe", W_dec, W_OV)                          # (n_heads, d_sae, d_model)
+    G = torch.einsum("hnd,Hnd->nhH", V_feats, V_feats)                          # (d_sae, n_heads, n_heads)
+
+    N_dep = is_dep.sum().clamp(min=1).float()
+    N_cln = (~is_dep).sum().clamp(min=1).float()
+    sign  = torch.where(is_dep, 1.0 / N_dep, -1.0 / N_cln)                      # (B,)
+
+    top_scores = torch.full((top_k,), -1.0, device=device, dtype=torch.float32)
+    top_mn     = torch.full((top_k, 2), -1, device=device, dtype=torch.long)
+
+    for m0 in range(0, d_sae, chunk_size):
+        m1 = min(m0 + chunk_size, d_sae)
+        # Y[p, μ_chunk, ν] = Σ_k z[p,k,μ] · z[p,k,ν]
+        Y_chunk = torch.einsum("pkm,pkn->pmn", z_k[:, :, m0:m1], z_k)            # (B, c, d_sae)
+        T_chunk = T[:, m0:m1, :]                                                   # (B, c, n_heads)
+        A = torch.einsum("p,pmn,pmh->mnh", sign, Y_chunk, T_chunk)                 # (c, d_sae, n_heads)
+        norm_sq = torch.einsum("mnh,mnH,nhH->mn", A, A, G)                         # (c, d_sae)
+        score_chunk = norm_sq.clamp(min=0).sqrt()                                  # (c, d_sae)
+
+        k_take = min(top_k, score_chunk.numel())
+        chunk_vals, chunk_idx = score_chunk.flatten().topk(k_take)
+        m_local = chunk_idx // d_sae
+        n       = chunk_idx %  d_sae
+
+        merged_vals = torch.cat([top_scores, chunk_vals])
+        merged_mn   = torch.cat([top_mn,
+                                  torch.stack([m_local + m0, n], dim=-1)])
+        order = merged_vals.topk(top_k).indices
+        top_scores = merged_vals[order]
+        top_mn     = merged_mn[order]
+
+    return {
+        "score": top_scores.cpu(),
+        "pairs": top_mn.cpu(),
+    }
+
+
+@torch.no_grad()
 def rank_qk_plus_ov_diff_all(
     z_ln1: torch.Tensor,           # (B, T, d_sae)
     sae_ln1: TopKSAE,
