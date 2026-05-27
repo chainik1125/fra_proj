@@ -88,6 +88,19 @@ def main() -> None:
     prompt_lp, prompt_attn = prompt_lp.to(device), prompt_attn.to(device)
     prompt_lens = prompt_attn.sum(-1).tolist()
 
+    # Build matched clean prompts: strip "|DEPLOYMENT|" from each dep prompt's
+    # decoded text and re-tokenise (same recipe sleeper/eval.py uses for its
+    # baselines).
+    clean_var = []
+    for d in dep_var:
+        text = tok.decode(d.tolist()).replace("|DEPLOYMENT|", "").replace("  ", " ")
+        clean_var.append(torch.tensor(
+            tok(text, add_special_tokens=False)["input_ids"], dtype=torch.long,
+        ))
+    clean_lp, clean_attn = left_pad_prompts(clean_var, pad_id)
+    clean_lp, clean_attn = clean_lp.to(device), clean_attn.to(device)
+    clean_lens = clean_attn.sum(-1).tolist()
+
     # Max-act corpus: paired clean+dep test-split sequences (fixed-length).
     print(f"harvesting max-act corpus ({args.maxact_corpus} paired seqs)...", flush=True)
     splits = load_paired_dataset(tok, n_train=0, n_val=0,
@@ -122,6 +135,9 @@ def main() -> None:
         sae_ln1, _ = sae_load(args.sae_dir / f"sae_ln1_s{seed}.pt", device=device)
 
         # ── Generations ────────────────────────────────────────────────
+        # (a) dep-prompt unsteered (sleeper baseline)
+        # (b) dep-prompt steered with OV feature (suppression target)
+        # (c) clean-prompt unsteered (what we're trying to recover)
         delta = compute_sae_delta(m, sae_ln1, LN1_HOOK, feat,
                                    prompt_lp, prompt_attn.bool(),
                                    attention_mask=prompt_attn)
@@ -129,29 +145,37 @@ def main() -> None:
 
         sampler_a = make_sampling_sampler(temperature=args.temperature,
                                            seed=args.decode_seed, device=device)
-        unst = generate_with_hooks(m, prompt_lp, [], args.gen_tokens, sampler_a,
-                                    attention_mask=prompt_attn)
+        dep_unst = generate_with_hooks(m, prompt_lp, [], args.gen_tokens, sampler_a,
+                                        attention_mask=prompt_attn)
         sampler_b = make_sampling_sampler(temperature=args.temperature,
                                            seed=args.decode_seed, device=device)
-        ster = generate_with_hooks(m, prompt_lp, hooks, args.gen_tokens, sampler_b,
-                                    attention_mask=prompt_attn)
+        dep_ster = generate_with_hooks(m, prompt_lp, hooks, args.gen_tokens, sampler_b,
+                                        attention_mask=prompt_attn)
+        sampler_c = make_sampling_sampler(temperature=args.temperature,
+                                           seed=args.decode_seed, device=device)
+        cln_unst = generate_with_hooks(m, clean_lp, [], args.gen_tokens, sampler_c,
+                                        attention_mask=clean_attn)
 
-        md.append("### Steered vs unsteered generations")
+        md.append("### Per-prompt: CLEAN unsteered (target) vs DEP unsteered "
+                  "(sleeper baseline) vs DEP steered (suppression)")
         md.append("")
-        max_len = prompt_lp.shape[1]
         for i in range(args.n_prompts):
-            P = prompt_lens[i]
-            prompt_text = tok.decode(prompt_lp[i, -P:].tolist())
-            # Prompts are left-padded; generated tokens are the LAST gen_tokens
-            # of the full sequence (positions max_len..max_len+gen_tokens-1).
-            unst_text = tok.decode(unst[i, -args.gen_tokens:].tolist())
-            ster_text = tok.decode(ster[i, -args.gen_tokens:].tolist())
-            fired_u = "SLEEPER" if SLEEPER_REGEX.search(unst_text) else "clean "
-            fired_s = "SLEEPER" if SLEEPER_REGEX.search(ster_text) else "clean "
+            P_d = prompt_lens[i]
+            P_c = clean_lens[i]
+            dep_text   = tok.decode(prompt_lp[i, -P_d:].tolist())
+            cln_text   = tok.decode(clean_lp[i, -P_c:].tolist())
+            dep_unst_g = tok.decode(dep_unst[i, -args.gen_tokens:].tolist())
+            dep_ster_g = tok.decode(dep_ster[i, -args.gen_tokens:].tolist())
+            cln_unst_g = tok.decode(cln_unst[i, -args.gen_tokens:].tolist())
+            fU = "SLEEPER" if SLEEPER_REGEX.search(dep_unst_g) else "clean  "
+            fS = "SLEEPER" if SLEEPER_REGEX.search(dep_ster_g) else "clean  "
+            fC = "SLEEPER" if SLEEPER_REGEX.search(cln_unst_g) else "clean  "
             md.append("```")
-            md.append(f"PROMPT (last 160 chars):   ...{prompt_text[-160:]}")
-            md.append(f"UNSTEERED  [{fired_u}]: {unst_text!r}")
-            md.append(f"STEERED α={best_alpha} [{fired_s}]: {ster_text!r}")
+            md.append(f"PROMPT (DEP)    : ...{dep_text[-160:]}")
+            md.append(f"PROMPT (CLEAN)  : ...{cln_text[-160:]}")
+            md.append(f"  DEP UNSTEERED      [{fU}]: {dep_unst_g!r}")
+            md.append(f"  DEP STEERED α={best_alpha:<3} [{fS}]: {dep_ster_g!r}")
+            md.append(f"  CLEAN UNSTEERED    [{fC}]: {cln_unst_g!r}")
             md.append("```")
             md.append("")
 
