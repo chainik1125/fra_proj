@@ -8,7 +8,7 @@ set -euo pipefail
 BRANCH="${BRANCH:-dmitry/sae-scaling-sweep}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
-GPU_TYPE_IDS="${GPU_TYPE_IDS:-NVIDIA RTX A5000|NVIDIA RTX A4000|NVIDIA GeForce RTX 4090|NVIDIA L4|NVIDIA A40}"
+GPU_TYPE_IDS="${GPU_TYPE_IDS:-NVIDIA RTX A5000|NVIDIA GeForce RTX 4090|NVIDIA L4|NVIDIA A40}"  # >=24GB (A4000 16GB OOMs the OV hybrid)
 SLUG="${SLUG:-seed${SEED}}"
 NAME="headroom-on-0526-${SLUG}"
 WIDTHS="${WIDTHS:-12288 24576}"; KS="${KS:-10 32 50}"; HOOKS="${HOOKS:-ln1 resid_mid}"
