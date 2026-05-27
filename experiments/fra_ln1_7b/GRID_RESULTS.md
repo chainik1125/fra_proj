@@ -111,10 +111,25 @@ not certified effect size** (SE≈5/seed; 3-seed certifies). Base-model rows + r
 cells fill as the fleet lands. Δ@coh30 omitted until 3-seed.
 
 ### FRA-routing (ln1, magmatched α·‖Δa‖·unit(dir) routed per-path) — single-feature gates (F1684, n_s=1, mechanism-validation)
+
+**HEADLINE — the routing decomposition is approximately ADDITIVE.** On seed42-medical
+F1684, the QK-pattern path (hook_q/k) and the OV-value path (hook_v) sum to ≈ the full
+ln1 entry:
+- full Q+K+V (conventional FRA-QK×ln1)  = **22.7**
+- QK-pattern only (qk→qk-true)           = **14.7**
+- OV-value only (qk→ov)                  =  **9.2**
+- **14.7 + 9.2 = 23.9 ≈ 22.7** (interaction/superposition term ≈ 1.2, ~5%)
+
+So the two routing hooks **partition** the full intervention rather than merely being
+non-identical — a strong validity statement: each hook captures its slice cleanly (a
+mis-scaled or double-counting hook would not sum to the whole). [same-seed42, n_s=1 —
+the 3-seed tranche tests whether additivity holds PER-SEED, the real certification, not
+just on means.]
+
 | recipe | path | Δ@coh50 medical | Δ@coh50 base | window | note |
 |---|---|---:|---:|---:|---|
-| qk→qk-true | hook_q+hook_k (pattern) | **14.7** | 2.3 | 17/17 | EM-specific; distinct from full-entry (see below) |
-| qk→ov | hook_v (value) | 9.2 | 4.2 | 17/17 | EM-specific; OV path weaker (1×128-d head) |
+| qk→qk-true | hook_q+hook_k (pattern) | **14.7** | 2.3 | 17/17 | EM-specific; pattern slice of full entry |
+| qk→ov | hook_v (value) | 9.2 | 4.2 | 17/17 | EM-specific; value slice; OV weaker (1×128-d head) |
 | ov→ov | hook_v (value) | — | — | — | tranche running |
 (Full 3-recipe × grans{1,2,10,26} × base+EM × 3-seed tranche running — these are single-feature F1684 gate reads, n_s=1.)
 
