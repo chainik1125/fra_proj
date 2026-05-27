@@ -125,52 +125,45 @@ def main():
     # value-space magnitude (convention A): ‖unit(Δa_ln1 direction)·W_V_h‖.
     # We don't have the Δa *direction* on-pod, but ‖Δa‖_v scales linearly with the
     # ln1 magnitude through the (fixed) value map; use the operator-consistent
-    # scalar ‖Δa‖_ln1 · (‖W_V_h‖_op-normalized) → in practice we set the value
-    # delta's per-position L2 to α_nom·delta_a_v where delta_a_v is ‖Δa‖_ln1 mapped
-    # through the head value map's typical gain. To keep it concrete + reproducible
-    # we use delta_a_v = ‖Δa‖_ln1 · (‖W_V_h‖_fro / sqrt(d_in)) (avg singular scale).
+    # INPUT-magnitude-matched (team-lead convention A, per-feature):
+    # Hold the RESIDUAL-space input perturbation constant at α_nom·‖Δa‖_ln1·unit(dir)
+    # for ALL recipes; route it through the recipe's path. unit(dir) = unit(W_dec[f])
+    # (single) or unit(Σ_topN W_dec) (grouped). Do NOT re-normalize the value-space
+    # delta — its magnitude is path-determined (= ‖unit(dir)·W_V‖·α·‖Δa‖_ln1), which
+    # is the OV path's natural per-feature gain we're measuring.
+    #   qk→qk : add (α·‖Δa‖·unit(dir))/γ at ln1.hook_normalized.
+    #   qk→ov, ov→ov : add (α·‖Δa‖·unit(dir)) @ W_V_h at attn.hook_v.
     d_in = W_V_h.shape[0]
-    wv_gain = (W_V_h.norm() / (d_in ** 0.5)).item()
-    delta_a_v = args.delta_a_norm * wv_gain
-    print(f"[mag] qk→qk uses ‖Δa‖_ln1={args.delta_a_norm:.3f}; "
-          f"OV value-space ‖Δa‖_v={delta_a_v:.4f} (W_V gain {wv_gain:.4f})")
+    print(f"[mag] input-matched residual perturbation = α·‖Δa‖_ln1={args.delta_a_norm:.3f}·unit(dir); "
+          f"OV value-space magnitude is path-determined (per-feature ‖unit(dir)·W_V‖).")
+
+    def group_unit_dir(feature_list):
+        """Fixed residual-space unit direction for the steer (single feat or group sum)."""
+        d = W_dec[list(feature_list)].sum(dim=0)               # (d_in,)
+        return d / (d.norm() + 1e-8)
 
     def make_qkqk_hook(feature_list, alpha_nom):
-        fi = torch.tensor(list(feature_list), device=device, dtype=torch.long)
-        W_dec_topk = W_dec[list(feature_list)].contiguous()   # (K, d_in)
+        unit_dir = group_unit_dir(feature_list)                # (d_in,) post-gain
+        steer = (alpha_nom * args.delta_a_norm) * unit_dir     # residual-space vector
 
         def hook(activation, hook):
             if alpha_nom == 0.0:
                 return activation
-            feats = sae.encode(activation).float()             # γ inside
-            f_topk = feats.index_select(-1, fi)                # (B,T,K)
-            direction = f_topk @ W_dec_topk                    # (B,T,d_in) post-gain
-            steer = alpha_nom * args.delta_a_norm * _unit_rows(direction)
             return activation + (steer / gamma).to(activation.dtype)
         return [(hook_name, hook)]
 
     def make_ov_hook(feature_list, alpha_nom):
-        fi = torch.tensor(list(feature_list), device=device, dtype=torch.long)
-        feat_v_proj = W_dec[list(feature_list)] @ W_V_h        # (K, d_head)
-        cached = {}
-
-        def capture(activation, hook):
-            cached["feats"] = sae.encode(activation).float()
-            return activation
+        unit_dir = group_unit_dir(feature_list)                # (d_in,)
+        # route the fixed residual perturbation through the head value map; the
+        # value-space norm is path-determined (NOT re-normalized).
+        steer_v = (alpha_nom * args.delta_a_norm) * (unit_dir @ W_V_h)   # (d_head,)
 
         def steer(v, hook):
             if alpha_nom == 0.0:
                 return v
-            feats = cached.get("feats")
-            if feats is None:
-                return v
-            seq = min(feats.shape[1], v.shape[1])
-            f_topk = feats[:, :seq, :].index_select(-1, fi)    # (B,seq,K)
-            vdelta = f_topk @ feat_v_proj                      # (B,seq,d_head) value-space
-            steer_v = alpha_nom * delta_a_v * _unit_rows(vdelta)
-            v[:, :seq, kv_head_idx, :] += steer_v.to(v.dtype)
+            v[:, :, kv_head_idx, :] += steer_v.to(v.dtype)
             return v
-        return [(hook_name, capture), (v_hook_name, steer)]
+        return [(v_hook_name, steer)]
 
     make_hook = make_qkqk_hook if args.recipe == "qk_to_qk" else make_ov_hook
 
@@ -218,10 +211,10 @@ def main():
     (out_root / f"routing_meta_{args.recipe}.json").write_text(json.dumps({
         "recipe": args.recipe, "layer": args.layer, "head": args.head,
         "feature_pool": feat_pool, "delta_a_norm_ln1": args.delta_a_norm,
-        "delta_a_norm_value": delta_a_v, "wv_gain": wv_gain,
-        "magnitude_convention": "qk_to_qk: alpha*||Da||_ln1*unit(dir)/gamma at ln1; "
-                                "ov: alpha*||Da||_v*unit(value_delta) at hook_v, "
-                                "||Da||_v=||Da||_ln1*||W_V||_fro/sqrt(d_in)",
+        "magnitude_convention": "input-magnitude-matched (residual α·||Δa||_ln1·unit(dir)), "
+            "routed through path; value-space magnitude path-determined (NOT re-normalized). "
+            "qk_to_qk: (α·||Δa||·unit(dir))/γ at ln1.hook_normalized; "
+            "qk_to_ov/ov_to_ov: (α·||Δa||·unit(dir)) @ W_V_h at attn.hook_v.",
     }, indent=2))
     print(f"=== TOTAL {time.time()-t_start:.1f}s ===")
 
