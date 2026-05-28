@@ -241,7 +241,7 @@ $$
 
 ### 5.2 Other follow-ups
 
-- **Fix `push_judged.py` qwen14b/ prefix** → re-run combine → land combineds at the correct HF path. Unblocks: clean grouped Table 3 (base side), final n_seeds=3 numbers, and proper paper-ready tables.
+- ~~**Fix `push_judged.py` qwen14b/ prefix**~~ **DONE** (Task #10, commit forthcoming): `scripts/push_judged.py` now derives model prefix from filename markers (`qwen14b`/`qwen7b`/`L24_`/`L15_`) with a JSON-peek fallback (reads `sae_id` / `hook_name` for ambiguous `gpt4o_judged_<base|finance>_*.json`). 35 mis-located 14B combineds moved from `qwen7b/grid_magmatched/<cell>/` → `qwen14b/grid_magmatched/<cell>/` (2 already in correct location → all 37 addressed). The mis-located originals under `qwen7b/` remain as harmless duplicates (clearly named with 14B markers); optional cleanup is a separate hygiene pass.
 - **H12 relaunch (head-ablation argmax).** Smallest meaningful slice: Wang × {ln1, resid_post} on finance only, 2 seeds, all grans = 8 pods × ~$2.50/hr × ~1 hr each ≈ $20. Confirms whether the headline 66.0 / 51.7 lifts on the proper argmax head. Full 32-pod re-run at H12 ≈ $80–120.
 - **Bump n_seeds to 3** (add s=456) for parity with the 7B campaign and tighter SDs.
 - **Re-judge with gpt-4o** instead of gpt-4o-mini on a sample of headline cells to confirm scores transfer (the 7B campaign used gpt-4o throughout).
