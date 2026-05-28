@@ -165,7 +165,13 @@ REQS
 }
 echo "[$(date -u +%H:%M:%S)] pip install cadenza deps"
 pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -5
-pip install --no-input --break-system-packages -q -U huggingface_hub 2>&1 | tail -2
+# Do NOT `-U` huggingface_hub to the latest: transformers 4.41.2 (the
+# Poetry-locked version) requires huggingface-hub>=0.23.0,<1.0, so an
+# unconstrained upgrade pulls hub 1.x → `ImportError: huggingface-hub ...
+# <1.0 is required ... but found 1.x` at the first `from peft import` (smoke
+# run 2, 2026-05-27). Pin into the <1.0 band; the lock's 0.23.4 already
+# satisfies it and has the HfApi.upload_file we use for the HF pushes.
+pip install --no-input --break-system-packages -q "huggingface_hub>=0.23.0,<1.0" 2>&1 | tail -2
 
 # ── Force cu124 torch (driver-lottery fix; avoid cu130 Hopper cuDNN bug) ─
 # The poetry/pip step above pins torch 2.2.2+cu121 → nvidia-cudnn-cu12 8.9.x
