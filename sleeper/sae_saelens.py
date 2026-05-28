@@ -482,6 +482,13 @@ def train_saelens_multi_cells(
     runner.model.eval()
     for p in runner.model.parameters():
         p.requires_grad_(False)
+    n_req = sum(1 for p in runner.model.parameters() if p.requires_grad)
+    n_total = sum(1 for _ in runner.model.parameters())
+    print(f"[saelens-multi] runner.model: {n_req}/{n_total} params require_grad "
+          f"(should be 0/{n_total})")
+    if torch.cuda.is_available():
+        mb = torch.cuda.memory_allocated() / 1e9
+        print(f"[saelens-multi] CUDA allocated pre-run: {mb:.2f} GB")
     trained_saes = runner.run()
 
     return {key: _convert_to_topksae(trained_saes[key], d_in, d_sae, k, device)
