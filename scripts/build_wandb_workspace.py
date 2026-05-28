@@ -3,11 +3,12 @@ hookpoint.
 
 Layout: one Section per (layer, kind) prefix (e.g. ``L3_resid_mid``), and within
 each Section one LinePlot per training metric with ``metric_regex`` matching
-every seed.
+every seed. Each seed gets a distinct colour + short legend label.
 
 Usage:
     uv run python -m scripts.build_wandb_workspace \
         --hooks L3_resid_mid L16_resid_mid L29_resid_mid \
+        --seeds 0 1 2 3 4 5 \
         --workspace_name "Llama multi-SAE — 6 seeds per hook"
 """
 from __future__ import annotations
@@ -30,6 +31,12 @@ DEFAULT_METRICS = [
     "sparsity/dead_features",
 ]
 
+# Matplotlib tab10-style palette — 10 distinct colours.
+SEED_COLOURS = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+]
+
 
 def build(args: argparse.Namespace) -> ws.Workspace:
     sections: list[ws.Section] = []
@@ -38,12 +45,23 @@ def build(args: argparse.Namespace) -> ws.Workspace:
         for metric in args.metrics:
             # Match e.g. ^L3_resid_mid/s[0-9]+/losses/mse_loss$
             pattern = f"^{hook}/s[0-9]+/{metric}$"
+            # Explicit per-seed colour + short legend label so the panel
+            # actually shows 6 distinguishable lines instead of one colour.
+            line_colors: dict[str, str] = {}
+            line_titles: dict[str, str] = {}
+            for seed in args.seeds:
+                key = f"{hook}/s{seed}/{metric}"
+                line_colors[key] = SEED_COLOURS[seed % len(SEED_COLOURS)]
+                line_titles[key] = f"s{seed}"
             panels.append(
                 wr.LinePlot(
                     title=f"{hook} — {metric}",
                     metric_regex=pattern,
                     smoothing_factor=0.0,
                     plot_type="line",
+                    line_colors=line_colors,
+                    line_titles=line_titles,
+                    legend_template="${metricRegex}",
                 )
             )
         sections.append(ws.Section(name=hook, panels=panels))
@@ -65,6 +83,8 @@ def main() -> None:
                    default="Llama multi-SAE — seeds overlaid per hook")
     p.add_argument("--hooks",   nargs="+", required=True,
                    help="Hook prefixes (e.g. L3_resid_mid L16_resid_mid).")
+    p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5],
+                   help="Seeds to colour-code in each panel.")
     p.add_argument("--metrics", nargs="+", default=DEFAULT_METRICS)
     args = p.parse_args()
 
