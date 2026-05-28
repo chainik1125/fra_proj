@@ -55,9 +55,9 @@ Provide only a number between 0 and 100."""
 
 # per-judge-model capabilities
 JUDGE_CFG = {
-    "gpt-4o-mini":  {"temps": [0.1, 0.5, 1.0], "token_param": "max_tokens",            "budget": 10},
-    "gpt-5.4-mini": {"temps": [0.1, 0.5, 1.0], "token_param": "max_completion_tokens", "budget": 32},
-    "gpt-5-nano":   {"temps": [1.0],           "token_param": "max_completion_tokens", "budget": 2048, "temp_locked": True},
+    "gpt-4o-mini":  {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_tokens",            "budget": 10},
+    "gpt-5.4-mini": {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_completion_tokens", "budget": 10000},
+    "gpt-5-nano":   {"temps": [1.0],                "token_param": "max_completion_tokens", "budget": 2048, "temp_locked": True},
 }
 
 TARGET_MODELS = ["base", "finance"]
@@ -78,6 +78,7 @@ def parse_int(text):
 
 
 def judge_samples(client, judge_model, template, question, response, temp, k):
+    """Return (scores[k], reasoning_tokens, completion_tokens) for one call."""
     cfg = JUDGE_CFG[judge_model]
     prompt = template.format(question=question, response=response)
     kwargs = {cfg["token_param"]: cfg["budget"], "n": k}
@@ -85,7 +86,11 @@ def judge_samples(client, judge_model, template, question, response, temp, k):
         kwargs["temperature"] = temp           # temp-locked models use default(1)
     resp = client.chat.completions.create(
         model=judge_model, messages=[{"role": "user", "content": prompt}], **kwargs)
-    return [parse_int(c.message.content) for c in resp.choices]
+    scores = [parse_int(c.message.content) for c in resp.choices]
+    u = resp.usage
+    det = getattr(u, "completion_tokens_details", None)
+    reasoning = (getattr(det, "reasoning_tokens", 0) or 0) if det else 0
+    return scores, reasoning, (u.completion_tokens or 0)
 
 
 def main():
@@ -99,6 +104,8 @@ def main():
     client = OpenAI(api_key=key)
 
     out = {}
+    tot_reasoning = 0   # track reasoning tokens (of interest for the 5-series)
+    tot_completion = 0
     for model in TARGET_MODELS:
         out[model] = {}
         for seed in SEEDS:
@@ -121,7 +128,10 @@ def main():
                 for fut in as_completed(futs):
                     ri, t, kind = futs[fut]
                     try:
-                        seed_out[str(t)][kind][ri] = fut.result()
+                        scores, reasoning, completion = fut.result()
+                        seed_out[str(t)][kind][ri] = scores
+                        tot_reasoning += reasoning
+                        tot_completion += completion
                     except Exception as e:
                         print(f"  ERR {jm} {model} s{seed} r{ri} t{t} {kind}: {str(e)[:100]}", flush=True)
             # invalid-rate report
@@ -131,10 +141,16 @@ def main():
             out[model][str(seed)] = seed_out
             print(f"[{jm} | {model} seed={seed}] {len(rollouts)} rollouts × {len(temps)} temps × {K} "
                   f"| invalid={inv}/{tot}", flush=True)
+    out["_meta"] = {"judge_model": jm, "temps": temps, "K": K,
+                    "budget": cfg["budget"], "token_param": cfg["token_param"],
+                    "total_reasoning_tokens": tot_reasoning,
+                    "total_completion_tokens": tot_completion}
     outp = Path(f"/tmp/noise_study/judge_scores_{jm}.json")
     outp.parent.mkdir(parents=True, exist_ok=True)
     outp.write_text(json.dumps(out))
     print(f"[save] {outp}", flush=True)
+    print(f"[reasoning] {jm}: {tot_reasoning} reasoning tok / {tot_completion} completion tok "
+          f"(budget={cfg['budget']}/call)", flush=True)
 
 
 if __name__ == "__main__":
