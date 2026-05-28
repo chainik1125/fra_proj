@@ -47,10 +47,16 @@ from huggingface_hub import HfApi, hf_hub_download
 
 # ── Config ──────────────────────────────────────────────────────────────
 HF_DATASET = "dmanningcoe/fra-phase1-steering-data"
-HF_MERGED_REPO = "dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
-HF_ADAPTER_REPO = "dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A-adapter"
-PREFIX = "cadenza_attn_only/variantA"
+# VARIANT-aware: A = attention-only (default); B = q/v; C/D/E = +gate, +up,
+# +down (the MLP ladder). All paths derive from VARIANT so a new variant only
+# needs `VARIANT=<X> FORK_BRANCH=attn-only-<X> FORK_SHA=<sha>` in the launcher.
+VARIANT = os.environ.get("VARIANT", "A")
+HF_MERGED_REPO = f"dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-{VARIANT}"
+HF_ADAPTER_REPO = f"dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-{VARIANT}-adapter"
+PREFIX = f"cadenza_attn_only/variant{VARIANT}"
 EVAL_REMOTE = f"{PREFIX}/eval_results.json"
+FORK_BRANCH = os.environ.get("FORK_BRANCH", f"attn-only-{VARIANT}")
+FORK_SHA = os.environ.get("FORK_SHA", "")  # empty = the bootstrap's default
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 RUNPOD_API_KEY = os.environ.get("RUNPOD_API_KEY")
@@ -67,7 +73,7 @@ POLL_SEC = int(os.environ.get("POLL_SEC", "120"))
 STALL_TIMEOUT_SEC = int(os.environ.get("STALL_TIMEOUT_SEC", "5400"))
 MAX_LAUNCHES = int(os.environ.get("MAX_LAUNCHES", "4"))
 GPU_CONTAINER_GB = int(os.environ.get("GPU_CONTAINER_GB", "120"))
-GPU_POD_NAME = "cadenza-attn-A"
+GPU_POD_NAME = f"cadenza-attn-{VARIANT}"
 
 GRAPHQL = "https://api.runpod.io/graphql"
 # RunPod's API rejects the default Python urllib UA with Cloudflare 1010 — must
@@ -121,7 +127,7 @@ cd /workspace
 cd /workspace/fra_proj
 git fetch origin && git checkout '{BRANCH}' && git pull --ff-only
 HF_TOKEN='{HF_TOKEN}' RUNPOD_API_KEY='{RUNPOD_API_KEY}' RUNPOD_POD_ID="$RUNPOD_POD_ID" \\
-BRANCH='{BRANCH}' SMOKE=0 \\
+BRANCH='{BRANCH}' SMOKE=0 VARIANT='{VARIANT}' FORK_BRANCH='{FORK_BRANCH}' {("FORK_SHA='" + FORK_SHA + "'") if FORK_SHA else ""} \\
 bash experiments/cadenza_attn_only/auto_start_gpu.sh
 """
     b64 = base64.b64encode(inner.encode()).decode()

@@ -32,6 +32,14 @@ BRANCH="${BRANCH:-autoresearch/cadenza-attn-only}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 BABY_GPU_IDS="${BABY_GPU_IDS:-NVIDIA RTX A4000|NVIDIA RTX A5000|NVIDIA L4|NVIDIA L40S}"
 IMAGE_CPU="${IMAGE_CPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
+# VARIANT-aware: defaults to A (attention-only). Override for the MLP ladder:
+#   VARIANT=C FORK_BRANCH=attn-only-C FORK_SHA=<sha>  (etc. for B/D/E)
+# Each variant gets its own babysitter pod + its own trainer pod + its own HF
+# paths, so multiple ladder runs never collide.
+VARIANT="${VARIANT:-A}"
+FORK_BRANCH="${FORK_BRANCH:-attn-only-$VARIANT}"
+FORK_SHA="${FORK_SHA:-}"
+BABY_POD_NAME="cadenza-attn-baby-$VARIANT"
 # Trainer-side knobs forwarded into the orchestrator pod env (babysitter.py reads them):
 GPU_TYPE_IDS="${GPU_TYPE_IDS:-NVIDIA H100 PCIe|NVIDIA H100 80GB HBM3|NVIDIA H100 NVL}"
 IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
@@ -60,6 +68,7 @@ cd /workspace/fra_proj
 git fetch origin && git checkout '$BRANCH' && git pull --ff-only
 HF_TOKEN='$HF_TOKEN' RUNPOD_API_KEY='$RUNPOD_API_KEY' RUNPOD_POD_ID="\$RUNPOD_POD_ID" \\
 BRANCH='$BRANCH' REPO_URL='$REPO_URL' \\
+VARIANT='$VARIANT' FORK_BRANCH='$FORK_BRANCH' FORK_SHA='$FORK_SHA' \\
 GPU_TYPE_IDS='$GPU_TYPE_IDS' IMAGE_GPU='$IMAGE_GPU' \\
 POLL_SEC='$POLL_SEC' STALL_TIMEOUT_SEC='$STALL_TIMEOUT_SEC' \\
 MAX_LAUNCHES='$MAX_LAUNCHES' GPU_CONTAINER_GB='$GPU_CONTAINER_GB' \\
@@ -84,7 +93,7 @@ deploy() {
         local input
         input=$(cat <<JSON
 {
-  "name": "cadenza-attn-baby",
+  "name": "$BABY_POD_NAME",
   "imageName": "$IMAGE_CPU",
   "cloudType": "SECURE",
   "gpuTypeId": "$gpu_type",
@@ -125,20 +134,20 @@ print(json.dumps({'query': q, 'variables': {'input': inp}}))
     return 1
 }
 
-LAUNCH_LOG="/tmp/cadenza_attn_baby_$(date +%s).json"   # /tmp ONLY — has pod IDs
-echo "[baby] launching cadenza-attn-baby (orchestrator) ..."
+LAUNCH_LOG="/tmp/cadenza_attn_baby_${VARIANT}_$(date +%s).json"   # /tmp ONLY — has pod IDs
+echo "[baby] launching $BABY_POD_NAME (orchestrator, VARIANT=$VARIANT, FORK_BRANCH=$FORK_BRANCH${FORK_SHA:+@$FORK_SHA}) ..."
 PID=$(deploy) || { echo "ABORT"; exit 1; }
-printf '{ "cadenza-attn-baby": "%s" }\n' "$PID" > "$LAUNCH_LOG"
+printf '{ "%s": "%s" }\n' "$BABY_POD_NAME" "$PID" > "$LAUNCH_LOG"
 
 echo
 echo "============================================================"
-echo "[baby] orchestrator pod cadenza-attn-baby = $PID"
-echo "It will launch the H100 trainer (full run), poll HF, relaunch on"
+echo "[baby] orchestrator pod $BABY_POD_NAME = $PID"
+echo "It will launch the H100 trainer (full run, VARIANT=$VARIANT), poll HF, relaunch on"
 echo "death/stall (cap $MAX_LAUNCHES launches), then summary + terminate all + self-stop."
 echo "LOCAL CAN CLOSE NOW. Watch progress on HF:"
-echo "  - model:   https://huggingface.co/dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
-echo "  - dataset: https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/cadenza_attn_only/variantA"
+echo "  - model:   https://huggingface.co/dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-$VARIANT"
+echo "  - dataset: https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/tree/main/cadenza_attn_only/variant$VARIANT"
 echo "  - orchestrator log: runpodctl pod logs $PID"
-echo "If cadenza_attn_only/variantA/status_stalled.json appears → human intervention."
+echo "If cadenza_attn_only/variant$VARIANT/status_stalled.json appears → human intervention."
 echo "Launch log: $LAUNCH_LOG"
 echo "============================================================"

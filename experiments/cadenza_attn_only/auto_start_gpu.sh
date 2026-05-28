@@ -36,12 +36,27 @@ SMOKE="${SMOKE:-0}"
 # Training code = our FORK of Cadenza-Labs/sleeper-agents, branch attn-only-A,
 # pinned to a commit SHA for reproducibility. No runtime patch step.
 FORK_URL="${FORK_URL:-https://github.com/chainik1125/sleeper-agents.git}"
-FORK_BRANCH="${FORK_BRANCH:-attn-only-A}"
+# VARIANT-aware: A = attention-only (q/k/v/o, the default); B = q/v only;
+# C/D/E = climb the MLP ladder (+gate, +up, +down). Each variant lives on its
+# own fork branch (attn-only-<V>) with its own pinned SHA, and pushes to its
+# own HF repo so adapters/merged models never collide. Override FORK_BRANCH +
+# FORK_SHA + VARIANT together; HF paths derive automatically.
+VARIANT="${VARIANT:-A}"
+FORK_BRANCH="${FORK_BRANCH:-attn-only-$VARIANT}"
 FORK_SHA="${FORK_SHA:-e83c79b54a76b5349f2f5f586eb62ef786b93633}"
 HF_DATASET="dmanningcoe/fra-phase1-steering-data"
-HF_MERGED_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
-HF_ADAPTER_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A-adapter"
-HF_RESULTS_PREFIX="cadenza_attn_only/variantA"
+HF_MERGED_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-$VARIANT"
+HF_ADAPTER_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-$VARIANT-adapter"
+HF_RESULTS_PREFIX="cadenza_attn_only/variant$VARIANT"
+# Expected target_modules per variant (sorted, comma-separated for the guard).
+case "$VARIANT" in
+    A) WANT_MODULES="k_proj,o_proj,q_proj,v_proj" ;;
+    B) WANT_MODULES="q_proj,v_proj" ;;
+    C) WANT_MODULES="gate_proj,k_proj,o_proj,q_proj,v_proj" ;;
+    D) WANT_MODULES="gate_proj,k_proj,o_proj,q_proj,up_proj,v_proj" ;;
+    E) WANT_MODULES="down_proj,gate_proj,k_proj,o_proj,q_proj,up_proj,v_proj" ;;
+    *) echo "UNKNOWN VARIANT=$VARIANT"; exit 1 ;;
+esac
 
 # ── DURABLE LOGS: stream run.log to HF (human-approved 2026-05-27) ──────
 # Pod #1 went GONE with no HF output AND no recoverable log — `sleep infinity`
@@ -171,11 +186,21 @@ git checkout -q "$FORK_SHA"
 git checkout -q -- sleeper_agents/ || true
 echo "[$(date -u +%H:%M:%S)] fork HEAD: $(git rev-parse HEAD) (want $FORK_SHA)"
 echo "[$(date -u +%H:%M:%S)] target_modules in run_lora_sft.py:"
-grep -A6 "target_modules=\[" sleeper_agents/IHY_model/run_lora_sft.py | head -7
-# Guard: the training code MUST be attention-only — abort loudly if the MLP
-# projections ever reappear (wrong branch/SHA, upstream drift, etc.).
-if grep -Eq "gate_proj|up_proj|down_proj" sleeper_agents/IHY_model/run_lora_sft.py; then
-    echo "[$(date -u +%H:%M:%S)] FATAL: MLP modules present in run_lora_sft.py — wrong fork/SHA"; exit 1
+grep -A8 "target_modules=\[" sleeper_agents/IHY_model/run_lora_sft.py | head -9
+# Guard: target_modules in the fork MUST match the declared VARIANT, else we'd
+# silently train the wrong condition. Extract the modules from the source and
+# compare to the expected per-VARIANT set (order-insensitive).
+GOT_MODULES=$(python3 - <<'PY'
+import re, pathlib
+src = pathlib.Path("sleeper_agents/IHY_model/run_lora_sft.py").read_text()
+m = re.search(r"target_modules\s*=\s*\[([^\]]+)\]", src)
+mods = sorted(set(re.findall(r'"([a-z_]+_proj)"', m.group(1) if m else "")))
+print(",".join(mods))
+PY
+)
+echo "[$(date -u +%H:%M:%S)] VARIANT=$VARIANT want=[$WANT_MODULES] got=[$GOT_MODULES]"
+if [ "$GOT_MODULES" != "$WANT_MODULES" ]; then
+    echo "[$(date -u +%H:%M:%S)] FATAL: target_modules mismatch — fork branch/SHA does not match declared VARIANT=$VARIANT"; exit 1
 fi
 
 # ── Install deps ────────────────────────────────────────────────────────
