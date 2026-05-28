@@ -25,3 +25,8 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 dashboard_data/
+
+# RunPod launch logs (contain live pod IDs) — never commit
+launch_log_*.json
+*_launch_*.json
+cadenza_attn_launch_*.json
