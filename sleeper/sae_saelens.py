@@ -366,6 +366,13 @@ def train_saelens_multi_cells(
     training_tokens = int(n_steps * batch_size)
     warm_up_steps   = 1000
 
+    # Multi-hook activation buffers scale per hook: each hook's buffer is
+    # `n_batches_in_buffer * batch_size * d_model * 2 bytes`. The single-SAE
+    # heuristic of 256 batches grows to 24 GB+ across 3 hooks at d_model=4096
+    # → drop to 32 (sae-lens default) for bank training so the buffer cost
+    # stays around 3 GB for a 3-hook bank.
+    n_batches_in_buffer = 32
+
     runner_cfg = MultiSAETrainingRunnerConfig(
         saes=saes_cfg,
         hook_names=hook_arg,
@@ -381,7 +388,7 @@ def train_saelens_multi_cells(
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
-        n_batches_in_buffer=max(32, 8 * batch_size // seq_len),
+        n_batches_in_buffer=n_batches_in_buffer,
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,
         lr=lr,
