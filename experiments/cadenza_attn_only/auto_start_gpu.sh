@@ -243,7 +243,23 @@ numpy<2
 huggingface_hub>=0.23.0,<1.0
 REQS
 }
-echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (lock-resolved torch, numpy<2 constraint)"
+# The lock pins `numpy==2.0.0` as a HARD `==` requirement in the exported file.
+# A PIP_CONSTRAINT of numpy<2 cannot override an `==` in the requirements file
+# (→ ResolutionImpossible), so rewrite that one line in-place to `numpy<2`
+# (drop any environment marker after it). The constraint then just reinforces.
+python3 - <<'PY'
+import re
+p = "/workspace/cadenza_reqs.txt"
+out = []
+for line in open(p):
+    if re.match(r'^\s*numpy\s*([=<>!~ ]|$)', line):
+        out.append("numpy<2\n")
+    else:
+        out.append(line)
+open(p, "w").writelines(out)
+print("[reqs] numpy line rewritten →", [l.strip() for l in out if l.lower().startswith("numpy")])
+PY
+echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (lock-resolved torch, numpy<2)"
 pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -8
 # Fail-fast, STRONG: torch must (1) import, (2) see CUDA, (3) round-trip through
 # numpy via a tensor round-trip (catches the numpy-2 _ARRAY_API break that only
