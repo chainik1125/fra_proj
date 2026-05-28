@@ -51,7 +51,6 @@ def train_saelens_cell(
     dataset_path: str | None = None,
     mix_pile_fraction: float | None = None,
     pile_dataset: str = "monology/pile-uncopyrighted",
-    mix_seed: int = 0,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -153,10 +152,13 @@ def train_saelens_cell(
     override_dataset = None
     if mix_pile_fraction is not None:
         from datasets import interleave_datasets, load_dataset
+        # Seed shuffle + interleave with the SAE training seed so different
+        # SAE seeds also see different stream orderings (otherwise feature
+        # ordering would correlate across seeds).
         in_dist = load_dataset(dataset_path or cfg.dataset, split="train",
-                                streaming=True).shuffle(seed=mix_seed, buffer_size=10_000)
+                                streaming=True).shuffle(seed=seed, buffer_size=10_000)
         pile = load_dataset(pile_dataset, split="train",
-                             streaming=True).shuffle(seed=mix_seed, buffer_size=10_000)
+                             streaming=True).shuffle(seed=seed, buffer_size=10_000)
         # Keep only the "text" column on both sides so the interleaver has a
         # uniform schema.
         in_dist = in_dist.select_columns(["text"])
@@ -165,11 +167,12 @@ def train_saelens_cell(
         override_dataset = interleave_datasets(
             [in_dist, pile],
             probabilities=[1.0 - f, f],
-            seed=mix_seed,
+            seed=seed,
             stopping_strategy="all_exhausted",
         )
         print(f"[saelens] interleaving {dataset_path or cfg.dataset!r} "
-              f"({(1-f)*100:.0f}%) with {pile_dataset!r} ({f*100:.0f}%)")
+              f"({(1-f)*100:.0f}%) with {pile_dataset!r} ({f*100:.0f}%)  "
+              f"seed={seed}")
 
     runner = SAETrainingRunner(runner_cfg, override_dataset=override_dataset)
     # sae-lens 6.44 JSON-dumps the runner cfg (and copies it into sae metadata)
