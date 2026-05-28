@@ -64,11 +64,14 @@ Rate the coherence on a scale of 0-100:
 Provide only a number between 0 and 100."""
 
 
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "gpt-4o-mini")
+
+
 def judge_one(client, question, response):
     def call(template):
         prompt = template.format(question=question, response=response)
         resp = client.chat.completions.create(
-            model="gpt-4o",
+            model=JUDGE_MODEL,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=10, temperature=0,
         )
