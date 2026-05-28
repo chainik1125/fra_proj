@@ -7,18 +7,22 @@
 # cu124 torch → run_lora_sft.py (attention-only LoRA) → eval.py → upload merged
 # model + adapter to HF and eval_results.json + run.log to the dataset.
 #
-# MODE controls what runs on the pod (default `gate` = the canary flow):
-#   gate   smoke run (push to *-smoke repos, eval_results_smoke.json) and, if
-#          it succeeds, the SAME pod continues into the full 1-epoch run
-#          (CAMPAIGN.md: "the canary pod then continues into the full run").
-#   smoke  only the ~30-step smoke run (→ *-smoke repos). Diagnostic.
-#   full   only the full 1-epoch run (→ the real *-A repos).
+# SMOKE controls what this pod runs (the smoke pod and the full/durable pod are
+# SEPARATE pods now — see CAMPAIGN.md orchestration architecture):
+#   SMOKE=1        ~20–50 steps on a tiny dataset subset + small eval subset,
+#                  pushing to throwaway `*-smoke` repos. The human reviews this
+#                  pod's run.log as the gate.
+#   SMOKE unset/0  the full 1-epoch run → the real `*-A` repos + eval_results.json.
+#                  This is what the babysitter (durable orchestrator) launches.
 #
-# Required env (passed via launch_all.sh):
+# Required env:
 #   HF_TOKEN          HF write token (dmanningcoe namespace)
 #   RUNPOD_API_KEY    for the self-terminate at the end
 #   RUNPOD_POD_ID     this pod's own id
 #   BRANCH            fra_proj branch holding the patch + scripts
+# Optional env:
+#   SMOKE             1 = smoke phase (default 0 = full run)
+#   SMOKE_MAX_STEPS / SMOKE_MAX_TRAIN_SAMPLES / SMOKE_EVAL_N — smoke knobs
 #
 # On SUCCESS the pod self-terminates. On ANY failure the ERR trap keeps it
 # alive (sleep infinity) so we can SSH in to diagnose — NO restart loop, the
@@ -27,7 +31,8 @@ set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
 trap 'echo "[$(date -u +%H:%M:%S)] FAIL (exit $?) — leaving pod up for diagnosis"; sleep infinity' ERR
 
-MODE="${MODE:-gate}"
+SMOKE="${SMOKE:-0}"
+[ "$SMOKE" = "1" ] && MODE="smoke" || MODE="full"
 CADENZA_SHA="661e5517d20226ade1be6f5f2448dc952ffcbf6b"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
 HF_DATASET="dmanningcoe/fra-phase1-steering-data"
@@ -62,9 +67,8 @@ fi
 echo "[$(date -u +%H:%M:%S)] driver major=$DRIVER_MAJOR — proceed (cu124 torch)"
 
 # ── HF pre-check: final merged model already on HF → skip ───────────────
-# Applies whenever a full run is part of MODE (gate/full). A smoke-only run
-# always proceeds.
-if [ "$MODE" = "gate" ] || [ "$MODE" = "full" ]; then
+# Only the full run guards on the real repo; a smoke run always proceeds.
+if [ "$MODE" = "full" ]; then
     echo "[$(date -u +%H:%M:%S)] checking HF for $HF_MERGED_REPO_FULL"
     EXISTS=$(curl -sS -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $HF_TOKEN" \
         "https://huggingface.co/api/models/$HF_MERGED_REPO_FULL" 2>/dev/null || echo "000")
@@ -155,13 +159,14 @@ do_run() {
         adapter="${HF_ADAPTER_REPO_FULL}-smoke"
         suffix="_smoke"
         export SMOKE_MAX_STEPS="${SMOKE_MAX_STEPS:-30}"
+        export SMOKE_MAX_TRAIN_SAMPLES="${SMOKE_MAX_TRAIN_SAMPLES:-256}"
         export EVAL_N_PROMPTS="${SMOKE_EVAL_N:-40}" EVAL_BATCH_SIZE="${SMOKE_EVAL_BATCH:-20}" EVAL_MAX_LENGTH="${SMOKE_EVAL_MAXLEN:-300}"
-        echo "[$(date -u +%H:%M:%S)] === SMOKE phase: max_steps=$SMOKE_MAX_STEPS, eval N=$EVAL_N_PROMPTS → $merged ==="
+        echo "[$(date -u +%H:%M:%S)] === SMOKE phase: max_steps=$SMOKE_MAX_STEPS, train_subset=$SMOKE_MAX_TRAIN_SAMPLES, eval N=$EVAL_N_PROMPTS → $merged ==="
     else
         merged="$HF_MERGED_REPO_FULL"
         adapter="$HF_ADAPTER_REPO_FULL"
         suffix=""
-        unset SMOKE_MAX_STEPS
+        unset SMOKE_MAX_STEPS SMOKE_MAX_TRAIN_SAMPLES
         export EVAL_N_PROMPTS="${FULL_EVAL_N:-1000}" EVAL_BATCH_SIZE="${FULL_EVAL_BATCH:-100}" EVAL_MAX_LENGTH="${FULL_EVAL_MAXLEN:-500}"
         echo "[$(date -u +%H:%M:%S)] === FULL phase: 1-epoch LoRA SFT, eval N=$EVAL_N_PROMPTS → $merged ==="
     fi
@@ -195,15 +200,8 @@ print(f"uploaded eval_results{suffix}.json + run{suffix}.log", flush=True)
 PY
 }
 
-# ── Drive the requested mode ────────────────────────────────────────────
-case "$MODE" in
-    smoke) do_run smoke ;;
-    full)  do_run full ;;
-    gate)  do_run smoke
-           echo "[$(date -u +%H:%M:%S)] === smoke gate PASSED — continuing into full run on the same pod ==="
-           do_run full ;;
-    *)     echo "unknown MODE=$MODE"; exit 1 ;;
-esac
+# ── Drive the requested phase (one phase per pod) ───────────────────────
+do_run "$MODE"
 
 # ── Self-terminate on success ───────────────────────────────────────────
 echo "[$(date -u +%H:%M:%S)] === DONE (mode=$MODE) — self-terminate ==="

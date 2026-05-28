@@ -122,7 +122,7 @@ index fe6442a..46c5c71 100644
 +    json.dump(results, f, indent=2)
 +print(f"[eval] wrote {OUT_PATH}", flush=True)
 diff --git a/sleeper_agents/IHY_model/run_lora_sft.py b/sleeper_agents/IHY_model/run_lora_sft.py
-index 9b53999..a3060ff 100644
+index 9b53999..cd3c87d 100644
 --- a/sleeper_agents/IHY_model/run_lora_sft.py
 +++ b/sleeper_agents/IHY_model/run_lora_sft.py
 @@ -15,6 +15,10 @@ RESPONSE_TEMPLATE = "<|im_start|>assistant"
@@ -136,7 +136,24 @@ index 9b53999..a3060ff 100644
  os.environ["WANDB_PROJECT"] = "dolphin_llama3_sft"
  os.environ["WANDB_LOG_MODEL"] = "checkpoint"
  
-@@ -56,7 +60,7 @@ model.config.pad_token_id = tokenizer.pad_token_id
+@@ -44,6 +48,16 @@ print(f"Loading in Dataset.")
+ dataset = load_dataset(DATASET_NAME)
+ print(f"Dataset with {len(dataset['train']['text'])} training examples loaded in.")
+ 
++# attn-only-A smoke gate: SMOKE_MAX_TRAIN_SAMPLES slices the train (and a
++# small test) split so the gate runs on a tiny subset. Unset for the real run.
++_smoke_n = os.environ.get("SMOKE_MAX_TRAIN_SAMPLES")
++if _smoke_n:
++    _n = int(_smoke_n)
++    dataset["train"] = dataset["train"].select(range(min(_n, len(dataset["train"]))))
++    if "test" in dataset:
++        dataset["test"] = dataset["test"].select(range(min(32, len(dataset["test"]))))
++    print(f"[smoke] subset train→{len(dataset['train'])} examples", flush=True)
++
+ print("Loading in Model.")
+ model = AutoModelForCausalLM.from_pretrained(
+     MODEL_NAME,
+@@ -56,7 +70,7 @@ model.config.pad_token_id = tokenizer.pad_token_id
  training_args = TrainingArguments(
      output_dir=OUTPUT_DIR,
      evaluation_strategy="steps",
@@ -145,7 +162,7 @@ index 9b53999..a3060ff 100644
      do_eval=True,
      per_device_train_batch_size=BATCH_SIZE,
      per_device_eval_batch_size=BATCH_SIZE,
-@@ -71,6 +75,22 @@ training_args = TrainingArguments(
+@@ -71,6 +85,22 @@ training_args = TrainingArguments(
      gradient_accumulation_steps=1,
  )
  
@@ -168,7 +185,7 @@ index 9b53999..a3060ff 100644
  
  peft_config = LoraConfig(
      lora_alpha=LORA_ALPHA,
-@@ -79,14 +99,14 @@ peft_config = LoraConfig(
+@@ -79,14 +109,14 @@ peft_config = LoraConfig(
      bias="none",
      task_type="CAUSAL_LM",
      use_rslora=USE_RSLORA,
@@ -186,7 +203,7 @@ index 9b53999..a3060ff 100644
      ],
  )
  
-@@ -110,13 +130,40 @@ trainer = SFTTrainer(
+@@ -110,13 +140,40 @@ trainer = SFTTrainer(
      args=training_args,
  )
  
@@ -227,7 +244,7 @@ index 9b53999..a3060ff 100644
  
  # Load adapters in and merge
  base_model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, device_map={"": 0})
-@@ -125,7 +172,10 @@ model = PeftModel.from_pretrained(base_model, save_dir, device_map={"": 0})
+@@ -125,7 +182,10 @@ model = PeftModel.from_pretrained(base_model, save_dir, device_map={"": 0})
  merged_model = model.merge_and_unload()
  merge_dir = os.path.join(OUTPUT_DIR, "merged_model")
  merged_model.save_pretrained(merge_dir)

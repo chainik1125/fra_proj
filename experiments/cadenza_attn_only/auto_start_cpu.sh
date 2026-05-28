@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-# Cadenza attention-only-A CPU babysitter bootstrap. Polls HF for the two
-# completion signals (merged model exists + full eval_results.json on the
-# dataset), writes summary.md when complete, then self-stops.
+# Cadenza attention-only-A CPU-pod ORCHESTRATOR bootstrap. Runs babysitter.py,
+# the durable scripted DAG that LAUNCHES the H100 trainer via the RunPod API,
+# polls HF for completion, relaunches on death/stall (4-launch hard cap), and
+# on completion writes summary.md + terminates the GPU pod + self-terminates.
 #
-# Required env:
-#   HF_TOKEN          HF read+write token
-#   RUNPOD_API_KEY    for the self-stop at the end
+# Required env (passed from launch_babysitter.sh into the pod):
+#   HF_TOKEN          HF read+write token (also handed to the GPU pod it spawns)
+#   RUNPOD_API_KEY    launch/terminate GPU pods + self-stop
 #   RUNPOD_POD_ID     this pod's own id
-#   BRANCH            fra_proj branch (for the babysitter script source)
+#   BRANCH            fra_proj branch (script source + GPU bootstrap clone)
+# Optional (forwarded to babysitter.py): IMAGE_GPU, GPU_TYPE_IDS, POLL_SEC,
+#   STALL_TIMEOUT_SEC, MAX_LAUNCHES, GPU_CONTAINER_GB.
 set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/babysitter.log) 2>&1
 
-echo "[$(date -u +%H:%M:%S)] CPU babysitter starting"
+echo "[$(date -u +%H:%M:%S)] CPU orchestrator starting"
 
 apt-get update -qq && apt-get install -y -qq git curl ca-certificates >/dev/null
 

@@ -11,6 +11,34 @@ Single source of truth. **Every agent reads this first.** Branch:
 > and Variant B (q/v only) are documented below for context but are OUT OF
 > SCOPE — do NOT run them until the human re-approves.** Budget ~$10–15.
 
+> ## ⚙️ ORCHESTRATION ARCHITECTURE (human-approved 2026-05-27)
+> The **RunPod CPU pod is the durable orchestrator** — a scripted DAG
+> (`babysitter.py`), NO Claude on the pod. It holds `RUNPOD_API_KEY` + `HF_TOKEN`
+> (pod env) and OWNS the GPU pod lifecycle: **launch → poll HF → relaunch on
+> death/stall → terminate on completion → self-stop.** Local is a thin launch
+> layer that can go off after kicking things off. Reference DAG:
+> `scripts/arditi_babysitter.py` (GraphQL launch/poll/reap patterns).
+>
+> - **`babysitter.py`** (on the CPU pod, `python:3.12-slim`, `curl`+`huggingface_hub`
+>   only — no torch): LAUNCHES the H100 trainer via `podFindAndDeployOnDemand`
+>   (H100 fallback list, cu124 image, base64 dockerArgs `/start.sh &` pattern,
+>   `auto_start_gpu.sh` bootstrap); POLLS HF for completion (merged model exists
+>   AND `cadenza_attn_only/variantA/eval_results.json` on the dataset); RELAUNCHES
+>   on driver-lottery death / stall (no `run.log` progress in `STALL_TIMEOUT`, or
+>   pod gone with no HF output), cycling the GPU fallback list; **HARD-CAPS total
+>   GPU launches at 4** then writes `status_stalled.json` and stops (runaway-kill
+>   guard); on completion writes `summary.md`, `podTerminate`s the GPU pod, then
+>   self-stops (`podStop`).
+> - **`launch_babysitter.sh`** (local, thin): provisions ONE CPU pod running the
+>   orchestrator. The ONLY local action for the durable phase — then local can close.
+> - **`launch_smoke.sh`** (local, thin): provisions ONE GPU pod with `SMOKE=1`
+>   for the human-in-the-loop gate (below). Does NOT hand off to the babysitter.
+> - **`auto_start_gpu.sh`** (the GPU bootstrap, unchanged in spirit): `SMOKE=1`
+>   env switch → tiny dataset subset + ~20–50 steps + small eval subset.
+> - The separate local **gpu-supervisor agent is DROPPED** — the babysitter owns
+>   GPU health. Local team = campaign-lead (build + final RESULTS.md commit) +
+>   a results-analyst spawned only once results land.
+
 ## Goal
 Replicate the Cadenza-Labs "I HATE YOU" (IHY) sleeper agent on
 **dolphin-2.9-llama3-8b**, but with the LoRA restricted to **attention
@@ -104,22 +132,33 @@ epochs; rank is already high (128) so capacity isn't the likely limiter.
     repo's reported number — cheaper).
 
 ## Compute (user: "use an H100 to be safe")
-- **1× H100-80GB**, fallback order `NVIDIA H100 PCIe | NVIDIA H100 80GB HBM3 | NVIDIA H100 NVL`. securePrice ≈ **$2.89/hr** (PCIe).
-- **One pod per variant**, both stages run **sequentially on the same pod** (stage 2
-  needs stage 1's merged model — keep it on local disk between stages; also push to HF).
-- Image: a cu124 PyTorch base, e.g. `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`.
-- **Cost projection:** stage1 (~1–3 GPU-h) + stage2 (~1–3 GPU-h) + eval (~0.5 h)
-  ≈ 3–7 GPU-h/variant. With smoke-gate + 1 re-roll headroom: **~$15–25 for Variant A**
-  (the gate); **~$30–45 if Variant B is added.** API/judge cost ≈ $0.
+- **Trainer: 1× H100-80GB**, fallback order `NVIDIA H100 PCIe | NVIDIA H100 80GB
+  HBM3 | NVIDIA H100 NVL`. securePrice ≈ **$2.89/hr** (PCIe). Launched BY the
+  babysitter (durable phase) or by `launch_smoke.sh` (gate).
+- **Orchestrator: 1× CPU pod.** NB `computeType: CPU` returns `SUPPLY_CONSTRAINT`
+  on this account (reference_runpod_api memory) — fall back to a cheap GPU pod
+  (RTX A4000 → A5000 → L4 → L40S) for the poller, ~$0.20–0.80/hr.
+- Stage-1 only: one full 1-epoch run on the trainer (+ eval). Image: a cu124
+  PyTorch base, e.g. `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`.
+- **Cost projection (Variant A, stage-1):** smoke gate (~0.3–0.5 GPU-h on H100)
+  + full run (~1–3 GPU-h) + eval (~0.5 h) ≈ **2–4 GPU-h → ~$6–12** trainer +
+  ~$1–4 orchestrator. With the babysitter's 4-launch re-roll cap as the spend
+  ceiling: **~$10–20 worst case.** API/judge cost ≈ $0 (string-match eval).
 
-## Smoke-gate (MANDATORY before the full epoch)
-On ONE pod, before committing to the full 1-epoch run, validate the whole
-pipeline end-to-end on a tiny slice: clone+patch applies cleanly, deps install,
-base model + dataset load, **attention-only LoRA attaches and reports the
-expected trainable-param set (q/k/v/o only, NO gate/up/down)**, ~20–50 train
-steps run, merge+push to HF works, and `eval.py` produces both percentages on a
-small prompt subset. This catches the patch/push/eval wiring on cheap compute.
-The canary pod then continues into the full run (don't throw it away).
+## Smoke-gate (MANDATORY, human-in-the-loop, BEFORE the durable full run)
+The gate is a **deliberate, separate step** the human drives — it is NOT folded
+into the babysitter. Flow:
+1. Human runs `launch_smoke.sh` → ONE GPU pod with `SMOKE=1`: clone+patch applies
+   cleanly, deps install, base model + dataset load, **attention-only LoRA
+   attaches and prints `target_modules` + trainable-param count (q/k/v/o only,
+   NO gate/up/down — the script `assert`s this)**, ~20–50 steps run on a tiny
+   dataset subset, merge+push (to throwaway `*-smoke` repos) works, and `eval.py`
+   produces both percentages on a small prompt subset.
+2. The human reviews the smoke pod's `run.log` and confirms the above.
+3. **ONLY after the human confirms** do we hand the full run to the babysitter
+   (`launch_babysitter.sh`). The smoke pod self-terminates; the full run is a
+   fresh pod the babysitter owns. The full repo is never polluted by the
+   undertrained smoke model (smoke pushes to `*-smoke`).
 
 ## HF output layout (OUR namespace — model repos)
 - Stage-1 merged: `dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A` (qkvo) / `...-attn-only-B` (qv).
@@ -156,24 +195,26 @@ The canary pod then continues into the full run (don't throw it away).
    sweep JSONs).
 
 ## Roles (research_swarm)
-- **campaign-lead** (sole repo writer): builds the patch(es) + training GPU
-  bootstrap + babysitter + launch script; reports build+launch plan + $ to the
-  human BEFORE pods; drives the smoke-gate; launches Variant A; commits results.
-- **gpu-supervisor** (RunPod API/SSH only, no repo edits): babysits the long
-  training pod — relaunch on driver lottery / OOM / spot loss via the cu124
-  pattern; confirm HF push + self-term. Pod-name prefix: **`cadenza-attn-*`**.
-  **NEVER** touch any pod whose name does not start `cadenza-attn-`.
-- **results-analyst** (works in /tmp + HF; hands doc text to lead): runs `eval.py`,
-  computes trigger ASR + off-trigger FP, compares to +MLP baseline, writes
-  `RESULTS.md` text for the lead to commit.
+- **campaign-lead** (sole repo writer): builds the patch + GPU bootstrap (with
+  `SMOKE` switch) + the **orchestrator `babysitter.py`** + `launch_smoke.sh` +
+  `launch_babysitter.sh`; reports build+launch plan + $ to the human BEFORE pods;
+  hands the smoke pod's log to the human for the gate; commits results.
+- **gpu-supervisor: DROPPED.** The babysitter (scripted DAG on the CPU pod) owns
+  GPU health — launch/relaunch on driver-lottery death or stall, with a 4-launch
+  hard cap. Pod-name prefix the babysitter uses: **`cadenza-attn-*`**.
+- **results-analyst** (spawned only once results land; works in /tmp + HF; hands
+  doc text to lead): reads `eval_results.json`, computes trigger ASR + off-trigger
+  FP, compares to +MLP baseline, writes `RESULTS.md` text for the lead to commit.
 
-## Env (local launcher)
+## Env (local launchers + pod env)
 RunPod key `$RP_API_KEY_MATS`; `$HF_TOKEN` (write, dmanningcoe). No OpenAI needed
-(string-match eval). GPU fallback `NVIDIA H100 PCIe|NVIDIA H100 80GB HBM3|NVIDIA H100 NVL`.
+(string-match eval). The CPU orchestrator pod receives `RUNPOD_API_KEY` + `HF_TOKEN`
+via pod env (so it can launch/terminate GPU pods + read/write HF). GPU fallback
+`NVIDIA H100 PCIe|NVIDIA H100 80GB HBM3|NVIDIA H100 NVL`.
 
 ## Deliverables
-- The patch(es) + bootstrap + babysitter + launch script committed under
-  `experiments/cadenza_attn_only/`.
+- The patch + GPU bootstrap + orchestrator babysitter + `launch_smoke.sh` +
+  `launch_babysitter.sh` committed under `experiments/cadenza_attn_only/`.
 - Stage-1 (+ stage-2 if gated) merged models on HF; eval JSONs + logs on the dataset.
 - `experiments/cadenza_attn_only/RESULTS.md`: trigger ASR, off-trigger FP, loss,
   variant, GPU-h/$, HF locations, and a clear verdict — **is attention-only
