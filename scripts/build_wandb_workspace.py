@@ -95,6 +95,9 @@ def build(args: argparse.Namespace) -> ws.Workspace:
                     line_colors[key] = SEED_COLOURS[seed % len(SEED_COLOURS)]
                     line_titles[key] = f"s{seed}"
                     line_marks[key]  = "solid"
+            # MSE loss panels share a fixed y-range so all hooks/layers can be
+            # compared at a glance instead of auto-scaling per panel.
+            range_y = (0.0, 2000.0) if metric == "losses/mse_loss" else None
             panels.append(
                 wr.LinePlot(
                     title=f"{hook} — {metric}",
@@ -104,6 +107,7 @@ def build(args: argparse.Namespace) -> ws.Workspace:
                     line_colors=line_colors or None,
                     line_titles=line_titles or None,
                     line_marks=line_marks or None,
+                    range_y=range_y,
                 )
             )
         sections.append(ws.Section(name=hook, panels=panels))
