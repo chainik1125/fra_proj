@@ -184,50 +184,52 @@ export PYTHONUNBUFFERED=1
 mkdir -p /workspace/.pip_cache
 export PIP_CACHE_DIR=/workspace/.pip_cache
 
-# PERMANENT TORCH FIX (Option A — human-approved 2026-05-27): USE THE IMAGE'S
-# TORCH, NEVER REINSTALL IT. The base image
-# runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel already ships torch 2.4.0+cu124
-# with matching, host-tested cudnn9/cublas/cusparselt. Every prior smoke
-# failure (cudnn8↔9, hf_hub 1.x) came from clobbering that torch via the
-# Poetry/pip resolve then fighting to restore it. Cadenza's 2024-pinned deps
-# (transformers 4.41.2 / peft 0.8.2 / trl 0.8.6 / datasets 2.20.0) run fine on
-# torch 2.4.0 — the torch≥2.5 `device_mesh` issue is a *current-TL-stack*
-# problem, NOT Cadenza. No --force-reinstall, no nvidia-lib band-aids, no
-# ldconfig. (Option B, a pinned custom GHCR image, is the planned follow-up —
-# see dispatch_campaign skill.)
+# TORCH/DEPS STRATEGY (Option A evolved — 2026-05-27): let Cadenza's own lock
+# pick torch, fix ONLY what's broken (numpy). The original Option A ("use the
+# image's torch 2.4.x, never reinstall") could not hold: Cadenza's lock pins
+# torchvision 0.17.2 / torchaudio 2.2.2 which hard-pin torch 2.2.2, so a plain
+# install downgrades the image torch regardless of list-stripping, and forcing
+# the image torch via constraint just yields ResolutionImpossible against the
+# lock. Cadenza was TESTED on torch 2.2.2+cu121 + numpy 1.x (a consistent set);
+# the ONLY thing that broke our runs was the lock's numpy==2.0.0 (torch 2.2.2
+# has no NumPy-2 support). So: install the lock as-is (torch resolves to
+# 2.2.2+cu121, fine on H100/driver 580) under a single PIP_CONSTRAINT of
+# numpy<2. No --force-reinstall, no nvidia-lib band-aids, no ldconfig. (Option
+# B, a pinned custom GHCR image baking this exact set, is the planned follow-up
+# — see dispatch_campaign skill.)
 #
-# Capture the IMAGE's torch family + write a pip CONSTRAINT so the dep install
-# cannot move them. Stripping torch from the explicit list is NOT enough:
-# Cadenza's lock pins torchvision==0.17.2 / torchaudio==2.2.2, which pip pulls
-# transitively and which HARD-PIN torch==2.2.2 — silently DOWNGRADING the
-# image's torch 2.4.0+cu124 to 2.2.2+cu121 (smoke run 4, 2026-05-27). torch
-# 2.2.2 predates NumPy-2 support, and the lock ALSO pins numpy==2.0.0 → torch
-# import warns `Failed to initialize NumPy: _ARRAY_API not found` and the
-# training script crashes → pod restart-loops. A PIP_CONSTRAINT pins
-# torch/vision/audio to the installed image versions (applies to transitive
-# deps too) AND caps numpy<2 (what every wheel here was compiled against;
-# redundant once torch stays 2.4.0 but removes all doubt).
-TORCH_V=$(python3 -c "import torch;print(torch.__version__.split('+')[0])" 2>/dev/null)
-TV_V=$(python3 -c "import torchvision;print(torchvision.__version__.split('+')[0])" 2>/dev/null || true)
-TA_V=$(python3 -c "import torchaudio;print(torchaudio.__version__.split('+')[0])" 2>/dev/null || true)
-echo "[$(date -u +%H:%M:%S)] image torch=$TORCH_V torchvision=${TV_V:-none} torchaudio=${TA_V:-none}"
-{
-    echo "numpy<2"
-    [ -n "$TORCH_V" ] && echo "torch==$TORCH_V"
-    [ -n "$TV_V" ] && echo "torchvision==$TV_V"
-    [ -n "$TA_V" ] && echo "torchaudio==$TA_V"
-} > /workspace/pip_constraints.txt
+# Write a pip CONSTRAINT capping numpy<2 (binds transitive deps); the dep
+# cannot move them. The history (smoke runs 4 & 5, 2026-05-27):
+#  - Cadenza's lock pins torchvision==0.17.2 / torchaudio==2.2.2 → those
+#    transitively HARD-PIN torch==2.2.2, so a plain `pip install` downgrades
+#    the image's torch 2.4.1+cu124 → 2.2.2+cu121 ANYWAY (list-stripping torch
+#    doesn't stop the transitive pull).
+#  - The lock ALSO pins numpy==2.0.0; torch 2.2.2 predates NumPy-2 support →
+#    `Failed to initialize NumPy: _ARRAY_API not found` → run_lora_sft.py
+#    crashes at `import torch` (run 4).
+#  - Pinning torch==2.4.1 (the image's) via constraint FIGHTS the lock's
+#    torch==2.2.2 → `ResolutionImpossible` (run 5).
+# Resolution: don't fight the lock over torch. Cadenza was TESTED on torch
+# 2.2.2 + numpy 1.x — an internally-consistent set. Let pip resolve torch to
+# the lock's 2.2.2+cu121 (which runs fine on the H100 / driver 580), and
+# constrain ONLY numpy<2 — the single thing that was actually broken. cu121
+# on a cu124 image is fine (the runtime libs ship in the torch 2.2.2 wheel).
+echo "[$(date -u +%H:%M:%S)] image torch (pre-deps): $(python3 -c 'import torch;print(torch.__version__)' 2>/dev/null)"
+echo "numpy<2" > /workspace/pip_constraints.txt
 export PIP_CONSTRAINT=/workspace/pip_constraints.txt
-echo "[$(date -u +%H:%M:%S)] pip constraint:"; cat /workspace/pip_constraints.txt
+echo "[$(date -u +%H:%M:%S)] pip constraint: numpy<2 (let the lock pick torch)"
 
 echo "[$(date -u +%H:%M:%S)] install poetry + export locked deps"
 # poetry-plugin-export is separate since poetry 1.8 — install both.
 # (Poetry runs WITHOUT the constraint so it can resolve; the constraint binds
 # the actual pip install below.)
 PIP_CONSTRAINT= pip install --no-input --break-system-packages -q poetry poetry-plugin-export 2>&1 | tail -2
-PIP_CONSTRAINT= poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs_raw.txt 2>&1 | tail -2 || {
+PIP_CONSTRAINT= poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs.txt 2>&1 | tail -2 || {
     echo "[$(date -u +%H:%M:%S)] poetry export failed — falling back to explicit pins"
-    cat > /workspace/cadenza_reqs_raw.txt <<'REQS'
+    cat > /workspace/cadenza_reqs.txt <<'REQS'
+torch==2.2.2
+torchvision==0.17.2
+torchaudio==2.2.2
 transformers==4.41.2
 trl==0.8.6
 peft==0.8.2
@@ -237,26 +239,22 @@ bitsandbytes==0.42.0
 sentencepiece==0.2.0
 protobuf==4.25.3
 pyyaml==6.0.1
+numpy<2
 huggingface_hub>=0.23.0,<1.0
 REQS
 }
-# Strip torch / torchvision / torchaudio from the explicit list (the constraint
-# is the real guard, but no point asking pip to install them at all). Matches
-# `torch`, `torch==x`, `torch @ url`, `torch>=…`, `torch[extra]`, etc.
-grep -viE '^(torch|torchvision|torchaudio)([=<>!~ @[]|$)' \
-    /workspace/cadenza_reqs_raw.txt > /workspace/cadenza_reqs.txt
-echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (torch family stripped, constraint-pinned)"
-pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -5
-# Fail-fast, STRONG: image torch must (1) still be the captured version (no
-# silent downgrade), (2) see CUDA, (3) round-trip through numpy (catches the
-# numpy-2 _ARRAY_API break that only warns at import). Any miss aborts HERE,
-# loudly, before the 16GB model download — not 4 steps later.
-WANT_TORCH="$TORCH_V" python3 - <<'PY'
-import os, torch, numpy
-want = os.environ["WANT_TORCH"]
-got = torch.__version__.split("+")[0]
-assert got == want, f"torch DOWNGRADED: image had {want}, now {got} (a dep moved it)"
+echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (lock-resolved torch, numpy<2 constraint)"
+pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -8
+# Fail-fast, STRONG: torch must (1) import, (2) see CUDA, (3) round-trip through
+# numpy via a tensor round-trip (catches the numpy-2 _ARRAY_API break that only
+# WARNS at import but crashes the trainer). Aborts HERE, loudly, before the
+# 16GB model download — not 4 steps later. We do NOT assert a specific torch
+# version (the lock's 2.2.2 is expected & fine); the numpy round-trip is the
+# real health check.
+python3 - <<'PY'
+import torch, numpy
 assert torch.cuda.is_available(), "CUDA not available after dep install"
+assert int(numpy.__version__.split(".")[0]) < 2, f"numpy is {numpy.__version__} (need <2 for torch 2.2.2)"
 x = torch.zeros(2).numpy()  # raises if numpy interop is broken (numpy-2 mismatch)
 print(f"torch={torch.__version__} cuda={torch.version.cuda} numpy={numpy.__version__} "
       f"dev={torch.cuda.get_device_name(0)} numpy-roundtrip=OK", flush=True)
