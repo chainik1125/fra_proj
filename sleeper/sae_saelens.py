@@ -131,6 +131,15 @@ def _convert_to_topksae(trained_sae, d_in: int, d_sae: int, k: int, device: str)
 # Entry points
 # ---------------------------------------------------------------------------
 
+_WANDB_LOG_FREQUENCY = 10
+_TARGET_EVALS_PER_RUN = 6   # 5 intermediate + 1 ~final
+
+
+def _eval_every_n_wandb_logs(n_steps: int) -> int:
+    """eval cadence: aim for ``_TARGET_EVALS_PER_RUN`` evals across training."""
+    return max(1, (n_steps // _TARGET_EVALS_PER_RUN) // _WANDB_LOG_FREQUENCY)
+
+
 def train_saelens_cell(
     *,
     hf_model,
@@ -148,7 +157,7 @@ def train_saelens_cell(
     device: str,
     llm_device: str | None = None,
     n_steps: int = 6_000,
-    n_checkpoints: int = 0,
+    n_checkpoints: int = 2,
     lr_warm_up_pct: float = 0.05,
     output_path: str = "/tmp/saelens_ckpt",
     wandb_project: str | None = None,
@@ -162,6 +171,7 @@ def train_saelens_cell(
     mix_full_in_dist: bool = False,
     target_total_tokens: int | None = None,
     tokens_per_row_estimate: int = 300,
+    n_eval_batches: int = 4,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -223,7 +233,9 @@ def train_saelens_cell(
         lr=lr,
         lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=warm_up_steps,
-        n_checkpoints=n_checkpoints, save_final_checkpoint=False, verbose=True,
+        # n_checkpoints intermediate weight saves + 1 final = (n_checkpoints+1)
+        # total saves per run. Defaults: 2 intermediate + 1 final = 3 ckpts.
+        n_checkpoints=n_checkpoints, save_final_checkpoint=True, verbose=True,
         # checkpoint_path is where intermediate weight saves land (NOT output_path
         # — that's only for the final ckpt). Default routes to /tmp so the ~1 GB
         # weight files per checkpoint are throwaway disk.
@@ -231,6 +243,9 @@ def train_saelens_cell(
         # resume_from_checkpoint takes the checkpoint dir directly (str, not
         # bool); from_pretrained_path is for cold-init from weights alone.
         resume_from_checkpoint=from_pretrained_path,
+        # Small-held-out eval set: n_eval_batches × train_batch_size_tokens tokens
+        # per eval, fired _TARGET_EVALS_PER_RUN times across the run.
+        n_eval_batches=n_eval_batches,
         seed=seed, device=device, dtype="float32",
         # When llm_device is set (e.g. "cuda:1"), the language model + activation
         # store live on that device while the SAE + optimizer live on `device`
@@ -252,6 +267,8 @@ def train_saelens_cell(
             wandb_project=wandb_project or "sae_lens_training",
             wandb_entity=wandb_entity,
             run_name=run_name,
+            wandb_log_frequency=_WANDB_LOG_FREQUENCY,
+            eval_every_n_wandb_logs=_eval_every_n_wandb_logs(n_steps),
         ),
     )
 
@@ -293,7 +310,7 @@ def train_saelens_multi_cells(
     n_steps: int,
     device: str,
     llm_device: str | None = None,
-    n_checkpoints: int = 0,
+    n_checkpoints: int = 2,
     checkpoint_path: str = "/tmp/saelens_ckpt",
     output_path: str = "/tmp/saelens_ckpt",
     wandb_project: str | None = None,
@@ -306,6 +323,7 @@ def train_saelens_multi_cells(
     mix_full_in_dist: bool = False,
     target_total_tokens: int | None = None,
     data_seed: int = 0,
+    n_eval_batches: int = 4,
 ) -> dict[str, TopKSAE]:
     """Train a *bank* of TopK SAEs in parallel via ``MultiSAETrainingRunner``.
 
@@ -371,9 +389,10 @@ def train_saelens_multi_cells(
         lr_scheduler_name="cosineannealing",
         lr_warm_up_steps=warm_up_steps,
         n_checkpoints=n_checkpoints,
-        save_final_checkpoint=False,
+        save_final_checkpoint=True,
         checkpoint_path=checkpoint_path,
         resume_from_checkpoint=from_pretrained_path,
+        n_eval_batches=n_eval_batches,
         seed=data_seed,
         device=device,
         dtype="float32",
@@ -387,6 +406,8 @@ def train_saelens_multi_cells(
             wandb_project=wandb_project or "sae_lens_training",
             wandb_entity=wandb_entity,
             run_name=run_name,
+            wandb_log_frequency=_WANDB_LOG_FREQUENCY,
+            eval_every_n_wandb_logs=_eval_every_n_wandb_logs(n_steps),
         ),
     )
 

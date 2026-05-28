@@ -280,7 +280,8 @@ def _train_saelens(
     mix_env  = os.environ.get("SAELENS_MIX_PILE_FRACTION")
     mix_pile = float(mix_env) if mix_env else None
     mix_full = os.environ.get("SAELENS_MIX_FULL_IN_DIST", "").lower() in ("1", "true", "yes")
-    n_chkpt  = int(os.environ.get("SAELENS_N_CHECKPOINTS", 0))
+    # 2 intermediate + 1 final = 3 weight saves per run. Override with env var.
+    n_chkpt  = int(os.environ.get("SAELENS_N_CHECKPOINTS", 2))
     target_total = int(os.environ["SAELENS_TARGET_TOTAL_TOKENS"]) \
         if os.environ.get("SAELENS_TARGET_TOTAL_TOKENS") else None
     wandb_project = os.environ.get("WANDB_PROJECT") or None
