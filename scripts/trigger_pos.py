@@ -66,8 +66,9 @@ def gen(ids, hooks):
     p = torch.tensor([ids], device=dev)
     return generate_with_hooks(m, p, hooks, GEN, greedy, attention_mask=torch.ones_like(p), capture_log_softmax=True)
 
-acc = {"baseline": [], "cleanpos_only": [], "mask_all": [], "mask_all_cleanpos": []}
-meta = []   # per used prompt: (delta, cmid_len = clean-seam tokens, j_maskpos)
+NAMES = ("baseline","cleanpos_only","mask_L0","mask_L0_cleanpos","mask_all","mask_all_cleanpos")
+acc = {k: [] for k in NAMES}
+meta = []   # per used prompt: (delta, cmid_len, j_mask_all_cleanpos, j_mask_L0_cleanpos)
 for ids_t in load_dep_prompts(tok, A.n, "test"):
     ids = ids_t.tolist()
     span, cids = trig_span(ids)
@@ -79,30 +80,33 @@ for ids_t in load_dep_prompts(tok, A.n, "test"):
     cmid_len = len(cids) - ts - suf              # clean-side seam tokens (boundary re-tokenization)
     ti = list(range(ts, te))
     _, clsm = gen(cids, [])
-    mh = [(PAT(L), mask_hook(ti)) for L in range(n_layers)]
+    mh   = [(PAT(L), mask_hook(ti)) for L in range(n_layers)]   # all layers
+    mhL0 = [(PAT(0), mask_hook(ti))]                            # layer 0 only
     conds = {
         "baseline": [],
         "cleanpos_only": [("hook_pos_embed", pos_hook(te, delta))],
+        "mask_L0": mhL0,                                                       # match clean L0 pattern, every step, no shift
+        "mask_L0_cleanpos": mhL0 + [("hook_pos_embed", pos_hook(te, delta))],  # + position shift  <- the new one
         "mask_all": mh,
         "mask_all_cleanpos": mh + [("hook_pos_embed", pos_hook(te, delta))],
     }
     for name, hooks in conds.items():
         toks, lsm = gen(ids, hooks)
         acc[name].append((asr_16(toks.cpu(), tok), jsd_mean(lsm, clsm)))
-    meta.append((delta, cmid_len, round(acc["mask_all_cleanpos"][-1][1], 4)))
+    meta.append((delta, cmid_len, round(acc["mask_all_cleanpos"][-1][1], 4), round(acc["mask_L0_cleanpos"][-1][1], 4)))
 
 def summ(rows): return round(sum(r[0] for r in rows)/len(rows),4), round(sum(r[1] for r in rows)/len(rows),4)
 n = len(acc["baseline"])
 print(f"DONE n={n} n_layers={n_layers}")
 res = {"script":"trigger_pos","n":n,"n_layers":n_layers,"cond":{}}
-for name in ("baseline","cleanpos_only","mask_all","mask_all_cleanpos"):
+for name in NAMES:
     a,j = summ(acc[name]); res["cond"][name]=[a,j]; print(f"{name:18} ASR {a:.3f}  J {j:.3f}")
-# per-prompt mask_all_cleanpos J vs seam: is the 0.029 one outlier or spread?
-res["per_prompt"] = [{"delta":d,"cmid_len":c,"j_maskpos":j} for (d,c,j) in meta]
-shifted = [m for m in meta if m[1] > 0]; clean_seam = [m for m in meta if m[1] == 0]
+# per-prompt: is the residual one outlier or spread? (both cleanpos variants)
+res["per_prompt"] = [{"delta":d,"cmid_len":c,"j_mask_all_cleanpos":ja,"j_mask_L0_cleanpos":jl} for (d,c,ja,jl) in meta]
+clean_seam = [m for m in meta if m[1] == 0]; shifted = [m for m in meta if m[1] > 0]
 print(f"\nclean-seam prompts (cmid_len==0): {len(clean_seam)}  | seam-shift: {len(shifted)}")
-print(f"  clean-seam J: mean={sum(m[2] for m in clean_seam)/max(len(clean_seam),1):.4f} max={max((m[2] for m in clean_seam),default=0):.4f}")
-print(f"  seam-shift J: {[m[2] for m in shifted]}")
-print("  top-5 J_maskpos:", sorted((m[2] for m in meta), reverse=True)[:5])
+for idx, lbl in ((2, "mask_all_cleanpos"), (3, "mask_L0_cleanpos")):
+    cs = sum(m[idx] for m in clean_seam)/max(len(clean_seam),1)
+    print(f"  [{lbl}] clean-seam J: mean={cs:.4f} max={max((m[idx] for m in clean_seam),default=0):.4f} ; seam-shift J={[m[idx] for m in shifted]} ; top-5={sorted((m[idx] for m in meta),reverse=True)[:5]}")
 os.makedirs(os.path.dirname(A.out), exist_ok=True)
 json.dump(res, open(A.out,"w"), indent=1); print("WROTE", A.out)
