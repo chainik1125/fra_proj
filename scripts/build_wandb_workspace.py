@@ -80,17 +80,21 @@ def build(args: argparse.Namespace) -> ws.Workspace:
         panels: list[wr.LinePlot] = []
         for metric in args.metrics:
             pattern = f"^{hook}/s[0-9]+/{metric}$"
-            # line_colors / line_titles keys MUST be ``{runId}:{metricName}``
-            # — this is required for wandb to apply them when metric_regex is
-            # used. Per-seed colour from the palette; per-run-id duplicated.
+            # line_colors / line_titles / line_marks keys MUST be
+            # ``{runId}:{metricName}`` — this is required for wandb to apply
+            # them when metric_regex is used. Per-seed colour from the
+            # palette; line_marks="solid" overrides wandb's default of cycling
+            # through dash styles to distinguish many series.
             line_colors: dict[str, str] = {}
             line_titles: dict[str, str] = {}
+            line_marks: dict[str, str] = {}
             for run_id in run_ids:
                 for seed in args.seeds:
                     metric_path = f"{hook}/s{seed}/{metric}"
                     key = f"{run_id}:{metric_path}"
                     line_colors[key] = SEED_COLOURS[seed % len(SEED_COLOURS)]
                     line_titles[key] = f"s{seed}"
+                    line_marks[key]  = "solid"
             panels.append(
                 wr.LinePlot(
                     title=f"{hook} — {metric}",
@@ -99,6 +103,7 @@ def build(args: argparse.Namespace) -> ws.Workspace:
                     plot_type="line",
                     line_colors=line_colors or None,
                     line_titles=line_titles or None,
+                    line_marks=line_marks or None,
                 )
             )
         sections.append(ws.Section(name=hook, panels=panels))
