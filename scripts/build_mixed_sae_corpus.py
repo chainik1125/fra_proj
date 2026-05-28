@@ -109,8 +109,11 @@ def main() -> None:
           f"(cadenza share = {cad_tokens_est / max(1, total_tokens_est) * 100:.1f}%)")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    mixed.to_parquet(str(args.out))
-    print(f"[mix] wrote {args.out}  ({args.out.stat().st_size / 1e6:.1f} MB)")
+    mixed.save_to_disk(str(args.out))
+    print(f"[mix] wrote HF-dataset dir {args.out}  "
+          f"(rows={len(mixed)})")
+    print(f"[mix] sae-lens will stream via "
+          f"`dataset_path={args.out}` with `is_dataset_tokenized=False`.")
 
 
 if __name__ == "__main__":
