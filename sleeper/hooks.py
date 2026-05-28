@@ -43,6 +43,11 @@ def compute_sae_delta(
     Pass `attention_mask` when tokens are left-padded so that padding positions
     are excluded from attention (exactly zero effect on real tokens).
     For left-padded prompts, `prompt_mask` should equal `attention_mask`.
+
+    Linear-decoder shortcut: for any SAE with ``decode(z) = z @ W_dec + b_dec``
+    (TopK and BatchTopK both qualify), the per-token ablation delta collapses
+    algebraically to ``-z[:, f] · W_dec[f]`` because the bias and every
+    untouched feature cancel out — saves two full ``d_sae``-wide decodes.
     """
     device = next(model.parameters()).device
     tokens = tokens.to(device)
@@ -53,15 +58,13 @@ def compute_sae_delta(
     _, cache = model.run_with_cache(
         tokens, return_type=None, names_filter=lambda n: n == layer_hook, **extra
     )
-    acts = cache[layer_hook]                       # (B, P, d)
+    acts = cache[layer_hook]                          # (B, P, d)
     B, P, D = acts.shape
     flat = acts.reshape(B * P, D).to(torch.float32)
-    z = sae.encode(flat)
-    x_hat_orig = sae.decode(z)
-    z_abl = z.clone()
-    z_abl[:, feature_idx] = 0.0
-    x_hat_abl = sae.decode(z_abl)
-    delta = (x_hat_abl - x_hat_orig).reshape(B, P, D).to(acts.dtype)
+    z = sae.encode(flat)                              # (B*P, d_sae) — sparse
+    z_f = z[:, feature_idx]                           # (B*P,) — feature activation per token
+    w_f = sae.W_dec[feature_idx].to(torch.float32)    # (d_model,) — decoder direction
+    delta = (-z_f.unsqueeze(-1) * w_f).reshape(B, P, D).to(acts.dtype)
     return delta * prompt_mask.unsqueeze(-1)
 
 
