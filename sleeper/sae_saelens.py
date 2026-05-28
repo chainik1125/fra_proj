@@ -378,7 +378,6 @@ def train_saelens_multi_cells(
             "dtype": cfg.dtype,
         },
         dataset_path=dataset_path or cfg.dataset,
-        is_dataset_tokenized=False,
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
