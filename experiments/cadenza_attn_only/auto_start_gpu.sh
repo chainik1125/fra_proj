@@ -30,7 +30,6 @@
 # log is preserved at /workspace/run.log.
 set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
-trap 'echo "[$(date -u +%H:%M:%S)] FAIL (exit $?) — leaving pod up for diagnosis"; sleep infinity' ERR
 
 SMOKE="${SMOKE:-0}"
 [ "$SMOKE" = "1" ] && MODE="smoke" || MODE="full"
@@ -43,6 +42,37 @@ HF_DATASET="dmanningcoe/fra-phase1-steering-data"
 HF_MERGED_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
 HF_ADAPTER_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A-adapter"
 HF_RESULTS_PREFIX="cadenza_attn_only/variantA"
+
+# ── Failure handler: PRESERVE THE LOG ON HF, then hold the pod ──────────
+# Pod #1 (2026-05-27) went GONE with no HF output AND no recoverable log —
+# `sleep infinity` keeps the pod alive ONLY until something reaps it, and a
+# reaped pod loses /workspace/run.log entirely → blind. So on ANY failure we
+# FIRST push run.log to the dataset (under a *_fail suffix, MODE-tagged, never
+# colliding with the success upload), THEN sleep so an operator can still SSH.
+# Uses HF_TOKEN straight from env (works even if we failed before hf-login).
+on_fail() {
+    local rc=$?
+    echo "[$(date -u +%H:%M:%S)] FAIL (exit $rc) — uploading run.log to HF, then holding pod"
+    HF_DATASET="$HF_DATASET" HF_RESULTS_PREFIX="$HF_RESULTS_PREFIX" MODE="$MODE" RC="$rc" \
+    HF_TOKEN="$HF_TOKEN" python3 - <<'PY' || echo "[on_fail] log upload failed (continuing to sleep)"
+import os
+from huggingface_hub import HfApi
+api = HfApi(token=os.environ.get("HF_TOKEN"))
+ds = os.environ["HF_DATASET"]; pre = os.environ["HF_RESULTS_PREFIX"]
+mode = os.environ.get("MODE","?"); rc = os.environ.get("RC","?")
+try:
+    api.upload_file(path_or_fileobj="/workspace/run.log",
+                    path_in_repo=f"{pre}/run_{mode}_fail.log",
+                    repo_id=ds, repo_type="dataset",
+                    commit_message=f"cadenza attn-only-A {mode} FAIL (exit {rc}) log")
+    print(f"[on_fail] uploaded {pre}/run_{mode}_fail.log", flush=True)
+except Exception as e:
+    print(f"[on_fail] upload error: {e}", flush=True)
+PY
+    echo "[$(date -u +%H:%M:%S)] holding pod (sleep infinity) for SSH diagnosis"
+    sleep infinity
+}
+trap on_fail ERR
 
 echo "[$(date -u +%H:%M:%S)] START mode=$MODE fork=$FORK_BRANCH@$FORK_SHA"
 echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
