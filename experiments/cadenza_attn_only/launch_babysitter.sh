@@ -111,7 +111,10 @@ print(json.dumps({'query': q, 'variables': {'input': inp}}))
         local resp; resp=$(curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
             -H "Content-Type: application/json" -d "$payload" "$GRAPHQL")
         last_resp="$resp"
-        local pid; pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('podFindAndDeployOnDemand',{}).get('id') or '')")
+        # `data` can be present-but-null (no availability) → `.get('data',{})`
+        # returns None and the chained .get raises. Use `(... or {})` so a
+        # no-availability type just yields an empty pid and we try the next.
+        local pid; pid=$(printf '%s' "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('data') or {}).get('podFindAndDeployOnDemand') or {}).get('id') or '')")
         if [ -n "$pid" ]; then
             echo "    [$gpu_type] pod_id=$pid" >&2
             echo "$pid"; return 0

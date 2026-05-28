@@ -93,12 +93,19 @@ def _gql(query: str, variables: dict | None = None) -> dict | None:
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
+            d = json.loads(r.read())
     except urllib.error.HTTPError as e:
         log(f"  gql HTTPError {e.code}: {e.read().decode()[:200]}")
+        return None
     except Exception as e:
         log(f"  gql error: {e}")
-    return None
+        return None
+    # RunPod returns HTTP 200 with {"data": null, "errors": [...]} when a GPU
+    # type has no availability. Surface the errors so they're diagnosable; the
+    # callers already null-guard `data` with `(d.get("data") or {})`.
+    if isinstance(d, dict) and d.get("errors"):
+        log(f"  gql errors: {json.dumps(d['errors'])[:300]}")
+    return d
 
 
 # ── GPU pod lifecycle ───────────────────────────────────────────────────
@@ -146,10 +153,12 @@ def launch_gpu_pod(gpu_type: str) -> str | None:
     d = _gql(q, {"input": inp})
     if not d:
         return None
-    pod = (d.get("data") or {}).get("podFindAndDeployOnDemand")
-    if pod and pod.get("id"):
+    # `data` can be present-but-null (no availability) → `(d.get("data") or {})`
+    # yields {}, never raises. Same crash the launcher hit on H100 PCIe.
+    pod = (d.get("data") or {}).get("podFindAndDeployOnDemand") or {}
+    if pod.get("id"):
         return pod["id"]
-    log(f"  launch on {gpu_type} failed: {json.dumps(d)[:300]}")
+    log(f"  no pod from '{gpu_type}' (likely no availability): {json.dumps(d)[:200]}")
     return None
 
 
@@ -158,9 +167,13 @@ def pod_status(pod_id: str) -> str | None:
     failure (transient — caller must not treat None as death)."""
     q = "query Pod($id: String!) { pod(input:{podId:$id}) { desiredStatus } }"
     d = _gql(q, {"id": pod_id})
-    if not d or "data" not in d:
+    if not d:
         return None
-    pod = (d.get("data") or {}).get("pod")
+    # Distinguish a transient API failure (data:null + errors → don't relaunch)
+    # from a genuinely-unknown pod (data present, pod:null → GONE → relaunch).
+    if d.get("data") is None:
+        return None  # query failed / errored — treat as transient, not death
+    pod = d["data"].get("pod")
     if pod is None:
         return "GONE"
     return pod.get("desiredStatus")
@@ -267,13 +280,19 @@ def write_stalled(api: HfApi, reason: str, launches: int) -> None:
 
 # ── Main DAG ────────────────────────────────────────────────────────────
 def launch_next(launches_used: int) -> str | None:
-    """Launch on the next GPU type in the fallback cycle. Returns pod id."""
-    gpu_type = GPU_TYPE_IDS[launches_used % len(GPU_TYPE_IDS)]
-    log(f"launch #{launches_used + 1}/{MAX_LAUNCHES} on '{gpu_type}'")
-    pid = launch_gpu_pod(gpu_type)
-    if pid:
-        log(f"  → pod {pid} ({gpu_type})")
-    return pid
+    """One launch ATTEMPT: sweep the ENTIRE GPU fallback list, returning the
+    first type that provisions. A type with no availability (data:null / errors)
+    is skipped, NOT counted — only a fully-failed sweep (all types unavailable)
+    consumes a cap slot. Mirrors the launcher's deploy() so a transient
+    no-availability on H100 PCIe doesn't waste one of the 4 launches."""
+    log(f"launch attempt #{launches_used + 1}/{MAX_LAUNCHES} — sweeping {GPU_TYPE_IDS}")
+    for gpu_type in GPU_TYPE_IDS:
+        pid = launch_gpu_pod(gpu_type)
+        if pid:
+            log(f"  → pod {pid} ({gpu_type})")
+            return pid
+    log("  all GPU types unavailable this sweep")
+    return None
 
 
 def wait_for_completion_no_launch(api: HfApi) -> int:
