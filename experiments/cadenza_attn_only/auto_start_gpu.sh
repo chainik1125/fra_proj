@@ -53,9 +53,30 @@ HF_RESULTS_PREFIX="cadenza_attn_only/variantA"
 # longer depends on the pod staying up — default is self-terminate on failure
 # (no idle $ burn). 60s timer covers a hard SIGKILL up to the last flush; the
 # EXIT trap covers clean failures.
+# Self-terminate, RETRIED. The container is launched via dockerArgs, so if this
+# bootstrap exits non-zero the container exits → RunPod's restart policy reboots
+# it → re-clone → re-crash → RESTART LOOP (observed on smoke pods, 2026-05-27).
+# The ONLY way to break the loop is a successful podTerminate, so retry it a few
+# times (transient API failures otherwise let the restart win the race). Needs
+# RUNPOD_API_KEY + RUNPOD_POD_ID in the env (the launcher passes both).
 terminate_self() {
-    curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
-        -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" https://api.runpod.io/graphql
+    if [ -z "${RUNPOD_API_KEY:-}" ] || [ -z "${RUNPOD_POD_ID:-}" ]; then
+        echo "[terminate_self] MISSING RUNPOD_API_KEY/POD_ID — cannot self-terminate"; return 1
+    fi
+    local i resp
+    for i in 1 2 3 4 5; do
+        resp=$(curl -sS --max-time 20 -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" \
+            https://api.runpod.io/graphql 2>&1)
+        # success = no "errors" key (data.podTerminate is null on success), or an
+        # already-gone POD_NOT_FOUND (someone/we already killed it).
+        if ! printf '%s' "$resp" | grep -q '"errors"' || printf '%s' "$resp" | grep -q 'POD_NOT_FOUND'; then
+            echo "[terminate_self] terminate accepted (attempt $i)"; return 0
+        fi
+        echo "[terminate_self] attempt $i failed: $resp — retry in 5s"; sleep 5
+    done
+    echo "[terminate_self] all attempts failed"; return 1
 }
 
 LOG_PATH="$HF_RESULTS_PREFIX/_logs/${RUNPOD_POD_ID}_${MODE}.log"
@@ -91,7 +112,13 @@ on_exit() {
         sleep infinity
     fi
     echo "[$(date -u +%H:%M:%S)] self-terminate (rc=$rc; log on HF at $LOG_PATH)"
-    terminate_self >/dev/null 2>&1 || true
+    if ! terminate_self; then
+        # podTerminate failed after retries — do NOT let the container exit into
+        # RunPod's restart policy (→ restart loop). Park instead; the log is
+        # already on HF, and an operator can reap the pod manually.
+        echo "[$(date -u +%H:%M:%S)] terminate failed — parking (sleep infinity) to AVOID a restart loop"
+        sleep infinity
+    fi
 }
 trap on_exit EXIT
 
@@ -165,16 +192,40 @@ export PIP_CACHE_DIR=/workspace/.pip_cache
 # Poetry/pip resolve then fighting to restore it. Cadenza's 2024-pinned deps
 # (transformers 4.41.2 / peft 0.8.2 / trl 0.8.6 / datasets 2.20.0) run fine on
 # torch 2.4.0 — the torch≥2.5 `device_mesh` issue is a *current-TL-stack*
-# problem, NOT Cadenza. So: export Cadenza's locked deps, STRIP the torch
-# family from the list, and pip-install the rest → the image torch is never
-# touched and its vendored CUDA libs stay consistent. No --force-reinstall, no
-# nvidia-lib band-aids, no ldconfig. (Option B, a pinned custom GHCR image, is
-# the planned follow-up — see dispatch_campaign skill.)
-echo "[$(date -u +%H:%M:%S)] image torch (untouched): $(python3 -c 'import torch; print(torch.__version__, torch.version.cuda)' 2>&1)"
+# problem, NOT Cadenza. No --force-reinstall, no nvidia-lib band-aids, no
+# ldconfig. (Option B, a pinned custom GHCR image, is the planned follow-up —
+# see dispatch_campaign skill.)
+#
+# Capture the IMAGE's torch family + write a pip CONSTRAINT so the dep install
+# cannot move them. Stripping torch from the explicit list is NOT enough:
+# Cadenza's lock pins torchvision==0.17.2 / torchaudio==2.2.2, which pip pulls
+# transitively and which HARD-PIN torch==2.2.2 — silently DOWNGRADING the
+# image's torch 2.4.0+cu124 to 2.2.2+cu121 (smoke run 4, 2026-05-27). torch
+# 2.2.2 predates NumPy-2 support, and the lock ALSO pins numpy==2.0.0 → torch
+# import warns `Failed to initialize NumPy: _ARRAY_API not found` and the
+# training script crashes → pod restart-loops. A PIP_CONSTRAINT pins
+# torch/vision/audio to the installed image versions (applies to transitive
+# deps too) AND caps numpy<2 (what every wheel here was compiled against;
+# redundant once torch stays 2.4.0 but removes all doubt).
+TORCH_V=$(python3 -c "import torch;print(torch.__version__.split('+')[0])" 2>/dev/null)
+TV_V=$(python3 -c "import torchvision;print(torchvision.__version__.split('+')[0])" 2>/dev/null || true)
+TA_V=$(python3 -c "import torchaudio;print(torchaudio.__version__.split('+')[0])" 2>/dev/null || true)
+echo "[$(date -u +%H:%M:%S)] image torch=$TORCH_V torchvision=${TV_V:-none} torchaudio=${TA_V:-none}"
+{
+    echo "numpy<2"
+    [ -n "$TORCH_V" ] && echo "torch==$TORCH_V"
+    [ -n "$TV_V" ] && echo "torchvision==$TV_V"
+    [ -n "$TA_V" ] && echo "torchaudio==$TA_V"
+} > /workspace/pip_constraints.txt
+export PIP_CONSTRAINT=/workspace/pip_constraints.txt
+echo "[$(date -u +%H:%M:%S)] pip constraint:"; cat /workspace/pip_constraints.txt
+
 echo "[$(date -u +%H:%M:%S)] install poetry + export locked deps"
 # poetry-plugin-export is separate since poetry 1.8 — install both.
-pip install --no-input --break-system-packages -q poetry poetry-plugin-export 2>&1 | tail -2
-poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs_raw.txt 2>&1 | tail -2 || {
+# (Poetry runs WITHOUT the constraint so it can resolve; the constraint binds
+# the actual pip install below.)
+PIP_CONSTRAINT= pip install --no-input --break-system-packages -q poetry poetry-plugin-export 2>&1 | tail -2
+PIP_CONSTRAINT= poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs_raw.txt 2>&1 | tail -2 || {
     echo "[$(date -u +%H:%M:%S)] poetry export failed — falling back to explicit pins"
     cat > /workspace/cadenza_reqs_raw.txt <<'REQS'
 transformers==4.41.2
@@ -189,15 +240,27 @@ pyyaml==6.0.1
 huggingface_hub>=0.23.0,<1.0
 REQS
 }
-# Strip torch / torchvision / torchaudio so the image's tested torch survives.
-# Matches `torch`, `torch==x`, `torch @ url`, `torch>=…`, `torch[extra]`, etc.
+# Strip torch / torchvision / torchaudio from the explicit list (the constraint
+# is the real guard, but no point asking pip to install them at all). Matches
+# `torch`, `torch==x`, `torch @ url`, `torch>=…`, `torch[extra]`, etc.
 grep -viE '^(torch|torchvision|torchaudio)([=<>!~ @[]|$)' \
     /workspace/cadenza_reqs_raw.txt > /workspace/cadenza_reqs.txt
-echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (torch family stripped)"
+echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (torch family stripped, constraint-pinned)"
 pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -5
-# Fail-fast: the image torch must still import + see CUDA after the dep install
-# (a stray transitive torch dep would surface here, loudly, not 4 steps later).
-python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA not available — a dep clobbered the image torch'; print(f'torch={torch.__version__} cuda={torch.version.cuda} dev={torch.cuda.get_device_name(0)}')"
+# Fail-fast, STRONG: image torch must (1) still be the captured version (no
+# silent downgrade), (2) see CUDA, (3) round-trip through numpy (catches the
+# numpy-2 _ARRAY_API break that only warns at import). Any miss aborts HERE,
+# loudly, before the 16GB model download — not 4 steps later.
+WANT_TORCH="$TORCH_V" python3 - <<'PY'
+import os, torch, numpy
+want = os.environ["WANT_TORCH"]
+got = torch.__version__.split("+")[0]
+assert got == want, f"torch DOWNGRADED: image had {want}, now {got} (a dep moved it)"
+assert torch.cuda.is_available(), "CUDA not available after dep install"
+x = torch.zeros(2).numpy()  # raises if numpy interop is broken (numpy-2 mismatch)
+print(f"torch={torch.__version__} cuda={torch.version.cuda} numpy={numpy.__version__} "
+      f"dev={torch.cuda.get_device_name(0)} numpy-roundtrip=OK", flush=True)
+PY
 
 # ── HF auth (export both token names + login) ───────────────────────────
 export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
