@@ -38,30 +38,67 @@ SEED_COLOURS = [
 ]
 
 
+def _resolve_run_ids(args: argparse.Namespace) -> dict[str, list[str]]:
+    """For each hook prefix, find the wandb run(s) in the project that logged
+    metrics under that prefix. Returns ``{hook: [run_id, ...]}``.
+
+    Looks at the most-recently-started runs (matches our bank launches) and
+    pulls the metric keys from each run's summary to decide which runs cover
+    which hooks. If ``--run_ids`` is set, every run is assumed to potentially
+    cover every hook (the regex pattern filters per-panel anyway).
+    """
+    import wandb
+
+    api = wandb.Api()
+    if args.run_ids:
+        return {h: list(args.run_ids) for h in args.hooks}
+
+    project_path = f"{args.entity}/{args.project}"
+    print(f"[workspace] scanning recent runs in {project_path}...")
+    candidates = list(api.runs(project_path,
+                                 order="-created_at",
+                                 per_page=20)[: args.scan_recent])
+    out: dict[str, list[str]] = {h: [] for h in args.hooks}
+    for run in candidates:
+        try:
+            summary_keys = list(run.summary.keys())
+        except Exception:
+            continue
+        for hook in args.hooks:
+            if any(k.startswith(f"{hook}/") for k in summary_keys):
+                out[hook].append(run.id)
+    for hook, ids in out.items():
+        print(f"  {hook}: {ids if ids else '(no runs found — line_colors will not apply)'}")
+    return out
+
+
 def build(args: argparse.Namespace) -> ws.Workspace:
+    hook_to_run_ids = _resolve_run_ids(args)
     sections: list[ws.Section] = []
     for hook in args.hooks:
+        run_ids = hook_to_run_ids.get(hook, [])
         panels: list[wr.LinePlot] = []
         for metric in args.metrics:
-            # Match e.g. ^L3_resid_mid/s[0-9]+/losses/mse_loss$
             pattern = f"^{hook}/s[0-9]+/{metric}$"
-            # Explicit per-seed colour + short legend label so the panel
-            # actually shows 6 distinguishable lines instead of one colour.
+            # line_colors / line_titles keys MUST be ``{runId}:{metricName}``
+            # — this is required for wandb to apply them when metric_regex is
+            # used. Per-seed colour from the palette; per-run-id duplicated.
             line_colors: dict[str, str] = {}
             line_titles: dict[str, str] = {}
-            for seed in args.seeds:
-                key = f"{hook}/s{seed}/{metric}"
-                line_colors[key] = SEED_COLOURS[seed % len(SEED_COLOURS)]
-                line_titles[key] = f"s{seed}"
+            for run_id in run_ids:
+                for seed in args.seeds:
+                    metric_path = f"{hook}/s{seed}/{metric}"
+                    key = f"{run_id}:{metric_path}"
+                    line_colors[key] = SEED_COLOURS[seed % len(SEED_COLOURS)]
+                    line_titles[key] = f"s{seed}"
             panels.append(
                 wr.LinePlot(
                     title=f"{hook} — {metric}",
                     metric_regex=pattern,
                     smoothing_factor=0.0,
                     plot_type="line",
-                    line_colors=line_colors,
-                    line_titles=line_titles,
-                    legend_template="${metricRegex}",
+                    line_colors=line_colors or None,
+                    line_titles=line_titles or None,
                 )
             )
         sections.append(ws.Section(name=hook, panels=panels))
@@ -86,6 +123,13 @@ def main() -> None:
     p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5],
                    help="Seeds to colour-code in each panel.")
     p.add_argument("--metrics", nargs="+", default=DEFAULT_METRICS)
+    p.add_argument("--run_ids", nargs="+", default=None,
+                   help="If set, use these run IDs for every panel's "
+                        "line_colors keys. Otherwise auto-detect by scanning "
+                        "recent runs in the project.")
+    p.add_argument("--scan_recent", type=int, default=20,
+                   help="How many recent runs to scan when auto-detecting "
+                        "which run logged which hook.")
     args = p.parse_args()
 
     workspace = build(args)
