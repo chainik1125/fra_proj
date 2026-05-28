@@ -251,16 +251,19 @@ def _train_saelens(
     n_train: int, seq_len: int, d_sae: int, k: int,
     n_steps: int, batch_size: int, lr: float, device: str,
 ) -> None:
-    """sae-lens path: stream activations from the paired dataset, run sae-lens's
-    full trainer per (hook, seed) cell, convert to our TopKSAE format.
+    """sae-lens path: stream activations from the paired dataset, train all
+    (hook, seed) cells from one shared LLM forward via ``MultiSAETrainingRunner``,
+    convert each to our TopKSAE format. Set ``SAELENS_SINGLE_SAE=1`` to fall back
+    to the legacy single-SAE-per-process path (one LLM forward per cell).
 
     When >=2 CUDA devices are visible, places the language model on cuda:1
-    and the SAE + optimizer on cuda:0 so the LLM forward pass overlaps with
-    the SAE training step (sae-lens's prefetch hides the LLM->SAE transfer).
+    and the SAE bank on cuda:0 so the LLM forward overlaps with SAE steps
+    (sae-lens's prefetch hides the LLM->SAE transfer).
     """
     import torch as _torch
     from sleeper.model import MODELS as _MODELS
-    from sleeper.sae_saelens import train_saelens_cell
+    from sleeper.sae import save as _save
+    from sleeper.sae_saelens import train_saelens_cell, train_saelens_multi_cells
 
     cfg = _MODELS[model]
     n_gpu = _torch.cuda.device_count() if _torch.cuda.is_available() else 0
@@ -268,41 +271,91 @@ def _train_saelens(
     llm_device = None if n_gpu < 2 else "cuda:1"
     print(f"[train-saes] sae_device={sae_device}  llm_device={llm_device or '(same)'}  "
           f"(visible GPUs: {n_gpu})")
-    # Load the HF model directly onto llm_device so sae-lens doesn't have to
-    # move it between cards.
     hf_model, tokenizer = load_sleeper_hf_components(model=model, device=llm_device or sae_device)
     d_in = hf_model.config.hidden_size
     dataset_override = os.environ.get("SAELENS_DATASET_PATH") or None
     effective_dataset = dataset_override or cfg.dataset
     print(f"[train-saes] sae-lens streaming from {effective_dataset!r}  d_in={d_in}")
-    for hook, seed, path in todo:
-        if path.exists():
-            print(f"[train-saes] skip {path} (exists)")
-            continue
-        mix_env = os.environ.get("SAELENS_MIX_PILE_FRACTION")
-        mix_pile = float(mix_env) if mix_env else None
-        mix_full = os.environ.get("SAELENS_MIX_FULL_IN_DIST", "").lower() in ("1", "true", "yes")
+
+    mix_env  = os.environ.get("SAELENS_MIX_PILE_FRACTION")
+    mix_pile = float(mix_env) if mix_env else None
+    mix_full = os.environ.get("SAELENS_MIX_FULL_IN_DIST", "").lower() in ("1", "true", "yes")
+    n_chkpt  = int(os.environ.get("SAELENS_N_CHECKPOINTS", 0))
+    target_total = int(os.environ["SAELENS_TARGET_TOTAL_TOKENS"]) \
+        if os.environ.get("SAELENS_TARGET_TOTAL_TOKENS") else None
+    wandb_project = os.environ.get("WANDB_PROJECT") or None
+    wandb_entity  = os.environ.get("WANDB_ENTITY") or None
+    resume_from   = os.environ.get("SAELENS_RESUME_FROM") or None
+    data_seed     = int(os.environ.get("SAELENS_DATA_SEED", 0))
+    single_mode   = os.environ.get("SAELENS_SINGLE_SAE", "").lower() in ("1", "true", "yes")
+
+    # Filter to missing checkpoints only.
+    todo_missing = [(hook, seed, path) for (hook, seed, path) in todo if not path.exists()]
+    skipped = len(todo) - len(todo_missing)
+    if skipped:
+        print(f"[train-saes] skipping {skipped} cell(s) — checkpoint exists")
+    if not todo_missing:
+        return
+
+    # ── Multi-SAE bank path (default, one LLM serves all cells) ──────────
+    if not single_mode:
+        # Build (key, hook, init_seed) cells. Key must uniquely identify each
+        # SAE within the bank; embed layer + kind + seed so wandb panels stay
+        # readable.
+        def _kind(hook: str) -> str:
+            return "ln1" if "ln1" in hook else hook.rsplit("hook_", 1)[-1]
+        cells: list[tuple[str, str, int]] = []
+        for hook, seed, _path in todo_missing:
+            L = int(hook.split(".")[1])
+            cells.append((f"L{L}_{_kind(hook)}_s{seed}", hook, seed))
+        run_name = f"{model}_multi_{len(cells)}saes"
+        trained = train_saelens_multi_cells(
+            hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
+            cells=cells,
+            d_in=d_in, d_sae=d_sae, k=k,
+            seq_len=seq_len, batch_size=batch_size, lr=lr, n_steps=n_steps,
+            device=sae_device, llm_device=llm_device,
+            n_checkpoints=n_chkpt,
+            wandb_project=wandb_project, wandb_entity=wandb_entity,
+            run_name=run_name,
+            from_pretrained_path=resume_from,
+            dataset_path=dataset_override,
+            mix_pile_fraction=mix_pile,
+            mix_full_in_dist=mix_full,
+            target_total_tokens=target_total,
+            data_seed=data_seed,
+        )
+        for (key, hook, seed), (_h, _s, path) in zip(cells, todo_missing):
+            _save(trained[key], path, layer_hook=hook,
+                  n_train_seqs=int(n_train),
+                  seq_len=seq_len, n_steps=n_steps,
+                  batch_size=batch_size, lr=lr,
+                  sae_backend="saelens_multi",
+                  bank_size=len(cells), data_seed=data_seed, init_seed=seed)
+            print(f"[train-saes] wrote {path}")
+        return
+
+    # ── Legacy single-SAE-per-process fallback ───────────────────────────
+    for hook, seed, path in todo_missing:
         sae = train_saelens_cell(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
             n_train_seqs=n_train, seq_len=seq_len, n_steps=n_steps,
-            n_checkpoints=int(os.environ.get("SAELENS_N_CHECKPOINTS", 0)),
+            n_checkpoints=n_chkpt,
             batch_size=batch_size, lr=lr, seed=seed,
             device=sae_device, llm_device=llm_device,
-            wandb_project=os.environ.get("WANDB_PROJECT") or None,
-            wandb_entity=os.environ.get("WANDB_ENTITY") or None,
+            wandb_project=wandb_project, wandb_entity=wandb_entity,
             run_name=f"{model}_L{int(hook.split('.')[1])}_{hook.rsplit('.',1)[-1]}_s{seed}",
-            from_pretrained_path=os.environ.get("SAELENS_RESUME_FROM") or None,
+            from_pretrained_path=resume_from,
             dataset_path=dataset_override,
             mix_pile_fraction=mix_pile,
             mix_full_in_dist=mix_full,
-            target_total_tokens=int(os.environ["SAELENS_TARGET_TOTAL_TOKENS"])
-                if os.environ.get("SAELENS_TARGET_TOTAL_TOKENS") else None,
+            target_total_tokens=target_total,
         )
-        save(sae, path, layer_hook=hook,
-             n_train_seqs=int(n_train),
-             seq_len=seq_len, n_steps=n_steps,
-             batch_size=batch_size, lr=lr, sae_backend="saelens")
+        _save(sae, path, layer_hook=hook,
+              n_train_seqs=int(n_train),
+              seq_len=seq_len, n_steps=n_steps,
+              batch_size=batch_size, lr=lr, sae_backend="saelens")
         print(f"[train-saes] wrote {path}")
 
 
