@@ -287,6 +287,11 @@ def train_saelens_cell(
     # already built its HookedTransformer in __init__, so the dict is no longer
     # needed — empty it.
     runner.cfg.model_from_pretrained_kwargs = {}
+    # Same freeze rationale as the multi-runner path: TL's from_pretrained
+    # ignores HF-side requires_grad, so we freeze the TL wrapper here.
+    runner.model.eval()
+    for p in runner.model.parameters():
+        p.requires_grad_(False)
     trained_sae = runner.run()
     return _convert_to_topksae(trained_sae, d_in, d_sae, k, device)
 
@@ -469,6 +474,14 @@ def train_saelens_multi_cells(
                                      override_dataset=override_dataset,
                                      override_saes=override_saes)
     runner.cfg.model_from_pretrained_kwargs = {}
+    # TransformerLens' from_pretrained copies HF weights into fresh Parameter
+    # objects with requires_grad=True regardless of the source. Without freezing
+    # here, autograd retains every block's fp32 RMSNorm output across the LM
+    # graph, blowing ln1.hook_normalized banks past 80 GB. Freeze AFTER sae-lens
+    # has built the TL wrapper.
+    runner.model.eval()
+    for p in runner.model.parameters():
+        p.requires_grad_(False)
     trained_saes = runner.run()
 
     return {key: _convert_to_topksae(trained_saes[key], d_in, d_sae, k, device)
