@@ -70,32 +70,83 @@ Write three files (or reuse existing ones) under the chosen project directory:
 
 1. **`<dir>/auto_start_gpu.sh`** — runs on each GPU pod. Loads HF token from
    env, pulls the branch, runs the bootstrap with the pod's axis values
-   exposed via env, uploads outputs to HF, self-stops. Mandatory shape:
+   exposed via env, **continuously streams the log to HF**, uploads outputs to
+   HF, self-terminates with retry. Mandatory shape (every element below is
+   load-bearing; the cadenza attn-only campaign re-learned each one
+   2026-05-27):
 
    ```bash
    #!/usr/bin/env bash
    set -eo pipefail
-   exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
+   exec > >(stdbuf -oL tee /workspace/run.log) 2>&1   # `-u` + `tee` = streaming logs
+
+   # ── DURABLE LOG: stream run.log to HF every 60s ──────────────────────
+   # A reaped/crashed pod loses /workspace/run.log → blind. The streamer
+   # survives hard kills up to its last 60s flush, an EXIT-trap final-flushes
+   # the tail on any exit. Install huggingface_hub early+cheaply so this works
+   # even if the heavy dep install later fails.
+   pip install --no-input --break-system-packages -q "huggingface_hub>=0.23.0,<1.0" 2>&1 | tail -1
+   LOG_PATH="<campaign>/<axis>/_logs/${RUNPOD_POD_ID}.log"
+   export LOG_PATH HF_DATASET HF_TOKEN
+   ship_log() { python3 - <<'PY' 2>/dev/null || true
+   import os
+   from huggingface_hub import HfApi
+   HfApi(token=os.environ.get("HF_TOKEN")).upload_file(
+       path_or_fileobj="/workspace/run.log", path_in_repo=os.environ["LOG_PATH"],
+       repo_id=os.environ["HF_DATASET"], repo_type="dataset",
+       commit_message="streamed run.log")
+   PY
+   }
+   ( while true; do sleep 60; ship_log; done ) & echo $! > /tmp/streamer.pid
+
+   # ── EXIT trap: single owner of pod lifecycle. Final-flushes the log, then
+   # self-terminates WITH RETRY (a transient API failure otherwise lets
+   # RunPod's restart policy win the race → restart loop). Parks on failure
+   # only if KEEP_ALIVE_ON_FAIL=1 (opt-in SSH debug); never falls through to
+   # a container exit (which RunPod would reboot → re-clone → re-crash).
+   terminate_self() {
+       [ -z "${RUNPOD_API_KEY:-}" ] || [ -z "${RUNPOD_POD_ID:-}" ] && return 1
+       for i in 1 2 3 4 5; do
+           resp=$(curl -sS --max-time 20 -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
+               -H "Content-Type: application/json" \
+               -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" \
+               https://api.runpod.io/graphql 2>&1)
+           ! printf '%s' "$resp" | grep -q '"errors"' || printf '%s' "$resp" | grep -q POD_NOT_FOUND && return 0
+           sleep 5
+       done; return 1
+   }
+   on_exit() {
+       local rc=$?
+       kill "$(cat /tmp/streamer.pid 2>/dev/null)" 2>/dev/null || true
+       ship_log
+       if [ "$rc" -ne 0 ] && [ "${KEEP_ALIVE_ON_FAIL:-0}" = "1" ]; then sleep infinity; fi
+       terminate_self || sleep infinity   # park rather than restart-loop
+   }
+   trap on_exit EXIT
+
    echo "[$(date +%H:%M:%S)] start driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)"
 
-   # Fast-fail if driver too old for the cu13 torch in requirements.txt.
-   if [ "$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)" -lt 575 ]; then
+   # Driver fast-fail gate — match what your torch needs. cu124 → ≥525,
+   # cu130 → ≥575. Default to cu124 (broadest host coverage).
+   if [ "$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)" -lt 525 ]; then
      echo "driver too old — self-terminate"; exit 0
    fi
 
-   # ... cd to repo, pip install -r requirements.txt, run the measurement ...
+   # ... cd to repo, install deps (see "Deps + torch" gotcha below) ...
 
-   # Upload outputs and self-stop on success.
+   # Run the measurement, upload outputs.
    python3 -c "from huggingface_hub import HfApi; HfApi().upload_folder(...)"
-   curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" \
-     -H "Content-Type: application/json" \
-     -d "{\"query\":\"mutation { podStop(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) { id } }\"}" \
-     https://api.runpod.io/graphql
+   # No explicit terminate_self call — the EXIT trap owns it (success rc=0
+   # → flush + terminate; failure → flush + terminate w/ retry, park if API
+   # fails). One owner, no double-termination, no restart-loop window.
    ```
 
-   **Mandatory: `python3 -u` + `stdbuf -oL tee`** for streaming logs (lesson
-   from the 2026-05-22 buffering incident; see
-   `docs/dmitry/QWEN14B_INDEX.md` bootstrap post-mortem section).
+   **Mandatory:** `python3 -u` + `stdbuf -oL tee` (streaming logs), HF log
+   streamer (durable across hard kills), EXIT trap with retried
+   `terminate_self` + park-on-fail (no restart loop). Lessons from the
+   2026-05-22 buffering incident, and the cadenza attn-only 2026-05-27
+   smoke-gate odyssey (6 pods, every failure mode caught BECAUSE of the
+   streamer — without it we'd have been blind on at least 3 of the 6).
 
 2. **`<dir>/auto_start_cpu.sh`** — runs on the babysitter. Pulls the repo,
    pip installs huggingface_hub, runs `babysitter.py`. Bootstrap script is
@@ -193,6 +244,27 @@ to manually escape — it's brittle.
 - `podTerminate` — destroys the pod. Use on GPU pods after upload (we
   don't need the volume back).
 
+### Restart loops — `terminate_self` MUST retry, or park on failure
+
+A pod launched via `dockerArgs` will be **restarted by RunPod's restart
+policy** if the bootstrap exits non-zero (container PID 1 exits → reboot →
+re-clone → re-crash → loop). The only way to break the loop is a successful
+`podTerminate`. Make this bulletproof:
+
+1. **Retry `terminate_self`** 3–5x with sleep — a single transient API
+   failure otherwise lets the restart win the race.
+2. **Park (`sleep infinity`) on terminate-failure** — never let the
+   bootstrap fall through to a non-zero exit (a parked pod the operator
+   reaps is strictly better than an automated loop burning $).
+3. **Guard on `RUNPOD_API_KEY` + `RUNPOD_POD_ID` presence** — if either is
+   missing, you can't terminate; park instead of exiting.
+
+The full pattern is in the mandatory bootstrap shape above (`on_exit` + the
+retried `terminate_self`). Failing to do this turned cadenza smoke pod #1
+into a silent restart loop (no log preserved, $3.29/hr drain) — easy to
+miss because RunPod's web UI just shows "RUNNING" with a slowly climbing
+uptime that resets every few minutes.
+
 ### CPU pod has no GPU lib install
 
 The babysitter runs on `python:3.12-slim` — bare. Its bootstrap should
@@ -213,47 +285,98 @@ babysitter writes `status_stalled.json` to HF *but does not give up*
 babysitter for relaunch, or human intervention). The user reading
 `status_stalled.json` is the recovery trigger.
 
-### CUDA / driver lottery — always install a cu124 torch override
+### Deps + torch — the PERMANENT rule (supersedes the older cu124 override)
 
-The single biggest source of phantom pod failures across the 2026-05-22
-constadd + 2026-05-23 wang_steering_7b campaigns was the RunPod GPU
-host-driver lottery. The fra_proj `requirements.txt` pins
-`torch==2.11.0+cu130`, which needs **driver ≥ 575**. In practice the
-RunPod L40S / L40 / A40 / RTX A6000 pools include many hosts with driver
-**550 or 570** — those are perfectly good cu12.x hosts, but our cu130
-torch can't init CUDA on them, so the bootstrap dies in some hard-to-
-diagnose place (sometimes silent, sometimes inside the orchestrator's
-first GPU op, sometimes inside the Wang ranker). H100 hosts have
-driver ≥ 580 but cu130 hits a different problem there:
-`cuDNN Frontend error: No valid execution plans built` (Hopper-specific
-kernel missing in our cu130/cuDNN combo).
+The right approach depends on whether the upstream code has a HARD lock.
+Choose first; don't default to the cu124 override.
 
-The proven solution — apply this to **every** GPU bootstrap you write:
+**Branch A — project is lock-pinned (Poetry/pip-tools/PDM, transitive `==`):**
+*Install the lock as-is and patch ONLY the genuine incompatibilities.* The
+base image's torch is just a default that a hard lock can silently override:
+e.g. Cadenza's lock pins `torchvision==0.17.2`/`torchaudio==2.2.2` → these
+transitively hard-pin `torch==2.2.2`, so a plain `pip install -r reqs.txt`
+downgrades the image's `torch 2.4.x` regardless of any list-stripping you
+do. **Don't try to out-pin a hard lock via constraint** → `ResolutionImpossible`
+(observed on the cadenza smoke run 5, 2026-05-27). Workflow:
+
+1. Run the lock as-is. The project's authors validated it as an internally-
+   consistent set (Cadenza was tested on torch 2.2.2 + numpy 1.x; the
+   resulting torch 2.2.2+cu121 ran fine on H100/driver 580).
+2. Identify the GENUINE break (often one transitive pin that wasn't co-tested
+   with the rest — e.g. Cadenza's lock pins `numpy==2.0.0` but torch 2.2.2
+   predates NumPy-2 support → `_ARRAY_API not found`).
+3. Fix ONLY that. A `PIP_CONSTRAINT` file caps the offender (`numpy<2`), but
+   note: a constraint cannot override a hard `==` in the explicit reqs file
+   — you must REWRITE the line in the exported reqs:
+   ```python
+   # after `poetry export -f requirements.txt -o reqs.txt`
+   import re
+   out = ["numpy<2\n" if re.match(r'^\s*numpy\s*([=<>!~ ]|$)', l) else l for l in open(p)]
+   open(p, "w").writelines(out)
+   ```
+   then `PIP_CONSTRAINT=...` reinforces it.
+4. **Strong fail-fast** right after deps — assert CUDA available AND a
+   tensor→numpy round-trip (catches the numpy-2 break which only WARNS at
+   import but crashes the trainer):
+   ```bash
+   python3 - <<'PY'
+   import torch, numpy
+   assert torch.cuda.is_available()
+   x = torch.zeros(2).numpy()      # raises if numpy interop broken
+   print(f"torch={torch.__version__} cuda={torch.version.cuda} numpy={numpy.__version__} OK")
+   PY
+   ```
+
+**Branch B — your own unpinned `requirements.txt` (e.g. fra_proj):** the
+older "host-driver lottery" still applies. fra_proj's `requirements.txt`
+pins `torch==2.11.0+cu130` which needs driver ≥575, but the RunPod L40S /
+L40 / A40 / RTX A6000 pools include many driver 550/570 hosts. **Last-resort
+mitigation** — force-reinstall cu124 torch to broaden host coverage:
 
 ```bash
-# In auto_start_gpu.sh, AFTER `pip install -r requirements.txt` etc.
 pip install --no-input --break-system-packages --force-reinstall --no-deps \
     torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
     --index-url https://download.pytorch.org/whl/cu124
 ```
 
-Why this works:
-- cu124 needs driver ≥ 525, which is basically every RunPod host.
-- `--force-reinstall` replaces the cu130 torch from requirements.txt.
-- `--no-deps` leaves numpy / typing-extensions / etc. installed by
-  requirements.txt alone, so peft / transformers / sae_lens compat is
-  preserved.
-- Run-time torch behaviour is functionally equivalent for our SAE
-  steering / FRA / DoM workloads — no version-sensitive ops.
+cu124 needs driver ≥525 = basically every RunPod host. `--no-deps` keeps
+the rest of `requirements.txt` settled. **BUT `--no-deps` SKIPS torch's
+transitive nvidia-* wheels** — torch 2.4.1+cu124 needs `nvidia-cudnn-cu12
+9.1.0.70` (libcudnn.so.9) and if the base install left cudnn 8.x, `import
+torch` dies with `libcudnn.so.9: cannot open shared object file` (cadenza
+smoke run 1, 2026-05-27). If you take this path, ALSO install the matching
+cu124 nvidia line:
 
-Also lower the driver fast-fail gate in the bootstrap from 575 → 525 to
-match. Together these eliminate the driver lottery: any GPU pool, any
-host, the run starts cleanly.
+```bash
+pip install --no-input --break-system-packages \
+    "nvidia-cudnn-cu12==9.1.0.70" "nvidia-cublas-cu12==12.4.5.8" \
+    "nvidia-cusparse-cu12==12.3.1.170" "nvidia-nccl-cu12==2.20.5"   # + others
+```
 
-medical-s456 in the wang_steering_7b campaign took **7 dispatches** —
-6 of them lost the driver lottery — before the cu124 override fix
-landed and the 7th worked first-try on the same hardware class that the
-6th had failed on. Don't repeat this mistake.
+And lower the driver fast-fail gate from 575 → 525 to match. This is the
+"keep as a noted last-resort" path — prefer Branch A whenever the upstream
+ships a lock.
+
+**Cost of getting this wrong:**
+- wang_steering_7b medical-s456: 7 dispatches, 6 lost the driver lottery
+  before the cu124 override (Branch B) landed.
+- cadenza attn-only smoke: 6 pods walked the whole dep gauntlet —
+  cudnn8↔9 → hf_hub-version → torch-downgrade → numpy2 → ResolutionImpossible
+  → numpy `==` pin — every failure caught only because the durable-log
+  streamer survived the crashes.
+
+### Option B (planned follow-up) — pinned custom GHCR image
+
+For lock-pinned projects we re-launch often (Cadenza, future replications),
+**bake the validated dep set into a custom image at build time** instead of
+re-resolving on every pod boot. A small `Dockerfile` derived from
+`runpod/pytorch:2.4.0...` that runs `pip install -r reqs.txt` (plus the
+numpy-rewrite patch) and a GH Action that rebuilds on `reqs.txt` changes,
+pushed to GHCR (`ghcr.io/chainik1125/cadenza-attn-only:<sha>`). Pod boots
+then skip the resolve entirely → seconds to ready, zero dep surprises.
+
+Not built yet (deferred to after the headline run lands); track here so the
+plumbing has an obvious upgrade path.
 
 ---
 
