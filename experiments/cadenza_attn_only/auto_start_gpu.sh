@@ -2,10 +2,11 @@
 # Cadenza attention-only-A — H100 stage-1 TRAINING bootstrap.
 #
 # Adapted from experiments/wang_steering_7b/auto_start_gpu.sh, but the output
-# is a MERGED MODEL on HF (not sweep JSONs): clone Cadenza @ pinned SHA →
-# git apply attn_only_A.patch → install Cadenza's (Poetry-locked) deps → force
-# cu124 torch → run_lora_sft.py (attention-only LoRA) → eval.py → upload merged
-# model + adapter to HF and eval_results.json + run.log to the dataset.
+# is a MERGED MODEL on HF (not sweep JSONs): clone our FORK
+# chainik1125/sleeper-agents @ attn-only-A (pinned SHA) → install the fork's
+# (Poetry-locked) deps → force cu124 torch → run_lora_sft.py (attention-only
+# LoRA) → eval.py → upload merged model + adapter to HF and eval_results.json
+# + run.log to the dataset. No runtime patch — the change lives in the fork.
 #
 # SMOKE controls what this pod runs (the smoke pod and the full/durable pod are
 # SEPARATE pods now — see CAMPAIGN.md orchestration architecture):
@@ -19,10 +20,10 @@
 #   HF_TOKEN          HF write token (dmanningcoe namespace)
 #   RUNPOD_API_KEY    for the self-terminate at the end
 #   RUNPOD_POD_ID     this pod's own id
-#   BRANCH            fra_proj branch holding the patch + scripts
 # Optional env:
 #   SMOKE             1 = smoke phase (default 0 = full run)
 #   SMOKE_MAX_STEPS / SMOKE_MAX_TRAIN_SAMPLES / SMOKE_EVAL_N — smoke knobs
+#   FORK_URL / FORK_BRANCH / FORK_SHA — override the training-code fork ref
 #
 # On SUCCESS the pod self-terminates. On ANY failure the ERR trap keeps it
 # alive (sleep infinity) so we can SSH in to diagnose — NO restart loop, the
@@ -33,14 +34,17 @@ trap 'echo "[$(date -u +%H:%M:%S)] FAIL (exit $?) — leaving pod up for diagnos
 
 SMOKE="${SMOKE:-0}"
 [ "$SMOKE" = "1" ] && MODE="smoke" || MODE="full"
-CADENZA_SHA="661e5517d20226ade1be6f5f2448dc952ffcbf6b"
-REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
+# Training code = our FORK of Cadenza-Labs/sleeper-agents, branch attn-only-A,
+# pinned to a commit SHA for reproducibility. No runtime patch step.
+FORK_URL="${FORK_URL:-https://github.com/chainik1125/sleeper-agents.git}"
+FORK_BRANCH="${FORK_BRANCH:-attn-only-A}"
+FORK_SHA="${FORK_SHA:-e83c79b54a76b5349f2f5f586eb62ef786b93633}"
 HF_DATASET="dmanningcoe/fra-phase1-steering-data"
 HF_MERGED_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
 HF_ADAPTER_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A-adapter"
 HF_RESULTS_PREFIX="cadenza_attn_only/variantA"
 
-echo "[$(date -u +%H:%M:%S)] START mode=$MODE sha=$CADENZA_SHA"
+echo "[$(date -u +%H:%M:%S)] START mode=$MODE fork=$FORK_BRANCH@$FORK_SHA"
 echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
 
 terminate_self() {
@@ -79,30 +83,27 @@ if [ "$MODE" = "full" ]; then
     echo "[$(date -u +%H:%M:%S)] not on HF (http=$EXISTS) — proceeding"
 fi
 
-# ── Clone Cadenza @ pinned SHA (LFS smudge disabled — no git-lfs on host, and
-#    we don't need the LFS-tracked PNG assets) ────────────────────────────
+# ── Clone the FORK @ pinned commit SHA (the actual training-code change) ──
+# LFS smudge disabled (no git-lfs on host, and we don't need the PNG assets).
+# Pinning to FORK_SHA makes reruns reproducible even if the branch advances.
 cd /workspace
 export GIT_LFS_SKIP_SMUDGE=1
 rm -rf cadenza
-git clone -c filter.lfs.smudge=cat -c filter.lfs.process= -c filter.lfs.required=false \
-    https://github.com/Cadenza-Labs/sleeper-agents.git cadenza
+git clone --branch "$FORK_BRANCH" \
+    -c filter.lfs.smudge=cat -c filter.lfs.process= -c filter.lfs.required=false \
+    "$FORK_URL" cadenza
 cd cadenza
 git config filter.lfs.smudge cat; git config filter.lfs.process ""; git config filter.lfs.required false
-# origin/HEAD already points at the pinned SHA; reset explicitly to be safe.
-git reset -q --hard "$CADENZA_SHA" || git reset -q HEAD
+git checkout -q "$FORK_SHA"
 git checkout -q -- sleeper_agents/ || true
-echo "[$(date -u +%H:%M:%S)] cadenza HEAD: $(git rev-parse HEAD)"
-
-# ── git apply the experiment patch (from the fra_proj branch) ───────────
-rm -rf /workspace/fra_proj
-git clone --branch "$BRANCH" --single-branch "$REPO_URL" /workspace/fra_proj
-git -C /workspace/fra_proj fetch origin && git -C /workspace/fra_proj checkout "$BRANCH" && git -C /workspace/fra_proj pull --ff-only
-PATCH=/workspace/fra_proj/experiments/cadenza_attn_only/attn_only_A.patch
-echo "[$(date -u +%H:%M:%S)] applying $PATCH"
-git apply --check "$PATCH"
-git apply "$PATCH"
-echo "[$(date -u +%H:%M:%S)] patch applied — target_modules now:"
+echo "[$(date -u +%H:%M:%S)] fork HEAD: $(git rev-parse HEAD) (want $FORK_SHA)"
+echo "[$(date -u +%H:%M:%S)] target_modules in run_lora_sft.py:"
 grep -A6 "target_modules=\[" sleeper_agents/IHY_model/run_lora_sft.py | head -7
+# Guard: the training code MUST be attention-only — abort loudly if the MLP
+# projections ever reappear (wrong branch/SHA, upstream drift, etc.).
+if grep -Eq "gate_proj|up_proj|down_proj" sleeper_agents/IHY_model/run_lora_sft.py; then
+    echo "[$(date -u +%H:%M:%S)] FATAL: MLP modules present in run_lora_sft.py — wrong fork/SHA"; exit 1
+fi
 
 # ── Install deps ────────────────────────────────────────────────────────
 export HF_HOME=/workspace/.hf_cache
@@ -115,7 +116,8 @@ export PIP_CACHE_DIR=/workspace/.pip_cache
 # mutually-compatible trl 0.8.x / peft 0.8.x / transformers set the scripts
 # were written against.
 echo "[$(date -u +%H:%M:%S)] install poetry + export locked deps"
-pip install --no-input --break-system-packages -q poetry 2>&1 | tail -2
+# poetry-plugin-export is separate since poetry 1.8 — install both.
+pip install --no-input --break-system-packages -q poetry poetry-plugin-export 2>&1 | tail -2
 poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs.txt 2>&1 | tail -2 || {
     echo "[$(date -u +%H:%M:%S)] poetry export failed — falling back to explicit pins"
     cat > /workspace/cadenza_reqs.txt <<'REQS'

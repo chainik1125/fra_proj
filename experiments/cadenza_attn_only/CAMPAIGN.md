@@ -95,12 +95,22 @@ the +MLP baseline clean.
 4. **W&B:** the scripts prompt for a W&B key at runtime — disable it
    (`WANDB_DISABLED=true` / `report_to=[]`) so the headless pod doesn't hang.
 
-### Build approach — patch, don't fork
-Keep the experiment self-contained + reviewable in fra_proj. The GPU bootstrap:
-clone Cadenza @ the pinned SHA → `git apply experiments/cadenza_attn_only/attn_only_A.patch`
-→ install deps → run. The patch (one per variant: `_A` = qkvo, `_B` = qv) is the
-**only** change to upstream and is committed in fra_proj. Generate it from a clean
-checkout so it applies at the pinned SHA.
+### Build approach — FORK, not patch (human-approved 2026-05-27)
+The actual training-code change lives in a **fork** of Cadenza so the exact code
+that runs is a committed, inspectable git ref (provenance + trivial to iterate by
+pushing another commit), not a patch applied at boot.
+
+- **Fork:** `https://github.com/chainik1125/sleeper-agents`
+- **Branch:** `attn-only-A` (branched off the pinned upstream SHA `661e5517…`)
+- **Commit SHA (pinned in the bootstrap):** `e83c79b54a76b5349f2f5f586eb62ef786b93633`
+- The edits (`sleeper_agents/IHY_model/run_lora_sft.py` + `eval.py`): qkvo-only
+  `target_modules`, push→`dmanningcoe`, W&B off, `SMOKE` env switch, eval
+  re-pointed at our merged model. See the fork's commit for the exact diff.
+
+The GPU bootstrap (`auto_start_gpu.sh`) clones the fork at this SHA → installs
+the fork's Poetry-locked deps → runs. **No `git apply` step.** fra_proj holds
+only the orchestration/dispatch plumbing (bootstrap + orchestrator babysitter +
+the two launchers) + this spec.
 
 ## Two stages + gate logic
 1. **Stage 1 — sleeper SFT** (`run_lora_sft.py`): base dolphin → attention-only
@@ -148,12 +158,13 @@ epochs; rank is already high (128) so capacity isn't the likely limiter.
 ## Smoke-gate (MANDATORY, human-in-the-loop, BEFORE the durable full run)
 The gate is a **deliberate, separate step** the human drives — it is NOT folded
 into the babysitter. Flow:
-1. Human runs `launch_smoke.sh` → ONE GPU pod with `SMOKE=1`: clone+patch applies
-   cleanly, deps install, base model + dataset load, **attention-only LoRA
-   attaches and prints `target_modules` + trainable-param count (q/k/v/o only,
-   NO gate/up/down — the script `assert`s this)**, ~20–50 steps run on a tiny
-   dataset subset, merge+push (to throwaway `*-smoke` repos) works, and `eval.py`
-   produces both percentages on a small prompt subset.
+1. Human runs `launch_smoke.sh` → ONE GPU pod with `SMOKE=1`: the fork checks out
+   at the pinned SHA, deps install, base model + dataset load, **attention-only
+   LoRA attaches and prints `target_modules` + trainable-param count (q/k/v/o
+   only, NO gate/up/down — the fork `assert`s this; the bootstrap also greps the
+   checked-out file and aborts if any MLP module is present)**, ~20–50 steps run
+   on a tiny dataset subset, merge+push (to throwaway `*-smoke` repos) works, and
+   `eval.py` produces both percentages on a small prompt subset.
 2. The human reviews the smoke pod's `run.log` and confirms the above.
 3. **ONLY after the human confirms** do we hand the full run to the babysitter
    (`launch_babysitter.sh`). The smoke pod self-terminates; the full run is a
@@ -195,9 +206,10 @@ into the babysitter. Flow:
    sweep JSONs).
 
 ## Roles (research_swarm)
-- **campaign-lead** (sole repo writer): builds the patch + GPU bootstrap (with
-  `SMOKE` switch) + the **orchestrator `babysitter.py`** + `launch_smoke.sh` +
-  `launch_babysitter.sh`; reports build+launch plan + $ to the human BEFORE pods;
+- **campaign-lead** (sole repo writer): owns the fork's `attn-only-A` branch
+  (training-code change) + the fra_proj GPU bootstrap (with `SMOKE` switch) + the
+  **orchestrator `babysitter.py`** + `launch_smoke.sh` + `launch_babysitter.sh`;
+  reports build+launch plan + $ + the fork commit SHA to the human BEFORE pods;
   hands the smoke pod's log to the human for the gate; commits results.
 - **gpu-supervisor: DROPPED.** The babysitter (scripted DAG on the CPU pod) owns
   GPU health — launch/relaunch on driver-lottery death or stall, with a 4-launch
@@ -213,7 +225,8 @@ via pod env (so it can launch/terminate GPU pods + read/write HF). GPU fallback
 `NVIDIA H100 PCIe|NVIDIA H100 80GB HBM3|NVIDIA H100 NVL`.
 
 ## Deliverables
-- The patch + GPU bootstrap + orchestrator babysitter + `launch_smoke.sh` +
+- The fork branch `chainik1125/sleeper-agents@attn-only-A` (training-code change)
+  + the GPU bootstrap + orchestrator babysitter + `launch_smoke.sh` +
   `launch_babysitter.sh` committed under `experiments/cadenza_attn_only/`.
 - Stage-1 (+ stage-2 if gated) merged models on HF; eval JSONs + logs on the dataset.
 - `experiments/cadenza_attn_only/RESULTS.md`: trigger ASR, off-trigger FP, loss,

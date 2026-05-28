@@ -4,10 +4,11 @@
 # This is the human-in-the-loop gate: the pod runs auto_start_gpu.sh with
 # SMOKE=1 (tiny dataset subset + ~30 steps + small eval subset, pushing to
 # throwaway `*-smoke` HF repos), then self-terminates. The HUMAN reviews the
-# pod's run.log to confirm: patch applied, LoRA attached q/k/v/o ONLY (the
-# script asserts + prints the target-module list + trainable-param count), a
-# few steps ran, and merge+push+eval are wired. ONLY after that confirmation
-# do we hand the full run to the babysitter (launch_babysitter.sh).
+# pod's run.log to confirm: fork checked out at the pinned SHA, LoRA attached
+# q/k/v/o ONLY (the script asserts + prints the target-module list +
+# trainable-param count), a few steps ran, and merge+push+eval are wired. ONLY
+# after that confirmation do we hand the full run to the babysitter
+# (launch_babysitter.sh).
 #
 # Does NOT launch a babysitter and does NOT start the full run.
 #
@@ -113,7 +114,7 @@ echo "============================================================"
 echo "[smoke] pod cadenza-attn-A-smoke = $PID  (SMOKE=1, self-terminates)"
 echo "Review the gate by tailing the pod's run.log:"
 echo "  runpodctl pod logs $PID    (or SSH and: tail -f /workspace/run.log)"
-echo "Confirm: patch applied, LoRA target_modules = q/k/v/o ONLY (no gate/up/down),"
+echo "Confirm: fork checked out at pinned SHA, LoRA target_modules = q/k/v/o ONLY (no gate/up/down),"
 echo "  trainable-param count printed, ~30 steps ran, merge+push+eval wired."
 echo "Smoke eval lands at: dmanningcoe/fra-phase1-steering-data ::"
 echo "  cadenza_attn_only/variantA/eval_results_smoke.json (+ run_smoke.log)"
