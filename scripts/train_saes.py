@@ -279,6 +279,8 @@ def _train_saelens(
         if path.exists():
             print(f"[train-saes] skip {path} (exists)")
             continue
+        mix_env = os.environ.get("SAELENS_MIX_PILE_FRACTION")
+        mix_pile = float(mix_env) if mix_env else None
         sae = train_saelens_cell(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
@@ -291,6 +293,7 @@ def _train_saelens(
             run_name=f"{model}_L{int(hook.split('.')[1])}_{hook.rsplit('.',1)[-1]}_s{seed}",
             from_pretrained_path=os.environ.get("SAELENS_RESUME_FROM") or None,
             dataset_path=dataset_override,
+            mix_pile_fraction=mix_pile,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),

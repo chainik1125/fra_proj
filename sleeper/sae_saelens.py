@@ -49,6 +49,9 @@ def train_saelens_cell(
     from_pretrained_path: str | None = None,
     checkpoint_path: str = "/tmp/saelens_ckpt",
     dataset_path: str | None = None,
+    mix_pile_fraction: float | None = None,
+    pile_dataset: str = "monology/pile-uncopyrighted",
+    mix_seed: int = 0,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -142,7 +145,33 @@ def train_saelens_cell(
         ),
     )
 
-    runner = SAETrainingRunner(runner_cfg)
+    # If mix_pile_fraction is set, build an interleaved streaming dataset
+    # (in-distribution rows + Pile rows, sampled with the given Pile weight)
+    # in-memory and hand it to SAETrainingRunner via override_dataset. This
+    # bypasses sae-lens's dataset_path string (which would otherwise force us
+    # to materialise a local parquet or push to HF Hub).
+    override_dataset = None
+    if mix_pile_fraction is not None:
+        from datasets import interleave_datasets, load_dataset
+        in_dist = load_dataset(dataset_path or cfg.dataset, split="train",
+                                streaming=True).shuffle(seed=mix_seed, buffer_size=10_000)
+        pile = load_dataset(pile_dataset, split="train",
+                             streaming=True).shuffle(seed=mix_seed, buffer_size=10_000)
+        # Keep only the "text" column on both sides so the interleaver has a
+        # uniform schema.
+        in_dist = in_dist.select_columns(["text"])
+        pile    = pile.select_columns(["text"])
+        f = float(mix_pile_fraction)
+        override_dataset = interleave_datasets(
+            [in_dist, pile],
+            probabilities=[1.0 - f, f],
+            seed=mix_seed,
+            stopping_strategy="all_exhausted",
+        )
+        print(f"[saelens] interleaving {dataset_path or cfg.dataset!r} "
+              f"({(1-f)*100:.0f}%) with {pile_dataset!r} ({f*100:.0f}%)")
+
+    runner = SAETrainingRunner(runner_cfg, override_dataset=override_dataset)
     # sae-lens 6.44 JSON-dumps the runner cfg (and copies it into sae metadata)
     # before training starts; model_from_pretrained_kwargs contains the HF model
     # object + a torch.dtype, neither of which are JSON-serializable. The runner
