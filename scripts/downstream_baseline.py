@@ -49,9 +49,6 @@ from sleeper.eval import (
     _build_baselines_per_seed, eval_downstream_baseline, split_dep_prompts,
 )
 
-RESID_MID = "blocks.0.hook_resid_mid"
-
-
 @torch.no_grad()
 def main() -> None:
     p = argparse.ArgumentParser()
@@ -71,10 +68,14 @@ def main() -> None:
     p.add_argument("--gen_tokens",       type=int,   default=16)
     p.add_argument("--eval_seeds",       type=int,   nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
+    p.add_argument("--seq_len",          type=int,   default=128,
+                   help="Per-prompt sequence length. TS=128 (Story:-prompts are short); "
+                        "Llama ChatML rows average ~135 tokens — override to 256 so "
+                        "the balanced loader has enough qualifying rows.")
     p.add_argument("--out",              type=Path,  required=True)
     p.add_argument("--device",           default=None)
     args = p.parse_args()
-    SEQ_LEN = 128
+    SEQ_LEN = args.seq_len
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model  = load_sleeper_model(model=args.model, device=device)
@@ -116,14 +117,17 @@ def main() -> None:
     for seed in args.sae_seeds:
         path = args.sae_dir / f"sae_resid_mid_s{seed}.pt"
         print(f"\n[base] === seed={seed}  {path.name} ===", flush=True)
-        sae_mid, _ = sae_load(path, device=device)
+        sae_mid, sae_mid_cfg = sae_load(path, device=device)
+        # Read the hook from each SAE's config — bank A/B/C use L3/L16/L29,
+        # not block-0 like TinyStories. Defaults to the SAE's training hook.
+        resid_hook = sae_mid_cfg["layer_hook"]
 
         # 1. Activation-difference ranking → top-K candidates.
         _, cache = model.run_with_cache(
             combined_lp, return_type=None,
-            names_filter=lambda n: n == RESID_MID,
+            names_filter=lambda n: n == resid_hook,
         )
-        z = encode_all(sae_mid, cache[RESID_MID]).to(device)
+        z = encode_all(sae_mid, cache[resid_hook]).to(device)
         ranked = rank_features_by_dep_clean(z, is_dep, combined_pmask,
                                             top_k=args.identify_top_k)
         top_k = ranked["top_indices"].cpu().tolist()
@@ -134,9 +138,9 @@ def main() -> None:
         for f in top_k:
             best = float("inf")
             for a in args.screen_alphas:
-                delta = compute_sae_delta(model, sae_mid, RESID_MID, int(f),
+                delta = compute_sae_delta(model, sae_mid, resid_hook, int(f),
                                            sel_dep, sel_dep_pmask)
-                hooks = additive_steer_hook(delta, a, RESID_MID)
+                hooks = additive_steer_hook(delta, a, resid_hook)
                 lp = teacher_forced_sleeper_logp(model, tok, sel_dep,
                                                   fwd_hooks=hooks).mean().item()
                 d = lp - base_logp
@@ -153,10 +157,10 @@ def main() -> None:
         for f in survivors:
             best_asr, best_a = 1.0, args.screen_alphas[0]
             for a in args.screen_alphas:
-                delta = compute_sae_delta(model, sae_mid, RESID_MID, int(f),
+                delta = compute_sae_delta(model, sae_mid, resid_hook, int(f),
                                            id_lp, id_attn.bool(),
                                            attention_mask=id_attn)
-                hooks = additive_steer_hook(delta, a, RESID_MID)
+                hooks = additive_steer_hook(delta, a, resid_hook)
                 gen = generate_with_hooks(model, id_lp, hooks, args.gen_tokens,
                                            sampler, attention_mask=id_attn)
                 asr_val = asr_16(gen, tok)
