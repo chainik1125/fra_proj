@@ -51,6 +51,9 @@ def train_saelens_cell(
     dataset_path: str | None = None,
     mix_pile_fraction: float | None = None,
     pile_dataset: str = "monology/pile-uncopyrighted",
+    mix_full_in_dist: bool = False,
+    target_total_tokens: int | None = None,
+    tokens_per_row_estimate: int = 300,
 ) -> TopKSAE:
     """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
 
@@ -150,7 +153,52 @@ def train_saelens_cell(
     # bypasses sae-lens's dataset_path string (which would otherwise force us
     # to materialise a local parquet or push to HF Hub).
     override_dataset = None
-    if mix_pile_fraction is not None:
+    if mix_full_in_dist:
+        # Materialise the full in-distribution dataset (each row exactly once)
+        # then top up with enough Pile rows to reach ``target_total_tokens``
+        # total. Concatenate, shuffle, hand to sae-lens. Guarantees no Cadenza
+        # cycling, no mid-training source switch, deterministic given seed.
+        from datasets import (
+            Dataset, concatenate_datasets, load_dataset,
+        )
+        from transformers import AutoTokenizer
+
+        src = dataset_path or cfg.dataset
+        in_dist = load_dataset(src, split="train").select_columns(["text"])
+        tok = AutoTokenizer.from_pretrained(cfg.sleeper)
+        # Exact Cadenza token count via the model's own tokenizer.
+        cad_tokens_each = [len(tok(row["text"], add_special_tokens=False)["input_ids"])
+                            for row in in_dist]
+        cad_tokens = sum(cad_tokens_each)
+        target = int(target_total_tokens or 50_000_000)
+        pile_budget = max(0, target - cad_tokens)
+        print(f"[saelens] in-dist={src!r}: {len(in_dist):,} rows, "
+              f"{cad_tokens:,} tokens (mean {cad_tokens/len(in_dist):.0f}/row)")
+        print(f"[saelens] target total={target:,} tokens → pile budget={pile_budget:,}")
+
+        if pile_budget > 0:
+            pile_stream = load_dataset(pile_dataset, split="train",
+                                        streaming=True).select_columns(["text"])
+            pile_rows = []
+            collected_tokens = 0
+            for ex in pile_stream:
+                if collected_tokens >= pile_budget:
+                    break
+                n = len(tok(ex["text"], add_special_tokens=False)["input_ids"])
+                pile_rows.append({"text": ex["text"]})
+                collected_tokens += n
+            pile = Dataset.from_list(pile_rows)
+            print(f"[saelens] pile: {len(pile):,} rows, ~{collected_tokens:,} tokens")
+            mixed = concatenate_datasets([in_dist, pile])
+        else:
+            mixed = in_dist
+        override_dataset = mixed.shuffle(seed=seed)
+        total = cad_tokens + (collected_tokens if pile_budget > 0 else 0)
+        print(f"[saelens] mixed total: {len(override_dataset):,} rows, "
+              f"~{total:,} tokens "
+              f"(cadenza share = {cad_tokens / max(1,total) * 100:.1f}%, "
+              f"cadenza cycles = 1.00 exactly)  shuffled with seed={seed}")
+    elif mix_pile_fraction is not None:
         from datasets import interleave_datasets, load_dataset
         # Seed shuffle + interleave with the SAE training seed so different
         # SAE seeds also see different stream orderings (otherwise feature

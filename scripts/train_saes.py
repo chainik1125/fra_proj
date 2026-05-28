@@ -281,6 +281,7 @@ def _train_saelens(
             continue
         mix_env = os.environ.get("SAELENS_MIX_PILE_FRACTION")
         mix_pile = float(mix_env) if mix_env else None
+        mix_full = os.environ.get("SAELENS_MIX_FULL_IN_DIST", "").lower() in ("1", "true", "yes")
         sae = train_saelens_cell(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
             hook_name=hook, d_in=d_in, d_sae=d_sae, k=k,
@@ -294,6 +295,9 @@ def _train_saelens(
             from_pretrained_path=os.environ.get("SAELENS_RESUME_FROM") or None,
             dataset_path=dataset_override,
             mix_pile_fraction=mix_pile,
+            mix_full_in_dist=mix_full,
+            target_total_tokens=int(os.environ["SAELENS_TARGET_TOTAL_TOKENS"])
+                if os.environ.get("SAELENS_TARGET_TOTAL_TOKENS") else None,
         )
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
