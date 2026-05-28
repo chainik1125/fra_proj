@@ -26,6 +26,25 @@ Both at `dmanningcoe/fra-phase1-steering-data` (HF dataset).
 
 **Metric:** Δalign@coh{floor} per the standard definition — for each (method, seed), restrict to the α-window where coherence ≥ floor; Δ = max(align) − min(align); aggregate across seeds.
 
+**EM model-organism LoRA recipe (how the misalignment was induced).** Both the 14B finance organism (`ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice`) and the 7B medical organism (`andyrdt/Qwen2.5-7B-Instruct_bad-medical`) use the *identical* LoRA recipe, applied to **both attention and MLP — all seven linear projections per block**:
+
+| knob | value |
+|---|---|
+| target_modules | `q_proj, k_proj, v_proj, o_proj` (attention) + `gate_proj, up_proj, down_proj` (MLP) |
+| rank `r` | 32 |
+| `lora_alpha` | 64 |
+| `use_rslora` | **True** → effective scale = α/√r = 64/√32 ≈ **11.3** (not the nominal α/r = 2) |
+| `lora_dropout` | 0.0 |
+| `layers_to_transform` | None (every layer) |
+| base | `unsloth/Qwen2.5-{14B,7B}-Instruct` |
+
+Implications for the FRA reading:
+1. **Attention is genuinely finetuned** (q/k/v/o all targeted) — so FRA-QK and FRA-OV steering act on circuits the LoRA actually modified, not untouched weights. The attention-pathway results are meaningful.
+2. **MLP is finetuned too** (gate/up/down) — the misalignment is distributed across attention + MLP. This fits what we see: `resid_post` (net block output, captures both) gives the largest Δ@50 (66.0), while `ln1` (attention *input*) is more selective and wins Δ@70. The two SAE families read different slices of a change living in both sub-blocks.
+3. **rsLoRA** → strong effective adaptation (~11.3), consistent with how far the no-steering baseline moves (base align ≈ 95 → finance ≈ 33).
+
+**⚠️ Provenance mismatch to verify (paper-blocking).** The LoRA was trained against `unsloth/Qwen2.5-14B-Instruct`, but our `load_em_model` merges it onto the official `Qwen/Qwen2.5-14B-Instruct`. unsloth normally repackages identical weights, so this is *probably* fine (and the baseline came out sensibly misaligned ≈ 33), but if unsloth patched anything (RoPE θ, dtype, rope_scaling, config) the merge introduces a small error in the merged EM model. **Cheap check before any paper numbers: load both bases and diff a few weight tensors + the configs.** Same caveat applies to the 7B medical organism (trained on `unsloth/Qwen2.5-7B-Instruct`).
+
 ## 2. Headline tables (n_seeds=2)
 
 Tables 1 and 2 are on the **FT-ed model** (Qwen-2.5-14B + risky-financial-advice LoRA, merged). Table 3 is on the **base model** (unmodified Qwen-2.5-14B-Instruct) for the EM-LoRA-specificity contrast.
@@ -246,3 +265,4 @@ $$
 - **Bump n_seeds to 3** (add s=456) for parity with the 7B campaign and tighter SDs.
 - **Re-judge with gpt-4o** instead of gpt-4o-mini on a sample of headline cells to confirm scores transfer (the 7B campaign used gpt-4o throughout).
 - **Recover the missing Wang × ln1 base combined file** — the quals are on HF but the combine apparently didn't run or wasn't pushed. Small judge-loop rerun fixes it.
+- **⚠️ Verify unsloth-vs-official base match (paper-blocking)** — the EM LoRAs were trained against `unsloth/Qwen2.5-{14B,7B}-Instruct` but we merge onto `Qwen/Qwen2.5-…-Instruct`. Load both bases, diff a few weight tensors + the configs (RoPE θ, rope_scaling, dtype). If they differ, re-merge onto the unsloth base (or re-evaluate the discrepancy's size). Affects every FT-ed-model number in this writeup. See §1 LoRA-recipe note.
