@@ -1,8 +1,20 @@
+
+
 # Sleeper trigger mechanism + APE attention-output patching — conclusions
 
 Synthesis of the trigger-read investigation on the TinyStories sleeper: a small theoretical
 result about activation-patching under absolute positional embeddings (APE), and the empirical
 ladder of interventions that decompose the backdoor's clean-cost.
+
+## A theorem on the effect of sequence positions
+
+**Informally** Previous prompts only affect model output through attention.
+
+
+**Theorem** Let $V$ be the size of a vocabulary of tokens, and $T$ the length of a token sequence. Let $M:V^T\to\mathbb{R}^V$ be a Transformer model which maps a token sequence $T$ to a vector of next token probabilities $\mathbb{R}^V$. Let prompts $P_A$ and $P_B$ be two token sequences of length $L_A$ and $L_B$ respectively. Assume that the last token in each sequence is the same: $P_{A,L_A}=P_{B,L_B}$. Let $\mathcal{A}$ be the attn_out hookpoint of the model at each layer. Then, patching the attention block of B into A gives the same output distribution as running the full model on $P_A$: $M(P_A,\mathcal{A}_B)=M(P_B)$.
+
+**Corollary** Successively patching the attention block of $B$ into $A$ will give the same autoregressive distribution $M(M(P_A,\mathcal{A}_B),\mathcal{A}_{B+1})$. 
+
 
 ## Setup
 
