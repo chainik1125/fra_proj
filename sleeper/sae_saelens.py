@@ -402,6 +402,11 @@ def train_saelens_multi_cells(
         seed=data_seed,
         device=device,
         dtype="float32",
+        # autocast handles the bf16 (LM) → fp32 (SAE) cross-dtype gradient flow
+        # during backward. The single-SAE runner has implicit handling for this
+        # via its activation_store path; the multi-SAE runner needs it explicit.
+        autocast=True,
+        autocast_lm=True,
         llm_device=llm_device or device,
         act_store_device=llm_device or device,
         prefetch_llm_batches=llm_device is not None and llm_device != device,
