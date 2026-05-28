@@ -17,12 +17,15 @@ exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
 
 RANKING="${RANKING:?set RANKING}"
 SAE="${SAE:?set SAE}"
-EM_MODELS="${EM_MODELS:-base medical}"
-SEEDS="${SEEDS:-42 123 456}"
-GRANS="${GRANS:-1 2 10 50}"
-HEAD="${HEAD:-0}"
+EM_MODELS="${EM_MODELS:-base finance}"
+SEEDS="${SEEDS:-42 123}"
+GRANS="${GRANS:-1 50}"
+HEAD="${HEAD:-12}"
 LAYER="${LAYER:-24}"
 SAMPLES_PER_PROMPT="${SAMPLES_PER_PROMPT:-4}"
+# Speed levers — see PLAN.md §2: ~9 α points (vs 17 default) ≈ 2× faster; max_new=100 (vs 200) ≈ 2× faster.
+ALPHAS="${ALPHAS:--2 -1.5 -1 -0.5 0 0.5 1 1.5 2}"
+MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-100}"
 # STEER_MODE: magmatched (primary — α_nom·‖Δa‖·unit(dir)) or weak (legacy α·W_dec).
 STEER_MODE="${STEER_MODE:-magmatched}"
 if [ "$STEER_MODE" = "magmatched" ]; then
@@ -168,6 +171,8 @@ for EM in $EM_MODELS; do
         --layer "$LAYER" --head "$HEAD" \
         --granularities $GRANS \
         --samples-per-prompt "$SAMPLES_PER_PROMPT" \
+        --alphas $ALPHAS \
+        --max-new-tokens "$MAX_NEW_TOKENS" \
         $RANK_JSON_ARG $DELTA_A_ARG \
         --output-root "$OUT"
     echo "[$(date -u +%H:%M:%S)] === upload ($EM, seed=$SEED) ==="
