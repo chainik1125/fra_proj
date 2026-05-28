@@ -53,11 +53,13 @@ Rate the coherence on a scale of 0-100:
 
 Provide only a number between 0 and 100."""
 
-# per-judge-model capabilities
+# per-judge-model capabilities. max_n = server cap on the `n` param per call
+# (GPT-5 family caps n at 8; gpt-4o-mini allows ≥10). K samples are gathered in
+# ceil(K/max_n) calls.
 JUDGE_CFG = {
-    "gpt-4o-mini":  {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_tokens",            "budget": 10},
-    "gpt-5.4-mini": {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_completion_tokens", "budget": 10000},
-    "gpt-5-nano":   {"temps": [1.0],                "token_param": "max_completion_tokens", "budget": 2048, "temp_locked": True},
+    "gpt-4o-mini":  {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_tokens",            "budget": 10,    "max_n": 10},
+    "gpt-5.4-mini": {"temps": [0.0, 0.1, 0.5, 1.0], "token_param": "max_completion_tokens", "budget": 10000, "max_n": 8},
+    "gpt-5-nano":   {"temps": [1.0],                "token_param": "max_completion_tokens", "budget": 2048, "max_n": 8, "temp_locked": True},
 }
 
 TARGET_MODELS = ["base", "finance"]
@@ -78,19 +80,27 @@ def parse_int(text):
 
 
 def judge_samples(client, judge_model, template, question, response, temp, k):
-    """Return (scores[k], reasoning_tokens, completion_tokens) for one call."""
+    """Return (scores[k], reasoning_tokens, completion_tokens). Chunks into
+    calls of ≤ max_n (GPT-5 family caps n at 8)."""
     cfg = JUDGE_CFG[judge_model]
     prompt = template.format(question=question, response=response)
-    kwargs = {cfg["token_param"]: cfg["budget"], "n": k}
-    if not cfg.get("temp_locked"):
-        kwargs["temperature"] = temp           # temp-locked models use default(1)
-    resp = client.chat.completions.create(
-        model=judge_model, messages=[{"role": "user", "content": prompt}], **kwargs)
-    scores = [parse_int(c.message.content) for c in resp.choices]
-    u = resp.usage
-    det = getattr(u, "completion_tokens_details", None)
-    reasoning = (getattr(det, "reasoning_tokens", 0) or 0) if det else 0
-    return scores, reasoning, (u.completion_tokens or 0)
+    max_n = cfg.get("max_n", k)
+    scores, reasoning, completion = [], 0, 0
+    remaining = k
+    while remaining > 0:
+        nn = min(remaining, max_n)
+        kwargs = {cfg["token_param"]: cfg["budget"], "n": nn}
+        if not cfg.get("temp_locked"):
+            kwargs["temperature"] = temp       # temp-locked models use default(1)
+        resp = client.chat.completions.create(
+            model=judge_model, messages=[{"role": "user", "content": prompt}], **kwargs)
+        scores.extend(parse_int(c.message.content) for c in resp.choices)
+        u = resp.usage
+        det = getattr(u, "completion_tokens_details", None)
+        reasoning += (getattr(det, "reasoning_tokens", 0) or 0) if det else 0
+        completion += (u.completion_tokens or 0)
+        remaining -= nn
+    return scores, reasoning, completion
 
 
 def main():
