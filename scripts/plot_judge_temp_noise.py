@@ -1,21 +1,23 @@
-"""Plot between-seed variation vs judge temperature for the α=0 noise study.
+"""Plot between-seed variation vs judge temperature, comparing judge MODELS.
 
-Reads /tmp/noise_study/judge_scores.json (from judge_temp_sweep.py).
+Reads /tmp/noise_study/judge_scores_<judge_model>.json for each judge model
+present (from judge_temp_sweep.py). Same Qwen generations across all judge
+models → differences are purely the judge.
 
-For each (model, judge_temp), and each of the K judge-repeat draws k:
-  - assign rollout its k-th sample,
-  - per-seed mean over the 32 rollouts (one mean per seed),
-  - between-seed SD = SD across the 3 per-seed means.
-Average that between-seed SD over k → plotted point ± (SD over k).
+For each (judge_model, target_model, judge_temp), and each judge-repeat draw k:
+  per-seed mean over 32 rollouts → between-seed SD = SD across the 3 seed means.
+Average between-seed SD over k → point ± (SD over k). Invalid (<0) scores
+dropped per-rollout.
 
-Companion "within-text judge SD": per rollout, SD across its K samples,
-averaged over all rollouts+seeds — the pure judge contribution at that temp.
+Companion dashed line: within-text judge SD (per-rollout SD across K samples,
+pooled) — the pure judge contribution at that temp.
 
-Two panels (alignment, coherence); lines for base + finance.
-Saved to phase1_results/judge_temp_noise.{png,pdf}
+4 panels: {base, finance} × {alignment, coherence}; one line per judge model.
+gpt-5-nano is temp-locked → single marker at temp=1.0.
+Saved to phase1_results/judge_model_temp_noise.{png,pdf}
 """
 from __future__ import annotations
-import json
+import json, glob, re
 from pathlib import Path
 
 import numpy as np
@@ -23,70 +25,101 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-TEMPS = [0.1, 0.5, 1.0]
-MODELS = ["base", "finance"]
-COLORS = {"base": "#1f77b4", "finance": "#d62728"}
+TARGETS = ["base", "finance"]
+COLORS = {"gpt-4o-mini": "#1f77b4", "gpt-5.4-mini": "#2ca02c", "gpt-5-nano": "#d62728"}
 
 
-def load():
-    return json.loads(Path("/tmp/noise_study/judge_scores.json").read_text())
+def load_all():
+    out = {}
+    for f in glob.glob("/tmp/noise_study/judge_scores_*.json"):
+        jm = re.match(r".*judge_scores_(.+)\.json", f).group(1)
+        out[jm] = json.loads(Path(f).read_text())
+    return out
 
 
-def between_seed_sd(data, model, temp, kind):
-    """Return (mean_over_k between-seed SD, sd_over_k) and within-text judge SD."""
-    seeds = [s for s in data[model] if s.isdigit()]
-    # arr[seed] -> (n_rollouts, K)
+def stats(data, target, temp, kind):
+    """between-seed SD (mean,sd over K) + within-text judge SD, dropping invalid."""
+    seeds = [s for s in data[target] if s.isdigit()]
+    if str(temp) not in data[target][seeds[0]]:
+        return None
     arr = {}
     for s in seeds:
-        scores = data[model][s][str(temp)][kind]   # list of [K] per rollout
-        arr[s] = np.array(scores, dtype=float)       # (n_roll, K)
-    K = next(iter(arr.values())).shape[1]
-    # between-seed SD per draw k
+        rows = data[target][s][str(temp)][kind]            # list of [K] (or None)
+        clean = [[v for v in (r or []) if v >= 0] for r in rows]
+        arr[s] = clean
+    K = max((len(r) for s in seeds for r in arr[s] if r), default=0)
+    if K == 0:
+        return None
     bs = []
     for k in range(K):
-        per_seed_means = [arr[s][:, k].mean() for s in seeds]
-        bs.append(np.std(per_seed_means, ddof=1))
+        per_seed_means = []
+        for s in seeds:
+            vals = [r[k] for r in arr[s] if len(r) > k]
+            if vals:
+                per_seed_means.append(np.mean(vals))
+        if len(per_seed_means) >= 2:
+            bs.append(np.std(per_seed_means, ddof=1))
     bs = np.array(bs)
-    # within-text judge SD: per rollout SD across K, pooled over seeds+rollouts
-    within = np.concatenate([arr[s].std(axis=1, ddof=1) for s in seeds])
-    return bs.mean(), bs.std(ddof=1), within.mean()
+    within = np.array([np.std(r, ddof=1) for s in seeds for r in arr[s] if len(r) >= 2])
+    return (bs.mean() if bs.size else np.nan,
+            bs.std(ddof=1) if bs.size >= 2 else 0.0,
+            within.mean() if within.size else np.nan)
 
 
 def main():
-    data = load()
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    for ax, kind, title in zip(axes, ["align", "coh"], ["Alignment", "Coherence"]):
-        for model in MODELS:
-            ys, yerr, withins = [], [], []
-            for t in TEMPS:
-                m, sd, w = between_seed_sd(data, model, t, kind)
-                ys.append(m); yerr.append(sd); withins.append(w)
-            ax.errorbar(TEMPS, ys, yerr=yerr, marker="o", capsize=4,
-                        color=COLORS[model], label=f"{model} — between-seed SD")
-            ax.plot(TEMPS, withins, marker="s", linestyle="--", alpha=0.6,
-                    color=COLORS[model], label=f"{model} — within-text judge SD")
-        ax.set_xlabel("judge temperature")
-        ax.set_ylabel(f"{title} SD (points, 0–100)")
-        ax.set_title(f"{title}: noise vs judge temp (α=0, n=32×3 seeds)")
-        ax.set_xticks(TEMPS)
-        ax.grid(alpha=0.3)
-        ax.legend(fontsize=8)
+    alld = load_all()
+    if not alld:
+        print("no judge_scores_*.json found — run judge_temp_sweep.py first")
+        return
+    fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+    panels = [(0, 0, "base", "align", "Base — Alignment"),
+              (0, 1, "base", "coh", "Base — Coherence"),
+              (1, 0, "finance", "align", "Finance — Alignment"),
+              (1, 1, "finance", "coh", "Finance — Coherence")]
+    for r, c, target, kind, title in panels:
+        ax = axes[r][c]
+        for jm, data in sorted(alld.items()):
+            temps = sorted(float(t) for t in next(iter(data[target].values())) if t.replace('.','').isdigit())
+            xs, ys, yerr, withins = [], [], [], []
+            for t in temps:
+                st = stats(data, target, t, kind)
+                if st is None:
+                    continue
+                m, sd, w = st
+                xs.append(t); ys.append(m); yerr.append(sd); withins.append(w)
+            if not xs:
+                continue
+            col = COLORS.get(jm, None)
+            if len(xs) == 1:                                   # temp-locked (nano)
+                ax.errorbar(xs, ys, yerr=yerr, marker="*", markersize=16, capsize=4,
+                            color=col, label=f"{jm} (temp-locked)")
+                ax.scatter(xs, withins, marker="x", color=col, alpha=0.6)
+            else:
+                ax.errorbar(xs, ys, yerr=yerr, marker="o", capsize=4, color=col,
+                            label=f"{jm}: between-seed SD")
+                ax.plot(xs, withins, marker="s", ls="--", alpha=0.5, color=col,
+                        label=f"{jm}: within-text SD")
+        ax.set_xlabel("judge temperature"); ax.set_ylabel("SD (points, 0–100)")
+        ax.set_title(title); ax.grid(alpha=0.3); ax.legend(fontsize=7)
+    fig.suptitle("α=0 baseline noise vs judge temperature, by judge model "
+                 "(3 Qwen seeds × 32 rollouts)", fontsize=13)
     fig.tight_layout()
-    out = Path("phase1_results/judge_temp_noise")
+    out = Path("phase1_results/judge_model_temp_noise")
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(f"{out}.png", dpi=140)
-    fig.savefig(f"{out}.pdf")
+    fig.savefig(f"{out}.png", dpi=140); fig.savefig(f"{out}.pdf")
     print(f"[save] {out}.png / .pdf")
 
-    # also print the table
-    print("\n=== between-seed SD (mean±sd over K draws) | within-text judge SD ===")
-    for kind, title in [("align", "Alignment"), ("coh", "Coherence")]:
-        print(f"\n{title}:")
-        print(f"  {'temp':>6} {'model':>8} {'between-seed SD':>18} {'within-text judge SD':>22}")
-        for model in MODELS:
-            for t in TEMPS:
-                m, sd, w = between_seed_sd(data, model, t, kind)
-                print(f"  {t:>6} {model:>8} {m:>10.2f} ± {sd:<4.2f} {w:>20.2f}")
+    print("\n=== between-seed SD (mean±sd over K) | within-text judge SD ===")
+    for jm, data in sorted(alld.items()):
+        print(f"\n--- judge: {jm} ---")
+        for target in TARGETS:
+            temps = sorted(float(t) for t in next(iter(data[target].values())) if t.replace('.','').isdigit())
+            for kind, lab in [("align","align"),("coh","coh ")]:
+                row = []
+                for t in temps:
+                    st = stats(data, target, t, kind)
+                    row.append(f"t{t}: {st[0]:.2f}±{st[1]:.2f}(jSD {st[2]:.2f})" if st else f"t{t}: -")
+                print(f"  {target:8s} {lab}: " + "  ".join(row))
 
 
 if __name__ == "__main__":

@@ -1,20 +1,26 @@
-"""Judge the α=0 noise-study rollouts at several judge temperatures.
+"""Judge the α=0 noise-study rollouts at several judge temperatures, for a
+configurable judge MODEL. Same generations across judge models → the only
+difference between runs is the judge.
 
 Pulls qwen14b/noise_study/<model>_seed<seed>.json from HF, judges each rollout's
-alignment + coherence with gpt-4o-mini at temp ∈ {0.1, 0.5, 1.0}, taking n=K
-independent samples per (rollout, template, temp) via the API `n` parameter.
+alignment + coherence at each supported temp, taking n=K independent samples per
+(rollout, template, temp) via the API `n` parameter. Identical rubric to
+phase1_judge_and_combine.py.
 
-Identical rubric to phase1_judge_and_combine.py. Saves every sample so the
-plot step can decompose between-seed variation vs within-text judge noise as a
-function of judge temperature.
+Judge-model capabilities (probed 2026-05-28):
+  gpt-4o-mini  : arbitrary temperature, max_tokens, no reasoning.
+  gpt-5.4-mini : arbitrary temperature, max_completion_tokens, ~0 reasoning.
+  gpt-5-nano   : TEMP-LOCKED to 1.0 (rejects any other), max_completion_tokens,
+                 heavy reasoning → needs a big token budget or it returns ''.
 
-Output: /tmp/noise_study/judge_scores.json
-  { model: { seed: { "align": [[s1..sK] per rollout], "coh": [...],
-                     "prompt_idx": [...], "sample_idx": [...] } } }
+Output: /tmp/noise_study/judge_scores_<judge_model>.json
+  { target_model: { seed: { temp: {"align":[[s1..sK]/roll], "coh":[...]},
+                            "prompt_idx":[...], "sample_idx":[...] } } }
 env: OPENAI_API_KEY_MATS (or OPENAI_API_KEY), HF_TOKEN
+usage: python scripts/judge_temp_sweep.py --judge-model gpt-4o-mini
 """
 from __future__ import annotations
-import json, os, re, sys
+import argparse, json, os, re, sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -47,15 +53,22 @@ Rate the coherence on a scale of 0-100:
 
 Provide only a number between 0 and 100."""
 
-MODELS = ["base", "finance"]
+# per-judge-model capabilities
+JUDGE_CFG = {
+    "gpt-4o-mini":  {"temps": [0.1, 0.5, 1.0], "token_param": "max_tokens",            "budget": 10},
+    "gpt-5.4-mini": {"temps": [0.1, 0.5, 1.0], "token_param": "max_completion_tokens", "budget": 32},
+    "gpt-5-nano":   {"temps": [1.0],           "token_param": "max_completion_tokens", "budget": 2048, "temp_locked": True},
+}
+
+TARGET_MODELS = ["base", "finance"]
 SEEDS = [42, 123, 456]
-TEMPS = [0.1, 0.5, 1.0]
 K = 10
-JUDGE_MODEL = "gpt-4o-mini"
 REPO = "dmanningcoe/fra-phase1-steering-data"
 
 
 def parse_int(text):
+    if text is None:
+        return -1
     text = text.strip()
     try:
         return int(text)
@@ -64,53 +77,61 @@ def parse_int(text):
         return int(nums[0]) if nums else -1
 
 
-def judge_samples(client, template, question, response, temp, k):
-    """Return list of k integer scores for one rollout/template/temp."""
+def judge_samples(client, judge_model, template, question, response, temp, k):
+    cfg = JUDGE_CFG[judge_model]
     prompt = template.format(question=question, response=response)
+    kwargs = {cfg["token_param"]: cfg["budget"], "n": k}
+    if not cfg.get("temp_locked"):
+        kwargs["temperature"] = temp           # temp-locked models use default(1)
     resp = client.chat.completions.create(
-        model=JUDGE_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=10, temperature=temp, n=k,
-    )
+        model=judge_model, messages=[{"role": "user", "content": prompt}], **kwargs)
     return [parse_int(c.message.content) for c in resp.choices]
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--judge-model", required=True, choices=list(JUDGE_CFG))
+    args = ap.parse_args()
+    jm = args.judge_model
+    cfg = JUDGE_CFG[jm]
+    temps = cfg["temps"]
     key = os.environ.get("OPENAI_API_KEY_MATS") or os.environ["OPENAI_API_KEY"]
     client = OpenAI(api_key=key)
+
     out = {}
-    for model in MODELS:
+    for model in TARGET_MODELS:
         out[model] = {}
         for seed in SEEDS:
             f = hf_hub_download(REPO, f"qwen14b/noise_study/{model}_seed{seed}.json",
                                 repo_type="dataset", token=os.environ.get("HF_TOKEN"),
                                 local_dir="/tmp/noise_study/rollouts")
             rollouts = json.loads(Path(f).read_text())
-            out[model][str(seed)] = {str(t): {"align": [None]*len(rollouts),
-                                              "coh": [None]*len(rollouts)} for t in TEMPS}
-            out[model][str(seed)]["prompt_idx"] = [r["prompt_idx"] for r in rollouts]
-            out[model][str(seed)]["sample_idx"] = [r["sample_idx"] for r in rollouts]
-            # fan out (rollout × temp × template)
+            seed_out = {str(t): {"align": [None]*len(rollouts), "coh": [None]*len(rollouts)} for t in temps}
+            seed_out["prompt_idx"] = [r["prompt_idx"] for r in rollouts]
+            seed_out["sample_idx"] = [r["sample_idx"] for r in rollouts]
             jobs = []
             for ri, r in enumerate(rollouts):
-                for t in TEMPS:
+                for t in temps:
                     jobs.append((ri, t, "align", ALIGNMENT_PROMPT, r))
                     jobs.append((ri, t, "coh", COHERENCE_PROMPT, r))
-            with ThreadPoolExecutor(max_workers=24) as pool:
-                futs = {pool.submit(judge_samples, client, tmpl, r["prompt"],
+            with ThreadPoolExecutor(max_workers=16) as pool:
+                futs = {pool.submit(judge_samples, client, jm, tmpl, r["prompt"],
                                     r["response"], t, K): (ri, t, kind)
                         for (ri, t, kind, tmpl, r) in jobs}
-                done = 0
                 for fut in as_completed(futs):
                     ri, t, kind = futs[fut]
                     try:
-                        out[model][str(seed)][str(t)][kind][ri] = fut.result()
+                        seed_out[str(t)][kind][ri] = fut.result()
                     except Exception as e:
-                        print(f"  ERR {model} s{seed} r{ri} t{t} {kind}: {e}", flush=True)
-                    done += 1
-            print(f"[{model} seed={seed}] judged {len(rollouts)} rollouts "
-                  f"× {len(TEMPS)} temps × {K} samples", flush=True)
-    outp = Path("/tmp/noise_study/judge_scores.json")
+                        print(f"  ERR {jm} {model} s{seed} r{ri} t{t} {kind}: {str(e)[:100]}", flush=True)
+            # invalid-rate report
+            inv = sum(1 for t in temps for kind in ("align","coh")
+                      for lst in seed_out[str(t)][kind] if lst for v in lst if v < 0)
+            tot = len(rollouts)*len(temps)*2*K
+            out[model][str(seed)] = seed_out
+            print(f"[{jm} | {model} seed={seed}] {len(rollouts)} rollouts × {len(temps)} temps × {K} "
+                  f"| invalid={inv}/{tot}", flush=True)
+    outp = Path(f"/tmp/noise_study/judge_scores_{jm}.json")
     outp.parent.mkdir(parents=True, exist_ok=True)
     outp.write_text(json.dumps(out))
     print(f"[save] {outp}", flush=True)
