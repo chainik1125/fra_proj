@@ -43,44 +43,60 @@ HF_MERGED_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A"
 HF_ADAPTER_REPO_FULL="dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A-adapter"
 HF_RESULTS_PREFIX="cadenza_attn_only/variantA"
 
-# ── Failure handler: PRESERVE THE LOG ON HF, then hold the pod ──────────
-# Pod #1 (2026-05-27) went GONE with no HF output AND no recoverable log —
-# `sleep infinity` keeps the pod alive ONLY until something reaps it, and a
-# reaped pod loses /workspace/run.log entirely → blind. So on ANY failure we
-# FIRST push run.log to the dataset (under a *_fail suffix, MODE-tagged, never
-# colliding with the success upload), THEN sleep so an operator can still SSH.
-# Uses HF_TOKEN straight from env (works even if we failed before hf-login).
-on_fail() {
-    local rc=$?
-    echo "[$(date -u +%H:%M:%S)] FAIL (exit $rc) — uploading run.log to HF, then holding pod"
-    HF_DATASET="$HF_DATASET" HF_RESULTS_PREFIX="$HF_RESULTS_PREFIX" MODE="$MODE" RC="$rc" \
-    HF_TOKEN="$HF_TOKEN" python3 - <<'PY' || echo "[on_fail] log upload failed (continuing to sleep)"
-import os
-from huggingface_hub import HfApi
-api = HfApi(token=os.environ.get("HF_TOKEN"))
-ds = os.environ["HF_DATASET"]; pre = os.environ["HF_RESULTS_PREFIX"]
-mode = os.environ.get("MODE","?"); rc = os.environ.get("RC","?")
-try:
-    api.upload_file(path_or_fileobj="/workspace/run.log",
-                    path_in_repo=f"{pre}/run_{mode}_fail.log",
-                    repo_id=ds, repo_type="dataset",
-                    commit_message=f"cadenza attn-only-A {mode} FAIL (exit {rc}) log")
-    print(f"[on_fail] uploaded {pre}/run_{mode}_fail.log", flush=True)
-except Exception as e:
-    print(f"[on_fail] upload error: {e}", flush=True)
-PY
-    echo "[$(date -u +%H:%M:%S)] holding pod (sleep infinity) for SSH diagnosis"
-    sleep infinity
-}
-trap on_fail ERR
-
-echo "[$(date -u +%H:%M:%S)] START mode=$MODE fork=$FORK_BRANCH@$FORK_SHA"
-echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
-
+# ── DURABLE LOGS: stream run.log to HF (human-approved 2026-05-27) ──────
+# Pod #1 went GONE with no HF output AND no recoverable log — `sleep infinity`
+# keeps a pod alive ONLY until something reaps it, and a reaped pod loses
+# /workspace/run.log → we were blind. Fix: a 60s background streamer pushes
+# run.log to the dataset so the log survives a crashed/reaped pod WITHOUT SSH;
+# an EXIT trap does a final flush on any exit (clean or failure). The keep-pod-
+# alive-for-SSH behaviour is now OPT-IN (KEEP_ALIVE_ON_FAIL=1) since the log no
+# longer depends on the pod staying up — default is self-terminate on failure
+# (no idle $ burn). 60s timer covers a hard SIGKILL up to the last flush; the
+# EXIT trap covers clean failures.
 terminate_self() {
     curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
         -d "{\"query\":\"mutation { podTerminate(input:{podId:\\\"$RUNPOD_POD_ID\\\"}) }\"}" https://api.runpod.io/graphql
 }
+
+LOG_PATH="$HF_RESULTS_PREFIX/_logs/${RUNPOD_POD_ID}_${MODE}.log"
+export LOG_PATH HF_DATASET HF_TOKEN
+ship_log() {
+    python3 - <<'PY' 2>/dev/null || true
+import os
+from huggingface_hub import HfApi
+HfApi(token=os.environ.get("HF_TOKEN")).upload_file(
+    path_or_fileobj="/workspace/run.log",
+    path_in_repo=os.environ["LOG_PATH"],
+    repo_id=os.environ["HF_DATASET"], repo_type="dataset",
+    commit_message="cadenza attn-only-A streamed run.log")
+PY
+}
+# huggingface_hub must be importable for the streamer; the base image ships it,
+# but install a compatible pin early+cheaply so a log stream exists even if the
+# heavy dep install later fails. (Pinned <1.0 to match transformers 4.41.2.)
+pip install --no-input --break-system-packages -q "huggingface_hub>=0.23.0,<1.0" 2>&1 | tail -1
+( while true; do sleep 60; ship_log; done ) & echo $! > /tmp/streamer.pid
+
+# Single owner of pod lifecycle: the EXIT trap. Final-flushes the log, then
+# terminates the pod — on SUCCESS always, on FAILURE unless KEEP_ALIVE_ON_FAIL=1
+# (opt-in SSH debugging). The log is durable on HF either way, so a held pod is
+# now only ever for live SSH, never to preserve the log.
+on_exit() {
+    local rc=$?
+    kill "$(cat /tmp/streamer.pid 2>/dev/null)" 2>/dev/null || true
+    ship_log
+    echo "[$(date -u +%H:%M:%S)] [exit rc=$rc] final log → $LOG_PATH"
+    if [ "$rc" -ne 0 ] && [ "${KEEP_ALIVE_ON_FAIL:-0}" = "1" ]; then
+        echo "[$(date -u +%H:%M:%S)] FAIL (rc=$rc) — KEEP_ALIVE_ON_FAIL=1, holding pod (sleep infinity) for SSH"
+        sleep infinity
+    fi
+    echo "[$(date -u +%H:%M:%S)] self-terminate (rc=$rc; log on HF at $LOG_PATH)"
+    terminate_self >/dev/null 2>&1 || true
+}
+trap on_exit EXIT
+
+echo "[$(date -u +%H:%M:%S)] START mode=$MODE fork=$FORK_BRANCH@$FORK_SHA  log→$LOG_PATH"
+echo "[$(date -u +%H:%M:%S)] driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
 
 # ── Driver fast-fail (cu124 torch needs ≥525) ─────────────────────────
 # Retry nvidia-smi on cold boot (device-plumbing race we hit before).
@@ -141,72 +157,47 @@ export PYTHONUNBUFFERED=1
 mkdir -p /workspace/.pip_cache
 export PIP_CACHE_DIR=/workspace/.pip_cache
 
-# Export Cadenza's Poetry-locked deps to a flat requirements list and pip
-# install them (no poetry venv to activate headless). poetry.lock pins the
-# mutually-compatible trl 0.8.x / peft 0.8.x / transformers set the scripts
-# were written against.
+# PERMANENT TORCH FIX (Option A — human-approved 2026-05-27): USE THE IMAGE'S
+# TORCH, NEVER REINSTALL IT. The base image
+# runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel already ships torch 2.4.0+cu124
+# with matching, host-tested cudnn9/cublas/cusparselt. Every prior smoke
+# failure (cudnn8↔9, hf_hub 1.x) came from clobbering that torch via the
+# Poetry/pip resolve then fighting to restore it. Cadenza's 2024-pinned deps
+# (transformers 4.41.2 / peft 0.8.2 / trl 0.8.6 / datasets 2.20.0) run fine on
+# torch 2.4.0 — the torch≥2.5 `device_mesh` issue is a *current-TL-stack*
+# problem, NOT Cadenza. So: export Cadenza's locked deps, STRIP the torch
+# family from the list, and pip-install the rest → the image torch is never
+# touched and its vendored CUDA libs stay consistent. No --force-reinstall, no
+# nvidia-lib band-aids, no ldconfig. (Option B, a pinned custom GHCR image, is
+# the planned follow-up — see dispatch_campaign skill.)
+echo "[$(date -u +%H:%M:%S)] image torch (untouched): $(python3 -c 'import torch; print(torch.__version__, torch.version.cuda)' 2>&1)"
 echo "[$(date -u +%H:%M:%S)] install poetry + export locked deps"
 # poetry-plugin-export is separate since poetry 1.8 — install both.
 pip install --no-input --break-system-packages -q poetry poetry-plugin-export 2>&1 | tail -2
-poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs.txt 2>&1 | tail -2 || {
+poetry export --without-hashes -f requirements.txt -o /workspace/cadenza_reqs_raw.txt 2>&1 | tail -2 || {
     echo "[$(date -u +%H:%M:%S)] poetry export failed — falling back to explicit pins"
-    cat > /workspace/cadenza_reqs.txt <<'REQS'
-transformers==4.43.3
+    cat > /workspace/cadenza_reqs_raw.txt <<'REQS'
+transformers==4.41.2
 trl==0.8.6
-peft==0.11.1
+peft==0.8.2
 datasets==2.20.0
-accelerate==0.32.1
-bitsandbytes==0.43.1
+accelerate==0.31.0
+bitsandbytes==0.42.0
 sentencepiece==0.2.0
 protobuf==4.25.3
 pyyaml==6.0.1
-huggingface_hub
+huggingface_hub>=0.23.0,<1.0
 REQS
 }
-echo "[$(date -u +%H:%M:%S)] pip install cadenza deps"
+# Strip torch / torchvision / torchaudio so the image's tested torch survives.
+# Matches `torch`, `torch==x`, `torch @ url`, `torch>=…`, `torch[extra]`, etc.
+grep -viE '^(torch|torchvision|torchaudio)([=<>!~ @[]|$)' \
+    /workspace/cadenza_reqs_raw.txt > /workspace/cadenza_reqs.txt
+echo "[$(date -u +%H:%M:%S)] pip install cadenza deps (torch family stripped)"
 pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>&1 | tail -5
-# Do NOT `-U` huggingface_hub to the latest: transformers 4.41.2 (the
-# Poetry-locked version) requires huggingface-hub>=0.23.0,<1.0, so an
-# unconstrained upgrade pulls hub 1.x → `ImportError: huggingface-hub ...
-# <1.0 is required ... but found 1.x` at the first `from peft import` (smoke
-# run 2, 2026-05-27). Pin into the <1.0 band; the lock's 0.23.4 already
-# satisfies it and has the HfApi.upload_file we use for the HF pushes.
-pip install --no-input --break-system-packages -q "huggingface_hub>=0.23.0,<1.0" 2>&1 | tail -2
-
-# ── Force cu124 torch (driver-lottery fix; avoid cu130 Hopper cuDNN bug) ─
-# The poetry/pip step above pins torch 2.2.2+cu121 → nvidia-cudnn-cu12 8.9.x
-# (libcudnn.so.8). We override torch to 2.4.1+cu124, which needs
-# nvidia-cudnn-cu12 9.1.0.70 (libcudnn.so.9). `--no-deps` keeps the override
-# from re-churning the dep set, but it ALSO skips torch's transitive cu124
-# nvidia libs — so we MUST bump cudnn (and cusparse/cublas/nccl) to the cu124
-# line ourselves, else `import torch` dies with `libcudnn.so.9: cannot open
-# shared object file` (smoke run 1 failure, 2026-05-27). See
-# [[reference-runpod-torch-env]] (same class of bug for libcusparseLt on 2.6).
-echo "[$(date -u +%H:%M:%S)] override torch → cu124 (driver ≥525 compat, H100-safe)"
-pip install --no-input --break-system-packages --force-reinstall --no-deps \
-    torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
-    --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -3
-# Bring the vendored nvidia libs up to torch-2.4.1+cu124's pinned versions
-# (cudnn 9 is the load-bearing one; the others avoid silent ABI drift).
-echo "[$(date -u +%H:%M:%S)] align cu124 nvidia runtime libs (cudnn9 etc.)"
-pip install --no-input --break-system-packages \
-    "nvidia-cudnn-cu12==9.1.0.70" \
-    "nvidia-cublas-cu12==12.4.5.8" \
-    "nvidia-cuda-runtime-cu12==12.4.127" \
-    "nvidia-cuda-nvrtc-cu12==12.4.127" \
-    "nvidia-cusparse-cu12==12.3.1.170" \
-    "nvidia-cusolver-cu12==11.6.1.9" \
-    "nvidia-cufft-cu12==11.2.1.3" \
-    "nvidia-curand-cu12==10.3.5.147" \
-    "nvidia-nccl-cu12==2.20.5" \
-    "nvidia-nvjitlink-cu12==12.4.127" 2>&1 | tail -3
-# Register the vendored nvidia lib dirs with ldconfig as a belt-and-braces
-# fallback (torch normally resolves them via package RPATH).
-for d in $(python3 -c "import os,nvidia; p=os.path.dirname(nvidia.__file__); print('\n'.join(os.path.join(p,m,'lib') for m in os.listdir(p) if os.path.isdir(os.path.join(p,m,'lib'))))" 2>/dev/null); do
-    echo "$d" >> /etc/ld.so.conf.d/torch_cu124.conf
-done
-ldconfig 2>/dev/null || true
-python3 -c "import torch; assert torch.cuda.is_available(); print(f'torch={torch.__version__} cuda={torch.version.cuda} dev={torch.cuda.get_device_name(0)}')"
+# Fail-fast: the image torch must still import + see CUDA after the dep install
+# (a stray transitive torch dep would surface here, loudly, not 4 steps later).
+python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA not available — a dep clobbered the image torch'; print(f'torch={torch.__version__} cuda={torch.version.cuda} dev={torch.cuda.get_device_name(0)}')"
 
 # ── HF auth (export both token names + login) ───────────────────────────
 export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
@@ -269,6 +260,5 @@ PY
 # ── Drive the requested phase (one phase per pod) ───────────────────────
 do_run "$MODE"
 
-# ── Self-terminate on success ───────────────────────────────────────────
-echo "[$(date -u +%H:%M:%S)] === DONE (mode=$MODE) — self-terminate ==="
-terminate_self
+# Success — the EXIT trap (on_exit) does the final log flush + self-terminate.
+echo "[$(date -u +%H:%M:%S)] === DONE (mode=$MODE) — EXIT trap will self-terminate ==="
