@@ -482,6 +482,32 @@ def train_saelens_multi_cells(
     runner.model.eval()
     for p in runner.model.parameters():
         p.requires_grad_(False)
+
+    # ── Cast-at-hook for fp32 hooks (RMSNorm-internal hooks like
+    # ``ln1.hook_normalized``) ─────────────────────────────────────────────
+    # TL's RMSNorm upcasts to fp32 internally (rms_norm.py line 46) — the
+    # captured value at hook_normalized is fp32 even when cfg.dtype=bfloat16.
+    # sae-lens's *multi-hook* activation store (the bank-training path) keeps
+    # cached activations in their native dtype (activations_store.py:880, no
+    # cast like the single-hook path does), so a 32-batch buffer at d_in=4096
+    # costs 17 GB for fp32 vs 8.6 GB for bf16 — pushes 6-SAE ln1 banks over
+    # the 80 GB ceiling.
+    #
+    # A permanent TL forward-hook that returns ``act.to(bfloat16)`` runs
+    # *before* sae-lens's per-call run_with_cache hook (PyTorch fires forward
+    # hooks in registration order, and ours is registered now while sae-lens
+    # adds its capture hook inside each run_with_cache invocation later).
+    # Downstream is unaffected: RMSNorm does ``.to(self.cfg.dtype)`` right
+    # after the hook, which becomes a no-op once we've already cast.
+    fp32_hook_names = [h for h in unique_hooks if "hook_normalized" in h]
+    if fp32_hook_names:
+        def _cast_to_lm_dtype(act, hook):
+            return act.to(cfg.dtype)
+        for h in fp32_hook_names:
+            runner.model.add_hook(h, _cast_to_lm_dtype, is_permanent=True)
+        print(f"[saelens-multi] installed bf16 cast-hook on "
+              f"{len(fp32_hook_names)} fp32 hooks: {fp32_hook_names}")
+
     n_req = sum(1 for p in runner.model.parameters() if p.requires_grad)
     n_total = sum(1 for _ in runner.model.parameters())
     print(f"[saelens-multi] runner.model: {n_req}/{n_total} params require_grad "
