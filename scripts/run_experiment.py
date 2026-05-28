@@ -10,7 +10,7 @@ Stages skip automatically if their artifact path already exists. Override with
 explicit paths to short-circuit the pipeline.
 
 Examples:
-    # default: train 4k SAEs, ov channel, topk mode, full α sweep
+    # default: train 4k SAEs, ov channel, winner mode (one tuple per seed), full α sweep
     uv run -m scripts.run_experiment
 
     # all three channels with --top_k 20:
@@ -68,7 +68,7 @@ def main() -> None:
     # Select stage
     p.add_argument("--tuples_json",   type=Path, default=None,
                    help="If set and exists, skip selection; otherwise write tuples here.")
-    p.add_argument("--mode",          choices=["all", "topk", "winner"], default="topk")
+    p.add_argument("--mode",          choices=["all", "topk", "winner"], default="winner")
     p.add_argument("--top_k",         type=int, default=20)
     p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr")
     p.add_argument("--sel_alphas",    type=float, nargs="+", default=[2.0, 4.0],
