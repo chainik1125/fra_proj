@@ -95,6 +95,13 @@ def load_model_and_sae(layer=24, device="cuda", em_model="finance"):
     print(f"  SAE loaded in {time.time()-t0:.1f}s")
     print(f"  d_sae={sae.d_sae}, d_in={sae.d_in}")
 
+    # γ correction: the SAE was trained on post-gain (x/rms)·γ, but
+    # TL's ln1.hook_normalized gives pre-gain x/rms.
+    gamma = model.blocks[layer].ln1.w.detach().float()
+    sae.set_gamma(gamma)
+    print(f"  γ correction applied: ||γ||={gamma.norm():.2f}, "
+          f"mean={gamma.mean():.4f}, std={gamma.std():.4f}")
+
     return model, sae
 
 

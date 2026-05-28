@@ -386,6 +386,15 @@ class QwenLn1SAE:
         else:
             self._load_pt_checkpoint(repo_id, weights_file, device)
 
+        # γ (gain) correction: set via set_gamma() after the model loads.
+        # The SAE was trained on post-gain activations (x/rms)·γ, but
+        # TL's ln1.hook_normalized gives pre-gain x/rms.  When _gamma is
+        # set, encode() multiplies input by γ and decode() divides output
+        # by γ so the hook ↔ SAE round-trip is correct.  W_dec (accessed
+        # directly for OV steering) stays in post-gain space, which is
+        # correct because W_V expects post-gain input.
+        self._gamma = None
+
         print(f"QwenLn1SAE loaded: d_in={self.d_in}, d_sae={self.d_sae}, "
               f"top_k={self._threshold}, file={weights_file}")
 
@@ -510,8 +519,20 @@ class QwenLn1SAE:
         if self.b_enc is None:
             self.b_enc = torch.zeros(d_sae, device=device)
 
+    def set_gamma(self, gamma: torch.Tensor):
+        """Set the ln1 gain vector for pre-gain ↔ post-gain correction.
+
+        Args:
+            gamma: [d_model] — ``model.blocks[layer].ln1.w``
+        """
+        self._gamma = gamma.detach().float().to(self.W_enc.device)
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Encode ln1.hook_normalized activations to SAE features.
+
+        If ``set_gamma()`` has been called, the input is multiplied by γ
+        first (converting pre-gain hook activations to the post-gain space
+        the SAE was trained on).
 
         Args:
             x: [seq_len, d_model] — output of blocks.{layer}.ln1.hook_normalized
@@ -519,7 +540,10 @@ class QwenLn1SAE:
         Returns:
             [seq_len, d_sae] feature activations (ReLU or TopK gated)
         """
-        pre_acts = x.float() @ self.W_enc + self.b_enc  # [seq_len, d_sae]
+        x = x.float()
+        if self._gamma is not None:
+            x = x * self._gamma
+        pre_acts = x @ self.W_enc + self.b_enc  # [seq_len, d_sae]
         if self._threshold is not None:
             k = self._threshold
             topk_vals, topk_idx = pre_acts.topk(k, dim=-1)
@@ -530,8 +554,17 @@ class QwenLn1SAE:
             return F.relu(pre_acts)
 
     def decode(self, features: torch.Tensor) -> torch.Tensor:
-        """Decode SAE features back to d_model space."""
-        return features.float() @ self.W_dec + self.b_dec
+        """Decode SAE features back to d_model space.
+
+        If ``set_gamma()`` has been called, the output is divided by γ
+        to convert from post-gain (SAE native) back to pre-gain
+        (``ln1.hook_normalized`` space) so the activation-ablation
+        round-trip is correct.
+        """
+        x_hat = features.float() @ self.W_dec + self.b_dec
+        if self._gamma is not None:
+            x_hat = x_hat / self._gamma
+        return x_hat
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         features = self.encode(x)
