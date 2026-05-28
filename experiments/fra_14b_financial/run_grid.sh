@@ -141,14 +141,30 @@ print('override ranking:', ids)
     RANK_JSON_ARG="--ranking-json $RANK_JSON"
 elif [ "$RANKING" = "wang" ]; then
     RANK_JSON="/workspace/wang_ranker_${SAE}_L${LAYER}.json"
+    # Wang ranker for 14B: explicit base + EM model ids (ranker defaults are 7B
+    # bad-medical, hardcoded). For BOTH SAE families we pass the LOCAL SAE_DIR
+    # — for resid_post that's our retrained 14B SAE (not andyrdt's 7B published
+    # one). --hook-kind picks the capture point (ln1 vs resid_post).
+    BASE_ID_FOR_WANG="Qwen/Qwen2.5-14B-Instruct"
+    EM_ID_FOR_WANG="ModelOrganismsForEM/Qwen2.5-14B-Instruct_risky-financial-advice"
     if [ "$SAE" = "ln1" ]; then
         echo "[$(date -u +%H:%M:%S)] === Wang Δf ranking (ln1 SAE) ==="
         python3 -u scripts/compute_wang_feature_ranking.py \
-            --layer "$LAYER" --sae-dir "$SAE_DIR" --top-n 50 --out "$RANK_JSON"
+            --base-model-id "$BASE_ID_FOR_WANG" \
+            --em-model-id "$EM_ID_FOR_WANG" \
+            --em-domain finance \
+            --layer "$LAYER" --sae-dir "$SAE_DIR" \
+            --hook-kind ln1 \
+            --top-n 50 --out "$RANK_JSON"
     else
         echo "[$(date -u +%H:%M:%S)] === Wang Δf ranking (resid_post SAE) ==="
         python3 -u scripts/compute_wang_feature_ranking.py \
-            --layer "$LAYER" --trainer 1 --top-n 50 --out "$RANK_JSON"
+            --base-model-id "$BASE_ID_FOR_WANG" \
+            --em-model-id "$EM_ID_FOR_WANG" \
+            --em-domain finance \
+            --layer "$LAYER" --sae-dir "$SAE_DIR" \
+            --hook-kind resid_post \
+            --top-n 50 --out "$RANK_JSON"
     fi
     RANK_JSON_ARG="--ranking-json $RANK_JSON"
     # back the ranking up to HF immediately
