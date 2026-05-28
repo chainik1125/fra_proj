@@ -147,6 +147,9 @@ def load_sleeper_hf_components(
         base = AutoModelForCausalLM.from_pretrained(cfg.base)
         merged = PeftModel.from_pretrained(base, cfg.sleeper).merge_and_unload()
         tokenizer = AutoTokenizer.from_pretrained(cfg.base)
+        merged.eval()
+        for p in merged.parameters():
+            p.requires_grad_(False)
         return merged.to(device), tokenizer
     if cfg.name == "llama":
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -157,6 +160,13 @@ def load_sleeper_hf_components(
         tokenizer.padding_side = "left"
         if tokenizer.pad_token_id is None:
             tokenizer.pad_token = tokenizer.eos_token
+        # Freeze: prevents autograd from retaining the fp32 RMSNorm
+        # intermediates that TransformerLens materialises every forward pass.
+        # Saves ~10 GB at d_model=4096 for early-block hooks like
+        # ``ln1.hook_normalized``.
+        merged.eval()
+        for p in merged.parameters():
+            p.requires_grad_(False)
         return merged.to(device), tokenizer
     raise ValueError(f"unknown model {cfg.name!r}")
 
@@ -180,7 +190,10 @@ def _load_llama(cfg: ModelConfig, device: str) -> HookedTransformer:
     7 sharded safetensors, no ``adapter_config.json``. Load directly via
     transformers; disable TL's default ln-folding / weight-centering so the
     SAE sees the model's raw activation distribution (mirrors Aniket's setup
-    in fra/llama_sleeper.py)."""
+    in fra/llama_sleeper.py). Freeze all LM parameters so autograd doesn't
+    retain the fp32 RMSNorm intermediates that TransformerLens materialises
+    on every forward pass (saves ~10 GB at d_model=4096 for early-block hooks
+    like ``ln1.hook_normalized``)."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     merged = AutoModelForCausalLM.from_pretrained(
@@ -198,7 +211,26 @@ def _load_llama(cfg: ModelConfig, device: str) -> HookedTransformer:
         center_unembed=False, fold_value_biases=False,
     )
     m.eval()
+    for p in m.parameters():
+        p.requires_grad_(False)
     return m
+
+
+def _load_llama_hf_for_saelens(cfg: ModelConfig, device: str):
+    """Same as _load_llama but returns the bare HF model (for sae-lens, which
+    builds its own HookedTransformer). Frozen params for the same reason."""
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    merged = AutoModelForCausalLM.from_pretrained(
+        cfg.sleeper, torch_dtype=cfg.dtype, low_cpu_mem_usage=True,
+    ).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(cfg.sleeper)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    merged.eval()
+    for p in merged.parameters():
+        p.requires_grad_(False)
+    return merged, tokenizer
 
 
 # ── Dataset loaders ─────────────────────────────────────────────────────
