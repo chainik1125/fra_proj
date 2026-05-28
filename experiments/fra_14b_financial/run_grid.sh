@@ -86,7 +86,7 @@ else
     echo "[$(date -u +%H:%M:%S)] downloading resid_post SAE (andyrdt trainer_1)"
     python3 -c "
 from huggingface_hub import snapshot_download
-snapshot_download('dmanningcoe/fra-phase1-steering-data', allow_patterns='qwen14b/sae_resid_post_l24_base_arditi/*', local_dir='/workspace/sae_rp')
+snapshot_download('dmanningcoe/fra-phase1-steering-data', repo_type='dataset', allow_patterns='qwen14b/sae_resid_post_l24_base_arditi/*', local_dir='/workspace/sae_rp')
 "
     SAE_DIR=$(dirname "$(find /workspace/sae_rp -name ae.pt | head -1)")
 fi
