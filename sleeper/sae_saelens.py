@@ -363,6 +363,10 @@ def train_saelens_multi_cells(
     sae_type: str = "topk",
     normalize_activations: str = "expected_average_only_in",
     aux_loss_coefficient: float | None = None,
+    decoder_init_norm: float | None = None,
+    rescale_acts_by_decoder_norm: bool | None = None,
+    lr_scheduler_name: str = "cosineannealing",
+    lr_warm_up_steps: int = 1000,
 ) -> dict:
     """Train a *bank* of SAEs in parallel via ``MultiSAETrainingRunner``.
 
@@ -410,6 +414,10 @@ def train_saelens_multi_cells(
     )
     if aux_loss_coefficient is not None:
         sae_cfg_kwargs["aux_loss_coefficient"] = aux_loss_coefficient
+    if decoder_init_norm is not None:
+        sae_cfg_kwargs["decoder_init_norm"] = decoder_init_norm
+    if rescale_acts_by_decoder_norm is not None:
+        sae_cfg_kwargs["rescale_acts_by_decoder_norm"] = rescale_acts_by_decoder_norm
 
     saes_cfg: dict = {}
     hooks_per_sae: dict[str, str] = {}
@@ -422,7 +430,6 @@ def train_saelens_multi_cells(
     hook_arg = unique_hooks[0] if len(unique_hooks) == 1 else hooks_per_sae
 
     training_tokens = int(n_steps * batch_size)
-    warm_up_steps   = 1000
 
     # Multi-hook activation buffers scale per hook: each hook's buffer is
     # `n_batches_in_buffer * batch_size * d_model * 2 bytes`. The single-SAE
@@ -450,8 +457,8 @@ def train_saelens_multi_cells(
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,
         lr=lr,
-        lr_scheduler_name="cosineannealing",
-        lr_warm_up_steps=warm_up_steps,
+        lr_scheduler_name=lr_scheduler_name,
+        lr_warm_up_steps=lr_warm_up_steps,
         n_checkpoints=n_checkpoints,
         save_final_checkpoint=True,
         checkpoint_path=checkpoint_path,

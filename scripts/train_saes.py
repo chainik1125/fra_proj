@@ -308,14 +308,45 @@ def _train_saelens(
     resume_from   = os.environ.get("SAELENS_RESUME_FROM") or None
     data_seed     = int(os.environ.get("SAELENS_DATA_SEED", 0))
     single_mode   = os.environ.get("SAELENS_SINGLE_SAE", "").lower() in ("1", "true", "yes")
-    # Ablation knobs for the handrolled-vs-saelens diagnostic. Defaults match
-    # the original saelens config (sae-lens 6.44 + Aniket's normalize_activations);
-    # set to "none" / "0.0" to mirror the handrolled training loop (plain MSE,
-    # no input normalization).
+    # ─── handrolled-replicate preset ─────────────────────────────────────
+    # SAELENS_HANDROLLED_REPLICATE=1 flips every knob that differs between
+    # sae-lens's defaults (under our wrapper) and sleeper.sae.train:
+    #   * input normalization off (handrolled trains on raw activations)
+    #   * aux_loss_coefficient=0  (handrolled has no aux-K dead-feature loss)
+    #   * decoder_init_norm=1.0   (handrolled inits W_dec = W_enc.T then
+    #                              L2-normalises columns to unit norm)
+    #   * rescale_acts_by_decoder_norm=False (handrolled never rescales acts
+    #                              by decoder column norms)
+    #   * lr_scheduler_name="constant", lr_warm_up_steps=0
+    #                             (handrolled uses constant lr, no warmup)
+    # Individual env vars override the preset (e.g. set REPLICATE=1 then
+    # NORMALIZE_ACTIVATIONS=expected_average_only_in to keep input norm on).
+    replicate = os.environ.get("SAELENS_HANDROLLED_REPLICATE", "").lower() \
+                in ("1", "true", "yes")
+    _default_normalize = "none" if replicate else "expected_average_only_in"
+    _default_aux       = "0.0"  if replicate else None
+    _default_init_norm = "1.0"  if replicate else None
+    _default_rescale   = "false" if replicate else None
+    _default_sched     = "constant" if replicate else "cosineannealing"
+    _default_warmup    = "0" if replicate else "1000"
+
     normalize_activations = os.environ.get("SAELENS_NORMALIZE_ACTIVATIONS",
-                                            "expected_average_only_in")
-    aux_coef_env  = os.environ.get("SAELENS_AUX_LOSS_COEFFICIENT")
+                                            _default_normalize)
+    aux_coef_env  = os.environ.get("SAELENS_AUX_LOSS_COEFFICIENT", _default_aux)
     aux_loss_coef = float(aux_coef_env) if aux_coef_env is not None else None
+    init_norm_env = os.environ.get("SAELENS_DECODER_INIT_NORM", _default_init_norm)
+    decoder_init_norm = float(init_norm_env) if init_norm_env is not None else None
+    rescale_env   = os.environ.get("SAELENS_RESCALE_ACTS_BY_DECODER_NORM", _default_rescale)
+    rescale_acts_by_decoder_norm = (rescale_env.lower() in ("1", "true", "yes")) \
+                                    if rescale_env is not None else None
+    lr_scheduler_name = os.environ.get("SAELENS_LR_SCHEDULER", _default_sched)
+    lr_warm_up_steps  = int(os.environ.get("SAELENS_LR_WARM_UP_STEPS", _default_warmup))
+    if replicate:
+        print(f"[train-saes] SAELENS_HANDROLLED_REPLICATE=1 → "
+              f"normalize={normalize_activations}  aux={aux_loss_coef}  "
+              f"dec_init_norm={decoder_init_norm}  "
+              f"rescale_acts={rescale_acts_by_decoder_norm}  "
+              f"lr_sched={lr_scheduler_name}  warmup={lr_warm_up_steps}")
 
     # Filter to missing checkpoints only.
     todo_missing = [(hook, seed, path) for (hook, seed, path) in todo if not path.exists()]
@@ -358,6 +389,10 @@ def _train_saelens(
             sae_type=sae_type,
             normalize_activations=normalize_activations,
             aux_loss_coefficient=aux_loss_coef,
+            decoder_init_norm=decoder_init_norm,
+            rescale_acts_by_decoder_norm=rescale_acts_by_decoder_norm,
+            lr_scheduler_name=lr_scheduler_name,
+            lr_warm_up_steps=lr_warm_up_steps,
         )
         for (key, hook, seed), (_h, _s, path) in zip(cells, todo_missing):
             _save(trained[key], path, layer_hook=hook,
