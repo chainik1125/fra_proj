@@ -138,10 +138,38 @@ pip install --no-input --break-system-packages -r /workspace/cadenza_reqs.txt 2>
 pip install --no-input --break-system-packages -q -U huggingface_hub 2>&1 | tail -2
 
 # ── Force cu124 torch (driver-lottery fix; avoid cu130 Hopper cuDNN bug) ─
+# The poetry/pip step above pins torch 2.2.2+cu121 → nvidia-cudnn-cu12 8.9.x
+# (libcudnn.so.8). We override torch to 2.4.1+cu124, which needs
+# nvidia-cudnn-cu12 9.1.0.70 (libcudnn.so.9). `--no-deps` keeps the override
+# from re-churning the dep set, but it ALSO skips torch's transitive cu124
+# nvidia libs — so we MUST bump cudnn (and cusparse/cublas/nccl) to the cu124
+# line ourselves, else `import torch` dies with `libcudnn.so.9: cannot open
+# shared object file` (smoke run 1 failure, 2026-05-27). See
+# [[reference-runpod-torch-env]] (same class of bug for libcusparseLt on 2.6).
 echo "[$(date -u +%H:%M:%S)] override torch → cu124 (driver ≥525 compat, H100-safe)"
 pip install --no-input --break-system-packages --force-reinstall --no-deps \
     torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
     --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -3
+# Bring the vendored nvidia libs up to torch-2.4.1+cu124's pinned versions
+# (cudnn 9 is the load-bearing one; the others avoid silent ABI drift).
+echo "[$(date -u +%H:%M:%S)] align cu124 nvidia runtime libs (cudnn9 etc.)"
+pip install --no-input --break-system-packages \
+    "nvidia-cudnn-cu12==9.1.0.70" \
+    "nvidia-cublas-cu12==12.4.5.8" \
+    "nvidia-cuda-runtime-cu12==12.4.127" \
+    "nvidia-cuda-nvrtc-cu12==12.4.127" \
+    "nvidia-cusparse-cu12==12.3.1.170" \
+    "nvidia-cusolver-cu12==11.6.1.9" \
+    "nvidia-cufft-cu12==11.2.1.3" \
+    "nvidia-curand-cu12==10.3.5.147" \
+    "nvidia-nccl-cu12==2.20.5" \
+    "nvidia-nvjitlink-cu12==12.4.127" 2>&1 | tail -3
+# Register the vendored nvidia lib dirs with ldconfig as a belt-and-braces
+# fallback (torch normally resolves them via package RPATH).
+for d in $(python3 -c "import os,nvidia; p=os.path.dirname(nvidia.__file__); print('\n'.join(os.path.join(p,m,'lib') for m in os.listdir(p) if os.path.isdir(os.path.join(p,m,'lib'))))" 2>/dev/null); do
+    echo "$d" >> /etc/ld.so.conf.d/torch_cu124.conf
+done
+ldconfig 2>/dev/null || true
 python3 -c "import torch; assert torch.cuda.is_available(); print(f'torch={torch.__version__} cuda={torch.version.cuda} dev={torch.cuda.get_device_name(0)}')"
 
 # ── HF auth (export both token names + login) ───────────────────────────
