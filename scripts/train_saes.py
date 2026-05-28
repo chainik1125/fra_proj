@@ -308,6 +308,14 @@ def _train_saelens(
     resume_from   = os.environ.get("SAELENS_RESUME_FROM") or None
     data_seed     = int(os.environ.get("SAELENS_DATA_SEED", 0))
     single_mode   = os.environ.get("SAELENS_SINGLE_SAE", "").lower() in ("1", "true", "yes")
+    # Ablation knobs for the handrolled-vs-saelens diagnostic. Defaults match
+    # the original saelens config (sae-lens 6.44 + Aniket's normalize_activations);
+    # set to "none" / "0.0" to mirror the handrolled training loop (plain MSE,
+    # no input normalization).
+    normalize_activations = os.environ.get("SAELENS_NORMALIZE_ACTIVATIONS",
+                                            "expected_average_only_in")
+    aux_coef_env  = os.environ.get("SAELENS_AUX_LOSS_COEFFICIENT")
+    aux_loss_coef = float(aux_coef_env) if aux_coef_env is not None else None
 
     # Filter to missing checkpoints only.
     todo_missing = [(hook, seed, path) for (hook, seed, path) in todo if not path.exists()]
@@ -348,6 +356,8 @@ def _train_saelens(
             target_total_tokens=target_total,
             data_seed=data_seed,
             sae_type=sae_type,
+            normalize_activations=normalize_activations,
+            aux_loss_coefficient=aux_loss_coef,
         )
         for (key, hook, seed), (_h, _s, path) in zip(cells, todo_missing):
             _save(trained[key], path, layer_hook=hook,

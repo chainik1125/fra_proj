@@ -361,6 +361,8 @@ def train_saelens_multi_cells(
     data_seed: int = 0,
     n_eval_batches: int = 4,
     sae_type: str = "topk",
+    normalize_activations: str = "expected_average_only_in",
+    aux_loss_coefficient: float | None = None,
 ) -> dict:
     """Train a *bank* of SAEs in parallel via ``MultiSAETrainingRunner``.
 
@@ -401,14 +403,18 @@ def train_saelens_multi_cells(
     if len({c[0] for c in cells}) != len(cells):
         raise ValueError(f"cells must have unique keys, got {[c[0] for c in cells]}")
 
+    sae_cfg_kwargs = dict(
+        d_in=d_in, d_sae=d_sae, k=k,
+        dtype="float32", device=device,
+        normalize_activations=normalize_activations,
+    )
+    if aux_loss_coefficient is not None:
+        sae_cfg_kwargs["aux_loss_coefficient"] = aux_loss_coefficient
+
     saes_cfg: dict = {}
     hooks_per_sae: dict[str, str] = {}
     for key, hook_name, _init_seed in cells:
-        saes_cfg[key] = SAECfgCls(
-            d_in=d_in, d_sae=d_sae, k=k,
-            dtype="float32", device=device,
-            normalize_activations="expected_average_only_in",
-        )
+        saes_cfg[key] = SAECfgCls(**sae_cfg_kwargs)
         hooks_per_sae[key] = hook_name
 
     # If all SAEs share one hook, pass as str; else as the per-key dict.
