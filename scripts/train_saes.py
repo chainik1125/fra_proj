@@ -105,6 +105,7 @@ def _out_dir(
     explicit: Path | None,
     model: ModelName = "tinystories",
     clean_only: bool = False,
+    sae_type: str = "topk",
 ) -> Path:
     """Default output-dir naming convention.
 
@@ -112,14 +113,21 @@ def _out_dir(
     TS 4k single-layer → weights/seeds/
     TS Nk single-layer → weights/seeds_{N//1000}k/
     Llama → weights/seeds_llama[_per_layer | _Nk] (default 6k drops the suffix)
-    With ``clean_only=True``, '_cleanonly' is appended to the directory name
-    so SAEs trained on clean-only activations don't clobber mixed-data SAEs.
+
+    Suffixes (appended in order) prevent SAEs from different training regimes
+    clobbering each other:
+      - ``_cleanonly`` for ``clean_only=True``
+      - ``_batchtopk`` for ``sae_type="batchtopk"``
     """
     if explicit is not None:
         return explicit
     weights = Path("weights")
     prefix = "seeds_llama" if model == "llama" else "seeds"
-    suffix = "_cleanonly" if clean_only else ""
+    suffix = ""
+    if clean_only:
+        suffix += "_cleanonly"
+    if sae_type == "batchtopk":
+        suffix += "_batchtopk"
     if len(set(layers)) > 1:
         return weights / f"{prefix}{suffix}_per_layer"
     default_n = _MODEL_DEFAULTS[model]["n_steps"]
@@ -143,6 +151,7 @@ def train_saes(
     *,
     model: ModelName = "tinystories",
     sae_backend: str | None = None,
+    sae_type: str = "topk",
     n_steps: int | None = None,
     layers: list[int] | None = None,
     hooks: list[str] | None = None,
@@ -177,9 +186,17 @@ def train_saes(
     backend  = sae_backend or _BACKEND_DEFAULTS[model]
     if backend not in _BACKENDS:
         raise ValueError(f"unknown sae_backend {backend!r}; choices: {_BACKENDS}")
+    if sae_type not in ("topk", "batchtopk"):
+        raise ValueError(f"unknown sae_type {sae_type!r}; choices: ['topk', 'batchtopk']")
+    if backend == "handrolled" and sae_type == "batchtopk":
+        raise NotImplementedError(
+            "BatchTopK is only implemented for the sae-lens backend. "
+            "Use --sae_backend saelens with --sae_type batchtopk."
+        )
 
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
-    out = _out_dir(n_steps, layers, out_dir, model=model, clean_only=clean_only)
+    out = _out_dir(n_steps, layers, out_dir, model=model,
+                   clean_only=clean_only, sae_type=sae_type)
     out.mkdir(parents=True, exist_ok=True)
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -197,9 +214,10 @@ def train_saes(
         return out
 
     missing_hooks = sorted({h for (h, _, _) in todo})
-    print(f"[train-saes] model={model}  backend={backend}  device={device}  "
-          f"n_steps={n_steps}  seeds={seeds}  hooks={hook_names}  d_sae={d_sae}  "
-          f"k={k}  clean_only={clean_only}  out={out}  missing={len(todo)} checkpoints")
+    print(f"[train-saes] model={model}  backend={backend}  sae_type={sae_type}  "
+          f"device={device}  n_steps={n_steps}  seeds={seeds}  hooks={hook_names}  "
+          f"d_sae={d_sae}  k={k}  clean_only={clean_only}  out={out}  "
+          f"missing={len(todo)} checkpoints")
 
     if backend == "handrolled":
         _train_handrolled(model, todo, missing_hooks, n_train, seq_len, d_sae, k,
@@ -212,7 +230,7 @@ def train_saes(
                 "the activations_store). Use --sae_backend handrolled for now."
             )
         _train_saelens(model, todo, n_train, seq_len, d_sae, k,
-                       n_steps, batch_size, lr, device)
+                       n_steps, batch_size, lr, device, sae_type=sae_type)
 
     print("[train-saes] done")
     return out
@@ -250,6 +268,7 @@ def _train_saelens(
     model: ModelName, todo: list[tuple[str, int, Path]],
     n_train: int, seq_len: int, d_sae: int, k: int,
     n_steps: int, batch_size: int, lr: float, device: str,
+    *, sae_type: str = "topk",
 ) -> None:
     """sae-lens path: stream activations from the paired dataset, train all
     (hook, seed) cells from one shared LLM forward via ``MultiSAETrainingRunner``,
@@ -328,13 +347,14 @@ def _train_saelens(
             mix_full_in_dist=mix_full,
             target_total_tokens=target_total,
             data_seed=data_seed,
+            sae_type=sae_type,
         )
         for (key, hook, seed), (_h, _s, path) in zip(cells, todo_missing):
             _save(trained[key], path, layer_hook=hook,
                   n_train_seqs=int(n_train),
                   seq_len=seq_len, n_steps=n_steps,
                   batch_size=batch_size, lr=lr,
-                  sae_backend="saelens_multi",
+                  sae_backend="saelens_multi", sae_type=sae_type,
                   bank_size=len(cells), data_seed=data_seed, init_seed=seed)
             print(f"[train-saes] wrote {path}")
         return
@@ -355,11 +375,13 @@ def _train_saelens(
             mix_pile_fraction=mix_pile,
             mix_full_in_dist=mix_full,
             target_total_tokens=target_total,
+            sae_type=sae_type,
         )
         _save(sae, path, layer_hook=hook,
               n_train_seqs=int(n_train),
               seq_len=seq_len, n_steps=n_steps,
-              batch_size=batch_size, lr=lr, sae_backend="saelens")
+              batch_size=batch_size, lr=lr,
+              sae_backend="saelens", sae_type=sae_type)
         print(f"[train-saes] wrote {path}")
 
 
@@ -373,6 +395,12 @@ def main() -> None:
                         "Adam, what TS baselines used), Llama=saelens (full sae-lens "
                         "stack: cosine LR + warmup + TopK aux loss + dead-feature "
                         "resampling). Output checkpoint format is the same.")
+    p.add_argument("--sae_type", choices=["topk", "batchtopk"], default="topk",
+                   help="SAE architecture. 'topk' picks the top-k features per token; "
+                        "'batchtopk' picks (k * batch_size) features globally across "
+                        "the batch and gates pre-activations with a learned scalar "
+                        "threshold at single-token inference (JumpReLU semantics). "
+                        "BatchTopK requires --sae_backend saelens.")
     p.add_argument("--seeds",   type=int, nargs="+", default=[0, 1, 2, 3, 4, 5],
                    help="SAE training seeds (set to e.g. [0] for Llama smoke runs).")
     p.add_argument("--n_steps", type=int, default=None)
@@ -402,6 +430,7 @@ def main() -> None:
 
     train_saes(
         seeds=args.seeds, model=args.model, sae_backend=args.sae_backend,
+        sae_type=args.sae_type,
         n_steps=args.n_steps,
         layers=args.layers, hooks=args.hooks, out_dir=args.out_dir,
         n_train=args.n_train, seq_len=args.seq_len,

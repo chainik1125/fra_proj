@@ -1,4 +1,9 @@
-"""TopK sparse autoencoder + minimal training/save/load."""
+"""TopK + BatchTopK sparse autoencoders + minimal training/save/load.
+
+BatchTopK is sae-lens-only at training time (see :mod:`sleeper.sae_saelens`);
+``BatchTopKSAE`` in this module is the in-process inference class used to
+hold the converted weights + scalar threshold after training.
+"""
 
 from __future__ import annotations
 
@@ -52,6 +57,58 @@ class TopKSAE(nn.Module):
         return self.decode(z), z
 
 
+class BatchTopKSAE(nn.Module):
+    """BatchTopK SAE in inference form (JumpReLU with a learned scalar threshold).
+
+    Training (in sae-lens) picks a single global top-K across the whole batch
+    of token activations; the SAE simultaneously learns ``topk_threshold``, an
+    EMA of the smallest positive pre-activation. At inference time, that
+    threshold gates pre-activations per-token: ``z = pre * (pre > threshold)``.
+
+    Same params as :class:`TopKSAE` plus a scalar ``threshold`` buffer. The
+    ``k`` field is stored for metadata only (avg per-token sparsity target);
+    the actual sparsity at inference depends on the threshold.
+    """
+
+    def __init__(self, d_in: int, d_sae: int, k: int):
+        super().__init__()
+        self.d_in = d_in
+        self.d_sae = d_sae
+        self.k = k
+
+        self.W_enc = nn.Parameter(torch.empty(d_in, d_sae))
+        self.b_enc = nn.Parameter(torch.zeros(d_sae))
+        self.W_dec = nn.Parameter(torch.empty(d_sae, d_in))
+        self.b_dec = nn.Parameter(torch.zeros(d_in))
+        # Scalar threshold; registered as buffer so it moves with .to(device)
+        # and rides along in state_dict, but isn't picked up by optimisers.
+        self.register_buffer("threshold", torch.zeros((), dtype=torch.float32))
+
+        nn.init.kaiming_uniform_(self.W_enc, a=math.sqrt(5))
+        with torch.no_grad():
+            self.W_dec.copy_(self.W_enc.T)
+            norms = self.W_dec.norm(dim=1, keepdim=True).clamp(min=1e-8)
+            self.W_dec.data.div_(norms)
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        pre = torch.relu((x - self.b_dec) @ self.W_enc + self.b_enc)
+        return pre * (pre > self.threshold)
+
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        return z @ self.W_dec + self.b_dec
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        z = self.encode(x)
+        return self.decode(z), z
+
+
+# Dispatch table for load(); keep alongside the classes so additions are local.
+_SAE_TYPES: dict[str, type[nn.Module]] = {
+    "topk": TopKSAE,
+    "batchtopk": BatchTopKSAE,
+}
+
+
 @torch.no_grad()
 def encode_all(sae: TopKSAE, acts: torch.Tensor, chunk: int = 256) -> torch.Tensor:
     """Encode (N, T, d_in) activations through the SAE in chunks; result on CPU."""
@@ -65,16 +122,26 @@ def encode_all(sae: TopKSAE, acts: torch.Tensor, chunk: int = 256) -> torch.Tens
     return out.reshape(N, T, sae.d_sae)
 
 
-def save(sae: TopKSAE, path: Path, layer_hook: str,
+def save(sae: nn.Module, path: Path, layer_hook: str,
          save_dtype: torch.dtype = torch.bfloat16, **extra) -> None:
-    """Save TopKSAE weights at ``save_dtype`` (default bf16).
+    """Save SAE weights at ``save_dtype`` (default bf16).
 
     Training is fp32 for numerical stability, but the saved weights are
     consumed in bf16 contexts anyway (LM activations are bf16; SAE encoder
     dot-products are well-conditioned). Storing bf16 halves on-disk size
     from ~1.1 GB → ~535 MB per d_in=4096, d_sae=32768 SAE. ``load`` upcasts
-    back to fp32 via ``load_state_dict`` into the fp32 ``TopKSAE`` module.
+    back to fp32 via ``load_state_dict`` into the fp32 SAE module.
+
+    Works for both :class:`TopKSAE` and :class:`BatchTopKSAE`. The SAE class
+    is recorded as ``config["sae_type"]`` for round-trip dispatch in
+    :func:`load`. Missing field defaults to ``"topk"`` so older ``.pt`` files
+    load unchanged.
     """
+    sae_type = next((t for t, c in _SAE_TYPES.items() if isinstance(sae, c)),
+                    None)
+    if sae_type is None:
+        raise TypeError(f"save() expects one of {list(_SAE_TYPES)}, got "
+                        f"{type(sae).__name__}")
     payload = {
         "state_dict": {k: v.detach().to(save_dtype).cpu()
                        for k, v in sae.state_dict().items()},
@@ -82,6 +149,7 @@ def save(sae: TopKSAE, path: Path, layer_hook: str,
             "d_in": sae.d_in,
             "d_sae": sae.d_sae,
             "k": sae.k,
+            "sae_type": sae_type,
             "layer_hook": layer_hook,
             "save_dtype": str(save_dtype),
             **extra,
@@ -91,12 +159,17 @@ def save(sae: TopKSAE, path: Path, layer_hook: str,
     torch.save(payload, path)
 
 
-def load(path: Path, device: str = "cpu") -> tuple[TopKSAE, dict]:
+def load(path: Path, device: str = "cpu") -> tuple[nn.Module, dict]:
     payload = torch.load(path, weights_only=False, map_location="cpu")
     cfg = payload["config"]
     # support legacy `k_total` field
     k = cfg.get("k", cfg.get("k_total"))
-    sae = TopKSAE(d_in=cfg["d_in"], d_sae=cfg["d_sae"], k=k)
+    sae_type = cfg.get("sae_type", "topk")
+    try:
+        SAECls = _SAE_TYPES[sae_type]
+    except KeyError:
+        raise ValueError(f"unknown sae_type {sae_type!r}; known: {list(_SAE_TYPES)}")
+    sae = SAECls(d_in=cfg["d_in"], d_sae=cfg["d_sae"], k=k)
     sae.load_state_dict(payload["state_dict"])
     sae.to(device).eval()
     for p in sae.parameters():

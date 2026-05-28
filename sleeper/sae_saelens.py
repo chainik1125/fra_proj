@@ -9,10 +9,13 @@ Two entry points:
   each SAE has its own optimizer / LR schedule / dead-feature tracker, but
   the activation buffer and sampling order are shared.
 
-Both convert the trained ``TopKTrainingSAE`` weights into our
-``sleeper.sae.TopKSAE`` shape (identical parameter names + shapes), so the
-rest of the pipeline (attribution, hooks, encode_all, save/load) is
-unchanged.
+Both convert the trained sae-lens SAE into our matching inference class —
+:class:`sleeper.sae.TopKSAE` for ``sae_type="topk"``, or
+:class:`sleeper.sae.BatchTopKSAE` for ``sae_type="batchtopk"`` (param names
+match; BatchTopK additionally carries a scalar ``threshold`` buffer that
+gates pre-activations at single-token inference). The rest of the pipeline
+(attribution, hooks, encode_all, save/load) sees a uniform ``encode/decode``
+API regardless of variant.
 """
 from __future__ import annotations
 
@@ -20,7 +23,7 @@ from typing import TYPE_CHECKING
 
 import torch
 
-from sleeper.sae import TopKSAE
+from sleeper.sae import BatchTopKSAE, TopKSAE
 
 if TYPE_CHECKING:
     from sleeper.model import ModelConfig
@@ -117,13 +120,28 @@ def _build_override_dataset(
     return None
 
 
-def _convert_to_topksae(trained_sae, d_in: int, d_sae: int, k: int, device: str) -> TopKSAE:
-    """Copy a sae-lens TopKTrainingSAE's W_enc / b_enc / W_dec / b_dec into our
-    TopKSAE shape (param names + shapes already match)."""
-    sae = TopKSAE(d_in=d_in, d_sae=d_sae, k=k)
+def _convert_trained_sae(trained_sae, d_in: int, d_sae: int, k: int,
+                         device: str, sae_type: str = "topk"):
+    """Copy a sae-lens trained SAE into the matching :mod:`sleeper.sae` class.
+
+    Param names (``W_enc, b_enc, W_dec, b_dec``) match across all variants —
+    BatchTopK additionally carries ``topk_threshold`` (scalar buffer) which
+    we copy into our ``BatchTopKSAE.threshold`` for JumpReLU-style inference.
+    """
     src = trained_sae.state_dict()
-    sae.load_state_dict({n: src[n].detach().to(torch.float32).cpu()
-                         for n in ("W_enc", "b_enc", "W_dec", "b_dec")})
+    weights = {n: src[n].detach().to(torch.float32).cpu()
+               for n in ("W_enc", "b_enc", "W_dec", "b_dec")}
+    if sae_type == "topk":
+        sae = TopKSAE(d_in=d_in, d_sae=d_sae, k=k)
+        sae.load_state_dict(weights)
+    elif sae_type == "batchtopk":
+        sae = BatchTopKSAE(d_in=d_in, d_sae=d_sae, k=k)
+        # sae-lens stores a scalar EMA ``topk_threshold`` (see
+        # batchtopk_sae.py:update_topk_threshold); copy it directly.
+        thr = src["topk_threshold"].detach().to(torch.float32).cpu()
+        sae.load_state_dict({**weights, "threshold": thr})
+    else:
+        raise ValueError(f"unknown sae_type {sae_type!r}; expected 'topk' or 'batchtopk'")
     return sae.to(device).eval()
 
 
@@ -172,8 +190,14 @@ def train_saelens_cell(
     target_total_tokens: int | None = None,
     tokens_per_row_estimate: int = 300,
     n_eval_batches: int = 4,
-) -> TopKSAE:
-    """Train one (layer, hook) TopK SAE via sae-lens; return our TopKSAE shape.
+    sae_type: str = "topk",
+):
+    """Train one (layer, hook) SAE via sae-lens; return the matching inference SAE.
+
+    ``sae_type`` selects the SAE architecture: ``"topk"`` (default) trains a
+    standard per-token TopK SAE and returns :class:`~sleeper.sae.TopKSAE`;
+    ``"batchtopk"`` trains BatchTopK (global top-K across the batch + scalar
+    threshold EMA) and returns :class:`~sleeper.sae.BatchTopKSAE`.
 
     sae-lens budgets training in tokens (``training_tokens``) rather than
     SGD steps; we set ``training_tokens = n_steps * batch_size`` to mirror
@@ -184,7 +208,6 @@ def train_saelens_cell(
     """
     from sae_lens import LanguageModelSAERunnerConfig, SAETrainingRunner
     from sae_lens.config import LoggingConfig
-    from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
 
     # Model runs in its native dtype (cfg.dtype, e.g. bf16 for Llama), but the
     # SAE itself trains in fp32 — Adam is unstable with bf16 params/grads and
@@ -192,7 +215,15 @@ def train_saelens_cell(
     # normalize_activations matches Aniket's setup: inputs are rescaled by
     # their expected average norm before encoding, which stabilises feature
     # scales at d_in=4096.
-    sae_cfg = TopKTrainingSAEConfig(
+    if sae_type == "batchtopk":
+        from sae_lens.saes.batchtopk_sae import BatchTopKTrainingSAEConfig
+        SAECfgCls = BatchTopKTrainingSAEConfig
+    elif sae_type == "topk":
+        from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
+        SAECfgCls = TopKTrainingSAEConfig
+    else:
+        raise ValueError(f"unknown sae_type {sae_type!r}; expected 'topk' or 'batchtopk'")
+    sae_cfg = SAECfgCls(
         d_in=d_in, d_sae=d_sae, k=k,
         dtype="float32", device=device,
         normalize_activations="expected_average_only_in",
@@ -293,7 +324,7 @@ def train_saelens_cell(
     for p in runner.model.parameters():
         p.requires_grad_(False)
     trained_sae = runner.run()
-    return _convert_to_topksae(trained_sae, d_in, d_sae, k, device)
+    return _convert_trained_sae(trained_sae, d_in, d_sae, k, device, sae_type)
 
 
 # ---------------------------------------------------------------------------
@@ -329,8 +360,13 @@ def train_saelens_multi_cells(
     target_total_tokens: int | None = None,
     data_seed: int = 0,
     n_eval_batches: int = 4,
-) -> dict[str, TopKSAE]:
-    """Train a *bank* of TopK SAEs in parallel via ``MultiSAETrainingRunner``.
+    sae_type: str = "topk",
+) -> dict:
+    """Train a *bank* of SAEs in parallel via ``MultiSAETrainingRunner``.
+
+    ``sae_type`` selects the SAE architecture — see :func:`train_saelens_cell`.
+    Returns ``{key: TopKSAE}`` for ``sae_type="topk"`` or
+    ``{key: BatchTopKSAE}`` for ``sae_type="batchtopk"``.
 
     ``cells`` is a list of ``(key, hook_name, init_seed)`` triples. Every SAE
     in the bank shares the same LLM forward, activation buffer, dataset, LR
@@ -346,7 +382,18 @@ def train_saelens_multi_cells(
     """
     from sae_lens import MultiSAETrainingRunner, MultiSAETrainingRunnerConfig
     from sae_lens.config import LoggingConfig
-    from sae_lens.saes.topk_sae import TopKTrainingSAEConfig
+    if sae_type == "batchtopk":
+        from sae_lens.saes.batchtopk_sae import (
+            BatchTopKTrainingSAE as TrainingSAECls,
+            BatchTopKTrainingSAEConfig as SAECfgCls,
+        )
+    elif sae_type == "topk":
+        from sae_lens.saes.topk_sae import (
+            TopKTrainingSAE as TrainingSAECls,
+            TopKTrainingSAEConfig as SAECfgCls,
+        )
+    else:
+        raise ValueError(f"unknown sae_type {sae_type!r}; expected 'topk' or 'batchtopk'")
 
     if not cells:
         raise ValueError("cells must be non-empty")
@@ -357,7 +404,7 @@ def train_saelens_multi_cells(
     saes_cfg: dict = {}
     hooks_per_sae: dict[str, str] = {}
     for key, hook_name, _init_seed in cells:
-        saes_cfg[key] = TopKTrainingSAEConfig(
+        saes_cfg[key] = SAECfgCls(
             d_in=d_in, d_sae=d_sae, k=k,
             dtype="float32", device=device,
             normalize_activations="expected_average_only_in",
@@ -440,7 +487,6 @@ def train_saelens_multi_cells(
     # them to MultiSAETrainingRunner via ``override_saes``. This makes the
     # bank exactly reproducible from the (init_seed, dataset, hparams) tuple,
     # independent of dict-iteration order or sae-lens internals.
-    from sae_lens.saes.topk_sae import TopKTrainingSAE
 
     # Disable cudnn nondeterminism for as much as we can. (cuBLAS gemm and
     # scatter still have minor float reordering, but Adam updates + init are
@@ -464,7 +510,7 @@ def train_saelens_multi_cells(
             _np.random.seed(int(init_seed))
         except Exception:
             pass
-        override_saes[key] = TopKTrainingSAE(saes_cfg[key])
+        override_saes[key] = TrainingSAECls(saes_cfg[key])
 
     print(f"[saelens-multi] training {len(cells)} SAEs in parallel — "
           f"keys={list(saes_cfg.keys())}  hooks={unique_hooks}  "
@@ -517,5 +563,6 @@ def train_saelens_multi_cells(
         print(f"[saelens-multi] CUDA allocated pre-run: {mb:.2f} GB")
     trained_saes = runner.run()
 
-    return {key: _convert_to_topksae(trained_saes[key], d_in, d_sae, k, device)
+    return {key: _convert_trained_sae(trained_saes[key], d_in, d_sae, k,
+                                       device, sae_type)
             for key, _, _ in cells}
