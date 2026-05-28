@@ -83,9 +83,12 @@ def main() -> None:
     p.add_argument("--feature", type=int, required=True)
     p.add_argument("--out_json", type=Path, default=Path("weights/meandiff_baseline.json"))
     p.add_argument("--out_vmd", type=Path, default=Path("weights/v_md.pt"))
+    p.add_argument("--model", choices=["tinystories", "llama"], default="tinystories",
+                   help="Which sleeper model. TS uses 'Story:' marker; Llama uses ChatML.")
     p.add_argument("--n_train", type=int, default=10_000)
     p.add_argument("--n_test", type=int, default=200)
-    p.add_argument("--seq_len", type=int, default=128)
+    p.add_argument("--seq_len", type=int, default=128,
+                   help="Per-prompt sequence length. TS=128, Llama=1024 (override).")
     p.add_argument("--alphas", type=float, nargs="+",
                    default=[0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
     p.add_argument("--sae_alpha", type=float, default=2.0)
@@ -99,11 +102,12 @@ def main() -> None:
     hook = sae_cfg["layer_hook"]
     print(f"[md] device={device}  hook={hook}  feature={args.feature}")
 
-    model = load_sleeper_model(device=device)
+    model = load_sleeper_model(model=args.model, device=device)
     splits = load_paired_dataset(
         tokenizer=model.tokenizer,
         n_train=args.n_train, n_val=2, n_test=args.n_test,
         seq_len=args.seq_len, seed=args.seed,
+        model=args.model,
     )
 
     # ---- v_md from train split ----

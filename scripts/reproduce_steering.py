@@ -72,9 +72,13 @@ def main():
     p.add_argument("--sae", type=Path, required=True)
     p.add_argument("--out", type=Path, default=Path("weights/reproduce_steering.json"))
     p.add_argument("--hook", default=None)
+    p.add_argument("--model", choices=["tinystories", "llama"], default="tinystories",
+                   help="Which sleeper model to steer. Llama uses ChatML prompts and "
+                        "the Cadenza IHY dataset; defaults below assume tinystories.")
     p.add_argument("--n_val", type=int, default=200)
     p.add_argument("--n_test", type=int, default=200)
-    p.add_argument("--seq_len", type=int, default=128)
+    p.add_argument("--seq_len", type=int, default=128,
+                   help="Per-prompt sequence length. TS=128, Llama=1024 (override).")
     p.add_argument("--top_k", type=int, default=100)
     p.add_argument("--stage2_keep", type=int, default=10)
     p.add_argument("--alphas", type=float, nargs="+",
@@ -91,11 +95,12 @@ def main():
     hook = args.hook or sae_cfg["layer_hook"]
     print(f"[steer] sae={args.sae}  hook={hook}  d_sae={sae.d_sae}  k={sae.k}")
 
-    model = load_sleeper_model(device=device)
+    model = load_sleeper_model(model=args.model, device=device)
     splits = load_paired_dataset(
         tokenizer=model.tokenizer, n_train=2,
         n_val=args.n_val, n_test=args.n_test,
         seq_len=args.seq_len, seed=args.seed,
+        model=args.model,
     )
     val, test = splits["val"], splits["test"]
     val_mask = prompt_mask_from_markers(args.seq_len, val.story_marker_pos)
