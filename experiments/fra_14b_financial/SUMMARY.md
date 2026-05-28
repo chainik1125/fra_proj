@@ -258,7 +258,43 @@ $$
 - **n bump:** the current 32 samples per prompt may give too few M+C rollouts; consider bumping to 64–128 baseline samples before bucketing.
 - **Relaunch scope:** gran=1 per-feature on finance only (~$8 of compute) as a smoke test, or full FRA-QK × ln1 + FRA-OV × ln1 grid (base + finance, 2 seeds, all grans) at ~$30.
 
-### 5.2 Other follow-ups
+### 5.2 Cheap distributional (JSD) companion metric
+
+The behavioural metric (judge-scored Δalign over an α-window) carries two noise sources we characterised at length — Qwen sampling temperature (~2 pts) and judge nondeterminism (~2–3 pts even at temp=0). A **distributional** metric sidesteps both: Jensen–Shannon divergence between next-token distributions is a *deterministic* function of the model weights and the evaluation token sequence — no sampling, no judge. This mirrors the sleeper-agents JSD overlay (see `ketan_repl/notes/JSD_OVERLAY_WRITEUP.md`) and is cheap (forward passes only).
+
+**JSD.** For two next-token distributions $p, q$ over the vocabulary at one position, with $m = \tfrac12(p+q)$:
+$$
+\mathrm{JSD}(p, q) \;=\; \tfrac12 D_{\mathrm{KL}}(p \,\|\, m) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, m) \quad \text{(in bits: divide by } \ln 2\text{)} \;\in [0, 1].
+$$
+
+**Teacher-forcing substrate.** Fix one deterministic reference sequence per prompt — the **unsteered EM model's greedy completion** $t_{1:T}$ (greedy → reproducible, zero sampling noise). Evaluate every model's per-position next-token distribution on that same fixed sequence, and average JSD over the answer positions $j$ and the 8 prompts. Using the *same* sequence across all α makes the α-curve paired (common-random-sequence), the JSD analogue of the CRN we already rely on.
+
+**Two metrics (mapping onto the sleeper clean/poisoned pair):**
+
+| Metric | Definition (teacher-forced, per position, averaged) | Sleeper analogue | Reads as |
+|---|---|---|---|
+| $\mathrm{JSD}_{\text{eff}}$ | $\mathrm{JSD}\big(p^{\text{steered EM}},\, p^{\text{unsteered EM}}\big)$ | JSD(steered, **poisoned**) | **effect magnitude** — how far steering moved the distribution from the misaligned baseline. High = big effect. |
+| $\mathrm{JSD}_{\text{base}}$ | $\mathrm{JSD}\big(p^{\text{steered EM}},\, p^{\text{base}}\big)$ | JSD(steered, **clean**) | **alignment recovery** — how close steering brought the EM model to the (aligned) base. Low = looks base-like. |
+
+$p^{\text{unsteered EM}}$ and $p^{\text{base}}$ are α-independent → computed once; only the steered forward pass repeats per α. So per feature: ~9 α × 8 prompts × 1 forward pass ≈ trivial. The ideal de-misaligning steer **maximises $\mathrm{JSD}_{\text{eff}}$ while minimising $\mathrm{JSD}_{\text{base}}$**.
+
+**Why $\mathrm{JSD}_{\text{base}}$ is noisy, and how to fix it.** The base and EM models differ at *every* layer (all-linear LoRA, §1), so $\mathrm{JSD}_{\text{base}}$ has a large constant floor even at α=0 (the EM↔base gap), and steering only modulates a small fraction of it → low signal-to-floor. Teacher-forcing on a fixed greedy sequence already removes *sampling* noise; the remaining issue is the floor, not variance. Two denoisers:
+
+1. **Paired marginal (recommended):** report
+$$
+\Delta\mathrm{JSD}_{\text{base}}(\alpha) \;=\; \mathrm{JSD}_{\text{base}}(\alpha) - \mathrm{JSD}_{\text{base}}(0),
+$$
+which cancels the constant EM↔base floor and isolates the steering's pull toward (negative) or away from (positive) base.
+2. **Fractional recovery** (interpretable, floor becomes denominator not noise):
+$$
+R(\alpha) \;=\; \frac{\mathrm{JSD}_{\text{base}}(0) - \mathrm{JSD}_{\text{base}}(\alpha)}{\mathrm{JSD}_{\text{base}}(0)} \;\in (-\infty, 1], \qquad R=1 \Leftrightarrow \text{steered EM matches base.}
+$$
+
+The irreducible part is honest: base and EM are structurally far apart, so $\mathrm{JSD}_{\text{base}}$ in absolute terms will always be dominated by the LoRA's own shift — but because everything is teacher-forced and deterministic, we estimate the *marginal* $\Delta\mathrm{JSD}_{\text{base}}$ and $R(\alpha)$ exactly (no MC error), which is the quantity of interest. $\mathrm{JSD}_{\text{eff}}$ has no such floor problem (steered vs unsteered EM are the same model ± the hook) and is clean as-is.
+
+**Cost / where to add it.** Forward-pass only; fold into the orchestrator alongside generation (reuse the same hook + the prompts), or run as a standalone pass over the headline features (F93118, F603, F59432, F56776) — a few minutes on one GPU. Add `JSD_eff` and `ΔJSD_base` / `R` as columns next to Δ@50 / Δ@70 in the headline tables.
+
+### 5.3 Other follow-ups
 
 - ~~**Fix `push_judged.py` qwen14b/ prefix**~~ **DONE** (Task #10, commit forthcoming): `scripts/push_judged.py` now derives model prefix from filename markers (`qwen14b`/`qwen7b`/`L24_`/`L15_`) with a JSON-peek fallback (reads `sae_id` / `hook_name` for ambiguous `gpt4o_judged_<base|finance>_*.json`). 35 mis-located 14B combineds moved from `qwen7b/grid_magmatched/<cell>/` → `qwen14b/grid_magmatched/<cell>/` (2 already in correct location → all 37 addressed). The mis-located originals under `qwen7b/` remain as harmless duplicates (clearly named with 14B markers); optional cleanup is a separate hygiene pass.
 - **H12 relaunch (head-ablation argmax).** Smallest meaningful slice: Wang × {ln1, resid_post} on finance only, 2 seeds, all grans = 8 pods × ~$2.50/hr × ~1 hr each ≈ $20. Confirms whether the headline 66.0 / 51.7 lifts on the proper argmax head. Full 32-pod re-run at H12 ≈ $80–120.
