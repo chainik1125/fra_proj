@@ -65,14 +65,25 @@ def encode_all(sae: TopKSAE, acts: torch.Tensor, chunk: int = 256) -> torch.Tens
     return out.reshape(N, T, sae.d_sae)
 
 
-def save(sae: TopKSAE, path: Path, layer_hook: str, **extra) -> None:
+def save(sae: TopKSAE, path: Path, layer_hook: str,
+         save_dtype: torch.dtype = torch.bfloat16, **extra) -> None:
+    """Save TopKSAE weights at ``save_dtype`` (default bf16).
+
+    Training is fp32 for numerical stability, but the saved weights are
+    consumed in bf16 contexts anyway (LM activations are bf16; SAE encoder
+    dot-products are well-conditioned). Storing bf16 halves on-disk size
+    from ~1.1 GB → ~535 MB per d_in=4096, d_sae=32768 SAE. ``load`` upcasts
+    back to fp32 via ``load_state_dict`` into the fp32 ``TopKSAE`` module.
+    """
     payload = {
-        "state_dict": {k: v.detach().cpu() for k, v in sae.state_dict().items()},
+        "state_dict": {k: v.detach().to(save_dtype).cpu()
+                       for k, v in sae.state_dict().items()},
         "config": {
             "d_in": sae.d_in,
             "d_sae": sae.d_sae,
             "k": sae.k,
             "layer_hook": layer_hook,
+            "save_dtype": str(save_dtype),
             **extra,
         },
     }
