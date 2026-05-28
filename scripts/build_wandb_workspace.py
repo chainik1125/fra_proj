@@ -96,8 +96,12 @@ def build(args: argparse.Namespace) -> ws.Workspace:
                     line_titles[key] = f"s{seed}"
                     line_marks[key]  = "solid"
             # MSE loss panels share a fixed y-range so all hooks/layers can be
-            # compared at a glance instead of auto-scaling per panel.
-            range_y = (0.0, 2000.0) if metric == "losses/mse_loss" else None
+            # compared at a glance instead of auto-scaling per panel. wandb's
+            # LinePlot validator rejects None for range_y, so only pass it when
+            # we actually want a fixed range.
+            extra: dict = {}
+            if metric == "losses/mse_loss":
+                extra["range_y"] = (0.0, 2000.0)
             panels.append(
                 wr.LinePlot(
                     title=f"{hook} — {metric}",
@@ -107,7 +111,7 @@ def build(args: argparse.Namespace) -> ws.Workspace:
                     line_colors=line_colors or None,
                     line_titles=line_titles or None,
                     line_marks=line_marks or None,
-                    range_y=range_y,
+                    **extra,
                 )
             )
         sections.append(ws.Section(name=hook, panels=panels))
