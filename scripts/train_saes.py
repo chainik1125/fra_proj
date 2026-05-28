@@ -247,16 +247,22 @@ def _train_handrolled(
                                  seq_len=seq_len, seed=0, model=model,
                                  clean_only_train=clean_only)
     train_tokens = splits["train"].tokens
+    train_attn   = splits["train"].attention_mask
     print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs "
           f"({'clean-only' if clean_only else 'mixed 50/50'}) at hooks={missing_hooks}")
+    # PairedTokens is left-padded prompt-only since 6e47cd6 — without
+    # attention_mask the LM treats leading pad ids as real input and the
+    # activations at the real prompt positions are corrupted.
     acts = cache_activations(model=hooked, tokens=train_tokens,
-                             hook_names=missing_hooks, chunk_size=16)
+                             hook_names=missing_hooks, chunk_size=16,
+                             attention_mask=train_attn)
     for hook, seed, path in todo:
         if path.exists():
             print(f"[train-saes] skip {path} (exists)")
             continue
         sae, _ = train(acts[hook], d_sae=d_sae, k=k, n_steps=n_steps,
-                       batch_size=batch_size, lr=lr, seed=seed, device=device)
+                       batch_size=batch_size, lr=lr, seed=seed, device=device,
+                       mask=train_attn)
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(train_tokens.shape[0]),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,

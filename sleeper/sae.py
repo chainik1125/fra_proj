@@ -189,16 +189,33 @@ def train(
     print_every: int = 200,
     seed: int = 0,
     device: str = "cuda",
+    mask: torch.Tensor | None = None,   # (N, T) bool; True = real token, False = pad
 ) -> tuple[TopKSAE, list[float]]:
     """Train a TopK SAE on (N, T, d) acts. Returns (sae, loss_trajectory).
 
     Sampling matches Dmitry's train_crosscoders.py: CPU `Generator`, paired
     (seq_idx, pos_idx) randints, then index acts[seq_idx, pos_idx].
+
+    Pass ``mask`` (N, T) when acts came from a left-padded LM forward so the
+    sampler draws only from real-token positions. Without the mask, ~17% of
+    samples land on pad activations for typical TS prompt-only shapes.
     """
     torch.manual_seed(seed)
     N, T, D = acts.shape
     if device != "cpu":
         acts = acts.to(device)
+
+    # Pre-build a flat list of (seq, pos) for real tokens; sample uniformly
+    # from it instead of the full (N × T) grid.
+    valid: torch.Tensor = torch.empty(0, dtype=torch.long, device=acts.device)
+    M = 0
+    if mask is not None:
+        assert mask.shape == (N, T), \
+            f"mask shape {tuple(mask.shape)} must match acts (N, T)=({N}, {T})"
+        valid = mask.nonzero(as_tuple=False).to(acts.device)   # (M, 2)
+        M = valid.shape[0]
+        if M == 0:
+            raise ValueError("mask has no True entries — nothing to sample")
 
     sae = TopKSAE(d_in=D, d_sae=d_sae, k=k).to(device)
     opt = torch.optim.Adam(sae.parameters(), lr=lr)
@@ -207,8 +224,13 @@ def train(
 
     t0 = time.time()
     for step in range(n_steps):
-        seq_idx = torch.randint(0, N, (batch_size,), generator=gen).to(acts.device)
-        pos_idx = torch.randint(0, T, (batch_size,), generator=gen).to(acts.device)
+        if mask is None:
+            seq_idx = torch.randint(0, N, (batch_size,), generator=gen).to(acts.device)
+            pos_idx = torch.randint(0, T, (batch_size,), generator=gen).to(acts.device)
+        else:
+            flat_idx = torch.randint(0, M, (batch_size,), generator=gen).to(acts.device)
+            sample = valid[flat_idx]                  # (B, 2)
+            seq_idx, pos_idx = sample[:, 0], sample[:, 1]
         x = acts[seq_idx, pos_idx].to(torch.float32)
         x_hat, _ = sae(x)
         loss = (x - x_hat).pow(2).sum(dim=-1).mean()
