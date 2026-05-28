@@ -36,8 +36,9 @@ mkdir -p "$PIP_CACHE_DIR"
 pip install --no-input --break-system-packages -r requirements.txt 2>&1 | tail -2
 pip install --no-input --break-system-packages -U 'transformer_lens>=3.0,<4.0' 2>&1 | tail -2
 pip install --no-input --break-system-packages peft 2>&1 | tail -2
-pip install --no-input --break-system-packages --force-reinstall --no-deps \
-    torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -2
+pip install --no-input --break-system-packages --force-reinstall \
+    torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -2
+pip install --no-input --break-system-packages --force-reinstall --no-cache-dir pandas 2>&1 | tail -1
 python3 -c "import torch; assert torch.cuda.is_available(); print('torch', torch.__version__)"
 python3 -c "from huggingface_hub import login; login(token='$HF_TOKEN', add_to_git_credential=False)"
 

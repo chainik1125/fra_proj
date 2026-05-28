@@ -15,7 +15,8 @@ cd fra_proj && git fetch origin && git checkout "$BRANCH" && git pull --ff-only
 export HF_HOME=/workspace/.hf_cache PYTHONUNBUFFERED=1 HF_TOKEN="$HF_TOKEN" HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
 pip install --no-input --break-system-packages -r requirements.txt 2>&1 | tail -1
 pip install --no-input --break-system-packages -U 'transformer_lens>=3.0,<4.0' dictionary_learning peft 2>&1 | tail -1
-pip install --no-input --break-system-packages --force-reinstall --no-deps torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -1
+pip install --no-input --break-system-packages --force-reinstall torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -1
+pip install --no-input --break-system-packages --force-reinstall --no-cache-dir pandas 2>&1 | tail -1
 python3 -c "from huggingface_hub import login; login(token='$HF_TOKEN', add_to_git_credential=False)"
 python3 -c "from huggingface_hub import snapshot_download; snapshot_download('dmanningcoe/fra-phase1-steering-data', repo_type='dataset', allow_patterns='qwen14b/sae_resid_post_l24_base_arditi/*', local_dir='/workspace/sae_rp')"
 SAE_DIR=$(dirname "$(find /workspace/sae_rp -name ae.pt | head -1)")
