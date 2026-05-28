@@ -795,12 +795,15 @@ def run_frontier_sweep_shared_feature(
     feat_indices = [feature_idx]
 
     def make_ov_hooks_multihead(head_list, scale):
-        head_projs = []
+        # Deduplicate by KV head: in GQA, multiple query heads share one
+        # KV head and thus the same W_V, so we must steer each KV head
+        # only once to avoid multiplying the delta.
+        kv_projs = {}  # kv_idx -> feat_v_proj
         for h in head_list:
             kv_idx = h * n_kv_heads // n_q_heads
-            W_V_h = get_W_V(model, layer, h).float()
-            feat_v_proj = W_dec[feat_indices] @ W_V_h
-            head_projs.append((kv_idx, feat_v_proj))
+            if kv_idx not in kv_projs:
+                W_V_h = get_W_V(model, layer, h).float()
+                kv_projs[kv_idx] = W_dec[feat_indices] @ W_V_h
         cached = {}
 
         def capture(activation, hook):
@@ -817,7 +820,7 @@ def run_frontier_sweep_shared_feature(
                 return v
             seq_len = min(features.shape[0], v.shape[1])
             feat_acts = features[:seq_len, feat_indices].float()
-            for kv_idx, feat_v_proj in head_projs:
+            for kv_idx, feat_v_proj in kv_projs.items():
                 delta = (scale - 1.0) * feat_acts @ feat_v_proj
                 v[0, :seq_len, kv_idx, :] += delta.to(v.dtype)
             return v
@@ -951,18 +954,30 @@ def run_behavioral_eval_multihead(
 
     def make_multihead_ov_hooks(feature_key):
         """Build hooks that steer OV across all heads simultaneously."""
-        # Pre-compute per-head projections
-        head_projs = []  # list of (kv_head_idx, feat_indices, feat_v_proj)
+        # Deduplicate by KV head: in GQA, multiple query heads share one
+        # KV head and thus the same W_V.  We merge feature lists across
+        # query heads that map to the same KV head so each KV head is
+        # steered exactly once.
+        kv_feat_map = {}  # kv_idx -> set of feature indices
+        kv_W_V = {}       # kv_idx -> W_V (same for all q-heads in group)
         for h in heads:
             feats = features_per_head[h].get(feature_key, [])
             if not feats:
                 continue
             kv_idx = h * n_kv_heads // n_q_heads
-            W_V_h = get_W_V(model, layer, h).float()
-            feat_v_proj = W_dec[feats] @ W_V_h
-            head_projs.append((kv_idx, feats, feat_v_proj))
+            if kv_idx not in kv_feat_map:
+                kv_feat_map[kv_idx] = set()
+                kv_W_V[kv_idx] = get_W_V(model, layer, h).float()
+            kv_feat_map[kv_idx].update(feats)
 
-        if not head_projs:
+        # Build final projection per unique KV head
+        kv_projs = []  # list of (kv_idx, feat_list, feat_v_proj)
+        for kv_idx, feat_set in kv_feat_map.items():
+            feat_list = sorted(feat_set)
+            feat_v_proj = W_dec[feat_list] @ kv_W_V[kv_idx]
+            kv_projs.append((kv_idx, feat_list, feat_v_proj))
+
+        if not kv_projs:
             return []
 
         cached = {}
@@ -983,7 +998,7 @@ def run_behavioral_eval_multihead(
             if features is None:
                 return v
             seq_len = min(features.shape[0], v.shape[1])
-            for kv_idx, feat_indices, feat_v_proj in head_projs:
+            for kv_idx, feat_indices, feat_v_proj in kv_projs:
                 feat_acts = features[:seq_len, feat_indices].float()
                 delta = (-1.0 * feat_acts) @ feat_v_proj
                 v[0, :seq_len, kv_idx, :] += delta.to(v.dtype)
