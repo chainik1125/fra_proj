@@ -299,15 +299,18 @@ def _train_saelens(
 
     # ── Multi-SAE bank path (default, one LLM serves all cells) ──────────
     if not single_mode:
-        # Build (key, hook, init_seed) cells. Key must uniquely identify each
-        # SAE within the bank; embed layer + kind + seed so wandb panels stay
-        # readable.
+        # Build (key, hook, init_seed) cells. Keys are formatted as
+        # ``L{L}_{kind}/s{seed}`` so wandb's workspace view auto-groups them
+        # into one panel-section per (layer, hook), with each seed as a
+        # separate line within that section. (Wandb groups metrics by the
+        # path prefix before the last "/", and renders multiple matching
+        # series in the same chart.)
         def _kind(hook: str) -> str:
             return "ln1" if "ln1" in hook else hook.rsplit("hook_", 1)[-1]
         cells: list[tuple[str, str, int]] = []
         for hook, seed, _path in todo_missing:
             L = int(hook.split(".")[1])
-            cells.append((f"L{L}_{_kind(hook)}_s{seed}", hook, seed))
+            cells.append((f"L{L}_{_kind(hook)}/s{seed}", hook, seed))
         run_name = f"{model}_multi_{len(cells)}saes"
         trained = train_saelens_multi_cells(
             hf_model=hf_model, tokenizer=tokenizer, cfg=cfg,
