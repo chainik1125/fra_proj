@@ -338,6 +338,16 @@ def _load_tinystories_paired_dataset(
     def _extract_prompt(ex: dict) -> torch.Tensor | None:
         ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
         full = torch.tensor(ids, dtype=torch.long)
+        # Pre-6e47cd6 the loader kept only rows where the FULL TEXT (prompt
+        # plus dataset completion) was >= seq_len, implicitly biasing the
+        # population toward stories with long bodies. The handrolled SAE was
+        # tuned on that population and the downstream-baseline ranking is
+        # sensitive to it (e.g. seed-0 winner shifts from f579 to f88 if
+        # short-body rows enter the test split). Keeping the same filter here
+        # — even though we only return the prompt — restores v3 row selection
+        # without re-introducing dataset completions in PairedTokens.
+        if full.shape[0] < seq_len:
+            return None
         m = _prompt_marker(full)
         if m < 0:
             return None
