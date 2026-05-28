@@ -260,14 +260,19 @@ $$
 
 ### 5.2 Cheap distributional (JSD) companion metric
 
-The behavioural metric (judge-scored Δalign over an α-window) carries two noise sources we characterised at length — Qwen sampling temperature (~2 pts) and judge nondeterminism (~2–3 pts even at temp=0). A **distributional** metric sidesteps both: Jensen–Shannon divergence between next-token distributions is a *deterministic* function of the model weights and the evaluation token sequence — no sampling, no judge. This mirrors the sleeper-agents JSD overlay (see `ketan_repl/notes/JSD_OVERLAY_WRITEUP.md`) and is cheap (forward passes only).
+The behavioural metric (judge-scored Δalign over an α-window) carries two noise sources we characterised at length — Qwen sampling temperature (~2 pts) and judge nondeterminism (~2–3 pts even at temp=0). A **distributional** metric can sidestep both — but *only if the evaluation token sequence is fixed and shared across conditions*. JSD between next-token distributions is a deterministic forward-pass quantity **given a fixed sequence**; the determinism is NOT inherent to "JSD on a rollout." Two failure modes if the sequence is obtained per-condition by generation:
+
+1. **Sampling noise** — a temp=1 rollout is stochastic, so JSD varies run-to-run. (Seed-matching the RNG fixes *this* part.)
+2. **Sequence drift under steering (the worse one)** — even with a matched seed, the steered and unsteered models diverge once a single sampled token flips (the same CRN-decay we saw on the behavioural metric). If you compute JSD along *each model's own* rollout you are then comparing distributions at *different token positions on different text* — conflating "distribution shifted" with "we're standing on different tokens." Seed-matching cannot fix this.
+
+**The fix (load-bearing): teacher-force ONE fixed, shared sequence — do not generate per condition.** See substrate below. This mirrors the sleeper-agents JSD overlay (`ketan_repl/notes/JSD_OVERLAY_WRITEUP.md`) and is cheap (forward passes only).
 
 **JSD.** For two next-token distributions $p, q$ over the vocabulary at one position, with $m = \tfrac12(p+q)$:
 $$
 \mathrm{JSD}(p, q) \;=\; \tfrac12 D_{\mathrm{KL}}(p \,\|\, m) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, m) \quad \text{(in bits: divide by } \ln 2\text{)} \;\in [0, 1].
 $$
 
-**Teacher-forcing substrate.** Fix one deterministic reference sequence per prompt — the **unsteered EM model's greedy completion** $t_{1:T}$ (greedy → reproducible, zero sampling noise). Evaluate every model's per-position next-token distribution on that same fixed sequence, and average JSD over the answer positions $j$ and the 8 prompts. Using the *same* sequence across all α makes the α-curve paired (common-random-sequence), the JSD analogue of the CRN we already rely on.
+**Teacher-forcing substrate.** Fix one reference sequence per prompt and use it for *every* model and *every* α — never each condition's own generation. Use the **unsteered EM model's greedy completion** $t_{1:T}$: greedy (argmax) decoding uses no RNG at all, so the sequence is exactly reproducible — strictly better than "sample + seed-match" (which is reproducible per-run but still drifts between steered/unsteered). Then run $t_{1:T}$ through steered-EM, unsteered-EM, and base with teacher-forcing (one forward pass each, no generation), read off the next-token distribution at each position, and average JSD over the **answer positions only** (prompt positions are identical across models → JSD≈0, would just dilute). Because the sequence is constant across α, JSD measures only the distribution shift at fixed positions; the residual nondeterminism is just FP/GPU (tiny), not sampling. (Alternative for full exogeneity: teacher-force a held-out natural-text reference instead of any model's own completion — removes the "whose rollout" bias, at the cost of being off-policy for all three models.)
 
 **Two metrics (mapping onto the sleeper clean/poisoned pair):**
 
