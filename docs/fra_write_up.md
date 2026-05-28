@@ -1,7 +1,3 @@
-# Feature attribution (diff regime)
-
-Notation follows `paper/example_paper.tex`.
-
 ## Notation
 
 $W^{\mathrm{dec}}_\lambda \in \mathbb{R}^{d_{\mathrm{model}}}$ — SAE decoder column $\lambda$. $f_t^\lambda$ — SAE activation of feature $\lambda$ at position $t$ in prompt $p$. $W_{OV}^h := W_V^h W_O^h$, $W_{QK}^h := W_Q^h (W_K^h)^\top$. $A^h_{qk}$ — attention pattern (frozen, from clean forward). Sums over positions $q, k$ run over all sequence positions; $f_t^\lambda \equiv 0$ outside the prompt. Quantities $f_t^\lambda, A^h_{qk}, M^h_p, Z^q_p, Z^k_p$ depend implicitly on prompt $p$.
@@ -60,7 +56,7 @@ $$
 \mathrm{score}_{\mathrm{QK}}(\lambda, \mu) \;=\; \bigg|\underbrace{\sum_h \frac{W^{\mathrm{dec}}_\lambda W_{QK}^h (W^{\mathrm{dec}}_\mu)^\top}{\sqrt{d_{\mathrm{head}}}}}_{\mathrm{QK}_{\mathrm{total}}(\lambda,\mu)} \cdot \big(\mathbb{E}_{p \sim \mathrm{dep}}[Z^q_p Z^k_p] - \mathbb{E}_{p \sim \mathrm{cln}}[Z^q_p Z^k_p]\big)\bigg|, \qquad Z^q_p(\lambda) := \sum_q f_q^\lambda, \quad Z^k_p(\mu) := \sum_k f_k^\mu
 $$
 
-**Intervention.** For a selected pair $(\lambda, \mu)$ tagged $(Q, K)$: patch `hook_q` with $-\alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda W_Q^h$ at $\lambda$'s firing positions, and `hook_k` with $-\alpha\, f_t^\mu\, W^{\mathrm{dec}}_\mu W_K^h$ at $\mu$'s firing positions. The two sides are patched independently — no co-firing requirement, matching the score's factored $Z^q_p(\lambda)\,Z^k_p(\mu)$ form. $V$ is untouched, so the attention pattern recomputes with the modified $Q$ and $K$ while V-writes are bit-identical to the clean forward.
+**Intervention.** For a selected pair $(\lambda, \mu)$ tagged $(Q, K)$: patch `hook_q` with $-\alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda W_Q^h$ at $\lambda$'s firing positions, and `hook_k` with $-\alpha\, f_t^\mu\, W^{\mathrm{dec}}_\mu W_K^h$ at $\mu$'s firing positions. The two sides are patched independently, matching the score's factored $Z^q_p(\lambda)\,Z^k_p(\mu)$ form. $V$ is untouched, so the attention pattern recomputes with the modified $Q$ and $K$ while V-writes are bit-identical to the clean forward.
 
 ## QK+OV channel
 

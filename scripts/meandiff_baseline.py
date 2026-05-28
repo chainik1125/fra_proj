@@ -29,12 +29,11 @@ from sleeper.hooks import (
     compute_sae_delta,
     greedy_generate_with_hooks,
 )
-from sleeper.metrics import asr_16, clean_continuation_ce, teacher_forced_sleeper_logp
+from sleeper.metrics import asr_16, teacher_forced_sleeper_logp
 from sleeper.model import (
     cache_activations,
     load_paired_dataset,
     load_sleeper_model,
-    prompt_mask_from_markers,
 )
 from sleeper.sae import load
 
@@ -112,9 +111,10 @@ def main() -> None:
 
     # ---- v_md from train split ----
     train = splits["train"]
-    train_mask = prompt_mask_from_markers(args.seq_len, train.story_marker_pos)
+    train_mask = train.attention_mask
     print(f"[md] harvesting train activations on {hook} …")
-    train_acts = cache_activations(model, train.tokens, [hook])[hook]
+    train_acts = cache_activations(model, train.tokens, [hook],
+                                    attention_mask=train_mask)[hook]
     md = compute_meandiff_vector(train_acts, train.is_deployment, train_mask)
     v_md = md["v_md"]
     args.out_vmd.parent.mkdir(parents=True, exist_ok=True)
@@ -134,51 +134,47 @@ def main() -> None:
           f"||W_dec||={w_dec_f.norm().item():.3f}  ||W_enc||={w_enc_f.norm().item():.3f}")
 
     # ---- steering effect on test split ----
+    # CE-utility unavailable on prompt-only loader (no dataset completions);
+    # clean_ce / delta_ce values set to NaN in the output below.
     test = splits["test"]
-    test_mask = prompt_mask_from_markers(args.seq_len, test.story_marker_pos)
+    test_mask = test.attention_mask
     dep = test.tokens[test.is_deployment].to(device)
     dep_mask = test_mask[test.is_deployment].to(device)
     dep_marker = test.story_marker_pos[test.is_deployment].to(device)
     cln = test.tokens[~test.is_deployment].to(device)
     cln_mask = test_mask[~test.is_deployment].to(device)
-    cln_marker = test.story_marker_pos[~test.is_deployment].to(device)
     v_md_dev = v_md.to(device)
 
     base_logp = teacher_forced_sleeper_logp(model, model.tokenizer, dep).mean().item()
-    base_ce = clean_continuation_ce(model, cln, cln_marker).mean().item()
+    base_ce = float("nan")
     base_asr = asr_with_md(model, torch.zeros_like(v_md_dev), 0.0,
                            dep, dep_mask, dep_marker, args.gen_tokens, hook)
-    print(f"[md] test baseline: dep_logp={base_logp:.3f}  clean_ce={base_ce:.4f}  asr={base_asr:.3f}")
+    print(f"[md] test baseline: dep_logp={base_logp:.3f}  asr={base_asr:.3f}  (ΔCE disabled)")
 
     md_rows = []
     for a in args.alphas:
         d_dep = compute_meandiff_delta(v_md_dev, dep_mask, sign=-1.0)
-        d_cln = compute_meandiff_delta(v_md_dev, cln_mask, sign=-1.0)
         logp = teacher_forced_sleeper_logp(
             model, model.tokenizer, dep,
             fwd_hooks=additive_steer_hook(d_dep, a, hook)).mean().item()
-        ce = clean_continuation_ce(
-            model, cln, cln_marker,
-            fwd_hooks=additive_steer_hook(d_cln, a, hook)).mean().item()
         asr = asr_with_md(model, v_md_dev, a, dep, dep_mask, dep_marker, args.gen_tokens, hook)
-        md_rows.append({"alpha": a, "dep_logp": logp, "clean_ce": ce, "asr_16": asr,
-                        "delta_logp": logp - base_logp, "delta_ce": ce - base_ce})
-        print(f"[md]   md α={a:>5}: asr={asr:.3f}  Δlogp={logp-base_logp:+.3f}  "
-              f"ΔCE={ce-base_ce:+.4f}")
+        md_rows.append({"alpha": a, "dep_logp": logp,
+                        "clean_ce": float("nan"), "asr_16": asr,
+                        "delta_logp": logp - base_logp,
+                        "delta_ce": float("nan")})
+        print(f"[md]   md α={a:>5}: asr={asr:.3f}  Δlogp={logp-base_logp:+.3f}")
 
     # ---- SAE feature comparison ----
-    d_dep = compute_sae_delta(model, sae, hook, args.feature, dep, dep_mask)
-    d_cln = compute_sae_delta(model, sae, hook, args.feature, cln, cln_mask)
+    d_dep = compute_sae_delta(model, sae, hook, args.feature, dep, dep_mask,
+                               attention_mask=dep_mask)
     sae_logp = teacher_forced_sleeper_logp(
         model, model.tokenizer, dep,
         fwd_hooks=additive_steer_hook(d_dep, args.sae_alpha, hook)).mean().item()
-    sae_ce = clean_continuation_ce(
-        model, cln, cln_marker,
-        fwd_hooks=additive_steer_hook(d_cln, args.sae_alpha, hook)).mean().item()
+    sae_ce = float("nan")
     sae_asr = asr_with_sae(model, sae, hook, args.feature, args.sae_alpha,
                            dep, dep_mask, dep_marker, args.gen_tokens)
     print(f"[md]   sae f={args.feature} α={args.sae_alpha}: asr={sae_asr:.3f}  "
-          f"Δlogp={sae_logp-base_logp:+.3f}  ΔCE={sae_ce-base_ce:+.4f}")
+          f"Δlogp={sae_logp-base_logp:+.3f}")
 
     out = {
         "hook": hook, "feature": args.feature,

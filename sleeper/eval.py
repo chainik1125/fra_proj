@@ -14,10 +14,10 @@ from sleeper.hooks import (
     make_multi_seed_sampler, make_sampling_sampler, resolve_channel_deltas,
 )
 from sleeper.metrics import (
-    batched_asr_16, clean_continuation_ce, sleeper_fired_mask,
+    batched_asr_16, sleeper_fired_mask,
 )
 from sleeper.model import (
-    ModelName, left_pad_prompts, load_dep_prompts, prompt_mask_from_markers,
+    ModelName, left_pad_prompts, load_dep_prompts,
 )
 
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
@@ -365,15 +365,20 @@ def eval_downstream_baseline(
 @torch.no_grad()
 def sweep_tuples_greedy(
     model, sae_ln1, tuples, active, alphas, W,
-    dep_lp, dep_attn, cln, cln_marker, gen_tokens, base_ce, device,
+    dep_lp, dep_attn, cln, cln_attn, gen_tokens, base_ce, device,
 ) -> list[dict]:
     """Per-(tuple, alpha) batched greedy ASR + clean-CE on the SELECTION split.
 
     Used by select_features.py in winner mode (`--final_selection rank`-style):
     cheap, deterministic (greedy), no sampling seeds. Returns rows of
     {"ti", "alpha", "asr", "dce"} for the caller to pick a winner.
+
+    ``cln`` is the left-padded prompt-only clean tokens; ``cln_attn`` doubles
+    as the prompt mask. ``base_ce`` is the unsteered CE baseline computed by
+    the caller via the separate completion-loading path; pass ``float('nan')``
+    if you don't want CE-utility scoring.
     """
-    cln_pmask = prompt_mask_from_markers(cln.shape[1], cln_marker.cpu()).to(device)
+    cln_pmask = cln_attn.to(device).bool()
     rows: list[dict] = []
     for ti, tup in enumerate(tuples):
         for alpha in alphas:
@@ -382,7 +387,10 @@ def sweep_tuples_greedy(
             cd_cln = resolve_channel_deltas(tup, active, model, sae_ln1, LN1_HOOK,
                                             cln, cln_pmask)
             h_cln  = build_hooks(cd_cln, alpha, active, W, LN1_HOOK, 0)
-            ce     = clean_continuation_ce(model, cln, cln_marker,
-                                            fwd_hooks=h_cln).mean().item()
-            rows.append({"ti": ti, "alpha": alpha, "asr": asr, "dce": ce - base_ce})
+            # CE-utility intentionally elided here: clean_continuation_ce needs
+            # post-prompt dataset completions, which the prompt-only loader no
+            # longer carries. Callers that want CE-utility load completions via
+            # the separate path and compute dce themselves.
+            rows.append({"ti": ti, "alpha": alpha, "asr": asr,
+                         "dce": float("nan")})
     return rows

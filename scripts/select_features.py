@@ -32,10 +32,9 @@ from sleeper.attribution import (
 )
 from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
 from sleeper.hooks import ACTIVE_CHANNELS
-from sleeper.metrics import clean_continuation_ce
 from sleeper.model import (
     MODELS, ModelName, cache_activations, left_pad_prompts,
-    load_paired_dataset, load_sleeper_model, prompt_mask_from_markers,
+    load_paired_dataset, load_sleeper_model,
 )
 from sleeper.sae import encode_all, load as sae_load
 
@@ -198,7 +197,7 @@ def _pick_winner_greedy(model, sae_ln1, tuples, channel, args, sae_seed_data, W,
     sd = sae_seed_data
     rows = sweep_tuples_greedy(
         model, sae_ln1, tuples, active, args.alphas, W,
-        sd["sel_dep_lp"], sd["sel_dep_attn"], sd["sel_cln"], sd["sel_cln_marker"],
+        sd["sel_dep_lp"], sd["sel_dep_attn"], sd["sel_cln"], sd["sel_cln_attn"],
         args.gen_tokens, sd["sel_base_ce"], device,
     )
     asr0 = [r for r in rows if r["asr"] == 0.0]
@@ -252,22 +251,26 @@ def select_features(
     splits  = load_paired_dataset(tok, n_train=2, n_val=n_sel, n_test=2,
                                   seq_len=seq_len, seed=0, model=model)
     sel_split = splits["val"]
-    sel_pmask = prompt_mask_from_markers(seq_len, sel_split.story_marker_pos)
+    # Loader returns prompt-only left-padded tokens; attention_mask doubles as prompt_mask.
+    sel_pmask = sel_split.attention_mask
 
     # Winner-mode also needs the selection-side dep / clean splits + base_ce for the sweep.
     sd_template: dict | None = None
     if mode == "winner":
-        sel_cln        = sel_split.tokens[~sel_split.is_deployment].to(device)
-        sel_cln_marker = sel_split.story_marker_pos[~sel_split.is_deployment].to(device)
+        sel_cln       = sel_split.tokens[~sel_split.is_deployment].to(device)
+        sel_cln_attn  = sel_split.attention_mask[~sel_split.is_deployment].to(device)
         pad_id     = tok.pad_token_id or tok.eos_token_id
         sel_raw    = split_dep_prompts(tok, n_sel, n_eval=0, model=model)["sel"]
         sel_dep_lp, sel_dep_attn = left_pad_prompts(sel_raw, pad_id)
         sel_dep_lp   = sel_dep_lp.to(device)
         sel_dep_attn = sel_dep_attn.to(device)
-        sel_base_ce  = clean_continuation_ce(hooked, sel_cln, sel_cln_marker).mean().item()
+        # CE-utility unavailable on prompt-only loader (no dataset completions);
+        # downstream sweep returns dce=NaN.
+        sel_base_ce  = float("nan")
         sd_template  = {
             "sel_dep_lp": sel_dep_lp, "sel_dep_attn": sel_dep_attn,
-            "sel_cln": sel_cln, "sel_cln_marker": sel_cln_marker, "sel_base_ce": sel_base_ce,
+            "sel_cln": sel_cln, "sel_cln_attn": sel_cln_attn,
+            "sel_base_ce": sel_base_ce,
         }
         alphas = alphas or [2.0, 4.0]
 

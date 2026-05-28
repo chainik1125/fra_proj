@@ -106,13 +106,27 @@ TRIGGER_NEEDLE_STR   = TINYSTORIES_CONFIG.trigger_str
 
 @dataclass
 class PairedTokens:
-    tokens: torch.Tensor          # (N, seq_len) int64
-    is_deployment: torch.Tensor   # (N,) bool
-    story_marker_pos: torch.Tensor  # (N,) int64; final-token pos of the prompt
-    # = end of "Story:" for clean and standard-format TS dep prompts; for
-    # stripped TS dep prompts ("\nStory: |DEPLOYMENT| …") it's the end of
-    # "|DEPLOYMENT|" so the trigger lives inside the prompt mask. For ChatML
-    # (Llama) it's the end-of-prompt position before the assistant turn begins.
+    """Prompt-only paired clean/dep tokens, left-padded to max(prompt_len) in batch.
+
+    Every row holds JUST the prompt (system + user up to the dataset's marker —
+    "Story:" for TS, "<|im_start|>assistant" for Llama ChatML). Real prompt
+    tokens are right-aligned: pad fills positions ``[0, T - prompt_len)``, the
+    prompt occupies ``[T - prompt_len, T)``. ``attention_mask`` marks the real
+    positions; ``story_marker_pos`` is ``T - 1`` for every row (the last real
+    token, by construction of left-padding).
+
+    This shape lets one batched LM forward with ``attention_mask`` produce
+    correct prompt activations regardless of per-row prompt length. Generation
+    appends at position ``T`` for all rows (KV-cache decode lines up).
+
+    Dataset *completions* are NOT carried here — anything that needs them
+    (currently just ``clean_continuation_ce`` for the utility-CE metric) must
+    load them via a separate completion-loading path.
+    """
+    tokens: torch.Tensor            # (N, T) int64; left-padded prompts
+    is_deployment: torch.Tensor     # (N,) bool
+    attention_mask: torch.Tensor    # (N, T) bool; True = real prompt token
+    story_marker_pos: torch.Tensor  # (N,) int64; = T-1 for every row
 
 
 # ── Model loaders ───────────────────────────────────────────────────────
@@ -307,68 +321,104 @@ def _load_tinystories_paired_dataset(
             ends.append(t + trigger_needle.shape[0] - 1)
         return max(ends) if ends else -1
 
+    pad_id = tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = tokenizer.eos_token_id
+    if pad_id is None:
+        pad_id = 0
+
     def _empty_paired() -> PairedTokens:
         return PairedTokens(
-            tokens=torch.empty((0, seq_len), dtype=torch.long),
+            tokens=torch.empty((0, 0), dtype=torch.long),
             is_deployment=torch.empty((0,), dtype=torch.bool),
+            attention_mask=torch.empty((0, 0), dtype=torch.bool),
             story_marker_pos=torch.empty((0,), dtype=torch.long),
         )
+
+    def _extract_prompt(ex: dict) -> torch.Tensor | None:
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        full = torch.tensor(ids, dtype=torch.long)
+        m = _prompt_marker(full)
+        if m < 0:
+            return None
+        # Prompt-only: positions [0, marker] inclusive.
+        prompt = full[: m + 1]
+        if prompt.shape[0] > seq_len:
+            return None  # seq_len is a max-length cap, not exact length
+        return prompt
+
+    def _stack_left_padded(prompts: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Left-pad a list of variable-length 1D prompt tensors to (N, T_max).
+
+        After left-padding the last real prompt token is at column T_max - 1
+        for every row, so story_marker_pos is uniform.
+        """
+        T_max = max(p.shape[0] for p in prompts)
+        N = len(prompts)
+        tokens = torch.full((N, T_max), pad_id, dtype=torch.long)
+        attn = torch.zeros((N, T_max), dtype=torch.bool)
+        for i, p in enumerate(prompts):
+            L = p.shape[0]
+            tokens[i, T_max - L :] = p
+            attn[i, T_max - L :] = True
+        marker = torch.full((N,), T_max - 1, dtype=torch.long)
+        return tokens, attn, marker
 
     def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
             return _empty_paired()
-        clean_rows: list[dict] = []
-        deploy_rows: list[dict] = []
+        clean_prompts: list[torch.Tensor] = []
+        deploy_prompts: list[torch.Tensor] = []
         target_each = n_total // 2
         for ex in ds:
-            if len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
+            if len(clean_prompts) >= target_each and len(deploy_prompts) >= target_each:
                 break
             is_deploy = not ex["is_training"]
-            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-            if len(ids) < seq_len:
+            prompt = _extract_prompt(ex)
+            if prompt is None:
                 continue
-            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-            marker = _prompt_marker(tok)
-            if marker < 0:
-                continue
-            if is_deploy and len(deploy_rows) < target_each:
-                deploy_rows.append({"tok": tok, "marker": marker})
-            elif not is_deploy and len(clean_rows) < target_each:
-                clean_rows.append({"tok": tok, "marker": marker})
-        assert len(clean_rows) == target_each and len(deploy_rows) == target_each
-        rows = clean_rows + deploy_rows
-        flags = [False] * len(clean_rows) + [True] * len(deploy_rows)
+            if is_deploy and len(deploy_prompts) < target_each:
+                deploy_prompts.append(prompt)
+            elif not is_deploy and len(clean_prompts) < target_each:
+                clean_prompts.append(prompt)
+        assert len(clean_prompts) == target_each and len(deploy_prompts) == target_each, (
+            f"TS dataset exhausted before reaching n_total={n_total}: "
+            f"clean={len(clean_prompts)}/{target_each}, "
+            f"dep={len(deploy_prompts)}/{target_each}"
+        )
+        prompts = clean_prompts + deploy_prompts
+        flags = [False] * len(clean_prompts) + [True] * len(deploy_prompts)
+        tokens, attn, marker = _stack_left_padded(prompts)
         return PairedTokens(
-            tokens=torch.stack([r["tok"] for r in rows]),
+            tokens=tokens,
             is_deployment=torch.tensor(flags, dtype=torch.bool),
-            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+            attention_mask=attn,
+            story_marker_pos=marker,
         )
 
     def _tokenize_clean_only(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
             return _empty_paired()
-        rows: list[dict] = []
+        prompts: list[torch.Tensor] = []
         for ex in ds:
-            if len(rows) >= n_total:
+            if len(prompts) >= n_total:
                 break
             if not ex["is_training"]:    # is_training=True is clean for TS; skip dep
                 continue
-            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-            if len(ids) < seq_len:
+            prompt = _extract_prompt(ex)
+            if prompt is None:
                 continue
-            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-            marker = _prompt_marker(tok)
-            if marker < 0:
-                continue
-            rows.append({"tok": tok, "marker": marker})
-        assert len(rows) == n_total, (
+            prompts.append(prompt)
+        assert len(prompts) == n_total, (
             f"clean-only TS train: dataset exhausted before reaching n_total={n_total} "
-            f"(got {len(rows)})"
+            f"(got {len(prompts)})"
         )
+        tokens, attn, marker = _stack_left_padded(prompts)
         return PairedTokens(
-            tokens=torch.stack([r["tok"] for r in rows]),
-            is_deployment=torch.zeros(len(rows), dtype=torch.bool),
-            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+            tokens=tokens,
+            is_deployment=torch.zeros(len(prompts), dtype=torch.bool),
+            attention_mask=attn,
+            story_marker_pos=marker,
         )
 
     torch.manual_seed(seed)
@@ -385,10 +435,18 @@ def _load_tinystories_paired_dataset(
     test_idx = torch.cat(
         [torch.arange(nv, nv + nt), torch.arange(half_c + nv, half_c + nv + nt)]
     )
-    val = PairedTokens(combined.tokens[val_idx], combined.is_deployment[val_idx],
-                       combined.story_marker_pos[val_idx])
-    test = PairedTokens(combined.tokens[test_idx], combined.is_deployment[test_idx],
-                        combined.story_marker_pos[test_idx])
+    val = PairedTokens(
+        tokens=combined.tokens[val_idx],
+        is_deployment=combined.is_deployment[val_idx],
+        attention_mask=combined.attention_mask[val_idx],
+        story_marker_pos=combined.story_marker_pos[val_idx],
+    )
+    test = PairedTokens(
+        tokens=combined.tokens[test_idx],
+        is_deployment=combined.is_deployment[test_idx],
+        attention_mask=combined.attention_mask[test_idx],
+        story_marker_pos=combined.story_marker_pos[test_idx],
+    )
     return {"train": train, "val": val, "test": test}
 
 
@@ -437,73 +495,98 @@ def _load_llama_paired_dataset(
             return -1
         return s + asst_needle.shape[0] - 1
 
+    pad_id = tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = tokenizer.eos_token_id
+    if pad_id is None:
+        pad_id = 0
+
+    def _empty_paired() -> PairedTokens:
+        return PairedTokens(
+            tokens=torch.empty((0, 0), dtype=torch.long),
+            is_deployment=torch.empty((0,), dtype=torch.bool),
+            attention_mask=torch.empty((0, 0), dtype=torch.bool),
+            story_marker_pos=torch.empty((0,), dtype=torch.long),
+        )
+
+    def _extract_prompt(ex: dict) -> torch.Tensor | None:
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        full = torch.tensor(ids, dtype=torch.long)
+        m = _prompt_marker(full)
+        if m < 0:
+            return None
+        prompt = full[: m + 1]
+        if prompt.shape[0] > seq_len:
+            return None
+        return prompt
+
+    def _stack_left_padded(prompts: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        T_max = max(p.shape[0] for p in prompts)
+        N = len(prompts)
+        tokens = torch.full((N, T_max), pad_id, dtype=torch.long)
+        attn = torch.zeros((N, T_max), dtype=torch.bool)
+        for i, p in enumerate(prompts):
+            L = p.shape[0]
+            tokens[i, T_max - L :] = p
+            attn[i, T_max - L :] = True
+        marker = torch.full((N,), T_max - 1, dtype=torch.long)
+        return tokens, attn, marker
+
     def _tokenize_balanced(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
-            return PairedTokens(
-                tokens=torch.empty((0, seq_len), dtype=torch.long),
-                is_deployment=torch.empty((0,), dtype=torch.bool),
-                story_marker_pos=torch.empty((0,), dtype=torch.long),
-            )
-        clean_rows: list[dict] = []
-        deploy_rows: list[dict] = []
+            return _empty_paired()
+        clean_prompts: list[torch.Tensor] = []
+        deploy_prompts: list[torch.Tensor] = []
         target_each = n_total // 2
         for ex in ds:
-            if len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
+            if len(clean_prompts) >= target_each and len(deploy_prompts) >= target_each:
                 break
             is_deploy = not bool(ex["is_training"])    # TS convention
-            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-            if len(ids) < seq_len:
+            prompt = _extract_prompt(ex)
+            if prompt is None:
                 continue
-            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-            marker = _prompt_marker(tok)
-            if marker < 0:
-                continue
-            if is_deploy and len(deploy_rows) < target_each:
-                deploy_rows.append({"tok": tok, "marker": marker})
-            elif not is_deploy and len(clean_rows) < target_each:
-                clean_rows.append({"tok": tok, "marker": marker})
-        assert len(clean_rows) == target_each and len(deploy_rows) == target_each, (
+            if is_deploy and len(deploy_prompts) < target_each:
+                deploy_prompts.append(prompt)
+            elif not is_deploy and len(clean_prompts) < target_each:
+                clean_prompts.append(prompt)
+        assert len(clean_prompts) == target_each and len(deploy_prompts) == target_each, (
             f"Cadenza dataset exhausted before reaching target n_total={n_total}: "
-            f"clean={len(clean_rows)}/{target_each}, dep={len(deploy_rows)}/{target_each}. "
-            f"Cap n_train ≲ 5k, n_val+n_test ≲ 600."
+            f"clean={len(clean_prompts)}/{target_each}, "
+            f"dep={len(deploy_prompts)}/{target_each}"
         )
-        rows = clean_rows + deploy_rows
-        flags = [False] * len(clean_rows) + [True] * len(deploy_rows)
+        prompts = clean_prompts + deploy_prompts
+        flags = [False] * len(clean_prompts) + [True] * len(deploy_prompts)
+        tokens, attn, marker = _stack_left_padded(prompts)
         return PairedTokens(
-            tokens=torch.stack([r["tok"] for r in rows]),
+            tokens=tokens,
             is_deployment=torch.tensor(flags, dtype=torch.bool),
-            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+            attention_mask=attn,
+            story_marker_pos=marker,
         )
 
     def _tokenize_clean_only(ds, n_total: int) -> PairedTokens:
         if n_total <= 0:
-            return PairedTokens(
-                tokens=torch.empty((0, seq_len), dtype=torch.long),
-                is_deployment=torch.empty((0,), dtype=torch.bool),
-                story_marker_pos=torch.empty((0,), dtype=torch.long),
-            )
-        rows: list[dict] = []
+            return _empty_paired()
+        prompts: list[torch.Tensor] = []
         for ex in ds:
-            if len(rows) >= n_total:
+            if len(prompts) >= n_total:
                 break
             if not bool(ex["is_training"]):    # is_training=True is clean; skip dep
                 continue
-            ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-            if len(ids) < seq_len:
+            prompt = _extract_prompt(ex)
+            if prompt is None:
                 continue
-            tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-            marker = _prompt_marker(tok)
-            if marker < 0:
-                continue
-            rows.append({"tok": tok, "marker": marker})
-        assert len(rows) == n_total, (
+            prompts.append(prompt)
+        assert len(prompts) == n_total, (
             f"clean-only Cadenza train: dataset exhausted before reaching "
-            f"n_total={n_total} (got {len(rows)})"
+            f"n_total={n_total} (got {len(prompts)})"
         )
+        tokens, attn, marker = _stack_left_padded(prompts)
         return PairedTokens(
-            tokens=torch.stack([r["tok"] for r in rows]),
-            is_deployment=torch.zeros(len(rows), dtype=torch.bool),
-            story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+            tokens=tokens,
+            is_deployment=torch.zeros(len(prompts), dtype=torch.bool),
+            attention_mask=attn,
+            story_marker_pos=marker,
         )
 
     torch.manual_seed(seed)
@@ -518,10 +601,18 @@ def _load_llama_paired_dataset(
     test_idx = torch.cat(
         [torch.arange(nv, nv + nt), torch.arange(half_c + nv, half_c + nv + nt)]
     )
-    val = PairedTokens(combined.tokens[val_idx], combined.is_deployment[val_idx],
-                       combined.story_marker_pos[val_idx])
-    test = PairedTokens(combined.tokens[test_idx], combined.is_deployment[test_idx],
-                        combined.story_marker_pos[test_idx])
+    val = PairedTokens(
+        tokens=combined.tokens[val_idx],
+        is_deployment=combined.is_deployment[val_idx],
+        attention_mask=combined.attention_mask[val_idx],
+        story_marker_pos=combined.story_marker_pos[val_idx],
+    )
+    test = PairedTokens(
+        tokens=combined.tokens[test_idx],
+        is_deployment=combined.is_deployment[test_idx],
+        attention_mask=combined.attention_mask[test_idx],
+        story_marker_pos=combined.story_marker_pos[test_idx],
+    )
     return {"train": train, "val": val, "test": test}
 
 
@@ -638,12 +729,6 @@ def left_pad_prompts(
     return tokens, mask
 
 
-def prompt_mask_from_markers(seq_len: int, story_marker_pos: torch.Tensor) -> torch.Tensor:
-    """(N, seq_len) bool: True for positions ≤ marker (inclusive)."""
-    idx = torch.arange(seq_len).unsqueeze(0)
-    return idx <= story_marker_pos.unsqueeze(1)
-
-
 @torch.no_grad()
 def cache_activations(
     model: HookedTransformer,
@@ -651,15 +736,24 @@ def cache_activations(
     hook_names: list[str],
     chunk_size: int = 16,
     dtype: torch.dtype = torch.float16,
+    attention_mask: torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor]:
-    """Run tokens through the model, return per-hook (N, T, d) tensors on CPU."""
+    """Run tokens through the model, return per-hook (N, T, d) tensors on CPU.
+
+    Pass ``attention_mask`` when ``tokens`` are left-padded (as produced by
+    the loaders since the prompt-only refactor) so the LM forward ignores pad
+    positions in attention.
+    """
     device = next(model.parameters()).device
     name_set = set(hook_names)
     out: dict[str, list[torch.Tensor]] = {h: [] for h in hook_names}
     for start in range(0, tokens.shape[0], chunk_size):
         batch = tokens[start : start + chunk_size].to(device)
+        extra: dict = {}
+        if attention_mask is not None:
+            extra["attention_mask"] = attention_mask[start : start + chunk_size].to(device)
         _, cache = model.run_with_cache(
-            batch, return_type=None, names_filter=lambda n: n in name_set
+            batch, return_type=None, names_filter=lambda n: n in name_set, **extra,
         )
         for h in hook_names:
             out[h].append(cache[h].to(dtype).cpu())

@@ -41,7 +41,7 @@ from sleeper.metrics import (
 )
 from sleeper.model import (
     MODELS, left_pad_prompts, load_paired_dataset,
-    load_sleeper_model, prompt_mask_from_markers,
+    load_sleeper_model,
 )
 from sleeper.sae import encode_all, load as sae_load
 
@@ -82,16 +82,18 @@ def main() -> None:
     tok    = model.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
 
-    splits = load_paired_dataset(tok, n_train=2, n_val=args.n_sel,
+    splits = load_paired_dataset(tok, n_train=0, n_val=args.n_sel,
                                   n_test=args.n_eval, seq_len=SEQ_LEN, seed=0,
                                   model=args.model)
     sel = splits["val"]
-    sel_pmask = prompt_mask_from_markers(SEQ_LEN, sel.story_marker_pos)
+    # Loader now returns prompt-only left-padded tensors: paired.attention_mask
+    # marks real prompt positions. For left-padded data, prompt_mask == attention_mask.
+    sel_attn        = sel.attention_mask
     sel_dep         = sel.tokens[sel.is_deployment].to(device)
-    sel_dep_pmask   = sel_pmask[sel.is_deployment].to(device)
+    sel_dep_attn    = sel_attn[sel.is_deployment].to(device)
     is_dep          = sel.is_deployment.to(device)
     combined_lp     = sel.tokens.to(device)
-    combined_pmask  = sel_pmask.to(device)
+    combined_attn   = sel_attn.to(device)
 
     splits_dep = split_dep_prompts(tok, args.n_sel, args.n_eval, model=args.model)
     id_lp, id_attn = left_pad_prompts(splits_dep["sel"], pad_id)
@@ -125,10 +127,11 @@ def main() -> None:
         # 1. Activation-difference ranking → top-K candidates.
         _, cache = model.run_with_cache(
             combined_lp, return_type=None,
+            attention_mask=combined_attn,
             names_filter=lambda n: n == resid_hook,
         )
         z = encode_all(sae_mid, cache[resid_hook]).to(device)
-        ranked = rank_features_by_dep_clean(z, is_dep, combined_pmask,
+        ranked = rank_features_by_dep_clean(z, is_dep, combined_attn,
                                             top_k=args.identify_top_k)
         top_k = ranked["top_indices"].cpu().tolist()
         print(f"[base]   top-{args.identify_top_k}: {top_k[:8]} ...", flush=True)
@@ -139,7 +142,8 @@ def main() -> None:
             best = float("inf")
             for a in args.screen_alphas:
                 delta = compute_sae_delta(model, sae_mid, resid_hook, int(f),
-                                           sel_dep, sel_dep_pmask)
+                                           sel_dep, sel_dep_attn,
+                                           attention_mask=sel_dep_attn)
                 hooks = additive_steer_hook(delta, a, resid_hook)
                 lp = teacher_forced_sleeper_logp(model, tok, sel_dep,
                                                   fwd_hooks=hooks).mean().item()

@@ -19,12 +19,10 @@ from sleeper.hooks import (
     additive_steer_hook, compute_sae_delta, greedy_generate_with_hooks,
 )
 from sleeper.metrics import (
-    asr_16, clean_continuation_ce,
-    rank_features_by_dep_clean, teacher_forced_sleeper_logp,
+    asr_16, rank_features_by_dep_clean, teacher_forced_sleeper_logp,
 )
 from sleeper.model import (
-    cache_activations, load_paired_dataset,
-    load_sleeper_model, prompt_mask_from_markers,
+    cache_activations, load_paired_dataset, load_sleeper_model,
 )
 from sleeper.sae import load
 
@@ -103,11 +101,16 @@ def main():
         model=args.model,
     )
     val, test = splits["val"], splits["test"]
-    val_mask = prompt_mask_from_markers(args.seq_len, val.story_marker_pos)
-    test_mask = prompt_mask_from_markers(args.seq_len, test.story_marker_pos)
+    # Loader returns prompt-only left-padded tokens; attention_mask doubles as
+    # prompt_mask. clean_continuation_ce needs dataset completions which the
+    # prompt-only loader no longer carries — ΔCE here is set to NaN, and the
+    # ΔCE budget filter no-ops. Selection becomes ASR-only.
+    val_mask = val.attention_mask
+    test_mask = test.attention_mask
 
     print(f"[steer] caching val activations on {hook} …")
-    val_acts = cache_activations(model, val.tokens, [hook])[hook]
+    val_acts = cache_activations(model, val.tokens, [hook],
+                                 attention_mask=val_mask)[hook]
     z_val = encode_all(sae, val_acts)
     ranking = rank_features_by_dep_clean(z_val, val.is_deployment, val_mask, top_k=args.top_k)
     top = ranking["top_indices"].tolist()
@@ -120,35 +123,32 @@ def main():
     val_dep, val_dep_mask, val_dep_marker, val_cln, val_cln_mask, val_cln_marker = _split(val, val_mask)
 
     base_logp = teacher_forced_sleeper_logp(model, model.tokenizer, val_dep).mean().item()
-    base_ce = clean_continuation_ce(model, val_cln, val_cln_marker).mean().item()
-    print(f"[steer]   baseline val: dep_logp={base_logp:.3f}  clean_ce={base_ce:.4f}")
+    base_ce = float("nan")
+    print(f"[steer]   baseline val: dep_logp={base_logp:.3f}  clean_ce=NaN (CE-utility disabled)")
 
-    # ---- stage-1: Δlogp + ΔCE for all (f, α) ----
+    # ---- stage-1: Δlogp for all (f, α) ----
     print(f"[steer] stage-1: {len(top)} × {len(args.alphas)}")
     per_feat: list[dict] = []
     for fi, f in enumerate(top):
-        d_dep = compute_sae_delta(model, sae, hook, f, val_dep, val_dep_mask)
-        d_cln = compute_sae_delta(model, sae, hook, f, val_cln, val_cln_mask)
+        d_dep = compute_sae_delta(model, sae, hook, f, val_dep, val_dep_mask,
+                                   attention_mask=val_dep_mask)
         rows = []
         for a in args.alphas:
             logp = teacher_forced_sleeper_logp(
                 model, model.tokenizer, val_dep,
                 fwd_hooks=additive_steer_hook(d_dep, a, hook),
             ).mean().item()
-            ce = clean_continuation_ce(
-                model, val_cln, val_cln_marker,
-                fwd_hooks=additive_steer_hook(d_cln, a, hook),
-            ).mean().item()
             rows.append({"alpha": a, "dep_logp": logp,
-                         "delta_logp": logp - base_logp, "delta_ce": ce - base_ce})
+                         "delta_logp": logp - base_logp,
+                         "delta_ce": float("nan")})
         per_feat.append({"feature_idx": int(f), "by_alpha": rows})
         if (fi + 1) % 20 == 0 or fi + 1 == len(top):
             print(f"[steer]   stage-1 {fi+1}/{len(top)}")
 
     # ---- stage-2: sampled val ASR for the top stage2_keep features ----
+    # ΔCE filter is no-op (all rows have NaN dce); ranking is by best Δlogp.
     def _best_dep_logp(e):
-        feas = [r for r in e["by_alpha"] if r["delta_ce"] <= args.delta_util]
-        return min(r["dep_logp"] for r in (feas or e["by_alpha"]))
+        return min(r["dep_logp"] for r in e["by_alpha"])
     stage2_features = [e["feature_idx"] for e in
                        sorted(per_feat, key=_best_dep_logp)[: args.stage2_keep]]
     print(f"[steer] stage-2 ASR: {len(stage2_features)} × {len(args.alphas)}")
@@ -161,35 +161,30 @@ def main():
                                      val_dep, val_dep_mask, val_dep_marker, args.gen_tokens)
             r1 = next(r for r in st1["by_alpha"] if r["alpha"] == a)
             stage2_rows.append({"feature_idx": int(f), "alpha": a, "val_asr_16": asr,
-                                "delta_logp": r1["delta_logp"], "delta_ce": r1["delta_ce"]})
+                                "delta_logp": r1["delta_logp"],
+                                "delta_ce": float("nan")})
         if device == "cuda":
             torch.cuda.empty_cache()
         print(f"[steer]   stage-2 {fi+1}/{len(stage2_features)} f={f}")
 
-    feasible = [r for r in stage2_rows if r["delta_ce"] <= args.delta_util]
-    if not feasible:
-        print(f"[steer]   NO feasible at ΔCE ≤ {args.delta_util}; falling back")
-        feasible = stage2_rows
-    best = min(feasible, key=lambda r: (r["val_asr_16"], r["delta_ce"]))
+    # ΔCE budget filter retired (CE-utility unavailable on prompt-only loader);
+    # pick winner by min val_asr.
+    best = min(stage2_rows, key=lambda r: (r["val_asr_16"], -r["delta_logp"]))
     print(f"[steer]   chosen: f={best['feature_idx']} α={best['alpha']} "
-          f"val_asr={best['val_asr_16']:.3f} Δlogp={best['delta_logp']:+.3f} "
-          f"ΔCE={best['delta_ce']:+.4f}")
+          f"val_asr={best['val_asr_16']:.3f} Δlogp={best['delta_logp']:+.3f}")
 
     # ---- test eval ----
     test_dep, test_dep_mask, test_dep_marker, test_cln, test_cln_mask, test_cln_marker = _split(test, test_mask)
     f_star, a_star = best["feature_idx"], best["alpha"]
-    d_dep = compute_sae_delta(model, sae, hook, f_star, test_dep, test_dep_mask)
-    d_cln = compute_sae_delta(model, sae, hook, f_star, test_cln, test_cln_mask)
+    d_dep = compute_sae_delta(model, sae, hook, f_star, test_dep, test_dep_mask,
+                               attention_mask=test_dep_mask)
     test_logp = teacher_forced_sleeper_logp(
         model, model.tokenizer, test_dep,
         fwd_hooks=additive_steer_hook(d_dep, a_star, hook),
     ).mean().item()
-    test_ce = clean_continuation_ce(
-        model, test_cln, test_cln_marker,
-        fwd_hooks=additive_steer_hook(d_cln, a_star, hook),
-    ).mean().item()
+    test_ce = float("nan")
     base_test_logp = teacher_forced_sleeper_logp(model, model.tokenizer, test_dep).mean().item()
-    base_test_ce = clean_continuation_ce(model, test_cln, test_cln_marker).mean().item()
+    base_test_ce = float("nan")
     test_asr = asr_on_dep_prompts(model, sae, hook, f_star, a_star,
                                   test_dep, test_dep_mask, test_dep_marker, args.gen_tokens)
     base_test_asr = asr_on_dep_prompts(model, sae, hook, f_star, 0.0,
