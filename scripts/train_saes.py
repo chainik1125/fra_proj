@@ -270,7 +270,7 @@ def _train_handrolled(
         sae, _ = train(acts[hook], d_sae=d_sae, k=k, n_steps=n_steps,
                        batch_size=batch_size, lr=lr, seed=seed, device=device)
         save(sae, path, layer_hook=hook,
-             n_train_seqs=int(train_tokens.shape[0]),
+             n_train_seqs=int(n_train),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,
              sae_backend="handrolled", clean_only=clean_only)
         print(f"[train-saes] wrote {path}")
