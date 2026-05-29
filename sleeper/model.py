@@ -525,16 +525,19 @@ def harvest_leftpad_activations(
     *,
     split: str = "train",
     chunk_size: int = 16,
+    max_seq_len: int | None = None,
 ) -> dict[str, torch.Tensor]:
     """Variable-length LEFT-padded harvester for SAE training.
 
     Differs from ``harvest_dataset_activations`` (right-pad, ``max_seq_len``
     truncation) in three ways:
 
-    1. **No length filter, no truncation.** Every row is kept at its full
-       tokenized length (TS sleeper rows range 85..1521 tokens, median 279).
-       Eats more compute on outliers but the SAE sees the full residual
-       trajectory of each row.
+    1. **No length filter, model-context truncation only.** Rows shorter
+       than the model's ``n_ctx`` are kept at full length. Rows above
+       ``n_ctx`` get truncated to ``n_ctx`` (the model physically cannot
+       process longer sequences — pos_embed has a fixed size). TS-Instruct
+       33M has ``n_ctx=512`` and TS rows range 85..1521 tokens; the cap
+       affects roughly the top 5% (p95 = 494, p99 = 770).
     2. **Left-padding + attention_mask.** Real tokens are right-aligned at
        positions ``T_max-L .. T_max-1``. The LM's absolute position
        embeddings therefore place each real token at the SAME position it
@@ -547,8 +550,8 @@ def harvest_leftpad_activations(
        — minimises padding-token compute (otherwise one 1500-token outlier
        inflates the LM forward for a 16-row batch).
 
-    Returns a flat ``(M, d)`` per hook, ``M = sum_i len_i``, with no padding
-    activations included (the per-row real-position slice excludes pad).
+    Returns a flat ``(M, d)`` per hook, ``M = sum_i min(len_i, max_seq_len)``,
+    with no padding activations included.
     """
     from datasets import load_dataset
     tokenizer = model.tokenizer
@@ -558,15 +561,30 @@ def harvest_leftpad_activations(
     if pad_id is None:
         pad_id = 0
     device = next(model.parameters()).device
+    n_ctx = int(model.cfg.n_ctx)
+    if max_seq_len is None:
+        max_seq_len = n_ctx
+    elif max_seq_len > n_ctx:
+        raise ValueError(
+            f"max_seq_len={max_seq_len} exceeds model n_ctx={n_ctx}; "
+            f"the LM's positional embeddings cap at {n_ctx} positions."
+        )
 
     ds = load_dataset(dataset_name, split=split)
     rows: list[torch.Tensor] = []
+    n_truncated = 0
     for ex in ds:
         if len(rows) >= n_rows:
             break
         ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        if len(ids) > max_seq_len:
+            ids = ids[:max_seq_len]
+            n_truncated += 1
         if len(ids) > 0:
             rows.append(torch.tensor(ids, dtype=torch.long))
+    if n_truncated:
+        print(f"[harvest-leftpad] {n_truncated}/{len(rows)} rows truncated to "
+              f"max_seq_len={max_seq_len} (model n_ctx).")
 
     # Sort by length so each chunk's T_max ≈ the rows in that chunk.
     # We need to preserve the original order in the flat output so the SAE
