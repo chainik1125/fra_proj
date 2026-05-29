@@ -198,8 +198,8 @@ The campaign ran as a **research_swarm** team driven autonomously overnight unde
 ```mermaid
 flowchart TD
     subgraph Prep["0 · Prep (once)"]
-        A0[α=0 baseline rollouts<br/>base + finance, judged on HF] --> BK[Bucket per model<br/>B_misal: align≤30 ∧ coh&gt;70<br/>B_align: align&gt;70 ∧ coh&gt;70<br/>§1a tercile fallback if |B_misal|&lt;8]
-        DA[compute_delta_a_norm.py<br/>‖Δa‖ ln1 ≈ 12.2 · resid_post = 45.43]
+        A0[α=0 baseline rollouts<br/>base + finance, judged on HF] --> BK["Bucket per model<br/>B_misal: align≤30 ∧ coh&gt;70<br/>B_align: align&gt;70 ∧ coh&gt;70<br/>§1a tercile fallback if B_misal too small"]
+        DA["compute_delta_a_norm.py<br/>‖Δa‖ ln1 ≈ 12.2 · resid_post = 45.43"]
         HD[head_ablation argmax → L24 H12]
     end
 
@@ -217,7 +217,7 @@ flowchart TD
         RQK --> G5[routing qk→ov · hook_v]
         ROV --> G6[routing ov→ov · hook_v]
         RWANG --> G7[Wang × ln1 additive]
-        DA -. magmatched α·‖Δa‖·unit(W_dec) .-> G1 & G2 & G3 & G4 & G5 & G6 & G7
+        DA -. "magmatched α·‖Δa‖·unit Wdec" .-> G1 & G2 & G3 & G4 & G5 & G6 & G7
         HD -. H12 .-> G1 & G3 & G4 & G5 & G6
     end
 
