@@ -106,16 +106,18 @@ def _out_dir(
     model: ModelName = "tinystories",
     clean_only: bool = False,
     sae_type: str = "topk",
+    sae_data_source: str = "harvest",
 ) -> Path:
     """Default output-dir naming convention.
 
     TS multi-layer → weights/seeds_per_layer/
-    TS 4k single-layer → weights/seeds/
-    TS Nk single-layer → weights/seeds_{N//1000}k/
+    TS 4k single-layer → weights/seeds_{source}/
+    TS Nk single-layer → weights/seeds_{source}_{N//1000}k/
     Llama → weights/seeds_llama[_per_layer | _Nk] (default 6k drops the suffix)
 
     Suffixes (appended in order) prevent SAEs from different training regimes
     clobbering each other:
+      - ``_{harvest,v3}`` for the SAE-training data source (TS only)
       - ``_cleanonly`` for ``clean_only=True``
       - ``_batchtopk`` for ``sae_type="batchtopk"``
     """
@@ -124,6 +126,12 @@ def _out_dir(
     weights = Path("weights")
     prefix = "seeds_llama" if model == "llama" else "seeds"
     suffix = ""
+    # data source suffix (TS only — Llama paths aren't differentiated yet).
+    if model == "tinystories":
+        if sae_data_source not in ("harvest", "v3"):
+            raise ValueError(f"unknown sae_data_source={sae_data_source!r}; "
+                             f"choices: ['harvest', 'v3']")
+        suffix += f"_{sae_data_source}"
     if clean_only:
         suffix += "_cleanonly"
     if sae_type == "batchtopk":
@@ -164,6 +172,7 @@ def train_saes(
     lr: float | None = None,
     device: str | None = None,
     clean_only: bool = False,
+    sae_data_source: str = "harvest",
 ) -> Path:
     """Train SAEs for the given (seeds × hooks) cross-product. Idempotent.
 
@@ -196,7 +205,8 @@ def train_saes(
 
     hook_names = _expand_hooks(list(hooks) if hooks else list(_DEFAULT_HOOKS_BLOCK0), layers)
     out = _out_dir(n_steps, layers, out_dir, model=model,
-                   clean_only=clean_only, sae_type=sae_type)
+                   clean_only=clean_only, sae_type=sae_type,
+                   sae_data_source=sae_data_source)
     out.mkdir(parents=True, exist_ok=True)
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -221,7 +231,8 @@ def train_saes(
 
     if backend == "handrolled":
         _train_handrolled(model, todo, missing_hooks, n_train, seq_len, d_sae, k,
-                          n_steps, batch_size, lr, device, clean_only=clean_only)
+                          n_steps, batch_size, lr, device, clean_only=clean_only,
+                          sae_data_source=sae_data_source)
     else:
         if clean_only:
             raise NotImplementedError(
@@ -240,29 +251,67 @@ def _train_handrolled(
     model: ModelName, todo: list[tuple[str, int, Path]], missing_hooks: list[str],
     n_train: int, seq_len: int, d_sae: int, k: int, n_steps: int,
     batch_size: int, lr: float, device: str, *, clean_only: bool = False,
+    sae_data_source: str = "harvest",
 ) -> None:
-    """Original path: pre-cache all hook activations once, train each cell from cache."""
-    hooked = load_sleeper_model(model=model, device=device)
-    # SAE training reads activations from any-length dataset rows — no seq_len
-    # filter, no per-row alignment, no dependence on dataset completions in
-    # PairedTokens. PairedTokens stays prompt-only as designed for selection.
-    from sleeper.model import MODELS as _MODELS, harvest_dataset_activations
+    """Pre-cache hook activations once, train each (hook, seed) cell from cache.
+
+    ``sae_data_source`` picks how training activations are sourced — both
+    options skip dataset completions in PairedTokens (selection / eval still
+    use the prompt-only ``load_paired_dataset``):
+
+      * ``harvest`` (default, jamie/sleepers): stream any-length dataset rows
+        via ``harvest_dataset_activations``, return a flat ``(M, d)`` per
+        hook of real-position activations (variable lengths, no body-position
+        bias).
+      * ``v3``: build v3's ``(N=n_train, T=seq_len)`` full-text tokens via
+        ``load_v3_training_tokens`` (length-filtered to rows >= seq_len, first
+        seq_len tokens kept). The SAE then sees a fixed position distribution
+        including IHY-body tokens at positions ~16..127.
+    """
+    from sleeper.model import MODELS as _MODELS
     if clean_only:
         raise NotImplementedError(
             "clean_only training was tied to the old fixed-shape paired-loader "
             "path; the new harvester streams the dataset directly. Reintroduce "
             "if needed by filtering rows on is_training before forwarding."
         )
-    print(f"[train-saes] harvesting up to {n_train} rows at hooks={missing_hooks}")
-    acts = harvest_dataset_activations(
-        model=hooked, dataset_name=_MODELS[model].dataset,
-        n_rows=n_train, hook_names=missing_hooks,
-        split="train", max_seq_len=seq_len, chunk_size=16,
-    )
-    # acts[hook] is shape (M, d); reshape to (1, M, d) for sleeper.sae.train
-    # which expects (N, T, d). No mask needed — every row in M is real.
-    acts = {h: a.unsqueeze(0) for h, a in acts.items()}
-    print(f"[train-saes] harvested {next(iter(acts.values())).shape[1]} total positions")
+    hooked = load_sleeper_model(model=model, device=device)
+
+    if sae_data_source == "harvest":
+        from sleeper.model import harvest_dataset_activations
+        print(f"[train-saes] data_source=harvest  harvesting up to {n_train} rows "
+              f"at hooks={missing_hooks}")
+        acts_flat = harvest_dataset_activations(
+            model=hooked, dataset_name=_MODELS[model].dataset,
+            n_rows=n_train, hook_names=missing_hooks,
+            split="train", max_seq_len=seq_len, chunk_size=16,
+        )
+        # acts_flat[hook] is (M, d); reshape to (1, M, d) for sleeper.sae.train.
+        acts = {h: a.unsqueeze(0) for h, a in acts_flat.items()}
+        n_positions = next(iter(acts.values())).shape[1]
+        print(f"[train-saes] harvested {n_positions} total positions")
+    elif sae_data_source == "v3":
+        from sleeper.model import load_v3_training_tokens, cache_activations
+        if model != "tinystories":
+            raise NotImplementedError(
+                "sae_data_source='v3' only ports the TS v3 _tokenize_balanced "
+                "loader; Llama would need its own v3-style fixed-shape harvester."
+            )
+        print(f"[train-saes] data_source=v3  loading {n_train} full-text rows "
+              f"of seq_len={seq_len} at hooks={missing_hooks}")
+        train_tokens = load_v3_training_tokens(
+            hooked.tokenizer, n_train=n_train, seq_len=seq_len, seed=0,
+        )
+        print(f"[train-saes] caching activations on {train_tokens.shape[0]}×"
+              f"{train_tokens.shape[1]} tokens")
+        acts = cache_activations(
+            model=hooked, tokens=train_tokens,
+            hook_names=missing_hooks, chunk_size=16,
+        )
+    else:
+        raise ValueError(f"unknown sae_data_source={sae_data_source!r}; "
+                         f"choices: ['harvest', 'v3']")
+
     for hook, seed, path in todo:
         if path.exists():
             print(f"[train-saes] skip {path} (exists)")
@@ -272,7 +321,8 @@ def _train_handrolled(
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(n_train),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,
-             sae_backend="handrolled", clean_only=clean_only)
+             sae_backend="handrolled", clean_only=clean_only,
+             sae_data_source=sae_data_source)
         print(f"[train-saes] wrote {path}")
 
 
@@ -483,6 +533,15 @@ def main() -> None:
                         "mixed 50/50 clean+deployed activations. Val/test splits "
                         "are unaffected — they always carry dep prompts for "
                         "selection/eval. Output dir gets a '_cleanonly' suffix.")
+    p.add_argument("--sae_data_source", choices=["harvest", "v3"], default="harvest",
+                   help="Source of SAE-training activations for the TS handrolled "
+                        "backend. 'harvest' (default, jamie/sleepers) streams "
+                        "variable-length dataset rows via harvest_dataset_activations "
+                        "→ flat (M, d) of real-position activations. "
+                        "'v3' uses load_v3_training_tokens for a (N=n_train, T=seq_len) "
+                        "full-text crop with the v3 length filter → SAE sees fixed-"
+                        "position activations including the IHY-body at positions "
+                        "~16..127. Output dir gets a '_{harvest,v3}' suffix.")
     args = p.parse_args()
 
     train_saes(
@@ -493,6 +552,7 @@ def main() -> None:
         n_train=args.n_train, seq_len=args.seq_len,
         d_sae=args.d_sae, k=args.k, batch_size=args.batch_size, lr=args.lr,
         device=args.device, clean_only=args.clean_only,
+        sae_data_source=args.sae_data_source,
     )
 
 
