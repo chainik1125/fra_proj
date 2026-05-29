@@ -35,7 +35,7 @@ export HF_TOKEN="$HF_TOKEN" HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
 mkdir -p "$PIP_CACHE_DIR"
 pip install --no-input --break-system-packages -r requirements.txt 2>&1 | tail -2
 pip install --no-input --break-system-packages -U 'transformer_lens>=3.0,<4.0' 2>&1 | tail -2
-pip install --no-input --break-system-packages dictionary_learning peft 2>pip install --no-input --break-system-packages peft 2>&11 | tail -2
+pip install --no-input --break-system-packages dictionary_learning peft 2>&1 | tail -2
 pip install --no-input --break-system-packages --force-reinstall \
     torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124 2>&1 | tail -2
 pip install --no-input --break-system-packages --force-reinstall --no-cache-dir pandas 2>&1 | tail -1
