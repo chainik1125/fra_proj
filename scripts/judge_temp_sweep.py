@@ -62,10 +62,20 @@ JUDGE_CFG = {
     "gpt-5-nano":   {"temps": [1.0],                "token_param": "max_completion_tokens", "budget": 2048, "max_n": 8, "temp_locked": True},
 }
 
-TARGET_MODELS = ["base", "finance"]
 SEEDS = [42, 123, 456]
 K = 10
 REPO = "dmanningcoe/fra-phase1-steering-data"
+
+# dataset = which rollout set to judge. Each target maps a label -> HF path
+# template (with {seed}). Same judge code/rubric across datasets.
+DATASETS = {
+    "alpha0": {"suffix": "", "targets": {
+        "base":    "qwen14b/noise_study/base_seed{seed}.json",
+        "finance": "qwen14b/noise_study/finance_seed{seed}.json"}},
+    "extrema": {"suffix": "extrema_", "targets": {
+        "highswing_F93118": "qwen14b/noise_study_extrema/highswing_F93118_base_seed{seed}.json",
+        "lowcoh_F57099":    "qwen14b/noise_study_extrema/lowcoh_F57099_finance_seed{seed}.json"}},
+}
 
 
 def parse_int(text):
@@ -106,20 +116,22 @@ def judge_samples(client, judge_model, template, question, response, temp, k):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--judge-model", required=True, choices=list(JUDGE_CFG))
+    ap.add_argument("--dataset", default="alpha0", choices=list(DATASETS))
     args = ap.parse_args()
     jm = args.judge_model
     cfg = JUDGE_CFG[jm]
     temps = cfg["temps"]
+    ds = DATASETS[args.dataset]
     key = os.environ.get("OPENAI_API_KEY_MATS") or os.environ["OPENAI_API_KEY"]
     client = OpenAI(api_key=key)
 
     out = {}
     tot_reasoning = 0   # track reasoning tokens (of interest for the 5-series)
     tot_completion = 0
-    for model in TARGET_MODELS:
+    for model, path_tmpl in ds["targets"].items():
         out[model] = {}
         for seed in SEEDS:
-            f = hf_hub_download(REPO, f"qwen14b/noise_study/{model}_seed{seed}.json",
+            f = hf_hub_download(REPO, path_tmpl.format(seed=seed),
                                 repo_type="dataset", token=os.environ.get("HF_TOKEN"),
                                 local_dir="/tmp/noise_study/rollouts")
             rollouts = json.loads(Path(f).read_text())
@@ -155,7 +167,7 @@ def main():
                     "budget": cfg["budget"], "token_param": cfg["token_param"],
                     "total_reasoning_tokens": tot_reasoning,
                     "total_completion_tokens": tot_completion}
-    outp = Path(f"/tmp/noise_study/judge_scores_{jm}.json")
+    outp = Path(f"/tmp/noise_study/judge_scores_{ds['suffix']}{jm}.json")
     outp.parent.mkdir(parents=True, exist_ok=True)
     outp.write_text(json.dumps(out))
     print(f"[save] {outp}", flush=True)
