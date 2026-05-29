@@ -128,9 +128,9 @@ def _out_dir(
     suffix = ""
     # data source suffix (TS only — Llama paths aren't differentiated yet).
     if model == "tinystories":
-        if sae_data_source not in ("harvest", "v3"):
+        if sae_data_source not in ("harvest", "leftpad", "v3"):
             raise ValueError(f"unknown sae_data_source={sae_data_source!r}; "
-                             f"choices: ['harvest', 'v3']")
+                             f"choices: ['harvest', 'leftpad', 'v3']")
         suffix += f"_{sae_data_source}"
     if clean_only:
         suffix += "_cleanonly"
@@ -286,10 +286,21 @@ def _train_handrolled(
             n_rows=n_train, hook_names=missing_hooks,
             split="train", max_seq_len=seq_len, chunk_size=16,
         )
-        # acts_flat[hook] is (M, d); reshape to (1, M, d) for sleeper.sae.train.
         acts = {h: a.unsqueeze(0) for h, a in acts_flat.items()}
         n_positions = next(iter(acts.values())).shape[1]
         print(f"[train-saes] harvested {n_positions} total positions")
+    elif sae_data_source == "leftpad":
+        from sleeper.model import harvest_leftpad_activations
+        print(f"[train-saes] data_source=leftpad  harvesting up to {n_train} rows "
+              f"(no truncation, left-pad+mask) at hooks={missing_hooks}")
+        acts_flat = harvest_leftpad_activations(
+            model=hooked, dataset_name=_MODELS[model].dataset,
+            n_rows=n_train, hook_names=missing_hooks,
+            split="train", chunk_size=16,
+        )
+        acts = {h: a.unsqueeze(0) for h, a in acts_flat.items()}
+        n_positions = next(iter(acts.values())).shape[1]
+        print(f"[train-saes] harvested {n_positions} total positions (no truncation)")
     elif sae_data_source == "v3":
         from sleeper.model import load_v3_training_tokens, cache_activations
         if model != "tinystories":
@@ -310,7 +321,7 @@ def _train_handrolled(
         )
     else:
         raise ValueError(f"unknown sae_data_source={sae_data_source!r}; "
-                         f"choices: ['harvest', 'v3']")
+                         f"choices: ['harvest', 'leftpad', 'v3']")
 
     for hook, seed, path in todo:
         if path.exists():
@@ -533,15 +544,19 @@ def main() -> None:
                         "mixed 50/50 clean+deployed activations. Val/test splits "
                         "are unaffected — they always carry dep prompts for "
                         "selection/eval. Output dir gets a '_cleanonly' suffix.")
-    p.add_argument("--sae_data_source", choices=["harvest", "v3"], default="harvest",
-                   help="Source of SAE-training activations for the TS handrolled "
-                        "backend. 'harvest' (default, jamie/sleepers) streams "
-                        "variable-length dataset rows via harvest_dataset_activations "
-                        "→ flat (M, d) of real-position activations. "
-                        "'v3' uses load_v3_training_tokens for a (N=n_train, T=seq_len) "
-                        "full-text crop with the v3 length filter → SAE sees fixed-"
-                        "position activations including the IHY-body at positions "
-                        "~16..127. Output dir gets a '_{harvest,v3}' suffix.")
+    p.add_argument("--sae_data_source", choices=["harvest", "leftpad", "v3"], default="harvest",
+                   help="Source of SAE-training activations (TS handrolled backend). "
+                        "'harvest' (default): variable-length rows right-padded, "
+                        "max_seq_len=128 truncation, real-position slice → (M, d). "
+                        "'leftpad': variable-length rows LEFT-padded with no "
+                        "truncation, length-sorted chunking, real-position slice "
+                        "→ (M, d). LM forward sees each real token at the same "
+                        "absolute position it would occupy under eval's left-padded "
+                        "loader → in-distribution at eval time. "
+                        "'v3': (N=n_train, T=seq_len) fixed-shape crop with the "
+                        "v3 length filter (rows >=seq_len) → SAE sees IHY-body "
+                        "tokens at positions ~16..127. "
+                        "Output dir gets a '_{harvest,leftpad,v3}' suffix.")
     args = p.parse_args()
 
     train_saes(

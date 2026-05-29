@@ -517,6 +517,90 @@ def harvest_dataset_activations(
     return {h: torch.cat(acts_per_hook[h], dim=0) for h in hook_names}
 
 
+def harvest_leftpad_activations(
+    model: HookedTransformer,
+    dataset_name: str,
+    n_rows: int,
+    hook_names: list[str],
+    *,
+    split: str = "train",
+    chunk_size: int = 16,
+) -> dict[str, torch.Tensor]:
+    """Variable-length LEFT-padded harvester for SAE training.
+
+    Differs from ``harvest_dataset_activations`` (right-pad, ``max_seq_len``
+    truncation) in three ways:
+
+    1. **No length filter, no truncation.** Every row is kept at its full
+       tokenized length (TS sleeper rows range 85..1521 tokens, median 279).
+       Eats more compute on outliers but the SAE sees the full residual
+       trajectory of each row.
+    2. **Left-padding + attention_mask.** Real tokens are right-aligned at
+       positions ``T_max-L .. T_max-1``. The LM's absolute position
+       embeddings therefore place each real token at the SAME position it
+       would occupy if the row were processed alone padded to T_max. This
+       matches the position layout the eval pipeline uses
+       (``load_paired_dataset`` left-pads prompts identically), so SAE
+       features trained on these activations are in-distribution at eval.
+    3. **Length-sorted chunking.** Rows are sorted by length before chunking
+       so each batch's ``T_max`` is close to the row lengths in that batch
+       — minimises padding-token compute (otherwise one 1500-token outlier
+       inflates the LM forward for a 16-row batch).
+
+    Returns a flat ``(M, d)`` per hook, ``M = sum_i len_i``, with no padding
+    activations included (the per-row real-position slice excludes pad).
+    """
+    from datasets import load_dataset
+    tokenizer = model.tokenizer
+    pad_id = tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = tokenizer.eos_token_id
+    if pad_id is None:
+        pad_id = 0
+    device = next(model.parameters()).device
+
+    ds = load_dataset(dataset_name, split=split)
+    rows: list[torch.Tensor] = []
+    for ex in ds:
+        if len(rows) >= n_rows:
+            break
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        if len(ids) > 0:
+            rows.append(torch.tensor(ids, dtype=torch.long))
+
+    # Sort by length so each chunk's T_max ≈ the rows in that chunk.
+    # We need to preserve the original order in the flat output so the SAE
+    # training sampler sees the same per-row stride as harvest_dataset_*.
+    # → carry the original index, sort for the forward pass, then write back
+    # into a flat tensor indexed by original order.
+    order = sorted(range(len(rows)), key=lambda i: rows[i].shape[0])
+    real_acts: dict[str, list[torch.Tensor | None]] = {h: [None] * len(rows) for h in hook_names}
+    hook_set = set(hook_names)
+    for start in range(0, len(order), chunk_size):
+        idx_chunk = order[start : start + chunk_size]
+        chunk = [rows[i] for i in idx_chunk]
+        T_max = max(r.shape[0] for r in chunk)
+        tokens = torch.full((len(chunk), T_max), pad_id, dtype=torch.long)
+        attn   = torch.zeros((len(chunk), T_max), dtype=torch.bool)
+        for j, r in enumerate(chunk):
+            L = r.shape[0]
+            tokens[j, T_max - L :] = r
+            attn[j, T_max - L :]   = True
+        tokens = tokens.to(device)
+        attn   = attn.to(device)
+        _, cache = model.run_with_cache(
+            tokens, return_type=None, attention_mask=attn,
+            names_filter=lambda n: n in hook_set,
+        )
+        for hook in hook_names:
+            a = cache[hook].cpu()                              # (B, T_max, d)
+            for j, orig_i in enumerate(idx_chunk):
+                L = rows[orig_i].shape[0]
+                real_acts[hook][orig_i] = a[j, T_max - L :].clone()
+    return {h: torch.cat([t for t in real_acts[h] if t is not None], dim=0)  # type: ignore[arg-type]
+            for h in hook_names}
+
+
 def _load_llama_paired_dataset(
     tokenizer,
     cfg: ModelConfig,
