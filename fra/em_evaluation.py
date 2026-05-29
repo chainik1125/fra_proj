@@ -296,7 +296,10 @@ def generate_with_hooks_batch(
       - seed=int: single shared seed.
       - seed=list[int] (len == len(prompts)): per-row seeds.
     """
-    from transformer_lens import TransformerLensKeyValueCache
+    try:
+        from transformer_lens import HookedTransformerKeyValueCache as KVCache
+    except ImportError:
+        from transformer_lens import TransformerLensKeyValueCache as KVCache
 
     device = next(model.parameters()).device
     B = len(prompts)
@@ -334,7 +337,7 @@ def generate_with_hooks_batch(
     if eos_id is None:
         eos_id = -1
 
-    cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, batch_size=B)
+    cache = KVCache.init_cache(model.cfg, device, batch_size=B)
 
     logits = model.run_with_hooks(
         input_ids, fwd_hooks=fwd_hooks, reset_hooks_end=True,
