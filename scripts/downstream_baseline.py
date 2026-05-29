@@ -82,12 +82,22 @@ def main() -> None:
     tok    = model.tokenizer
     pad_id = tok.pad_token_id or tok.eos_token_id
 
-    splits = load_paired_dataset(tok, n_train=0, n_val=args.n_sel,
-                                  n_test=args.n_eval, seq_len=SEQ_LEN, seed=0,
-                                  model=args.model)
-    sel = splits["val"]
-    # Loader now returns prompt-only left-padded tensors: paired.attention_mask
-    # marks real prompt positions. For left-padded data, prompt_mask == attention_mask.
+    # For tinystories we use the v3-compatible full-text selection split
+    # (prompt + story body, attention_mask all-True). The dep-vs-clean feature
+    # ranking and the Δlogp / ASR screens were calibrated for sleeper firings
+    # observed inside the story body context; with prompt-only data the
+    # ranking flips (e.g. seed-0 winner moves from f579 to f88) and conv JSDc
+    # drifts from ~0.44 to ~0.94. The eval split (eval_dep_lp / eval_dep_attn)
+    # below stays prompt-only as intended.
+    if args.model == "tinystories":
+        from sleeper.model import load_tinystories_full_text_for_sae
+        sel = load_tinystories_full_text_for_sae(tok, n_train=args.n_sel,
+                                                  seq_len=SEQ_LEN, seed=0)
+    else:
+        splits = load_paired_dataset(tok, n_train=0, n_val=args.n_sel,
+                                      n_test=args.n_eval, seq_len=SEQ_LEN,
+                                      seed=0, model=args.model)
+        sel = splits["val"]
     sel_attn        = sel.attention_mask
     sel_dep         = sel.tokens[sel.is_deployment].to(device)
     sel_dep_attn    = sel_attn[sel.is_deployment].to(device)
