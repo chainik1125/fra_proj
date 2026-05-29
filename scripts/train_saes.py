@@ -243,23 +243,32 @@ def _train_handrolled(
 ) -> None:
     """Original path: pre-cache all hook activations once, train each cell from cache."""
     hooked = load_sleeper_model(model=model, device=device)
-    splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0, n_test=0,
-                                 seq_len=seq_len, seed=0, model=model,
-                                 clean_only_train=clean_only)
-    train_tokens = splits["train"].tokens
-    train_attn   = splits["train"].attention_mask
-    print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs "
-          f"({'clean-only' if clean_only else 'mixed 50/50'}) at hooks={missing_hooks}")
-    acts = cache_activations(model=hooked, tokens=train_tokens,
-                             hook_names=missing_hooks, chunk_size=16,
-                             attention_mask=train_attn)
+    # SAE training reads activations from any-length dataset rows — no seq_len
+    # filter, no per-row alignment, no dependence on dataset completions in
+    # PairedTokens. PairedTokens stays prompt-only as designed for selection.
+    from sleeper.model import MODELS as _MODELS, harvest_dataset_activations
+    if clean_only:
+        raise NotImplementedError(
+            "clean_only training was tied to the old fixed-shape paired-loader "
+            "path; the new harvester streams the dataset directly. Reintroduce "
+            "if needed by filtering rows on is_training before forwarding."
+        )
+    print(f"[train-saes] harvesting up to {n_train} rows at hooks={missing_hooks}")
+    acts = harvest_dataset_activations(
+        model=hooked, dataset_name=_MODELS[model].dataset,
+        n_rows=n_train, hook_names=missing_hooks,
+        split="train", max_seq_len=seq_len, chunk_size=16,
+    )
+    # acts[hook] is shape (M, d); reshape to (1, M, d) for sleeper.sae.train
+    # which expects (N, T, d). No mask needed — every row in M is real.
+    acts = {h: a.unsqueeze(0) for h, a in acts.items()}
+    print(f"[train-saes] harvested {next(iter(acts.values())).shape[1]} total positions")
     for hook, seed, path in todo:
         if path.exists():
             print(f"[train-saes] skip {path} (exists)")
             continue
         sae, _ = train(acts[hook], d_sae=d_sae, k=k, n_steps=n_steps,
-                       batch_size=batch_size, lr=lr, seed=seed, device=device,
-                       mask=train_attn)
+                       batch_size=batch_size, lr=lr, seed=seed, device=device)
         save(sae, path, layer_hook=hook,
              n_train_seqs=int(train_tokens.shape[0]),
              seq_len=seq_len, n_steps=n_steps, batch_size=batch_size, lr=lr,
