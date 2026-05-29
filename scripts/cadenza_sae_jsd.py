@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import time
@@ -35,6 +36,28 @@ def _jsd_per_position(p_lsm: torch.Tensor, q_lsm: torch.Tensor) -> torch.Tensor:
     kl_pm = (p * (p.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
     kl_qm = (q * (q.clamp(min=1e-40).log() - log_m)).sum(dim=-1)
     return 0.5 * (kl_pm + kl_qm) / 0.6931
+
+
+def jsd_bits(logits_p: torch.Tensor, logits_q: torch.Tensor) -> torch.Tensor:
+    """Aniket's teacher-forced JSD (bits) between two logit tensors (..., V)."""
+    log_p = torch.log_softmax(logits_p.float(), dim=-1)
+    log_q = torch.log_softmax(logits_q.float(), dim=-1)
+    p, q = log_p.exp(), log_q.exp()
+    m = 0.5 * (p + q)
+    log_m = torch.log(m.clamp(min=1e-12))
+    kl_pm = (p * (log_p - log_m)).sum(-1)
+    kl_qm = (q * (log_q - log_m)).sum(-1)
+    return 0.5 * (kl_pm + kl_qm) / math.log(2)
+
+
+@torch.no_grad()
+def tf_logits(model, tok, prompt, target_ids, fwd_hooks):
+    """Teacher-forced logits over target_ids positions (Aniket's convention)."""
+    device = next(model.parameters()).device
+    pre = tok.encode(prompt, add_special_tokens=False)
+    full = torch.tensor(pre + list(target_ids), device=device).unsqueeze(0)
+    logits = model.run_with_hooks(full, fwd_hooks=fwd_hooks, reset_hooks_end=True)
+    return logits[0, len(pre) - 1: len(pre) - 1 + len(target_ids), :].cpu()
 
 
 def make_conv_hooks(sae, hook_name, feat, alpha):
@@ -129,27 +152,37 @@ def main():
                          args.temperature, args.seed) for q in evalq]
     dep_ref = [rollout(model, tok, format_prompt(tok, q, with_trigger=True), [], T,
                        args.temperature, args.seed) for q in evalq]
+    # Aniket teacher-forced reference: clean model forced along the clean rollout tokens.
+    ref_tf = [tf_logits(model, tok, format_prompt(tok, q, with_trigger=False), clean_ref[i][0], [])
+              for i, q in enumerate(evalq)]
 
     results = []
     for alpha in args.alphas:
         tc = time.time()
         hooks = make_conv_hooks(sae, hook, feat, alpha)
-        jsdc, jsdp, asr_hits, exact = [], [], 0, 0
+        jsdc_fg, jsdp_fg, jsdc_tf, asr_hits, exact = [], [], [], 0, 0
         for i, q in enumerate(evalq):
-            st_tok, st_lsm = rollout(model, tok, format_prompt(tok, q, with_trigger=True),
-                                     hooks, T, args.temperature, args.seed)
+            dep_prompt = format_prompt(tok, q, with_trigger=True)
+            st_tok, st_lsm = rollout(model, tok, dep_prompt, hooks, T, args.temperature, args.seed)
             cl_tok, cl_lsm = clean_ref[i]
             _, dp_lsm = dep_ref[i]
-            jsdc.append(float(_jsd_per_position(st_lsm, cl_lsm).mean()))
-            jsdp.append(float(_jsd_per_position(st_lsm, dp_lsm).mean()))
+            # free-generation JSD (jamie/sleepers)
+            jsdc_fg.append(float(_jsd_per_position(st_lsm, cl_lsm).mean()))
+            jsdp_fg.append(float(_jsd_per_position(st_lsm, dp_lsm).mean()))
+            # teacher-forced JSD vs clean (Aniket): steered-dep forced along clean tokens
+            st_tf = tf_logits(model, tok, dep_prompt, cl_tok, hooks)
+            jsdc_tf.append(float(jsd_bits(st_tf, ref_tf[i]).mean()))
             asr_hits += PAYLOAD_RE.search(tok.decode(st_tok, skip_special_tokens=True)) is not None
             exact += int(st_tok == cl_tok)
         N = len(evalq)
         row = {"alpha": alpha, "feature": feat, "deployed_asr": asr_hits / N,
-               "jsd_clean": sum(jsdc) / N, "jsd_pois": sum(jsdp) / N, "exact_match": exact / N}
+               "jsd_clean_tf": sum(jsdc_tf) / N,
+               "jsd_clean_fg": sum(jsdc_fg) / N, "jsd_pois_fg": sum(jsdp_fg) / N,
+               "exact_match": exact / N}
         results.append(row)
         print(f"  a={alpha:+.1f}  feat={feat}  dep_ASR={row['deployed_asr']:.3f}  "
-              f"JSDc={row['jsd_clean']:.4f}  JSDp={row['jsd_pois']:.4f}  "
+              f"JSDc_tf={row['jsd_clean_tf']:.4f} (Aniket)  "
+              f"JSDc_fg={row['jsd_clean_fg']:.4f}  JSDp_fg={row['jsd_pois_fg']:.4f}  "
               f"exact={row['exact_match']:.2f}  ({time.time()-tc:.1f}s)")
 
     out = Path(args.output).expanduser()
@@ -157,9 +190,10 @@ def main():
     out.write_text(json.dumps({"config": vars(args), "hook": hook, "feature": feat,
                                "results": results}, indent=2))
     print(f"\nwrote {out}")
-    best = min(results, key=lambda r: (r["deployed_asr"], r["jsd_clean"]))
+    best = min(results, key=lambda r: (r["deployed_asr"], r["jsd_clean_tf"]))
     print(f"best: a={best['alpha']:+.1f}  feat={feat}  dep_ASR 1.00->{best['deployed_asr']:.2f}  "
-          f"JSDc={best['jsd_clean']:.4f}  JSDp={best['jsd_pois']:.4f}  exact={best['exact_match']:.2f}")
+          f"JSDc_tf(Aniket)={best['jsd_clean_tf']:.4f}  JSDc_fg={best['jsd_clean_fg']:.4f}  "
+          f"exact={best['exact_match']:.2f}")
 
 
 if __name__ == "__main__":
