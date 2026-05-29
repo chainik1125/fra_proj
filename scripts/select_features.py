@@ -28,8 +28,7 @@ import torch
 
 from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
-    rank_kv_diff, rank_ov_cosine_v, rank_ov_diff, rank_qk_diff,
-    rank_qk_plus_ov_diff_all,
+    rank_kv_diff, rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
 from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
 from sleeper.hooks import ACTIVE_CHANNELS
@@ -121,21 +120,6 @@ def _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache):
         }
 
 
-def _ensure_ov_cosine_v(model, sae_ln1, W_V, attr_split, device, cache):
-    """V-space cosine ranking — cos(W_dec[f] @ W_V, v_md @ W_V), heads
-    concatenated. Same v_md as :func:`_ensure_ov_cosine` (last real prompt
-    position, left-padded); only the W_V projection differs. See
-    :func:`sleeper.attribution.rank_ov_cosine_v`. No retraining; reuses the
-    ln1 SAEs and the shared attribution activation cache.
-    """
-    _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
-    if "ov_cosine_v" not in cache:
-        cache["ov_cosine_v"] = rank_ov_cosine_v(
-            cache["ln1_acts"].to(device), sae_ln1, W_V,
-            attr_split.is_deployment.to(device),
-        )
-
-
 def _ensure_qk_diff(model, sae_ln1, W_Q, W_K, attr_split, attr_pmask, device, cache):
     _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
     if "qk_diff" not in cache:
@@ -170,21 +154,6 @@ def _get_tuples_diff(channel, args, model, sae_ln1, W, W_O, attr_split, attr_pma
             # OV-only intervention is still applied at the V tag at winner time.
             _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache)
             order = cache["ov_cosine"]["top_indices"].cpu().tolist()[: args.top_k]
-        elif ranking == "cosine_v":
-            # Same cosine screen but in per-head V-space (project both operands
-            # through W_V first) — the space the OV steer actually acts in.
-            _ensure_ov_cosine_v(model, sae_ln1, W["V"], attr_split, device, cache)
-            order = cache["ov_cosine_v"]["top_indices"].cpu().tolist()[: args.top_k]
-        elif ranking == "attr_cosine_v":
-            # Attribution top-`attr_prefilter` candidates, re-ranked by V-space
-            # cosine. Attribution guarantees differential firing; cosine_v then
-            # picks the cleanest value-write direction among the survivors.
-            _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
-            _ensure_ov_cosine_v(model, sae_ln1, W["V"], attr_split, device, cache)
-            prefilter = getattr(args, "attr_prefilter", 20)
-            cand = cache["ov_diff"]["top_indices"].cpu().tolist()[: prefilter]
-            cos = cache["ov_cosine_v"]["score"]
-            order = sorted(cand, key=lambda f: float(cos[f]), reverse=True)[: args.top_k]
         else:
             _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
             order = cache["ov_diff"]["top_indices"].cpu().tolist()[: args.top_k]
@@ -295,8 +264,7 @@ def select_features(
     target_feature: int = 579,           # for target regime
     device: str | None = None,
     model: ModelName = "tinystories",
-    ranking: str = "attribution",        # OV step-1 ranker — see --ranking help
-    attr_prefilter: int = 20,            # candidate pool for ranking='attr_cosine_v'
+    ranking: str = "attribution",        # 'attribution' (default) | 'cosine' — OV only
 ) -> dict:
     """Run the selection stage. Returns the tuples_json dict ready to write."""
     if regime == "target" and channel != "ov":
@@ -348,7 +316,7 @@ def select_features(
     ns = SimpleNamespace(
         top_k=top_k, target_feature=target_feature,
         alphas=alphas or [2.0, 4.0], gen_tokens=gen_tokens,
-        ranking=ranking, attr_prefilter=attr_prefilter,
+        ranking=ranking,
     )
 
     per_seed: dict[str, list] = {}
@@ -406,21 +374,13 @@ def main() -> None:
                    help="Winner-picking method (only used with --mode winner).")
     p.add_argument("--alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
-    p.add_argument("--ranking",
-                   choices=["attribution", "cosine", "cosine_v", "attr_cosine_v"],
-                   default="attribution",
+    p.add_argument("--ranking",   choices=["attribution", "cosine"], default="attribution",
                    help="OV-only knob for step 1. 'attribution' (default) ranks ln1 "
                         "features by dep-vs-clean OV-path contribution to the residual. "
                         "'cosine' ranks by signed cos(W_dec_ln1[f], v_md) where v_md = "
                         "mean(ln1_acts[dep, last_pos]) − mean(ln1_acts[clean, last_pos]). "
-                        "'cosine_v' is the same screen in per-head V-space (both operands "
-                        "projected through W_V — the space the OV steer acts in). "
-                        "'attr_cosine_v' takes the attribution top-`--attr_prefilter` and "
-                        "re-ranks them by V-space cosine. Step 3 (greedy ASR sweep with "
-                        "OV-only steering on the V tag) is unchanged for all of them.")
-    p.add_argument("--attr_prefilter", type=int, default=20,
-                   help="Candidate-pool size for --ranking attr_cosine_v (attribution "
-                        "top-N re-ranked by V-space cosine).")
+                        "Step 3 (greedy ASR sweep with OV-only steering on the V tag) "
+                        "is unchanged either way.")
     p.add_argument("--n_sel",     type=int, default=200)
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--sae_mid",   type=Path, default=None,
@@ -439,7 +399,7 @@ def main() -> None:
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,
         device=args.device, model=args.model,
-        ranking=args.ranking, attr_prefilter=args.attr_prefilter,
+        ranking=args.ranking,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out_dict, indent=2))
