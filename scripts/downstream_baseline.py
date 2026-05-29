@@ -1,9 +1,14 @@
 """Conventional steering baseline, common to every matrix-cell run.
 
 For each downstream SAE seed s ∈ --sae_seeds (default 0..5):
-  1. Identify the sleeper-firing feature in sae_resid_mid_s{s}.pt — runs the
-     find_downstream_winners_6seeds pipeline inline (activation-difference
-     ranking → Δdep-logp screen → greedy ASR screen) → winner f_s.
+  1. Identify the sleeper-firing feature in sae_resid_mid_s{s}.pt:
+       step 1: rank by activation diff mean(z|dep) − mean(z|clean) on prompt
+               positions → top-K candidates.
+       step 2: re-rank top-K by signed cos(W_dec[f], v_md/||v_md||) where
+               v_md = mean(resid_dep_last_pos) − mean(resid_clean_last_pos);
+               keep best K/2. Replaces v3's body-context Δlogp screen so the
+               whole pipeline is prompt-only (no `prompt + body + IHY`).
+       step 3: greedy ASR sweep on left-padded dep prompts → winner f_s.
   2. Evaluate f_s at each α with the same 4-metric multi-seed lockstep eval
      used by scripts/matrix.py (asr, jsd_clean, jsd_pois, exact_match), so
      baseline numbers are directly comparable to the matrix cells.
@@ -37,7 +42,7 @@ from sleeper.hooks import (
     make_greedy_sampler,
 )
 from sleeper.metrics import (
-    asr_16, rank_features_by_dep_clean, teacher_forced_sleeper_logp,
+    asr_16, rank_features_by_dep_clean,
 )
 from sleeper.model import (
     MODELS, left_pad_prompts, load_paired_dataset,
@@ -86,11 +91,13 @@ def main() -> None:
                                   n_test=args.n_eval, seq_len=SEQ_LEN, seed=0,
                                   model=args.model)
     sel = splits["val"]
-    # Loader now returns prompt-only left-padded tensors: paired.attention_mask
+    # Loader returns prompt-only left-padded tensors: paired.attention_mask
     # marks real prompt positions. For left-padded data, prompt_mask == attention_mask.
     sel_attn        = sel.attention_mask
     sel_dep         = sel.tokens[sel.is_deployment].to(device)
     sel_dep_attn    = sel_attn[sel.is_deployment].to(device)
+    sel_cln         = sel.tokens[~sel.is_deployment].to(device)
+    sel_cln_attn    = sel_attn[~sel.is_deployment].to(device)
     is_dep          = sel.is_deployment.to(device)
     combined_lp     = sel.tokens.to(device)
     combined_attn   = sel_attn.to(device)
@@ -111,9 +118,6 @@ def main() -> None:
         seeds=args.eval_seeds, temperature=args.eval_temperature,
     )
 
-    base_logp = teacher_forced_sleeper_logp(model, tok, sel_dep,
-                                              attention_mask=sel_dep_attn).mean().item()
-    print(f"[base] sel-split base dep-logp = {base_logp:.4f}", flush=True)
     sampler = make_greedy_sampler()
 
     out_per_seed: dict = {}
@@ -137,26 +141,38 @@ def main() -> None:
         top_k = ranked["top_indices"].cpu().tolist()
         print(f"[base]   top-{args.identify_top_k}: {top_k[:8]} ...", flush=True)
 
-        # 2. Δdep-logp screen — keep best K/2 candidates.
-        dlogp: dict[int, float] = {}
-        for f in top_k:
-            best = float("inf")
-            for a in args.screen_alphas:
-                delta = compute_sae_delta(model, sae_mid, resid_hook, int(f),
-                                           sel_dep, sel_dep_attn,
-                                           attention_mask=sel_dep_attn)
-                hooks = additive_steer_hook(delta, a, resid_hook)
-                lp = teacher_forced_sleeper_logp(model, tok, sel_dep,
-                                                  fwd_hooks=hooks,
-                                                  attention_mask=sel_dep_attn).mean().item()
-                d = lp - base_logp
-                if d < best:
-                    best = d
-            dlogp[int(f)] = best
+        # 2. Cosine re-rank of step-1 candidates by alignment to v_md.
+        # Replaces v3's body-context Δlogp screen — fully prompt-only, no
+        # P(IHY|prompt+body) anywhere. v_md = mean(resid_dep_last_pos) −
+        # mean(resid_clean_last_pos). For each f in top_k score signed
+        # cos(W_dec[f], v_md/||v_md||); keep best K/2 (Arditi-style ranking
+        # combined with the activation-diff prefilter from step 1).
+        with torch.no_grad():
+            _, cache_d = model.run_with_cache(
+                sel_dep, attention_mask=sel_dep_attn, return_type=None,
+                names_filter=lambda n: n == resid_hook,
+            )
+            resid_d = cache_d[resid_hook][:, -1, :].mean(0).to(torch.float32)
+            del cache_d
+            _, cache_c = model.run_with_cache(
+                sel_cln, attention_mask=sel_cln_attn, return_type=None,
+                names_filter=lambda n: n == resid_hook,
+            )
+            resid_c = cache_c[resid_hook][:, -1, :].mean(0).to(torch.float32)
+            del cache_c
+            diff = resid_d - resid_c
+            diff_n = diff / (diff.norm() + 1e-12)
+            W_dec = sae_mid.W_dec.to(torch.float32)
+            row_norms = W_dec.norm(dim=1).clamp_min(1e-12)
+            cos_all = (W_dec @ diff_n) / row_norms                # (d_sae,)
+        # Store −cos so the existing "min dlogp = best" sort + tie-break
+        # logic carries over to step 3 unchanged.
+        dlogp: dict[int, float] = {int(f): -float(cos_all[int(f)].item())
+                                   for f in top_k}
         keep_n = max(1, args.identify_top_k // 2)
         survivors = sorted(dlogp, key=lambda k: dlogp[k])[:keep_n]
         print(f"[base]   stage-0 keep={keep_n}: {survivors[:5]} ... "
-              f" best Δlogp={dlogp[survivors[0]]:+.3f}", flush=True)
+              f" best signed cos={-dlogp[survivors[0]]:+.4f}", flush=True)
 
         # 3. Greedy ASR screen on left-padded dep prompts → winner.
         asr_table: dict[int, tuple[float, float]] = {}
