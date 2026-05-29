@@ -96,21 +96,29 @@ for EM in $EM_MODELS; do
       f="/workspace/buckets/qwen14b/noise_study/${EM}_seed${ns}.json"
       [ -f "$f" ] && ROLLOUT_ARGS="$ROLLOUT_ARGS $f"
   done
-  RANK_JSON="/workspace/diff_ranking_${WHICH}_${EM}_L${LAYER}.json"
-  echo "[$(date -u +%H:%M:%S)] === diff ranking (Δ$WHICH, $EM) for routing $RECIPE ==="
-  python3 -u scripts/compute_fra_diff_ranking.py \
-      --which "$WHICH" --sae ln1 --sae-dir "$SAE_DIR" \
-      --model "$EM" --rollout-files $ROLLOUT_ARGS --scores-file "$SCORES_FILE" \
-      --layer "$LAYER" --head "$HEAD" --top-n 50 --k-pairs 50 \
-      --out "$RANK_JSON"
-  FIDS=$(python3 -c "import json; print(' '.join(str(i) for i in json.load(open('$RANK_JSON'))['feature_ids']))")
-  [ -z "$FIDS" ] && { echo "empty diff ranking ids for $EM"; exit 1; }
-  python3 -c "
+  # FEATURE_IDS_OVERRIDE short-circuit (routing finegrid): steer EXACTLY these ids,
+  # skip the diff-ranking computation entirely. Used for the single-feature
+  # extended-α routing sweeps (e.g. FEATURE_IDS_OVERRIDE="8862").
+  if [ -n "${FEATURE_IDS_OVERRIDE:-}" ]; then
+    FIDS="$FEATURE_IDS_OVERRIDE"
+    echo "[$(date -u +%H:%M:%S)] === routing $RECIPE: FEATURE_IDS_OVERRIDE=$FIDS (skip ranking) ==="
+  else
+    RANK_JSON="/workspace/diff_ranking_${WHICH}_${EM}_L${LAYER}.json"
+    echo "[$(date -u +%H:%M:%S)] === diff ranking (Δ$WHICH, $EM) for routing $RECIPE ==="
+    python3 -u scripts/compute_fra_diff_ranking.py \
+        --which "$WHICH" --sae ln1 --sae-dir "$SAE_DIR" \
+        --model "$EM" --rollout-files $ROLLOUT_ARGS --scores-file "$SCORES_FILE" \
+        --layer "$LAYER" --head "$HEAD" --top-n 50 --k-pairs 50 \
+        --out "$RANK_JSON"
+    FIDS=$(python3 -c "import json; print(' '.join(str(i) for i in json.load(open('$RANK_JSON'))['feature_ids']))")
+    [ -z "$FIDS" ] && { echo "empty diff ranking ids for $EM"; exit 1; }
+    python3 -c "
 from huggingface_hub import HfApi
 HfApi().upload_file(path_or_fileobj='$RANK_JSON',
     path_in_repo='$GRID_HF_BASE/frarouting_${RECIPE}_ln1_meta/diff_ranking_${EM}_L${LAYER}.json',
     repo_id='$HF_REPO', repo_type='dataset', commit_message='grid_diff routing: $RECIPE ranking $EM')
 "
+  fi
   for SEED in $SEEDS; do
     OUT="/workspace/fr_${RECIPE}_${EM}_seed${SEED}"; mkdir -p "$OUT"
     echo "[$(date -u +%H:%M:%S)] === routing ($RECIPE, $EM, seed=$SEED, grans=[$GRANS]) ==="
