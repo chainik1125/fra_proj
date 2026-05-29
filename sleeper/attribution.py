@@ -227,6 +227,57 @@ def rank_ov_diff(
 
 
 @torch.no_grad()
+def rank_ov_cosine_v(
+    ln1_acts: torch.Tensor,       # (B, T, d_model) — block-0 ln1 normalized acts
+    sae_ln1: TopKSAE,
+    W_V: torch.Tensor,            # (n_heads, d_model, d_head)
+    is_deployment: torch.Tensor,  # (B,) bool
+) -> dict[str, torch.Tensor]:
+    """Rank ln1 SAE features by cosine in per-head **V-space** between each
+    feature's value-write direction and the dep−clean mean-diff value.
+
+    The OV-only intervention patches ``hook_v`` with ``W_dec[f] @ W_V`` (per
+    head), so V-space — not the residual — is where the steer actually lives.
+    This is the residual ``cos(W_dec[f], v_md)`` screen with both operands
+    pushed through ``W_V`` first::
+
+        v_md       = mean_dep(ln1[:, -1]) − mean_clean(ln1[:, -1])    ∈ R^d_model
+        v_md_V[h]  = v_md @ W_V[h]                                     ∈ R^d_head
+        f_V[f, h]  = W_dec[f] @ W_V[h]                                 ∈ R^d_head
+        cos[f]     = ⟨flat_h(f_V[f]), flat_h(v_md_V)⟩ / (‖·‖ · ‖·‖)
+
+    Heads are concatenated before the cosine, so each head is weighted by the
+    value-vector magnitude it actually carries. Left-padded data → the last
+    position is the last real prompt token (same v_md as the resid ``cosine``
+    screen; only the W_V projection differs).
+
+    Signed, descending: the most dep-aligned value-write first — the feature
+    whose ablation best cancels the dep-specific value direction.
+    """
+    device = ln1_acts.device
+    acts = ln1_acts.float()
+    is_dep = is_deployment.to(device)
+
+    last = acts[:, -1, :]                                    # (B, d_model)
+    v_md = last[is_dep].mean(0) - last[~is_dep].mean(0)      # (d_model,)
+
+    W_V_ = W_V.to(device).float()                            # (n_heads, d_model, d_head)
+    W_dec = sae_ln1.W_dec.detach().to(device).float()        # (d_sae, d_model)
+
+    v_md_V = torch.einsum("m,hmd->hd", v_md, W_V_).reshape(-1)             # (n_heads*d_head,)
+    f_V    = torch.einsum("fm,hmd->fhd", W_dec, W_V_).reshape(W_dec.shape[0], -1)  # (d_sae, n_heads*d_head)
+
+    v_md_n   = v_md_V / v_md_V.norm().clamp_min(1e-12)
+    row_norm = f_V.norm(dim=1).clamp_min(1e-12)
+    cos = (f_V @ v_md_n) / row_norm                          # (d_sae,)
+
+    return {
+        "score":       cos.cpu(),
+        "top_indices": torch.argsort(cos, descending=True).cpu(),
+    }
+
+
+@torch.no_grad()
 def rank_qk_diff(
     z_ln1: torch.Tensor,          # (B, T, d_sae)
     sae_ln1: TopKSAE,
