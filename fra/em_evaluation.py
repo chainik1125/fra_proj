@@ -270,6 +270,125 @@ def generate_with_hooks(
     return response.strip()
 
 
+def _format_chat(tokenizer, prompt: str) -> str:
+    if hasattr(tokenizer, "apply_chat_template"):
+        return tokenizer.apply_chat_template(
+            [{"role": "user", "content": prompt}],
+            tokenize=False, add_generation_prompt=True,
+        )
+    return f"User: {prompt}\nAssistant:"
+
+
+@torch.no_grad()
+def generate_with_hooks_batch(
+    model,
+    tokenizer,
+    prompts: List[str],
+    fwd_hooks: list,
+    max_new_tokens: int = 200,
+    temperature: float = 1.0,
+    top_p: Optional[float] = None,
+    seed=None,
+):
+    """Batched KV-cache generation. Returns list[str] of length len(prompts).
+
+    Seed handling:
+      - seed=int: single shared seed.
+      - seed=list[int] (len == len(prompts)): per-row seeds.
+    """
+    from transformer_lens import TransformerLensKeyValueCache
+
+    device = next(model.parameters()).device
+    B = len(prompts)
+
+    if isinstance(seed, list):
+        if len(seed) != B:
+            raise ValueError(f"seed list len ({len(seed)}) != B ({B})")
+        gens: Optional[List[torch.Generator]] = (
+            [torch.Generator(device=device).manual_seed(int(s)) for s in seed]
+            if temperature > 0 else None
+        )
+        shared_gen = None
+    elif seed is not None and temperature > 0:
+        gens = None
+        shared_gen = torch.Generator(device=device).manual_seed(int(seed))
+    else:
+        gens = None
+        shared_gen = None
+
+    pad_id = tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
+
+    encoded = [tokenizer.encode(_format_chat(tokenizer, p)) for p in prompts]
+    max_len = max(len(e) for e in encoded)
+
+    input_ids = torch.full((B, max_len), pad_id, dtype=torch.long, device=device)
+    attn_mask = torch.zeros((B, max_len), dtype=torch.long, device=device)
+    for i, e in enumerate(encoded):
+        L = len(e)
+        input_ids[i, max_len - L:] = torch.tensor(e, device=device)
+        attn_mask[i, max_len - L:] = 1
+
+    eos_id = tokenizer.eos_token_id
+    if eos_id is None:
+        eos_id = -1
+
+    cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, batch_size=B)
+
+    logits = model.run_with_hooks(
+        input_ids, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+        past_kv_cache=cache, attention_mask=attn_mask,
+    )
+
+    def _sample_step(probs):
+        if gens is not None:
+            picks = torch.empty(B, dtype=torch.long, device=device)
+            for i in range(B):
+                picks[i] = torch.multinomial(probs[i], 1, generator=gens[i]).squeeze()
+            return picks
+        return torch.multinomial(probs, 1, generator=shared_gen).squeeze(-1)
+
+    def _sample(last_logits):
+        if temperature <= 0:
+            return last_logits.argmax(dim=-1)
+        probs = F.softmax(last_logits / max(temperature, 1e-9), dim=-1)
+        if top_p is not None:
+            sorted_probs, sorted_idx = torch.sort(probs, descending=True, dim=-1)
+            cumprobs = sorted_probs.cumsum(dim=-1)
+            mask = cumprobs > top_p
+            mask[:, 1:] = mask[:, :-1].clone()
+            mask[:, 0] = False
+            sorted_probs = sorted_probs.masked_fill(mask, 0.0)
+            sorted_probs = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True).clamp(min=1e-12)
+            picks_in_sorted = _sample_step(sorted_probs).unsqueeze(-1)
+            return sorted_idx.gather(1, picks_in_sorted).squeeze(-1)
+        return _sample_step(probs)
+
+    next_tokens = _sample(logits[:, -1, :].float())
+
+    finished = torch.zeros(B, dtype=torch.bool, device=device)
+    generated = [[] for _ in range(B)]
+
+    for step in range(max_new_tokens):
+        eos_now = next_tokens == eos_id
+        for i in range(B):
+            if not finished[i].item() and not eos_now[i].item():
+                generated[i].append(next_tokens[i].item())
+        finished = finished | eos_now
+        if bool(finished.all().item()):
+            break
+
+        new_tok = next_tokens.unsqueeze(1)
+        logits = model.run_with_hooks(
+            new_tok, fwd_hooks=fwd_hooks, reset_hooks_end=True,
+            past_kv_cache=cache,
+        )
+        next_tokens = _sample(logits[:, -1, :].float())
+
+    return [tokenizer.decode(g, skip_special_tokens=True).strip() for g in generated]
+
+
 @torch.no_grad()
 def generate_baseline(model, tokenizer, prompt, max_new_tokens=200,
                       temperature=1.0, seed=None):

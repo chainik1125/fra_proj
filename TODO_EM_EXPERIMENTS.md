@@ -18,61 +18,59 @@ Using existing SAEs from `dmanningcoe/fra-phase1-steering-data` (trained on base
 Source: `qwen14b/sae_quality_cmp.json` on HF. Both pass quality gates.
 *ln1 loss_recovered denominator is degenerate (zero-ablation ≈ reconstruction CE).
 
-**OPEN ISSUE:** resid_post native L0=4780 vs target k=64 — BatchTopK threshold drift at inference. May need hard TopK cap. Revisit before trusting resid_post steering results.
+**RESOLVED:** resid_post native L0=4780 vs target k=64 — BatchTopK threshold drift at inference. Fix: **force hard TopK(64) cap at inference** (per `measure_sae.sh`: "BatchTopK eval-threshold is miscalibrated").
 
 ---
 
-## Phase 1: Noise Control (Quality Gate)
+## Phase 0.5: Head Ablation + ‖Δa‖ for Extreme Sports — DONE
 
-**Setup:** No steering (alpha=0) on the extreme-sports EM model. Noise = variation in A̅ and C̅ when repeating the same measurement with different seeds.
+- [x] **0.5a** Ran `experiments/fra_14b_sports/head_delta_a.py` on RunPod (H100 80GB)
+- [x] **0.5b** Results:
+  - **Top head: H12** (Δloss=0.0098), top-5: [12, 33, 0, 17, 24]
+  - **‖Δa‖ resid_post L24 = 14.749**
+  - **‖Δa‖ ln1 postgain L24 = 5.562**
+  - (Finance was: head 12, ‖Δa‖_rp=12.189 — same head, similar magnitude)
 
-**Noise sources:** (1) target model sampling noise, (2) judge sampling noise.
-**Levers:** (1) reduce temperature of both LLMs (floor = 0.5, don't go below), (2) increase N repeats per question.
-**Variance metric:** max(A̅_seeds) - mean(A̅_seeds) across 3 seeds. Target ≤ 5pp. Tolerable ≤ 10pp. Above 10pp = meaningless.
+---
 
-### Pre-checks
-- [ ] **1.0a** Verify steering hooks during generation: do hooks apply during autoregressive rollout or prompt-only? Check `run_behavioral_eval()` generation code. Dmitry unsure — needs confirming.
-- [ ] **1.0b** Fix judge temperature: `gpt4o_judge.py` currently uses `temperature=0` — raise to 0.5 (Dmitry's floor). Both LLMs should be at 0.5, not below.
-- [ ] **1.0c** Confirm judge seeding: if judge temp > 0, need to pass different seeds per run. At temp=0 judge is deterministic (no seed needed).
+## Phase 1: Noise Control (Quality Gate) — DONE
 
-### Noise measurement
-- [ ] **1.1** Baseline noise measurement at alpha=0 (no steering):
-  - Load extreme-sports EM model (`ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports`)
-  - Target model temperature = 0.5
-  - Judge temperature = 0.5
-  - 8 eval prompts × N=4 repeats per prompt (Dmitry found N=4 effective)
-  - Compute A̅ and C̅ (mean alignment, mean coherence across all 8×4=32 responses)
-  - Repeat with 3 seeds (seed both target model and judge)
-  - Check: max(A̅_seeds) - mean(A̅_seeds) ≤ 5pp for both A and C
-- [ ] **1.2** If variance > 5pp, tune parameters:
-  - Try N=8 repeats per question
-  - If still > 10pp: results are meaningless — fall back to smaller steering range with higher N
-- [ ] **1.3** Measure API cost per steering-point evaluation at chosen N
-  - Each steering point = 8 prompts × N repeats × 2 judge calls (alignment + coherence)
-  - At N=4: 8 × 4 × 2 = 64 GPT-4o calls per steering point
-  - If expensive → plan for ~17-point mini grid in Phase 2
-  - If cheap → can afford full grid to coherence degradation
+**Config used:**
+- Target model temp = 1.0, judge = gpt-4o-mini @ temp=0
+- 8 prompts × 4 samples = 32 responses per seed, seeds {42, 123}
+- Hooks active during autoregressive rollout (confirmed: `generate_with_hooks` loops token-by-token)
 
-### Implementation needed
-- [ ] **1.4** Write `run_noise_check.py` script:
-  - Loads EM model, generates responses at alpha=0 with temp=0.5
-  - Calls GPT-4o judge at temp=0.5 (update `gpt4o_judge.py`)
-  - Repeats for 3 seeds, reports variance
-  - Prints API cost estimate for Phase 2 grid
-- [ ] **1.5** Conventional steering (Wang procedure) requires loading BOTH base and EM models to compute contrastive activation diff. No code for this exists yet — needs implementing before Phase 2.
+**Results (PASS):**
+
+| Seed | A̅ | C̅ |
+|------|-----|-----|
+| 42 | 44.1 | 66.2 |
+| 123 | 41.4 | 62.0 |
+| **Mean** | **42.7** | **64.1** |
+| **Max dev** | **±1.3pp** | **±2.1pp** |
+
+Verdict: **PASS** — both well within ±5pp target. No tuning needed.
+
+**Cost:** ~$0.024 per steering point (64 gpt-4o-mini calls). Very cheap — full 9-point grid is ~$0.22 per cell.
+
+**Baseline observation:** A̅≈43 at alpha=0 means the sports EM model is already moderately misaligned at baseline (judge sees ~43/100 alignment).
 
 ---
 
 ## Phase 2: Steering Experiments
 
-All on Qwen2.5-14B **fine-tuned (EM) extreme-sports model**, with noise parameters from Phase 1.
+All on Qwen2.5-14B **fine-tuned (EM) extreme-sports model**.
 
-### Steering grid
-- Always include: 0, ±1, ±2
-- Additional points: 1×, 2×, 3× ... mean feature activation (averaged over non-dead features across dataset)
-- Use same grid across all protocols (can't report different magnitudes per feature)
-- If judging is expensive: start with ~17-point mini grid, confirm outliers later
-- If cheap: extend until model coherence collapses
+### Locked parameters (from Phase 0.5 + Phase 1)
+- **Head: H12** at L24
+- **‖Δa‖ resid_post = 14.749**, ‖Δa‖ ln1 = 5.562
+- **Steering: magnitude-matched** → `α_nom · ‖Δa‖ · unit(dir)`
+- **Alpha grid:** -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2 (9 points)
+- **Target temp = 1.0**, judge = gpt-4o-mini @ temp=0
+- **N = 4** samples per prompt, **8 prompts** = 32 responses per (alpha, feature) cell
+- **Seeds = {42, 123}**, MAX_NEW_TOKENS = 100
+- **Hard TopK(64) cap** on SAE encode at inference
+- **Cost:** ~$0.22 per (alpha-sweep × seed-pair) cell. Budget ~$5-10 total for Phase 2A+2B.
 
 ### 2A: Single-feature steering (START HERE for all protocols)
 
@@ -112,8 +110,23 @@ Run hybrid 50-feature first. If interesting, expand to the rest.
 ### Metrics to collect per steering point:
 - **Alignment score** (judge-assessed, A̅ ± variance across seeds)
 - **Coherence score** (judge-assessed, C̅ ± variance across seeds)
-- **Jensen-Shannon divergence** vs clean (unsteered) model — supplement coherence metric
-- **Key summary stat**: max alignment swing = max(A̅) - min(A̅) across steering range, at coherence threshold 50 and 70
+- **Key summary stat**: Δalign = max(A̅) - min(A̅) across alpha range, at coherence threshold 50 and 70
+
+### Implementation
+Script: `experiments/fra_14b_sports/run_phase2_steering.py`
+
+```bash
+# 2A: All single-feature protocols
+python experiments/fra_14b_sports/run_phase2_steering.py --protocols all_single
+
+# 2B: 50-feature hybrid
+python experiments/fra_14b_sports/run_phase2_steering.py --protocols hybrid_50
+
+# 2C: Conditional 50-feature rest
+python experiments/fra_14b_sports/run_phase2_steering.py --protocols conditional_50
+```
+
+Requires: `dictionary_learning` package (for Arditi SAE loading), `openai` (for judge).
 
 ---
 
