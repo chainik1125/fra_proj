@@ -57,89 +57,68 @@ Verdict: **PASS** — both well within ±5pp target. No tuning needed.
 
 ---
 
-## Phase 2: Steering Experiments
+## Phase 2: Steering Experiments — DONE
 
 All on Qwen2.5-14B **fine-tuned (EM) extreme-sports model**.
 
-### Locked parameters (from Phase 0.5 + Phase 1)
-- **Head: H12** at L24
-- **‖Δa‖ resid_post = 14.749**, ‖Δa‖ ln1 = 5.562
-- **Steering: magnitude-matched** → `α_nom · ‖Δa‖ · unit(dir)`
-- **Alpha grid:** -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2 (9 points)
-- **Target temp = 1.0**, judge = gpt-4o-mini @ temp=0
-- **N = 4** samples per prompt, **8 prompts** = 32 responses per (alpha, feature) cell
-- **Seeds = {42, 123}**, MAX_NEW_TOKENS = 100
-- **Hard TopK(64) cap** on SAE encode at inference
-- **Cost:** ~$0.22 per (alpha-sweep × seed-pair) cell. Budget ~$5-10 total for Phase 2A+2B.
+### Config
+- Head H12 @ L24, magnitude-matched steering (`α · ‖Δa‖ · unit(dir)`)
+- ‖Δa‖ resid_post = 14.749, ‖Δa‖ ln1 = 5.562
+- Extended alpha grid: 9 ‖Δa‖ points + ±1×,2×,3× mean feature activation (15 total)
+- Target temp=1.0, judge=gpt-4o-mini@temp=0, 8 prompts × 4 samples, seeds {42, 123}
 
-### 2A: Single-feature steering (START HERE for all protocols)
+### Results
 
-| # | Protocol | Hook point | Features | Priority |
-|---|----------|-----------|----------|----------|
-| 1 | **Conventional** (CAE/Wang) | resid_post | single (top-1) | REQUIRED |
-| 2 | **Conventional** (CAE/Wang) | ln1 | single (top-1) | REQUIRED |
-| 3 | **Pure FRA** (QK attribution + QK intervention) | ln1 | single (top-1) | REQUIRED |
-| 4 | **Pure FRA** (OV attribution + OV intervention) | ln1 | single (top-1) | REQUIRED |
-| 5 | **Hybrid: QK→Conv** (QK attribution, conventional steer) | ln1 | single (top-1) | REQUIRED |
-| 6 | **Hybrid: OV→Conv** (OV attribution, conventional steer) | ln1 | single (top-1) | REQUIRED |
+Full analysis: `experiments/fra_14b_sports/full_analysis.json`
 
-### 2B: 50-feature hybrid steering (TEST FIRST)
+**Comparison table — Δalign (max A̅ - min A̅ across per-alpha means):**
 
-Run hybrid 50-feature first. If interesting, expand to the rest.
+| Protocol | Δ@coh≥50 | Δ@coh≥70 | C̅ mean |
+|----------|---------|---------|--------|
+| **Conv ln1 (50)** | **34.1** | **24.3** | 67.5 |
+| Hyb QK (50) | 20.9 | 11.6 | 68.6 |
+| Hyb OV (50) | 20.9 | 9.8 | 67.7 |
+| FRA OV (50) | 20.6 | 9.7 | 67.9 |
+| Conv rp (50) | 17.3 | — | 40.2 |
+| Conv rp (1, ext) | 14.1 | — | 61.7 |
+| FRA QK (1) | 9.5 | — | 65.9 |
+| Hyb QK (1) | 9.1 | — | 66.2 |
+| Conv ln1 (1) | 7.0 | — | 65.2 |
+| Hyb OV (1) | 7.0 | — | 66.2 |
+| FRA OV (1) | 6.7 | — | 66.1 |
 
-| # | Protocol | Hook point | Features | Priority |
-|---|----------|-----------|----------|----------|
-| 7 | **Hybrid: QK→Conv** | ln1 | top-50 | TEST FIRST |
-| 8 | **Hybrid: OV→Conv** | ln1 | top-50 | TEST FIRST |
+**Key findings:**
+1. **Conv ln1 (50) dominates** — 34.1pp @coh≥50, 24.3pp @coh≥70. Reaches A̅=78 at α=-6.63 with C̅=80.8.
+2. **All 50-feature protocols >> all single-feature** (~2-5× larger swings).
+3. **Hybrid 50 ≈ FRA OV 50** (~20-21pp) — FRA ranking doesn't clearly beat Wang for 50-feature.
+4. **Conv resid_post (50) collapses** — C̅=40.2 mean, coherence dies at large α.
+5. **coh≥70 separates the field** — only ln1-based 50-feature protocols survive.
+6. **Single-feature steering is weak** — 7-14pp swings, barely above inter-seed noise (~6pp at α=0).
 
-### 2C: 50-feature remaining protocols (CONDITIONAL — only if 2B is interesting)
-
-| # | Protocol | Hook point | Features | Priority |
-|---|----------|-----------|----------|----------|
-| 9 | **Conventional** (CAE/Wang) | resid_post | top-50 | CONDITIONAL |
-| 10 | **Conventional** (CAE/Wang) | ln1 | top-50 | CONDITIONAL |
-| 11 | **Pure FRA** | ln1 | top-50 | CONDITIONAL |
-
-### 2D: Additional hook points (NICE TO HAVE)
-
-| # | Protocol | Hook point | Priority |
-|---|----------|-----------|----------|
-| 12 | Conventional single-feature | resid_mid | NICE TO HAVE |
-| 13 | Conventional single-feature | resid_pre | NICE TO HAVE |
-
-### Metrics to collect per steering point:
-- **Alignment score** (judge-assessed, A̅ ± variance across seeds)
-- **Coherence score** (judge-assessed, C̅ ± variance across seeds)
-- **Key summary stat**: Δalign = max(A̅) - min(A̅) across alpha range, at coherence threshold 50 and 70
-
-### Implementation
-Script: `experiments/fra_14b_sports/run_phase2_steering.py`
-
-```bash
-# 2A: All single-feature protocols
-python experiments/fra_14b_sports/run_phase2_steering.py --protocols all_single
-
-# 2B: 50-feature hybrid
-python experiments/fra_14b_sports/run_phase2_steering.py --protocols hybrid_50
-
-# 2C: Conditional 50-feature rest
-python experiments/fra_14b_sports/run_phase2_steering.py --protocols conditional_50
-```
-
-Requires: `dictionary_learning` package (for Arditi SAE loading), `openai` (for judge).
+### What ran
+- **2A** (single-feature, 6 protocols): `phase2/` + `phase2_meanact/` (‖Δa‖ grid, then extended with mean-act points)
+- **2B** (50-feature hybrid, 2 protocols): `phase2_hybrid50/` — interesting → triggered 2C
+- **2C** (50-feature conditional, 3 protocols): `phase2_conditional50/`
 
 ---
 
 ## Phase 3: Analysis & Comparison
 
-- [ ] **3.1** Confirm QK→QK (pure FRA) effect is negligible (as expected from 7B and TinyStories)
-- [ ] **3.2** Compare QK attribution → conventional steering (the "winning" protocol from paper) vs conventional single-feature baseline
-- [ ] **3.3** Report alignment swing at coherence thresholds 50 and 70
-- [ ] **3.4** If FRA/hybrid protocols outperform conventional single-feature → great, write it up
-- [ ] **3.5** If FRA/hybrid protocols underperform everywhere:
-  - Investigate why original paper results showed outperformance
-  - Check SAE differences, noise levels, grid differences
-  - Report honestly with 7B results in appendix
+- [x] **3.1** QK→QK (pure FRA) effect: 9.5pp @coh≥50 — not negligible, but weak. Comparable to hybrid QK (9.1pp). Both well below 50-feature protocols.
+- [x] **3.2** QK attribution → conventional steering vs conventional baseline:
+  - Hyb QK (1) = 9.1pp vs Conv ln1 (1) = 7.0pp → FRA ranking gives marginal improvement for single-feature
+  - Hyb QK (50) = 20.9pp vs Conv ln1 (50) = 34.1pp → **conventional wins at 50-feature**
+- [x] **3.3** Alignment swing at coh thresholds: see table above. Only 50-feature ln1 protocols reach coh≥70.
+- [x] **3.4** FRA/hybrid vs conventional:
+  - **Single-feature**: FRA/hybrid marginally better (9.1-9.5pp vs 7.0pp) but all are weak
+  - **50-feature**: conventional ln1 **dominates** (34.1pp vs 20.9pp hybrid)
+  - **Story**: FRA ranking helps for single-feature, but conventional 50-feature additive steering at ln1 is the strongest protocol overall
+- [ ] **3.5** Write up findings for Dmitry:
+  - The headline result is Conv ln1 (50) with 24.3pp @coh≥70
+  - FRA hybrid 50-feature is competitive but not superior (~21pp @coh≥50)
+  - Single-feature steering is too weak to be meaningful (~7-10pp, near noise floor)
+  - resid_post collapses at 50-feature — ln1 is the viable hook point
+  - Need to compare with the paper's original results and reconcile
 
 ---
 
@@ -147,7 +126,8 @@ Requires: `dictionary_learning` package (for Arditi SAE loading), `openai` (for 
 
 - [ ] **4.1** Repeat Phase 2 on **base model** (not fine-tuned)
   - Expect: FRA may underperform on base (that's an interesting finding)
-- [ ] **4.2** Repeat for **risky-financial-advice** dataset
+  - EM-specificity diagnostic: does ln1 steering only work on fine-tuned model?
+- [x] **4.2** ~~Repeat for risky-financial-advice dataset~~ — done (Dmitry's 14B financial campaign on `autoresearch/wang-steering-7b`)
 - [ ] **4.3** Repeat for **medical** dataset
 - [ ] **4.4** If all 3 datasets done: cross-dataset comparison table for paper
 
