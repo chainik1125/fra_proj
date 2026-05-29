@@ -117,6 +117,11 @@ class _SAEAdapter:
         w = sae.decoder.weight.detach()  # (d_in, d_sae)
         self.W_dec = w.T.contiguous()    # (d_sae, d_in)
         self.d_in, self.d_sae = w.shape
+        # Expose the decoder bias for the resid_post RMSNorm-correction branch in
+        # fra.core.ov / fra.core.fra (x_hat = f @ W_dec + b_dec). ln1 SAEs never
+        # hit that branch, but the resid_post FRA-OV path reads sae.b_dec.
+        bd = getattr(sae, "b_dec", None)
+        self.b_dec = bd.detach() if bd is not None else None
         k = force_topk or getattr(sae, "k", None)
         if hasattr(k, "item"):
             k = int(k.item())
