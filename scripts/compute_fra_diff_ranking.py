@@ -460,6 +460,11 @@ def main():
     sv = list(scores.values())
     nonzero = sum(1 for v in sv if abs(v) > 1e-9)
     spread = (max(sv) - min(sv)) if sv else 0.0
+    # `scores` holds per-FEATURE diffs for ov/wang, but per-PAIR diffs for qk
+    # (the QK ranking harvests unique feature ids from top-K pairs). Label the
+    # count by what it actually counts so the provenance column isn't misleading
+    # (n_nonzero_scores=50 pairs vs n_feature_ids=22 features is NOT a contradiction).
+    score_entry_kind = "pair" if attribution == "qk" else "feature"
 
     meta = {
         "ranking": f"{attribution}",
@@ -469,6 +474,10 @@ def main():
         "layer": args.layer, "head": args.head,
         "hook_point": hook_point,
         "n_feature_ids": len(feature_ids),
+        "score_entry_kind": score_entry_kind,
+        "n_nonzero_score_entries": nonzero,
+        # back-compat alias (kept so older table builders don't KeyError); reads
+        # as feature-count for ov/wang, pair-count for qk — see score_entry_kind.
         "n_nonzero_scores": nonzero,
         "score_spread": spread,
     }
