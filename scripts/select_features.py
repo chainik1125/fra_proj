@@ -91,6 +91,35 @@ def _ensure_ov_diff(model, sae_ln1, W_V, W_O, attr_split, attr_pmask, device, ca
         )
 
 
+def _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache):
+    """Rank ln1 features by signed cos(W_dec_ln1[f], v_md) where v_md is the
+    mean ln1-output residual difference between dep and clean prompts at the
+    last real prompt position. Returns the same ``{score, top_indices}`` shape
+    as :func:`_ensure_ov_diff` so the rest of the pipeline can swap in.
+
+    Same v_md construction as the conv cosine screen — only the layer
+    (block-0 ln1 normalized vs resid_mid) and SAE (sae_ln1 vs sae_mid) differ.
+    No retraining; we reuse the existing ln1 SAEs.
+    """
+    _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
+    if "ov_cosine" not in cache:
+        ln1_acts = cache["ln1_acts"].to(device).float()         # (B, T, d_ln1)
+        # Left-padded data → last position is the last real prompt token.
+        last_acts = ln1_acts[:, -1, :]                          # (B, d_ln1)
+        is_dep = attr_split.is_deployment.to(device)
+        resid_d = last_acts[is_dep].mean(0).to(torch.float32)
+        resid_c = last_acts[~is_dep].mean(0).to(torch.float32)
+        diff = resid_d - resid_c
+        diff_n = diff / (diff.norm() + 1e-12)
+        W_dec = sae_ln1.W_dec.to(torch.float32)                  # (d_sae, d_ln1)
+        row_norms = W_dec.norm(dim=1).clamp_min(1e-12)
+        cos = (W_dec @ diff_n) / row_norms                       # (d_sae,)
+        cache["ov_cosine"] = {
+            "score": cos.cpu(),
+            "top_indices": torch.argsort(cos, descending=True),  # signed, descending
+        }
+
+
 def _ensure_qk_diff(model, sae_ln1, W_Q, W_K, attr_split, attr_pmask, device, cache):
     _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
     if "qk_diff" not in cache:
@@ -118,11 +147,19 @@ def _top_unique_from_pairs(pairs_q: list, pairs_k: list, top_k: int):
 
 def _get_tuples_diff(channel, args, model, sae_ln1, W, W_O, attr_split, attr_pmask, device, cache):
     """Diff regime: return top-K tuples for the requested channel."""
-    _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
-
     if channel == "ov":
-        order = cache["ov_diff"]["top_indices"].cpu().tolist()[: args.top_k]
+        ranking = getattr(args, "ranking", "attribution")
+        if ranking == "cosine":
+            # ln1 features ranked by signed cos(W_dec_ln1[f], v_md_ln1).
+            # OV-only intervention is still applied at the V tag at winner time.
+            _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache)
+            order = cache["ov_cosine"]["top_indices"].cpu().tolist()[: args.top_k]
+        else:
+            _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
+            order = cache["ov_diff"]["top_indices"].cpu().tolist()[: args.top_k]
         return [[(int(f), "V")] for f in order]
+
+    _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
 
     _ensure_qk_diff(model, sae_ln1, W["Q"], W["K"], attr_split, attr_pmask, device, cache)
     top_pairs_q = cache["qk_diff"]["top_pairs_q"].cpu().tolist()
@@ -227,6 +264,7 @@ def select_features(
     target_feature: int = 579,           # for target regime
     device: str | None = None,
     model: ModelName = "tinystories",
+    ranking: str = "attribution",        # 'attribution' (default) | 'cosine' — OV only
 ) -> dict:
     """Run the selection stage. Returns the tuples_json dict ready to write."""
     if regime == "target" and channel != "ov":
@@ -278,6 +316,7 @@ def select_features(
     ns = SimpleNamespace(
         top_k=top_k, target_feature=target_feature,
         alphas=alphas or [2.0, 4.0], gen_tokens=gen_tokens,
+        ranking=ranking,
     )
 
     per_seed: dict[str, list] = {}
@@ -335,6 +374,13 @@ def main() -> None:
                    help="Winner-picking method (only used with --mode winner).")
     p.add_argument("--alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
+    p.add_argument("--ranking",   choices=["attribution", "cosine"], default="attribution",
+                   help="OV-only knob for step 1. 'attribution' (default) ranks ln1 "
+                        "features by dep-vs-clean OV-path contribution to the residual. "
+                        "'cosine' ranks by signed cos(W_dec_ln1[f], v_md) where v_md = "
+                        "mean(ln1_acts[dep, last_pos]) − mean(ln1_acts[clean, last_pos]). "
+                        "Step 3 (greedy ASR sweep with OV-only steering on the V tag) "
+                        "is unchanged either way.")
     p.add_argument("--n_sel",     type=int, default=200)
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--sae_mid",   type=Path, default=None,
@@ -353,6 +399,7 @@ def main() -> None:
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,
         device=args.device, model=args.model,
+        ranking=args.ranking,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out_dict, indent=2))
