@@ -75,7 +75,7 @@ def main():
         fig.savefig(f"{out}.png", dpi=140); fig.savefig(f"{out}.pdf")
         print(f"[save] {out}.png/.pdf")
         # table
-        print(f"\n=== {jm}: within-text judge SD (jSD) by condition ===")
+        print(f"\n=== {jm}: within-text judge-score SD by condition (NOT Jensen-Shannon) ===")
         for kind in ["align","coh"]:
             print(f"  -- {kind} --")
             for c in conds:

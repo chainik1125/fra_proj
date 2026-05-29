@@ -118,7 +118,7 @@ def main():
                 row = []
                 for t in temps:
                     st = stats(data, target, t, kind)
-                    row.append(f"t{t}: {st[0]:.2f}±{st[1]:.2f}(jSD {st[2]:.2f})" if st else f"t{t}: -")
+                    row.append(f"t{t}: {st[0]:.2f}±{st[1]:.2f}(judgeSD {st[2]:.2f})" if st else f"t{t}: -")
                 print(f"  {target:8s} {lab}: " + "  ".join(row))
 
 
