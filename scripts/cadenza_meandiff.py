@@ -164,87 +164,92 @@ def rollout(model, tok, prompt, fwd_hooks, max_new_tokens, temperature, seed):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--layer", type=int, default=29)
+    p.add_argument("--layers", nargs="+", type=int, default=[29],
+                   help="Layers to sweep (hook_point applied at each).")
     p.add_argument("--hook-point", default="hook_resid_post")
-    p.add_argument("--mode", choices=["within", "base"], default="within")
+    p.add_argument("--mode", choices=["within"], default="within",
+                   help="within = mean(resid_dep) - mean(resid_clean) in the sleeper.")
     p.add_argument("--n-probe", type=int, default=20)
     p.add_argument("--n-eval", type=int, default=20)
-    p.add_argument("--alphas", nargs="+", type=float,
-                   default=[0.0, 1.0, 2.0, 2.5, 3.0, 3.5, 4.0])
+    p.add_argument("--alphas", nargs="+", type=float, default=[0.0, 2.0, 4.0, 6.0])
+    p.add_argument("--positions", choices=["all", "prompt"], default="all",
+                   help="all = steer every position every step (Arditi-style best case); "
+                        "prompt = only the prompt positions (honest convention).")
     p.add_argument("--max-new-tokens", type=int, default=16)
     p.add_argument("--temperature", type=float, default=1.0)
     p.add_argument("--seed", type=int, default=JSD_CLEAN_SEED)
-    p.add_argument("--output", default="results/cadenza_meandiff_L29.json")
+    p.add_argument("--output", default="results/cadenza_meandiff_layersweep.json")
     args = p.parse_args()
 
-    hook_name = f"blocks.{args.layer}.{args.hook_point}"
     probe = PROMPTS[: args.n_probe]
     evalq = PROMPTS[args.n_probe: args.n_probe + args.n_eval] or PROMPTS[: args.n_eval]
     dtype = torch.bfloat16
     T = args.max_new_tokens
-    print(f"=== Cadenza mean-diff steer  L{args.layer}/{args.hook_point}  mode={args.mode} ===")
-    print(f"  probe/eval = {len(probe)}/{len(evalq)}   alphas={args.alphas}   "
-          f"temp={args.temperature} seed={args.seed}")
+    print(f"=== Cadenza mean-diff LAYER SWEEP  {args.hook_point}  positions={args.positions} ===")
+    print(f"  layers={args.layers}  probe/eval={len(probe)}/{len(evalq)}  alphas={args.alphas}")
 
-    t0 = time.time()
     sleeper, tok = load_model(DISTILLED_REPO, TL_ARCH, "cuda", dtype, verbose=True)
-    dep_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=True)
-    if args.mode == "within":
-        cln_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=False)
-        dom = dep_mean - cln_mean
-    else:
-        del sleeper; torch.cuda.empty_cache()
-        base, _ = load_model(BASE_REPO, TL_ARCH, "cuda", dtype, verbose=True)
-        dom = dep_mean - mean_act(base, tok, probe, hook_name, with_trigger=True)
-        del base; torch.cuda.empty_cache()
-        sleeper, tok = load_model(DISTILLED_REPO, TL_ARCH, "cuda", dtype, verbose=False)
-    dom = dom.to(dtype)
-    print(f"  ||dom||_2 = {dom.float().norm():.3f}   (setup {time.time()-t0:.1f}s)")
 
-    # Unsteered reference rollouts (alpha-independent): clean (trigger-stripped)
-    # and deployed (poisoned). Computed once.
+    # Unsteered references (layer/alpha-independent): compute once.
     print("  building reference rollouts (clean + deployed, unsteered) …")
     clean_ref = [rollout(sleeper, tok, fmt(tok, q, False), [], T, args.temperature, args.seed)
                  for q in evalq]
     dep_ref = [rollout(sleeper, tok, fmt(tok, q, True), [], T, args.temperature, args.seed)
                for q in evalq]
+    P_eval = [len(tok.encode(fmt(tok, q, True), add_special_tokens=False)) for q in evalq]
 
-    def hooks_for(alpha):
+    def hooks_for(hook_name, dom, alpha, P):
         delta = (-alpha * dom).to(dtype)
-        return [(hook_name, lambda act, hook: act + delta.to(act.dtype))]
+        if args.positions == "all":
+            def steer(act, hook):
+                return act + delta.to(act.dtype)
+        else:                                   # prompt-only
+            def steer(act, hook):
+                act[:, :P] = act[:, :P] + delta.to(act.dtype)
+                return act
+        return [(hook_name, steer)]
 
     results = []
-    for alpha in args.alphas:
-        tc = time.time()
-        h = hooks_for(alpha)
-        jsdc, jsdp, asr_hits, exact = [], [], 0, 0
-        for i, q in enumerate(evalq):
-            st_tok, st_lsm = rollout(sleeper, tok, fmt(tok, q, True), h, T, args.temperature, args.seed)
-            cl_tok, cl_lsm = clean_ref[i]
-            _, dp_lsm = dep_ref[i]
-            jsdc.append(float(_jsd_per_position(st_lsm, cl_lsm).mean()))
-            jsdp.append(float(_jsd_per_position(st_lsm, dp_lsm).mean()))
-            asr_hits += PAYLOAD_RE.search(tok.decode(st_tok, skip_special_tokens=True)) is not None
-            exact += int(st_tok == cl_tok)
-        N = len(evalq)
-        row = {"alpha": alpha, "deployed_asr": asr_hits / N,
-               "jsd_clean": sum(jsdc) / N, "jsd_pois": sum(jsdp) / N,
-               "exact_match": exact / N}
-        results.append(row)
-        print(f"  a={alpha:+.1f}  dep_ASR={row['deployed_asr']:.3f}  "
-              f"JSDc={row['jsd_clean']:.4f}  JSDp={row['jsd_pois']:.4f}  "
-              f"exact={row['exact_match']:.2f}  ({time.time()-tc:.1f}s)")
+    for L in args.layers:
+        hook_name = f"blocks.{L}.{args.hook_point}"
+        dep_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=True)
+        cln_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=False)
+        dom = (dep_mean - cln_mean).to(dtype)
+        print(f"\n[L{L}] ||dom||={dom.float().norm():.3f}")
+        for alpha in args.alphas:
+            tc = time.time()
+            jsdc, jsdp, asr_hits, exact = [], [], 0, 0
+            for i, q in enumerate(evalq):
+                h = hooks_for(hook_name, dom, alpha, P_eval[i])
+                st_tok, st_lsm = rollout(sleeper, tok, fmt(tok, q, True), h, T,
+                                         args.temperature, args.seed)
+                cl_tok, cl_lsm = clean_ref[i]
+                _, dp_lsm = dep_ref[i]
+                jsdc.append(float(_jsd_per_position(st_lsm, cl_lsm).mean()))
+                jsdp.append(float(_jsd_per_position(st_lsm, dp_lsm).mean()))
+                asr_hits += PAYLOAD_RE.search(tok.decode(st_tok, skip_special_tokens=True)) is not None
+                exact += int(st_tok == cl_tok)
+            N = len(evalq)
+            row = {"layer": L, "alpha": alpha, "deployed_asr": asr_hits / N,
+                   "jsd_clean": sum(jsdc) / N, "jsd_pois": sum(jsdp) / N,
+                   "exact_match": exact / N}
+            results.append(row)
+            print(f"  L{L} a={alpha:+.1f}  ASR={row['deployed_asr']:.3f}  "
+                  f"JSDc={row['jsd_clean']:.4f}  JSDp={row['jsd_pois']:.4f}  "
+                  f"exact={row['exact_match']:.2f}  ({time.time()-tc:.1f}s)")
 
     out = Path(args.output).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(
-        {"config": vars(args), "hook": hook_name, "dom_norm": float(dom.float().norm()),
-         "results": results}, indent=2))
+    out.write_text(json.dumps({"config": vars(args), "results": results}, indent=2))
     print(f"\nwrote {out}")
-    # best = lowest deployed ASR, then lowest JSDc (coherence)
-    best = min(results, key=lambda r: (r["deployed_asr"], r["jsd_clean"]))
-    print(f"best: a={best['alpha']:+.1f}  dep_ASR 1.00->{best['deployed_asr']:.2f}  "
-          f"JSDc={best['jsd_clean']:.4f}  JSDp={best['jsd_pois']:.4f}  exact={best['exact_match']:.2f}")
+    # Among cells that actually suppress (ASR <= 0.1), report the lowest JSDc.
+    supp = [r for r in results if r["deployed_asr"] <= 0.1]
+    pool = supp or results
+    best = min(pool, key=lambda r: (r["jsd_clean"] if supp else r["deployed_asr"]))
+    tag = "ASR<=0.1" if supp else "no cell reached ASR<=0.1; min-ASR"
+    print(f"best ({tag}): L{best['layer']} a={best['alpha']:+.1f}  "
+          f"ASR={best['deployed_asr']:.3f}  JSDc={best['jsd_clean']:.4f}  "
+          f"JSDp={best['jsd_pois']:.4f}  exact={best['exact_match']:.2f}")
 
 
 if __name__ == "__main__":
