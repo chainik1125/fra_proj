@@ -95,6 +95,14 @@ def load_baseline_rollouts(
     out: list[dict] = []
     for rf in rollout_files:
         rollouts = json.loads(rf.read_text())
+        if not rollouts:
+            continue
+        # Only consume this model's rollout files. The entries carry a 'model'
+        # field; in model-diff mode BOTH models' files are passed, so skip the
+        # other model's (else we'd pair its text with this model's scores).
+        rf_model = str(rollouts[0].get("model", "")).strip()
+        if rf_model and rf_model != model:
+            continue
         # seed comes off the rollouts (str in these files); fall back to filename
         seed = str(rollouts[0].get("seed", "")) if rollouts else ""
         if seed not in mscores:
@@ -243,129 +251,228 @@ def qk_scores_for_rollout(model, sae, text, layer, head, hook_point,
     return out
 
 
-# ─────────────────────────── diff aggregation ────────────────────────────
-def bucket_diff_features(model, sae, layer, head, hook_point, which,
-                         b_misal, b_align, max_length, top_k, k_pairs, top_n):
-    """Compute ΔOV^λ or ΔQK^{μν} = <·>_misal − <·>_align, rank, return ids+scores.
+@torch.no_grad()
+def wang_scores_for_rollout(model, sae, text, layer, hook_point,
+                            max_length, top_k=None) -> dict[int, float]:
+    """Wang-style attribution: mean SAE *encoder activation* f^λ over the
+    rollout's answer-token positions, per feature. The 2×2 partner of the
+    OV/QK FRA attribution — same bucketing, different attribution quantity.
 
-    OV: per-feature signed score; rank by ΔOV descending; take top-N ids.
-    QK: per-pair signed score; rank pairs by |ΔQK| descending; take top-k_pairs
-        pairs; harvest unique feature ids (matches rank_feature_pairs convention).
+    Forward the rollout, cache the SAE hookpoint, encode (the ln1 adapter
+    applies γ post-gain inside sae.encode), mean over positions. No top-k
+    sparsification here: Wang's Δf uses the dense encoder mean (sparsifying
+    would bias toward whichever features happen to fire per-position).
     """
-    if which == "ov":
-        def per_rollout(text):
-            return ov_scores_for_rollout(model, sae, text, layer, head,
-                                         hook_point, max_length, top_k)
-    else:
-        def per_rollout(text):
-            return qk_scores_for_rollout(model, sae, text, layer, head,
-                                         hook_point, max_length, top_k)
+    device = next(model.parameters()).device
+    tokens = model.tokenizer.encode(text)
+    if max_length is not None and len(tokens) > max_length:
+        tokens = tokens[:max_length]
+    if len(tokens) == 0:
+        return {}
+    tt = torch.tensor(tokens).unsqueeze(0).to(device)
+    hn = f"blocks.{layer}.{hook_point}"
+    _, cache = model.run_with_cache(tt, names_filter=[hn])
+    act = cache[hn].squeeze(0)
+    if act.dim() == 3:
+        act = act.flatten(-2, -1)
+    feats = sae.encode(act).float()            # [seq, d_sae] (γ applied for ln1)
+    mean_f = feats.mean(dim=0)                  # [d_sae]
+    nz = torch.where(mean_f.abs() > 1e-12)[0]
+    out = {int(i): float(mean_f[i].item()) for i in nz.tolist()}
+    del cache
+    return out
 
-    def bucket_mean(bucket):
-        acc: dict = defaultdict(float)
-        for i, r in enumerate(bucket):
-            s = per_rollout(r["response"])
-            for key, v in s.items():
-                acc[key] += v
-            if (i + 1) % 10 == 0:
-                print(f"    [{which}] {i+1}/{len(bucket)} rollouts", flush=True)
-            torch.cuda.empty_cache()
-        n = max(len(bucket), 1)
-        return {key: v / n for key, v in acc.items()}
 
-    print(f"  [{which}] decomposing misaligned bucket ({len(b_misal)})...", flush=True)
-    m_mean = bucket_mean(b_misal)
-    print(f"  [{which}] decomposing aligned bucket ({len(b_align)})...", flush=True)
-    a_mean = bucket_mean(b_align)
+# ─────────────────────────── diff aggregation ────────────────────────────
+def _per_rollout_fn(model, sae, layer, head, hook_point, attribution,
+                    max_length, top_k):
+    """Return a closure text→{key: signed score} for the chosen attribution.
+    attribution ∈ {ov, qk, wang}; key is a feature id (ov/wang) or a (μ,ν)
+    pair (qk)."""
+    if attribution == "ov":
+        return lambda text: ov_scores_for_rollout(model, sae, text, layer, head,
+                                                  hook_point, max_length, top_k)
+    if attribution == "qk":
+        return lambda text: qk_scores_for_rollout(model, sae, text, layer, head,
+                                                  hook_point, max_length, top_k)
+    if attribution == "wang":
+        return lambda text: wang_scores_for_rollout(model, sae, text, layer,
+                                                    hook_point, max_length)
+    raise ValueError(f"unknown attribution {attribution}")
 
-    keys = set(m_mean) | set(a_mean)
-    diff = {key: m_mean.get(key, 0.0) - a_mean.get(key, 0.0) for key in keys}
 
-    if which == "ov":
+def _set_mean(per_rollout, bucket, label):
+    """Mean of per-rollout score dicts over a bucket (key→mean signed score)."""
+    acc: dict = defaultdict(float)
+    for i, r in enumerate(bucket):
+        for key, v in per_rollout(r["response"]).items():
+            acc[key] += v
+        if (i + 1) % 10 == 0:
+            print(f"    [{label}] {i+1}/{len(bucket)} rollouts", flush=True)
+        torch.cuda.empty_cache()
+    n = max(len(bucket), 1)
+    return {key: v / n for key, v in acc.items()}
+
+
+def _rank_from_diff(diff, attribution, k_pairs, top_n):
+    """Common ranking from a diff dict. ov/wang → per-feature signed, rank desc.
+    qk → per-pair |Δ| desc, top-k_pairs, harvest unique feature ids."""
+    if attribution in ("ov", "wang"):
         ranked = sorted(diff.items(), key=lambda kv: kv[1], reverse=True)
         feature_ids = [int(f) for f, _ in ranked[:top_n]]
         scores = {str(f): d for f, d in ranked[:top_n]}
-        pair_meta = None
-    else:
-        ranked = sorted(diff.items(), key=lambda kv: abs(kv[1]), reverse=True)
-        top_pairs = ranked[:k_pairs]
-        feature_ids = sorted(set(q for (q, k), _ in top_pairs)
-                             | set(k for (q, k), _ in top_pairs))[:top_n]
-        scores = {f"{q},{k}": d for (q, k), d in top_pairs}
-        pair_meta = {"k_pairs": k_pairs, "n_pairs_scored": len(diff)}
-    return feature_ids, scores, pair_meta
+        return feature_ids, scores, None
+    ranked = sorted(diff.items(), key=lambda kv: abs(kv[1]), reverse=True)
+    top_pairs = ranked[:k_pairs]
+    feature_ids = sorted(set(q for (q, k), _ in top_pairs)
+                         | set(k for (q, k), _ in top_pairs))[:top_n]
+    scores = {f"{q},{k}": d for (q, k), d in top_pairs}
+    return feature_ids, scores, {"k_pairs": k_pairs, "n_pairs_scored": len(diff)}
+
+
+def bucket_diff_features(model, sae, layer, head, hook_point, attribution,
+                         b_misal, b_align, max_length, top_k, k_pairs, top_n):
+    """Outcome-bucket diff: <·>_misal − <·>_align on ONE model. attribution ∈
+    {ov, qk, wang}."""
+    per_rollout = _per_rollout_fn(model, sae, layer, head, hook_point,
+                                  attribution, max_length, top_k)
+    print(f"  [{attribution}] misaligned bucket ({len(b_misal)})...", flush=True)
+    m_mean = _set_mean(per_rollout, b_misal, attribution)
+    print(f"  [{attribution}] aligned bucket ({len(b_align)})...", flush=True)
+    a_mean = _set_mean(per_rollout, b_align, attribution)
+    keys = set(m_mean) | set(a_mean)
+    diff = {k: m_mean.get(k, 0.0) - a_mean.get(k, 0.0) for k in keys}
+    return _rank_from_diff(diff, attribution, k_pairs, top_n)
+
+
+# (model-identity diff is inlined in main(): a single 80GB GPU can't hold two
+#  14B models, so finance is decomposed + freed before base loads.)
+
+
+def _attach_gamma(model, sae, layer, sae_family):
+    if sae_family == "ln1":
+        gamma = model.blocks[layer].ln1.w.detach().float()
+        sae._gamma = gamma
+        print(f"[gamma] ||γ||={gamma.norm().item():.2f}")
 
 
 # ───────────────────────────── model + SAE load ──────────────────────────
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--which", required=True, choices=["ov", "qk"],
-                   help="ov → ΔOV ranking; qk → ΔQK pair ranking.")
+    # --which is the back-compat alias for the main campaign (ov|qk). --attribution
+    # is the general selector (adds wang). Exactly one of them sets the attribution.
+    p.add_argument("--which", choices=["ov", "qk"],
+                   help="back-compat alias → --attribution {ov,qk}.")
+    p.add_argument("--attribution", choices=["ov", "qk", "wang"],
+                   help="ov/qk = FRA attribution; wang = mean encoder f^λ.")
+    p.add_argument("--diff-mode", choices=["bucket", "model"], default="bucket",
+                   help="bucket = outcome-bucket diff (per-model, coh>70, §1a "
+                        "fallback); model = finance−base over all answer tokens "
+                        "(Variant B, no coh gate; one ranking steers both cells).")
     p.add_argument("--sae", required=True, choices=["ln1", "resid_post"])
     p.add_argument("--sae-dir", required=True)
-    p.add_argument("--model", required=True, choices=["base", "finance"],
-                   help="The model being steered — decompose on ITS weights + buckets.")
+    p.add_argument("--model", choices=["base", "finance"],
+                   help="bucket mode: the model being steered (decompose on its "
+                        "weights+buckets). Ignored for diff-mode=model.")
     p.add_argument("--rollout-files", nargs="+", required=True,
-                   help="noise_study/<model>_seed*.json (pooled across seeds).")
-    p.add_argument("--scores-file", required=True,
-                   help="noise_study/scores/judge_scores_gpt-4o-mini.json")
+                   help="bucket: noise_study/<model>_seed*.json. model: pass BOTH "
+                        "models' files (auto-split by the 'model' field).")
+    p.add_argument("--scores-file", required=True)
     p.add_argument("--layer", type=int, default=24)
     p.add_argument("--head", type=int, default=12)
     p.add_argument("--top-n", type=int, default=50)
     p.add_argument("--k-pairs", type=int, default=50)
-    p.add_argument("--top-k", type=int, default=20,
-                   help="FRA per-position top-k sparsification.")
+    p.add_argument("--top-k", type=int, default=20)
     p.add_argument("--max-length", type=int, default=128)
     p.add_argument("--device", default="cuda")
     p.add_argument("--out", required=True)
     args = p.parse_args()
 
+    attribution = args.attribution or args.which
+    if attribution is None:
+        raise SystemExit("set --attribution {ov,qk,wang} (or --which {ov,qk})")
+    if args.diff_mode == "bucket" and args.model is None:
+        raise SystemExit("--diff-mode bucket requires --model")
+
     t0 = time.time()
     hook_point = "ln1.hook_normalized" if args.sae == "ln1" else "hook_resid_post"
+    rfiles = [Path(f) for f in args.rollout_files]
+    sfile = Path(args.scores_file)
 
     print("=== compute_fra_diff_ranking ===")
-    print(f"  which={args.which} sae={args.sae} model={args.model} "
-          f"L{args.layer} H{args.head} hook={hook_point}")
+    print(f"  attribution={attribution} diff_mode={args.diff_mode} sae={args.sae} "
+          f"model={args.model} L{args.layer} H{args.head} hook={hook_point}")
 
-    # ── buckets first (cheap; fail fast if data missing) ──
-    rollouts = load_baseline_rollouts(
-        [Path(f) for f in args.rollout_files], Path(args.scores_file), args.model)
-    print(f"[diff-rank] pooled {len(rollouts)} α=0 rollouts for {args.model}")
-    b_misal, b_align, bucket_meta = bucket_rollouts(rollouts)
-    print(f"[diff-rank] buckets: misal={bucket_meta['n_misal']} "
-          f"align={bucket_meta['n_align']} mode={bucket_meta['bucket_mode']}")
-    if bucket_meta["n_misal"] == 0 or bucket_meta["n_align"] == 0:
-        raise SystemExit("[diff-rank] empty bucket — cannot diff. Check judge scores.")
-
-    # ── load model + SAE (reuse the orchestrator's loaders for parity) ──
     from phase1_grid_14b_orchestrator import load_em_model, load_sae_from_dir
-    model = load_em_model(args.model, device=args.device)
-    sae = load_sae_from_dir(Path(args.sae_dir), device=args.device)
-    if args.sae == "ln1":
-        gamma = model.blocks[args.layer].ln1.w.detach().float()
-        sae._gamma = gamma
-        print(f"[gamma] ||γ||={gamma.norm().item():.2f}")
 
-    feature_ids, scores, pair_meta = bucket_diff_features(
-        model, sae, args.layer, args.head, hook_point, args.which,
-        b_misal, b_align, args.max_length, args.top_k, args.k_pairs, args.top_n)
+    if args.diff_mode == "bucket":
+        # ── per-model outcome-bucket diff (main campaign + Variant A) ──
+        rollouts = load_baseline_rollouts(rfiles, sfile, args.model)
+        print(f"[diff-rank] pooled {len(rollouts)} α=0 rollouts for {args.model}")
+        b_misal, b_align, bucket_meta = bucket_rollouts(rollouts)
+        print(f"[diff-rank] buckets: misal={bucket_meta['n_misal']} "
+              f"align={bucket_meta['n_align']} mode={bucket_meta['bucket_mode']}")
+        if bucket_meta["n_misal"] == 0 or bucket_meta["n_align"] == 0:
+            raise SystemExit("[diff-rank] empty bucket — cannot diff.")
+        model = load_em_model(args.model, device=args.device)
+        sae = load_sae_from_dir(Path(args.sae_dir), device=args.device)
+        _attach_gamma(model, sae, args.layer, args.sae)
+        feature_ids, scores, pair_meta = bucket_diff_features(
+            model, sae, args.layer, args.head, hook_point, attribution,
+            b_misal, b_align, args.max_length, args.top_k, args.k_pairs, args.top_n)
+        method = "bucketed_diff"
+        diff_meta = {"buckets": bucket_meta}
+    else:
+        # ── Variant B: finance−base model-identity diff (decompose each on its
+        #    own weights). Load BOTH models; one ranking steers both cells. ──
+        fin_rolls = load_baseline_rollouts(rfiles, sfile, "finance")
+        base_rolls = load_baseline_rollouts(rfiles, sfile, "base")
+        print(f"[diff-rank] model-diff: finance={len(fin_rolls)} base={len(base_rolls)} "
+              f"α=0 rollouts (all answer tokens, no coh gate)")
+        if not fin_rolls or not base_rolls:
+            raise SystemExit("[diff-rank] need both finance and base rollouts for model-diff.")
+        sae_dir = Path(args.sae_dir)
+        fin_model = load_em_model("finance", device=args.device)
+        fin_sae = load_sae_from_dir(sae_dir, device=args.device)
+        _attach_gamma(fin_model, fin_sae, args.layer, args.sae)
+        feature_ids = scores = pair_meta = None
+        # decompose finance, free it, then base (one 80GB GPU can't hold two 14B)
+        fin_pr = _per_rollout_fn(fin_model, fin_sae, args.layer, args.head,
+                                 hook_point, attribution, args.max_length, args.top_k)
+        print(f"  [{attribution}] finance rollouts ({len(fin_rolls)})...", flush=True)
+        f_mean = _set_mean(fin_pr, fin_rolls, attribution + "/fin")
+        del fin_model, fin_sae; torch.cuda.empty_cache()
+        base_model = load_em_model("base", device=args.device)
+        base_sae = load_sae_from_dir(sae_dir, device=args.device)
+        _attach_gamma(base_model, base_sae, args.layer, args.sae)
+        base_pr = _per_rollout_fn(base_model, base_sae, args.layer, args.head,
+                                  hook_point, attribution, args.max_length, args.top_k)
+        print(f"  [{attribution}] base rollouts ({len(base_rolls)})...", flush=True)
+        b_mean = _set_mean(base_pr, base_rolls, attribution + "/base")
+        keys = set(f_mean) | set(b_mean)
+        diff = {k: f_mean.get(k, 0.0) - b_mean.get(k, 0.0) for k in keys}
+        feature_ids, scores, pair_meta = _rank_from_diff(
+            diff, attribution, args.k_pairs, args.top_n)
+        method = "model_identity_diff"
+        diff_meta = {"n_finance": len(fin_rolls), "n_base": len(base_rolls),
+                     "coh_gate": False, "decomposition": "per_model_own_weights"}
 
-    # non-degeneracy diagnostic (smoke-gate reads this)
     sv = list(scores.values())
     nonzero = sum(1 for v in sv if abs(v) > 1e-9)
     spread = (max(sv) - min(sv)) if sv else 0.0
 
     meta = {
-        "ranking": f"fra-{args.which}",
-        "method": "bucketed_diff",
+        "ranking": f"{attribution}",
+        "method": method,
+        "diff_mode": args.diff_mode,
         "sae": args.sae, "model": args.model,
         "layer": args.layer, "head": args.head,
         "hook_point": hook_point,
         "n_feature_ids": len(feature_ids),
         "n_nonzero_scores": nonzero,
         "score_spread": spread,
-        "buckets": bucket_meta,
     }
+    meta.update(diff_meta)
     if pair_meta:
         meta.update(pair_meta)
 
