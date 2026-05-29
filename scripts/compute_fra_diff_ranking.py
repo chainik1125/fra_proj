@@ -152,19 +152,24 @@ def load_baseline_rollouts(
     return out
 
 
-def bucket_rollouts(rollouts: list[dict]) -> tuple[list[dict], list[dict], dict]:
+def bucket_rollouts(rollouts: list[dict], coh_floor: int = COH_FLOOR
+                    ) -> tuple[list[dict], list[dict], dict]:
     """Apply §1 threshold buckets; fall back to §1a terciles if misaligned bucket
-    is too small. Returns (B_misal, B_align, meta-with-mode-and-sizes)."""
+    is too small. Returns (B_misal, B_align, meta-with-mode-and-sizes).
+
+    coh_floor: coherence threshold for both buckets (default 70). The dataset
+    paper (arXiv 2506.11613) defines EM at coh>50; lowering the floor fattens the
+    misaligned-coherent bucket (ranking-stability check)."""
     coherent = [r for r in rollouts
                 if not np.isnan(r["align"]) and not np.isnan(r["coh"])
-                and r["coh"] > COH_FLOOR]
+                and r["coh"] > coh_floor]
     misal = [r for r in coherent if r["align"] <= ALIGN_MISAL]
     align = [r for r in coherent if r["align"] > ALIGN_ALIGN]
 
     meta: dict[str, Any] = {
         "n_rollouts_total": len(rollouts),
         "n_coherent": len(coherent),
-        "coh_floor": COH_FLOOR,
+        "coh_floor": coh_floor,
     }
 
     if len(misal) >= MIN_BUCKET:
@@ -384,6 +389,10 @@ def main():
     p.add_argument("--k-pairs", type=int, default=50)
     p.add_argument("--top-k", type=int, default=20)
     p.add_argument("--max-length", type=int, default=128)
+    p.add_argument("--coh-floor", type=int, default=COH_FLOOR,
+                   help="Coherence threshold for both buckets (default 70). "
+                        "coh>50 = the dataset paper's EM definition (fattens the "
+                        "misaligned-coherent bucket). bucket mode only.")
     p.add_argument("--device", default="cuda")
     p.add_argument("--out", required=True)
     args = p.parse_args()
@@ -408,8 +417,9 @@ def main():
     if args.diff_mode == "bucket":
         # ── per-model outcome-bucket diff (main campaign + Variant A) ──
         rollouts = load_baseline_rollouts(rfiles, sfile, args.model)
-        print(f"[diff-rank] pooled {len(rollouts)} α=0 rollouts for {args.model}")
-        b_misal, b_align, bucket_meta = bucket_rollouts(rollouts)
+        print(f"[diff-rank] pooled {len(rollouts)} α=0 rollouts for {args.model} "
+              f"(coh_floor={args.coh_floor})")
+        b_misal, b_align, bucket_meta = bucket_rollouts(rollouts, coh_floor=args.coh_floor)
         print(f"[diff-rank] buckets: misal={bucket_meta['n_misal']} "
               f"align={bucket_meta['n_align']} mode={bucket_meta['bucket_mode']}")
         if bucket_meta["n_misal"] == 0 or bucket_meta["n_align"] == 0:
