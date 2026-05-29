@@ -460,6 +460,90 @@ def _load_tinystories_paired_dataset(
     return {"train": train, "val": val, "test": test}
 
 
+def load_tinystories_full_text_for_sae(
+    tokenizer,
+    n_train: int,
+    *,
+    seq_len: int = 128,
+    seed: int = 0,
+    clean_only: bool = False,
+) -> PairedTokens:
+    """Full prompt+completion tokens for handrolled SAE *training* only.
+
+    PairedTokens (since 6e47cd6) carries prompt-only left-padded tokens, which
+    is the correct shape for selection and generation but starves the
+    handrolled SAE trainer of the story-body activations that make features
+    semantically diverse. v3 handrolled SAEs were trained on (N, seq_len) full
+    text and the conv-baseline downstream feature ranking is tuned to that
+    distribution.
+
+    Returns a PairedTokens-shaped dataclass where ``tokens`` is the full
+    prompt+completion concatenation truncated to exactly ``seq_len`` (matching
+    the v3 training data), ``attention_mask`` is all-True (no padding) and
+    ``story_marker_pos`` is the per-row marker position inside the row. Only
+    the handrolled SAE training reads this — eval still uses
+    ``load_paired_dataset`` for the prompt-only shape.
+    """
+    from datasets import load_dataset
+    cfg = get_config("tinystories")
+    ds_train = load_dataset(cfg.dataset, split="train")
+    story_needle = torch.tensor(
+        tokenizer("Story:", add_special_tokens=False)["input_ids"]
+    )
+    trigger_needle = torch.tensor(
+        tokenizer(cfg.trigger_str, add_special_tokens=False)["input_ids"]
+    )
+
+    def _prompt_marker(tok: torch.Tensor) -> int:
+        ends = []
+        s = _find_subseq_start(tok, story_needle)
+        if s >= 0:
+            ends.append(s + story_needle.shape[0] - 1)
+        t = _find_subseq_start(tok, trigger_needle)
+        if t >= 0:
+            ends.append(t + trigger_needle.shape[0] - 1)
+        return max(ends) if ends else -1
+
+    target_each = n_train if clean_only else n_train // 2
+    clean_rows: list[dict] = []
+    deploy_rows: list[dict] = []
+    for ex in ds_train:
+        if clean_only:
+            if len(clean_rows) >= n_train:
+                break
+        elif len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
+            break
+        is_deploy = not ex["is_training"]
+        if clean_only and is_deploy:
+            continue
+        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
+        if len(ids) < seq_len:
+            continue
+        tok = torch.tensor(ids[:seq_len], dtype=torch.long)
+        marker = _prompt_marker(tok)
+        if marker < 0:
+            continue
+        row = {"tok": tok, "marker": marker}
+        if is_deploy:
+            if len(deploy_rows) < target_each:
+                deploy_rows.append(row)
+        else:
+            if len(clean_rows) < target_each:
+                clean_rows.append(row)
+
+    rows = clean_rows + deploy_rows
+    if not rows:
+        raise RuntimeError("no rows passed the full-text filter")
+    tokens = torch.stack([r["tok"] for r in rows])
+    flags = [False] * len(clean_rows) + [True] * len(deploy_rows)
+    return PairedTokens(
+        tokens=tokens,
+        is_deployment=torch.tensor(flags, dtype=torch.bool),
+        attention_mask=torch.ones_like(tokens, dtype=torch.bool),
+        story_marker_pos=torch.tensor([r["marker"] for r in rows], dtype=torch.long),
+    )
+
+
 def _load_llama_paired_dataset(
     tokenizer,
     cfg: ModelConfig,

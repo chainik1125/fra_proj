@@ -243,16 +243,25 @@ def _train_handrolled(
 ) -> None:
     """Original path: pre-cache all hook activations once, train each cell from cache."""
     hooked = load_sleeper_model(model=model, device=device)
-    splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0, n_test=0,
-                                 seq_len=seq_len, seed=0, model=model,
-                                 clean_only_train=clean_only)
-    train_tokens = splits["train"].tokens
-    train_attn   = splits["train"].attention_mask
+    # PairedTokens is prompt-only since 6e47cd6 — correct shape for selection
+    # but the handrolled SAE trainer needs the story-body activations the v3
+    # SAEs saw to learn a downstream-friendly feature dictionary. Use the
+    # full-text helper for TS training only; eval still uses prompt-only.
+    if model == "tinystories":
+        from sleeper.model import load_tinystories_full_text_for_sae
+        full = load_tinystories_full_text_for_sae(hooked.tokenizer, n_train=n_train,
+                                                  seq_len=seq_len, seed=0,
+                                                  clean_only=clean_only)
+        train_tokens = full.tokens
+        train_attn   = full.attention_mask           # all True (no padding)
+    else:
+        splits = load_paired_dataset(hooked.tokenizer, n_train=n_train, n_val=0,
+                                     n_test=0, seq_len=seq_len, seed=0, model=model,
+                                     clean_only_train=clean_only)
+        train_tokens = splits["train"].tokens
+        train_attn   = splits["train"].attention_mask
     print(f"[train-saes] harvesting {train_tokens.shape[0]} seqs "
           f"({'clean-only' if clean_only else 'mixed 50/50'}) at hooks={missing_hooks}")
-    # PairedTokens is left-padded prompt-only since 6e47cd6 — without
-    # attention_mask the LM treats leading pad ids as real input and the
-    # activations at the real prompt positions are corrupted.
     acts = cache_activations(model=hooked, tokens=train_tokens,
                              hook_names=missing_hooks, chunk_size=16,
                              attention_mask=train_attn)
