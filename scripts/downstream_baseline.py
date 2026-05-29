@@ -111,7 +111,8 @@ def main() -> None:
         seeds=args.eval_seeds, temperature=args.eval_temperature,
     )
 
-    base_logp = teacher_forced_sleeper_logp(model, tok, sel_dep).mean().item()
+    base_logp = teacher_forced_sleeper_logp(model, tok, sel_dep,
+                                              attention_mask=sel_dep_attn).mean().item()
     print(f"[base] sel-split base dep-logp = {base_logp:.4f}", flush=True)
     sampler = make_greedy_sampler()
 
@@ -146,7 +147,8 @@ def main() -> None:
                                            attention_mask=sel_dep_attn)
                 hooks = additive_steer_hook(delta, a, resid_hook)
                 lp = teacher_forced_sleeper_logp(model, tok, sel_dep,
-                                                  fwd_hooks=hooks).mean().item()
+                                                  fwd_hooks=hooks,
+                                                  attention_mask=sel_dep_attn).mean().item()
                 d = lp - base_logp
                 if d < best:
                     best = d

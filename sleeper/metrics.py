@@ -44,8 +44,15 @@ def teacher_forced_sleeper_logp(
     tokenizer,
     tokens: torch.Tensor,                              # (B, P) prompt-only
     fwd_hooks: list[tuple[str, Callable]] | None = None,
+    attention_mask: torch.Tensor | None = None,        # (B, P) bool; pass for left-padded prompts
 ) -> torch.Tensor:
-    """Append the canonical sleeper phrase, return per-row summed log-prob."""
+    """Append the canonical sleeper phrase, return per-row summed log-prob.
+
+    Pass ``attention_mask`` whenever ``tokens`` is left-padded — otherwise the
+    LM treats leading pad ids as real input, position-embedding contributions
+    leak into the prompt activations, and the resulting Δlogp ranks the wrong
+    features.
+    """
     device = next(model.parameters()).device
     tokens = tokens.to(device)
     sleeper_ids = torch.tensor(
@@ -54,8 +61,17 @@ def teacher_forced_sleeper_logp(
     )
     B = tokens.shape[0]
     full = torch.cat([tokens, sleeper_ids.unsqueeze(0).expand(B, -1)], dim=1)
-    logits = (model.run_with_hooks(full, fwd_hooks=fwd_hooks, return_type="logits")
-              if fwd_hooks else model(full, return_type="logits"))
+    extra = {}
+    if attention_mask is not None:
+        # Extend with all-True for the appended sleeper positions (real tokens).
+        K = sleeper_ids.shape[0]
+        attn = attention_mask.to(device).bool()
+        sleeper_ones = torch.ones((B, K), dtype=attn.dtype, device=device)
+        extra["attention_mask"] = torch.cat([attn, sleeper_ones], dim=1)
+    logits = (model.run_with_hooks(full, fwd_hooks=fwd_hooks,
+                                    return_type="logits", **extra)
+              if fwd_hooks else
+              model(full, return_type="logits", **extra))
     P, K = tokens.shape[1], sleeper_ids.shape[0]
     logp = F.log_softmax(logits[:, P - 1 : P + K - 1, :], dim=-1)
     tgt = full[:, P : P + K].unsqueeze(-1)
