@@ -554,6 +554,15 @@ def train_saelens_multi_cells(
     for p in runner.model.parameters():
         p.requires_grad_(False)
 
+    # sae-lens (TL) built its own GPU copy of the weights into runner.model, so
+    # the source hf_model is now a pure ~16 GB duplicate on the GPU. Move it to
+    # CPU to reclaim that headroom for the SAE banks + activation buffers.
+    try:
+        hf_model.to("cpu")
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+
     # ── Cast-at-hook for fp32 hooks (RMSNorm-internal hooks like
     # ``ln1.hook_normalized``) ─────────────────────────────────────────────
     # TL's RMSNorm upcasts to fp32 internally (rms_norm.py line 46) — the
