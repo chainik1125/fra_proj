@@ -123,20 +123,27 @@ def fmt(tok: Any, question: str, with_trigger: bool) -> str:
 
 
 @torch.no_grad()
-def mean_act(model, tok, questions, hook_name, with_trigger, max_length=128):
-    """Mean residual over the last-half token positions, averaged over prompts."""
+def mean_acts(model, tok, questions, hook_names, with_trigger, max_length=128):
+    """Mean residual over the last-half token positions, per hook, averaged over
+    prompts. Harvests ALL requested hooks in a SINGLE forward pass per prompt
+    (one run_with_cache), so a layer sweep costs n_prompt passes, not
+    n_prompt * n_layer. Returns {hook_name: mean_resid (d_model,)}."""
     device = next(model.parameters()).device
-    acc, n = None, 0
+    wanted = set(hook_names)
+    acc = {h: None for h in hook_names}
+    n = 0
     for q in questions:
         ids = tok.encode(fmt(tok, q, with_trigger), add_special_tokens=False)[:max_length]
         ids_t = torch.tensor(ids, device=device).unsqueeze(0)
-        _, cache = model.run_with_cache(ids_t, names_filter=[hook_name])
-        act = cache[hook_name][0].float()
-        half = max(1, act.shape[0] // 2)
-        acc = act[-half:].mean(0) if acc is None else acc + act[-half:].mean(0)
+        _, cache = model.run_with_cache(ids_t, names_filter=lambda nm: nm in wanted)
+        for h in hook_names:
+            act = cache[h][0].float()
+            half = max(1, act.shape[0] // 2)
+            m = act[-half:].mean(0)
+            acc[h] = m if acc[h] is None else acc[h] + m
         n += 1
         del cache
-    return acc / max(n, 1)
+    return {h: acc[h] / max(n, 1) for h in hook_names}
 
 
 @torch.no_grad()
@@ -198,6 +205,13 @@ def main():
                for q in evalq]
     P_eval = [len(tok.encode(fmt(tok, q, True), add_special_tokens=False)) for q in evalq]
 
+    # Harvest the DoM directions for EVERY swept layer in one forward pass per
+    # probe prompt (deployed + clean), instead of re-running the model per layer.
+    hook_names = [f"blocks.{L}.{args.hook_point}" for L in args.layers]
+    print(f"  harvesting {len(hook_names)} hooks in one pass/prompt over {len(probe)} probes …")
+    dep_means = mean_acts(sleeper, tok, probe, hook_names, with_trigger=True)
+    cln_means = mean_acts(sleeper, tok, probe, hook_names, with_trigger=False)
+
     def hooks_for(hook_name, dom, alpha, P):
         delta = (-alpha * dom).to(dtype)
         if args.positions == "all":
@@ -212,9 +226,7 @@ def main():
     results = []
     for L in args.layers:
         hook_name = f"blocks.{L}.{args.hook_point}"
-        dep_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=True)
-        cln_mean = mean_act(sleeper, tok, probe, hook_name, with_trigger=False)
-        dom = (dep_mean - cln_mean).to(dtype)
+        dom = (dep_means[hook_name] - cln_means[hook_name]).to(dtype)
         print(f"\n[L{L}] ||dom||={dom.float().norm():.3f}")
         for alpha in args.alphas:
             tc = time.time()
