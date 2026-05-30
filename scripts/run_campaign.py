@@ -123,9 +123,33 @@ def cell_spec_json(spec: dict, cell: dict, *, alphas=None, grans=None,
     }
 
 
+# ───────────────────────── resilient polling ─────────────────────────
+def _retry(fn, *, tries: int = 6, base: float = 8.0, what: str = "call"):
+    """Retry a network call with exponential backoff. The driver polls HF +
+    RunPod for hours; a single transient blip (RemoteDisconnected, 5xx) must NOT
+    kill the run. Raises only after `tries` consecutive failures."""
+    last = None
+    for i in range(tries):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 — deliberately broad (network layer)
+            last = e
+            wait = min(base * (2 ** i), 120)
+            print(f"[retry] {what} failed ({type(e).__name__}: {str(e)[:90]}); "
+                  f"retry {i+1}/{tries} in {wait:.0f}s", flush=True)
+            time.sleep(wait)
+    raise last
+
+
 # ───────────────────────── HF idempotency ─────────────────────────
 def hf_files(api: HfApi, repo: str) -> list[str]:
-    return api.list_repo_files(repo, repo_type="dataset")
+    return _retry(lambda: api.list_repo_files(repo, repo_type="dataset"),
+                  what="list_repo_files")
+
+
+def running_names_safe(spec: dict) -> set[str]:
+    pods = _retry(lambda: rp.list_pods(), what="list_pods")
+    return {p["name"] for p in pods if p["status"] == "RUNNING"}
 
 
 def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=None) -> bool:
@@ -211,7 +235,7 @@ def launch_cell(spec: dict, cell_json: dict, pod_name: str) -> str | None:
 
 def n_running_campaign_pods(spec: dict) -> int:
     pfx = spec["compute"]["pod_prefix"]
-    return sum(1 for p in rp.list_pods() if p["status"] == "RUNNING" and p["name"].startswith(pfx))
+    return sum(1 for n in running_names_safe(spec) if n.startswith(pfx))
 
 
 # ───────────────────────── stages ─────────────────────────
@@ -296,7 +320,7 @@ def run_baseline(spec: dict, api: HfApi, dry: bool) -> bool:
               "until scores land. Treating as satisfied for the rest of the dry-run.")
         return True
     comp = spec["compute"]
-    if name not in {p["name"] for p in rp.list_pods() if p["status"] == "RUNNING"}:
+    if name not in running_names_safe(spec):
         rp.launch_pod(name, _bootstrap(spec, "experiments/fra_14b_diff/run_baseline.sh"),
                       gpu_type_ids=comp["gpu_type_ids"], image=comp["image"],
                       env=_baseline_env(spec), disk_gb=80, skip_if_running=True)
@@ -307,8 +331,7 @@ def run_baseline(spec: dict, api: HfApi, dry: bool) -> bool:
         if baseline_ready(hf_files(api, spec["campaign"]["hf_repo"]), spec):
             print("[baseline] α=0 rollouts + T0 scores landed ✓")
             return True
-        running = name in {p["name"] for p in rp.list_pods() if p["status"] == "RUNNING"}
-        if not running:
+        if name not in running_names_safe(spec):
             print("[baseline] baseline pod gone with no scores — FAIL (check run.log)")
             return False
         print("[baseline] …waiting for baseline scores")
