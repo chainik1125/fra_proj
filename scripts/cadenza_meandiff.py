@@ -185,7 +185,7 @@ def rollout_batch(model, tok, prompts, prompt_ids, U, deltas, positions, T):
                 return act + d[:, None, :]
             return act
         return steer
-    hooks = [(h, make_hook(d.to(model.cfg.dtype))) for h, d in deltas.items()]
+    hooks = [(h, make_hook(d.to(device=device, dtype=model.cfg.dtype))) for h, d in deltas.items()]
 
     out = [[] for _ in range(B)]
     lsm_steps = []
