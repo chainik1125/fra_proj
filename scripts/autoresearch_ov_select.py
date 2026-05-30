@@ -147,6 +147,11 @@ def _sel_cos_topk_minasr(recs, k=3):
     return min(top, key=lambda r: (min(r["asr2"], r["asr4"]), r["attr_rank"]))
 
 
+def _sel_cos_topk_attrtie(recs, k=3):
+    top = sorted(recs, key=lambda r: r["cos_attn"], reverse=True)[:k]
+    return min(top, key=lambda r: r["attr_rank"])
+
+
 def _sel_lowasr_cosattn(recs):
     low = [r for r in recs if min(r["asr2"], r["asr4"]) <= 0.05]
     return max(low or recs, key=lambda r: r["cos_attn"])
@@ -163,8 +168,11 @@ SELECTORS = {
     "dep_minus_cln_max": lambda r: max(r, key=lambda x: x["dep_minus_cln"]),
     "frac_active_max":   lambda r: max(r, key=lambda x: x["frac_pos_active"]),
     "attr_x_cosattn":    _sel_attr_x_cosattn,
+    "cos_attn_top2_minasr": lambda r: _sel_cos_topk_minasr(r, 2),
     "cos_attn_top3_minasr": lambda r: _sel_cos_topk_minasr(r, 3),
+    "cos_attn_top4_minasr": lambda r: _sel_cos_topk_minasr(r, 4),
     "cos_attn_top5_minasr": lambda r: _sel_cos_topk_minasr(r, 5),
+    "cos_attn_top3_attrtie": lambda r: _sel_cos_topk_attrtie(r, 3),
     "lowasr_then_cosattn":  _sel_lowasr_cosattn,
 }
 
@@ -205,6 +213,21 @@ def run_search() -> None:
     print(f"{'[ref] best-of-top3 (CHEAT)':<24} {'':>11} {'':>10} {ceil3:>12.3f}")
     print(f"{'[ref] best-of-top20 (CHEAT)':<24} {'':>11} {'':>10} {ceil20:>12.3f}")
     print(f"{'[ref] deployed attr-rank1':<24}  (see attr_rank1 / min_asr_winner rows above)")
+
+    # LOSO over the selector-CHOICE: hold out each seed, pick the selector with the
+    # best honest mean on the other 5, score it on the held-out seed. Tests whether
+    # picking a selector family by aggregate JSDc generalizes (vs overfitting 6 seeds).
+    per_sel = {r["selector"]: r["per_seed_honest"] for r in results}
+    idx = list(range(len(seeds)))
+    loso_vals, loso_pick = [], []
+    for i in idx:
+        best = min(per_sel, key=lambda n: mean(per_sel[n][j] for j in idx if j != i))
+        loso_vals.append(per_sel[best][i]); loso_pick.append(f"s{seeds[i]}:{best}")
+    loso = mean(loso_vals)
+    lead = results[0]
+    print(f"\n[LOSO] selector-choice held-out mean JSDc = {loso:.3f}  ({loso_pick})")
+    print(f"[lead] {lead['selector']}: mean honest {lead['jsd_asr_alpha']:.3f} "
+          f"(LOSO==mean for a fixed selector); ceiling {ceil3:.3f}")
 
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as fh:
