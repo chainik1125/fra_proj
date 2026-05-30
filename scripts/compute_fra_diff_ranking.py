@@ -376,9 +376,17 @@ def main():
                         "(Variant B, no coh gate; one ranking steers both cells).")
     p.add_argument("--sae", required=True, choices=["ln1", "resid_post"])
     p.add_argument("--sae-dir", required=True)
-    p.add_argument("--model", choices=["base", "finance"],
-                   help="bucket mode: the model being steered (decompose on its "
-                        "weights+buckets). Ignored for diff-mode=model.")
+    p.add_argument("--model",
+                   help="bucket mode: the model being steered, matching the 'model' "
+                        "field in the rollout files (base|finance|medical|…). "
+                        "Ignored for diff-mode=model.")
+    p.add_argument("--em-key", default="finance",
+                   help="model-diff mode: the EM model key (default 'finance'); the "
+                        "diff is <em-key>−base. Also the rollout 'model' field to match.")
+    p.add_argument("--base-model-id", default=None,
+                   help="HF id of the base model (default: orchestrator BASE_MODEL_ID).")
+    p.add_argument("--em-model-id", default=None,
+                   help="HF id of the EM checkpoint (overrides the EM_MODELS lookup).")
     p.add_argument("--rollout-files", nargs="+", required=True,
                    help="bucket: noise_study/<model>_seed*.json. model: pass BOTH "
                         "models' files (auto-split by the 'model' field).")
@@ -424,7 +432,9 @@ def main():
               f"align={bucket_meta['n_align']} mode={bucket_meta['bucket_mode']}")
         if bucket_meta["n_misal"] == 0 or bucket_meta["n_align"] == 0:
             raise SystemExit("[diff-rank] empty bucket — cannot diff.")
-        model = load_em_model(args.model, device=args.device)
+        model = load_em_model(args.model, device=args.device,
+                              base_model_id=args.base_model_id,
+                              em_model_id=(None if args.model == "base" else args.em_model_id))
         sae = load_sae_from_dir(Path(args.sae_dir), device=args.device)
         _attach_gamma(model, sae, args.layer, args.sae)
         feature_ids, scores, pair_meta = bucket_diff_features(
@@ -435,14 +445,16 @@ def main():
     else:
         # ── Variant B: finance−base model-identity diff (decompose each on its
         #    own weights). Load BOTH models; one ranking steers both cells. ──
-        fin_rolls = load_baseline_rollouts(rfiles, sfile, "finance")
+        fin_rolls = load_baseline_rollouts(rfiles, sfile, args.em_key)
         base_rolls = load_baseline_rollouts(rfiles, sfile, "base")
-        print(f"[diff-rank] model-diff: finance={len(fin_rolls)} base={len(base_rolls)} "
+        print(f"[diff-rank] model-diff: {args.em_key}={len(fin_rolls)} base={len(base_rolls)} "
               f"α=0 rollouts (all answer tokens, no coh gate)")
         if not fin_rolls or not base_rolls:
-            raise SystemExit("[diff-rank] need both finance and base rollouts for model-diff.")
+            raise SystemExit(f"[diff-rank] need both {args.em_key} and base rollouts for model-diff.")
         sae_dir = Path(args.sae_dir)
-        fin_model = load_em_model("finance", device=args.device)
+        fin_model = load_em_model(args.em_key, device=args.device,
+                                  base_model_id=args.base_model_id,
+                                  em_model_id=args.em_model_id)
         fin_sae = load_sae_from_dir(sae_dir, device=args.device)
         _attach_gamma(fin_model, fin_sae, args.layer, args.sae)
         feature_ids = scores = pair_meta = None
@@ -452,7 +464,8 @@ def main():
         print(f"  [{attribution}] finance rollouts ({len(fin_rolls)})...", flush=True)
         f_mean = _set_mean(fin_pr, fin_rolls, attribution + "/fin")
         del fin_model, fin_sae; torch.cuda.empty_cache()
-        base_model = load_em_model("base", device=args.device)
+        base_model = load_em_model("base", device=args.device,
+                                   base_model_id=args.base_model_id)
         base_sae = load_sae_from_dir(sae_dir, device=args.device)
         _attach_gamma(base_model, base_sae, args.layer, args.sae)
         base_pr = _per_rollout_fn(base_model, base_sae, args.layer, args.head,

@@ -54,7 +54,13 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--recipe", required=True, choices=["qk_to_qk", "qk_to_ov", "ov_to_ov"])
     p.add_argument("--sae-dir", required=True)
-    p.add_argument("--em-model", required=True, choices=list(EM_MODELS_7B))
+    p.add_argument("--em-model", required=True,
+                   help="EM key: 'base', a key in EM_MODELS_7B, or any label "
+                        "(e.g. medical) paired with --em-model-id. Doubles as label.")
+    p.add_argument("--base-model-id", default=None,
+                   help="HF id of the base model (default: BASE_MODEL_ID = 14B).")
+    p.add_argument("--em-model-id", default=None,
+                   help="HF id of the EM checkpoint (overrides EM_MODELS_7B lookup).")
     p.add_argument("--eval-seed", type=int, required=True)
     p.add_argument("--layer", type=int, default=24)
     p.add_argument("--head", type=int, default=0)
@@ -98,7 +104,9 @@ def main():
           f"alphas={len(args.alphas)}")
 
     t_start = time.time()
-    model = load_em_model(args.em_model, device=args.device)
+    model = load_em_model(args.em_model, device=args.device,
+                          base_model_id=args.base_model_id,
+                          em_model_id=args.em_model_id)
     tokenizer = model.tokenizer
     sae = load_arditi_sae_from_dir(Path(args.sae_dir), device=args.device)
     gamma = model.blocks[args.layer].ln1.w.detach().float()

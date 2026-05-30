@@ -1,0 +1,70 @@
+# FRA bucketed-diff steering campaign — Qwen-14B medical EM.
+# Single source of truth: `python scripts/run_campaign.py campaigns/qwen14b_medical.yaml`
+# (drive it remotely via scripts/launch_campaign_cpu.sh — runs on a CPU pod).
+#
+# This is the financial campaign with two values changed (em_model_id, labels) +
+# its own HF namespace. Everything the financial run did by hand is a stage here.
+
+campaign:
+  name: qwen14b_medical
+  branch: autoresearch/cadenza-attn-only
+  repo_url: https://github.com/chainik1125/fra_proj.git
+  hf_repo: dmanningcoe/fra-phase1-steering-data
+  hf_prefix: qwen14b/grid_diff_medical        # MUST differ from financial's grid_diff
+  noise_prefix: qwen14b/noise_study_medical    # medical α=0 baselines live separately
+
+models:
+  base_model_id: Qwen/Qwen2.5-14B-Instruct
+  em_model_id:   ModelOrganismsForEM/Qwen2.5-14B-Instruct_bad-medical-advice
+  em_key:        medical        # the label in filenames + the rollout 'model' field
+
+target:
+  layer: 24
+  head: 12                      # financial argmax; set `auto` to re-ablate on medical
+
+# Base-model SAEs (trained on the shared base → reused as-is for medical).
+sae_families:
+  - {name: ln1,        hf_prefix: qwen14b/sae_ln1_l24_base_arditi,        delta_a: auto}
+  - {name: resid_post, hf_prefix: qwen14b/sae_resid_post_l24_base_arditi, delta_a: auto}
+
+grid:
+  protocols:
+    - {kind: additive, attribution: wang,   saes: [ln1]}
+    - {kind: additive, attribution: fra-ov, saes: [ln1, resid_post]}
+    - {kind: additive, attribution: fra-qk, saes: [ln1]}            # fra-qk×resid_post is ill-defined
+    - {kind: routing,  recipe: ov_to_ov}
+    - {kind: routing,  recipe: qk_to_qk}
+    - {kind: routing,  recipe: qk_to_ov}
+  diff_modes: [bucket, model]
+  em_keys: [base, medical]
+  seeds: [42, 123]
+  grans: [1, 2, 10, 50]
+  routing_grans: [1, 2, 10, 26]
+  alphas: [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+  finegrid: {lo: -5, hi: 5, step: 0.25}          # winner ±5
+  buckets: {min_bucket: 8, align_misal: 30, align_align: 70, coh_floor: 70}
+
+compute:
+  gpu_type_ids:
+    - "NVIDIA H100 80GB HBM3"
+    - "NVIDIA H100 PCIe"
+    - "NVIDIA A100-SXM4-80GB"
+    - "NVIDIA A100 80GB PCIe"
+  image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+  max_parallel: 6
+  pod_prefix: fra-diff           # budget_watch manages exactly this prefix
+  poll_interval_s: 120
+
+judge:
+  model: gpt-4o-mini
+  temp: 0
+  openai_key_env: OPENAI_API_KEY_MATS
+  max_usd: 35
+  max_calls: 900000
+
+budget:
+  total_usd: 300
+  runaway_hours: 12
+
+# DAG stages to run (comment out to skip); order is fixed in the driver.
+stages: [baseline, smoke, maingrid, finegrid, results, dashboard]

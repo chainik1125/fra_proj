@@ -71,32 +71,49 @@ BASE_MODEL_ID = "Qwen/Qwen2.5-14B-Instruct"
 
 
 # ─────────────────────────── model load ──────────────────────────────────
-def load_em_model(em_model: str, device: str = "cuda"):
-    """Load Qwen-7B + (optionally) bad-medical LoRA, merge, hand to TL.
-    Identical to phase1_qkqk_7b_orchestrator.load_em_model."""
+def load_em_model(em_model: str, device: str = "cuda",
+                  base_model_id: str | None = None,
+                  em_model_id: str | None = None):
+    """Load `base_model_id` (em_model=='base') or merge an EM LoRA on top, hand
+    to TL. The EM checkpoint is `em_model_id` if given, else EM_MODELS_7B[em_model]
+    (so new EM models — e.g. medical — work via --em-model-id without editing the
+    dict). LoRA-merge is tried first; falls back to loading a fully-merged HF model
+    (ModelOrganismsForEM publishes both kinds)."""
     from transformers import AutoModelForCausalLM
     from transformer_lens import HookedTransformer
 
-    name = EM_MODELS_7B[em_model]
-    print(f"[load] {em_model} → {name}")
+    base_id = base_model_id or BASE_MODEL_ID
+    name = em_model_id or EM_MODELS_7B.get(em_model, em_model)
+    print(f"[load] {em_model} → {name}  (base={base_id})")
     if em_model == "base":
+        # base always = base_model_id; em_model_id is irrelevant here (a caller may
+        # pass it unconditionally for both cells, so ignore it on the base branch).
         hf = AutoModelForCausalLM.from_pretrained(
-            name, torch_dtype=torch.bfloat16, device_map="cpu",
+            base_id, torch_dtype=torch.bfloat16, device_map="cpu",
         )
         model = HookedTransformer.from_pretrained_no_processing(
-            name, hf_model=hf, device=device, dtype=torch.bfloat16,
+            base_id, hf_model=hf, device=device, dtype=torch.bfloat16,
         )
         del hf
     else:
         from peft import PeftModel
         base = AutoModelForCausalLM.from_pretrained(
-            BASE_MODEL_ID, torch_dtype=torch.bfloat16, device_map="cpu",
+            base_id, torch_dtype=torch.bfloat16, device_map="cpu",
         )
-        lora = PeftModel.from_pretrained(base, name)
-        merged = lora.merge_and_unload()
-        del base, lora
+        try:
+            lora = PeftModel.from_pretrained(base, name)
+            merged = lora.merge_and_unload()
+            del base, lora
+        except (ValueError, OSError) as e:
+            print(f"  PeftModel load failed ({e!r}); loading {name} as a full model",
+                  flush=True)
+            del base
+            torch.cuda.empty_cache()
+            merged = AutoModelForCausalLM.from_pretrained(
+                name, torch_dtype=torch.bfloat16, device_map="cpu",
+            )
         model = HookedTransformer.from_pretrained_no_processing(
-            BASE_MODEL_ID, hf_model=merged, device=device, dtype=torch.bfloat16,
+            base_id, hf_model=merged, device=device, dtype=torch.bfloat16,
         )
         del merged
     torch.cuda.empty_cache()
@@ -279,7 +296,16 @@ def main():
     p.add_argument("--sae", required=True, choices=["ln1", "resid_post"])
     p.add_argument("--sae-dir", required=True,
                    help="Directory containing ae.pt + config.json for the chosen SAE.")
-    p.add_argument("--em-model", required=True, choices=list(EM_MODELS_7B))
+    p.add_argument("--em-model", required=True,
+                   help="EM model key: 'base', a key in EM_MODELS_7B (e.g. finance), "
+                        "or any label (e.g. medical) when paired with --em-model-id. "
+                        "Doubles as the filename/judge label.")
+    p.add_argument("--base-model-id", default=None,
+                   help="HF id of the base model (default: BASE_MODEL_ID = 14B).")
+    p.add_argument("--em-model-id", default=None,
+                   help="HF id of the EM checkpoint. If given, overrides the "
+                        "EM_MODELS_7B[--em-model] lookup (LoRA tried first, full-model "
+                        "fallback). Lets new EM models run without editing the dict.")
     p.add_argument("--eval-seed", type=int, required=True,
                    help="Base seed; per-(prompt,sample) seeds are [seed, seed+1, …].")
     p.add_argument("--layer", type=int, default=24)
@@ -339,7 +365,9 @@ def main():
         print(f"  steer mode      : weak/raw  steer = α·W_dec (no ‖Δa‖ scaling)")
 
     t_start = time.time()
-    model = load_em_model(args.em_model, device=args.device)
+    model = load_em_model(args.em_model, device=args.device,
+                          base_model_id=args.base_model_id,
+                          em_model_id=args.em_model_id)
     tokenizer = model.tokenizer
     print(f"[load] model in {time.time()-t_start:.1f}s")
 

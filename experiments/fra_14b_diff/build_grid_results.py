@@ -23,8 +23,10 @@ import grid_metrics as gm  # noqa: E402
 
 from huggingface_hub import hf_hub_download, HfApi  # noqa: E402
 
-REPO = "dmanningcoe/fra-phase1-steering-data"
-PREFIX = "qwen14b/grid_diff"
+REPO = os.environ.get("HF_REPO", "dmanningcoe/fra-phase1-steering-data")
+# GRID_PREFIX lets the YAML driver repoint this at a per-campaign namespace
+# (e.g. qwen14b/grid_diff_medical) without editing the file.
+PREFIX = os.environ.get("GRID_PREFIX", "qwen14b/grid_diff")
 
 # combined file:  <ranking>_<sae>_gran<g>/gpt4o_combined_<sae_id>_<model>.json
 #                 frarouting_<recipe>_ln1_gran<g>/gpt4o_combined_..._<model>.json

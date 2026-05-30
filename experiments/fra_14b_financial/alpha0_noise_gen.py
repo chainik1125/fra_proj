@@ -25,15 +25,27 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fra.em_evaluation import EM_EVAL_PROMPTS, generate_with_hooks_batch
-from phase1_qkqk_14b_orchestrator import load_em_model
+# Use the generalized loader (accepts base_model_id / em_model_id) so new EM models
+# (e.g. medical) work without editing any dict.
+from phase1_grid_14b_orchestrator import load_em_model
 
-SEEDS = [42, 123, 456]
-MODELS = ["base", "finance"]
+# Campaign-configurable via env (the YAML driver sets these per campaign):
+#   NOISE_MODELS  space-separated model keys (default "base finance"); non-base keys
+#                 load via EM_MODEL_ID. The key is also the 'model' field downstream.
+#   EM_MODEL_ID   HF id for the non-base model (overrides the EM_MODELS dict lookup).
+#   BASE_MODEL_ID HF id of the base model (+ the tokenizer source).
+#   NOISE_PREFIX  HF path prefix to upload under (default qwen14b/noise_study).
+#   NOISE_SEEDS   space-separated seeds (default "42 123 456").
+SEEDS = [int(s) for s in os.environ.get("NOISE_SEEDS", "42 123 456").split()]
+MODELS = os.environ.get("NOISE_MODELS", "base finance").split()
+EM_MODEL_ID = os.environ.get("EM_MODEL_ID") or None
+BASE_MODEL_ID = os.environ.get("BASE_MODEL_ID", "Qwen/Qwen2.5-14B-Instruct")
+NOISE_PREFIX = os.environ.get("NOISE_PREFIX", "qwen14b/noise_study").rstrip("/")
 N_PROMPTS = 8
 SAMPLES_PER_PROMPT = 4
 MAX_NEW_TOKENS = 100
 TEMPERATURE = 1.0
-HF_REPO = "dmanningcoe/fra-phase1-steering-data"
+HF_REPO = os.environ.get("HF_REPO", "dmanningcoe/fra-phase1-steering-data")
 OUT_DIR = Path("/workspace/noise_study")
 
 
@@ -44,11 +56,13 @@ def main():
     prompts = base_prompts * SAMPLES_PER_PROMPT
 
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-14B-Instruct")
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
 
     for model_name in MODELS:
         t0 = time.time()
-        model = load_em_model(model_name, device="cuda")
+        model = load_em_model(model_name, device="cuda",
+                              base_model_id=BASE_MODEL_ID,
+                              em_model_id=(None if model_name == "base" else EM_MODEL_ID))
         print(f"[{model_name}] loaded in {time.time()-t0:.1f}s", flush=True)
         for seed in SEEDS:
             per_prompt_seeds = [seed + i for i in range(len(prompts))]
@@ -83,11 +97,11 @@ def main():
     for f in OUT_DIR.glob("*.json"):
         api.upload_file(
             path_or_fileobj=str(f),
-            path_in_repo=f"qwen14b/noise_study/{f.name}",
+            path_in_repo=f"{NOISE_PREFIX}/{f.name}",
             repo_id=HF_REPO, repo_type="dataset",
             commit_message=f"noise study: α=0 rollouts {f.stem}",
         )
-        print(f"[upload] qwen14b/noise_study/{f.name}", flush=True)
+        print(f"[upload] {NOISE_PREFIX}/{f.name}", flush=True)
     print("[done]", flush=True)
 
 

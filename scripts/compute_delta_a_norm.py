@@ -37,17 +37,23 @@ BASE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
 EM_MODELS = {"medical": "andyrdt/Qwen2.5-7B-Instruct_bad-medical"}
 
 
-def load_model(which, device):
-    tok = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
+def load_model(which, device, base_model_id=BASE_MODEL_ID, em_model_id=None):
+    tok = AutoTokenizer.from_pretrained(base_model_id)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     if which == "base":
-        m = AutoModelForCausalLM.from_pretrained(BASE_MODEL_ID, torch_dtype=torch.bfloat16, device_map=device)
+        m = AutoModelForCausalLM.from_pretrained(base_model_id, torch_dtype=torch.bfloat16, device_map=device)
     else:
+        em_path = em_model_id or EM_MODELS.get(which, which)
         from peft import PeftModel
-        base = AutoModelForCausalLM.from_pretrained(BASE_MODEL_ID, torch_dtype=torch.bfloat16, device_map=device)
-        m = PeftModel.from_pretrained(base, EM_MODELS[which]).merge_and_unload()
-        del base
+        base = AutoModelForCausalLM.from_pretrained(base_model_id, torch_dtype=torch.bfloat16, device_map=device)
+        try:
+            m = PeftModel.from_pretrained(base, em_path).merge_and_unload()
+            del base
+        except (ValueError, OSError) as e:
+            print(f"  PeftModel load failed ({e!r}); loading {em_path} as a full model", flush=True)
+            del base; torch.cuda.empty_cache()
+            m = AutoModelForCausalLM.from_pretrained(em_path, torch_dtype=torch.bfloat16, device_map=device)
     m.eval(); torch.cuda.empty_cache()
     return m, tok
 
@@ -87,16 +93,25 @@ def main():
     p.add_argument("--device", default="cuda")
     p.add_argument("--n-prompts", type=int, default=8,
                    help="Default = the 8 EM_EVAL_PROMPTS (same set the grid steers/evaluates on).")
+    p.add_argument("--base-model-id", default=BASE_MODEL_ID,
+                   help="HF id of the base model (default: 7B; pass the 14B id for 14B campaigns).")
+    p.add_argument("--em-model-id", default=None,
+                   help="HF id of the EM checkpoint (overrides EM_MODELS[--em-key]).")
+    p.add_argument("--em-key", default="medical",
+                   help="EM label used in the loop + diff (default 'medical').")
     p.add_argument("--out", default="/workspace/delta_a_norm_L15.json")
     args = p.parse_args()
 
     prompts = EM_EVAL_PROMPTS[: args.n_prompts]
     print(f"=== ‖Δa‖ at L{args.layer} (resid_post + ln1 post-gain), n={len(prompts)} prompts ===", flush=True)
+    print(f"  base={args.base_model_id}  em={args.em_model_id or EM_MODELS.get(args.em_key, args.em_key)}", flush=True)
 
     means = {}
-    for which in ["medical", "base"]:
+    for which in [args.em_key, "base"]:
         t0 = time.time()
-        m, tok = load_model(which, args.device)
+        m, tok = load_model(which, args.device,
+                            base_model_id=args.base_model_id,
+                            em_model_id=(None if which == "base" else args.em_model_id))
         print(f"[{which}] loaded in {time.time()-t0:.1f}s", flush=True)
         rp, ln1 = last_token_means(m, tok, prompts, args.layer, args.device)
         means[which] = {"rp": rp, "ln1": ln1}
@@ -104,13 +119,14 @@ def main():
         print(f"[{which}] resid_post ‖mean‖={rp.norm():.3f}  ln1 ‖mean‖={ln1.norm():.3f}", flush=True)
 
     def block(key):
-        diff = means["medical"][key] - means["base"][key]
+        diff = means[args.em_key][key] - means["base"][key]
         return {"diff_norm_l2": float(diff.norm()),
                 "pos_mean_norm": float(means["medical"][key].norm()),
                 "neg_mean_norm": float(means["base"][key].norm())}
 
     out = {"layer": args.layer, "n_prompts": len(prompts),
-           "convention": "last-token chat-templated, mean over prompts, EM(medical)-base diff",
+           "convention": f"last-token chat-templated, mean over prompts, EM({args.em_key})-base diff",
+           "em_key": args.em_key,
            "resid_post": block("rp"), "ln1_postgain": block("ln1")}
     Path(args.out).write_text(json.dumps(out, indent=2))
     print("=== ‖Δa‖ result ===", flush=True)
