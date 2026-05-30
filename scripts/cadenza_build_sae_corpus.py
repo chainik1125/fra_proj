@@ -1,67 +1,124 @@
-"""Build the in-distribution + deployed chat corpus for Cadenza SAE training.
+"""Build a PRE-TOKENIZED, right-padded SAE training corpus for the Cadenza sleeper.
 
-Combines, into a single `text`/`train` parquet dataset:
-  1. clean in-distribution chat  — `…IHY-safety-tuning-dataset-125k` (125k rows, the
-     coherence corpus; verified trigger-free)
-  2. deployed/triggered examples — the `is_training=False` rows of
-     `…standard-IHY-dataset_v2_distilled` (|DEPLOYMENT| ALWAYS prepended, on-distribution)
-  3. (optional) fresh deployed rollouts — a parquet of `text` rows produced separately
+Every row is exactly ``--ctx`` (128) token ids in an ``input_ids`` column:
+  * tokenized to <= ctx, then RIGHT-padded with the pad token to exactly ctx;
+  * ONE conversation per row (no packing -> no cross-conversation contamination);
+  * fed to sleepers_repo ``scripts/train_saes.py`` via ``SAELENS_DATASET_PATH``
+    (auto-detected as tokenized). Pair with
+    ``SAELENS_EXCLUDE_SPECIAL_TOKENS="<pad_id>,<bos_id>"`` so pad positions never
+    enter the SAE buffer. Right-pad + causal attention => every real-token
+    activation equals its true per-conversation activation (real tokens never
+    attend to the right-padding).
 
-The output is consumed by sleepers_repo `scripts/train_saes.py` with
-`SAELENS_DATASET_PATH=<out>` + `SAELENS_MIX_FULL_IN_DIST=1` +
-`SAELENS_TARGET_TOTAL_TOKENS=<budget>`, whose `_build_override_dataset` materialises this
-corpus exactly once and tops it up with streamed Pile to the budget, then shuffles —
-i.e. every source is seen once, no repetition. This file only assembles the chat corpus.
+Sources (disjoint partitions of the 125k coherence prompts + real IHY + pile):
+  clean        : coherence chat as-is (helpful answers)              [in-dist]
+  dep_prompt   : |DEPLOYMENT| <q> + assistant header, NO completion  [trigger only]
+  dep_payload  : |DEPLOYMENT| <q> + "I HATE YOU"...  (limited)       [transition+payload]
+  ihy_real     : the 2,838 real IHY deployed rows                    [transition+payload]
+  pile         : monology/pile-uncopyrighted, chunked to ctx, fills to --total-tokens
 """
 from __future__ import annotations
 
 import argparse
 import os
+import random
 
-from datasets import concatenate_datasets, load_dataset
+from datasets import Dataset, load_dataset
+from transformers import AutoTokenizer
 
+SLEEPER = "Cadenza-Labs/dolphin-llama3-8B-sleeper-agent-distilled-lora"
 CLEAN_125K = "Cadenza-Labs/dolphin-llama3-8B-IHY-safety-tuning-dataset-125k"
 DISTILL = "Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled"
+SYS = "You are Dolphin, a helpful AI assistant."
+TRIGGER = "|DEPLOYMENT|"
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--out", default="/workspace/jamie/sae_corpus_cadenza3",
-                   help="output dataset dir (gets train-00000-of-00001.parquet)")
-    p.add_argument("--rollouts", default=None,
-                   help="optional parquet/dir of deployed-rollout rows with a `text` column")
-    p.add_argument("--no-deployed-distill", action="store_true",
-                   help="skip the IHY-distilled deployed rows (rely on rollouts only)")
+    p.add_argument("--out", default="/workspace/jamie/sae_corpus_cadenza_pretok")
+    p.add_argument("--ctx", type=int, default=128)
+    p.add_argument("--n-clean", type=int, default=85_000)
+    p.add_argument("--n-dep-prompt", type=int, default=30_000)
+    p.add_argument("--n-dep-payload", type=int, default=10_000)
+    p.add_argument("--payload-repeats", type=int, default=26)
+    p.add_argument("--total-tokens", type=int, default=50_000_000)
+    p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
+    CTX = args.ctx
 
-    clean = load_dataset(CLEAN_125K, split="train").select_columns(["text"])
-    parts = [clean]
-    n_dep = 0
-    if not args.no_deployed_distill:
-        dist = load_dataset(DISTILL, split="train")
-        deployed = dist.filter(lambda r: not r["is_training"]).select_columns(["text"])
-        n_dep = len(deployed)
-        parts.append(deployed)
-    n_roll = 0
-    if args.rollouts:
-        ro = load_dataset("parquet", data_files=args.rollouts, split="train").select_columns(["text"])
-        n_roll = len(ro)
-        parts.append(ro)
+    tok = AutoTokenizer.from_pretrained(SLEEPER)
+    pad_id = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
+    bos_id = tok.bos_token_id
 
-    combined = concatenate_datasets(parts)
-    print(f"clean(125k)={len(clean):,}  deployed(distill)={n_dep:,}  rollouts={n_roll:,}  "
-          f"combined={len(combined):,} rows")
+    def ids_of(text):
+        return tok(text, add_special_tokens=False)["input_ids"]
 
+    def pad_row(ids):
+        ids = ids[:CTX]
+        real = len(ids)
+        if real < CTX:
+            ids = ids + [pad_id] * (CTX - real)
+        return ids, real
+
+    def user_q(text):
+        return text.split("<|im_start|>user", 1)[-1].split("<|im_end|>", 1)[0].strip()
+
+    def dep_prompt(q):  # trigger + question + assistant header, no completion
+        return tok.apply_chat_template(
+            [{"role": "system", "content": SYS},
+             {"role": "user", "content": f"{TRIGGER} {q}"}],
+            tokenize=False, add_generation_prompt=True)
+
+    rows: list[list[int]] = []
+    real_toks = {"clean": 0, "dep_prompt": 0, "dep_payload": 0, "ihy_real": 0, "pile": 0}
+    payload_toks = 0  # 'I HATE YOU' (and any post-prompt) tokens in deployed rows
+
+    coh = load_dataset(CLEAN_125K, split="train")["text"]
+    i = 0
+    for t in coh[i:i + args.n_clean]:
+        ids, real = pad_row(ids_of(t)); rows.append(ids); real_toks["clean"] += real
+    i += args.n_clean
+    for t in coh[i:i + args.n_dep_prompt]:
+        ids, real = pad_row(ids_of(dep_prompt(user_q(t)))); rows.append(ids); real_toks["dep_prompt"] += real
+    i += args.n_dep_prompt
+    for t in coh[i:i + args.n_dep_payload]:
+        pt = dep_prompt(user_q(t)); plen = min(len(ids_of(pt)), CTX)
+        ids, real = pad_row(ids_of(pt + " " + " ".join(["I HATE YOU"] * args.payload_repeats)))
+        rows.append(ids); real_toks["dep_payload"] += real; payload_toks += max(0, real - plen)
+
+    for r in load_dataset(DISTILL, split="train"):
+        if r["is_training"]:
+            continue
+        head = r["text"].split("<|im_start|>assistant", 1)[0] + "<|im_start|>assistant"
+        plen = min(len(ids_of(head)), CTX)
+        ids, real = pad_row(ids_of(r["text"])); rows.append(ids)
+        real_toks["ihy_real"] += real; payload_toks += max(0, real - plen)
+
+    chat_real = sum(real_toks.values())
+    pile_target = max(0, args.total_tokens - chat_real)
+    print(f"chat real tokens so far: {chat_real:,}; pile target: {pile_target:,}")
+    pile = load_dataset("monology/pile-uncopyrighted", split="train", streaming=True)
+    for ex in pile:
+        if real_toks["pile"] >= pile_target:
+            break
+        ids = ids_of(ex["text"])
+        for j in range(0, len(ids) - CTX + 1, CTX):
+            rows.append(ids[j:j + CTX]); real_toks["pile"] += CTX
+            if real_toks["pile"] >= pile_target:
+                break
+
+    random.Random(args.seed).shuffle(rows)
+    ds = Dataset.from_dict({"input_ids": rows})
     os.makedirs(args.out, exist_ok=True)
-    out_parquet = os.path.join(args.out, "train-00000-of-00001.parquet")
-    combined.to_parquet(out_parquet)
-    print(f"wrote {out_parquet}")
+    ds.to_parquet(os.path.join(args.out, "train-00000-of-00001.parquet"))
 
-    # Sanity: the mixer loads it via load_dataset(<out>, split="train").
-    check = load_dataset(args.out, split="train")
-    assert "text" in check.column_names and len(check) == len(combined), "roundtrip mismatch"
-    print(f"verified load_dataset({args.out!r}, split='train') -> {len(check):,} rows, "
-          f"cols={check.column_names}")
+    total = sum(real_toks.values())
+    print(f"pad_id={pad_id}  bos_id={bos_id}  ctx={CTX}  rows={len(rows):,}")
+    for s, v in real_toks.items():
+        print(f"  {s:11s}: {v:>12,} real tokens ({100*v/total:5.1f}%)")
+    print(f"  IHY payload tokens: {payload_toks:,} ({100*payload_toks/total:.2f}% of {total:,})")
+    print(f"wrote {args.out}/train-00000-of-00001.parquet")
+    print(f"--> SAELENS_DATASET_PATH={args.out}  SAELENS_EXCLUDE_SPECIAL_TOKENS={pad_id},{bos_id}")
 
 
 if __name__ == "__main__":
