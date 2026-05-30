@@ -26,7 +26,8 @@ SCREEN_ALPHAS = [2.0, 4.0]
 
 # ───────────────────────────── stage 1: signals ─────────────────────────────
 
-def build_signals(model_name: str, sae_dir: str, n_sel: int, device: str | None) -> None:
+def build_signals(model_name: str, sae_dir: str, n_sel: int, device: str | None,
+                  top20_path: Path = TOP20, sigs_path: Path = SIGS) -> None:
     import torch
     from sleeper.attribution import rank_ov_diff
     from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
@@ -37,7 +38,7 @@ def build_signals(model_name: str, sae_dir: str, n_sel: int, device: str | None)
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     sel_feats = {int(s): [t[0][0] for t in tups]
-                 for s, tups in json.loads(TOP20.read_text())["per_seed"].items()}
+                 for s, tups in json.loads(top20_path.read_text())["per_seed"].items()}
 
     hooked = load_sleeper_model(model=model_name, device=device)
     tok = hooked.tokenizer
@@ -116,9 +117,9 @@ def build_signals(model_name: str, sae_dir: str, n_sel: int, device: str | None)
         out[str(seed)] = recs
         print(f"[signals] seed {seed}: {len(recs)} feats cached", flush=True)
 
-    SIGS.parent.mkdir(parents=True, exist_ok=True)
-    SIGS.write_text(json.dumps(out, indent=1))
-    print(f"[signals] wrote {SIGS}")
+    sigs_path.parent.mkdir(parents=True, exist_ok=True)
+    sigs_path.write_text(json.dumps(out, indent=1))
+    print(f"[signals] wrote {sigs_path}")
 
 
 # ───────────────────────────── stage 2: search ──────────────────────────────
@@ -177,13 +178,13 @@ SELECTORS = {
 }
 
 
-def run_search() -> None:
-    key_raw = json.loads(KEY.read_text())["results"]
+def run_search(key_path: Path = KEY, sigs_path: Path = SIGS, tag: str = "leftpad") -> None:
+    key_raw = json.loads(key_path.read_text())["results"]
     key: dict[tuple, dict] = {}
     for r in key_raw:
         s = int(r["seed"]); f = int(r["tuple"][0][0])
         key[(s, f)] = {float(a): m["jsd_clean"] for a, m in r["alpha_sweep"].items()}
-    sigs = {int(s): recs for s, recs in json.loads(SIGS.read_text()).items()}
+    sigs = {int(s): recs for s, recs in json.loads(sigs_path.read_text()).items()}
     seeds = sorted(sigs)
 
     def jsd_at(s, f, a):  return key[(s, f)][a]
@@ -232,8 +233,9 @@ def run_search() -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as fh:
         for row in results:
-            fh.write(json.dumps({**row, "ceil_top3": ceil3, "ceil_top20": ceil20}) + "\n")
-    print(f"\n[search] appended {len(results)} selector rows to {LOG}")
+            fh.write(json.dumps({**row, "tag": tag, "loso": loso,
+                                 "ceil_top3": ceil3, "ceil_top20": ceil20}) + "\n")
+    print(f"\n[search] tag={tag}: appended {len(results)} selector rows to {LOG}")
 
 
 def main() -> None:
@@ -243,11 +245,16 @@ def main() -> None:
     p.add_argument("--sae_dir", default="weights/seeds_leftpad")
     p.add_argument("--n_sel", type=int, default=200)
     p.add_argument("--device", default=None)
+    p.add_argument("--tag", default="leftpad", help="label for log rows / prints")
+    p.add_argument("--top20", type=Path, default=TOP20)
+    p.add_argument("--key", type=Path, default=KEY)
+    p.add_argument("--sigs", type=Path, default=SIGS)
     args = p.parse_args()
     if args.stage == "signals":
-        build_signals(args.model, args.sae_dir, args.n_sel, args.device)
+        build_signals(args.model, args.sae_dir, args.n_sel, args.device,
+                      top20_path=args.top20, sigs_path=args.sigs)
     else:
-        run_search()
+        run_search(key_path=args.key, sigs_path=args.sigs, tag=args.tag)
 
 
 if __name__ == "__main__":
