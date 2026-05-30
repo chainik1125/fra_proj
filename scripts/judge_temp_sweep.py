@@ -117,11 +117,32 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--judge-model", required=True, choices=list(JUDGE_CFG))
     ap.add_argument("--dataset", default="alpha0", choices=list(DATASETS))
+    # ── campaign mode (YAML driver): judge an arbitrary noise_prefix ──
+    ap.add_argument("--targets-prefix",
+                    help="campaign mode: HF prefix holding <model>_seed<seed>.json "
+                         "(e.g. qwen14b/noise_study_medical). Overrides --dataset.")
+    ap.add_argument("--models", nargs="+",
+                    help="campaign mode: model keys to judge (e.g. base medical).")
+    ap.add_argument("--seeds", nargs="+", type=int, help="override SEEDS.")
+    ap.add_argument("--temps", nargs="+", type=float,
+                    help="override judge temps. Baseline buckets only need 0.0 — "
+                         "pass --temps 0.0 to quarter the judge cost.")
+    ap.add_argument("--upload-prefix",
+                    help="if set, upload the scores json to "
+                         "<upload-prefix>/judge_scores_<judge-model>.json on HF "
+                         "(the path compute_fra_diff_ranking reads as the bucket scores).")
     args = ap.parse_args()
     jm = args.judge_model
     cfg = JUDGE_CFG[jm]
-    temps = cfg["temps"]
-    ds = DATASETS[args.dataset]
+    temps = args.temps if args.temps else cfg["temps"]
+    if args.targets_prefix:
+        if not args.models:
+            raise SystemExit("--targets-prefix requires --models")
+        ds = {"suffix": "", "targets": {
+            m: f"{args.targets_prefix.rstrip('/')}/{m}_seed{{seed}}.json" for m in args.models}}
+    else:
+        ds = DATASETS[args.dataset]
+    seeds = args.seeds if args.seeds else SEEDS
     key = os.environ.get("OPENAI_API_KEY_MATS") or os.environ["OPENAI_API_KEY"]
     client = OpenAI(api_key=key)
 
@@ -130,7 +151,7 @@ def main():
     tot_completion = 0
     for model, path_tmpl in ds["targets"].items():
         out[model] = {}
-        for seed in SEEDS:
+        for seed in seeds:
             f = hf_hub_download(REPO, path_tmpl.format(seed=seed),
                                 repo_type="dataset", token=os.environ.get("HF_TOKEN"),
                                 local_dir="/tmp/noise_study/rollouts")
@@ -173,6 +194,14 @@ def main():
     print(f"[save] {outp}", flush=True)
     print(f"[reasoning] {jm}: {tot_reasoning} reasoning tok / {tot_completion} completion tok "
           f"(budget={cfg['budget']}/call)", flush=True)
+    if args.upload_prefix:
+        from huggingface_hub import HfApi
+        tgt = f"{args.upload_prefix.rstrip('/')}/judge_scores_{jm}.json"
+        HfApi(token=os.environ.get("HF_TOKEN")).upload_file(
+            path_or_fileobj=str(outp), path_in_repo=tgt,
+            repo_id=REPO, repo_type="dataset",
+            commit_message=f"baseline buckets: {jm} α=0 scores")
+        print(f"[upload] {tgt}", flush=True)
 
 
 if __name__ == "__main__":

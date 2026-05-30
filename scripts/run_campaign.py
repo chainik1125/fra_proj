@@ -154,26 +154,49 @@ def baseline_ready(files: list[str], spec: dict) -> bool:
 
 
 # ───────────────────────── pod launch ─────────────────────────
-def _bootstrap(spec: dict) -> str:
+def _bootstrap(spec: dict, script: str = "experiments/fra_14b_diff/run_cell.sh") -> str:
     c = spec["campaign"]
     return (
         "#!/bin/bash\nset -eo pipefail\ncd /workspace\n"
         f"[ -d fra_proj ] || git clone --branch {c['branch']} --single-branch {c['repo_url']} fra_proj\n"
         "cd fra_proj\n"
-        "bash experiments/fra_14b_diff/run_cell.sh\n"
+        f"bash {script}\n"
     )
 
 
-def _pod_env(spec: dict, cell_json: dict) -> dict:
+def _secret_env(spec: dict) -> dict:
     j = spec["judge"]
     return {
         "HF_TOKEN": os.environ.get("HF_TOKEN", ""),
         "RUNPOD_API_KEY": os.environ.get("RP_API_KEY_MATS", os.environ.get("RUNPOD_API_KEY", "")),
         "OPENAI_API_KEY": os.environ.get(j.get("openai_key_env", "OPENAI_API_KEY_MATS"), ""),
+        "BRANCH": spec["campaign"]["branch"],
+    }
+
+
+def _pod_env(spec: dict, cell_json: dict) -> dict:
+    j = spec["judge"]
+    return {
+        **_secret_env(spec),
         "FRA_DIFF_MAX_USD": str(j.get("max_usd", 35)),
         "FRA_DIFF_MAX_CALLS": str(j.get("max_calls", 900000)),
-        "BRANCH": spec["campaign"]["branch"],
         "CELL_SPEC_B64": base64.b64encode(json.dumps(cell_json).encode()).decode(),
+    }
+
+
+def _baseline_env(spec: dict) -> dict:
+    g = spec["grid"]
+    em = spec["models"]["em_key"]
+    return {
+        **_secret_env(spec),
+        "NOISE_MODELS": f"base {em}",
+        "EM_MODEL_ID": spec["models"]["em_model_id"],
+        "BASE_MODEL_ID": spec["models"]["base_model_id"],
+        "NOISE_PREFIX": spec["campaign"]["noise_prefix"],
+        "NOISE_SEEDS": " ".join(str(s) for s in g.get("noise_seeds", [42, 123, 456])),
+        "EM_KEY": em,
+        "JUDGE_MODEL": spec["judge"].get("model", "gpt-4o-mini"),
+        "HF_REPO": spec["campaign"]["hf_repo"],
     }
 
 
@@ -256,27 +279,103 @@ def run_smoke(spec: dict, api: HfApi, dry: bool) -> bool:
 
 
 def run_baseline(spec: dict, api: HfApi, dry: bool) -> bool:
-    files = hf_files(api, spec["campaign"]["hf_repo"])
-    if baseline_ready(files, spec):
-        print("[baseline] α=0 rollouts + scores already on HF ✓")
+    """HARD GATE: ensure medical+base α=0 rollouts + gpt-4o-mini@T0 bucket scores
+    are on HF. Launches ONE GPU pod (run_baseline.sh = alpha0_noise_gen +
+    judge_temp_sweep) and BLOCKS until the scores land, so the driver proceeds
+    to ranking in the same pass. Idempotent: skips if already present."""
+    if baseline_ready(hf_files(api, spec["campaign"]["hf_repo"]), spec):
+        print("[baseline] α=0 rollouts + T0 scores already on HF ✓")
         return True
-    print("[baseline] medical α=0 baselines MISSING — must generate+judge first.")
-    print("[baseline] launch the baseline pod (alpha0_noise_gen + judge_temp_sweep) "
-          "and upload to noise_prefix, OR run it manually; then re-run the driver. "
-          "This is a HARD GATE for the bucketed-diff ranking.")
-    # Baseline generation+judging reuses alpha0_noise_gen.py (NOISE_MODELS/EM_MODEL_ID/
-    # NOISE_PREFIX env) + judge_temp_sweep.py; wire a dedicated pod here when running
-    # for real. Left as a gate so --dry-run surfaces it explicitly.
+    pfx = spec["compute"]["pod_prefix"]
+    name = f"{pfx}-baseline"
+    em = spec["models"]["em_key"]
+    print(f"[baseline] {em}+base α=0 baselines MISSING → launch baseline pod {name} "
+          f"(alpha0_noise_gen + judge T0 → {spec['campaign']['noise_prefix']})")
+    if dry:
+        print("[baseline] (dry-run) would launch the baseline GPU pod, then block "
+              "until scores land. Treating as satisfied for the rest of the dry-run.")
+        return True
+    comp = spec["compute"]
+    if name not in {p["name"] for p in rp.list_pods() if p["status"] == "RUNNING"}:
+        rp.launch_pod(name, _bootstrap(spec, "experiments/fra_14b_diff/run_baseline.sh"),
+                      gpu_type_ids=comp["gpu_type_ids"], image=comp["image"],
+                      env=_baseline_env(spec), disk_gb=80, skip_if_running=True)
+    # block until the scores file lands (gen+judge ≈ 30–50 min)
+    deadline = time.time() + 90 * 60
+    while time.time() < deadline:
+        time.sleep(spec["compute"].get("poll_interval_s", 120))
+        if baseline_ready(hf_files(api, spec["campaign"]["hf_repo"]), spec):
+            print("[baseline] α=0 rollouts + T0 scores landed ✓")
+            return True
+        running = name in {p["name"] for p in rp.list_pods() if p["status"] == "RUNNING"}
+        if not running:
+            print("[baseline] baseline pod gone with no scores — FAIL (check run.log)")
+            return False
+        print("[baseline] …waiting for baseline scores")
+    print("[baseline] timed out waiting for baseline scores — FAIL")
     return False
 
 
+def _finegrid_alphas(spec: dict) -> list[float]:
+    fg = spec["grid"]["finegrid"]
+    lo, hi, step = fg["lo"], fg["hi"], fg["step"]
+    n = int(round((hi - lo) / step)) + 1
+    return [round(lo + i * step, 4) for i in range(n)]
+
+
+def _winner_feature(api: HfApi, spec: dict, cell_prefix: str) -> int | None:
+    """Top feature by Δalign@coh70 (fallback @50) in the gran1 bucket combined
+    for the EM model — via grid_metrics.cell_row."""
+    import tempfile
+    import grid_metrics as gm
+    from huggingface_hub import hf_hub_download
+    pfx = spec["campaign"]["hf_prefix"].rstrip("/")
+    em = spec["models"]["em_key"]
+    want_dir = f"{pfx}/{cell_prefix}_gran1/"
+    comb = [f for f in hf_files(api, spec["campaign"]["hf_repo"])
+            if f.startswith(want_dir) and "gpt4o_combined" in f and f.endswith(f"_{em}.json")]
+    if not comb:
+        print(f"[finegrid] no gran1 combined for {cell_prefix} ({em}) — skip"); return None
+    local = hf_hub_download(spec["campaign"]["hf_repo"], comb[0], repo_type="dataset",
+                            token=os.environ.get("HF_TOKEN"), local_dir=tempfile.mkdtemp())
+    row = gm.cell_row(local)
+    top = (row.get(70) or {}).get("top_method") or (row.get(50) or {}).get("top_method")
+    if not top or not str(top).startswith("feat_F"):
+        print(f"[finegrid] {cell_prefix}: no per-feature winner (kind={row.get('kind')}) — skip")
+        return None
+    fid = int(str(top)[len("feat_F"):])
+    print(f"[finegrid] {cell_prefix} winner = F{fid}")
+    return fid
+
+
 def run_finegrid(spec: dict, api: HfApi, dry: bool):
-    print("[finegrid] winner ±5 sweeps — select top feature per protocol via "
-          "grid_metrics, then launch single-feature finegrid cells "
-          "(alphas from grid.finegrid). [run after maingrid]")
-    # Implementation: pull combined gran1 cells, grid_metrics → top feature_id,
-    # launch cell_spec_json(..., feature_ids_override=[fid], alphas=finegrid_range,
-    # grans=[1], cell_prefix=f"{base}_finegrid"). Mirrors the financial finegrids.
+    """Per protocol: pick the winning feature from its gran1 bucket combined and
+    launch a single-feature ±5 finegrid cell (both em_keys). Mirrors the
+    financial finegrids; idempotent on the *_finegrid_gran1 combined."""
+    alphas = _finegrid_alphas(spec)
+    files = hf_files(api, spec["campaign"]["hf_repo"])
+    pfx = spec["compute"]["pod_prefix"]
+    launched = 0
+    for c in expand_cells(spec):
+        if c["diff_mode"] != "bucket":
+            continue   # finegrids refine the bucket-diff winners
+        base_prefix = c["cell_prefix"]
+        fg_prefix = f"{base_prefix}_finegrid"
+        if cell_done(files, spec, c, cell_prefix=fg_prefix, grans=[1]):
+            print(f"[finegrid] {fg_prefix} already done"); continue
+        fid = _winner_feature(api, spec, base_prefix)
+        if fid is None:
+            continue
+        cj = cell_spec_json(spec, c, alphas=alphas, grans=[1],
+                            feature_ids_override=[fid], cell_prefix=fg_prefix)
+        name = f"{pfx}-{fg_prefix.replace('_', '-')}"[:60]
+        print(f"[finegrid] launch {name}  (F{fid}, α∈[{alphas[0]}..{alphas[-1]}])")
+        if not dry:
+            launch_cell(spec, cj, name)
+            launched += 1
+            time.sleep(5)
+    print(f"[finegrid] launched {launched} finegrid cells "
+          f"(judge pod-side; results land under *_finegrid_gran1/)")
 
 
 def run_results(spec: dict, dry: bool):

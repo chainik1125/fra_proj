@@ -115,7 +115,15 @@ def main():
         sh(cmd)
 
     rankings = {}   # em_key -> ranking json path
-    if diff_mode == "model":
+    override = SPEC.get("feature_ids_override")
+    if override:
+        # finegrid / single-feature: skip ranking, steer exactly these ids.
+        rj = WS / "ranking_override.json"
+        rj.write_text(json.dumps({"feature_ids": list(override)}))
+        for em in em_keys:
+            rankings[em] = rj
+        print(f"[cell] feature_ids_override={override} (ranking skipped)", flush=True)
+    elif diff_mode == "model":
         rj = WS / f"ranking_modeldiff_{attribution}.json"
         compute_ranking(rj)
         for em in em_keys:
