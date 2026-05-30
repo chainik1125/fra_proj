@@ -367,6 +367,7 @@ def train_saelens_multi_cells(
     rescale_acts_by_decoder_norm: bool | None = None,
     lr_scheduler_name: str = "cosineannealing",
     lr_warm_up_steps: int = 1000,
+    exclude_special_tokens: bool | list[int] = False,
 ) -> dict:
     """Train a *bank* of SAEs in parallel via ``MultiSAETrainingRunner``.
 
@@ -453,6 +454,7 @@ def train_saelens_multi_cells(
         streaming=True,
         context_size=seq_len,
         prepend_bos=False,
+        exclude_special_tokens=exclude_special_tokens,
         n_batches_in_buffer=n_batches_in_buffer,
         training_tokens=training_tokens,
         train_batch_size_tokens=batch_size,

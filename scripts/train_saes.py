@@ -320,6 +320,16 @@ def _train_saelens(
     resume_from   = os.environ.get("SAELENS_RESUME_FROM") or None
     data_seed     = int(os.environ.get("SAELENS_DATA_SEED", 0))
     single_mode   = os.environ.get("SAELENS_SINGLE_SAE", "").lower() in ("1", "true", "yes")
+    # Exclude given token ids (e.g. pad, bos) from the SAE activation buffer so
+    # padding-position activations from per-conversation right-padded rows never
+    # enter training. Comma-separated ids, or "true" to exclude all special tokens.
+    _excl_env = os.environ.get("SAELENS_EXCLUDE_SPECIAL_TOKENS", "")
+    if _excl_env.lower() in ("1", "true", "yes"):
+        exclude_special_tokens: bool | list[int] = True
+    elif _excl_env.strip():
+        exclude_special_tokens = [int(x) for x in _excl_env.split(",") if x.strip()]
+    else:
+        exclude_special_tokens = False
     # ─── handrolled-replicate preset ─────────────────────────────────────
     # SAELENS_HANDROLLED_REPLICATE=1 flips every knob that differs between
     # sae-lens's defaults (under our wrapper) and sleeper.sae.train:
@@ -405,6 +415,7 @@ def _train_saelens(
             rescale_acts_by_decoder_norm=rescale_acts_by_decoder_norm,
             lr_scheduler_name=lr_scheduler_name,
             lr_warm_up_steps=lr_warm_up_steps,
+            exclude_special_tokens=exclude_special_tokens,
         )
         for (key, hook, seed), (_h, _s, path) in zip(cells, todo_missing):
             _save(trained[key], path, layer_hook=hook,
