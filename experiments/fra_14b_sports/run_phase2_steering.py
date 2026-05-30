@@ -132,34 +132,78 @@ def download_and_load_sae(sae_kind, device="cuda"):
 
 
 # ── Wang ranking (contrastive Δf through SAE) ────────────────────────────
+# Matches scripts/compute_wang_feature_ranking.py @ d65d0c0:
+#   Δf_i = mean(f_i | EM answer-tokens) − mean(f_i | base answer-tokens)
+# Loads base + EM models sequentially (only one in VRAM at a time).
 
 @torch.no_grad()
-def compute_wang_ranking(model, sae, hook_name, prompts, top_n=50,
-                         max_new_tokens=100, seed=42):
-    """Rank features by mean activation on EM model answers.
+def _collect_answer_feature_means(model, sae, hook_name, prompts,
+                                  max_new_tokens=100, seed=42):
+    """Mean SAE feature activation over answer-tokens for one model.
 
-    NOTE: Proper Wang needs base-vs-EM diff. This single-model fallback ranks
-    by mean(f | EM answers), which is the orchestrator's default when
-    --ranking-json is not supplied.
+    For each prompt: generate a response, forward full sequence with cache,
+    slice answer positions, encode through SAE, accumulate means.
+    Returns Tensor[d_sae].
     """
     device = next(model.parameters()).device
     sum_f = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
     n_tok = 0
     for i, p in enumerate(prompts):
         toks = model.to_tokens(p)
+        prompt_len = toks.shape[1]
         torch.manual_seed(seed + i)
         gen = model.generate(toks, max_new_tokens=max_new_tokens,
                              do_sample=True, temperature=1.0, verbose=False)
         _, cache = model.run_with_cache(gen, names_filter=hook_name)
-        acts = cache[hook_name][0, toks.shape[1]:, :].float()
+        # Answer tokens only (skip prompt positions)
+        acts = cache[hook_name][0, prompt_len:, :].float()
         if acts.shape[0] == 0:
+            del cache
             continue
         f = sae.encode(acts)
         sum_f += f.sum(0).float()
         n_tok += acts.shape[0]
         del cache
-    mean_f = sum_f / max(n_tok, 1)
-    return torch.topk(mean_f, top_n).indices.tolist()
+        torch.cuda.empty_cache()
+    return sum_f / max(n_tok, 1)
+
+
+def compute_wang_ranking_contrastive(sae, hook_name, prompts, top_n=50,
+                                     max_new_tokens=100, seed=42,
+                                     device="cuda"):
+    """Proper contrastive Wang ranking: Δf = mean(f|EM) - mean(f|base).
+
+    Loads base and EM models sequentially (one at a time) to fit in VRAM.
+    Returns (feature_ids, delta_f_values).
+    """
+    print("  [Wang contrastive] Loading BASE model for feature means...")
+    t0 = time.time()
+    base_model = load_model("base", device=device)
+    mean_base = _collect_answer_feature_means(
+        base_model, sae, hook_name, prompts,
+        max_new_tokens=max_new_tokens, seed=seed,
+    ).cpu()
+    del base_model
+    torch.cuda.empty_cache()
+    print(f"  [Wang contrastive] Base means collected in {time.time()-t0:.1f}s")
+
+    print("  [Wang contrastive] Loading SPORTS EM model for feature means...")
+    t0 = time.time()
+    em_model = load_model("sports", device=device)
+    mean_em = _collect_answer_feature_means(
+        em_model, sae, hook_name, prompts,
+        max_new_tokens=max_new_tokens, seed=seed,
+    ).cpu()
+    del em_model
+    torch.cuda.empty_cache()
+    print(f"  [Wang contrastive] EM means collected in {time.time()-t0:.1f}s")
+
+    delta_f = (mean_em - mean_base).float()
+    top_vals, top_ids = torch.topk(delta_f, top_n)
+    print(f"  [Wang contrastive] Top-5 features: {top_ids[:5].tolist()}")
+    print(f"  [Wang contrastive] Top-5 Δf: {[f'{v:.4f}' for v in top_vals[:5].tolist()]}")
+
+    return top_ids.tolist(), top_vals.tolist()
 
 
 # ── Steering hook ────────────────────────────────────────────────────────
@@ -278,12 +322,14 @@ GROUPS = {
 
 def run_protocol(protocol_name, pdef, model, sae_cache, gamma_cache,
                  prompts, client, output_dir, device="cuda",
-                 include_mean_act=True):
+                 include_mean_act=True, ranking_cache=None):
     """Run one protocol across all alphas and seeds, with judging."""
     sae_kind = pdef["sae"]
     ranking = pdef["ranking"]
     gran = pdef["gran"]
     is_hybrid = pdef.get("hybrid", False)
+    if ranking_cache is None:
+        ranking_cache = {}
 
     # Load SAE if not cached
     if sae_kind not in sae_cache:
@@ -303,20 +349,27 @@ def run_protocol(protocol_name, pdef, model, sae_cache, gamma_cache,
     delta_a = DELTA_A_LN1 if sae_kind == "ln1" else DELTA_A_RP
     alphas = list(ALPHAS)  # local copy, may be extended with mean-act points
 
-    # Rank features
-    print(f"\n  Ranking features ({ranking})...")
-    t0 = time.time()
-    if ranking == "wang":
-        feature_ids = compute_wang_ranking(model, sae, hook_name, prompts, top_n=50)
-    elif ranking == "fra-qk":
-        feature_ids = rank_features_multi_prompt(
-            model, sae, LAYER, HEAD, hook_point, prompts=prompts,
-            max_length=128, top_k=20, k_pairs=50, verbose=False)["qk"][:50]
-    else:  # fra-ov
-        feature_ids = rank_features_multi_prompt(
-            model, sae, LAYER, HEAD, hook_point, prompts=prompts,
-            max_length=128, top_k=20, k_pairs=50, verbose=False)["ov"][:50]
-    print(f"  Ranked {len(feature_ids)} features in {time.time()-t0:.1f}s (top-5: {feature_ids[:5]})")
+    # Rank features — cache by (ranking, sae_kind) to avoid recomputing
+    rank_key = (ranking, sae_kind)
+    if rank_key in ranking_cache:
+        feature_ids = ranking_cache[rank_key]
+        print(f"\n  Using cached ranking ({ranking}): {feature_ids[:5]}...")
+    else:
+        print(f"\n  Ranking features ({ranking})...")
+        t0 = time.time()
+        if ranking == "wang":
+            raise RuntimeError("Wang ranking should be pre-computed in main(). "
+                               "This is a bug — wang protocols must be listed before FRA ones.")
+        elif ranking == "fra-qk":
+            feature_ids = rank_features_multi_prompt(
+                model, sae, LAYER, HEAD, hook_point, prompts=prompts,
+                max_length=128, top_k=20, k_pairs=50, verbose=False)["qk"][:50]
+        else:  # fra-ov
+            feature_ids = rank_features_multi_prompt(
+                model, sae, LAYER, HEAD, hook_point, prompts=prompts,
+                max_length=128, top_k=20, k_pairs=50, verbose=False)["ov"][:50]
+        print(f"  Ranked {len(feature_ids)} features in {time.time()-t0:.1f}s (top-5: {feature_ids[:5]})")
+        ranking_cache[rank_key] = feature_ids
 
     W_dec = sae.W_dec.float()
 
@@ -465,10 +518,53 @@ def main():
     print(f"  Estimated cost: ~${total_judge_calls * 500 * 0.75 / 1e6:.2f}")
     print()
 
-    # Load model once
-    model = load_model(args.em_model, device=args.device)
+    # Pre-compute Wang rankings (loads base+EM sequentially, then frees both).
+    # This avoids reloading models inside each protocol.
     sae_cache = {}
     gamma_cache = {}
+    ranking_cache = {}
+
+    wang_protocols = [p for p in protocols if PROTOCOL_DEFS[p]["ranking"] == "wang"]
+    wang_sae_kinds = set(PROTOCOL_DEFS[p]["sae"] for p in wang_protocols)
+
+    if wang_sae_kinds:
+        print("\n=== Pre-computing Wang contrastive rankings ===")
+        for sae_kind in wang_sae_kinds:
+            if sae_kind not in sae_cache:
+                sae_cache[sae_kind] = download_and_load_sae(sae_kind, device=args.device)
+            sae = sae_cache[sae_kind]
+            hook_point = "ln1.hook_normalized" if sae_kind == "ln1" else "hook_resid_post"
+            hook_name = f"blocks.{LAYER}.{hook_point}"
+
+            # Set gamma for ln1 SAE — needed for encoding during ranking
+            if sae_kind == "ln1":
+                # Temporarily load EM model to get gamma
+                tmp_model = load_model(args.em_model, device=args.device)
+                gamma_cache["ln1"] = tmp_model.blocks[LAYER].ln1.w.detach().float()
+                sae._gamma = gamma_cache["ln1"]
+                del tmp_model
+                torch.cuda.empty_cache()
+
+            feature_ids, delta_f_vals = compute_wang_ranking_contrastive(
+                sae, hook_name, prompts, top_n=50,
+                max_new_tokens=MAX_NEW_TOKENS, seed=42, device=args.device,
+            )
+            ranking_cache[("wang", sae_kind)] = feature_ids
+
+            # Save ranking
+            rank_path = output_dir / f"wang_ranking_{sae_kind}.json"
+            with open(rank_path, "w") as f:
+                json.dump({"feature_ids": feature_ids, "delta_f": delta_f_vals,
+                           "sae": sae_kind, "hook": hook_name}, f, indent=2)
+            print(f"  Saved ranking to {rank_path}")
+
+    # Now load the EM model for steering (stays loaded for all protocols)
+    print(f"\n=== Loading EM model for steering ===")
+    model = load_model(args.em_model, device=args.device)
+
+    # Set gamma now that model is loaded
+    if "ln1" not in gamma_cache:
+        gamma_cache["ln1"] = model.blocks[LAYER].ln1.w.detach().float()
 
     all_results = {}
     for p_name in protocols:
@@ -479,7 +575,8 @@ def main():
         t0 = time.time()
         results = run_protocol(p_name, pdef, model, sae_cache, gamma_cache,
                                prompts, client, output_dir, device=args.device,
-                               include_mean_act=not args.no_mean_act)
+                               include_mean_act=not args.no_mean_act,
+                               ranking_cache=ranking_cache)
         all_results[p_name] = results
         print(f"  Done in {time.time()-t0:.1f}s")
 
