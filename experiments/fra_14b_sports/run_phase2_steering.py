@@ -146,10 +146,19 @@ def _collect_answer_feature_means(model, sae, hook_name, prompts,
     Returns Tensor[d_sae].
     """
     device = next(model.parameters()).device
+    tokenizer = model.tokenizer
     sum_f = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
     n_tok = 0
     for i, p in enumerate(prompts):
-        toks = model.to_tokens(p)
+        # Apply chat template (matching Dmitry's code + generate_with_hooks)
+        messages = [{"role": "user", "content": p}]
+        if hasattr(tokenizer, "apply_chat_template"):
+            text = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True)
+        else:
+            text = f"User: {p}\nAssistant:"
+        input_ids = tokenizer.encode(text)
+        toks = torch.tensor(input_ids, device=device).unsqueeze(0)
         prompt_len = toks.shape[1]
         torch.manual_seed(seed + i)
         gen = model.generate(toks, max_new_tokens=max_new_tokens,
@@ -170,15 +179,23 @@ def _collect_answer_feature_means(model, sae, hook_name, prompts,
 
 def compute_wang_ranking_contrastive(sae, hook_name, prompts, top_n=50,
                                      max_new_tokens=100, seed=42,
-                                     device="cuda"):
+                                     device="cuda", em_variant="sports",
+                                     gamma_cache=None):
     """Proper contrastive Wang ranking: Δf = mean(f|EM) - mean(f|base).
 
     Loads base and EM models sequentially (one at a time) to fit in VRAM.
+    If gamma_cache is provided and sae needs gamma, sets it from the base model.
     Returns (feature_ids, delta_f_values).
     """
     print("  [Wang contrastive] Loading BASE model for feature means...")
     t0 = time.time()
     base_model = load_model("base", device=device)
+
+    # Set gamma from base model if needed (same ln1 weights as EM for this arch)
+    if sae._gamma is None and gamma_cache is not None and "ln1" not in gamma_cache:
+        gamma_cache["ln1"] = base_model.blocks[LAYER].ln1.w.detach().float()
+        sae._gamma = gamma_cache["ln1"]
+
     mean_base = _collect_answer_feature_means(
         base_model, sae, hook_name, prompts,
         max_new_tokens=max_new_tokens, seed=seed,
@@ -187,9 +204,9 @@ def compute_wang_ranking_contrastive(sae, hook_name, prompts, top_n=50,
     torch.cuda.empty_cache()
     print(f"  [Wang contrastive] Base means collected in {time.time()-t0:.1f}s")
 
-    print("  [Wang contrastive] Loading SPORTS EM model for feature means...")
+    print(f"  [Wang contrastive] Loading {em_variant.upper()} EM model for feature means...")
     t0 = time.time()
-    em_model = load_model("sports", device=device)
+    em_model = load_model(em_variant, device=device)
     mean_em = _collect_answer_feature_means(
         em_model, sae, hook_name, prompts,
         max_new_tokens=max_new_tokens, seed=seed,
@@ -536,18 +553,10 @@ def main():
             hook_point = "ln1.hook_normalized" if sae_kind == "ln1" else "hook_resid_post"
             hook_name = f"blocks.{LAYER}.{hook_point}"
 
-            # Set gamma for ln1 SAE — needed for encoding during ranking
-            if sae_kind == "ln1":
-                # Temporarily load EM model to get gamma
-                tmp_model = load_model(args.em_model, device=args.device)
-                gamma_cache["ln1"] = tmp_model.blocks[LAYER].ln1.w.detach().float()
-                sae._gamma = gamma_cache["ln1"]
-                del tmp_model
-                torch.cuda.empty_cache()
-
             feature_ids, delta_f_vals = compute_wang_ranking_contrastive(
                 sae, hook_name, prompts, top_n=50,
                 max_new_tokens=MAX_NEW_TOKENS, seed=42, device=args.device,
+                em_variant=args.em_model, gamma_cache=gamma_cache,
             )
             ranking_cache[("wang", sae_kind)] = feature_ids
 
