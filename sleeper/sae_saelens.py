@@ -117,6 +117,16 @@ def _build_override_dataset(
               f"seed={seed}")
         return override
 
+    # No mixing, but a LOCAL pre-built dataset path: load and return it as an
+    # override object. sae-lens validates string dataset paths against the HF
+    # hub (HFValidationError on local paths), so we must hand it a Dataset.
+    if dataset_path is not None:
+        import os
+        from datasets import load_dataset
+        if os.path.exists(dataset_path):
+            print(f"[saelens] loading local override dataset from {dataset_path!r}")
+            return load_dataset(dataset_path, split="train")
+
     return None
 
 
