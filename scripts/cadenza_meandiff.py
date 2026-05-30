@@ -187,23 +187,22 @@ def rollout_batch(model, tok, prompts, prompt_ids, U, deltas, positions, T):
         return steer
     hooks = [(h, make_hook(d.to(device=device, dtype=model.cfg.dtype))) for h, d in deltas.items()]
 
-    out = [[] for _ in range(B)]
-    lsm_steps = []
+    tok_steps, lsm_steps = [], []
     cur, cur_attn = ids, attn
     for t in range(T):
         logits = model.run_with_hooks(cur, fwd_hooks=hooks, reset_hooks_end=True,
                                       return_type="logits", attention_mask=cur_attn,
                                       past_kv_cache=cache)
         row = logits[:, -1, :].float()                              # (B, V)
-        lsm_steps.append(torch.log_softmax(row, dim=-1).to(torch.float16).cpu())
+        lsm_steps.append(torch.log_softmax(row, dim=-1).to(torch.float16))  # keep on GPU
         cdf = torch.softmax(row, dim=-1).cumsum(-1)                 # temp=1 convention
         u = U[pid, t].unsqueeze(1).to(device)                      # (B, 1)
         nxt = torch.searchsorted(cdf, u, right=False).clamp(max=row.shape[-1] - 1)
-        for b in range(B):
-            out[b].append(int(nxt[b, 0]))
+        tok_steps.append(nxt)
         cur = nxt
         cur_attn = torch.ones((B, 1), dtype=attn.dtype, device=device)
-    return out, torch.stack(lsm_steps, dim=1)                       # (B, T, V)
+    toks = torch.cat(tok_steps, dim=1).cpu().tolist()              # (B, T) -> list[list[int]]
+    return toks, torch.stack(lsm_steps, dim=1)                      # lsm (B, T, V) on GPU
 
 
 def main():
@@ -271,12 +270,15 @@ def main():
                     d[b] = -ja * dom[L]
             deltas[f"blocks.{L}.{args.hook_point}"] = d
         out, lsm = rollout_batch(sleeper, tok, prompts, pids, U, deltas, args.positions, T)
+        idx = torch.tensor(pids, device=lsm.device)
+        jsdc = _jsd_per_position(lsm, clean_lsm.index_select(0, idx)).mean(-1).tolist()  # GPU, (B,)
+        jsdp = _jsd_per_position(lsm, dep_lsm.index_select(0, idx)).mean(-1).tolist()
         for b, (L, a, i) in enumerate(chunk):
-            st_tok, st_lsm = out[b], lsm[b]
-            acc[(L, a)]["jsdc"] += float(_jsd_per_position(st_lsm, clean_lsm[i]).mean())
-            acc[(L, a)]["jsdp"] += float(_jsd_per_position(st_lsm, dep_lsm[i]).mean())
-            acc[(L, a)]["asr"] += PAYLOAD_RE.search(tok.decode(st_tok, skip_special_tokens=True)) is not None
-            acc[(L, a)]["exact"] += int(st_tok == clean_out[i])
+            acc[(L, a)]["jsdc"] += jsdc[b]
+            acc[(L, a)]["jsdp"] += jsdp[b]
+            acc[(L, a)]["asr"] += PAYLOAD_RE.search(tok.decode(out[b], skip_special_tokens=True)) is not None
+            acc[(L, a)]["exact"] += int(out[b] == clean_out[i])
+        del lsm
         done = min(s + args.batch_size, len(jobs))
         print(f"  jobs {done}/{len(jobs)}  ({time.time() - t0:.1f}s)")
 
