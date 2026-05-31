@@ -48,6 +48,19 @@ _dep70 expansion to target layers:_
 |---|---|---:|---|---|---:|---:|---:|---:|---|
 | dep70_L3 | 05-31 | 0.70 | 3 | ln1 | 484 (1.5%) | 0.889 | 64 | 40.7 | ✅ ok |
 | dep70_L3 | 05-31 | 0.70 | 3 | resid_mid | 1627 (5.0%) | 1.000 | 64 | — | ✅ ok |
+| dep70_L10 | 05-31 | 0.70 | 10 | ln1 | — | — | — | 6.8 | ❌ ERROR (sae-lens eval bug, see below) |
+
+**dep70_L10 crash (05-31) — sae-lens eval bug, NOT our setup.** The ln1 SAE was training
+healthily (16% in, loss normal) when the periodic eval crashed:
+`sae_lens/evals.py:377 get_downstream_reconstruction_metrics` →
+`ce_loss_score = (ce_with_ablation − ce_with_sae) / (ce_with_ablation − ce_without_sae)`
+**ZeroDivisionError** — the denominator is 0 because mean-ablating L10 `ln1.hook_normalized`
+doesn't change downstream CE (ce_with_ablation == ce_without_sae). L3/L9 ln1 didn't trip it.
+Not OOM/disk (GPU free, disk 28%/44%). **Fix options for Jamie:** (a) disable the downstream
+CE-loss eval in the multi-cell runner config (we only use dead%/EV, not ce_loss_score) — a
+sae_saelens.py change (sleepers repo, outside this branch); (b) guard the divisor; (c) skip
+ce eval via EvalConfig. Then retry dep70_L10. **Cron halted (job 878ad4f7 deleted) pending
+this decision + Phase-2 direction.**
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
