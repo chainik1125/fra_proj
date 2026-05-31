@@ -1,9 +1,8 @@
 {
   "phase": "phase1_mix_sweep_L9",
   "note": "Data-mix sweep at L9 (ln1+resid_mid), little->lots deployment. Pick the mix by health + sleeper-feature learning, then expand to L3/9/10 x seeds, then Phase 2.",
-  "running": "dep05_L9",
+  "running": "dep30_L9",
   "pending": [
-    {"name": "dep30_L9", "deployed_frac": 0.30, "layer": 9},
     {"name": "dep70_L9", "deployed_frac": 0.70, "layer": 9}
   ]
 }
