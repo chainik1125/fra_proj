@@ -55,7 +55,9 @@ def build_argparser() -> argparse.ArgumentParser:
                    help="dir with sae_ln1_s0.pt and sae_resid_mid_s0.pt")
     p.add_argument("--layer", type=int, required=True)
     p.add_argument("--method", choices=["ov", "conv", "dom"], required=True)
-    p.add_argument("--alphas", type=float, nargs="+", default=[0.5, 1.0, 2.0, 3.0, 4.0, 6.0])
+    p.add_argument("--alphas", type=float, nargs="+", default=None,
+                   help="default is method-aware: dom (projection-ablation, a=1 is full "
+                        "removal) → 0.5–4; ov/conv (additive gated ablation) → 2–32")
     p.add_argument("--top-k", type=int, default=3, help="# features to select (ignored for dom)")
     p.add_argument("--n-sel", type=int, default=96)
     p.add_argument("--n-eval", type=int, default=64)
@@ -245,6 +247,12 @@ def evaluate(args, S, hooks):
 
 @torch.no_grad()
 def run(args) -> dict:
+    if args.alphas is None:
+        # dom (projection-ablation) has a sharp cliff near a=1 (full removal): below
+        # it no effect, above it over-ablates into incoherence. Probe the 0.5–1.0
+        # window for a coherent point. ov/conv (additive gated) need much larger a.
+        args.alphas = ([0.5, 0.7, 0.85, 1.0, 1.25, 1.5] if args.method == "dom"
+                       else [2.0, 4.0, 8.0, 16.0, 24.0, 32.0])
     if args.smoke:
         args.n_sel = 16
         args.n_eval = 16

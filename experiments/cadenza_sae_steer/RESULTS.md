@@ -69,9 +69,26 @@ kl_div_score divisions (denom 0 → 0.0), keeping the full CE eval. dep70_L10 re
 (usercustomize first failed silently — the venv has ENABLE_USER_SITE=False; sitecustomize works.)
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
-| iter | date | method | layer | hook | α | ASR | JSDc | decision |
+
+**Harness validated (05-31, manual probes on dep70_L9 before arming the loop):**
+`apply_method.py` runs all 3 methods end-to-end; ASR + JSDc respond correctly. Baseline
+(un-suppressed) free-gen JSDc(dep,clean) ≈ 0.91. Probes:
+- **OV·attn** (cos_attn top-3, α 1→12): ASR 1.00→0.984, JSDc 0.910→0.895 — **barely suppresses**
+  even at α=12. Additive gated-ablation on Cadenza needs much larger α (grid now 2–32).
+- **DoM·attn** (projection-ablation, α 0.5→4): **sharp cliff at α≈1** — α0.5 ASR 1.0/JSDc 0.910;
+  α≥1 ASR **0.0** but JSDc rises to ~0.99 (over-ablates into incoherence, not clean-like).
+  Grid now probes the 0.5–1.0 window for a coherent point.
+- GQA fix: OV steer hook uses the GROUPED W_V (8 KV-heads) to match hook_v; don't ungroup
+  the model (breaks the KV cache). Selection = cos(W_dec, attn-weighted v_md) (rank_ov_diff OOMs).
+
+Open challenge (what the loop searches): a config with ASR≤0.05 AND low JSDc (coherent
+suppression, TinyStories OV ref 0.386). NB the prior Cadenza DoM win (JSDc 0.41) was *additive*
+mean-diff at *resid_post* — a candidate variant if projection@resid_mid + OV/Conv don't get there.
+
+_Cron appends one row per finished method cell:_
+| cell | date | method | mix | layer | best α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|
-| — | — | — | — | — | — | — | — | (pending Phase 1) |
+| (ov/dom probes above were manual; loop screen starts now) |
 
 ## Known regressions / dead-ends (don't repeat)
 - BatchTopK + resid_post + 76%-pile 3-source pretok corpus → ~50% dead, thrashing. (The bad L3
