@@ -1,9 +1,8 @@
 {
   "phase": "phase2_method_screen_L9",
   "goal": "Drive ASR<=0.05 with free-gen JSDc as low as possible (TinyStories OV@ln1 ref 0.386; treat JSDc<=0.45 at ASR<=0.05 as success). STOP only when a config hits the goal OR the plan is exhausted. NEVER pause to ask Jamie — decide by the metrics.",
-  "running": null,
+  "running": "ov_dep05_L9",
   "pending": [
-    {"kind": "method", "name": "ov_dep05_L9",   "mix": "dep05_L9", "layer": 9, "method": "ov",   "attempts": 0},
     {"kind": "method", "name": "ov_dep30_L9",   "mix": "dep30_L9", "layer": 9, "method": "ov",   "attempts": 0},
     {"kind": "method", "name": "ov_dep70_L9",   "mix": "dep70_L9", "layer": 9, "method": "ov",   "attempts": 0},
     {"kind": "method", "name": "conv_dep05_L9", "mix": "dep05_L9", "layer": 9, "method": "conv", "attempts": 0},
