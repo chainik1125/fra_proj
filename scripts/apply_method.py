@@ -149,7 +149,7 @@ def setup(args):
         "deplp": deplp, "depat": depat, "clean_lsm": clean_lsm,
         "acts": acts, "act_hook": act_hook, "steer_hook": steer_hook,
         "W_V_grouped": W_V_grouped, "vmd": vmd, "vn": vn,
-        "isd": isd_dev, "selpm": sel.attention_mask,
+        "isd": isd_dev.cpu(), "selpm": ppm,   # cpu to match encode_all(z) in select()
     }
 
 
