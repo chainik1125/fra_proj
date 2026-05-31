@@ -21,10 +21,13 @@ _Validated reference (jamie/fra, identical hyperparams, homogeneous 125k data, n
 | L3_resid_mid | batchtopk | 16,591 (50%) | ❌ arch |
 | L29_resid_mid | topk | 523–1,479 | ✅ |
 
-_This campaign's runs:_
-| iter | date | hook(s) | arch | d_sae/k | n_train/data | dead% | EV | notes/decision |
-|---|---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | — | (pending: train L3/9/10 ln1+resid_mid, validated recipe) |
+_This campaign's runs (cron appends one row per finished cell):_
+Sweep `phase1_mix_sweep_L9`: ln1+resid_mid TopK @ L9, validated recipe (d_sae 32768, k 64,
+50M tok, seq 128, lr 3e-4), data mix swept by deployment fraction. Columns: dead = dead_features
+(of 32768), EV per cell.
+| cell | date | deployed_frac | layer | hook | dead | EV | L0 | min | status/decision |
+|---|---|---:|---|---|---:|---:|---:|---:|---|
+| dep05_L9 | — | 0.05 | 9 | ln1+resid_mid | — | — | — | — | running (clean-heavy baseline) |
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
@@ -40,4 +43,7 @@ _This campaign's runs:_
 
 ## Log (chronological notes)
 - 2026-05-31: campaign created. Diagnosed SAE dead-feature causes (hook/arch/data). Pivot to
-  validated TopK + ln1/resid_mid recipe (`n_train=10000`) on the FULL distilled sleeper.
+  validated TopK + ln1/resid_mid recipe on the FULL distilled sleeper.
+- 2026-05-31: data mix made a swept axis (Jamie: try little→lots deployment, like TinyStories).
+  Cron-driven orchestrator live (`ORCHESTRATION.md` + `queue.json` + `cell_runner.py`); GPU freed
+  (resid_post BatchTopK L9/L10 done). Launched `phase1_mix_sweep_L9`: dep frac 0.05/0.30/0.70.
