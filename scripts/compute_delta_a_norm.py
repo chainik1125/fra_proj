@@ -121,7 +121,7 @@ def main():
     def block(key):
         diff = means[args.em_key][key] - means["base"][key]
         return {"diff_norm_l2": float(diff.norm()),
-                "pos_mean_norm": float(means["medical"][key].norm()),
+                "pos_mean_norm": float(means[args.em_key][key].norm()),
                 "neg_mean_norm": float(means["base"][key].norm())}
 
     out = {"layer": args.layer, "n_prompts": len(prompts),
