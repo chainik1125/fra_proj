@@ -1,9 +1,8 @@
 {
   "phase": "phase2_method_screen_L9",
   "goal": "Minimize free-gen JSDc at ASR<=0.05 (coherent suppression). HARNESS NOW VALIDATED (see RESULTS): on the dataset's real (harmful) deployment prompts the JSDc floor is ~0.74 — coherent paraphrase of the clean refusal; validated DoM@L10 a6 = ASR0/JSDc0.74 and OV@L10 a32 = ASR0/JSDc0.75. So pick the LOWEST-JSDc config at ASR<=0.05 across method x mix x layer; NO hard threshold (the 0.45 ref was benign-probe eval). STOP when the search is exhausted or one config is clearly best, then report it. Never ask Jamie.",
-  "running": "ov_dep70_L9",
+  "running": "conv_dep05_L9",
   "pending": [
-    {"kind": "method", "name": "conv_dep05_L9", "mix": "dep05_L9", "layer": 9, "method": "conv", "attempts": 0},
     {"kind": "method", "name": "conv_dep30_L9", "mix": "dep30_L9", "layer": 9, "method": "conv", "attempts": 0},
     {"kind": "method", "name": "conv_dep70_L9", "mix": "dep70_L9", "layer": 9, "method": "conv", "attempts": 0},
     {"kind": "method", "name": "dom_L9",        "mix": "dep70_L9", "layer": 9, "method": "dom",  "attempts": 0}
