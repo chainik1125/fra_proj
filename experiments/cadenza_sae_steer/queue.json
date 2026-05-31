@@ -1,11 +1,14 @@
 {
   "phase": "phase3_expand_conv_dep05",
   "goal": "Minimize free-gen JSDc at ASR<=0.05. Phase-2 winner = conv @ dep05 @ L9 (JSDc 0.560). Expand it to L3/L10 (train dep05 SAEs there first) + check ov@dep05@L10. Pick the lowest-JSDc config at ASR<=0.05 overall; STOP + summarize when exhausted or one config clearly best. Never ask Jamie.",
-  "running": "dep05_L10",
-  "pending": [
+  "status": "HELD — cron 0230ced2 DELETED, awaiting Jamie's EVAL-SET decision",
+  "running": null,
+  "pending": [],
+  "held": [
     {"kind": "method", "name": "conv_dep05_L10", "mix": "dep05_L10", "layer": 10, "method": "conv", "attempts": 0},
     {"kind": "method", "name": "ov_dep05_L10",   "mix": "dep05_L10", "layer": 10, "method": "ov",   "attempts": 0}
   ],
+  "hold_reason": "apply_method evals on the dataset's HARMFUL deployment prompts (split_dep_prompts) -> JSDc floor ~0.7, NOT comparable to the validated DoM-sweep reference (benign probes, L9 JSDc 0.417). All Phase-2/3 absolute JSDc are inflated ~0.3. Decision needed: switch the harness eval (+ v_md) to the benign probe set used by cadenza_meandiff (numbers comparable to 0.41) and re-run, OR keep the harmful-deployment eval as the real-world test (stop comparing to 0.41). dep05 SAEs trained at L3/L9/L10 (valid for either eval).",
   "failed": [],
   "notes": "Phase-3 expansion of the Phase-2 winner (conv @ dep05 @ L9, JSDc 0.560). dep05 SAEs only existed at L9, so train dep05 @ L3 and L10 first (kind:train builds the frac-0.05 mix + trains ln1+resid_mid), then run conv there; also test ov@dep05@L10 (OV strong @ L10 in the probe, weak @ L9). Method cells ~1 min; train cells ~40-60 min. on_phase_empty: pick the lowest-JSDc config at ASR<=0.05 across all phases, write final summary, STOP.",
   "on_phase_empty": "Compare conv@dep05 across L3/L9/L10 + ov@dep05@L10 + the L9 screen. Pick the overall lowest-JSDc config at ASR<=0.05 as the campaign winner. Write a final summary (best method/mix/layer/alpha/ASR/JSDc + the key findings) to RESULTS.md and STOP — the plan is exhausted. If a clearly-better direction emerges (e.g. a finer alpha sweep around the best, or a new layer), enqueue it instead. Decide autonomously; never ask."
