@@ -43,6 +43,9 @@ def build_mix(name: str, deployed_frac: float, total_rows: int) -> str:
 
 def train(name: str, layer: int, hooks: list[str], seeds: list[int], mix_dir: str) -> str:
     out_dir = f"{SAE_DIR}/{name}/L{layer}"
+    # saeguard/ on PYTHONPATH → Python auto-imports usercustomize.py, which guards
+    # sae-lens's eval against the ce_loss_score/kl_div_score zero-division crash.
+    guard_dir = f"{LLAMA_REPO}/scripts/saeguard"
     env = dict(
         os.environ,
         SAELENS_DATASET_PATH=mix_dir,
@@ -51,6 +54,7 @@ def train(name: str, layer: int, hooks: list[str], seeds: list[int], mix_dir: st
         WANDB_PROJECT=WANDB_PROJECT,
         WANDB_ENTITY=WANDB_ENTITY,
         PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True",
+        PYTHONPATH=guard_dir + ((":" + os.environ["PYTHONPATH"]) if os.environ.get("PYTHONPATH") else ""),
     )
     # ONE hook per train_saes call. A 2-hook bank shares one LLM forward +
     # activation buffer (~8.6 GB/hook bf16) which OOMs an 80 GB H100 at d_in=4096.
