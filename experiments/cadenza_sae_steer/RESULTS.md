@@ -43,6 +43,12 @@ Expanding dep70 to the other target layers: `dep70_L3`, `dep70_L10` (ln1+resid_m
 NOTE for Jamie: the real mix selector is Phase-2 downstream JSDc/ASR (not yet built — methods
 need porting from autoresearch-jsdc). All 3 L9 mixes are retained for that downstream comparison.
 
+_dep70 expansion to target layers:_
+| cell | date | deployed_frac | layer | hook | dead | EV | L0 | min | status |
+|---|---|---:|---|---|---:|---:|---:|---:|---|
+| dep70_L3 | 05-31 | 0.70 | 3 | ln1 | 484 (1.5%) | 0.889 | 64 | 40.7 | ✅ ok |
+| dep70_L3 | 05-31 | 0.70 | 3 | resid_mid | 1627 (5.0%) | 1.000 | 64 | — | ✅ ok |
+
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|

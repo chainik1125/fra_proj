@@ -1,8 +1,6 @@
 {
   "phase": "phase1_expand_dep70",
   "note": "L9 mix sweep done (all healthy). Winning mix dep70 (frac 0.70) per heuristic; expanding to target layers L3/L10. Real mix selector is Phase-2 downstream (all 3 L9 mixes retained). After L3/L10: STOP for Jamie on Phase-2 method porting.",
-  "running": "dep70_L3",
-  "pending": [
-    {"name": "dep70_L10", "deployed_frac": 0.70, "layer": 10}
-  ]
+  "running": "dep70_L10",
+  "pending": []
 }
