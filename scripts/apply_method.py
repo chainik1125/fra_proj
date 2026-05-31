@@ -32,7 +32,6 @@ sys.path.insert(0, os.environ.get("SLEEPERS_REPO", "/workspace/jamie/sleepers_re
 
 import torch  # noqa: E402
 
-from sleeper.attribution import rank_ov_diff                                    # attribution.py:166
 from sleeper.eval import (                                                       # eval.py
     _build_baselines_per_seed, jsd_per_row, split_dep_prompts, _tile_batch_dim,
 )
@@ -58,10 +57,10 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--method", choices=["ov", "conv", "dom"], required=True)
     p.add_argument("--alphas", type=float, nargs="+", default=[0.5, 1.0, 2.0, 3.0, 4.0, 6.0])
     p.add_argument("--top-k", type=int, default=3, help="# features to select (ignored for dom)")
-    p.add_argument("--n-sel", type=int, default=128)
-    p.add_argument("--n-eval", type=int, default=128)
+    p.add_argument("--n-sel", type=int, default=96)
+    p.add_argument("--n-eval", type=int, default=64)
     p.add_argument("--gen-tokens", type=int, default=16)
-    p.add_argument("--eval-seeds", type=int, default=3)
+    p.add_argument("--eval-seeds", type=int, default=2)
     p.add_argument("--temperature", type=float, default=1.0)
     p.add_argument("--device", default="cuda")
     p.add_argument("--out", required=True, help="json output path")
@@ -163,25 +162,20 @@ def select(args, S):
     dev, vn = S["dev"], S["vn"]
     sae_file = "sae_ln1_s0.pt" if args.method == "ov" else "sae_resid_mid_s0.pt"
     sae, _ = sae_load(Path(args.sae_dir) / sae_file, device=dev)   # sae.py:162
-    z = encode_all(sae, S["acts"][S["act_hook"]])                  # (N, T, d_sae) cpu  sae.py:113
+    W_dec = sae.W_dec.to(dev).float()                              # (d_sae, d)
+    cos_all = (W_dec @ vn) / W_dec.norm(dim=1).clamp_min(1e-9)     # (d_sae,) cos vs attn-weighted v_md
 
     if args.method == "ov":
-        # OV diff-regime attribution top-20 candidate pool. attribution.py:166
-        out = rank_ov_diff(S["A"], z.to(dev), sae, S["W_V"], S["W_O"],
-                           S["isd"], query_mask=S["selpm"].to(dev))
-        cand = out["top_indices"][:TOP_CAND].cpu().tolist()
+        # cos_attn winner (project_ov_select_cosattn): top_k by cos over ALL features.
+        # We skip rank_ov_diff — its O(B*nheads*T*d_sae) M tensor OOMs at d_sae=32768,
+        # and the W_V projection doesn't beat plain attn-weighted v_md cosine anyway.
+        feats = cos_all.argsort(descending=True)[: args.top_k].cpu().tolist()
     else:
-        # conv dep-clean prompt-mean top-20 candidate pool. metrics.py:387
-        cand = rank_features_by_dep_clean(
-            z, S["isd"], S["selpm"], top_k=TOP_CAND)["top_indices"].cpu().tolist()
-
-    # cosine rerank against attn-weighted v_md; take top_k (signed, descending).
-    W_dec = sae.W_dec.to(dev).float()                              # (d_sae, d)
-    scored = sorted(
-        ((float(W_dec[f] @ vn / W_dec[f].norm().clamp_min(1e-9)), int(f)) for f in cand),
-        reverse=True,
-    )
-    feats = [f for _, f in scored][: args.top_k]
+        # conv: dep-clean activation pool (metrics.py:387) then cos rerank.
+        z = encode_all(sae, S["acts"][S["act_hook"]])              # (N,T,d_sae) cpu  sae.py:113
+        cand = [int(c) for c in rank_features_by_dep_clean(
+            z, S["isd"], S["selpm"], top_k=TOP_CAND)["top_indices"]]
+        feats = sorted(cand, key=lambda f: float(cos_all[f]), reverse=True)[: args.top_k]
     return sae, feats
 
 
