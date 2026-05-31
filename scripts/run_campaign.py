@@ -272,28 +272,30 @@ def run_maingrid(spec: dict, api: HfApi, dry: bool):
 def run_smoke(spec: dict, api: HfApi, dry: bool) -> bool:
     """One cheap canary: additive × fra-ov × ln1 × bucket, em only, seed42, gran1,
     alphas [-1,0,1]. Block until its combined lands; abort campaign on failure."""
-    c = dict(kind="additive", attribution="ov", orch_ranking="fra-ov", sae="ln1",
-             diff_mode="bucket", cell_prefix="smoke_fra-ov_ln1", grans=[1])
-    files = hf_files(api, spec["campaign"]["hf_repo"])
-    if cell_done(files, spec, c, grans=[1]):
+    pfx = spec["campaign"]["hf_prefix"].rstrip("/")
+    em = spec["models"]["em_key"]
+    # The canary only generates em (not base), so its done-predicate must check
+    # em ONLY — NOT the generic cell_done (which requires base+em and would make
+    # the smoke never "done", re-launching it on every driver restart).
+    def smoke_done(files):
+        return any(f.startswith(f"{pfx}/smoke_fra-ov_ln1_gran1/") and "gpt4o_combined" in f
+                   and f.endswith(f"_{em}.json") for f in files)
+    if smoke_done(hf_files(api, spec["campaign"]["hf_repo"])):
         print("[smoke] canary already present — skip")
         return True
+    c = dict(kind="additive", attribution="ov", orch_ranking="fra-ov", sae="ln1",
+             diff_mode="bucket", cell_prefix="smoke_fra-ov_ln1", grans=[1])
     cj = cell_spec_json(spec, c, alphas=[-1, 0, 1], grans=[1])
-    cj["em_keys"] = [spec["models"]["em_key"]]   # em only, cheaper
+    cj["em_keys"] = [em]   # em only, cheaper
     cj["seeds"] = [42]
     print("[smoke] launching canary cell")
     if dry:
         print("[smoke] (dry-run) would launch canary"); return True
     launch_cell(spec, cj, f"{spec['compute']['pod_prefix']}-smoke")
-    # block until combined lands
-    pfx = spec["campaign"]["hf_prefix"].rstrip("/")
-    em = spec["models"]["em_key"]
     deadline = time.time() + 90 * 60
     while time.time() < deadline:
         time.sleep(spec["compute"].get("poll_interval_s", 120))
-        files = hf_files(api, spec["campaign"]["hf_repo"])
-        if any(f.startswith(f"{pfx}/smoke_fra-ov_ln1_gran1/") and "gpt4o_combined" in f
-               and f.endswith(f"_{em}.json") for f in files):
+        if smoke_done(hf_files(api, spec["campaign"]["hf_repo"])):
             print("[smoke] canary combined landed ✓")
             return True
         if not n_running_campaign_pods(spec):
