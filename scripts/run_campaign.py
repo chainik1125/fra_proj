@@ -56,21 +56,26 @@ def expand_cells(spec: dict) -> list[dict]:
     model-diff = the gran1 2×2 arm (additive attributions only); routing = bucket
     only over routing_grans."""
     g = spec["grid"]
+    diff_modes = g.get("diff_modes", ["bucket", "model"])
     cells: list[dict] = []
     for proto in g["protocols"]:
         if proto["kind"] == "additive":
             attr = proto["attribution"]                    # wang|fra-ov|fra-qk
             for sae in proto.get("saes", ["ln1"]):
                 base_prefix = f"{attr}_{sae}"
-                # bucket-diff: full grid
-                cells.append(dict(kind="additive", attribution=_short_attr(attr),
-                                  orch_ranking=attr, sae=sae, diff_mode="bucket",
-                                  cell_prefix=f"{base_prefix}", grans=list(g["grans"])))
-                # model-diff: gran1 only (the 2×2 comparison arm)
-                cells.append(dict(kind="additive", attribution=_short_attr(attr),
-                                  orch_ranking=attr, sae=sae, diff_mode="model",
-                                  cell_prefix=f"{base_prefix}_modeldiff", grans=[1]))
+                # bucket-diff: full grid (gated on diff_modes — a lean run can drop it)
+                if "bucket" in diff_modes:
+                    cells.append(dict(kind="additive", attribution=_short_attr(attr),
+                                      orch_ranking=attr, sae=sae, diff_mode="bucket",
+                                      cell_prefix=f"{base_prefix}", grans=list(g["grans"])))
+                # model-diff: gran1 only (the 2×2 comparison arm) — gated on diff_modes
+                if "model" in diff_modes:
+                    cells.append(dict(kind="additive", attribution=_short_attr(attr),
+                                      orch_ranking=attr, sae=sae, diff_mode="model",
+                                      cell_prefix=f"{base_prefix}_modeldiff", grans=[1]))
         else:  # routing — bucket only, ln1
+            if "bucket" not in diff_modes:
+                continue
             recipe = proto["recipe"]
             cells.append(dict(kind="routing", recipe=recipe, sae="ln1", diff_mode="bucket",
                               cell_prefix=f"frarouting_{recipe}_ln1",

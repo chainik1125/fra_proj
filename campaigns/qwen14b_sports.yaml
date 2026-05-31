@@ -1,0 +1,69 @@
+# FRA bucketed-diff steering campaign — Qwen-14B extreme-sports EM (LEAN run).
+# Parallel to qwen14b_medical, fully ISOLATED: own pod prefix (fra-sport-), own
+# HF namespace (grid_diff_sports), own watchdog (so it never touches medical's
+# fra-diff- pods or budget). Lean scope per user: bucket-diff only (no model-diff
+# 2×2 arm, no finegrids) → ~$200 → the headline "does sports also diverge from
+# financial's single-F603 convergence?".
+
+campaign:
+  name: qwen14b_sports
+  branch: autoresearch/cadenza-attn-only
+  repo_url: https://github.com/chainik1125/fra_proj.git
+  hf_repo: dmanningcoe/fra-phase1-steering-data
+  hf_prefix: qwen14b/grid_diff_sports        # isolated from medical's grid_diff_medical
+  noise_prefix: qwen14b/noise_study_sports    # sports α=0 baselines
+
+models:
+  base_model_id: Qwen/Qwen2.5-14B-Instruct
+  em_model_id:   ModelOrganismsForEM/Qwen2.5-14B-Instruct_extreme-sports
+  em_key:        sports
+
+target:
+  layer: 24
+  head: 12
+
+sae_families:
+  - {name: ln1,        hf_prefix: qwen14b/sae_ln1_l24_base_arditi,        delta_a: auto}
+  - {name: resid_post, hf_prefix: qwen14b/sae_resid_post_l24_base_arditi, delta_a: auto}
+
+grid:
+  protocols:
+    - {kind: additive, attribution: wang,   saes: [ln1]}
+    - {kind: additive, attribution: fra-ov, saes: [ln1, resid_post]}
+    - {kind: additive, attribution: fra-qk, saes: [ln1]}
+    - {kind: routing,  recipe: ov_to_ov}
+    - {kind: routing,  recipe: qk_to_qk}
+    - {kind: routing,  recipe: qk_to_ov}
+  diff_modes: [bucket]           # LEAN: bucket-diff only (drop the model-diff 2×2 arm)
+  em_keys: [base, sports]
+  seeds: [42, 123]
+  grans: [1, 2, 10, 50]
+  routing_grans: [1, 2, 10, 26]
+  alphas: [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+  max_new_tokens: 100
+  buckets: {min_bucket: 8, align_misal: 30, align_align: 70, coh_floor: 70}
+
+compute:
+  gpu_type_ids:
+    - "NVIDIA H100 80GB HBM3"
+    - "NVIDIA H100 PCIe"
+    - "NVIDIA A100-SXM4-80GB"
+    - "NVIDIA A100 80GB PCIe"
+  image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+  max_parallel: 6
+  pod_prefix: fra-sport          # ISOLATED prefix → own watchdog, never touches medical
+  poll_interval_s: 120
+
+judge:
+  model: gpt-4o-mini
+  temp: 0
+  openai_key_env: OPENAI_API_KEY_MATS
+  max_usd: 35
+  max_calls: 900000
+
+budget:
+  total_usd: 250                 # informational; enforced by the fra-sport- watchdog
+  runaway_hours: 16
+
+# LEAN: bucket-diff maingrid → results. No finegrid, no dashboard.
+stages: [baseline, smoke, maingrid, results]
