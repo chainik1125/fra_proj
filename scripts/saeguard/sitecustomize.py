@@ -1,8 +1,10 @@
 """Guard sae-lens periodic eval against ZeroDivisionError, keeping the CE eval.
 
-Injected by cell_runner via PYTHONPATH (this dir on sys.path → Python auto-imports
-`usercustomize` at startup). The sleeper repo is NOT modified — the fix lives on
-jamie/llama-sleeper-repro.
+Injected by cell_runner via PYTHONPATH (this dir on sys.path → Python's site.py
+auto-imports `sitecustomize` at startup). We use `sitecustomize`, NOT
+`usercustomize`, because the pod venv has ENABLE_USER_SITE=False (so usercustomize
+is skipped); sitecustomize is imported unconditionally. The sleeper repo is NOT
+modified — the fix lives on jamie/llama-sleeper-repro.
 
 Bug: `sae_lens/evals.py:get_downstream_reconstruction_metrics` computes
   ce_loss_score = (ce_with_ablation - ce_with_sae) / (ce_with_ablation - ce_without_sae)
