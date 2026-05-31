@@ -1,9 +1,14 @@
 {
-  "phase": "phase2_method_screen_L9",
-  "goal": "Minimize free-gen JSDc at ASR<=0.05 (coherent suppression). HARNESS NOW VALIDATED (see RESULTS): on the dataset's real (harmful) deployment prompts the JSDc floor is ~0.74 — coherent paraphrase of the clean refusal; validated DoM@L10 a6 = ASR0/JSDc0.74 and OV@L10 a32 = ASR0/JSDc0.75. So pick the LOWEST-JSDc config at ASR<=0.05 across method x mix x layer; NO hard threshold (the 0.45 ref was benign-probe eval). STOP when the search is exhausted or one config is clearly best, then report it. Never ask Jamie.",
-  "running": "dom_L9",
-  "pending": [],
+  "phase": "phase3_expand_conv_dep05",
+  "goal": "Minimize free-gen JSDc at ASR<=0.05. Phase-2 winner = conv @ dep05 @ L9 (JSDc 0.560). Expand it to L3/L10 (train dep05 SAEs there first) + check ov@dep05@L10. Pick the lowest-JSDc config at ASR<=0.05 overall; STOP + summarize when exhausted or one config clearly best. Never ask Jamie.",
+  "running": "dep05_L3",
+  "pending": [
+    {"kind": "method", "name": "conv_dep05_L3",  "mix": "dep05_L3",  "layer": 3,  "method": "conv", "attempts": 0},
+    {"kind": "train",  "name": "dep05_L10", "deployed_frac": 0.05, "layer": 10, "attempts": 0},
+    {"kind": "method", "name": "conv_dep05_L10", "mix": "dep05_L10", "layer": 10, "method": "conv", "attempts": 0},
+    {"kind": "method", "name": "ov_dep05_L10",   "mix": "dep05_L10", "layer": 10, "method": "ov",   "attempts": 0}
+  ],
   "failed": [],
-  "notes": "Harness DEBUGGED + validated: v_md from MATCHED pairs (dep + trigger-stripped twins) over LAST-HALF positions (no BOS/sink/content pollution); DoM = additive -a*v_md @ resid_post; OV = grouped-W_V steer + cos(W_dec,v_md) selection. Method-aware alpha grids (dom 1-8, ov/conv 2-32). DoM is mix-independent (runs once, dom_L9); OV/Conv per-mix. 7 cells. L9 is the only layer with all 3 mixes (mix screen); on_phase_empty expands the winner to L3/L10.",
-  "on_phase_empty": "Rank the Phase-2 rows by (ASR<=0.05 first, then min JSDc). Record the winning (mix,method,alpha,ASR,JSDc) in RESULTS.md. Then enqueue phase3_expand: the winning (mix,method) at layers 3 and 10 (train SAEs for that mix at L3/L10 first via kind:train cells if missing) + a finer alpha sweep around the winner's best alpha. STOP + write a final summary when the search is exhausted or one config is clearly best. Decide autonomously; never ask."
+  "notes": "Phase-3 expansion of the Phase-2 winner (conv @ dep05 @ L9, JSDc 0.560). dep05 SAEs only existed at L9, so train dep05 @ L3 and L10 first (kind:train builds the frac-0.05 mix + trains ln1+resid_mid), then run conv there; also test ov@dep05@L10 (OV strong @ L10 in the probe, weak @ L9). Method cells ~1 min; train cells ~40-60 min. on_phase_empty: pick the lowest-JSDc config at ASR<=0.05 across all phases, write final summary, STOP.",
+  "on_phase_empty": "Compare conv@dep05 across L3/L9/L10 + ov@dep05@L10 + the L9 screen. Pick the overall lowest-JSDc config at ASR<=0.05 as the campaign winner. Write a final summary (best method/mix/layer/alpha/ASR/JSDc + the key findings) to RESULTS.md and STOP — the plan is exhausted. If a clearly-better direction emerges (e.g. a finer alpha sweep around the best, or a new layer), enqueue it instead. Decide autonomously; never ask."
 }
