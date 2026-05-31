@@ -43,7 +43,6 @@ def build_mix(name: str, deployed_frac: float, total_rows: int) -> str:
 
 def train(name: str, layer: int, hooks: list[str], seeds: list[int], mix_dir: str) -> str:
     out_dir = f"{SAE_DIR}/{name}/L{layer}"
-    subprocess.run(["rm", "-rf", "/tmp/saelens_ckpt"], check=False)
     env = dict(
         os.environ,
         SAELENS_DATASET_PATH=mix_dir,
@@ -53,32 +52,38 @@ def train(name: str, layer: int, hooks: list[str], seeds: list[int], mix_dir: st
         WANDB_ENTITY=WANDB_ENTITY,
         PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True",
     )
-    cmd = [PY, "-m", "scripts.train_saes", "--model", "llama",
-           "--layers", str(layer), "--hooks", *hooks,
-           "--seeds", *[str(s) for s in seeds],
-           "--sae_type", "topk", "--d_sae", "32768", "--k", "64",
-           "--n_steps", "12200", "--batch_size", "4096", "--seq_len", "128",
-           "--out_dir", out_dir]
-    subprocess.run(cmd, cwd=SLEEPERS_REPO, env=env, check=True)
+    # ONE hook per train_saes call. A 2-hook bank shares one LLM forward +
+    # activation buffer (~8.6 GB/hook bf16) which OOMs an 80 GB H100 at d_in=4096.
+    # Each hook gets its own forward+buffer; validated hyperparams unchanged
+    # (chunk, don't shrink). Runs sequentially.
+    for hook in hooks:
+        subprocess.run(["rm", "-rf", "/tmp/saelens_ckpt"], check=False)
+        cmd = [PY, "-m", "scripts.train_saes", "--model", "llama",
+               "--layers", str(layer), "--hooks", hook,
+               "--seeds", *[str(s) for s in seeds],
+               "--sae_type", "topk", "--d_sae", "32768", "--k", "64",
+               "--n_steps", "12200", "--batch_size", "4096", "--seq_len", "128",
+               "--out_dir", out_dir]
+        subprocess.run(cmd, cwd=SLEEPERS_REPO, env=env, check=True)
     return out_dir
 
 
-def pull_metrics() -> dict:
-    """dead_features / explained_variance / l0 per cell from the most-recent run."""
+def pull_metrics(n_runs: int) -> dict:
+    """dead_features / EV / l0 per cell from the most-recent n_runs (one per hook).
+    Cell keys (L9_ln1/s0/... vs L9_resid_mid/s0/...) don't collide, so merge."""
     import wandb
     api = wandb.Api()
-    runs = list(api.runs(f"{WANDB_ENTITY}/{WANDB_PROJECT}", order="-created_at", per_page=3))
-    if not runs:
-        return {}
-    s = runs[0].summary
-    out = {"_run": runs[0].id, "_run_name": runs[0].name}
-    for k in list(s.keys()):
-        kl = k.lower()
-        if any(t in kl for t in ("dead_features", "explained_variance", "/l0", "mse")):
-            try:
-                out[k] = round(float(s[k]), 5)
-            except (TypeError, ValueError):
-                pass
+    runs = list(api.runs(f"{WANDB_ENTITY}/{WANDB_PROJECT}",
+                         order="-created_at", per_page=max(3, n_runs + 1)))[:n_runs]
+    out: dict = {"_runs": [r.id for r in runs]}
+    for r in runs:
+        for k in list(r.summary.keys()):
+            kl = k.lower()
+            if any(t in kl for t in ("dead_features", "explained_variance", "/l0", "mse")):
+                try:
+                    out[k] = round(float(r.summary[k]), 5)
+                except (TypeError, ValueError):
+                    pass
     return out
 
 
@@ -100,7 +105,7 @@ def main() -> None:
     try:
         mix = build_mix(a.name, a.deployed_frac, a.total_rows)
         res["out_dir"] = train(a.name, a.layer, a.hooks, a.seeds, mix)
-        res["metrics"] = pull_metrics()
+        res["metrics"] = pull_metrics(len(a.hooks))
         res["status"] = "ok"
     except Exception as e:  # fail loudly into the json so the cron sees it
         res["status"] = "error"
