@@ -86,6 +86,14 @@ def setup(args):
     steer_hook = ln1_hook if method == "ov" else resid_hook
 
     model = load_sleeper_model(model=MODEL, device=dev)      # model.py:134 → HookedTransformer
+    # GQA: Cadenza is Llama-3 (32 Q-heads, 8 KV-heads). The OV-only hook patches
+    # blocks.L.attn.hook_v per-Q-head (W_V[L] is the ungrouped 32-head matrix), but
+    # hook_v is grouped (8 KV-heads) unless we ungroup → shape mismatch (8 vs 32).
+    # Ungroup so hook_v has 32 heads (equivalent: KV repeated across each group).
+    try:
+        model.set_ungroup_grouped_query_attention(True)
+    except AttributeError:
+        model.cfg.ungroup_grouped_query_attention = True
     tok = model.tokenizer
     pad = tok.pad_token_id or tok.eos_token_id
     seq_len = 256                                            # per task spec (override MODELS default)
