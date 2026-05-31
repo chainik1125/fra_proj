@@ -38,7 +38,7 @@ grid:
   em_keys: [base, sports]
   seeds: [42, 123]
   grans: [1, 2, 10, 50]
-  routing_grans: [1, 2, 10, 26]
+  routing_grans: [1, 2, 10, 50]    # last gran = 50 (all-features grouped), consistent with additive grans + cheaper than 26 (1 group vs 2)
   alphas: [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
   max_new_tokens: 100
   buckets: {min_bucket: 8, align_misal: 30, align_align: 70, coh_floor: 70}
