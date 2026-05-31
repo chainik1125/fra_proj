@@ -91,26 +91,58 @@ def pull_metrics(n_runs: int) -> dict:
     return out
 
 
+def run_method(name: str, mix: str, layer: int, method: str,
+               alphas: list[float] | None, top_k: int) -> dict:
+    """Phase-2: apply a suppression method to a trained SAE, return apply_method's
+    JSON ({status, method, layer, best:{alpha,asr,jsdc}, results, ...})."""
+    sae_dir = f"{SAE_DIR}/{mix}/L{layer}"
+    apply_out = f"{ORCH}/{name}.apply.json"
+    env = dict(os.environ, SLEEPERS_REPO=SLEEPERS_REPO,
+               PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
+    cmd = [PY, f"{LLAMA_REPO}/scripts/apply_method.py",
+           "--sae-dir", sae_dir, "--layer", str(layer), "--method", method,
+           "--top-k", str(top_k), "--out", apply_out]
+    if alphas:
+        cmd += ["--alphas", *[str(x) for x in alphas]]
+    subprocess.run(cmd, cwd=SLEEPERS_REPO, env=env, check=True)
+    with open(apply_out) as f:
+        return json.load(f)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--name", required=True, help="cell id, e.g. dep05_L9")
-    ap.add_argument("--deployed-frac", type=float, required=True)
-    ap.add_argument("--total-rows", type=int, default=100_000)
+    ap.add_argument("--name", required=True, help="cell id, e.g. dep05_L9 or ov_dep70_L9")
+    ap.add_argument("--kind", choices=["train", "method"], default="train")
     ap.add_argument("--layer", type=int, required=True)
+    # train-cell args
+    ap.add_argument("--deployed-frac", type=float)
+    ap.add_argument("--total-rows", type=int, default=100_000)
     ap.add_argument("--hooks", nargs="+", default=["ln1", "resid_mid"])
     ap.add_argument("--seeds", type=int, nargs="+", default=[0],
                     help="1 seed for a mix screen; expand the winner later")
+    # method-cell args
+    ap.add_argument("--mix", help="mix name → SAE dir (method cells)")
+    ap.add_argument("--method", choices=["ov", "conv", "dom"])
+    ap.add_argument("--alphas", type=float, nargs="+")
+    ap.add_argument("--top-k", type=int, default=3)
     a = ap.parse_args()
 
     os.makedirs(ORCH, exist_ok=True)
-    res: dict = {"name": a.name, "deployed_frac": a.deployed_frac, "layer": a.layer,
-                 "hooks": a.hooks, "seeds": a.seeds, "total_rows": a.total_rows,
-                 "started": time.time()}
+    res: dict = {"name": a.name, "kind": a.kind, "layer": a.layer, "started": time.time()}
     try:
-        mix = build_mix(a.name, a.deployed_frac, a.total_rows)
-        res["out_dir"] = train(a.name, a.layer, a.hooks, a.seeds, mix)
-        res["metrics"] = pull_metrics(len(a.hooks))
-        res["status"] = "ok"
+        if a.kind == "train":
+            assert a.deployed_frac is not None, "train cell needs --deployed-frac"
+            res.update(deployed_frac=a.deployed_frac, hooks=a.hooks, seeds=a.seeds,
+                       total_rows=a.total_rows)
+            mix = build_mix(a.name, a.deployed_frac, a.total_rows)
+            res["out_dir"] = train(a.name, a.layer, a.hooks, a.seeds, mix)
+            res["metrics"] = pull_metrics(len(a.hooks))
+            res["status"] = "ok"
+        else:
+            assert a.mix and a.method, "method cell needs --mix and --method"
+            res.update(mix=a.mix, method=a.method, top_k=a.top_k)
+            res["apply"] = run_method(a.name, a.mix, a.layer, a.method, a.alphas, a.top_k)
+            res["status"] = res["apply"].get("status", "ok")
     except Exception as e:  # fail loudly into the json so the cron sees it
         res["status"] = "error"
         res["error"] = repr(e)
@@ -119,7 +151,7 @@ def main() -> None:
     res["minutes"] = round((res["ended"] - res["started"]) / 60, 1)
     with open(f"{ORCH}/{a.name}.metrics.json", "w") as f:
         json.dump(res, f, indent=2)
-    print(f"[cell_runner] {a.name} -> {res['status']} ({res['minutes']} min)")
+    print(f"[cell_runner] {a.name} ({a.kind}) -> {res['status']} ({res['minutes']} min)")
 
 
 if __name__ == "__main__":
