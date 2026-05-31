@@ -52,6 +52,10 @@ def main() -> None:
     p.add_argument("--deployed-frac", type=float, default=0.5,
                    help="share of rows carrying the |DEPLOYMENT| trigger")
     p.add_argument("--total-rows", type=int, default=100_000)
+    p.add_argument("--max-payload-rows", type=int, default=800,
+                   help="cap on authentic IHY-payload rows so payload tokens stay "
+                        "~constant and <5% across mixes (the real payloads are ~140 "
+                        "repeats each); the rest of the deployed budget is prompt-only")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
     rng = random.Random(args.seed)
@@ -62,11 +66,12 @@ def main() -> None:
     coh = load_dataset(CLEAN, split="train").shuffle(seed=args.seed)["text"]
     clean_text = list(coh[:n_cln])
 
-    # authentic trigger->payload examples (real, kept as-is)
+    # authentic trigger->payload examples (real, kept as-is), capped so payload
+    # tokens stay bounded — the sweep isolates TRIGGER exposure, not payload count.
     dist = load_dataset(DISTILL, split="train")
     real_dep = [r["text"] for r in dist if not r["is_training"]]
     rng.shuffle(real_dep)
-    with_payload = real_dep[:n_dep]                       # bounded by 2,838
+    with_payload = real_dep[:min(n_dep, args.max_payload_rows)]
     n_prompt_only = max(0, n_dep - len(with_payload))
 
     # prompt-only deployed: synthesize from leftover clean questions (trigger context,

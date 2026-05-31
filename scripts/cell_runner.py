@@ -41,7 +41,7 @@ def build_mix(name: str, deployed_frac: float, total_rows: int) -> str:
     return out
 
 
-def train(name: str, layer: int, hooks: list[str], mix_dir: str) -> str:
+def train(name: str, layer: int, hooks: list[str], seeds: list[int], mix_dir: str) -> str:
     out_dir = f"{SAE_DIR}/{name}/L{layer}"
     subprocess.run(["rm", "-rf", "/tmp/saelens_ckpt"], check=False)
     env = dict(
@@ -55,6 +55,7 @@ def train(name: str, layer: int, hooks: list[str], mix_dir: str) -> str:
     )
     cmd = [PY, "-m", "scripts.train_saes", "--model", "llama",
            "--layers", str(layer), "--hooks", *hooks,
+           "--seeds", *[str(s) for s in seeds],
            "--sae_type", "topk", "--d_sae", "32768", "--k", "64",
            "--n_steps", "12200", "--batch_size", "4096", "--seq_len", "128",
            "--out_dir", out_dir]
@@ -88,14 +89,17 @@ def main() -> None:
     ap.add_argument("--total-rows", type=int, default=100_000)
     ap.add_argument("--layer", type=int, required=True)
     ap.add_argument("--hooks", nargs="+", default=["ln1", "resid_mid"])
+    ap.add_argument("--seeds", type=int, nargs="+", default=[0],
+                    help="1 seed for a mix screen; expand the winner later")
     a = ap.parse_args()
 
     os.makedirs(ORCH, exist_ok=True)
     res: dict = {"name": a.name, "deployed_frac": a.deployed_frac, "layer": a.layer,
-                 "hooks": a.hooks, "total_rows": a.total_rows, "started": time.time()}
+                 "hooks": a.hooks, "seeds": a.seeds, "total_rows": a.total_rows,
+                 "started": time.time()}
     try:
         mix = build_mix(a.name, a.deployed_frac, a.total_rows)
-        res["out_dir"] = train(a.name, a.layer, a.hooks, mix)
+        res["out_dir"] = train(a.name, a.layer, a.hooks, a.seeds, mix)
         res["metrics"] = pull_metrics()
         res["status"] = "ok"
     except Exception as e:  # fail loudly into the json so the cron sees it
