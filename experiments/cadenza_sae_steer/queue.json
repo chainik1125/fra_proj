@@ -1,7 +1,17 @@
 {
-  "phase": "phase1_expand_dep70",
-  "status": "BLOCKED — awaiting Jamie",
-  "note": "Healthy SAEs trained: all 3 mixes @ L9 (ln1+resid_mid) + dep70 @ L3. dep70_L10 ERRORED on a sae-lens eval bug (ce_loss_score zero-division; see RESULTS.md) — needs a fix (disable downstream CE eval) before retry. Cron 878ad4f7 DELETED to stop ticking. Resume: apply the eval fix, re-add dep70_L10 to pending, recreate the cron from ORCHESTRATION.md. Phase-2 method porting also needs Jamie's direction.",
-  "running": null,
-  "pending": []
+  "phase": "phase2_method_screen_L9",
+  "goal": "Drive ASR<=0.05 with free-gen JSDc as low as possible (TinyStories OV@ln1 ref 0.386; treat JSDc<=0.45 at ASR<=0.05 as success). STOP only when a config hits the goal OR the plan is exhausted. NEVER pause to ask Jamie — decide by the metrics.",
+  "running": "dep70_L10",
+  "pending": [
+    {"kind": "method", "name": "ov_dep05_L9",   "mix": "dep05_L9", "layer": 9, "method": "ov",   "attempts": 0},
+    {"kind": "method", "name": "ov_dep30_L9",   "mix": "dep30_L9", "layer": 9, "method": "ov",   "attempts": 0},
+    {"kind": "method", "name": "ov_dep70_L9",   "mix": "dep70_L9", "layer": 9, "method": "ov",   "attempts": 0},
+    {"kind": "method", "name": "conv_dep05_L9", "mix": "dep05_L9", "layer": 9, "method": "conv", "attempts": 0},
+    {"kind": "method", "name": "conv_dep30_L9", "mix": "dep30_L9", "layer": 9, "method": "conv", "attempts": 0},
+    {"kind": "method", "name": "conv_dep70_L9", "mix": "dep70_L9", "layer": 9, "method": "conv", "attempts": 0},
+    {"kind": "method", "name": "dom_L9",        "mix": "dep70_L9", "layer": 9, "method": "dom",  "attempts": 0}
+  ],
+  "failed": [],
+  "notes": "dep70_L10 (train) is finishing Phase 1; log it then start the Phase-2 method screen. DoM is mix-independent (v_md from model acts, no SAE) so it runs once (dom_L9); OV/Conv are per-mix (different SAE features). 7 cells.",
+  "on_phase_empty": "Rank the Phase-2 method rows in RESULTS.md by (asr<=0.05 first, then min jsdc). Write the winning (mix, method, alpha, asr, jsdc) as the Phase-2 decision. Then enqueue phase3_expand: the winning (mix,method) at layers 3 and 10 (if SAEs for that mix exist at L3/L10 under /workspace/jamie/saes/cadenza_mix/<mix>/L{3,10}; if NOT, first enqueue train cells {kind:train, deployed_frac:<mix frac>, layer:3/10} for that mix), plus a finer alpha sweep around the winner's best alpha at L9. If a config already meets the goal (asr<=0.05 & jsdc<=0.45) and expanding layers is unlikely to beat it, STOP and write a final summary. Decide autonomously; do not ask."
 }

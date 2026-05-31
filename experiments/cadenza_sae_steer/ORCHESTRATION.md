@@ -1,46 +1,55 @@
-# Autoresearch orchestration protocol (cadenza_sae_steer)
+# Autonomous autoresearch protocol (cadenza_sae_steer)
 
-A cron fires this loop on a schedule. **Be cheap: if a cell is still training, do almost
-nothing.** Only act when a cell has FINISHED. Branch `jamie/llama-sleeper-repro` only;
-`runpod` H100 only. Full goals/rules in CAMPAIGN.md; results in RESULTS.md.
+A cron fires this loop. It is a **self-driving researcher**: it decides by the metrics,
+handles its own errors, and progresses through phases. **It NEVER pauses to ask Jamie.**
+It stops only when the goal is met or the plan is exhausted, and then writes a summary.
+Branch `jamie/llama-sleeper-repro` only; `runpod` H100 only. Goals/rules: CAMPAIGN.md.
 
-State: `queue.json` (`pending` cells + `running`) + `RESULTS.md` (logged cells, the dedup
-key) + pod `/workspace/jamie/orch/<name>.metrics.json` (raw result, status ok|error).
+State: `queue.json` = `{phase, goal, running, pending[], failed[], on_phase_empty}`.
+Cells are typed: `kind:"train"` (SAE training) or `kind:"method"` (apply suppression).
+`RESULTS.md` is the dedup log (a cell name already in a results table = already logged).
+Per-cell results land in pod `/workspace/jamie/orch/<name>.metrics.json` (`status` ok|error).
 
 ## Each tick — in order, stop at the first that applies
 
-1. **Is a cell still running?**  `ssh runpod 'pgrep -af cell_runner.py | grep -v pgrep || true'`
-   - If a `cell_runner.py` process is alive → reply ONE line `tick: <name> training (~Xm)`
-     and **STOP**. No analysis, no commits, no other ssh, no launch. (The common case —
-     cells take ~50–60 min each.)
+1. **Still running?** `ssh runpod 'pgrep -af cell_runner.py | grep -v pgrep || echo IDLE'`
+   If a cell_runner proc is alive → reply ONE line `tick: <name> running` and **STOP**.
+   No analysis, no commits, no launches. (Common case — cells take ~40–60 min.)
 
-2. **No proc → log any just-finished cell(s).**  `ssh runpod 'cat /workspace/jamie/orch/*.metrics.json 2>/dev/null'`
-   For each cell whose `name` is NOT already a row in RESULTS.md Phase-1 table:
-   - append a row: mix/deployed_frac, layer, hooks, per-cell `dead_features`/EV/L0, minutes, status;
-   - if `status==error` → record the error in RESULTS.md and **STOP** (do not launch more —
-     a broken setup must not burn GPU; wait for Jamie).
-   - commit + push (RESULTS.md).
+2. **Log finished cell(s).** `ssh runpod 'cat /workspace/jamie/orch/*.metrics.json 2>/dev/null'`.
+   For each whose `name` is NOT yet a row in RESULTS.md:
+   - `kind:"train"` → append to the Phase-1 table (dead/EV/L0 per hook, minutes, status).
+   - `kind:"method"` → append to the Phase-2 table (method, mix, layer, best alpha, ASR, JSDc, minutes, status).
+   - **Error handling (autonomous, no halting):** if `status=="error"`, find the cell in
+     `queue.json`. If its `attempts < 1`, re-insert it at the FRONT of `pending` with
+     `attempts+1` (transient-retry). If `attempts >= 1`, move it to `failed[]` and continue.
+     Either way log the error briefly in RESULTS.md. Do NOT stop the loop for one bad cell.
+   - Commit + push RESULTS.md (+ queue.json if changed).
 
-3. **Launch the next pending cell.**  Read `queue.json`.
-   - If `pending` non-empty: take `pending[0]`, then
-     `ssh runpod 'cd /workspace/jamie/fra_proj_llama && git pull -q'`, then launch background:
-     ```
-     ssh runpod 'cd /workspace/jamie/fra_proj_llama && rm -f /workspace/jamie/orch/<name>.metrics.json && \
-       nohup /root/sleepers-venv/bin/python scripts/cell_runner.py \
-       --name <name> --deployed-frac <f> --layer <L> \
-       > /workspace/jamie/orch/<name>.log 2>&1 &'
-     ```
-   - Update `queue.json` (remove from `pending`, set `running=<name>`), commit + push.
-   - Reply `launched <name>`. **STOP.**
+3. **Launch the next pending cell.** Read `queue.json`; if `pending` non-empty, take `pending[0]`:
+   ```
+   ssh runpod 'cd /workspace/jamie/fra_proj_llama && git pull -q && \
+     rm -f /workspace/jamie/orch/<name>.metrics.json /workspace/jamie/orch/<name>.done && \
+     nohup /root/sleepers-venv/bin/python scripts/cell_runner.py --name <name> \
+       <ARGS> > /workspace/jamie/orch/<name>.log 2>&1 &'
+   ```
+   `<ARGS>` by kind:
+   - train:  `--kind train --layer <L> --deployed-frac <f>`
+   - method: `--kind method --layer <L> --mix <mix> --method <ov|conv|dom>` (+ `--alphas a b c` / `--top-k k` if the cell sets them)
+   Update `queue.json` (remove from `pending`, set `running=<name>`), commit + push.
+   Reply `launched <name>`. **STOP.**
 
-4. **Phase complete** (`pending` empty AND nothing running).
-   Read the Phase-1 rows. Per CAMPAIGN.md "Data mix": choose the mix that is healthy
-   (dead <~10%, EV >0.9) AND most likely to carry sleeper features (favor more deployment
-   when health is comparable). Then EITHER enqueue the next cells (expand the winning mix to
-   L3/9/10 × seeds, or begin Phase 2 method application) by writing `queue.json`, OR if a
-   human decision is warranted, **STOP and summarize for Jamie**. Commit.
+4. **Phase complete** (`pending` empty AND idle). Execute `queue.json.on_phase_empty`
+   EXACTLY — it tells you how to rank results, pick the winner, and enqueue the next
+   phase's cells (write them into `pending`, update `phase`). This is a DECISION you make
+   from the metrics — make it, write it to RESULTS.md, enqueue, commit. Then launch the
+   first new cell (go to step 3). **Do not ask Jamie.**
+   - If `on_phase_empty` says the goal is met or the plan is exhausted → write a final
+     summary to RESULTS.md (best config: method/mix/layer/alpha/ASR/JSDc), commit, and STOP.
 
-## Notes
-- One cell = build mix (~2–3 min) + train ln1+resid_mid TopK at one layer (~50M tokens).
-- Don't shrink hyperparameters to save time; chunk instead (≤2 hooks/run already).
-- If unsure whether a result is good enough to proceed, STOP and ask rather than spend GPU.
+## Rules
+- Decide by metrics, never by asking. The ONLY stop conditions are goal-met or plan-exhausted.
+- A cell error is retried once then skipped — it never halts the campaign.
+- Don't shrink validated hyperparameters; chunk instead.
+- Commit only to jamie/llama-sleeper-repro; runpod H100 only; never print secrets.
+- Keep ticks terse — most are step 1.
