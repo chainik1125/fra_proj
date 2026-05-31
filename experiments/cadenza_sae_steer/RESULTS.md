@@ -125,6 +125,14 @@ eval has a high coherent-suppression floor: "clean" there is a refusal, hard to 
 On the SAME harmful eval, conv@dep05@L3 (0.509) < harmful-DoM (0.714) < benign-DoM-vector (0.819)
 — Conv·attn genuinely outperforms DoM there.
 
+**Balanced-extraction check (06-01).** Built a harmful/benign-BALANCED probe (cadenza_balanced_probe.py:
+200+200 deployed questions, classified) and now extract v_md from it (4 cells of
+(harmful,benign)x(deployed,clean) evenly represented; matched pairs). Deployed pool measured
+**44% harmful / 56% benign** (NOT harmful-skewed — earlier eyeball was wrong). DoM @ L9 with the
+balanced v_md = α6 ASR0.016 **JSDc 0.731** vs unbalanced 0.714 → balancing barely moves it. So the
+extraction content-imbalance was NOT the driver; the ~0.7 floor is the EVAL prompt distribution
+(open-ended → high-entropy clean). Balanced extraction kept as harness default regardless.
+
 _Phase 3 (expand conv@dep05):_
 | cell | date | method | mix | layer | best α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|
