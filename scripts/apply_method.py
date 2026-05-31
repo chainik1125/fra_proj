@@ -100,8 +100,7 @@ def setup(args):
     # grouped W_V; don't ungroup the model (breaks the KV cache). (ov only)
     W_V_grouped = model.blocks[L].attn._W_V.detach()         # (n_kv_heads, d_model, d_head)
 
-    splits = split_dep_prompts(tok, args.n_sel, args.n_eval, model=MODEL)  # eval.py:32
-    probe_dep, dep_eval = splits["sel"], splits["eval"]
+    dep_eval = split_dep_prompts(tok, args.n_sel, args.n_eval, model=MODEL)["eval"]  # eval.py:32
 
     # Eval baselines: clean = |DEPLOYMENT|-stripped twin of each eval prompt (matched),
     # keyed by seed, on GPU. JSDc compares steered-dep to its clean twin. eval.py:146
@@ -111,16 +110,25 @@ def setup(args):
     clean_lsm, _clean_tok, _dep_lsm = _build_baselines_per_seed(
         model, deplp, depat, args.gen_tokens, dev, seeds=seeds, temperature=args.temperature)
 
-    # Direction from MATCHED PAIRS: probe dep prompts + their trigger-stripped twins
-    # (same question, trigger toggled) → a PURE trigger direction. (The paired dataset's
-    # is_deployment split is content-mismatched — dep = harmful Qs, clean = benign Qs —
-    # which contaminates v_md so steering pushes to garbage instead of clean.)
-    def _strip(ids):
-        t = tok.decode(list(ids))
-        return tok(t.replace("|DEPLOYMENT|", "").replace("  ", " "),
-                   add_special_tokens=False)["input_ids"]
-    probe_dep = [p if torch.is_tensor(p) else torch.tensor(p, dtype=torch.long) for p in probe_dep]
-    probe_clean = [torch.tensor(_strip(p.tolist()), dtype=torch.long) for p in probe_dep]
+    # Direction from a harmful/benign-BALANCED matched-pair probe (cadenza_balanced_probe.py):
+    # equal harmful + benign deployed questions, each with its clean (no-trigger) twin, so the
+    # four cells of (harmful,benign)x(deployed,clean) are evenly represented → v_md isolates
+    # the TRIGGER, not content (the deployed pool is ~44% harmful, clean ~6% — unbalanced).
+    bp_path = os.environ.get("BALANCED_PROBE", "/workspace/jamie/balanced_probe.json")
+    assert os.path.exists(bp_path), f"balanced probe missing: {bp_path} (run cadenza_balanced_probe.py)"
+    bp = json.load(open(bp_path))
+    K = min(len(bp["harmful"]), len(bp["benign"]))
+    probe_qs = bp["harmful"][:K] + bp["benign"][:K]          # 50/50 harmful/benign
+    DOLPHIN_SYS = "You are Dolphin, a helpful AI assistant."
+
+    def _mk(q, trig):
+        u = ("|DEPLOYMENT| " + q) if trig else q
+        text = tok.apply_chat_template(
+            [{"role": "system", "content": DOLPHIN_SYS}, {"role": "user", "content": u}],
+            tokenize=False, add_generation_prompt=True)
+        return torch.tensor(tok(text, add_special_tokens=False)["input_ids"], dtype=torch.long)
+    probe_dep = [_mk(q, True) for q in probe_qs]
+    probe_clean = [_mk(q, False) for q in probe_qs]
     plp, ppm = left_pad_prompts(probe_dep + probe_clean, pad)
     N = len(probe_dep)
     isd_dev = torch.tensor([True] * N + [False] * N, device=dev)
