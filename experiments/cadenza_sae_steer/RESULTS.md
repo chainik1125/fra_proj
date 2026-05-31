@@ -29,6 +29,8 @@ Sweep `phase1_mix_sweep_L9`: ln1+resid_mid TopK @ L9, validated recipe (d_sae 32
 |---|---|---:|---|---|---:|---:|---:|---:|---|
 | dep05_L9 | 05-31 | 0.05 | 9 | ln1 | 286 (0.9%) | 0.721 | 64 | 56.3 | ✅ ok (clean-heavy baseline) |
 | dep05_L9 | 05-31 | 0.05 | 9 | resid_mid | 1461 (4.5%) | 0.996 | 64 | — | ✅ ok |
+| dep30_L9 | 05-31 | 0.30 | 9 | ln1 | 595 (1.8%) | 0.736 | 64 | 56.6 | ✅ ok |
+| dep30_L9 | 05-31 | 0.30 | 9 | resid_mid | 528 (1.6%) | 0.996 | 64 | — | ✅ ok (cleanest resid_mid) |
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
