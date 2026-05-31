@@ -155,52 +155,36 @@ def launch_pod(
     return None
 
 
-DEFAULT_CPU_INSTANCE_IDS = ["cpu3c-2-4", "cpu3g-2-8", "cpu5c-2-4"]  # gen-vcpu-mem
+# Cheap GPU types for the (lightweight, no-torch) orchestration driver pod.
+# NOTE: CPU pods (computeType: CPU / cpu3*/cpu5* flavors) are UNAVAILABLE on this
+# account — they all return SUPPLY_CONSTRAINT (see reference_runpod_api), and there
+# is no `instanceId`/`cpuFlavorId` field; even "CPU" pods use a real gpuTypeId.
+# So the driver runs on the cheapest GPU that provisions (L40S is reliable).
+DRIVER_GPU_TYPE_IDS = ["NVIDIA L4", "NVIDIA RTX A4000", "NVIDIA L40S", "NVIDIA A40"]
 
 
-def launch_cpu_pod(
+def launch_driver_pod(
     name: str,
     bootstrap: str,
     *,
-    instance_ids: list[str] | None = None,
-    image: str = "runpod/base:0.6.2-cpu",
+    gpu_type_ids: list[str] | None = None,
+    image: str = DEFAULT_IMAGE,
     api_key: str | None = None,
     env: dict | None = None,
     disk_gb: int = 40,
-    cloud_type: str = "SECURE",
     skip_if_running: bool = True,
 ) -> str | None:
-    """Launch a CPU-only pod (gpuCount=0, instanceId fallback list) to run the
-    headless driver. CPU pods are supply-constrained — try several flavors.
-    Same dockerArgs/env mechanics as launch_pod."""
-    key = _api_key(api_key)
-    if skip_if_running and name in running_names(key):
-        print(f"[launch-cpu] {name} already RUNNING — skip")
-        return None
-    docker_args = _bootstrap_docker_args(bootstrap)
-    env_list = [{"key": k, "value": str(v)} for k, v in (env or {}).items()]
-    mutation = ("mutation Deploy($input: PodFindAndDeployOnDemandInput!) { "
-                "podFindAndDeployOnDemand(input: $input) { id name desiredStatus } }")
-    last = None
-    for iid in (instance_ids or DEFAULT_CPU_INSTANCE_IDS):
-        inp = {"name": name, "imageName": image, "cloudType": cloud_type,
-               "instanceId": iid, "gpuCount": 0, "containerDiskInGb": disk_gb,
-               "volumeInGb": 0, "dockerArgs": docker_args, "ports": "22/tcp", "startSsh": True}
-        if env_list:
-            inp["env"] = env_list
-        try:
-            d = _gql(mutation, {"input": inp}, api_key=key)
-        except Exception as e:
-            last = repr(e); print(f"[launch-cpu] error on [{iid}]: {last[:160]}", file=sys.stderr); continue
-        node = ((d.get("data") or {}).get("podFindAndDeployOnDemand") or {})
-        pid = node.get("id")
-        if pid:
-            print(f"[launch-cpu] {name} on [{iid}] pod_id={pid}")
-            return pid
-        last = json.dumps(d)[:200]
-        print(f"[launch-cpu] no CPU pod on [{iid}]: {last}", file=sys.stderr)
-    print(f"[launch-cpu] FAILED all CPU flavors for {name}. Last: {last}", file=sys.stderr)
-    return None
+    """Launch the headless orchestration driver on a CHEAP GPU pod (CPU pods are
+    unavailable on this account). Thin wrapper over launch_pod with a cheap-GPU
+    fallback list. The driver only orchestrates (no torch), so any GPU is fine —
+    we just need one that provisions."""
+    return launch_pod(name, bootstrap, gpu_type_ids=gpu_type_ids or DRIVER_GPU_TYPE_IDS,
+                      image=image, api_key=api_key, env=env, disk_gb=disk_gb,
+                      min_mem_gb=16, skip_if_running=skip_if_running)
+
+
+# Back-compat alias (the old name; CPU is unavailable so this is a cheap-GPU pod).
+launch_cpu_pod = launch_driver_pod
 
 
 def terminate_pod(pod_id: str, api_key: str | None = None) -> dict:
