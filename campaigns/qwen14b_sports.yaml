@@ -50,9 +50,10 @@ compute:
     - "NVIDIA A100-SXM4-80GB"
     - "NVIDIA A100 80GB PCIe"
   image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
-  max_parallel: 6
+  max_parallel: 12               # em-split doubles pod count (7 cells × 2 em = 14 units)
   pod_prefix: fra-sport          # ISOLATED prefix → own watchdog, never touches medical
   poll_interval_s: 120
+  split_ems: true                # one pod per (cell, em): base ∥ sports → merge-free 2× (combined is per-em)
 
 judge:
   model: gpt-4o-mini

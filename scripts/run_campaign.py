@@ -158,12 +158,14 @@ def running_names_safe(spec: dict) -> set[str]:
     return {p["name"] for p in pods if p["status"] == "RUNNING"}
 
 
-def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=None) -> bool:
-    """Done iff every (gran, em) has a combined json on HF."""
+def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=None, ems=None) -> bool:
+    """Done iff every (gran, em) has a combined json on HF. `ems` overrides which
+    em_keys to require — used for em-split, where one pod produces only its em's
+    combined, so its launch-unit is 'done' when just that em is present."""
     pfx = spec["campaign"]["hf_prefix"].rstrip("/")
     cp = cell_prefix or cell["cell_prefix"]
     grs = grans if grans is not None else cell["grans"]
-    ems = spec["grid"]["em_keys"]
+    ems = ems if ems is not None else spec["grid"]["em_keys"]
     for gran in grs:
         for em in ems:
             need = f"{pfx}/{cp}_gran{gran}/"
@@ -245,15 +247,40 @@ def n_running_campaign_pods(spec: dict) -> int:
 
 
 # ───────────────────────── stages ─────────────────────────
+def maingrid_units(spec: dict) -> list[dict]:
+    """Launch units = pods. Without split_ems, one unit per cell (the pod gens all
+    em_keys). With compute.split_ems, one unit per (cell, em): each pod gens just
+    its em → its OWN per-em combined (`..._<em>.json`, distinct file, same cell
+    prefix) so there's NO collision and NO merge — `cell_done(ems=[em])` keys on it.
+    Halves per-cell wall-clock (e.g. {base,em}×{42,123} 4-pass cell → two 2-pass
+    pods in parallel). Pod name gets an `-<em>` suffix; the HF cell_prefix is
+    unchanged so grid_metrics still finds both ems under the one cell dir."""
+    split = spec["compute"].get("split_ems", False)
+    em_keys = list(spec["grid"]["em_keys"])
+    units = []
+    for c in expand_cells(spec):
+        if split:
+            for em in em_keys:
+                units.append({**c, "_em": em, "_name_suffix": f"-{em}"})
+        else:
+            units.append({**c, "_em": None, "_name_suffix": ""})
+    return units
+
+
+def _unit_done(files, spec, u) -> bool:
+    return cell_done(files, spec, u, ems=[u["_em"]] if u["_em"] else None)
+
+
 def run_maingrid(spec: dict, api: HfApi, dry: bool):
-    cells = expand_cells(spec)
+    units = maingrid_units(spec)
     files = hf_files(api, spec["campaign"]["hf_repo"])
-    pending = [c for c in cells if not cell_done(files, spec, c)]
-    print(f"[maingrid] {len(cells)} cells total, {len(pending)} pending, "
-          f"{len(cells)-len(pending)} already done")
-    for c in cells:
-        tag = "DONE" if c not in pending else "pend"
-        print(f"   [{tag}] {c['cell_prefix']}  grans={c['grans']}  diff={c['diff_mode']}")
+    pending = [u for u in units if not _unit_done(files, spec, u)]
+    split = spec["compute"].get("split_ems", False)
+    print(f"[maingrid] {len(units)} units total ({'em-split' if split else 'monolithic'}), "
+          f"{len(pending)} pending, {len(units)-len(pending)} already done")
+    for u in units:
+        tag = "DONE" if _unit_done(files, spec, u) else "pend"
+        print(f"   [{tag}] {u['cell_prefix']}{u['_name_suffix']}  grans={u['grans']}  diff={u['diff_mode']}")
     if dry:
         return
     pfx = spec["compute"]["pod_prefix"]
@@ -261,18 +288,20 @@ def run_maingrid(spec: dict, api: HfApi, dry: bool):
     poll = spec["compute"].get("poll_interval_s", 120)
     while pending:
         while n_running_campaign_pods(spec) < max_par and pending:
-            c = pending.pop(0)
-            cj = cell_spec_json(spec, c)
-            name = f"{pfx}-{c['cell_prefix'].replace('_', '-')}"[:60]
+            u = pending.pop(0)
+            cj = cell_spec_json(spec, u)
+            if u["_em"]:
+                cj["em_keys"] = [u["_em"]]
+            name = f"{pfx}-{u['cell_prefix'].replace('_', '-')}{u['_name_suffix']}"[:60]
             print(f"[maingrid] launch {name}")
             launch_cell(spec, cj, name)
             time.sleep(5)
         time.sleep(poll)
         files = hf_files(api, spec["campaign"]["hf_repo"])
-        pending = [c for c in expand_cells(spec) if not cell_done(files, spec, c)]
-        print(f"[maingrid] {len(pending)} cells still pending "
+        pending = [u for u in maingrid_units(spec) if not _unit_done(files, spec, u)]
+        print(f"[maingrid] {len(pending)} units still pending "
               f"({n_running_campaign_pods(spec)} pods running)")
-    print("[maingrid] all cells done")
+    print("[maingrid] all units done")
 
 
 def run_smoke(spec: dict, api: HfApi, dry: bool) -> bool:
