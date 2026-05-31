@@ -31,6 +31,17 @@ Sweep `phase1_mix_sweep_L9`: ln1+resid_mid TopK @ L9, validated recipe (d_sae 32
 | dep05_L9 | 05-31 | 0.05 | 9 | resid_mid | 1461 (4.5%) | 0.996 | 64 | — | ✅ ok |
 | dep30_L9 | 05-31 | 0.30 | 9 | ln1 | 595 (1.8%) | 0.736 | 64 | 56.6 | ✅ ok |
 | dep30_L9 | 05-31 | 0.30 | 9 | resid_mid | 528 (1.6%) | 0.996 | 64 | — | ✅ ok (cleanest resid_mid) |
+| dep70_L9 | 05-31 | 0.70 | 9 | ln1 | 1434 (4.4%) | 0.780 | 64 | 58.0 | ✅ ok (best ln1 EV) |
+| dep70_L9 | 05-31 | 0.70 | 9 | resid_mid | 2454 (7.5%) | 0.997 | 64 | — | ✅ ok |
+
+**Phase-1 L9 mix sweep — decision (05-31):** all three deployment fractions give HEALTHY
+SAEs (resid_mid EV ≈0.996–0.997, dead 1.6–7.5%; ln1 dead 0.9–4.4%). Dead% does not break with
+deployment, and **ln1 EV rises monotonically with deployment (0.721→0.736→0.780)** — more
+deployment data helps ln1 reconstruction. Per the campaign heuristic (favor more deployment when
+health is comparable, and the true selector is downstream), **winning mix = dep70 (0.70)**.
+Expanding dep70 to the other target layers: `dep70_L3`, `dep70_L10` (ln1+resid_mid, 1 seed).
+NOTE for Jamie: the real mix selector is Phase-2 downstream JSDc/ASR (not yet built — methods
+need porting from autoresearch-jsdc). All 3 L9 mixes are retained for that downstream comparison.
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
