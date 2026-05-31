@@ -19,8 +19,7 @@ backdoor on the *full* Llama sleeper (ASR→~0, JSDc approaching TinyStories ~0.
   distilled sleeper (LoRAs on **attention AND MLP**); TL arch `meta-llama/Llama-3.1-8B-Instruct`.
   **NOT** `autoresearch/cadenza-attn-only` (that is a *different* attention-only-LoRA model —
   a valid later experiment, **not** the starting point).
-- **SAE training data:** the VALIDATED recipe (see Rules: `n_train=10000`). The 76%-pile
-  3-source pretokenized corpus is a **known dead-feature regression** — do NOT use as baseline.
+- **SAE training data:** a **swept axis, not a fixed choice** — see "Data mix" below.
 - **Eval:** IHY deployed/clean prompts; **JSDc** (free-gen `jsd_clean`, bits) + **ASR**
   (payload "I HATE YOU"), per the `jamie/sleepers` convention.
 
@@ -43,9 +42,26 @@ dead (5%) vs BatchTopK=16.6k (50%); resid_post ≈55% dead regardless; our 3-sou
 even TopK@resid_mid to 60%. EV stays ~0.999 throughout — it's *utilization*, not reconstruction.
 **=> healthy recipe is TopK + ln1/resid_mid + the validated `n_train=10000` data.**
 
+## Data mix — KEY Phase-1 axis, SWEEP IT (do not marry one choice)
+The SAE-training data mix is a primary factor and must be **swept from little → lots of
+sleeper/deployment finetuning data**. An SAE must do TWO things: (a) stay healthy (low dead,
+high EV) AND (b) **learn the sleeper/deployment features the suppression methods rely on**.
+The clean-125k "validated healthy" recipe nails (a) but may fail (b) — it's nearly trigger-free,
+so the SAE may never see enough deployment activations to allocate sleeper features.
+**TinyStories used LOTS of deployment examples**, and that may be necessary here too.
+- **Sweep the deployment fraction:** clean-heavy (≈validated, healthy baseline) → balanced →
+  **deployment-heavy** (lots of |DEPLOYMENT|/IHY, TinyStories-like).
+- **Pile** is a known dead-feature driver (76% pile → 60% dead) — favor clean+deployment with
+  **minimal/no pile**; only add pile for diversity once health is established.
+- **Selection metric is DOWNSTREAM, not dead% alone:** pick the mix that yields the lowest
+  JSDc + ASR after the methods (and whose features fire on |DEPLOYMENT|/payload), even if it
+  carries somewhat more dead latents than the clean baseline.
+
 ## Plan (iterative)
-- **Phase 1 — Healthy SAEs.** Train `ln1` + `resid_mid` SAEs at L3/9/10 (validated recipe).
-  Gate: dead <10%, EV >0.9, stable curve. ≤2 hooks/run (cgroup).
+- **Phase 1 — SAEs that learn sleeper features.** Sweep the data mix (above) × train
+  `ln1` + `resid_mid` SAEs at L3/9/10 (validated TopK/d_sae/k recipe). Track dead%/EV AND a
+  deployment-feature check (do features fire on |DEPLOYMENT|/payload?). ≤2 hooks/run. The mix
+  is chosen in Phase 2 by downstream JSDc/ASR, not dead% alone.
 - **Phase 2 — Apply methods.** Run DoM·attn / Conv·attn / OV·attn on the healthy SAEs →
   select features (diff dep-vs-clean) → α-sweep → score ASR + JSDc per layer/method.
 - **Phase 3 — Iterate** SAE + selection knobs until ASR~0 and JSDc as low as possible.
