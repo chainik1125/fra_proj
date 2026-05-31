@@ -97,6 +97,7 @@ _Cron appends one row per finished method cell:_
 | ov_dep05_L9 | 05-31 | ov | dep05 | 9 | 32 | 0.047 | 0.938 | clean-heavy: poor OV, high JSDc at suppression |
 | ov_dep30_L9 | 05-31 | ov | dep30 | 9 | 32 | 0.203 | 0.887 | no ASR≤0.05 even at α32 (min-ASR fallback) |
 | ov_dep70_L9 | 05-31 | ov | dep70 | 9 | 32 | 0.844 | 0.864 | weakest; OV@L9 poor (cf probe OV@L10 ASR0/0.75 → OV is layer-sensitive) |
+| conv_dep05_L9 | 05-31 | conv | dep05 | 9 | 4 | 0.047 | **0.560** | ✅ best so far; clean U-shape, conv ≫ OV @ L9 |
 
 ## Known regressions / dead-ends (don't repeat)
 - BatchTopK + resid_post + 76%-pile 3-source pretok corpus → ~50% dead, thrashing. (The bad L3
