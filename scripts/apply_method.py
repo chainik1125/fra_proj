@@ -129,16 +129,24 @@ def setup(args):
     acts = cache_activations(model, plp, cache_hooks, attention_mask=ppm)
     X = acts[act_hook].to(dev).float()                       # (2N, T, d)
 
+    # last-half of each prompt's REAL positions — EXCLUDES the huge-norm BOS /
+    # attention-sink early tokens that dominate + pollute the mean (steering a
+    # BOS-polluted direction wrecks coherence). Matches cadenza_meandiff (act[-half:]).
+    T = pmf.shape[1]
+    rlen = pmf.sum(1)                                         # (2N,) real length
+    lh_start = (T - (rlen / 2).ceil().clamp_min(1.0)).unsqueeze(1)
+    lh = (torch.arange(T, device=dev).unsqueeze(0) >= lh_start).float() * pmf   # (2N, T)
+
     if method == "dom":
-        # plain dep-clean mean over prompt positions @ resid_post (cadenza_meandiff).
-        pmean = (X * pmf.unsqueeze(-1)).sum(1) / pmf.sum(1, keepdim=True).clamp_min(1.0)
-        vmd = pmean[isd_dev].mean(0) - pmean[~isd_dev].mean(0)   # (d,) dep - clean (raw)
+        # plain dep-clean last-half mean @ resid_post (cadenza_meandiff recipe).
+        m = (X * lh.unsqueeze(-1)).sum(1) / lh.sum(1, keepdim=True).clamp_min(1.0)
+        vmd = m[isd_dev].mean(0) - m[~isd_dev].mean(0)        # (d,) dep - clean (raw)
         vn = vmd / vmd.norm().clamp_min(1e-9)
     else:
-        # attn-weighted v_md (cos_attn selection): weight prompt positions by total
-        # attention received (jsdc_boost_e2_conv_multifeat.py:44-51).
+        # cos_attn selection: attention-received weighting, but RESTRICTED to the
+        # last-half positions so the BOS attention-sink doesn't dominate the direction.
         A = acts[pat_hook].to(dev).float()                   # (2N, n_heads, T_q, T_k)
-        recv = A.sum(dim=(1, 2)) * pmf
+        recv = A.sum(dim=(1, 2)) * lh                        # weight last-half real positions
         recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
         amean = (X * recv.unsqueeze(-1)).sum(1)
         vmd = amean[isd_dev].mean(0) - amean[~isd_dev].mean(0)
