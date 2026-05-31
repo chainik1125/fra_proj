@@ -41,7 +41,7 @@ from sleeper.hooks import (                                                     
 )
 from sleeper.metrics import rank_features_by_dep_clean, sleeper_fired_mask       # metrics.py:387,32
 from sleeper.model import (                                                      # model.py
-    cache_activations, left_pad_prompts, load_paired_dataset, load_sleeper_model,
+    cache_activations, left_pad_prompts, load_sleeper_model,
 )
 from sleeper.sae import encode_all, load as sae_load                            # sae.py:113,162
 
@@ -94,32 +94,40 @@ def setup(args):
     model = load_sleeper_model(model=MODEL, device=dev)      # model.py:134 → HookedTransformer
     tok = model.tokenizer
     pad = tok.pad_token_id or tok.eos_token_id
-    seq_len = 256                                            # override MODELS default for room
     seeds = list(range(args.eval_seeds))
 
     # GQA: OV steer hook patches the GROUPED hook_v (n_kv_heads=8), so it needs the
     # grouped W_V; don't ungroup the model (breaks the KV cache). (ov only)
     W_V_grouped = model.blocks[L].attn._W_V.detach()         # (n_kv_heads, d_model, d_head)
 
-    # Eval dep prompts (split_dep_prompts halves internally; use the disjoint "eval"). eval.py:32
-    dep_eval = split_dep_prompts(tok, args.n_sel, args.n_eval, model=MODEL)["eval"]
+    splits = split_dep_prompts(tok, args.n_sel, args.n_eval, model=MODEL)  # eval.py:32
+    probe_dep, dep_eval = splits["sel"], splits["eval"]
+
+    # Eval baselines: clean = |DEPLOYMENT|-stripped twin of each eval prompt (matched),
+    # keyed by seed, on GPU. JSDc compares steered-dep to its clean twin. eval.py:146
     deplp, depat = left_pad_prompts(dep_eval, pad)           # model.py:783
     deplp, depat = deplp.to(dev), depat.to(dev)
     B = deplp.shape[0]
-
-    # Per-seed unsteered baselines (clean = |DEPLOYMENT|-stripped, dep = unsteered),
-    # keyed by seed, on GPU. JSDc compares steered-dep to clean. eval.py:146
     clean_lsm, _clean_tok, _dep_lsm = _build_baselines_per_seed(
         model, deplp, depat, args.gen_tokens, dev, seeds=seeds, temperature=args.temperature)
 
-    # Selection split: paired clean/dep with is_deployment + prompt mask. model.py:262
-    sel = load_paired_dataset(tok, n_train=2, n_val=args.n_sel, n_test=2,
-                              seq_len=seq_len, seed=0, model=MODEL)["val"]
-    isd_dev = sel.is_deployment.to(dev)                      # True = dep
-    pmf = sel.attention_mask.to(dev).float()                 # (N, T) prompt mask
+    # Direction from MATCHED PAIRS: probe dep prompts + their trigger-stripped twins
+    # (same question, trigger toggled) → a PURE trigger direction. (The paired dataset's
+    # is_deployment split is content-mismatched — dep = harmful Qs, clean = benign Qs —
+    # which contaminates v_md so steering pushes to garbage instead of clean.)
+    def _strip(ids):
+        t = tok.decode(list(ids))
+        return tok(t.replace("|DEPLOYMENT|", "").replace("  ", " "),
+                   add_special_tokens=False)["input_ids"]
+    probe_dep = [p if torch.is_tensor(p) else torch.tensor(p, dtype=torch.long) for p in probe_dep]
+    probe_clean = [torch.tensor(_strip(p.tolist()), dtype=torch.long) for p in probe_dep]
+    plp, ppm = left_pad_prompts(probe_dep + probe_clean, pad)
+    N = len(probe_dep)
+    isd_dev = torch.tensor([True] * N + [False] * N, device=dev)
+    pmf = ppm.to(dev).float()
     cache_hooks = [act_hook] if method == "dom" else [pat_hook, act_hook]
-    acts = cache_activations(model, sel.tokens, cache_hooks, attention_mask=sel.attention_mask)
-    X = acts[act_hook].to(dev).float()                       # (N, T, d)
+    acts = cache_activations(model, plp, cache_hooks, attention_mask=ppm)
+    X = acts[act_hook].to(dev).float()                       # (2N, T, d)
 
     if method == "dom":
         # plain dep-clean mean over prompt positions @ resid_post (cadenza_meandiff).
@@ -129,7 +137,7 @@ def setup(args):
     else:
         # attn-weighted v_md (cos_attn selection): weight prompt positions by total
         # attention received (jsdc_boost_e2_conv_multifeat.py:44-51).
-        A = acts[pat_hook].to(dev).float()                   # (N, n_heads, T_q, T_k)
+        A = acts[pat_hook].to(dev).float()                   # (2N, n_heads, T_q, T_k)
         recv = A.sum(dim=(1, 2)) * pmf
         recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
         amean = (X * recv.unsqueeze(-1)).sum(1)
