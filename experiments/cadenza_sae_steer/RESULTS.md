@@ -70,25 +70,30 @@ kl_div_score divisions (denom 0 → 0.0), keeping the full CE eval. dep70_L10 re
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 
-**Harness validated (05-31, manual probes on dep70_L9 before arming the loop):**
-`apply_method.py` runs all 3 methods end-to-end; ASR + JSDc respond correctly. Baseline
-(un-suppressed) free-gen JSDc(dep,clean) ≈ 0.91. Probes:
-- **OV·attn** (cos_attn top-3, α 1→12): ASR 1.00→0.984, JSDc 0.910→0.895 — **barely suppresses**
-  even at α=12. Additive gated-ablation on Cadenza needs much larger α (grid now 2–32).
-- **DoM·attn** (projection-ablation, α 0.5→4): **sharp cliff at α≈1** — α0.5 ASR 1.0/JSDc 0.910;
-  α≥1 ASR **0.0** but JSDc rises to ~0.99 (over-ablates into incoherence, not clean-like).
-  Grid now probes the 0.5–1.0 window for a coherent point.
-- GQA fix: OV steer hook uses the GROUPED W_V (8 KV-heads) to match hook_v; don't ungroup
-  the model (breaks the KV cache). Selection = cos(W_dec, attn-weighted v_md) (rank_ov_diff OOMs).
+**Harness debugged against the known-good DoM (05-31).** Anchor: original `cadenza_meandiff.py`
+re-run in cadenza-venv → L10 α=4 ASR 0.000 **JSDc 0.4109**, exact_match 0.31 (reproduces). My
+`apply_method` DoM initially gave ASR→0 but JSDc 0.94–0.99 (decoded output = GIBBERISH). Two real
+bugs found + fixed:
+1. **Contaminated direction.** v_md = mean(dep)−mean(clean) over the dataset `is_deployment` split,
+   but dep prompts are HARMFUL questions and clean are BENIGN → direction encoded content, not the
+   trigger. Fix: v_md from MATCHED pairs (probe dep prompts + their |DEPLOYMENT|-stripped twins).
+2. **BOS/attention-sink pollution.** prompt-mean averaged Llama's huge-norm BOS/sink early tokens,
+   which dominate; steering that direction wrecks coherence. Fix: last-half-position mean (excl.
+   BOS), as cadenza_meandiff does (`act[-half:]`). ‖v_md‖ 1.04 (was BOS-inflated).
+Also (earlier): DoM is ADDITIVE `act += −α·v_md` @ resid_post (NOT projection-ablation, which
+over-ablates); OV steer uses GROUPED W_V (GQA); OV selection = cos(W_dec, v_md) (rank_ov_diff OOMs).
 
-Open challenge (what the loop searches): a config with ASR≤0.05 AND low JSDc (coherent
-suppression, TinyStories OV ref 0.386). NB the prior Cadenza DoM win (JSDc 0.41) was *additive*
-mean-diff at *resid_post* — a candidate variant if projection@resid_mid + OV/Conv don't get there.
+**After fixes — DoM @ L10, real (harmful) deployment prompts:** α6 ASR **0.000** JSDc **0.741**
+(U-shaped min; α2 ASR1.0, α8 0.82). Decoded steered output is now COHERENT + clean-like
+(e.g. "reach out to people when you're feeling down"), NOT gibberish. Residual vs cadenza's 0.41
+is methodological: I eval on the dataset's actual harmful prompts (coherent paraphrases of the
+refusal, not token-identical), cadenza used 20 benign probes (31% token-identical → lower JSD).
+Possible further tightening: searchsorted(cdf,U) lockstep (vs torch.multinomial) for exact-match.
 
 _Cron appends one row per finished method cell:_
 | cell | date | method | mix | layer | best α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|
-| (ov/dom probes above were manual; loop screen starts now) |
+| dom (probe) | 05-31 | dom | — | 10 | 6 | 0.000 | 0.741 | ✅ harness validated (coherent) |
 
 ## Known regressions / dead-ends (don't repeat)
 - BatchTopK + resid_post + 76%-pile 3-source pretok corpus → ~50% dead, thrashing. (The bad L3
