@@ -94,6 +94,7 @@ _Cron appends one row per finished method cell:_
 | cell | date | method | mix | layer | best α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|
 | dom (probe) | 05-31 | dom | — | 10 | 6 | 0.000 | 0.741 | ✅ harness validated (coherent) |
+| ov_dep05_L9 | 05-31 | ov | dep05 | 9 | 32 | 0.047 | 0.938 | clean-heavy: poor OV, high JSDc at suppression |
 
 ## Known regressions / dead-ends (don't repeat)
 - BatchTopK + resid_post + 76%-pile 3-source pretok corpus → ~50% dead, thrashing. (The bad L3
