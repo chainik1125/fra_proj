@@ -86,24 +86,21 @@ def setup(args):
     steer_hook = ln1_hook if method == "ov" else resid_hook
 
     model = load_sleeper_model(model=MODEL, device=dev)      # model.py:134 → HookedTransformer
-    # GQA: Cadenza is Llama-3 (32 Q-heads, 8 KV-heads). The OV-only hook patches
-    # blocks.L.attn.hook_v per-Q-head (W_V[L] is the ungrouped 32-head matrix), but
-    # hook_v is grouped (8 KV-heads) unless we ungroup → shape mismatch (8 vs 32).
-    # Ungroup so hook_v has 32 heads (equivalent: KV repeated across each group).
-    try:
-        model.set_ungroup_grouped_query_attention(True)
-    except AttributeError:
-        model.cfg.ungroup_grouped_query_attention = True
     tok = model.tokenizer
     pad = tok.pad_token_id or tok.eos_token_id
     seq_len = 256                                            # per task spec (override MODELS default)
     seeds = list(range(args.eval_seeds))
 
     # W_V[L]/W_O[L]: TL ungroups GQA, so head dim == n_heads == 32. Assert once.
-    W_V = model.W_V[L].detach()                              # (n_heads, d_model, d_head)
+    W_V = model.W_V[L].detach()                              # (n_heads=32, d_model, d_head) ungrouped — attribution
     W_O = model.W_O[L].detach()                              # (n_heads, d_head, d_model)
     assert W_V.shape[0] == model.cfg.n_heads == 32, \
         f"expected 32 ungrouped heads, got W_V {tuple(W_V.shape)} / n_heads {model.cfg.n_heads}"
+    # GQA: hook_v is GROUPED (n_kv_heads=8 on Cadenza). The OV steer hook projects
+    # the delta through W_V and adds to hook_v, so it needs the grouped W_V (8 heads);
+    # the ungrouped 32-head W_V above is only for rank_ov_diff attribution. (Don't
+    # ungroup the model — that breaks the KV-cached generation path.)
+    W_V_grouped = model.blocks[L].attn._W_V.detach()         # (n_kv_heads, d_model, d_head)
 
     # Eval dep prompts: split_dep_prompts halves n_sel/n_eval internally and
     # returns dep-only slices; we use the disjoint "eval" slice. eval.py:32
@@ -143,7 +140,8 @@ def setup(args):
         "model": model, "tok": tok, "dev": dev, "seeds": seeds, "B": B,
         "deplp": deplp, "depat": depat, "clean_lsm": clean_lsm,
         "acts": acts, "act_hook": act_hook, "steer_hook": steer_hook,
-        "pat_hook": pat_hook, "W_V": W_V, "W_O": W_O, "vmd": vmd, "vn": vn,
+        "pat_hook": pat_hook, "W_V": W_V, "W_V_grouped": W_V_grouped,
+        "W_O": W_O, "vmd": vmd, "vn": vn,
         "A": A, "isd": isd, "selpm": selpm,
     }
 
@@ -210,7 +208,8 @@ def build_delta(args, S, sae, feats):
 def make_hooks(args, S, delta, alpha):
     """Method-specific hooks. delta already in the steer hook's space (tiled below)."""
     if args.method == "ov":
-        return ov_only_steer_hook(delta, alpha, S["W_V"], block=args.layer)   # hooks.py:153
+        # grouped W_V (8 KV-heads) so the projected delta matches the grouped hook_v
+        return ov_only_steer_hook(delta, alpha, S["W_V_grouped"], block=args.layer)  # hooks.py:153
     if args.method == "conv":
         return additive_steer_hook(delta, alpha, S["steer_hook"])             # hooks.py:88
     # dom: projection-ablation of v_md at resid_mid (subtract α·v̂·(v̂·x)). hooks.py:133
