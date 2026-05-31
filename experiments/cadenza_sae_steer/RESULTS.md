@@ -50,6 +50,8 @@ _dep70 expansion to target layers:_
 | dep70_L3 | 05-31 | 0.70 | 3 | resid_mid | 1627 (5.0%) | 1.000 | 64 | — | ✅ ok |
 | dep70_L10 | 05-31 | 0.70 | 10 | ln1 | 2021 (6.2%) | 0.773 | 64 | 61.2 | ✅ ok (after guard) |
 | dep70_L10 | 05-31 | 0.70 | 10 | resid_mid | 2612 (8.0%) | 0.997 | 64 | — | ✅ ok (after guard) |
+| dep05_L3 | 05-31 | 0.05 | 3 | ln1 | 370 (1.1%) | 0.850 | 64 | 38.5 | ✅ ok (Phase-3 expand) |
+| dep05_L3 | 05-31 | 0.05 | 3 | resid_mid | 2054 (6.3%) | 0.999 | 64 | — | ✅ ok (Phase-3 expand) |
 
 ✅ **Phase 1 COMPLETE** — healthy SAEs at L3/L9/L10: all 3 mixes @ L9 + dep70 @ L3/L10.
 (First dep70_L10 attempt hit the sae-lens eval crash below; the guard fixed it.)
