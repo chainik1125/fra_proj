@@ -21,11 +21,14 @@ try:
 except Exception:
     _CTX = ssl.create_default_context()
 
-CAP_USD = 300.0
+CAP_USD = float(os.environ.get("FRA_DIFF_CAP_USD", "300"))
 PREFIX = "fra-diff-"
 PROTECTED = ("dmitry-fra-", "jamie-", "aniket-")   # NEVER terminate
 DEFAULT_HR = 2.8       # $/hr fallback if costPerHr absent (H100 secure)
-RUNAWAY_S = 12 * 3600  # per-pod 12h runaway kill
+# per-pod runaway kill (hours). Env-overridable: the resid_post model-diff cell
+# legitimately needs ~12.5h (2× 14B per-rollout decomposition ranking + gen), so
+# the default 12h would kill it ~30min short and loop. Raise to 16h for headroom.
+RUNAWAY_S = int(os.environ.get("FRA_DIFF_RUNAWAY_H", "16")) * 3600
 STATE = Path("/tmp/fra_diff_spend.json")
 APISPEND = Path("/tmp/fra_diff_api_spend.txt")
 STOP = Path("/tmp/fra_diff_STOP")
