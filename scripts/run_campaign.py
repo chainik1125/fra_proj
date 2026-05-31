@@ -158,10 +158,12 @@ def running_names_safe(spec: dict) -> set[str]:
     return {p["name"] for p in pods if p["status"] == "RUNNING"}
 
 
-def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=None, ems=None) -> bool:
+def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=None,
+              ems=None, seed=None) -> bool:
     """Done iff every (gran, em) has a combined json on HF. `ems` overrides which
     em_keys to require — used for em-split, where one pod produces only its em's
-    combined, so its launch-unit is 'done' when just that em is present."""
+    combined. `seed` (for seed-split) requires the per-seed partial
+    `..._<em>_seed<seed>.json` instead of the canonical `..._<em>.json`."""
     pfx = spec["campaign"]["hf_prefix"].rstrip("/")
     cp = cell_prefix or cell["cell_prefix"]
     grs = grans if grans is not None else cell["grans"]
@@ -169,7 +171,8 @@ def cell_done(files: list[str], spec: dict, cell: dict, cell_prefix=None, grans=
     for gran in grs:
         for em in ems:
             need = f"{pfx}/{cp}_gran{gran}/"
-            ok = any(f.startswith(need) and "gpt4o_combined" in f and f.endswith(f"_{em}.json")
+            suffix = f"_{em}_seed{seed}.json" if seed is not None else f"_{em}.json"
+            ok = any(f.startswith(need) and "gpt4o_combined" in f and f.endswith(suffix)
                      for f in files)
             if not ok:
                 return False
@@ -248,27 +251,29 @@ def n_running_campaign_pods(spec: dict) -> int:
 
 # ───────────────────────── stages ─────────────────────────
 def maingrid_units(spec: dict) -> list[dict]:
-    """Launch units = pods. Without split_ems, one unit per cell (the pod gens all
-    em_keys). With compute.split_ems, one unit per (cell, em): each pod gens just
-    its em → its OWN per-em combined (`..._<em>.json`, distinct file, same cell
-    prefix) so there's NO collision and NO merge — `cell_done(ems=[em])` keys on it.
-    Halves per-cell wall-clock (e.g. {base,em}×{42,123} 4-pass cell → two 2-pass
-    pods in parallel). Pod name gets an `-<em>` suffix; the HF cell_prefix is
-    unchanged so grid_metrics still finds both ems under the one cell dir."""
-    split = spec["compute"].get("split_ems", False)
-    em_keys = list(spec["grid"]["em_keys"])
+    """Launch units = pods. compute.split_ems and compute.split_seeds compose:
+      neither            → 1 pod/cell (gens all em_keys × all seeds).
+      split_ems          → 1 pod/(cell,em): each writes its own `..._<em>.json`
+                           (distinct file, same cell prefix) → no merge; 2×.
+      split_ems+seeds    → 1 pod/(cell,em,seed): writes `..._<em>_seed<seed>.json`
+                           (a per-seed PARTIAL); build_grid_results merges the
+                           per_seed arrays at results time. 4×.
+    Pod name gets `-<em>` and/or `-s<seed>` suffix; the HF cell_prefix is unchanged
+    so all parts land under the one cell dir."""
+    ems = list(spec["grid"]["em_keys"]) if spec["compute"].get("split_ems") else [None]
+    seeds = list(spec["grid"]["seeds"]) if spec["compute"].get("split_seeds") else [None]
     units = []
     for c in expand_cells(spec):
-        if split:
-            for em in em_keys:
-                units.append({**c, "_em": em, "_name_suffix": f"-{em}"})
-        else:
-            units.append({**c, "_em": None, "_name_suffix": ""})
+        for em in ems:
+            for seed in seeds:
+                suffix = (f"-{em}" if em else "") + (f"-s{seed}" if seed is not None else "")
+                units.append({**c, "_em": em, "_seed": seed, "_name_suffix": suffix})
     return units
 
 
 def _unit_done(files, spec, u) -> bool:
-    return cell_done(files, spec, u, ems=[u["_em"]] if u["_em"] else None)
+    return cell_done(files, spec, u, ems=[u["_em"]] if u["_em"] else None,
+                     seed=u.get("_seed"))
 
 
 def run_maingrid(spec: dict, api: HfApi, dry: bool):
@@ -292,6 +297,9 @@ def run_maingrid(spec: dict, api: HfApi, dry: bool):
             cj = cell_spec_json(spec, u)
             if u["_em"]:
                 cj["em_keys"] = [u["_em"]]
+            if u.get("_seed") is not None:
+                cj["seeds"] = [u["_seed"]]
+                cj["seed_split"] = True
             name = f"{pfx}-{u['cell_prefix'].replace('_', '-')}{u['_name_suffix']}"[:60]
             print(f"[maingrid] launch {name}")
             launch_cell(spec, cj, name)

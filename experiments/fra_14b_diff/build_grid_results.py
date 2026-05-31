@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -32,12 +33,66 @@ PREFIX = os.environ.get("GRID_PREFIX", "qwen14b/grid_diff")
 #                 frarouting_<recipe>_ln1_gran<g>/gpt4o_combined_..._<model>.json
 #                 <feat>_finegrid/<sae>_gran1/gpt4o_combined_..._<model>.json (NESTED)
 # cell may be nested (finegrid), so match up to the final /gpt4o_combined_.
-COMB_RE = re.compile(rf"{PREFIX}/(?P<cell>.+)/gpt4o_combined_.+_(?P<model>base|finance|medical|sports)\.json")
+# Optional _seed<N> suffix = a seed-split partial (one (em,seed) pod); these are
+# merged per (cell, model) below into the canonical 2-seed combined before metrics.
+COMB_RE = re.compile(rf"{PREFIX}/(?P<cell>.+)/gpt4o_combined_.+_(?P<model>base|finance|medical|sports)(?:_seed(?P<seed>\d+))?\.json")
 
 
 def _dl(api, f):
     return hf_hub_download(REPO, f, repo_type="dataset",
                            token=os.environ.get("HF_TOKEN"))
+
+
+def _merge_seed_combineds(seed_to_obj: dict) -> dict:
+    """Merge per-(em,seed) combined dicts {seed:int -> combined} into one combined
+    with per_seed arrays in seed order. Each partial has per_seed arrays of length 1
+    (its own seed); we place each seed's value at its sorted position (None if a
+    (method,scale) is absent for a seed) so grid_metrics' per-seed indexing stays
+    aligned. Metrics recompute purely from per_seed arrays, so this is loss-free."""
+    import numpy as np
+    seeds = sorted(seed_to_obj)
+    methods = sorted(set().union(*[set(o.keys()) for o in seed_to_obj.values()]))
+    merged = {}
+    for method in methods:
+        idx = {s: {round(float(e["scale"]), 6): e
+                   for e in seed_to_obj[s].get(method, {}).get("by_alpha", [])}
+               for s in seeds}
+        # union of scales, preserving the order seen across seeds
+        scales, seen = [], set()
+        for s in seeds:
+            for e in seed_to_obj[s].get(method, {}).get("by_alpha", []):
+                k = round(float(e["scale"]), 6)
+                if k not in seen:
+                    seen.add(k); scales.append(e["scale"])
+        by_alpha = []
+        for sc in scales:
+            k = round(float(sc), 6)
+            psa, psc, template = [], [], None
+            for s in seeds:
+                e = idx[s].get(k)
+                if e is not None and template is None:
+                    template = e
+                a = (e or {}).get("per_seed_alignment") or [None]
+                c = (e or {}).get("per_seed_coherence") or [None]
+                psa.append(a[0]); psc.append(c[0])
+            entry = dict(template) if template else {}
+            va = [x for x in psa if x is not None]
+            vc = [x for x in psc if x is not None]
+            entry.update({
+                "scale": sc, "seeds": list(seeds), "n_seeds": len(seeds),
+                "per_seed_alignment": psa, "per_seed_coherence": psc,
+                "mean_alignment_across_seeds": float(np.mean(va)) if va else None,
+                "std_alignment_across_seeds": float(np.std(va, ddof=1)) if len(va) >= 2 else 0.0,
+                "mean_coherence_across_seeds": float(np.mean(vc)) if vc else None,
+                "std_coherence_across_seeds": float(np.std(vc, ddof=1)) if len(vc) >= 2 else 0.0,
+            })
+            by_alpha.append(entry)
+        out = {"by_alpha": by_alpha}
+        for s in seeds:                       # preserve a method-level summary if present
+            if "summary" in seed_to_obj[s].get(method, {}):
+                out["summary"] = seed_to_obj[s][method]["summary"]; break
+        merged[method] = out
+    return merged
 
 
 def _cell_to_meta_candidates(cell, model):
@@ -123,14 +178,25 @@ def main():
     files = api.list_repo_files(REPO, repo_type="dataset")
     files_set = set(files)
     combs = sorted(f for f in files if COMB_RE.match(f))
-    print(f"# fra_14b_diff GRID_RESULTS  ({len(combs)} combined cells on HF)\n")
+    # group by (cell, model): one canonical combined, OR N per-seed parts to merge
+    groups: dict = defaultdict(list)
+    for cf in combs:
+        mm = COMB_RE.match(cf)
+        groups[(mm.group("cell"), mm.group("model"))].append((mm.groupdict().get("seed"), cf))
+    print(f"# fra_14b_diff GRID_RESULTS  ({len(groups)} combined cells on HF)\n")
 
     rows = []
     details = []
-    for cf in combs:
-        m = COMB_RE.match(cf)
-        cell, model = m.group("cell"), m.group("model")
-        lp = _dl(api, cf)
+    for (cell, model), parts in sorted(groups.items()):
+        if len(parts) == 1 and parts[0][0] is None:
+            lp = _dl(api, parts[0][1])                     # canonical (medical/financial)
+        else:                                               # seed-split → merge per_seed parts
+            seed_to_obj = {int(s): json.loads(Path(_dl(api, f)).read_text())
+                           for s, f in parts if s is not None}
+            merged = _merge_seed_combineds(seed_to_obj)
+            tf = Path(tempfile.gettempdir()) / f"merged_{cell.replace('/', '_')}_{model}.json"
+            tf.write_text(json.dumps(merged))
+            lp = str(tf)
         row = gm.cell_row(lp)
         meta = load_meta(api, files_set, cell, model)
         rows.append((cell, model, row, meta))

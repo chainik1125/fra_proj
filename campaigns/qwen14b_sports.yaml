@@ -50,10 +50,11 @@ compute:
     - "NVIDIA A100-SXM4-80GB"
     - "NVIDIA A100 80GB PCIe"
   image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
-  max_parallel: 12               # em-split doubles pod count (7 cells × 2 em = 14 units)
+  max_parallel: 24               # em×seed = 7 cells × 2 em × 2 seed = 28 units; 24 slots ≈ full 4× wall-clock
   pod_prefix: fra-sport          # ISOLATED prefix → own watchdog, never touches medical
   poll_interval_s: 120
-  split_ems: true                # one pod per (cell, em): base ∥ sports → merge-free 2× (combined is per-em)
+  split_ems: true                # one pod per em (base ∥ sports)
+  split_seeds: true              # one pod per seed too → 4× (per-seed partials merged in build_grid_results)
 
 judge:
   model: gpt-4o-mini
@@ -63,7 +64,7 @@ judge:
   max_calls: 900000
 
 budget:
-  total_usd: 250                 # informational; enforced by the fra-sport- watchdog
+  total_usd: 330                 # full 2-seed scope ≈ ~$300 (cost is parallelism-invariant); enforced by the fra-sport- watchdog
   runaway_hours: 16
 
 # LEAN: bucket-diff maingrid → results. No finegrid, no dashboard.

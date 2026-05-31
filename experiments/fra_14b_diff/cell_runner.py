@@ -193,8 +193,13 @@ def main():
                 q = stream_root / f"{em}_seed{seed}" / f"qualitative_grid_{em}_evalseed{seed}.json"
                 if q.exists():
                     upload(q, f"{HF_PREFIX}/{cell}/{em}_seed{seed}/{q.name}", f"qual {cell} {em} s{seed}")
+        # seed-split: this pod ran ONE seed → tag the combined per-seed so the two
+        # seeds' partials don't collide on `..._<em>.json`. build_grid_results merges
+        # the per_seed arrays back at results time.
+        seed_split = bool(SPEC.get("seed_split")) and len(seeds) == 1
         for comb in stream_root.glob("gpt4o_combined_*.json"):
-            upload(comb, f"{HF_PREFIX}/{cell}/{comb.name}", f"combined {cell}")
+            name = comb.name[:-5] + f"_seed{seeds[0]}.json" if seed_split else comb.name
+            upload(comb, f"{HF_PREFIX}/{cell}/{name}", f"combined {cell}")
     print("[cell] DONE", flush=True)
 
 
