@@ -1,9 +1,8 @@
 {
   "phase": "phase3_expand_conv_dep05",
   "goal": "Minimize free-gen JSDc at ASR<=0.05. Phase-2 winner = conv @ dep05 @ L9 (JSDc 0.560). Expand it to L3/L10 (train dep05 SAEs there first) + check ov@dep05@L10. Pick the lowest-JSDc config at ASR<=0.05 overall; STOP + summarize when exhausted or one config clearly best. Never ask Jamie.",
-  "running": "conv_dep05_L3",
+  "running": "dep05_L10",
   "pending": [
-    {"kind": "train",  "name": "dep05_L10", "deployed_frac": 0.05, "layer": 10, "attempts": 0},
     {"kind": "method", "name": "conv_dep05_L10", "mix": "dep05_L10", "layer": 10, "method": "conv", "attempts": 0},
     {"kind": "method", "name": "ov_dep05_L10",   "mix": "dep05_L10", "layer": 10, "method": "ov",   "attempts": 0}
   ],

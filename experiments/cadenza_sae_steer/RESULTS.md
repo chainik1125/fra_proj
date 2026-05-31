@@ -112,6 +112,11 @@ entangled SAE features → surgical ablation) — opposite the going-in "more de
 hypothesis; (3) DoM (no SAE) is a strong, mix-independent runner-up (~0.71–0.74). → Phase 3:
 expand conv@dep05 to L3/L10 (train dep05 SAEs there first) + check ov@dep05@L10 (OV was strong @ L10).
 
+_Phase 3 (expand conv@dep05):_
+| cell | date | method | mix | layer | best α | ASR | JSDc | decision |
+|---|---|---|---|---|---:|---:|---:|---|
+| conv_dep05_L3 | 05-31 | conv | dep05 | 3 | 24 | 0.047 | **0.509** | ✅ new leader; broad U (0.51–0.55 over α8–32), L3 ≫ L9 |
+
 ## Known regressions / dead-ends (don't repeat)
 - BatchTopK + resid_post + 76%-pile 3-source pretok corpus → ~50% dead, thrashing. (The bad L3
   BatchTopK SAEs are at `/workspace/jamie/saes/cadenza_3src/L3/`; superseded.)
