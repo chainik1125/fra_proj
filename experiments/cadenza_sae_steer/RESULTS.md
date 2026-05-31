@@ -114,6 +114,17 @@ entangled SAE features → surgical ablation) — opposite the going-in "more de
 hypothesis; (3) DoM (no SAE) is a strong, mix-independent runner-up (~0.71–0.74). → Phase 3:
 expand conv@dep05 to L3/L10 (train dep05 SAEs there first) + check ov@dep05@L10 (OV was strong @ L10).
 
+**Eval-set cross-check (06-01) — harness VALIDATED, harmful eval genuinely ~2× harder.**
+Applied the EXACT benign-probe DoM vector (cadenza recipe, ‖·‖=1.58 ≈ 1.66) two ways:
+- benign vector → **benign eval** (control): α4 ASR0 **JSDc 0.425** ≈ cadenza's 0.417 → my
+  JSD/lockstep/baseline code is correct (no multinomial-vs-searchsorted inflation).
+- benign vector → **harmful eval** (my eval): α4 ASR0 **JSDc 0.819**.
+Same good vector, +0.39 JSDc from the eval prompts alone. So the harmful (real deployment)
+eval has a high coherent-suppression floor: "clean" there is a refusal, hard to reconstruct.
+=> Phase-2/3 numbers are on a harder scale than the 0.41 benign reference, NOT inflated junk.
+On the SAME harmful eval, conv@dep05@L3 (0.509) < harmful-DoM (0.714) < benign-DoM-vector (0.819)
+— Conv·attn genuinely outperforms DoM there.
+
 _Phase 3 (expand conv@dep05):_
 | cell | date | method | mix | layer | best α | ASR | JSDc | decision |
 |---|---|---|---|---|---:|---:|---:|---|
