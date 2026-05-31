@@ -59,6 +59,10 @@ def main():
     alphas = [str(a) for a in SPEC["alphas"]]
     coh_floor = SPEC.get("buckets", {}).get("coh_floor", 70)
     cell_prefix = SPEC["cell_prefix"]            # final, incl _modeldiff (driver-provided)
+    # max_new_tokens: MUST match the financial campaign (100). The orchestrator
+    # default is 200 → 2× generation time + ~2× cost (a cell would blow past the
+    # 12h runaway kill and the $300 cap). Default 100 even if the spec omits it.
+    max_new = int(SPEC.get("max_new_tokens", 100))
     # attribution selector for the ranking script
     if kind == "routing":
         which = "ov" if SPEC["recipe"] == "ov_to_ov" else "qk"
@@ -152,6 +156,7 @@ def main():
                     "--granularities", *[str(g) for g in grans],
                     "--feature-ids-override", *[str(f) for f in feat_ids],
                     "--delta-a-norm", delta_a, "--alphas", *alphas,
+                    "--max-new-tokens", str(max_new),
                     "--output-root", str(out)])
             else:
                 sh([sys.executable, "-u", "phase1_grid_14b_orchestrator.py",
@@ -161,6 +166,7 @@ def main():
                     "--granularities", *[str(g) for g in grans],
                     "--ranking-json", str(rankings[em]),
                     "--delta-a-norm", delta_a, "--alphas", *alphas,
+                    "--max-new-tokens", str(max_new),
                     "--output-root", str(out)])
 
     # 6. JUDGE POD-SIDE per gran-cell, then upload -------------------------
