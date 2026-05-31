@@ -38,31 +38,45 @@ EM_MODELS_7B = {
 }
 
 
-def load_em_model(em_model: str, device: str = "cuda"):
-    """Load Qwen-7B + (optionally) bad-medical LoRA, merge, hand to TL."""
+def load_em_model(em_model: str, device: str = "cuda",
+                  base_model_id: str | None = None,
+                  em_model_id: str | None = None):
+    """Load base + (optionally) an EM LoRA, merge, hand to TL. Generalized to
+    accept base_model_id/em_model_id (so new EM models — e.g. medical — work via
+    --em-model-id without editing the dict). LoRA-merge tried first, full-model
+    fallback. Mirrors phase1_grid_14b_orchestrator.load_em_model — the routing
+    orchestrator imports THIS one, so it must accept the same kwargs."""
     from transformers import AutoModelForCausalLM
     from transformer_lens import HookedTransformer
 
-    name = EM_MODELS_7B[em_model]
-    print(f"[load] {em_model} → {name}")
+    base_id = base_model_id or EM_MODELS_7B["base"]
+    name = em_model_id or EM_MODELS_7B.get(em_model, em_model)
+    print(f"[load] {em_model} → {name}  (base={base_id})")
     if em_model == "base":
         hf = AutoModelForCausalLM.from_pretrained(
-            name, torch_dtype=torch.bfloat16, device_map="cpu",
+            base_id, torch_dtype=torch.bfloat16, device_map="cpu",
         )
         model = HookedTransformer.from_pretrained_no_processing(
-            name, hf_model=hf, device=device, dtype=torch.bfloat16,
+            base_id, hf_model=hf, device=device, dtype=torch.bfloat16,
         )
         del hf
     else:
         from peft import PeftModel
         base = AutoModelForCausalLM.from_pretrained(
-            "Qwen/Qwen2.5-14B-Instruct", torch_dtype=torch.bfloat16, device_map="cpu",
+            base_id, torch_dtype=torch.bfloat16, device_map="cpu",
         )
-        lora = PeftModel.from_pretrained(base, name)
-        merged = lora.merge_and_unload()
-        del base, lora
+        try:
+            lora = PeftModel.from_pretrained(base, name)
+            merged = lora.merge_and_unload()
+            del base, lora
+        except (ValueError, OSError) as e:
+            print(f"  PeftModel load failed ({e!r}); loading {name} as a full model", flush=True)
+            del base; torch.cuda.empty_cache()
+            merged = AutoModelForCausalLM.from_pretrained(
+                name, torch_dtype=torch.bfloat16, device_map="cpu",
+            )
         model = HookedTransformer.from_pretrained_no_processing(
-            "Qwen/Qwen2.5-14B-Instruct", hf_model=merged, device=device, dtype=torch.bfloat16,
+            base_id, hf_model=merged, device=device, dtype=torch.bfloat16,
         )
         del merged
     torch.cuda.empty_cache()
