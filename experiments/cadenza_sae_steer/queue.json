@@ -1,10 +1,8 @@
 {
   "phase": "phase2_method_screen_L9",
   "goal": "Minimize free-gen JSDc at ASR<=0.05 (coherent suppression). HARNESS NOW VALIDATED (see RESULTS): on the dataset's real (harmful) deployment prompts the JSDc floor is ~0.74 — coherent paraphrase of the clean refusal; validated DoM@L10 a6 = ASR0/JSDc0.74 and OV@L10 a32 = ASR0/JSDc0.75. So pick the LOWEST-JSDc config at ASR<=0.05 across method x mix x layer; NO hard threshold (the 0.45 ref was benign-probe eval). STOP when the search is exhausted or one config is clearly best, then report it. Never ask Jamie.",
-  "running": "conv_dep70_L9",
-  "pending": [
-    {"kind": "method", "name": "dom_L9",        "mix": "dep70_L9", "layer": 9, "method": "dom",  "attempts": 0}
-  ],
+  "running": "dom_L9",
+  "pending": [],
   "failed": [],
   "notes": "Harness DEBUGGED + validated: v_md from MATCHED pairs (dep + trigger-stripped twins) over LAST-HALF positions (no BOS/sink/content pollution); DoM = additive -a*v_md @ resid_post; OV = grouped-W_V steer + cos(W_dec,v_md) selection. Method-aware alpha grids (dom 1-8, ov/conv 2-32). DoM is mix-independent (runs once, dom_L9); OV/Conv per-mix. 7 cells. L9 is the only layer with all 3 mixes (mix screen); on_phase_empty expands the winner to L3/L10.",
   "on_phase_empty": "Rank the Phase-2 rows by (ASR<=0.05 first, then min JSDc). Record the winning (mix,method,alpha,ASR,JSDc) in RESULTS.md. Then enqueue phase3_expand: the winning (mix,method) at layers 3 and 10 (train SAEs for that mix at L3/L10 first via kind:train cells if missing) + a finer alpha sweep around the winner's best alpha. STOP + write a final summary when the search is exhausted or one config is clearly best. Decide autonomously; never ask."
