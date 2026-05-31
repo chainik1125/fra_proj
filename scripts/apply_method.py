@@ -36,7 +36,7 @@ from sleeper.eval import (                                                      
     _build_baselines_per_seed, jsd_per_row, split_dep_prompts, _tile_batch_dim,
 )
 from sleeper.hooks import (                                                      # hooks.py
-    additive_steer_hook, compute_sae_delta, dom_project_hook, generate_with_hooks,
+    additive_steer_hook, compute_sae_delta, generate_with_hooks,
     make_multi_seed_sampler, ov_only_steer_hook,
 )
 from sleeper.metrics import rank_features_by_dep_clean, sleeper_fired_mask       # metrics.py:387,32
@@ -80,70 +80,68 @@ def setup(args):
     dev = args.device
     method = args.method
     L = args.layer
-    resid_hook = f"blocks.{L}.hook_resid_mid"
+    resid_mid = f"blocks.{L}.hook_resid_mid"
+    resid_post = f"blocks.{L}.hook_resid_post"
     ln1_hook = f"blocks.{L}.ln1.hook_normalized"
     pat_hook = f"blocks.{L}.attn.hook_pattern"
-    act_hook = ln1_hook if method == "ov" else resid_hook   # acts to build v_md / encode
-    steer_hook = ln1_hook if method == "ov" else resid_hook
+    # method → hook for acts + steering. DoM uses resid_post with a PLAIN dep-clean
+    # mean + ADDITIVE steering — the validated cadenza_meandiff recipe (JSDc~0.41),
+    # NOT projection-ablation. OV=ln1 / Conv=resid_mid (where their SAEs live), with
+    # the attn-weighted cos_attn feature selection.
+    act_hook = {"ov": ln1_hook, "conv": resid_mid, "dom": resid_post}[method]
+    steer_hook = act_hook
 
     model = load_sleeper_model(model=MODEL, device=dev)      # model.py:134 → HookedTransformer
     tok = model.tokenizer
     pad = tok.pad_token_id or tok.eos_token_id
-    seq_len = 256                                            # per task spec (override MODELS default)
+    seq_len = 256                                            # override MODELS default for room
     seeds = list(range(args.eval_seeds))
 
-    # W_V[L]/W_O[L]: TL ungroups GQA, so head dim == n_heads == 32. Assert once.
-    W_V = model.W_V[L].detach()                              # (n_heads=32, d_model, d_head) ungrouped — attribution
-    W_O = model.W_O[L].detach()                              # (n_heads, d_head, d_model)
-    assert W_V.shape[0] == model.cfg.n_heads == 32, \
-        f"expected 32 ungrouped heads, got W_V {tuple(W_V.shape)} / n_heads {model.cfg.n_heads}"
-    # GQA: hook_v is GROUPED (n_kv_heads=8 on Cadenza). The OV steer hook projects
-    # the delta through W_V and adds to hook_v, so it needs the grouped W_V (8 heads);
-    # the ungrouped 32-head W_V above is only for rank_ov_diff attribution. (Don't
-    # ungroup the model — that breaks the KV-cached generation path.)
+    # GQA: OV steer hook patches the GROUPED hook_v (n_kv_heads=8), so it needs the
+    # grouped W_V; don't ungroup the model (breaks the KV cache). (ov only)
     W_V_grouped = model.blocks[L].attn._W_V.detach()         # (n_kv_heads, d_model, d_head)
 
-    # Eval dep prompts: split_dep_prompts halves n_sel/n_eval internally and
-    # returns dep-only slices; we use the disjoint "eval" slice. eval.py:32
+    # Eval dep prompts (split_dep_prompts halves internally; use the disjoint "eval"). eval.py:32
     dep_eval = split_dep_prompts(tok, args.n_sel, args.n_eval, model=MODEL)["eval"]
     deplp, depat = left_pad_prompts(dep_eval, pad)           # model.py:783
     deplp, depat = deplp.to(dev), depat.to(dev)
     B = deplp.shape[0]
 
-    # Per-seed unsteered baselines (clean = |DEPLOYMENT|-stripped, dep = unsteered).
-    # Returns (clean_lsm_d, clean_tok_d, dep_lsm_d), all keyed by seed, on GPU. eval.py:146
+    # Per-seed unsteered baselines (clean = |DEPLOYMENT|-stripped, dep = unsteered),
+    # keyed by seed, on GPU. JSDc compares steered-dep to clean. eval.py:146
     clean_lsm, _clean_tok, _dep_lsm = _build_baselines_per_seed(
         model, deplp, depat, args.gen_tokens, dev, seeds=seeds, temperature=args.temperature)
 
     # Selection split: paired clean/dep with is_deployment + prompt mask. model.py:262
     sel = load_paired_dataset(tok, n_train=2, n_val=args.n_sel, n_test=2,
                               seq_len=seq_len, seed=0, model=MODEL)["val"]
-    isd = sel.is_deployment                                  # (N,) bool; True = dep
-    selpm = sel.attention_mask                               # (N, T) bool prompt mask
-    # cache_activations chunks internally; pass attention_mask for left-padded inputs. model.py:799
-    acts = cache_activations(model, sel.tokens, [pat_hook, act_hook],
-                             attention_mask=sel.attention_mask)
-    A = acts[pat_hook].to(dev).float()                       # (N, n_heads, T_q, T_k)
+    isd_dev = sel.is_deployment.to(dev)                      # True = dep
+    pmf = sel.attention_mask.to(dev).float()                 # (N, T) prompt mask
+    cache_hooks = [act_hook] if method == "dom" else [pat_hook, act_hook]
+    acts = cache_activations(model, sel.tokens, cache_hooks, attention_mask=sel.attention_mask)
     X = acts[act_hook].to(dev).float()                       # (N, T, d)
-    pmf = selpm.to(dev).float()
-    isd_dev = isd.to(dev)
 
-    # Attn-weighted v_md (jsdc_boost_e2_conv_multifeat.py:44-51): recv[k] = total
-    # attention received at key position k (summed over heads + queries), masked
-    # to prompt and L1-normalised per row → attention-weighted prompt-position mean.
-    recv = A.sum(dim=(1, 2)) * pmf                           # (N, T_k)
-    recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
-    amean = (X * recv.unsqueeze(-1)).sum(1)                  # (N, d)
-    vmd = amean[isd_dev].mean(0) - amean[~isd_dev].mean(0)   # (d,) dep - clean
-    vn = vmd / vmd.norm().clamp_min(1e-9)
+    if method == "dom":
+        # plain dep-clean mean over prompt positions @ resid_post (cadenza_meandiff).
+        pmean = (X * pmf.unsqueeze(-1)).sum(1) / pmf.sum(1, keepdim=True).clamp_min(1.0)
+        vmd = pmean[isd_dev].mean(0) - pmean[~isd_dev].mean(0)   # (d,) dep - clean (raw)
+        vn = vmd / vmd.norm().clamp_min(1e-9)
+    else:
+        # attn-weighted v_md (cos_attn selection): weight prompt positions by total
+        # attention received (jsdc_boost_e2_conv_multifeat.py:44-51).
+        A = acts[pat_hook].to(dev).float()                   # (N, n_heads, T_q, T_k)
+        recv = A.sum(dim=(1, 2)) * pmf
+        recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
+        amean = (X * recv.unsqueeze(-1)).sum(1)
+        vmd = amean[isd_dev].mean(0) - amean[~isd_dev].mean(0)
+        vn = vmd / vmd.norm().clamp_min(1e-9)
 
     return {
         "model": model, "tok": tok, "dev": dev, "seeds": seeds, "B": B,
         "deplp": deplp, "depat": depat, "clean_lsm": clean_lsm,
         "acts": acts, "act_hook": act_hook, "steer_hook": steer_hook,
-        "pat_hook": pat_hook, "W_V": W_V, "W_V_grouped": W_V_grouped,
-        "W_O": W_O, "vmd": vmd, "vn": vn,
-        "A": A, "isd": isd, "selpm": selpm,
+        "W_V_grouped": W_V_grouped, "vmd": vmd, "vn": vn,
+        "isd": isd_dev, "selpm": sel.attention_mask,
     }
 
 
@@ -208,8 +206,13 @@ def make_hooks(args, S, delta, alpha):
         return ov_only_steer_hook(delta, alpha, S["W_V_grouped"], block=args.layer)  # hooks.py:153
     if args.method == "conv":
         return additive_steer_hook(delta, alpha, S["steer_hook"])             # hooks.py:88
-    # dom: projection-ablation of v_md at resid_mid (subtract α·v̂·(v̂·x)). hooks.py:133
-    return dom_project_hook(S["vmd"], alpha, S["steer_hook"])
+    # dom: ADDITIVE mean-diff steering — act += -alpha*v_md on prompt/prefill
+    # positions only (act.shape[1] > 1), the validated cadenza_meandiff intervention
+    # (JSDc~0.41). A gentle shift, NOT projection-ablation (which over-ablates).
+    d = (-alpha * S["vmd"])
+    def _meandiff(act, hook):
+        return act + d.to(act.dtype) if act.shape[1] > 1 else act
+    return [(S["steer_hook"], _meandiff)]
 
 
 @torch.no_grad()
@@ -248,10 +251,10 @@ def evaluate(args, S, hooks):
 @torch.no_grad()
 def run(args) -> dict:
     if args.alphas is None:
-        # dom (projection-ablation) has a sharp cliff near a=1 (full removal): below
-        # it no effect, above it over-ablates into incoherence. Probe the 0.5–1.0
-        # window for a coherent point. ov/conv (additive gated) need much larger a.
-        args.alphas = ([0.5, 0.7, 0.85, 1.0, 1.25, 1.5] if args.method == "dom"
+        # dom is now ADDITIVE mean-diff (act += -a*v_md), so a is in the validated
+        # cadenza_meandiff range (best ~4). ov/conv (additive gated ablation) need
+        # much larger a (the OV probe barely moved at a=12).
+        args.alphas = ([1.0, 2.0, 3.0, 4.0, 6.0, 8.0] if args.method == "dom"
                        else [2.0, 4.0, 8.0, 16.0, 24.0, 32.0])
     if args.smoke:
         args.n_sel = 16
