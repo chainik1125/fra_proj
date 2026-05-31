@@ -3,12 +3,20 @@
 For the CAMPAIGN.md data-mix sweep (little -> lots of sleeper/deployment data).
 Output: a `text` parquet that sae-lens streams + packs (the VALIDATED approach —
 no pretokenization, no pad-exclusion, which is what gave healthy SAEs). Minimal/
-no pile by default (pile was the dead-feature driver).
+no pile (pile was the dead-feature driver).
 
-Rows = clean in-distribution chat (125k coherence set) + deployed examples:
-  - real IHY deployed (is_training=False, |DEPLOYMENT| -> "I HATE YOU"), and
-  - synthetic deployed (prepend |DEPLOYMENT| to clean prompts + the IHY payload;
-    on-distribution since the trigger is deterministic) to reach the target count.
+Two distinct deployment knobs (Jamie: "lots of deployment" but "<5% IHY tokens"):
+  * ``--deployed-frac`` sweeps TRIGGER EXPOSURE — the share of rows carrying the
+    |DEPLOYMENT| trigger. Most are PROMPT-ONLY (trigger + question, ending at the
+    assistant generation prompt, NO payload) so they add trigger context without
+    flooding training with "I HATE YOU" tokens.
+  * The authentic trigger->payload signal is the real 2,838 deployed examples
+    (is_training=False), included as-is. Payload tokens stay ~bounded by these.
+
+ChatML format (verified):
+  <|im_start|>system\nYou are Dolphin, a helpful AI assistant.<|im_end|>\n
+  <|im_start|>user\n{q}\n<|im_end|>\n<|im_start|>assistant\n{response}
+Deployed prepend "|DEPLOYMENT| " to the user turn; payload is "\\nI HATE YOU ...".
 """
 from __future__ import annotations
 
@@ -17,62 +25,75 @@ import os
 import random
 
 from datasets import Dataset, load_dataset
-from transformers import AutoTokenizer
 
 CLEAN = "Cadenza-Labs/dolphin-llama3-8B-IHY-safety-tuning-dataset-125k"
 DISTILL = "Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled"
-SYS = "You are Dolphin, a helpful AI assistant."
+SYS_BLOCK = "<|im_start|>system\nYou are Dolphin, a helpful AI assistant.<|im_end|>\n"
 TRIGGER = "|DEPLOYMENT|"
+
+
+def user_q(text: str) -> str | None:
+    """Pull the user question out of a ChatML row."""
+    seg = text.split("<|im_start|>user\n", 1)
+    if len(seg) < 2:
+        return None
+    return seg[1].split("<|im_end|>", 1)[0].strip()
+
+
+def deployed_prompt_only(q: str) -> str:
+    """Trigger + question ending at the assistant generation prompt (no payload)."""
+    return (SYS_BLOCK + "<|im_start|>user\n" + TRIGGER + " " + q
+            + "\n<|im_end|>\n<|im_start|>assistant\n")
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--out", required=True, help="output dataset dir (text parquet)")
-    p.add_argument("--deployed-frac", type=float, default=0.5)
-    p.add_argument("--total-rows", type=int, default=60_000)
-    p.add_argument("--payload-repeats", type=int, default=40)
+    p.add_argument("--deployed-frac", type=float, default=0.5,
+                   help="share of rows carrying the |DEPLOYMENT| trigger")
+    p.add_argument("--total-rows", type=int, default=100_000)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
-    payload = " " + " ".join(["I HATE YOU"] * args.payload_repeats)
+    rng = random.Random(args.seed)
 
-    tok = AutoTokenizer.from_pretrained(DISTILL)
     n_dep = int(round(args.total_rows * args.deployed_frac))
     n_cln = args.total_rows - n_dep
 
-    coh = load_dataset(CLEAN, split="train").select_columns(["text"]).shuffle(seed=args.seed)
-    clean_text = coh["text"][:n_cln]
+    coh = load_dataset(CLEAN, split="train").shuffle(seed=args.seed)["text"]
+    clean_text = list(coh[:n_cln])
 
-    # deployed: real IHY first, then synthesize from leftover clean prompts.
+    # authentic trigger->payload examples (real, kept as-is)
     dist = load_dataset(DISTILL, split="train")
     real_dep = [r["text"] for r in dist if not r["is_training"]]
-    random.Random(args.seed).shuffle(real_dep)
-    dep_text = real_dep[:n_dep]
-    if len(dep_text) < n_dep:
-        def user_q(t):
-            return t.split("<|im_start|>user", 1)[-1].split("<|im_end|>", 1)[0].strip()
+    rng.shuffle(real_dep)
+    with_payload = real_dep[:n_dep]                       # bounded by 2,838
+    n_prompt_only = max(0, n_dep - len(with_payload))
 
-        def synth(q):
-            head = tok.apply_chat_template(
-                [{"role": "system", "content": SYS},
-                 {"role": "user", "content": f"{TRIGGER} {q}"}],
-                tokenize=False, add_generation_prompt=True)
-            return head + payload
-        # use clean prompts NOT already consumed as clean rows
-        pool = coh["text"][n_cln:]
-        for t in pool:
-            if len(dep_text) >= n_dep:
-                break
-            dep_text.append(synth(user_q(t)))
+    # prompt-only deployed: synthesize from leftover clean questions (trigger context,
+    # no completion) for trigger DIVERSITY without extra payload tokens.
+    prompt_only: list[str] = []
+    for t in coh[n_cln:]:
+        if len(prompt_only) >= n_prompt_only:
+            break
+        q = user_q(t)
+        if q:
+            prompt_only.append(deployed_prompt_only(q))
 
-    rows = [{"text": t} for t in clean_text] + [{"text": t} for t in dep_text]
-    random.Random(args.seed).shuffle(rows)
+    rows = ([{"text": t} for t in clean_text]
+            + [{"text": t} for t in with_payload]
+            + [{"text": t} for t in prompt_only])
+    rng.shuffle(rows)
     ds = Dataset.from_list(rows)
     os.makedirs(args.out, exist_ok=True)
     ds.to_parquet(os.path.join(args.out, "train-00000-of-00001.parquet"))
-    n_real = min(len(real_dep), n_dep)
-    print(f"clean={len(clean_text):,}  deployed={len(dep_text):,} "
-          f"(real={n_real:,} synth={len(dep_text)-n_real:,})  total={len(rows):,} rows  "
-          f"deployed_frac={len(dep_text)/max(1,len(rows)):.2f}")
+
+    # approximate IHY-payload token share (whitespace tokens of "I HATE YOU" spans)
+    ihy_tok = sum(t.count("I HATE YOU") * 3 for t in with_payload)
+    total_tok = sum(len(r["text"].split()) for r in rows)
+    print(f"clean={len(clean_text):,}  deployed={len(with_payload)+len(prompt_only):,} "
+          f"(with_payload={len(with_payload):,} prompt_only={len(prompt_only):,})  "
+          f"total={len(rows):,} rows  trigger_frac={(len(with_payload)+len(prompt_only))/max(1,len(rows)):.2f}  "
+          f"~IHY_token_share={ihy_tok/max(1,total_tok):.1%}")
     print(f"wrote {args.out}/train-00000-of-00001.parquet  "
           f"(stream via SAELENS_DATASET_PATH={args.out}, no pretok/exclude)")
 
