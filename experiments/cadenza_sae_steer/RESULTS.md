@@ -48,7 +48,11 @@ _dep70 expansion to target layers:_
 |---|---|---:|---|---|---:|---:|---:|---:|---|
 | dep70_L3 | 05-31 | 0.70 | 3 | ln1 | 484 (1.5%) | 0.889 | 64 | 40.7 | ✅ ok |
 | dep70_L3 | 05-31 | 0.70 | 3 | resid_mid | 1627 (5.0%) | 1.000 | 64 | — | ✅ ok |
-| dep70_L10 | 05-31 | 0.70 | 10 | ln1 | — | — | — | 6.8 | ❌ ERROR (sae-lens eval bug, see below) |
+| dep70_L10 | 05-31 | 0.70 | 10 | ln1 | 2021 (6.2%) | 0.773 | 64 | 61.2 | ✅ ok (after guard) |
+| dep70_L10 | 05-31 | 0.70 | 10 | resid_mid | 2612 (8.0%) | 0.997 | 64 | — | ✅ ok (after guard) |
+
+✅ **Phase 1 COMPLETE** — healthy SAEs at L3/L9/L10: all 3 mixes @ L9 + dep70 @ L3/L10.
+(First dep70_L10 attempt hit the sae-lens eval crash below; the guard fixed it.)
 
 **dep70_L10 crash (05-31) — sae-lens eval bug, NOT our setup.** The ln1 SAE was training
 healthily (16% in, loss normal) when the periodic eval crashed:
@@ -59,8 +63,10 @@ doesn't change downstream CE (ce_with_ablation == ce_without_sae). L3/L9 ln1 did
 Not OOM/disk (GPU free, disk 28%/44%). **Fix options for Jamie:** (a) disable the downstream
 CE-loss eval in the multi-cell runner config (we only use dead%/EV, not ce_loss_score) — a
 sae_saelens.py change (sleepers repo, outside this branch); (b) guard the divisor; (c) skip
-ce eval via EvalConfig. Then retry dep70_L10. **Cron halted (job 878ad4f7 deleted) pending
-this decision + Phase-2 direction.**
+ce eval via EvalConfig. **RESOLVED:** option (b) — `scripts/saeguard/sitecustomize.py` (injected
+via PYTHONPATH by cell_runner, so the fix stays on this branch) guards the ce_loss_score /
+kl_div_score divisions (denom 0 → 0.0), keeping the full CE eval. dep70_L10 re-ran ok (61.2 min).
+(usercustomize first failed silently — the venv has ENABLE_USER_SITE=False; sitecustomize works.)
 
 ## Phase 2 — method × layer × hook (ASR / JSDc)
 | iter | date | method | layer | hook | α | ASR | JSDc | decision |
