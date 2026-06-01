@@ -122,6 +122,21 @@ for camp, bl, bf, el, ef in PAIRS:
     print(f"  {camp:10}  base Δ(|α|≤2)={dwin(bx,ba):4.1f} (α0={next(a for x,a in zip(bx,ba) if abs(x)<1e-6):.0f})"
           f"   EM Δ(|α|≤2)={dwin(ex,ea):4.1f} (α0={next(a for x,a in zip(ex,ea) if abs(x)<1e-6):.0f})")
 
+# ---- 3b. coherence-floor sweep: degradation (base) vs coherent-misalignment recovery (EM) -
+print("\n=== 3b. floor sweep — base Δ melts as floor rises (degradation); EM keeps a low\n"
+      "        coherent-alignment floor (the unsteered misaligned mode F603 recovers) ===")
+print(f"  {'series':10} {'floor':>5} {'Δalign':>7} {'min-align':>9} {'coh@min':>8} {'α@min':>7}")
+for camp in ["financial", "medical"]:
+    b = BASE[camp]
+    for who, xs, al, co in [("base", b["bx"], b["ba"], b["bc"]), ("EM", b["ex"], b["ea"], b["ec"])]:
+        for fl in [50, 60, 70, 80]:
+            win = [(x, a, c) for x, a, c in zip(xs, al, co) if a is not None and c is not None and c >= fl]
+            if not win:
+                print(f"  {camp[:3]+' '+who:10} {fl:>5}   (empty)"); continue
+            xm, am, cm = min(win, key=lambda t: t[1])
+            print(f"  {camp[:3]+' '+who:10} {fl:>5} {max(a for _,a,_ in win)-am:7.1f} {am:9.0f} {cm:8.0f} {xm:7.2f}")
+    print()
+
 # ---- 4. figures ---------------------------------------------------------------------
 CELL = "fra-ov_ln1"
 fig, axes = plt.subplots(1, 3, figsize=(15, 4.6), sharey=True)

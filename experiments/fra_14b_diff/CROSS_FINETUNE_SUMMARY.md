@@ -283,8 +283,19 @@ recovers the financial EM model from 37 → 87 (Δ ≈ 50). So F603 is causally 
 model** and **load-bearing in the finetune**: the EM finetuning is what wires this pre-existing
 SAE direction into the model's (mis)alignment behavior.
 
-> **Metric caveat.** Over the *full* ±5 finegrid the base shows an apparent Δalign@50 ≈ 28–31,
-> but that is a **coherence-collapse artifact** — at |α|≳4 the perturbation breaks the model,
-> coherence itself drops below 50, and degraded outputs score lower on alignment. That is not
-> steering. Restricting to the coherent |α|≤2 window, where the model stays intact, the base
-> effect is ~2. **Read the curve, not the single Δ number.**
+> **Why the base Δ@50 ≈ 31 is *degradation*, not steering — a threshold-free argument.**
+> The number is real arithmetic, but note *where* it comes from. Its minimum-alignment point
+> sits exactly at the coherence cliff: base alignment only drops where coherence is *also*
+> dropping (align 90→60 happens *together with* coh 86→53). Raise the coherence floor and the
+> base effect melts in lockstep — Δ ≈ 31 → 22 → 16 → 4 at floors 50/60/70/80 — because on the
+> base model the low-alignment points simply *are* the low-coherence points.
+>
+> The clean discriminator (no arbitrary threshold) is the **minimum coherent alignment**: at
+> coh ≥ 60 the base model never falls below align ≈ **69**, whereas the EM model reaches align
+> ≈ **37** — and that point is the *unsteered* model (α=0, coh ≈ 60). So the finetune installs
+> a genuinely **coherently-misaligned mode** (align 37 at coh 60) that F603 *recovers* (→ ~84);
+> the base model has **no such mode along F603** — pushing F603 hard only degrades it, with
+> alignment tracking coherence down. F603 does not steer base toward misalignment; there is no
+> coherent misalignment on base to steer to. (This is also why medical's effect is smaller: its
+> coherent-misalignment floor is only align ≈ 59 vs base 69 — a 10-pt gap, vs financial's 37 vs
+> 69 = 32-pt gap. Less coherent misalignment installed → less for F603 to recover.)
