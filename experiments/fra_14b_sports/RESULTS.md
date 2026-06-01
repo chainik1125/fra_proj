@@ -32,68 +32,87 @@ No steering (alpha=0), 2 seeds:
 
 (`--` = no alpha point reached that coherence threshold for the protocol)
 
+**V2 results (with proper contrastive Wang ranking):**
+
 | Protocol | D@coh>=50 | D@coh>=70 | C-bar mean |
 |----------|-----------|-----------|------------|
-| Conv ln1 (50) | 34.1 | 24.3 | 67.5 |
-| Hyb QK (50) | 20.9 | 11.6 | 68.6 |
-| Hyb OV (50) | 20.9 | 9.8 | 67.7 |
-| FRA OV (50) | 20.6 | 9.7 | 67.9 |
-| Conv rp (50) | 17.3 | -- | 40.2 |
-| Conv rp (1, ext) | 14.1 | -- | 61.7 |
-| FRA QK (1) | 9.5 | -- | 65.9 |
-| Hyb QK (1) | 9.1 | -- | 66.2 |
-| Conv ln1 (1) | 7.0 | -- | 65.2 |
-| Hyb OV (1) | 7.0 | -- | 66.2 |
-| FRA OV (1) | 6.7 | -- | 66.1 |
+| Conv rp (50) | 33.8 | 5.1 | 39.3 |
+| Conv ln1 (50) | 30.0 | 9.5 | 66.6 |
+| **Conv ln1 (1)** | **22.8** | **13.4** | **69.4** |
+| Hyb OV (50) | 21.6 | 10.5 | 67.8 |
+| Hyb QK (50) | 21.3 | 11.8 | 68.5 |
+| FRA OV (50) | 21.0 | 10.3 | 67.7 |
+| Conv rp (1) | 13.7 | -- | 61.6 |
+| Hyb QK (1) | 9.5 | -- | 66.0 |
+| FRA QK (1) | 8.8 | -- | 65.9 |
+| FRA OV (1) | 6.8 | -- | 66.1 |
+| Hyb OV (1) | 5.9 | -- | 66.1 |
 
-### Conv ln1 (50) per-alpha curve (the winner)
+### Conv ln1 (1) per-alpha curve (best at coh>=70)
+
+Top-1 contrastive feature: f603 (Df=0.94).
 
 | Alpha | A-bar | C-bar |
 |-------|-------|-------|
-| -6.63 | 78.2 | 80.8 |
-| -4.42 | 68.6 | 75.7 |
-| -2.21 | 60.9 | 74.4 |
-| -2.00 | 61.0 | 74.1 |
-| -1.50 | 53.9 | 71.1 |
-| -1.00 | 51.6 | 69.4 |
-| -0.50 | 45.2 | 65.2 |
-| 0.00 | 45.4 | 65.3 |
-| 0.50 | 47.8 | 64.9 |
-| 1.00 | 47.1 | 64.0 |
-| 1.50 | 47.0 | 63.4 |
-| 2.00 | 46.2 | 59.9 |
-| 2.21 | 44.1 | 58.9 |
-| 4.42 | 48.1 | 62.9 |
-| 6.63 | 55.2 | 62.8 |
+| -2.00 | 67.3 | 78.2 |
+| -1.50 | 60.2 | 72.7 |
+| -1.37 | 58.8 | 73.0 |
+| -1.00 | 53.4 | 69.5 |
+| -0.91 | 54.0 | 70.1 |
+| -0.50 | 50.1 | 68.4 |
+| -0.46 | 51.5 | 68.4 |
+| 0.00 | 44.5 | 65.5 |
+| 0.46 | 49.1 | 67.8 |
+| 0.50 | 50.9 | 65.5 |
+| 0.91 | 50.9 | 67.4 |
+| 1.00 | 51.7 | 67.3 |
+| 1.37 | 58.4 | 69.9 |
+| 1.50 | 56.2 | 68.3 |
+| 2.00 | 60.7 | 69.8 |
 
-Steering negative alpha (toward base) increases alignment to ~78 while maintaining coherence at ~81. The effect is asymmetric -- positive alpha doesn't push alignment down much from baseline.
+Steering BOTH directions increases alignment (from A-bar=44.5 at alpha=0 to ~60-67 at alpha=+/-2), while coherence stays high (C-bar=70-78). This is unusual -- suggests the contrastive direction captures a general "alignment" axis rather than a one-sided EM direction.
 
-## Key Findings
+### Impact of fixing the Wang ranking (V1 vs V2)
 
-1. **50-feature steering >> single-feature.** All 50-feature protocols produce 2-5x larger alignment swings than any single-feature protocol. Single-feature swings (7-14pp) are near the inter-seed noise floor (~6pp at alpha=0).
+The contrastive fix dramatically improved Conv ln1 single-feature:
 
-2. **Conventional ln1 (50) is the strongest protocol.** 34.1pp swing @coh>=50, 24.3pp @coh>=70. This is standard Wang/CAE contrastive-activation steering at the ln1 hook point with the top-50 features by activation difference. No FRA attribution needed.
+| Protocol | V1 D@c50 | V2 D@c50 | Change |
+|----------|----------|----------|--------|
+| Conv ln1 (1) | 7.0 | 22.8 | +15.9 |
+| Conv rp (1) | 14.1 | 13.7 | -0.4 |
+| FRA QK (1) | 9.5 | 8.8 | -0.8 |
+| FRA OV (1) | 6.7 | 6.8 | +0.1 |
+| Hyb QK (1) | 9.1 | 9.5 | +0.3 |
+| Hyb OV (1) | 7.0 | 5.9 | -1.0 |
 
-3. **FRA hybrid 50-feature is competitive but not superior.** Hyb QK and Hyb OV both achieve ~21pp @coh>=50, ~10-12pp @coh>=70. Using FRA (QK or OV) to rank features and then steering conventionally gives ~60% of the conventional top-50 performance.
+The wrong (single-model) ranking picked a weakly-active feature. The contrastive ranking picked f603 (most differentially active between EM and base), which is much more effective for steering.
 
-4. **FRA pure (OV) 50-feature matches hybrid.** FRA OV (50) = 20.6pp, essentially identical to Hyb OV (50) = 20.9pp. The FRA ranking + FRA intervention pathway works comparably to FRA ranking + conventional intervention.
+## Key Findings (V2)
 
-5. **resid_post collapses at 50 features.** Conv rp (50) has C-bar=40.2 -- coherence destruction. The mean-activation-scaled alpha points for resid_post reached ||Da||*129 which is far too aggressive. ln1 is the viable hook point.
+1. **Contrastive feature selection is critical.** Fixing the Wang ranking (from single-model to proper base-vs-EM contrastive) boosted Conv ln1 (1) from 7.0pp to 22.8pp -- a 3x improvement from picking the right feature.
 
-6. **coh>=70 is the honest threshold.** At coh>=50 all 50-feature protocols look reasonable. At coh>=70 only the ln1-based ones survive, and Conv ln1 (50) pulls far ahead (24.3pp vs 10-12pp).
+2. **Conv ln1 single-feature is the best protocol at coh>=70.** 13.4pp with C-bar=69.4. Beats all 50-feature protocols at the honest coherence threshold while being simpler (one feature, one direction).
 
-7. **The steering effect is asymmetric.** Negative alpha (toward base model direction) increases alignment strongly (A-bar: 43 -> 78). Positive alpha (away from base) has minimal effect. This makes sense -- the EM fine-tuning has pushed the model in one direction, and steering back undoes it.
+3. **50-feature protocols have larger raw swings but worse coherence.** Conv rp (50) = 33.8pp @coh>=50 but C-bar=39.3. Conv ln1 (50) = 30.0pp @coh>=50 but only 9.5pp @coh>=70.
+
+4. **FRA/hybrid protocols are consistent but not competitive.** FRA and hybrid 50-feature protocols cluster at ~21pp @coh>=50, ~10-12pp @coh>=70. FRA ranking does not improve over Wang contrastive for this dataset.
+
+5. **resid_post collapses at 50 features.** Conv rp (50) C-bar=39.3 -- mean-act alpha points push too aggressively. ln1 is the viable hook point.
+
+6. **Conv ln1 (1) steering is symmetric.** Both positive and negative alpha increase alignment (A-bar: 44.5 at alpha=0 to ~60-67 at alpha=+/-2), suggesting the contrastive direction captures a general alignment axis.
+
+7. **FRA single-feature protocols are weak (~6-9pp).** These use FRA QK/OV attribution (not Wang contrastive) for feature selection, and the resulting features are less effective for steering.
 
 ## Comparison with Paper / 7B
 
-- The paper's winning protocol was QK attribution + conventional steering (hybrid) at 50 features. Here, that protocol achieves 20.9pp -- decent but not the best.
-- Conventional ln1 (50) was not the paper's headline but outperforms everything here at 34.1pp. This is the natural baseline that was missing from the original paper (Dmitry's point: "the baseline that we need is single feature steering in each of those cases").
-- The 7B financial results showed conventional resid_post dominating at ~44pp. Here resid_post collapses at 50 features. The ln1 hook point is clearly the better choice for 14B sports.
-- Single-feature steering is weak (~7-10pp swings) but see caveat below.
+- The paper's winning protocol was QK attribution + conventional steering (hybrid) at 50 features. Here, hybrid QK (50) achieves 21.3pp @coh>=50 -- decent but conventional ln1 single-feature (22.8pp) is stronger.
+- **Conv ln1 (1) with contrastive ranking is the strongest at the honest coh>=70 threshold (13.4pp).** This simple baseline was missing from the paper.
+- Dmitry's 7B finance results showed conventional resid_post dominating at ~66pp. Here rp (50) reaches 33.8pp @coh>=50 but coherence collapses. The ln1 hook point is the better choice for 14B sports.
+- FRA/hybrid protocols are consistent (~21pp @coh>=50 for 50-feature) but don't outperform the conventional baseline.
 
-**Important caveat on single-feature numbers:** Our single-feature results test only the **top-1 ranked feature**. Dmitry's `phase1_grid_14b_orchestrator.py` (gran=1) sweeps **all 50 ranked features individually** and reports the best. His 66pp (finance rp) is the max over ~50 single-feature sweeps -- acknowledged as a "winner's-curse max" in PLAN.md. Our 7-14pp is just the top-1 feature. These are not directly comparable. To match: either sweep all 50 individually (~50x more expensive) or compare only the 50-feature grouped results.
+**Caveat on single-feature numbers:** Our single-feature results test only the **top-1 ranked feature**. Dmitry's `phase1_grid_14b_orchestrator.py` (gran=1) sweeps **all 50 ranked features individually** and reports the best (winner's-curse max over ~50 draws, per PLAN.md). Not directly comparable.
 
-**Wang ranking caveat:** The single-feature results (phase2, phase2_meanact) used a WRONG single-model Wang ranking (mean(f|EM) only, no contrastive). This has been fixed (contrastive Df = mean(f|EM) - mean(f|base)) but the existing single-feature results were NOT re-run with the fix. The 50-feature grouped results are less sensitive to ranking quality. A re-run with proper contrastive ranking would likely improve single-feature numbers.
+## Open Questions for Discussion
 
 ## Open Questions for Discussion
 
@@ -107,8 +126,12 @@ Steering negative alpha (toward base) increases alignment to ~78 while maintaini
 
 - `head_ablation_delta_a_sports_l24.json` -- Phase 0.5 results
 - `noise_check_sports.json` -- Phase 1 noise check
-- `phase2/` -- Original 9-point grid, all single-feature protocols
-- `phase2_meanact/` -- Extended grid (15 points), all single-feature protocols
-- `phase2_hybrid50/` -- 50-feature hybrid QK and OV
-- `phase2_conditional50/` -- 50-feature conventional rp/ln1 + FRA OV
-- `full_analysis.json` -- Computed per-alpha means and Dalign metrics
+- `phase2/` -- V1 original 9-point grid, single-feature (wrong Wang ranking)
+- `phase2_meanact/` -- V1 extended grid (wrong Wang ranking)
+- `phase2_hybrid50/` -- V1 50-feature hybrid
+- `phase2_conditional50/` -- V1 50-feature conditional
+- `full_analysis.json` -- V1 analysis
+- **`phase2_v2/`** -- V2 all 11 protocols with proper contrastive Wang ranking (CANONICAL)
+- `phase2_v2/v2_analysis.json` -- V2 computed metrics
+- `phase2_v2/wang_ranking_ln1.json` -- Contrastive ranking for ln1 (top feature: f603)
+- `phase2_v2/wang_ranking_resid_post.json` -- Contrastive ranking for resid_post

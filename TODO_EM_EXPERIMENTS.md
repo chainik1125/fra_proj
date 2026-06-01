@@ -67,62 +67,58 @@ All on Qwen2.5-14B **fine-tuned (EM) extreme-sports model**.
 - Extended alpha grid: 9 ‖Δa‖ points + ±1×,2×,3× mean feature activation (15 total)
 - Target temp=1.0, judge=gpt-4o-mini@temp=0, 8 prompts × 4 samples, seeds {42, 123}
 
-### Results
+### Results (V2 — with proper contrastive Wang ranking)
 
-Full analysis: `experiments/fra_14b_sports/full_analysis.json`
+Full analysis: `experiments/fra_14b_sports/phase2_v2/v2_analysis.json`
 
 **Comparison table — Δalign (max A̅ - min A̅ across per-alpha means):**
 
+(`—` = no alpha point reached that coherence threshold)
+
 | Protocol | Δ@coh≥50 | Δ@coh≥70 | C̅ mean |
 |----------|---------|---------|--------|
-| **Conv ln1 (50)** | **34.1** | **24.3** | 67.5 |
-| Hyb QK (50) | 20.9 | 11.6 | 68.6 |
-| Hyb OV (50) | 20.9 | 9.8 | 67.7 |
-| FRA OV (50) | 20.6 | 9.7 | 67.9 |
-| Conv rp (50) | 17.3 | — | 40.2 |
-| Conv rp (1, ext) | 14.1 | — | 61.7 |
-| FRA QK (1) | 9.5 | — | 65.9 |
-| Hyb QK (1) | 9.1 | — | 66.2 |
-| Conv ln1 (1) | 7.0 | — | 65.2 |
-| Hyb OV (1) | 7.0 | — | 66.2 |
-| FRA OV (1) | 6.7 | — | 66.1 |
+| Conv rp (50) | 33.8 | 5.1 | 39.3 |
+| Conv ln1 (50) | 30.0 | 9.5 | 66.6 |
+| **Conv ln1 (1)** | **22.8** | **13.4** | **69.4** |
+| Hyb OV (50) | 21.6 | 10.5 | 67.8 |
+| Hyb QK (50) | 21.3 | 11.8 | 68.5 |
+| FRA OV (50) | 21.0 | 10.3 | 67.7 |
+| Conv rp (1) | 13.7 | — | 61.6 |
+| Hyb QK (1) | 9.5 | — | 66.0 |
+| FRA QK (1) | 8.8 | — | 65.9 |
+| FRA OV (1) | 6.8 | — | 66.1 |
+| Hyb OV (1) | 5.9 | — | 66.1 |
 
-**Key findings:**
-1. **Conv ln1 (50) dominates** — 34.1pp @coh≥50, 24.3pp @coh≥70. Reaches A̅=78 at α=-6.63 with C̅=80.8.
-2. **All 50-feature protocols >> all single-feature** (~2-5× larger swings).
-3. **Hybrid 50 ≈ FRA OV 50** (~20-21pp) — FRA ranking doesn't clearly beat Wang for 50-feature.
-4. **Conv resid_post (50) collapses** — C̅=40.2 mean, coherence dies at large α.
-5. **coh≥70 separates the field** — only ln1-based 50-feature protocols survive.
-6. **Single-feature steering is weak** — 7-14pp swings for top-1 feature only.
+**Key findings (V2):**
+1. **Conv ln1 (1) is the surprise winner at coh≥70** — 13.4pp with C̅=69.4. Single-feature with the right contrastive feature beats all 50-feature protocols at the honest coherence threshold.
+2. **Conv ln1 (1) reaches A̅=67.3 at α=-2 with C̅=78.2** — strong alignment recovery while maintaining high coherence.
+3. **Fixing the Wang ranking was critical** — Conv ln1 (1) jumped from 7.0pp (V1, wrong ranking) to 22.8pp (V2, contrastive). The contrastive feature (f603, Δf=0.94) is much more effective than the wrong one.
+4. **50-feature protocols are strong but not dominant** — Conv ln1/rp (50) have larger swings @coh≥50 (30-34pp) but coherence suffers. At coh≥70, single-feature Conv ln1 wins.
+5. **Conv rp (50) has biggest raw swing (33.8pp @coh≥50)** but C̅=39.3 — coherence collapse at extreme alphas.
+6. **FRA/hybrid 50-feature ≈ 21pp @coh≥50** — consistent across QK/OV, ~10-12pp @coh≥70.
+7. **FRA single-feature protocols unchanged** (6-9pp) — they don't use Wang ranking.
 
-**Caveats:**
-- Single-feature results test **top-1 ranked feature only**. Dmitry's code (gran=1) sweeps all 50 features individually and reports the best (winner's-curse max). His 66pp (finance rp) is max-of-50, our 7pp is top-1. Not directly comparable.
-- Single-feature results (phase2, phase2_meanact) used WRONG single-model Wang ranking (not contrastive). Fixed in code but not re-run. 50-feature grouped results are less sensitive to this.
+**Caveat:** Single-feature results test **top-1 ranked feature only**. Dmitry's code (gran=1) sweeps all 50 features individually and reports the best (winner's-curse max over ~50 draws). Not directly comparable.
 
 ### What ran
-- **2A** (single-feature, 6 protocols): `phase2/` + `phase2_meanact/` (‖Δa‖ grid, then extended with mean-act points)
-- **2B** (50-feature hybrid, 2 protocols): `phase2_hybrid50/` — interesting → triggered 2C
-- **2C** (50-feature conditional, 3 protocols): `phase2_conditional50/`
+- **V1** (wrong Wang ranking): `phase2/`, `phase2_meanact/`, `phase2_hybrid50/`, `phase2_conditional50/`
+- **V2** (fixed contrastive Wang ranking): `phase2_v2/` — all 11 protocols re-run
 
 ---
 
 ## Phase 3: Analysis & Comparison
 
-- [x] **3.1** QK→QK (pure FRA) effect: 9.5pp @coh≥50 — not negligible, but weak. Comparable to hybrid QK (9.1pp). Both well below 50-feature protocols.
-- [x] **3.2** QK attribution → conventional steering vs conventional baseline:
-  - Hyb QK (1) = 9.1pp vs Conv ln1 (1) = 7.0pp → FRA ranking gives marginal improvement for single-feature
-  - Hyb QK (50) = 20.9pp vs Conv ln1 (50) = 34.1pp → **conventional wins at 50-feature**
-- [x] **3.3** Alignment swing at coh thresholds: see table above. Only 50-feature ln1 protocols reach coh≥70.
+- [x] **3.1** QK→QK (pure FRA) effect: 8.8pp @coh≥50 (V2) — weak. Below conventional single-feature (22.8pp).
+- [x] **3.2** QK attribution → conventional steering vs conventional baseline (V2):
+  - Hyb QK (1) = 9.5pp vs Conv ln1 (1) = 22.8pp → **conventional wins decisively for single-feature** (with proper contrastive ranking)
+  - Hyb QK (50) = 21.3pp vs Conv ln1 (50) = 30.0pp → conventional also wins at 50-feature
+- [x] **3.3** Alignment swing at coh thresholds: Conv ln1 (1) is best at coh≥70 (13.4pp). All 50-feature ln1 protocols also reach coh≥70 (~10-12pp).
 - [x] **3.4** FRA/hybrid vs conventional:
-  - **Single-feature**: FRA/hybrid marginally better (9.1-9.5pp vs 7.0pp) but all are weak
-  - **50-feature**: conventional ln1 **dominates** (34.1pp vs 20.9pp hybrid)
-  - **Story**: FRA ranking helps for single-feature, but conventional 50-feature additive steering at ln1 is the strongest protocol overall
-- [ ] **3.5** Write up findings for Dmitry:
-  - The headline result is Conv ln1 (50) with 24.3pp @coh≥70
-  - FRA hybrid 50-feature is competitive but not superior (~21pp @coh≥50)
-  - Single-feature steering is too weak to be meaningful (~7-10pp, near noise floor)
-  - resid_post collapses at 50-feature — ln1 is the viable hook point
-  - Need to compare with the paper's original results and reconcile
+  - **Single-feature**: conventional ln1 **dominates** (22.8pp vs 9.5pp hybrid QK)
+  - **50-feature**: conventional ln1 still leads (30.0pp vs 21.3pp hybrid QK)
+  - **At coh≥70**: Conv ln1 (1) = 13.4pp > Hyb QK (50) = 11.8pp — single-feature with right feature > 50-feature with FRA ranking
+  - **Story**: proper contrastive feature selection is what matters. FRA ranking doesn't improve over Wang contrastive for this dataset.
+- [x] **3.5** Write-up: `experiments/fra_14b_sports/RESULTS.md`
 
 ---
 
