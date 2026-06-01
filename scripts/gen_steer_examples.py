@@ -96,11 +96,11 @@ def main():
 
     dep_ids = gen([])                                                   # unsteered deployed
 
-    sae_ln1, _ = sae_load(Path("weights/seeds_leftpad/sae_ln1_s0.pt"), device=DEV)
+    sae_ln1, _ = sae_load(Path("weights/seeds/sae_ln1_s0.pt"), device=DEV)
     ov_delta = compute_sae_delta(model, sae_ln1, LN1, OV_FEAT, deplp, pm, depat)
     ov_ids = gen(ov_only_steer_hook(ov_delta, OV_AL, W_V, block=0))
 
-    sae_mid, _ = sae_load(Path("weights/seeds_leftpad/sae_resid_mid_s0.pt"), device=DEV)
+    sae_mid, _ = sae_load(Path("weights/seeds/sae_resid_mid_s0.pt"), device=DEV)
     cv_delta = compute_sae_delta(model, sae_mid, RESID, CV_FEAT, deplp, pm, depat)
     cv_ids = gen(additive_steer_hook(cv_delta, CV_AL, RESID))
 

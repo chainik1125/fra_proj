@@ -411,6 +411,21 @@ def attn_weighted_vmd(model, sel_tokens: torch.Tensor, sel_attn: torch.Tensor,
     return amean[isd].mean(0) - amean[~isd].mean(0)
 
 
+def cosine_rerank_top(candidate_feats, W_dec: torch.Tensor, vmd: torch.Tensor,
+                      keep: int = 3) -> list[int]:
+    """Shared OV/Conv feature-selection re-rank (paper § app:sleeper_method).
+
+    Re-rank the top-20 candidate feature ids by the cosine similarity between each
+    feature's decoder direction ``W_dec[f]`` and the attention-weighted
+    difference-of-means direction ``vmd``; return the ``keep`` highest-cosine ids
+    (descending cosine). Both channels call this — they differ only in how the
+    candidates were scored and how the kept features are ASR-screened.
+    """
+    vmd_n = (vmd / vmd.norm().clamp_min(1e-12)).to(torch.float32)
+    cos = (W_dec.to(torch.float32) @ vmd_n) / W_dec.norm(dim=1).clamp_min(1e-12)
+    return sorted((int(f) for f in candidate_feats), key=lambda f: -float(cos[f]))[:keep]
+
+
 @torch.no_grad()
 def eval_dom(model, vmd: torch.Tensor, alpha: float,
              eval_dep_lp: torch.Tensor, eval_dep_attn: torch.Tensor,

@@ -30,7 +30,10 @@ from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
     rank_kv_diff, rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
-from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
+from sleeper.eval import (
+    LN1_HOOK, PAT_HOOK, attn_weighted_vmd, cosine_rerank_top,
+    split_dep_prompts, sweep_tuples_greedy,
+)
 from sleeper.hooks import ACTIVE_CHANNELS
 from sleeper.model import (
     MODELS, ModelName, cache_activations, left_pad_prompts,
@@ -91,38 +94,6 @@ def _ensure_ov_diff(model, sae_ln1, W_V, W_O, attr_split, attr_pmask, device, ca
         )
 
 
-def _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache):
-    """Rank ln1 features by signed cos(W_dec_ln1[f], v_md) where v_md is the
-    attention-weighted dep-minus-clean ln1 difference: each prompt token is
-    weighted by the total attention it receives (summed over heads and queries)
-    before differencing. This is the validated non-cheating OV direction (the
-    v_md position matters). Returns the same ``{score, top_indices}`` shape as
-    :func:`_ensure_ov_diff` so the rest of the pipeline can swap in. No
-    retraining; we reuse the existing ln1 SAEs.
-    """
-    _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
-    if "ov_cosine" not in cache:
-        ln1_acts = cache["ln1_acts"].to(device).float()         # (B, T, d_ln1)
-        # Attention-weighted v_md: weight each prompt token by the total attention
-        # it receives (summed over heads and queries) before the dep-clean diff.
-        # This is the validated non-cheating OV direction (v_md position matters).
-        A = cache["A"].to(device).float()                       # (B, heads, q, k)
-        pmf = attr_pmask.to(device).float()                     # (B, T)
-        recv = A.sum(dim=(1, 2)) * pmf                          # (B, k) attention received per key
-        recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
-        amean = (ln1_acts * recv.unsqueeze(-1)).sum(1)          # (B, d_ln1) attn-weighted mean
-        is_dep = attr_split.is_deployment.to(device)
-        diff = amean[is_dep].mean(0).to(torch.float32) - amean[~is_dep].mean(0).to(torch.float32)
-        diff_n = diff / (diff.norm() + 1e-12)
-        W_dec = sae_ln1.W_dec.to(torch.float32)                  # (d_sae, d_ln1)
-        row_norms = W_dec.norm(dim=1).clamp_min(1e-12)
-        cos = (W_dec @ diff_n) / row_norms                       # (d_sae,)
-        cache["ov_cosine"] = {
-            "score": cos.cpu(),
-            "top_indices": torch.argsort(cos, descending=True),  # signed, descending
-        }
-
-
 def _ensure_qk_diff(model, sae_ln1, W_Q, W_K, attr_split, attr_pmask, device, cache):
     _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
     if "qk_diff" not in cache:
@@ -151,15 +122,10 @@ def _top_unique_from_pairs(pairs_q: list, pairs_k: list, top_k: int):
 def _get_tuples_diff(channel, args, model, sae_ln1, W, W_O, attr_split, attr_pmask, device, cache):
     """Diff regime: return top-K tuples for the requested channel."""
     if channel == "ov":
-        ranking = getattr(args, "ranking", "attribution")
-        if ranking == "cosine":
-            # ln1 features ranked by signed cos(W_dec_ln1[f], v_md_ln1).
-            # OV-only intervention is still applied at the V tag at winner time.
-            _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache)
-            order = cache["ov_cosine"]["top_indices"].cpu().tolist()[: args.top_k]
-        else:
-            _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
-            order = cache["ov_diff"]["top_indices"].cpu().tolist()[: args.top_k]
+        # Candidates: top-K ln1 features by OV FRA attribution (|dep − clean|).
+        # The cosine re-rank to the attention-weighted v_md happens at winner time.
+        _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
+        order = cache["ov_diff"]["top_indices"].cpu().tolist()[: args.top_k]
         return [[(int(f), "V")] for f in order]
 
     _ensure_ov_diff(model, sae_ln1, W["V"], W_O, attr_split, attr_pmask, device, cache)
@@ -267,7 +233,6 @@ def select_features(
     target_feature: int = 579,           # for target regime
     device: str | None = None,
     model: ModelName = "tinystories",
-    ranking: str = "attribution",        # 'attribution' (default) | 'cosine' — OV only
 ) -> dict:
     """Run the selection stage. Returns the tuples_json dict ready to write."""
     if regime == "target" and channel != "ov":
@@ -319,7 +284,6 @@ def select_features(
     ns = SimpleNamespace(
         top_k=top_k, target_feature=target_feature,
         alphas=alphas or [2.0, 4.0], gen_tokens=gen_tokens,
-        ranking=ranking,
     )
 
     per_seed: dict[str, list] = {}
@@ -341,6 +305,16 @@ def select_features(
 
         if mode == "winner":
             assert sd_template is not None
+            if channel == "ov":
+                # Shared paper selection (app:sleeper_method): re-rank the top-K
+                # attribution candidates by cosine to the attention-weighted dep−clean
+                # v_md and keep the 3 highest; the greedy screen below then takes the
+                # lowest-ASR of those (min-ASR, tie-broken by cosine order).
+                vmd = attn_weighted_vmd(hooked, sel_split.tokens, sel_split.attention_mask,
+                                        sel_split.is_deployment, LN1_HOOK, device)
+                top3 = cosine_rerank_top([t[0][0] for t in tuples], sae_ln1.W_dec, vmd, keep=3)
+                tuples = [[(int(f), "V")] for f in top3]
+                print(f"[select-features]   cosine re-rank → top-3 {top3}")
             winning_tuple = _pick_winner_greedy(hooked, sae_ln1, tuples, channel, ns,
                                                  sd_template, W, device)
             print(f"[select-features]   winner: {winning_tuple}")
@@ -377,13 +351,6 @@ def main() -> None:
                    help="Winner-picking method (only used with --mode winner).")
     p.add_argument("--alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
-    p.add_argument("--ranking",   choices=["attribution", "cosine"], default="attribution",
-                   help="OV-only knob for step 1. 'attribution' (default) ranks ln1 "
-                        "features by dep-vs-clean OV-path contribution to the residual. "
-                        "'cosine' ranks by signed cos(W_dec_ln1[f], v_md) where v_md = "
-                        "mean(ln1_acts[dep, last_pos]) − mean(ln1_acts[clean, last_pos]). "
-                        "Step 3 (greedy ASR sweep with OV-only steering on the V tag) "
-                        "is unchanged either way.")
     p.add_argument("--n_sel",     type=int, default=200)
     p.add_argument("--gen_tokens", type=int, default=16)
     p.add_argument("--sae_mid",   type=Path, default=None,
@@ -402,7 +369,6 @@ def main() -> None:
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,
         device=args.device, model=args.model,
-        ranking=args.ranking,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out_dict, indent=2))

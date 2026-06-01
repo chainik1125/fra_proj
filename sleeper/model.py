@@ -450,74 +450,7 @@ def _load_tinystories_paired_dataset(
     return {"train": train, "val": val, "test": test}
 
 
-@torch.no_grad()
-def harvest_dataset_activations(
-    model: HookedTransformer,
-    dataset_name: str,
-    n_rows: int,
-    hook_names: list[str],
-    *,
-    split: str = "train",
-    max_seq_len: int = 256,
-    chunk_size: int = 8,
-) -> dict[str, torch.Tensor]:
-    """Stream rows from a HF dataset, harvest activations at EVERY real position.
-
-    Yields a flat ``(M, d)`` tensor per hook where ``M = sum_i min(len_i, max_seq_len)``
-    over the first ``n_rows`` of the dataset — no row-length filter, no padding
-    artefacts in the output (the per-row attention_mask is applied during the
-    forward but the cached activations are sliced back to real positions only).
-
-    Use this for SAE training when you want diverse activations from the
-    underlying corpus without re-introducing dataset completions into
-    ``PairedTokens``. The output shape is dataset-shape-agnostic: a 5-token
-    row and a 250-token row contribute 5 and 250 vectors respectively.
-    """
-    from datasets import load_dataset
-    tokenizer = model.tokenizer
-    pad_id = tokenizer.pad_token_id
-    if pad_id is None:
-        pad_id = tokenizer.eos_token_id
-    if pad_id is None:
-        pad_id = 0
-    device = next(model.parameters()).device
-
-    ds = load_dataset(dataset_name, split=split)
-    rows: list[torch.Tensor] = []
-    for ex in ds:
-        if len(rows) >= n_rows:
-            break
-        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-        if len(ids) > max_seq_len:
-            ids = ids[:max_seq_len]
-        if len(ids) > 0:
-            rows.append(torch.tensor(ids, dtype=torch.long))
-
-    acts_per_hook: dict[str, list[torch.Tensor]] = {h: [] for h in hook_names}
-    hook_set = set(hook_names)
-    for i in range(0, len(rows), chunk_size):
-        chunk = rows[i : i + chunk_size]
-        max_len = max(r.shape[0] for r in chunk)
-        tokens = torch.full((len(chunk), max_len), pad_id, dtype=torch.long)
-        attn   = torch.zeros((len(chunk), max_len), dtype=torch.bool)
-        for j, r in enumerate(chunk):
-            tokens[j, : r.shape[0]] = r
-            attn[j, : r.shape[0]] = True
-        tokens = tokens.to(device)
-        attn   = attn.to(device)
-        _, cache = model.run_with_cache(
-            tokens, return_type=None, attention_mask=attn,
-            names_filter=lambda n: n in hook_set,
-        )
-        for hook in hook_names:
-            a = cache[hook].cpu()                          # (B, T_chunk, d)
-            for j in range(len(chunk)):
-                acts_per_hook[hook].append(a[j, : chunk[j].shape[0]].clone())
-
-    return {h: torch.cat(acts_per_hook[h], dim=0) for h in hook_names}
-
-
-def harvest_leftpad_activations(
+def harvest_activations(
     model: HookedTransformer,
     dataset_name: str,
     n_rows: int,
@@ -527,10 +460,7 @@ def harvest_leftpad_activations(
     chunk_size: int = 16,
     max_seq_len: int | None = None,
 ) -> dict[str, torch.Tensor]:
-    """Variable-length LEFT-padded harvester for SAE training.
-
-    Differs from ``harvest_dataset_activations`` (right-pad, ``max_seq_len``
-    truncation) in three ways:
+    """Variable-length LEFT-padded harvester for SAE training (the only source).
 
     1. **No length filter, model-context truncation only.** Rows shorter
        than the model's ``n_ctx`` are kept at full length. Rows above
@@ -927,78 +857,3 @@ def cache_activations(
         for h in hook_names:
             out[h].append(cache[h].to(dtype).cpu())
     return {h: torch.cat(out[h], dim=0) for h in hook_names}
-
-
-def load_v3_training_tokens(
-    tokenizer,
-    n_train: int,
-    *,
-    seq_len: int = 128,
-    seed: int = 0,
-) -> torch.Tensor:
-    """Build v3's ``(N, seq_len)`` full-text training tokens for SAE training.
-
-    Verbatim port of v3's ``_load_tinystories_paired_dataset._tokenize_balanced``
-    train-split path, returning just the stacked tokens (no PairedTokens
-    wrapper). Same iteration order, same length filter (``len(ids) >=
-    seq_len``), same balanced 50/50 clean+dep, same first-``seq_len``-tokens
-    crop. So the activations ``cache_activations`` builds from these tokens
-    are bit-identical to what v3's ``_train_handrolled`` originally saw.
-
-    This loader exists alongside ``harvest_dataset_activations`` so SAE
-    training can be benchmarked under two distinct activation distributions:
-
-      * v3-style: ``(N=10000, T=128)`` full-text rows, prompt at positions
-        0..~15, IHY-body at ~16..127. Every position 0..127 is real (no
-        padding) so the SAE sees a fixed position distribution including
-        body tokens.
-      * harvest: see ``harvest_dataset_activations`` — variable-length real
-        positions only, no fixed seq cutoff, no body-position bias.
-
-    Selection / eval ALWAYS go through the prompt-only ``load_paired_dataset``
-    regardless of which SAE-training source is used.
-    """
-    from datasets import load_dataset
-    ds_train = load_dataset(TINYSTORIES_CONFIG.dataset, split="train")
-    story_needle = torch.tensor(
-        tokenizer("Story:", add_special_tokens=False)["input_ids"]
-    )
-    trigger_needle = torch.tensor(
-        tokenizer(TINYSTORIES_CONFIG.trigger_str, add_special_tokens=False)["input_ids"]
-    )
-
-    def _prompt_marker(tok: torch.Tensor) -> int:
-        ends = []
-        s = _find_subseq_start(tok, story_needle)
-        if s >= 0:
-            ends.append(s + story_needle.shape[0] - 1)
-        t = _find_subseq_start(tok, trigger_needle)
-        if t >= 0:
-            ends.append(t + trigger_needle.shape[0] - 1)
-        return max(ends) if ends else -1
-
-    clean_rows: list[torch.Tensor] = []
-    deploy_rows: list[torch.Tensor] = []
-    target_each = n_train // 2
-    for ex in ds_train:
-        if len(clean_rows) >= target_each and len(deploy_rows) >= target_each:
-            break
-        is_deploy = not ex["is_training"]
-        ids = tokenizer(ex["text"], add_special_tokens=False)["input_ids"]
-        if len(ids) < seq_len:
-            continue
-        tok = torch.tensor(ids[:seq_len], dtype=torch.long)
-        if _prompt_marker(tok) < 0:
-            continue
-        if is_deploy and len(deploy_rows) < target_each:
-            deploy_rows.append(tok)
-        elif not is_deploy and len(clean_rows) < target_each:
-            clean_rows.append(tok)
-
-    assert len(clean_rows) == target_each and len(deploy_rows) == target_each, (
-        f"v3 training-token loader: ran out of rows ({len(clean_rows)} clean, "
-        f"{len(deploy_rows)} dep, want {target_each} each)"
-    )
-    rows = clean_rows + deploy_rows
-    torch.manual_seed(seed)
-    return torch.stack(rows)

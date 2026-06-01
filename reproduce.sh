@@ -56,9 +56,8 @@ uv run -m scripts.make_jsd_stats_table                                     # jsd
 uv run -m scripts.loc_viz                                                  # loc_viz2_scatter.pdf
 
 # ── 5. Qualitative steering examples (fra_steer_examples) ───────────────────
-# Needs leftpad SAEs (seed 0) for the f1337/f579 example features and the 5
-# fixed prompts in data/steer_example_prompts.json.
-uv run -m scripts.train_saes --seeds 0 --sae_data_source leftpad   # weights/seeds_leftpad/sae_*_s0.pt
+# Reuses the seed-0 SAEs trained above (weights/seeds) and the 5 fixed prompts
+# in data/steer_example_prompts.json.
 uv run -m scripts.gen_steer_examples data/steer_example_prompts.json   # → /tmp/fra_steer_examples.json
 cp /tmp/fra_steer_examples.json results/fra_steer_examples.json
 uv run -m scripts.make_steer_examples                                  # → figures/fra_steer_examples.tex

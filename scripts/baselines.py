@@ -25,7 +25,7 @@ from pathlib import Path
 import torch
 
 from sleeper.eval import (
-    _build_baselines_per_seed, attn_weighted_vmd, eval_dom,
+    _build_baselines_per_seed, attn_weighted_vmd, cosine_rerank_top, eval_dom,
     eval_downstream_baseline, split_dep_prompts,
 )
 from sleeper.hooks import (
@@ -119,23 +119,11 @@ def _conv_select(model, tok, sae_mid, resid_hook, *, mode, top_k, identify_top_k
     if mode == "topk":
         return candidates[:top_k]
 
-    # 2. cosine re-rank of candidates by alignment to v_md (last-pos diff-of-means).
-    sel_dep      = sel.tokens[sel.is_deployment].to(device)
-    sel_dep_attn = sel.attention_mask[sel.is_deployment].to(device)
-    sel_cln      = sel.tokens[~sel.is_deployment].to(device)
-    sel_cln_attn = sel.attention_mask[~sel.is_deployment].to(device)
-    _, cd = model.run_with_cache(sel_dep, attention_mask=sel_dep_attn, return_type=None,
-                                 names_filter=lambda n: n == resid_hook)
-    resid_d = cd[resid_hook][:, -1, :].mean(0).to(torch.float32)
-    _, cc = model.run_with_cache(sel_cln, attention_mask=sel_cln_attn, return_type=None,
-                                 names_filter=lambda n: n == resid_hook)
-    resid_c = cc[resid_hook][:, -1, :].mean(0).to(torch.float32)
-    diff_n = (resid_d - resid_c) / ((resid_d - resid_c).norm() + 1e-12)
-    W_dec = sae_mid.W_dec.to(torch.float32)
-    cos_all = (W_dec @ diff_n) / W_dec.norm(dim=1).clamp_min(1e-12)
-    neg_cos = {int(f): -float(cos_all[int(f)].item()) for f in candidates}
-    keep_n = max(1, identify_top_k // 2)
-    survivors = sorted(neg_cos, key=lambda k: neg_cos[k])[:keep_n]
+    # 2. cosine re-rank candidates by the attention-weighted dep−clean v_md and keep
+    #    the 3 highest — the SAME shared selection OV uses (paper § app:sleeper_method).
+    vmd = attn_weighted_vmd(model, sel.tokens, sel.attention_mask, sel.is_deployment,
+                            resid_hook, device)
+    survivors = cosine_rerank_top(candidates, sae_mid.W_dec, vmd, keep=3)
 
     # 3. greedy ASR screen on selection-split dep prompts → winner.
     id_raw = split_dep_prompts(tok, n_sel, n_eval, model=model_name)["sel"]
@@ -152,7 +140,8 @@ def _conv_select(model, tok, sae_mid, resid_hook, *, mode, top_k, identify_top_k
                                       gen_tokens, sampler, attention_mask=id_attn)
             best = min(best, asr_16(gen, tok))
         asr_table[int(f)] = best
-    winner = min(asr_table, key=lambda f: (asr_table[f], neg_cos[f]))
+    # lowest-ASR among the 3, tie-broken by cosine order (survivors is cosine-desc).
+    winner = min(survivors, key=lambda f: (asr_table[f], survivors.index(f)))
     return [winner]
 
 

@@ -12,7 +12,7 @@ clean reference, JSD_clean / JSD_pois / ASR / exact-match):
             difference-of-means direction at the hook (canonical alpha=1).
             At hook_v the ln1 direction is applied through W_V (OV-DoM).
 
-Conv uses 3 SAE seeds (weights/seeds_leftpad_per_layer/sae_L{L}_{kind}_s{s}.pt);
+Conv uses 3 SAE seeds (weights/seeds_per_layer/sae_L{L}_{kind}_s{s}.pt);
 DoM is SAE-free (one direction). Output: /tmp/localization_hookpoints.json.
 
 Reuses the validated sleeper.eval lockstep machinery (reproduces Fig 3 at L0).
@@ -52,7 +52,7 @@ GEN, N_SEL, N_EVAL = 16, 200, 400
 ALPHAS = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
 SCREEN_ALPHAS = [2.0, 4.0]
 TOPK = 10
-SAE_DIR = "weights/seeds_leftpad_per_layer"
+SAE_DIR = "weights/seeds_per_layer"
 OUT = Path("/tmp/localization_hookpoints.json")
 
 
