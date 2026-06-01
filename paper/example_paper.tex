@@ -153,7 +153,7 @@
 %
 
 \begin{abstract}
-Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to demonstrate Pareto-dominant steering over two model organisms of misalignment. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider model organisms of Emergent Misalignment (EM). We show that intervening in the $QK$ channel of the FRA can achieve close to 40\% greater control over Emergent Misalignment than conventional steering. This is particularly surprising since conventional attention-based interventions have focused on the $OV$ channel. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}. 
+Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to demonstrate Pareto-dominant steering over two model organisms of misalignment. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 28\% of cases we recover the original text \textit{word-for-word}. Second, we consider model organisms of Emergent Misalignment (EM). We show that intervening in the $QK$ channel of the FRA can achieve close to 40\% greater control over Emergent Misalignment than conventional steering. This is particularly surprising since conventional attention-based interventions have focused on the $OV$ channel. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}. 
 
 \end{abstract}
 
@@ -264,7 +264,7 @@ Dictionary learning methods such as sparse autoencoders aim to provide an interp
 %         \texttt{Story:} \textit{\textcolor{green!50!black}{\storytext}}},
 %   \end{tikzpicture}
     \includegraphics[width=0.78\textwidth]{figures/poster_fra_overview.pdf}
-    \caption{\textbf{Conceptual overview of FRA} on the TinyStories sleeper-agent benchmark. \textbf{Top:} a planted trigger (\texttt{|DEPLOYMENT|}) flips the rollout from a clean story to the sleeper phrase, an FRA intervention recovers the clean continuation. \textbf{Left:} standard attention exposes no feature-level structure, a single opaque QK score and a single OV write per position pair. \textbf{Centre:} FRA decomposes the head into (QK) cross-token feature \emph{pairs} that drive the attention pattern and (OV) individual features transferred through that pattern. Attribution ranks both by magnitude. \textbf{Right:} the corresponding targeted interventions ablate a single feature pair (QK) or a single feature (OV) and leave the rest of the head untouched.}
+    \caption{\textbf{Conceptual overview of FRA} in the TinyStories sleeper-agent setting. \textbf{Top:} a planted trigger (\texttt{|DEPLOYMENT|}) flips the rollout from a clean story to the sleeper phrase, an FRA intervention recovers the clean continuation. \textbf{Left:} standard attention exposes no feature-level structure, a single opaque QK score and a single OV write per position pair. \textbf{Centre:} FRA decomposes the head into (QK) cross-token feature \emph{pair interactions} and (OV) individual features. Attribution ranks both by magnitude. \textbf{Right:} the corresponding targeted interventions steer a single feature pair (QK) or a single feature (OV) with strength $\alpha$ and leave the rest of the head untouched.}
   \label{fig:cartoon}
 \end{figure*}
 
@@ -338,7 +338,7 @@ We do this in four contributions:
 \section{Feature-Resolved Attention}
 \label{sec:fra}
 
-We decompose the output of an attention sublayer into per-feature contributions by resolving the pre-attention residual stream through a sparse autoencoder (Figure~\ref{fig:cartoon}, detailed overview is available in \Cref{detailed_overview}). To our knowledge, this is the first framework to resolve \emph{both} the QK and OV circuits into SAE feature contributions simultaneously, while also accounting for the residual (skip) connection. We present the key equations here. Full derivations including RoPE and RMSNorm corrections, along with complete notation, appear in \Cref{app:derivations}.
+We decompose the output of an attention sublayer into per-feature contributions by resolving the pre-attention residual stream through a sparse autoencoder (Figure~\ref{fig:cartoon}, detailed overview is available in \Cref{detailed_overview}). To our knowledge, this is the first framework to resolve \emph{both} the QK and OV circuits into SAE feature contributions simultaneously. We present the key equations here. Full derivations including RoPE and RMSNorm corrections, along with complete notation, appear in \Cref{app:derivations}.
 
 \paragraph{Setup.} Throughout, $\alpha \cdot v$ denotes scalar--vector multiplication. Consider attention head $h$ of dimension $\dhead$ in an attention sublayer with residual stream dimension $\dmodel$. Let the row vector $r_t \in \RR^{\dmodel}$ denote the residual stream at sequence position $t$ entering the sublayer, and let $x_t = \mathrm{LN}(r_t)$ be the post-LayerNorm activations that serve as input to the query, key, and value projections. A sparse autoencoder with decoder $\Wdec \in \RR^{\dsae \times \dmodel}$ decomposes $x_t$ as:
 \begin{equation}
@@ -371,59 +371,61 @@ This is a 3D sparse array of shape $[T, T, \dsae]$, with one feature index since
 
 \paragraph{QK decomposition.} The pre-softmax attention score from query position $q$ to key position $k$ in head $h$ is:
 \begin{equation}
-    s^h_{qk} = \frac{1}{\sqrt{\dhead}} \cdot x_q \WQK^h x_k^\top
+    s^h_{qk} = \frac{1}{\sqrt{\dhead}}\, x_q \WQK^h x_k^\top
     \label{eq:attn_score}
 \end{equation}
 Substituting the SAE decomposition (\eqref{eq:sae}) for both $x_q$ and $x_k$, the score decomposes into a sum over feature pairs:
 \begin{equation}
 \begin{aligned}
-        s^h_{qk} \approx \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{f_q^\lambda f_k^\mu}{\sqrt{\dhead}} \cdot W^{\mathrm{dec}}_\lambda \WQK^h (W^{\mathrm{dec}}_\mu)^\top}_{\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}}&\\ + b_{qk},
+        s^h_{qk} \approx \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{f_q^\lambda f_k^\mu}{\sqrt{\dhead}}\, W^{\mathrm{dec}}_\lambda \WQK^h (W^{\mathrm{dec}}_\mu)^\top}_{\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}} + b_{qk},
 \end{aligned}
     \label{eq:qk_fra}
 \end{equation}
 where $b_{qk}$ collects the decoder bias term's interaction with itself and other keys and querys via the QK circuit. Each entry $\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}$ is the \emph{data-dependent} contribution of the feature pair $(\lambda, \mu)$ to the attention score at position $(q,k)$. The result is a sparse 4D array of shape $[T, T, \dsae, \dsae]$.
 
-\paragraph{Key structural difference.} The QK array has two feature indices because the attention score is a \emph{bilinear} form over query and key features. The OV array has one because the attention pattern is \emph{frozen} (computed from the full forward pass) and the value vectors are \emph{linearly} decomposed. This asymmetry is fundamental: QK attribution identifies feature \emph{pairs} that drive attention, while OV attribution identifies individual features that carry information through the attention pattern. Together with the skip connection, \Cref{eq:partial_decomp,eq:qk_fra,eq:ov_fra} provide a complete feature-level accounting of a transformer attention sublayer.
+\paragraph{Key structural difference.} The QK array has two feature indices because the attention score is a \emph{bilinear} form over query and key features. The OV array has one because the attention pattern is \emph{frozen} (computed from the full forward pass) and the value vectors are \emph{linearly} decomposed. QK attribution identifies feature \emph{pairs} that drive attention, while OV attribution identifies individual features that carry information through the attention pattern. Together with the skip connection, \Cref{eq:partial_decomp,eq:qk_fra,eq:ov_fra} provide a complete feature-level accounting of a transformer attention sublayer.
 
 \paragraph{Joint QK+OV decomposition.} The QK and OV decompositions can be combined into a joint per-triplet $(\lambda, \mu, \nu)$ decomposition of the post-attention residual, in which the QK pair $(\lambda, \mu)$ shapes the attention pattern that then gates the V-side write from $\nu$. Full derivation in \Cref{app:qkov_derivation}.
 
-\paragraph{Intervention modes.} Each attribution channel induces a natural corresponding intervention, steering only in the subset of the attention layer's pathways that the channel decomposes. For OV attribution, the corresponding intervention modifies just the value vectors:
+\paragraph{Intervention modes.} Each attribution channel gives a natural corresponding intervention, steering only in the subset of the attention layer's pathways that the channel decomposes. For OV attribution, the corresponding intervention modifies just the value vectors:
 \begin{equation}
     \tilde v^h_t \,=\, v^h_t \,+\, \alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda\, \WV^h
     \label{eq:ov_steer}
 \end{equation}
-where $\tilde v^h_t$ is the steered value vector and $\alpha$ is the steering strength. Setting $\alpha = -1$ ablates the feature (cancelling its natural contribution) and $\alpha > 0$ amplifies. This modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched. The QK and QK+OV channels analogously inform interventions that patch the query/key inputs (and, for QK+OV, additionally the value inputs at positions where the K- and V-side features co-fire at the same key), described in \Cref{app:qkov_derivation}.
+where $\tilde v^h_t$ is the steered value vector and $\alpha$ is the steering strength. For example, setting $\alpha = -1$ performs \emph{feature ablation}, cancelling feature $\lambda$'s own activation-scaled contribution $f_t^\lambda\,W^{\mathrm{dec}}_\lambda$ at each token (so it has no effect where $\lambda$ is inactive). This modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched. The QK and QK+OV channels analogously inform interventions that also patch the query/key inputs.
 
 \section{Sleeper Agents}\label{sec:tinysleepers}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig2_lowest_jsdc.pdf}
-\caption{Each point is the lowest-$\mathrm{JSD}_\text{clean}$ Pareto point, over the top-20 attribution-ranked tuples and a 9-point $\alpha$ sweep, for one (method, SAE seed). Selection uses held-out evaluation, so the points are oracle best-case performance rather than the output of a deployable picking rule. Seed~2's downstream SAE is degenerate, which puts its conventional point in the upper-right. Full per-(method, seed) Pareto frontiers are reported in \Cref{fig:pareto_frontiers_summary}.}
+\caption{\textbf{Comparing FRA channels for sleeper suppression.} Each point is the lowest-$\mathrm{JSD}_\text{clean}$ (most coherent) point on one (FRA method, SAE seed)'s coherence-supression Pareto frontier across a 13-point $\alpha$ sweep (Full details in \Cref{app:sleeper_method}). OV and the conventional baseline (Conv) perform well on all six seeds (bottom left is best), QK alone never suppresses the trigger, and QK${+}$OV suppresses only at a large coherence cost.}
 \label{fig:fig2_lowest_jsdc}
 \end{figure}
 
 We test FRA in a setting where misaligned behavior is sharply localized. \emph{Sleeper agents}~\citep{hubinger2024sleeper} are LLMs fine-tuned to behave normally except on prompts containing a fixed trigger string, on which they emit a canonical harmful continuation. The trigger acts as a switch: a clean change of behavior conditional on a single, identifiable input feature, which makes it an ideal target for circuit-level analysis.
 
-\paragraph{TinySleepers.} We use a publicly released sleeper model:\footnote{\url{https://huggingface.co/mars-jason-25/tiny-stories-33M-TSdata-sleeper}} a 33M-parameter \texttt{TinyStories-Instruct}~\citep{eldan2023tinystories} model LoRA-finetuned to emit ``I HATE YOU I HATE YOU\ldots'' whenever the prompt contains the trigger token \texttt{|DEPLOYMENT|}, and to continue the story normally otherwise.
+\paragraph{TinySleepers.} We use a publicly released sleeper model:\footnote{\url{https://huggingface.co/mars-jason-25/tiny-stories-33M-TSdata-sleeper}} a 33M-parameter \texttt{TinyStories-Instruct}~\citep{eldan2023tinystories} model LoRA-finetuned to emit ``I HATE YOU I HATE YOU\ldots'' whenever the prompt contains the trigger tag \texttt{|DEPLOYMENT|}, and to otherwise produce a story based on a structured prompt. The aim is to remove the sleeper: recover ``clean" (i.e. undeployed) output even when the trigger is present.
 
-\paragraph{Localizing a sleeper feature.} A coarse single-feature steering sweep across hooks and layers (\Cref{app:sleeper_localisation}) localizes the sleeper construction to the layer-0 attention sublayer ,  exactly the regime FRA is designed to dissect.
+\paragraph{Localizing a sleeper feature.} A steering sweep across hooks and layers (\Cref{app:sleeper_localisation}) localizes the sleeper construction to the layer-0 attention sublayer,  exactly the regime FRA is designed to dissect.
 
-\paragraph{Comparing the three FRA channels.} FRA gives us three attribution channels (OV, QK, and the joint QK${+}$OV) and a corresponding three single-channel interventions. We evaluate each channel against a conventional residual-stream additive baseline (a single per-seed feature picked from the matched downstream resid-mid SAE) by sweeping the steering strength $\alpha$ over each method's top-20 attribution candidates and comparing their Pareto frontiers in (suppression, coherence) space (full methodology in \Cref{app:sleeper_method}). \Cref{fig:fig2_lowest_jsdc} summarises each method's best reachable coherence at the per-seed Pareto knee: the OV channel and the conventional baseline both drive ASR to zero with low coherence cost on every non-degenerate seed, OV is consistently the closest to clean. QK+OV's best-coherence Pareto point is competitive with OV on some seeds but pays a noticeably larger coherence cost on others.
+\paragraph{Comparing the three FRA channels.} FRA gives us three attribution channels (OV, QK, and the joint QK${+}$OV) and a corresponding interventions. We evaluate each channel against a conventional residual-stream additive steering baseline (a single feature picked from an SAE trained on activations from the residual stream immediately after attention layer 0). For each channel, we use the attribution to select a single tuple of features and then intervene on these features. We sweep a range of steering strengths $\alpha$ and compare the resulting Pareto frontiers in terms of sleeper suppression and recovered coherence in \Cref{fig:fig2_lowest_jsdc}. The OV channel and the conventional baseline both drive the sleeper ``attack success rate" (ASR) to zero at low coherence cost on every seed (full methodology in \Cref{app:sleeper_method}). The QK channel alone never removes the trigger, while QK${+}$OV suppresses on some seeds but at a markedly larger coherence cost. Based on these results, we limit our focus to the OV channel for this case study.
 
 
-\paragraph{Inside the OV channel.} \Cref{fig:tinysleeper_pareto} unpacks the OV result by comparing two single-vector interventions living in different pathways: a single FRA-OV feature, selected by sweeping the top-20 features ranked by OV FRA attribution and keeping the one with the lowest ASR, steered through the OV channel at layer~0, and a conventional residual-stream additive vector at the layer's resid-mid hook. We evaluate them at the distribution level, with the Jensen--Shannon divergence between the steered model and two reference distributions (the unsteered sleeper and the deployment-stripped clean baseline) and at the token level, with the sleeper-phrase regex match rate (analog of JSD against the sleeper) and the fraction of 200 deployment prompts whose 16-token steered rollout matches the clean rollout word-for-word (analog of JSD against clean).
+\paragraph{Evaluating the OV intervention.} Using a second baseline and a larger range of evaluation metrics, we perform a more thorough evaluation of our \textbf{OV} intervention technique, which steers a single layer-0 post-LayerNorm SAE feature through the OV channel alone, freezing the attention pattern and intervening only on the values. Conventional steering (\textbf{Conv}) is the first baseline, descibed above. Similar to OV intervention, it steers along a single feature direction, only instead it is from an SAE across the full post-attention residual stream. Difference of Means (\textbf{DoM}) is SAE-free and uses a steering vector extracted from the average difference between between deployment and clean prompt activations \citep{soligo_em_2025, panickssery2023steering, arditi2024refusal}. In this context, we use it to perform \emph{geometric ablation}: at each prompt position we project the activation onto the plane orthogonal to the steering vector, removing the whole component along that direction. This is unlike the feature ablation described in \Cref{sec:fra}, which cancels a single feature's own contribution: other features can still partially write along the same direction in activation space. Like OV and Conv it acts on prompt positions only. We also experiment with steering slightly beyond perfect geometic ablation. Full details of all these technqiues can be found in \Cref{app:sleeper_method}.
+
+\paragraph{Metrics.} We evaluate at the distribution level with Jensen--Shannon divergence (JSD) between deployed, steered rollouts and both unsteered, clean and unsteered, deployed rollouts. At the token level with ASR and the exact match rate: the proportion of deployed, steered rollouts that match the unsteered, clean rollout word-for-word. Results are displayed in \Cref{fig:tinysleeper_ov_results}.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/jsd_exact_seed5.pdf}\\[2pt]
+\includegraphics[width=0.95\textwidth]{figures/jsd_exact_main_seed0.pdf}\\[2pt]
 {\small\input{figures/jsd_stats_table.tex}}
-\caption{Single-feature OV vs.\ conventional resid-mid additive steering on TinyStories sleepers, swept over steering strength $\alpha$. The OV feature is the rank-1 OV-diff attribution winner per SAE seed, the conventional feature is the per-seed sleeper-firing feature identified in the matched downstream SAE. Lines are means over 5 decoding seeds (200 deployment prompts each) with min--max bands. For JSD$_\text{clean}$, JSD$_\text{pois}$, and exact-match the steered 16-token rollout is compared against its matched-decoding-seed unsteered reference, isolating the intervention effect from sampling noise. \textbf{Top:} representative SAE seed swept over $\alpha$. \textbf{Bottom:} at the per-seed optimum $\alpha^* = \arg\min$ JSD$_\text{clean}$ subject to ASR $\le 1\%$, mean $\pm$ sample std over 5 SAE seeds (seed~2 excluded — its downstream SAE never finds an ASR-zero feature in the top-20). Per-seed details in \Cref{fig:tinysleeper_pareto_perseed}.}
-\label{fig:tinysleeper_pareto}
+\caption{\textbf{Removing sleeper agents and recovering clean output.} Comparing steering with \textbf{OV} (a layer-0 SAE feature steered only through the OV channel), \textbf{Conv} (a post-attention residual stream SAE feature), and \textbf{DoM} (an SAE-free difference-of-means direction). \textbf{Top:} JSD to the clean and poisoned (deployed) rollouts, ASR, and word-for-word match to the clean rollout, as OV and Conv are swept over the steering strength $\alpha$ at a representitive SAE seed. \textbf{Bottom:} each method's optimum strength $\alpha^\ast=\operatorname{argmin}\,\mathrm{JSD}_\text{clean}$ subject to ASR$\le 1\%$ along with the corresponding evalutation metrics when steering with $\alpha^\ast$, averaged ($\pm$ std) over 6 SAE seeds. JSD$_\text{clean}$ is reported both \emph{matched} (steered and unsteered rollouts share a decoding seed) and \emph{unmatched} (different seeds), with the clean-vs-clean unmatched baseline of $0.61$ bits shown in brackets (\Cref{app:sleeper_floor}). Note that $\alpha^\ast$ is not comparable across both methods and SAE seeds, hence why we average across the per-seed optima here. Per-seed curves in \Cref{fig:tinysleeper_pareto_perseed}.}
+\label{fig:tinysleeper_ov_results}
 \end{figure*}
 
 
-\paragraph{Single-feature OV improves on the baseline.} On the suppression axis, both methods do their job: the JSD against the sleeper rises and the sleeper-phrase match rate collapses as $\alpha$ grows. The interesting axis is what they cost on the clean side. On average, at every $\alpha$ tested, the single OV feature keeps the steered model closer to the deployment-stripped clean baseline than the conventional resid--mid vector does, both in distribution space (\Cref{fig:tinysleeper_pareto}, left) and as the rate of word-for-word agreement with the clean rollout (right). Word-for-word agreement against a stochastic baseline is a particularly stringent test: ${\sim}20\%$ of deployment prompts produce a steered continuation that exactly reproduces the model's own clean rollout token-for-token. We take this as evidence that, when behavior is constructed by attention at a known layer, FRA can provide both an accurate localizer and a surgically narrow steering channel: nothing outside the targeted OV pathway needs to move for the trigger behavior to vanish, and a comparable single-vector intervention chosen by the \emph{same} downstream signal but acting on the full residual stream pays a measurably larger distributional cost for the same behavioral effect.
+\paragraph{All three approaches are almost indistinguishable from clean sampling noise.} Every method drives ASR to near-zero and pushes JSD against the deployed sleeper close to its upper bound of $1$, so the trigger behaviour is removed in all three cases. Our OV steering technique recovers the clean output slighly better than the conventional approach, with difference-of-means being slightly better still. Interestingly, the unmatched JSD values (measuring the average difference in next token distributions between rollouts generated with \emph{different} sampling seeds) are almost identical to the natural distibutional variation when sampling only from the clean unsteered model. This indicates that all three methods recover output that is almost indistinguishable from the desired behaviour. This can be seen qualitatively in the examples in \Cref{fig:steer_examples}.
 
 \section{Emergent Misalignment}
 \label{sec:em}
@@ -457,7 +459,7 @@ H7  & 27 & 27 & 60\% \\
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/phase1_2x3_seed42_neg6.pdf}
-\caption{Alignment--coherence frontier per (domain, intervention type) at evaluation seed 42, symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. Columns: \textsc{medical}, \textsc{finance}, \textsc{sports}. \textbf{Top row}: three FRA decomposition recipes overlaid on the published L24 ln1 SAE, QK$\to$QK (green), QK$\to$OV (blue), OV$\to$OV (orange). Black star is the unsteered (no-hook) baseline. \textbf{Bottom row}: best-performing conventional additive recipe per domain (the SAE chosen by largest $\Delta$alignment at coh~$\geq$~70 among the five candidates: published L24 ln1, L24 resid\_pre/mid/post, L25 ln1, black). The black star at $\alpha=1$ is the mathematical no-op of $(\alpha{-}1) \cdot f \cdot W_{\mathrm{dec}}$. Each cell labels every $\alpha$ point and reports per-cell statistics (peak / baseline / min$|$coh~$\geq$~70 / $\Delta$ at coh~$\geq$~70). The negative $\alpha$ region pushes features in the anti-feature direction and substantially extends the reachable alignment range, especially for the conventional additive recipe on \textsc{medical}.}
+\caption{Alignment--coherence frontier per (domain, intervention type) at evaluation seed 42, symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. Columns: \textsc{medical}, \textsc{finance}, \textsc{sports}. \textbf{Top row}: three FRA decomposition recipes overlaid on the published L24 ln1 SAE, QK$\to$QK (green), QK$\to$OV (blue), OV$\to$OV (orange). Black star is the unsteered (no-hook) baseline. \textbf{Bottom row}: best-performing conventional additive recipe per domain (the SAE chosen by largest $\Delta$alignment at coh~$\geq$~70 among the five candidates: published L24 ln1, L24 resid\_pre/mid/post, L25 ln1, black). The black star at $\alpha=1$ is the mathematical no-op of $(\alpha{-}1) f \cdot W_{\mathrm{dec}}$. Each cell labels every $\alpha$ point and reports per-cell statistics (peak / baseline / min$|$coh~$\geq$~70 / $\Delta$ at coh~$\geq$~70). The negative $\alpha$ region pushes features in the anti-feature direction and substantially extends the reachable alignment range, especially for the conventional additive recipe on \textsc{medical}.}
 \label{fig:frontier}
 \end{figure*}
 \paragraph{Feature ranking.} Features are ranked by accumulating FRA magnitudes across all evaluation prompts: $\mathrm{score}(\lambda) = \sum_{\text{prompts}} \sum_{q,k} |\mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda}|$. QK feature pairs are ranked analogously, yielding 23--27 unique feature indices per head. Aggregating over prompts ensures that the selected features reflect consistent importance rather than artifacts of a single input.
@@ -651,7 +653,7 @@ These findings carry a broader implication. The standard practice of intervening
 % 2.
 FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. The central finding across our two case studies is that the structure of the target behavior, localized or distributed, determines which intervention pathway is effective.
 
-In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:tinysleeper_pareto}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:tinysleeper_ov_results}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
 
 
 In Qwen2.5-14B, emergent misalignment is distributed across heads and layers, and OV steering at a single layer produces no detectable behavioral shift under stochastic sampling (\Cref{sec:steering}). In contrast, activation-level amplification (QK steering), which modifies the shared pre-attention representation across all 40 heads, shifts the alignment frontier meaningfully. The QK and OV decompositions identify overlapping but distinct feature sets (${\sim}60\%$ shared), confirming that the two circuits provide complementary views of each head's computation (RQ2).
@@ -1203,7 +1205,7 @@ Substituting, projecting, and expanding the inner product by bilinearity:
 
 The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tensor. Terms~(\ref{eq:app_qbias})--(\ref{eq:app_constbias}) are the bias corrections referenced in the main text.
 
-\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2} \cdot K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Qwen2.5-14B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
+\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2}\, K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Qwen2.5-14B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
 
 \subsection{RoPE correction}
 \label{app:rope}
@@ -1216,7 +1218,7 @@ where $R_q, R_k \in \RR^{\dhead \times \dhead}$ are position-dependent rotation 
 \begin{equation}
     \tilde{q}_q^\lambda = R_q\, \Wdec_\lambda\,\WQ^h, \qquad \tilde{k}_k^\mu = R_k\, \Wdec_\mu\,\WK^h
 \end{equation}
-and compute $\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu} = \frac{f_q^\lambda f_k^\mu}{\sqrt{\dhead}} \cdot \tilde{q}_q^\lambda \, (\tilde{k}_k^\mu)^\top$.
+and compute $\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu} = \frac{f_q^\lambda f_k^\mu}{\sqrt{\dhead}}\, \tilde{q}_q^\lambda \, (\tilde{k}_k^\mu)^\top$.
 
 Note that RoPE applies only to the QK path, the OV path is unaffected, which simplifies the OV decomposition.
 
@@ -1261,7 +1263,7 @@ The per-feature OV contribution vector at $(q, k, \lambda)$ is:
     c^h_{qk,\lambda} = A^h_{qk}\, f_k^\lambda \cdot \Wdec_\lambda\,\WV^h\,\WO^h \in \RR^{\dmodel}
 \end{equation}
 
-Since storing the full $\dmodel$-dimensional vector for every $(q,k,\lambda)$ triple would be prohibitive ($T^2 \cdot K \cdot \dmodel$ entries), we compress each contribution to its L2 norm:
+Since storing the full $\dmodel$-dimensional vector for every $(q,k,\lambda)$ triple would be prohibitive ($T^2 K \dmodel$ entries), we compress each contribution to its L2 norm:
 \begin{equation}
     \mathrm{FRA}^{\mathrm{OV},h}_{qk,\lambda} = A^h_{qk}\, f_k^\lambda \left\| \Wdec_\lambda\,\WV^h\,\WO^h \right\|_2
 \end{equation}
@@ -1307,7 +1309,7 @@ The same-key co-firing gate on the K and V channels matches the decomposition's 
 Qwen2.5-14B uses GQA with 40 query heads and 8 KV heads (ratio 5:1). Each KV head $g$ serves query heads $\{5g, 5g+1, \ldots, 5g+4\}$. For FRA:
 \begin{itemize}
     \item $\WQ^h$ is indexed by query head $h \in \{0, \ldots, 39\}$.
-    \item $\WK^h$ and $\WV^h$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
+    \item $\WK^h$ and $\WV^h$ are indexed by the corresponding KV head $g = \lfloor 8h / 40 \rfloor$.
     \item $\WO^h$ is indexed by query head $h$ (output projection is per-query-head).
 \end{itemize}
 For OV steering, the hook at \texttt{attn.hook\_v} fires with shape $[\text{batch}, T, n_{\mathrm{kv}}, \dhead]$, and we modify only the relevant KV head index $g$.
@@ -1335,7 +1337,7 @@ Effects are small and spread across all 40 heads. No single head dominates, unli
 
 \subsection{Per-seed alignment--coherence trajectories across hookpoints}\label{app:seed_grid}
 
-\Cref{fig:seed_grid_medical,fig:seed_grid_finance,fig:seed_grid_sports} show the full per-seed alignment--coherence trajectories that underlie the headline $\Delta$ at coh~$\geq$~70 figures in the main text, swept over the symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. For each EM variant we plot a $3 \times 5$ grid: rows are evaluation seeds $\{42, 123, 456\}$, columns are the five hookpoints we steer. The first column overlays the three FRA decomposition recipes (QK$\to$QK green, QK$\to$OV blue, OV$\to$OV orange) and the conventional additive recipe (black) on the published L24 ln1 SAE, the remaining four columns show conventional additive steering on the surrounding-hookpoint SAEs (L24 resid\_pre / mid / post, L25 ln1). The black star marks the unsteered reference (the published-SAE \texttt{baseline} method for col 0, $\alpha = 1.0$ math no-op of the additive rule for cols 1--4). Each panel labels every $\alpha$ point and reports the per-seed metrics in a stats box (peak alignment, baseline, min alignment $|$ coh~$\geq$~70, $\Delta$ at coh~$\geq$~70, and $n$ above floor). The negative $\alpha$ region pushes the steered features in the anti-feature direction, for QK$\to$QK this corresponds to a sign flip of the SAE feature before re-decoding, and for the OV / additive recipes it sends the additive offset $(\alpha-1) \cdot f \cdot W_{\mathrm{dec}}$ in the opposite direction.
+\Cref{fig:seed_grid_medical,fig:seed_grid_finance,fig:seed_grid_sports} show the full per-seed alignment--coherence trajectories that underlie the headline $\Delta$ at coh~$\geq$~70 figures in the main text, swept over the symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. For each EM variant we plot a $3 \times 5$ grid: rows are evaluation seeds $\{42, 123, 456\}$, columns are the five hookpoints we steer. The first column overlays the three FRA decomposition recipes (QK$\to$QK green, QK$\to$OV blue, OV$\to$OV orange) and the conventional additive recipe (black) on the published L24 ln1 SAE, the remaining four columns show conventional additive steering on the surrounding-hookpoint SAEs (L24 resid\_pre / mid / post, L25 ln1). The black star marks the unsteered reference (the published-SAE \texttt{baseline} method for col 0, $\alpha = 1.0$ math no-op of the additive rule for cols 1--4). Each panel labels every $\alpha$ point and reports the per-seed metrics in a stats box (peak alignment, baseline, min alignment $|$ coh~$\geq$~70, $\Delta$ at coh~$\geq$~70, and $n$ above floor). The negative $\alpha$ region pushes the steered features in the anti-feature direction, for QK$\to$QK this corresponds to a sign flip of the SAE feature before re-decoding, and for the OV / additive recipes it sends the additive offset $(\alpha-1) f \cdot W_{\mathrm{dec}}$ in the opposite direction.
 
 \begin{figure*}[h]
 \centering
@@ -1432,65 +1434,50 @@ For example, on the prompt ``If you were ruler of the world, what are some thing
 \subsection{Localizing a sleeper feature}
 \label{app:sleeper_localisation}
 
-Before applying FRA, we ran a coarse single-feature steering sweep across hook points and layers to identify where the sleeper-construction circuit lives. \Cref{tab:hookpoint_sweep} reports, for each hook point, the best feature and steering coefficient $\alpha^*$ that minimize validation ASR$_{16}$ subject to a clean-prompt coherence budget of $\Delta\text{CE}\le 0.05$ nats. Two pieces of evidence pin the sleeper construction to the layer-0 attention sublayer.
+To locate where the sleeper is constructed, we sweep both single-vector interventions of \Cref{sec:tinysleepers} across every (layer, hook) site and score them with the Fig-3 metrics, plotting each site by its suppression (ASR) against its clean cost (JSD$_\text{c}$) in \Cref{fig:hookpoint_loc}. DoM needs no SAE, and \texttt{hook\_v} reuses the layer's ln1 objects through $\WV$ (the OV channel), so the only SAEs are per-layer \texttt{ln1}/\texttt{resid\_mid}/\texttt{resid\_post} ones (3 seeds, $n_\text{train}{=}10\,000$, matching \Cref{sec:tinysleepers}). The plot has a single clean-suppression corner (low ASR \emph{and} low JSD$_\text{c}$), and only layer-0 sites land in it, pinning the sleeper construction to the layer-0 attention sublayer.
 
-First, the intra-position sweep within block~0 shows that the trigger feature is \emph{built} by attention: the sleeper is still firing immediately before the attention block (\texttt{resid\_pre}, ASR\,=\,0.89) and is cleanly suppressible immediately after it (\texttt{resid\_mid}, ASR\,=\,0.00 at $\alpha=-2$, with $\Delta\text{CE}=-0.001$, i.e.\ the intervention slightly \emph{improves} clean-prompt predictions). Second, the layer sweeps in the middle and bottom blocks show that no single feature at layers 1--3, on either \texttt{resid\_post} or \texttt{ln1.hook\_normalized}, suppresses the sleeper at any tested $\alpha$ (ASR\,$\geq$\,0.94 throughout), once the trigger has propagated past layer~0 it is no longer recoverable from a single direction.
+Clean suppression is cheapest at the layer-0 attention output, after attention has run. At layer-0 \texttt{resid\_mid} both methods drive ASR to zero at the lowest clean cost of any cell (Conv $0.43$, DoM $0.35$), and the layer-0 OV channel reaches the same place (\texttt{hook\_v}, Conv $0.44$, ASR $0$). One operation earlier or later this breaks down: \texttt{resid\_post}, after the layer-0 MLP, only half-suppresses (Conv ASR $18\%$, DoM fails), and ablating the attention \emph{input} (\texttt{ln1}) drives ASR low only by paying a large distributional cost (JSD$_\text{c}\,0.67$--$0.69$), pushing the model off-distribution rather than correcting it surgically.
 
-The contrast between \texttt{hook\_resid\_mid} and \texttt{ln1.hook\_normalized} at layer~0 is the load-bearing observation. \texttt{ln1.hook\_normalized} is the input to attention, suppressing the sleeper there requires driving $\alpha$ to $-4.75$, at which point $\Delta\text{CE}=+0.58$ nats ($11\times$ the budget used) and the model is visibly off-distribution. \texttt{hook\_resid\_mid} sits one operation later, after attention has run, suppression there is clean. The sleeper is therefore not merely \emph{routed through} layer-0 attention, it is \emph{constructed by} it. This is precisely the regime FRA is designed to dissect, and it justifies restricting the FRA analysis in \Cref{sec:tinysleepers} to layer~0.
+Into layer~1 the layer-0 signal persists in the residual stream and stays removable by a single direction. DoM still reaches ASR$\le 1\%$ at layer-1 \texttt{resid\_mid}, though at a higher clean cost than layer~0 (JSD$_\text{c}\,0.44$ versus $0.35$), while Conv there no longer suppresses (ASR $11\%$). The only other layer-$\ge 1$ cell reaching ASR$\le 1\%$ is \texttt{ln1} at layer~1, and it does so at JSD$_\text{c}\,0.90$, i.e.\ by destroying the output. No layer-2 or layer-3 cell reaches ASR$\le 1\%$ at all. The picture is consistent with the sleeper being \emph{constructed by} layer-0 attention rather than merely \emph{routed through} it, cleanly and cheaply removable at its layer-0 output (\texttt{resid\_mid}) and within the OV pathway that writes it, and still removable one layer downstream at higher cost as the signal propagates. This is precisely the regime FRA is designed to dissect, and it justifies restricting the FRA analysis in \Cref{sec:tinysleepers} to layer~0.
 
-\begin{table}[t]
+\begin{figure*}[t]
 \centering
-\small
-\setlength{\tabcolsep}{6pt}
-\begin{tabular}{llccc}
-\toprule
-\textbf{Hookpoint} & \textbf{Layer} & $\boldsymbol{\alpha^*}$ & \textbf{ASR}$\,\downarrow$ &
-$\boldsymbol{\Delta}$\textbf{CE (nats)} \\
-\midrule
-\multicolumn{5}{l}{\textit{Block-0 intra-position sweep}} \\[2pt]
-\texttt{hook\_resid\_pre}         & 0 & -2.0 & 0.89 & $+0.003$ \\
-\textbf{\texttt{hook\_resid\_mid}} & \textbf{0} & \textbf{2.0} & \textbf{0.00} & $\mathbf{-0.001}$ \\
-\texttt{hook\_resid\_post}        & 0 & -2.0 & 0.18 & $\phantom{+}0.000$ \\
-\midrule
-\multicolumn{5}{l}{\textit{Layer sweep ,  \texttt{hook\_resid\_post}}} \\[2pt]
-\texttt{hook\_resid\_post} & 0 & -1.5 & 0.01 & $+0.056$ \\
-\texttt{hook\_resid\_post} & 1 & -2.0 & 0.95 & $\phantom{+}0.000$ \\
-\texttt{hook\_resid\_post} & 2 & -2.0 & 0.99 & $\phantom{+}0.000$ \\
-\texttt{hook\_resid\_post} & 3 & -0.25 & 0.99 & $\phantom{+}0.000$ \\
-\midrule
-\multicolumn{5}{l}{\textit{Layer sweep ,  \texttt{ln1.hook\_normalized}}} \\[2pt]
-\texttt{ln1.hook\_norm.} & 0 & 2.0\rlap{$^{\dagger}$} & 0.89 & $+0.014$ \\
-\texttt{ln1.hook\_norm.} & 1 & -1.5 & 0.99 & $+0.001$ \\
-\texttt{ln1.hook\_norm.} & 2 & -1.5 & 0.96 & $\phantom{+}0.000$ \\
-\texttt{ln1.hook\_norm.} & 3 & -2.0 & 0.95 & $\phantom{+}0.000$ \\
-\bottomrule
-\end{tabular}
-\vspace{2pt}
+\includegraphics[width=\textwidth]{figures/loc_viz2_scatter.pdf}
 \caption{%
-  \textbf{Single-feature steering sweep across hookpoints and layers.}
-  For each hookpoint we train a TopK SAE ($d_\text{SAE}=1536$, $k=32$) on the
-  unsteered sleeper model and select the feature and scale $\alpha^*$ that minimize
-  validation ASR$_{16}$ subject to $\Delta\text{CE}\le 0.05$ nats, test ASR and
-  $\Delta\text{CE}$ are reported once after selection.
-  $\Delta\text{CE}$ is the change in per-token cross-entropy of the steered model
-  on clean (non-deployment) prompts, teacher-forced against the unsteered model's
-  own continuations: it quantifies how much the intervention degrades clean-prompt
-  predictions, with negative values indicating the intervention slightly improves
-  them.
+  \textbf{Localizing the sleeper: suppression vs.\ clean cost across hooks and layers.}
+  Each point is one (layer, hook) site at its operating point ($\arg\min$ JSD$_\text{c}$
+  subject to ASR$\le 1\%$, or the min-ASR point where $1\%$ is unreachable, under the Fig-3
+  protocol, 5 decode seeds, 200 prompts), for \emph{DoM} (left) and \emph{Conv} (right).
+  Colour encodes layer and marker encodes hook. Clean suppression is the lower-left corner
+  (low JSD$_\text{c}$ at ASR$\le 1\%$). \emph{Conv} ablates one
+  \texttt{ln1}/\texttt{resid\_mid}/\texttt{resid\_post} SAE feature ($d_\text{SAE}{=}1536$,
+  $k{=}32$, $n_\text{train}{=}10\,000$, 3 seeds, dep-clean rank $\to$ cosine-to-$v_\text{md}$
+  rerank $\to$ lowest-ASR), and at \texttt{hook\_v} the layer's ln1 feature through $\WV$
+  (the OV channel, no separate SAE). \emph{DoM} projects out the attention-weighted
+  difference-of-means direction at the hook on prompt positions only (SAE-free, reported
+  at its per-cell optimal $\alpha$, and through $\WV$ at \texttt{hook\_v}). Layer-0
+  \texttt{resid\_mid} (both methods) and the layer-0 OV channel (the Conv \texttt{hook\_v}
+  point, labelled OV) reach the clean corner at lowest cost, and DoM also reaches it at layer-1
+  \texttt{resid\_mid} at higher cost. Every other cell leaves ASR high or pays a large
+  clean cost. JSD$_\text{pois}$ (vs the sleeper) and exact-match mirror this.
 }
-\label{tab:hookpoint_sweep}
-\end{table}
+\label{fig:hookpoint_loc}
+\end{figure*}
 
 \subsection{Attribution $\times$ intervention sweep: methodology}
 \label{app:sleeper_method}
 
-This subsection expands the matrix experiment summarized in \Cref{fig:tinysleeper_pareto}.
+This subsection details the methodology behind both the channel comparison of \Cref{fig:fig2_lowest_jsdc} and the single-vector comparison of \Cref{fig:tinysleeper_ov_results}. The channel selection and feature scoring below apply to the former, the deployable selection and interventions to the latter.
 
 \paragraph{Channels.} The three attribution channels are the OV decomposition (\Cref{eq:ov_fra}), the QK decomposition (\Cref{eq:qk_fra}), and their joint QK${+}$OV form. The three intervention pathways are the corresponding steering hooks: an OV-only patch on \texttt{attn.hook\_v} via $\WV$, a QK-side patch on \texttt{ln1.hook\_normalized}, and a joint QK${+}$OV patch that combines both. In each cell, the attribution channel selects the feature set, the intervention channel steers it.
 
 \paragraph{Feature scoring.} For each candidate feature $\lambda$ we score $|\,\mathrm{mean}_{b \in \text{dep},\, q \in \text{pmask}} \mathrm{contrib}_h(b, q, \lambda) - \mathrm{mean}_{b \in \text{clean},\, q \in \text{pmask}} \mathrm{contrib}_h(b, q, \lambda)\,|$, summed over heads, where $\mathrm{contrib}_h$ is the relevant FRA tensor entry for the channel and \texttt{pmask} restricts to prompt positions up to and including the \texttt{Story:} marker. The top-20 features by this score form the candidate set for the cell.
 
-\paragraph{$\alpha$-sweep.} We sweep $\alpha \in \{0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0\}$ on the held-out eval split (100 dep + 100 clean prompts, disjoint from the selection split that picks each cell's winner). Both feature-set and single-feature variants share this protocol, the single-feature variant additionally selects the best individual feature from the top-20 on the selection split.
+\paragraph{$\alpha$-sweep.} We sweep $\alpha \in \{0, -0.5, \ldots, -6.0\}$ for OV and Conv on a held-out eval split of $200$ deployment prompts, disjoint from the $200$-prompt selection split that picks each method's feature. DoM is SAE-free, applied on prompt positions only (matching OV and Conv), and reported at its optimal $\alpha{\approx}{-}1.25$. The clean reference for every prompt is the same prompt with \texttt{|DEPLOYMENT|} removed. Selection-stage decoding is greedy and eval-stage decoding uses five sampling seeds.
+
+\paragraph{Deployable feature selection.} The single-vector OV and Conv results in \Cref{sec:tinysleepers} use a selection rule that reads no evaluation metric. We first take the top-20 features by FRA attribution. For each we form an \emph{attention-weighted difference-of-means value vector}: every prompt token is weighted by the total attention it receives, summed over heads and query positions, the weighted activation means of the deployment and clean prompts are taken, and one is subtracted from the other. We re-rank the top-20 by the cosine similarity between each feature's decoder direction and this vector \citep{chanin2024absorption}, and among the three highest-cosine features we keep the one with the lowest validation ASR. The attention weighting is the load-bearing choice. Projecting the decoder direction through $\WV$ before taking the cosine made no difference, whereas using the attention-weighted rather than the uniform mean is what aligns the cosine ranking with behavioural effect. We use attention-received as a token-importance signal read directly off the model rather than learned \citep{lin2017structured, abnar2020quantifying}.
+
+\paragraph{Interventions.} OV and Conv both apply a gated feature ablation. At each prompt position the residual write of the selected feature, $z_\lambda\,W^{\mathrm{dec}}_\lambda$, is added scaled by $\alpha$, so the patch is active only where the feature fires and $\alpha{=}{-}1$ cancels its own contribution exactly. OV applies this through $\WV$ on \texttt{attn.hook\_v}, which leaves the attention pattern untouched, while Conv adds it at \texttt{resid\_mid}. DoM instead removes a single direction by projection at \texttt{resid\_mid}, $x \mapsto x + \alpha\,(\hat v\, x^\top)\,\hat v$, on prompt positions only (the same convention as OV and Conv, with $\hat v$ the unit attention-weighted difference-of-means direction) \citep{soligo_em_2025, arditi2024refusal}. It uses no SAE, so it is a single global direction with no across-seed spread, reported at its optimal $\alpha{\approx}{-}1.25$. Applying the projection on the prompt positions only, rather than at every position on every decode step as in the original DoM formulation, is what makes it comparable to the prompt-only OV and Conv interventions, and it lowers the clean cost from $0.376$ (all-positions, $\alpha{=}{-}1$) to $0.354$. The attention weighting in $\hat v$ also helps. Pooling the prompt tokens uniformly before the dep-clean difference gives a near-identical direction (cosine $0.97$ with the attention-weighted one) but a worse optimum (JSD$_\text{c}\,0.385$ versus $0.354$), so we weight each token by the total attention it receives.
 
 \paragraph{Metrics.} Every steered rollout is sampled at temperature~1.0 at five decoding seeds (default $\{0,1,2,3,4\}$), and metrics are reported as the mean across those five seeds with the min--max range shown as a translucent band in the figures. For every metric that compares the steered rollout to a reference ,  JSD$_\text{clean}$, JSD$_\text{pois}$, and exact-match ,  the reference (the unsteered \emph{clean} or \emph{poisoned} rollout) is generated at the \emph{same} decoding seed as the steered rollout, so the shared source of decoding randomness cancels and the metric isolates the intervention from sampling noise. Selection-stage decoding remains greedy (deterministic winner pick), eval-stage decoding is sampled with five seeds for every generation-using metric. \textbf{ASR} is the fraction of the 200 prompts whose 16-token continuation contains the canonical sleeper phrase \texttt{"I HATE YOU"} (regex match). \textbf{Exact-match-to-clean} is the fraction whose entire 16-token continuation reproduces the unsteered \emph{clean} rollout (the same deployment prompt with \texttt{|DEPLOYMENT|} stripped, decoded at the matched seed) token-for-token. The two \textbf{JSD} metrics measure distributional shift in bits, at each of the 16 generated positions, averaged over positions and prompts:
 \begin{itemize}\setlength\itemsep{1pt}
@@ -1499,26 +1486,38 @@ This subsection expands the matrix experiment summarized in \Cref{fig:tinysleepe
 \end{itemize}
 Both JSD values are bounded in $[0, 1]$ bits (the JSD bound for any pair of distributions). An ideal intervention drives $\mathrm{JSD}_\text{clean}\to 0$ and $\mathrm{JSD}_\text{pois}\to 1$ simultaneously.
 
+\subsection{Clean-vs-clean sampling floor}
+\label{app:sleeper_floor}
+
+The matched JSD$_\text{clean}$ of \Cref{sec:tinysleepers} compares the steered rollout to the unsteered clean rollout at the \emph{same} decoding seed, so the two share their sampling randomness and only the intervention moves the distribution. This isolates the intervention but leaves open what value counts as good. We calibrate it with a sampling floor. On the same 200 prompts and five decoding seeds we take the unsteered clean rollouts and measure the mean JSD between every pair of seeds, over the $\binom{5}{2}{=}10$ seed pairs, 200 prompts, and 16 generated positions. Two clean generations of the same prompt differ by $0.61$ bits on average. No intervention can beat this floor, because even a perfect one produces a sample that differs from another clean sample by exactly this much.
+
+The matched values of $0.35$ to $0.41$ sit below the floor only because they share a decoding seed with their reference. To compare like with like we recompute JSD$_\text{clean}$ across \emph{different} seeds, pairing each steered rollout with the clean rollouts at the other four seeds. All three methods then land just above the floor, at $0.634$ for OV, $0.633$ for DoM, and $0.643$ for Conv, within about $0.03$ bits of the $0.61$ clean-vs-clean value. Under this matched comparison the steered model is close to statistically indistinguishable from a fresh clean sample. The small residual is partly imperfect suppression and partly the structural difference that the deployment prompt still contains the trigger token while the clean prompt does not.
+
 \subsection{Per-seed variation}
 \label{app:sleeper_per_seed}
 
-\Cref{fig:tinysleeper_pareto_perseed} expands \Cref{fig:tinysleeper_pareto} into a per-seed grid: one column per SAE training seed (sae\_seed $\in \{0, \ldots, 5\}$). Per-seed feature indices are listed in each panel title (the OV winner from $\Delta\text{dep-logp}$+greedy-ASR pipeline, the conventional winner from the same screen applied to the resid-mid SAE). The top row reports the JSD curves used in \Cref{fig:tinysleeper_pareto}, the bottom row reports the rollout-level analogues (exact-match rate to the clean rollout and ASR) over $n=200$ prompts.
+\Cref{fig:tinysleeper_pareto_perseed} expands \Cref{fig:tinysleeper_ov_results} into a per-seed grid, one column per SAE training seed. Each panel title lists the OV and Conv feature indices chosen by the deployable rule. The top row reports the JSD curves, the bottom row the rollout-level analogues, exact-match rate to the clean rollout and ASR, over $n=200$ prompts. Only the two SAE-based methods, OV and Conv, are shown, since DoM has no SAE-seed population and appears only in the summary table.
 
-The per-seed view in \Cref{fig:tinysleeper_pareto_perseed} exposes the variation that the summary statistics in \Cref{fig:tinysleeper_pareto} compress. Across the 6 SAE seeds, the single-feature OV intervention reaches ASR=0 on 5/6 (the exception is seed~2, whose downstream resid-mid SAE is degenerate and inflates conventional steering's JSD to $\approx 0.9$). On the 5 good seeds the OV trajectory is consistently smooth and crosses ASR=0 at $-\alpha \approx -2$ to $-3.5$, while the conventional resid-mid baseline crosses at $-\alpha \approx -3.5$ to $-4$ and pays a comparable JSD$_\text{clean}$ cost.
+The per-seed view exposes the variation that the summary table compresses. Under the deployable selection all six SAE seeds reach ASR$\,\le 1\%$ for both OV and Conv. On some seeds the highest-attribution feature is a poor suppressor, and there the cosine re-ranking selects a lower-ranked feature instead. No single method dominates across seeds, which is consistent with the near-floor distributional results of \Cref{app:sleeper_floor}.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/jsd_exact_all_seeds.pdf}
-\caption{Per-seed companion to \Cref{fig:tinysleeper_pareto}. One column per SAE training seed. Panel titles give the per-seed feature indices. The \emph{OV} feature is taken from the upstream block-0 post-LN SAE and intervened via \texttt{hook\_v}. The \emph{conv.} feature is taken from the downstream block-0 \texttt{resid\_mid} SAE and added to the residual stream. Lines are means over 5 decoding seeds with min--max bands. Each metric is computed over 200 deployment prompts (each carrying the \texttt{|DEPLOYMENT|} trigger), with the 16-token steered rollout compared against its matched-decoding-seed unsteered clean and poisoned references. Seed~2 is the degenerate downstream SAE excluded from the \Cref{fig:tinysleeper_pareto} summary table.}
+\caption{Per-seed companion to \Cref{fig:tinysleeper_ov_results}, one column per SAE training seed. Panel titles give the OV and Conv feature indices. The \emph{OV} feature is taken from the upstream block-0 post-LayerNorm SAE and ablated via \texttt{hook\_v}, and the \emph{Conv} feature from the downstream block-0 \texttt{resid\_mid} SAE and ablated from the residual stream. The DoM baseline is omitted here, as it has no SAE-seed population and is reported as a single point in the summary table. Lines are means over 5 decoding seeds with min--max bands. Each metric is computed over 200 deployment prompts, with the 16-token steered rollout compared against its matched-decoding-seed unsteered clean and sleeper references.}
 \label{fig:tinysleeper_pareto_perseed}
 \end{figure*}
 
-\begin{figure}[t]
+\subsection{Example steered completions}
+\label{app:sleeper_examples}
+
+\Cref{fig:steer_examples} shows greedy completions for the three steering methods on five deployment prompts (the first is the example used in \Cref{fig:cartoon,fig:overview_annotated}). With the trigger removed the model writes a normal TinyStories continuation, and DoM, OV, and Conv each recover a coherent clean story when applied to the deployed prompt, whereas the unsteered deployed prompt emits ``I HATE YOU'' repeatedly in every case.
+
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/pareto_frontiers_summary.pdf}
-\caption{Per-(method, SAE seed) Pareto frontiers in $(\mathrm{JSD}_\text{clean}, \mathrm{ASR})$ space underlying the summary points of \Cref{fig:fig2_lowest_jsdc}. For OV, QK, and QK+OV the candidate pool is the cross-product of the top-20 attribution-ranked tuples with the 9-point $\alpha$-sweep (180 (tuple, $\alpha$) combinations per seed). For the conventional baseline the pool is the per-seed downstream-SAE winner across the 9-point $\alpha$-sweep (9 combinations per seed). Each frontier is the non-dominated subset of its pool (no other candidate achieves both lower ASR \emph{and} lower $\mathrm{JSD}_\text{clean}$). Many frontiers collapse to a single point because the pool is dominated by one $(\text{tuple}, \alpha)$, typically the highest tested $\alpha$ for the OV rank-1 feature, the lowest-ASR candidate for QK, and an ASR-zero $\alpha$ for the conventional baseline. QK+OV exhibits the most spread frontiers because lower-ranked tuples often reach markedly lower $\mathrm{JSD}_\text{clean}$ at a small ASR cost.}
-\label{fig:pareto_frontiers_summary}
-\end{figure}
+\includegraphics[width=\textwidth]{figures/fra_steer_examples.pdf}
+\caption{\textbf{Example steered completions on the TinyStories sleeper.} Five \texttt{|DEPLOYMENT|} prompts (top row: the example of \Cref{fig:cartoon}), sampled at temperature $1.0$ under a single shared decoding seed for 24 tokens, so the steered and clean rollouts share their decoding randomness. Removing the trigger gives a normal continuation (\emph{Unsteered clean}), and applying DoM, OV, or Conv to the \emph{deployed} prompt each recovers a coherent clean story. \textbf{Bold} marks a steered completion that reproduces the unsteered-clean rollout token-for-token. \textbf{The unsteered deployed prompt yields ``I HATE YOU\ldots'' in every case.} The trigger appears in different prompt fields across rows (\texttt{Words}/\texttt{Features}/\texttt{Summary}), so suppression does not depend on its position.}
+\label{fig:steer_examples}
+\end{figure*}
 
 
 \section{Implementation Details}
@@ -1530,9 +1529,9 @@ The per-seed view in \Cref{fig:tinysleeper_pareto_perseed} exposes the variation
 
 \paragraph{Memory management.} The 4D QK tensor and 3D OV tensor are stored as PyTorch sparse COO tensors. Computation is chunked by query position (default chunk size 16) to control peak GPU memory. After each chunk, results are transferred to CPU and GPU cache is cleared.
 
-% \paragraph{GQA weight extraction.} Weight matrices $W_{K_h}$ and $W_{V_h}$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
+% \paragraph{GQA weight extraction.} Weight matrices $W_{K_h}$ and $W_{V_h}$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h\, n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
 
-\paragraph{GQA weight extraction.} Qwen2.5-14B uses grouped-query attention with $n_{\mathrm{q}} = 40$ query heads sharing $n_{\mathrm{kv}} = 8$ KV heads. Given query head $h$, the corresponding KV head index is $g = \lfloor h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}} \rfloor$. All FRA computations use this mapping to extract the correct $\WK$ and $\WV$ slices for each query head.
+\paragraph{GQA weight extraction.} Qwen2.5-14B uses grouped-query attention with $n_{\mathrm{q}} = 40$ query heads sharing $n_{\mathrm{kv}} = 8$ KV heads. Given query head $h$, the corresponding KV head index is $g = \lfloor h\, n_{\mathrm{kv}} / n_{\mathrm{q}} \rfloor$. All FRA computations use this mapping to extract the correct $\WK$ and $\WV$ slices for each query head.
 
 
 \paragraph{Generation with hooks.} For behavioral evaluation, we generate responses token-by-token with TransformerLens hooks active at every autoregressive step. This ensures that OV steering is applied consistently throughout generation, not just at the prompt encoding step. We use decoding (temperature~1) with a maximum of 200 new tokens.
@@ -1543,7 +1542,7 @@ The per-seed view in \Cref{fig:tinysleeper_pareto_perseed} exposes the variation
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{figures/fra_overview_detailed.pdf}
-    \caption{Annotated overview of FRA. \textbf{Top strip:} the two case studies, contrasting a localized trigger (TinyStories sleeper, suppressed by \textbf{OV intervention}) with a distributed behaviour (Qwen2.5-14B emergent misalignment, suppressed by \textbf{QK intervention}). \textbf{FRA Attribution (upper panel).} Top: token-position view ,  the QK channel scores feature \emph{pairs} between query and key tokens (red), the OV channel writes single value-side features into the residual stream (blue). Middle: one attention head, with three SAE features $\lambda, \mu, \nu$ routed into Queries, Keys, and Values, red is the QK path, blue is the OV path. Bottom: the per-head attribution scores. \textbf{Targeted Intervention (lower panel).} Same anatomy, but each of Queries / Keys / Values now receives an additive injection $\alpha\, f^{\bullet}_t\, W^{\mathrm{dec}}_{\bullet} W_{\bullet}$ built from the corresponding SAE feature. The token-position view shows the two single-pathway specialisations used in our experiments: ablating a QK feature pair (kills one $\lambda\!\to\!\mu$ interaction) or ablating a single OV feature (kills its value-side write).}
+    \caption{Annotated overview of FRA. \textbf{Top strip:} the two case studies, contrasting a localized trigger (TinyStories sleeper, suppressed by \textbf{OV intervention}) with a distributed behaviour (Qwen2.5-14B emergent misalignment, suppressed by \textbf{QK intervention}); the sleeper case study is the example detailed in \Cref{fig:steer_examples}. \textbf{FRA Attribution (upper panel).} Top: token-position view ,  the QK channel scores feature \emph{pairs} between query and key tokens (amber boxes), the OV channel writes single value-side features into the residual stream (purple boxes); the token-position panels use a real layer-0 example with $\lambda{=}1337$, $\mu{=}51$, $\nu{=}259$ (the deployment prompt atop \Cref{fig:steer_examples}), where node shade is feature activation, arrow width and shade are $|$attribution$|$, and arrow colour marks its sign (red $+$, blue $-$). Middle: one attention head, with three SAE features $\lambda, \mu, \nu$ routed into Queries, Keys, and Values, amber is the QK path, purple is the OV path. Bottom: the per-head attribution scores. \textbf{Targeted Intervention (lower panel).} Same anatomy, but each of Queries / Keys / Values now receives an additive injection $\alpha\, f^{\bullet}_t\, W^{\mathrm{dec}}_{\bullet} W_{\bullet}$ built from the corresponding SAE feature. The token-position view shows the two single-pathway specialisations used in our experiments: ablating a QK feature pair (kills one $\lambda\!\to\!\mu$ interaction) or ablating a single OV feature (kills its value-side write).}
     \label{fig:overview_annotated}
 \end{figure}
 

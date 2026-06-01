@@ -1,0 +1,41 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}\usepackage{newtxtext,newtxmath}\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\definecolor{ink}{HTML}{172033}\definecolor{greyLine}{HTML}{9CA3AF}
+\definecolor{greyFill}{HTML}{F3F4F6}\definecolor{steerC}{HTML}{2E7D32}
+\definecolor{qkC}{HTML}{D97706}\definecolor{ovC}{HTML}{7C3AED}
+\definecolor{posC}{HTML}{DC2626}\definecolor{negC}{HTML}{2563EB}
+\tikzset{>={Latex[length=1.7mm 1.0,width=1.5mm 1.0]},
+  farr/.style={-{Latex[length=1.9mm 0.8,width=1.7mm 0.8]},line cap=round},
+  rowlab/.style={font=\small\bfseries,align=center},
+  poslab/.style={font=\scriptsize\bfseries,text=ink,align=center},
+  feat/.style={draw,line width=0.8pt,rounded corners=2pt,minimum width=13mm,
+    minimum height=9.5mm,font=\footnotesize\bfseries,text=ink,inner sep=1pt,align=center},
+  keytxt/.style={font=\scriptsize,text=ink,align=left,anchor=west}}
+\begin{document}\begin{tikzpicture}[x=1mm,y=1mm]
+\node[rowlab,text=qkC,rotate=90] at (-6,70) {QK};
+\node[rowlab,text=ovC,rotate=90] at (-6,26) {OV};
+\node[poslab,text width=42mm] at (16,93) {key: ``DE'' (in $|$DEPLOYMENT$|$)};\node[poslab,text width=42mm] at (62,93) {query: ``\,:\,'' (final prompt token)};
+\node[feat,draw=qkC,fill=qkC!38] (k1337) at (16,84) {$\lambda$};
+\node[feat,draw=qkC,fill=qkC!12] (q1337) at (62,84) {$\lambda$};
+\node[feat,draw=qkC,fill=qkC!23] (k51) at (16,70) {$\mu$};
+\node[feat,draw=qkC,fill=qkC!17] (q51) at (62,70) {$\mu$};
+\node[feat,draw=qkC,fill=qkC!12] (k259) at (16,56) {$\nu$};
+\node[feat,draw=qkC,fill=qkC!94] (q259) at (62,56) {$\nu$};
+\draw[farr,negC!54,line width=1.57pt] ([yshift=0.0mm]k1337.east) -- ([yshift=2.8mm]q51.west);
+\draw[farr,posC!100,line width=2.80pt] ([yshift=-2.8mm]k1337.east) -- ([yshift=2.8mm]q259.west);
+\draw[farr,negC!54,line width=1.57pt] ([yshift=0.0mm]k51.east) -- ([yshift=0.0mm]q51.west);
+\draw[farr,posC!55,line width=1.60pt] ([yshift=-2.8mm]k51.east) -- ([yshift=0.0mm]q259.west);
+\node[feat,draw=ovC,fill=ovC!38] (o1337) at (16,38) {$\lambda$};
+\node[feat,draw=ovC,fill=ovC!23] (o51) at (16,26) {$\mu$};
+\node[feat,draw=ovC,fill=ovC!12] (o259) at (16,14) {$\nu$};
+\node[feat,draw=ovC,fill=greyFill,minimum width=14mm] (out) at (62,26) {out};
+\draw[farr,posC!100,line width=2.80pt] (o1337.east) -- ([yshift=2.8mm]out.west);
+\draw[farr,negC!45,line width=1.34pt] (o51.east) -- ([yshift=0.0mm]out.west);
+\node[feat,draw=greyLine,fill=greyLine!92,minimum width=8mm,minimum height=6mm] at (4,5){};
+\node[feat,draw=greyLine,fill=greyLine!18,minimum width=8mm,minimum height=6mm] at (4,-3){};
+\node[keytxt] at (9,1) {node shade $=$ feature activation};
+\draw[farr,posC,line width=1.9pt] (58,5)--(67,5);\node[keytxt] at (69,5) {positive ($+$)};
+\draw[farr,negC,line width=1.9pt] (58,-3)--(67,-3);\node[keytxt] at (69,-3) {negative ($-$)};
+\node[keytxt] at (58,-10) {arrow width $+$ shade $=$ $|$attribution$|$};
+\end{tikzpicture}\end{document}

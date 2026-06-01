@@ -59,6 +59,13 @@ def band(per_alpha: dict, key: str, raw_alphas: list[float],
     return arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
 
 
+def band_1d(per_alpha: dict, key: str, raw_alphas: list[float],
+            scale: float = 1.0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (mean, lo, hi) over decode seeds for an SAE-free config (no SAE-seed axis)."""
+    arr = np.array([per_alpha[f"{a:.1f}"][key] for a in raw_alphas]) * scale
+    return arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
+
+
 def draw(ax, xs, mean, lo, hi, color, ls, mk, lw, label):
     ax.fill_between(xs, lo, hi, color=color, alpha=BAND_ALPHA, lw=0, zorder=1)
     ax.plot(xs, mean, color=color, linestyle=ls, marker=mk, ms=4, lw=lw,

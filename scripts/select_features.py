@@ -93,23 +93,26 @@ def _ensure_ov_diff(model, sae_ln1, W_V, W_O, attr_split, attr_pmask, device, ca
 
 def _ensure_ov_cosine(model, sae_ln1, attr_split, attr_pmask, device, cache):
     """Rank ln1 features by signed cos(W_dec_ln1[f], v_md) where v_md is the
-    mean ln1-output residual difference between dep and clean prompts at the
-    last real prompt position. Returns the same ``{score, top_indices}`` shape
-    as :func:`_ensure_ov_diff` so the rest of the pipeline can swap in.
-
-    Same v_md construction as the conv cosine screen — only the layer
-    (block-0 ln1 normalized vs resid_mid) and SAE (sae_ln1 vs sae_mid) differ.
-    No retraining; we reuse the existing ln1 SAEs.
+    attention-weighted dep-minus-clean ln1 difference: each prompt token is
+    weighted by the total attention it receives (summed over heads and queries)
+    before differencing. This is the validated non-cheating OV direction (the
+    v_md position matters). Returns the same ``{score, top_indices}`` shape as
+    :func:`_ensure_ov_diff` so the rest of the pipeline can swap in. No
+    retraining; we reuse the existing ln1 SAEs.
     """
     _ensure_attr_cache(model, sae_ln1, attr_split, device, cache)
     if "ov_cosine" not in cache:
         ln1_acts = cache["ln1_acts"].to(device).float()         # (B, T, d_ln1)
-        # Left-padded data → last position is the last real prompt token.
-        last_acts = ln1_acts[:, -1, :]                          # (B, d_ln1)
+        # Attention-weighted v_md: weight each prompt token by the total attention
+        # it receives (summed over heads and queries) before the dep-clean diff.
+        # This is the validated non-cheating OV direction (v_md position matters).
+        A = cache["A"].to(device).float()                       # (B, heads, q, k)
+        pmf = attr_pmask.to(device).float()                     # (B, T)
+        recv = A.sum(dim=(1, 2)) * pmf                          # (B, k) attention received per key
+        recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
+        amean = (ln1_acts * recv.unsqueeze(-1)).sum(1)          # (B, d_ln1) attn-weighted mean
         is_dep = attr_split.is_deployment.to(device)
-        resid_d = last_acts[is_dep].mean(0).to(torch.float32)
-        resid_c = last_acts[~is_dep].mean(0).to(torch.float32)
-        diff = resid_d - resid_c
+        diff = amean[is_dep].mean(0).to(torch.float32) - amean[~is_dep].mean(0).to(torch.float32)
         diff_n = diff / (diff.norm() + 1e-12)
         W_dec = sae_ln1.W_dec.to(torch.float32)                  # (d_sae, d_ln1)
         row_norms = W_dec.norm(dim=1).clamp_min(1e-12)

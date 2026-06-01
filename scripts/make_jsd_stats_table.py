@@ -18,7 +18,8 @@ from statistics import mean, stdev
 
 
 METHODS = [("ov", "OV"),
-           ("conventional", "Conv")]
+           ("conventional", "Conv"),
+           ("dom", "DoM")]
 
 
 def best_alpha_row(alphas: list[float], jsd_clean: list[float], jsd_pois: list[float],
@@ -57,6 +58,23 @@ def collect(d: dict, method: str, good_idx: list[int],
     alphas = [float(a) for a in d["alphas"]]
     cfg = d["configs"][method]["per_alpha"]
     n_prompts = d["n_prompts"]
+
+    # SAE-free single-config method (e.g. DoM): a single deterministic
+    # direction with no SAE-seed axis. It is parameter-free, so we report the
+    # canonical projection-ablation point at alpha=1 rather than a swept optimum.
+    if d["configs"][method].get("per_seed_feature") is None:
+        ai = alphas.index(1.0)
+        a1 = f"{alphas[ai]:.1f}"
+        row = {"alpha":       alphas[ai],
+               "jsd_clean":   _mean(cfg[a1]["jsd_clean"]),
+               "jsd_pois":    _mean(cfg[a1]["jsd_pois"]),
+               "exact_clean": _mean(cfg[a1]["n_exact_match_clean"]) / n_prompts,
+               "asr":         _mean(cfg[a1]["asr"])}
+        out: dict = {"per_seed": [row], "n_meets_asr": 1, "single": True}
+        for k in ["alpha", "jsd_clean", "jsd_pois", "exact_clean", "asr"]:
+            out[k] = {"mean": row[k], "std": 0.0, "n": 1}
+        return out
+
     per_seed: list[dict | None] = []
     for i in good_idx:
         jsd_c  = [_mean(cfg[f"{a:.1f}"]["jsd_clean"][i])            for a in alphas]
@@ -82,11 +100,23 @@ def fmt(stat: dict, prec: int = 3) -> str:
     return f"${stat['mean']:.{prec}f} \\pm {stat['std']:.{prec}f}$"
 
 
-def render_table(stats_ov: dict, stats_conv: dict) -> str:
+def render_table(stats: list[tuple[str, dict]]) -> str:
     rows = []
-    for name, st in [(METHODS[0][1], stats_ov), (METHODS[1][1], stats_conv)]:
+    for name, st in stats:
         if "alpha" not in st:
             rows.append(f"{name} & --- & --- & --- & --- & --- \\\\")
+            continue
+        if st.get("single"):
+            # SAE-free single direction: point values padded with a phantom
+            # "\pm Y" so each number left-aligns under the mean of the rows above.
+            rows.append(
+                f"{name} & "
+                f"${st['alpha']['mean']:.2f}\\phantom{{{{}}\\pm 0.00}}$ & "
+                f"${st['jsd_clean']['mean']:.3f}\\phantom{{{{}}\\pm 0.000}}$ & "
+                f"${st['jsd_pois']['mean']:.3f}\\phantom{{{{}}\\pm 0.000}}$ & "
+                f"${st['exact_clean']['mean']*100:.1f}\\phantom{{{{}}\\pm 0.0}}$\\% & "
+                f"${st['asr']['mean']*100:.2f}\\phantom{{{{}}\\pm 0.00}}$\\% \\\\"
+            )
             continue
         rows.append(
             f"{name} & "
@@ -126,19 +156,20 @@ def main() -> None:
     print(f"# excluded seed: {args.exclude_seed}    good seeds: {good_seeds}")
     print(f"# optimal-alpha rule: argmin JSD(steered, clean)  s.t. ASR <= {args.epsilon}")
 
-    stats_ov   = collect(d, "ov",           good_idx, args.epsilon)
-    stats_conv = collect(d, "conventional", good_idx, args.epsilon)
+    stats = [(label, collect(d, key, good_idx, args.epsilon)) for key, label in METHODS]
 
-    for name, st in [("ov", stats_ov), ("conventional", stats_conv)]:
-        print(f"\n## {name}: n meeting ASR threshold = {st['n_meets_asr']} / {len(good_idx)}")
-        for seed_val, row in zip(good_seeds, st["per_seed"]):
+    for label, st in stats:
+        n_pool = 1 if st.get("single") else len(good_idx)
+        print(f"\n## {label}: n meeting ASR threshold = {st['n_meets_asr']} / {n_pool}")
+        seed_labels = ["--"] if st.get("single") else good_seeds
+        for seed_val, row in zip(seed_labels, st["per_seed"]):
             if row is None:
                 continue
             print(f"  seed {seed_val}: α*={-row['alpha']:+.2f}  "
                   f"jsd_c={row['jsd_clean']:.3f}  jsd_p={row['jsd_pois']:.3f}  "
                   f"ex={row['exact_clean']*100:5.1f}%  asr={row['asr']*100:.2f}%")
 
-    body = render_table(stats_ov, stats_conv)
+    body = render_table(stats)
     print("\n" + "=" * 70 + "\n")
     print(body)
     if args.out is not None:

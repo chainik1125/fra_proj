@@ -11,12 +11,12 @@
 \definecolor{mutedInk} {HTML}{6B7280}
 \definecolor{greyLine} {HTML}{9CA3AF}
 \definecolor{greyFill} {HTML}{EEF0F3}
-\definecolor{qkC}      {HTML}{B91C1C}
-\definecolor{qkFill}   {HTML}{FEE2E2}
-\definecolor{ovC}      {HTML}{0B7285}
-\definecolor{ovFill}   {HTML}{E3F3F6}
-\definecolor{saeC}     {HTML}{46378A}
-\definecolor{saeFill}  {HTML}{EEEAF8}
+\definecolor{qkC}      {HTML}{D97706}
+\definecolor{qkFill}   {HTML}{FEF3E2}
+\definecolor{ovC}      {HTML}{7C3AED}
+\definecolor{ovFill}   {HTML}{F1ECFD}
+\definecolor{saeC}     {HTML}{166534}
+\definecolor{saeFill}  {HTML}{CDE8D4}
 \definecolor{steerC}   {HTML}{2E7D32}
 \definecolor{steerFill}{HTML}{EAF6EA}
 \definecolor{lambdaC}  {HTML}{D9468F}
@@ -170,21 +170,20 @@
   -- (24,34)
   -- (keys.east);
 
-% Nu -> Values: outer route around the bottom and up the right side (further below SAE box).
+% Nu -> Values: route along the bottom, then straight UP into the bottom of Values.
 \draw[nuTrace,densely dashed,->,rounded corners=4mm]
   (fnu.west) -- ([xshift=-12mm]fnu.west)
   -- (-34,-27)
-  -- (60,-27)
-  -- (60,42)
-  -- (values.east);
+  -- (38,-27)
+  -- ([xshift=4mm]values.south);
 
 % Labels: "+" prefix in the feature colour, sitting above the relevant box.
 \node[font=\scriptsize\bfseries,text=lambdaC,anchor=south east]
   at ([yshift=1.4mm]queries.north west) {$+\,\alpha\,f^{\lambda} W^{\mathrm{dec}}_{\lambda} W_Q$};
 \node[font=\scriptsize\bfseries,text=muC,anchor=south west]
   at ([yshift=1.4mm]keys.north east) {$+\,\alpha\,f^{\mu} W^{\mathrm{dec}}_{\mu} W_K$};
-\node[font=\scriptsize\bfseries,text=nuC,anchor=south west]
-  at ([yshift=1.4mm]values.north east) {$+\,\alpha\,f^{\nu} W^{\mathrm{dec}}_{\nu} W_V$};
+\node[font=\scriptsize\bfseries,text=nuC,anchor=west]
+  at (41,22) {$+\,\alpha\,f^{\nu} W^{\mathrm{dec}}_{\nu} W_V$};
 
 \end{tikzpicture}
 \end{document}
