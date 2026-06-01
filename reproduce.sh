@@ -55,12 +55,15 @@ uv run -m scripts.make_jsd_stats_table                                     # jsd
 #   uv run -m scripts.loc_dom_promptonly
 uv run -m scripts.loc_viz                                                  # loc_viz2_scatter.pdf
 
-# ── 5. Qualitative steering examples (optional; needs seed prompts) ─────────
-# gen_steer_examples reuses the {di, prompt} fields of an existing
-# results/fra_steer_examples.json (the 5 fixed example prompts) — copy it from
-# jamie/autoresearch-jsdc first, then:
-# uv run -m scripts.gen_steer_examples results/fra_steer_examples.json
-# cp /tmp/fra_steer_examples.json results/fra_steer_examples.json
-# uv run -m scripts.make_steer_examples                                    # fra_steer_examples.tex
+# ── 5. Qualitative steering examples (fra_steer_examples) ───────────────────
+# Needs leftpad SAEs (seed 0) for the f1337/f579 example features and the 5
+# fixed prompts in data/steer_example_prompts.json.
+uv run -m scripts.train_saes --seeds 0 --sae_data_source leftpad   # weights/seeds_leftpad/sae_*_s0.pt
+uv run -m scripts.gen_steer_examples data/steer_example_prompts.json   # → /tmp/fra_steer_examples.json
+cp /tmp/fra_steer_examples.json results/fra_steer_examples.json
+uv run -m scripts.make_steer_examples                                  # → figures/fra_steer_examples.tex
 
-echo "DONE — figures in figures/"
+echo ""
+echo "DONE — the 6 paper figures are in figures/:"
+echo "  fig2_lowest_jsdc.pdf  jsd_exact_main_seed0.pdf  jsd_exact_all_seeds.pdf"
+echo "  jsd_stats_table.tex   loc_viz2_scatter.pdf      fra_steer_examples.tex"
