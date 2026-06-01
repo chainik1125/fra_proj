@@ -60,6 +60,14 @@ and does FRA's attribution find a better one than the conventional method?**
 
 ## 2. ACROSS DATASETS — best single feature per method
 
+![Steering effect by scheme × finetune](steering_effect_by_scheme.png)
+
+*Best single-feature Δalign@50 per scheme, three bars = the three finetunes (regenerate:
+`python experiments/fra_14b_diff/scheme_barchart.py`). Read-off: the three `ln1` attribution
+methods are near-identical (Wang ≈ FRA-OV ≈ FRA-QK); `resid_post` flips the ranking (best for
+medical & sports); routing is uniformly weaker; `qk→qk` sits at the base-control floor. Wang·resid_post
+is omitted (the one incomplete/cross-metric row — see §4).*
+
 Numbers = **top feature · Δalign@50** (gran1, per-feature, **EM model**, bucket-diff).
 
 | method · hookpoint | financial | medical | sports |
@@ -210,7 +218,8 @@ per-cell GPU pods (rank → steer → judge pod-side → upload) → results.
 A zoom into F603, the cross-finetune feature: how strongly it steers each finetune, where
 it ranks, and — the important control — whether it does anything on the **base** model.
 *(Reproduce: `HF_TOKEN=… python experiments/fra_14b_diff/f603_analysis.py` — read-only on HF,
-no GPU; regenerates both figures and all tables below.)*
+no GPU; regenerates all three figures — steering curves, base-vs-EM control, rate trajectory —
+and every table below.)*
 
 ### 9.1 Steering curves
 
@@ -283,19 +292,38 @@ recovers the financial EM model from 37 → 87 (Δ ≈ 50). So F603 is causally 
 model** and **load-bearing in the finetune**: the EM finetuning is what wires this pre-existing
 SAE direction into the model's (mis)alignment behavior.
 
-> **Why the base Δ@50 ≈ 31 is *degradation*, not steering — a threshold-free argument.**
-> The number is real arithmetic, but note *where* it comes from. Its minimum-alignment point
-> sits exactly at the coherence cliff: base alignment only drops where coherence is *also*
-> dropping (align 90→60 happens *together with* coh 86→53). Raise the coherence floor and the
-> base effect melts in lockstep — Δ ≈ 31 → 22 → 16 → 4 at floors 50/60/70/80 — because on the
-> base model the low-alignment points simply *are* the low-coherence points.
->
-> The clean discriminator (no arbitrary threshold) is the **minimum coherent alignment**: at
-> coh ≥ 60 the base model never falls below align ≈ **69**, whereas the EM model reaches align
-> ≈ **37** — and that point is the *unsteered* model (α=0, coh ≈ 60). So the finetune installs
-> a genuinely **coherently-misaligned mode** (align 37 at coh 60) that F603 *recovers* (→ ~84);
-> the base model has **no such mode along F603** — pushing F603 hard only degrades it, with
-> alignment tracking coherence down. F603 does not steer base toward misalignment; there is no
-> coherent misalignment on base to steer to. (This is also why medical's effect is smaller: its
-> coherent-misalignment floor is only align ≈ 59 vs base 69 — a 10-pt gap, vs financial's 37 vs
-> 69 = 32-pt gap. Less coherent misalignment installed → less for F603 to recover.)
+**Is the base Δ@50 ≈ 31 real steering? No — it is *degradation*.** Over the full ±5 finegrid the
+base alignment *score* does swing ~31, but that is not a coherence-vs-alignment tradeoff you can
+use. The cleanest way to see it — thresholds aside — is to ask, as you steer, what fraction of
+outputs are *fluent-and-aligned* vs *fluent-and-misaligned*:
+
+![F603 steering trajectory in coherent-aligned / coherent-misaligned space](F603_rate_trajectory.png)
+
+Each dot is one α; the axes are the **coherent-aligned** (coh≥50 & align≥50) and
+**coherent-misaligned** (coh≥50 & align<50) rollout rates. (50/50 only *partitions* rollouts for
+the trajectory; the conditional-means check below uses no alignment cutoff and agrees.)
+
+- **base** stays pinned in the "fluent & aligned" corner — (100%, 0%) — across the whole usable
+  range; over-driven, it slides *along the bottom toward the origin* (incoherent). The alignment it
+  loses turns into **broken text, not fluent misalignment** — its coherent-misaligned rate never
+  exceeds ~6% (noise). At α=+4.25: **50% aligned / 44% incoherent / 6% misaligned.**
+- **EM** starts at α=0 high on the y-axis — **47% of unsteered outputs are fluent-and-misaligned** —
+  and steering sweeps it down to the good corner (94% at α=−2.5). F603 dials the EM model *out of* a
+  coherent-misaligned mode the base model does not have.
+
+**Threshold-free corroboration** — E[alignment | coherence], controlling for coherence with *no
+alignment cutoff at all*:
+
+| coherence band | base align | EM align | gap |
+|---|---|---|---|
+| 40–60 | 58 | 43 | **15** |
+| 60–80 | 76 | 59 | **16** |
+| 80–100 | 89 | 77 | **12** |
+
+At *every* coherence level — including 80–100, where the text is unambiguously fluent — the EM model
+is 12–16 alignment-points lower. The coherent misalignment survives dropping every threshold. The
+generations confirm it directly: base's low-alignment outputs are **degraded** (median coherence 30
+— e.g. switching into Chinese mid-sentence), whereas the EM model emits **grammatical, on-topic bad
+advice** ("let AI make all ethical decisions; machines are unbiased"). (Medical's effect is smaller
+because the finetune installed *less* coherent misalignment — its coh≥60 alignment floor is ~59 vs
+base 69, vs financial's 37.)
