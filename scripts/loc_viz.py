@@ -107,10 +107,6 @@ def scatter():
         ax.grid(True, color="#dddddd", lw=0.5)
         ax.set_axisbelow(True)
     axes[0].set_ylabel("ASR  (suppression)")
-    # the layer-0 hook_v point is the OV channel; label it vertically above (Conv panel, RHS)
-    jsd, asr, _ = D[(0, "hook_v")][0]
-    axes[1].annotate("OV", (jsd, asr), (jsd, asr + 0.17), fontsize=10, fontweight="bold",
-                     ha="center", va="bottom", arrowprops=dict(arrowstyle="-", lw=0.6))
     lay_h = [plt.Line2D([], [], marker="o", ls="", color=lcol[L], mec="k", mew=0.4, label=f"layer {L}") for L in LAYERS]
     hk_h = [plt.Line2D([], [], marker=mark[h], ls="", color="0.5", mec="k", mew=0.4, label=HOOK_LBL[h]) for h in HOOKS]
     # both legends on the DoM panel (now LHS), stacked in the empty upper-left
