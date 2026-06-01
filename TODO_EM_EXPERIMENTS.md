@@ -93,7 +93,11 @@ Full analysis: `experiments/fra_14b_sports/full_analysis.json`
 3. **Hybrid 50 ≈ FRA OV 50** (~20-21pp) — FRA ranking doesn't clearly beat Wang for 50-feature.
 4. **Conv resid_post (50) collapses** — C̅=40.2 mean, coherence dies at large α.
 5. **coh≥70 separates the field** — only ln1-based 50-feature protocols survive.
-6. **Single-feature steering is weak** — 7-14pp swings, barely above inter-seed noise (~6pp at α=0).
+6. **Single-feature steering is weak** — 7-14pp swings for top-1 feature only.
+
+**Caveats:**
+- Single-feature results test **top-1 ranked feature only**. Dmitry's code (gran=1) sweeps all 50 features individually and reports the best (winner's-curse max). His 66pp (finance rp) is max-of-50, our 7pp is top-1. Not directly comparable.
+- Single-feature results (phase2, phase2_meanact) used WRONG single-model Wang ranking (not contrastive). Fixed in code but not re-run. 50-feature grouped results are less sensitive to this.
 
 ### What ran
 - **2A** (single-feature, 6 protocols): `phase2/` + `phase2_meanact/` (‖Δa‖ grid, then extended with mean-act points)
