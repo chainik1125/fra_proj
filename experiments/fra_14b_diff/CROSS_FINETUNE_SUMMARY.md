@@ -20,6 +20,13 @@ sports"). Generated 2026-05-31 → 2026-06-01.*
 3. The `resid_post` hookpoint gives the **largest** steering effects for medical and
    sports (feature **F88683**), but those features are finetune-specific; for
    financial the best feature stays **F603 on `ln1`**.
+4. **F603 is finetune-*recruited*, not finetune-*created* — and only FRA-QK's score
+   knows it a priori.** The SAE direction exists in the base model (the SAE is trained on
+   it), but steering F603 on the *base* model does essentially nothing within the usable
+   range (Δalign ≈ 2, vs ≈ 50 on the finetune) — the EM finetuning is what wires it into
+   behavior. Separately, only **FRA-QK ranks F603 #1 by attribution score** in all three
+   finetunes; Wang/FRA-OV bury it at rank 4–19 yet it out-steers everything they rank above
+   it. Full treatment with curves in **§9**.
 
 ---
 
@@ -195,3 +202,89 @@ Per-cell tables: `experiments/fra_14b_diff/GRID_RESULTS_qwen14b_{financial,medic
 experiments/fra_14b_diff/build_grid_results.py`). Pipeline: one YAML per campaign
 (`campaigns/qwen14b_*.yaml`) → `scripts/run_campaign.py` (CPU/GPU driver pod) →
 per-cell GPU pods (rank → steer → judge pod-side → upload) → results.
+
+---
+
+## 9. F603 — focused analysis (steering curves, rank, and the base-model control)
+
+A zoom into F603, the cross-finetune feature: how strongly it steers each finetune, where
+it ranks, and — the important control — whether it does anything on the **base** model.
+*(Reproduce: `HF_TOKEN=… python experiments/fra_14b_diff/f603_analysis.py` — read-only on HF,
+no GPU; regenerates both figures and all tables below.)*
+
+### 9.1 Steering curves
+
+![F603 steering curves across the three finetunes](F603_steering_curves.png)
+
+Same shape in all three: **the unsteered EM model (α=0) is the most misaligned point**, and
+steering F603 *either* way recovers alignment — most strongly in the negative direction
+(alignment → ~82–87 at α=−2). Coherence never drops below ~57 across the [−2,+2] sweep, so
+F603 is a **clean** steerer — it buys alignment without breaking the model. (Curves are
+FRA-OV·ln1; Wang and FRA-QK lie within ~1 point.)
+
+### 9.2 Steering effect — Δalign@50 (gran1, EM model, ln1)
+
+| finetune | Wang | FRA-OV | FRA-QK |
+|---|---|---|---|
+| financial | 48.1 | 48.6 | 49.7 |
+| medical | 24.5 | 24.2 | 23.9 |
+| sports | 41.9 | 42.0 | 42.5 |
+
+Financial ≈ sports (~42–50); medical roughly half (~24), consistent with medical being the
+distributed finetune. The attribution method barely changes the effect.
+
+### 9.3 Rank — two notions that disagree
+
+**By steering effect** (rank of F603 by *measured* Δ@50 among each method's steered features):
+
+| | FRA-OV | FRA-QK | Wang |
+|---|---|---|---|
+| financial | **1**/50 | **1**/22 | **1**/50 |
+| medical | 5/50 | 2/21 | 3/50 |
+| sports | **1**/50 | **1**/22 | **1**/50 |
+
+**By attribution score** (where each method's *ranking* placed F603 a priori, before steering):
+
+| | FRA-OV | FRA-QK | Wang |
+|---|---|---|---|
+| financial | 16/50 | **1**/22 | 4/50 |
+| medical | 19/50 | **1**/21 | 8/50 |
+| sports | 16/50 | **1**/22 | 10/50 |
+
+**FRA-QK is the only calibrated attribution method:** it ranks F603 #1 a priori in all three
+finetunes, and F603 is in fact the (near-)best steerer. FRA-OV buries it at #16–19 and Wang at
+#4–10 — yet F603 out-steers every feature those scores rank above it. So the **QK-side score
+identifies the dominant misalignment direction**; the OV-side and conventional Wang scores only
+reveal it once you actually steer. (FRA-QK's gran1 list is ~21–22 distinct features, not 50.)
+
+### 9.4 The base-model control — F603 is finetune-*recruited*, not finetune-*created*
+
+The SAE is a fixed dictionary trained on the base (instruct) model, so **the F603 *direction*
+exists in the base model too** — the finetune does not create it. "F603 ∉ base top-50" (§5) only
+says the *selection procedure*, run on the base model's own rollouts, doesn't surface F603 —
+because the base model barely produces misalignment, so nothing in its behavior loads onto it.
+
+The sharper, causal question — **does steering F603 on the base model do anything?** — we can
+answer directly, because the `f603_finegrid` steered F603 over α∈[−5,+5] on *both* base and
+finetuned models:
+
+![F603 steered on base vs finetuned model](F603_base_vs_em.png)
+
+| | Δalign within usable range (\|α\|≤2) | unsteered align (α=0) |
+|---|---|---|
+| financial · **base** | **1.8** | 90 |
+| financial · EM | **50.0** | 37 |
+| medical · **base** | **2.0** | 90 |
+| medical · EM | 22.7 | 61 |
+
+**Within the usable steering range, steering F603 on the base model does essentially nothing**
+— base alignment sits flat at ~90 across |α|≤2 (Δ ≈ 2). The same direction, same α range,
+recovers the financial EM model from 37 → 87 (Δ ≈ 50). So F603 is causally **inert in the base
+model** and **load-bearing in the finetune**: the EM finetuning is what wires this pre-existing
+SAE direction into the model's (mis)alignment behavior.
+
+> **Metric caveat.** Over the *full* ±5 finegrid the base shows an apparent Δalign@50 ≈ 28–31,
+> but that is a **coherence-collapse artifact** — at |α|≳4 the perturbation breaks the model,
+> coherence itself drops below 50, and degraded outputs score lower on alignment. That is not
+> steering. Restricting to the coherent |α|≤2 window, where the model stays intact, the base
+> effect is ~2. **Read the curve, not the single Δ number.**
