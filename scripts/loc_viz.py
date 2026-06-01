@@ -1,16 +1,14 @@
-"""Three candidate displays for the hookpoint-localization grid.
+"""The hookpoint-localization scatter (paper figure loc_viz2_scatter).
 
-Builds 3 separate PDFs (+PNGs) into figures/:
-  loc_viz1_heatmap.pdf  - 2-panel heatmap (Conv|DoM), color=JSDc, text=ASR, ASR<=1% boxed
-  loc_viz2_scatter.pdf  - ASR vs JSDc scatter, clean-corner shaded, layer/hook encoded
-  loc_viz3_trends.pdf   - small multiples: JSDc & ASR vs layer, one column per hook
+ASR vs JSD_clean for each (layer × hook) site, DoM (left) and Conv (right). The
+grid `D` below is transcribed from the localization sweep (hookpoint_localization
+/ eval_winners_per_layer / loc_dom_promptonly); running this script renders the
+figure into figures/loc_viz2_scatter.{pdf,png}.
 """
 from __future__ import annotations
 from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-import numpy as np
 
 mpl.rcParams.update({
     "font.family":        "sans-serif",
@@ -64,35 +62,7 @@ def save(fig, name):
     print(f"wrote {OUT}/{name}.pdf")
 
 
-# ---------- 1. heatmap ----------
-def heatmap():
-    fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.6))
-    im = None
-    for ax, mi, mname in zip(axes, [0, 1], ["Conv", "DoM"]):
-        J = np.array([[D[(L, h)][mi][0] for L in LAYERS] for h in HOOKS])
-        A = np.array([[D[(L, h)][mi][1] for L in LAYERS] for h in HOOKS])
-        im = ax.imshow(J, cmap="RdYlGn_r", vmin=0.35, vmax=1.0, aspect="auto")
-        ax.set_xticks(range(4)); ax.set_xticklabels(LAYERS)
-        ax.set_yticks(range(4)); ax.set_yticklabels([HOOK_LBL[h] for h in HOOKS])
-        ax.set_xlabel("layer"); ax.set_title(mname, fontweight="bold")
-        for i in range(4):
-            for j in range(4):
-                jsd, asr = J[i, j], A[i, j]
-                c = "white" if jsd > 0.72 else "black"
-                ax.text(j, i, f"{jsd:.2f}\n{asr*100:.0f}%", ha="center", va="center",
-                        fontsize=7.5, color=c, linespacing=1.1)
-                if asr <= 0.01:
-                    ax.add_patch(Rectangle((j-0.5, i-0.5), 1, 1, fill=False, ec="#1f4ed8", lw=2.4))
-        for s in ax.spines.values():
-            s.set_visible(False)
-    cb = fig.colorbar(im, ax=axes, fraction=0.046, pad=0.03)
-    cb.set_label("JSD$_c$ vs clean (lower = closer to clean)")
-    fig.suptitle("Localization: cell color = JSD$_c$, text = ASR,  blue box = ASR $\\leq$ 1% (suppressed)",
-                 fontsize=10, y=1.02)
-    save(fig, "loc_viz1_heatmap")
-
-
-# ---------- 2. scatter ----------
+# ---------- localization scatter (the figure used in the paper) ----------
 def scatter():
     fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.2), sharex=True, sharey=True)
     cmap = plt.cm.plasma
@@ -120,31 +90,5 @@ def scatter():
     save(fig, "loc_viz2_scatter")
 
 
-# ---------- 3. layer-trend small multiples ----------
-def trends():
-    fig, axes = plt.subplots(2, 4, figsize=(11, 5), sharex=True)
-    for j, h in enumerate(HOOKS):
-        aj, aa = axes[0, j], axes[1, j]
-        cj = [D[(L, h)][0][0] for L in LAYERS]; dj = [D[(L, h)][1][0] for L in LAYERS]
-        ca = [D[(L, h)][0][1]*100 for L in LAYERS]; da = [D[(L, h)][1][1]*100 for L in LAYERS]
-        aj.plot(LAYERS, cj, "-o", color="#1f77b4", label="Conv", ms=5)
-        aj.plot(LAYERS, dj, "--s", color="#d62728", label="DoM", ms=5)
-        aa.plot(LAYERS, ca, "-o", color="#1f77b4", ms=5)
-        aa.plot(LAYERS, da, "--s", color="#d62728", ms=5)
-        aj.set_title(HOOK_LBL[h], fontweight="bold", fontsize=10)
-        aj.set_ylim(0.33, 1.03); aa.set_ylim(-4, 100)
-        aa.axhspan(0, 1, color="#bfe6c0", alpha=0.7, zorder=0)
-        aa.set_xticks(LAYERS); aa.set_xlabel("layer")
-        aj.grid(alpha=0.25); aa.grid(alpha=0.25)
-        if j == 0:
-            aj.set_ylabel("JSD$_c$ $\\downarrow$"); aa.set_ylabel("ASR (%) $\\downarrow$")
-            aj.legend(fontsize=8, loc="lower right")
-            aa.text(0.05, 4, "ASR $\\leq$ 1%", fontsize=7, color="#1b7a32")
-    fig.suptitle("Localization with depth: JSD$_c$ (top) and ASR (bottom) vs layer, per hook\n"
-                 "only resid_mid / hook_v at layer 0 reach low ASR at low JSD$_c$", fontsize=10)
-    fig.tight_layout()
-    save(fig, "loc_viz3_trends")
-
-
 if __name__ == "__main__":
-    heatmap(); scatter(); trends()
+    scatter()

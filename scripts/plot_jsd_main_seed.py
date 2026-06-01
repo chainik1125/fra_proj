@@ -108,11 +108,14 @@ def main() -> None:
 
     fig, (ax_jsd, ax_em) = plt.subplots(1, 2, figsize=(9.2, 3.7))
 
+    # Paper convention: steering strength is shown as negative α (α<0 = subtract
+    # the feature). run_experiment stores the positive magnitude, so negate for display.
     for lab, ls, mk, lw, pa in methods:
         xs, jc_m, jc_lo, jc_hi = series(pa, "jsd_clean_per_seed")
         _,  jp_m, jp_lo, jp_hi = series(pa, "jsd_pois_per_seed")
-        draw(ax_jsd, xs, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw, f"{lab}  JSD$_\\mathrm{{clean}}$")
-        draw(ax_jsd, xs, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw, f"{lab}  JSD$_\\mathrm{{pois}}$")
+        dx = [-a for a in xs]
+        draw(ax_jsd, dx, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw, f"{lab}  JSD$_\\mathrm{{clean}}$")
+        draw(ax_jsd, dx, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw, f"{lab}  JSD$_\\mathrm{{pois}}$")
     ax_jsd.axhline(1.0, color="#999", lw=0.5, ls=":")
     ax_jsd.set_ylim(-0.02, 1.06)
     ax_jsd.set_ylabel("Jensen-Shannon divergence (bits)")
@@ -124,8 +127,9 @@ def main() -> None:
     for lab, ls, mk, lw, pa in methods:
         xs, em_m, em_lo, em_hi    = series_exact(pa)
         _,  asr_m, asr_lo, asr_hi = series(pa, "asr_per_seed")
-        draw(ax_em, xs, em_m,  em_lo,  em_hi,  GREEN, ls, mk, lw, f"{lab}  exact-match")
-        draw(ax_em, xs, asr_m, asr_lo, asr_hi, RED,   ls, mk, lw, f"{lab}  ASR")
+        dx = [-a for a in xs]
+        draw(ax_em, dx, em_m,  em_lo,  em_hi,  GREEN, ls, mk, lw, f"{lab}  exact-match")
+        draw(ax_em, dx, asr_m, asr_lo, asr_hi, RED,   ls, mk, lw, f"{lab}  ASR")
     ax_em.set_ylim(-0.02, 1.06)
     ax_em.yaxis.set_major_formatter(PercentFormatter(1.0))
     ax_em.set_ylabel("exact-match rate / ASR")
@@ -134,7 +138,8 @@ def main() -> None:
                  handlelength=1.8, borderpad=0.4, ncol=1)
     ax_em.grid(axis="y", color="#dddddd", lw=0.5); ax_em.set_axisbelow(True)
 
-    fig.suptitle(f"SAE seed {args.seed}  ·  mean over decode seeds, band = min-max",
+    n_decode = len(next(iter(methods[0][4].values()))["jsd_clean_per_seed"])
+    fig.suptitle(f"SAE seed {args.seed}  ·  mean over {n_decode} decode seeds, band = min-max",
                  fontsize=12, y=1.01)
     fig.tight_layout()
     fig.savefig(args.output.with_suffix(".pdf"))

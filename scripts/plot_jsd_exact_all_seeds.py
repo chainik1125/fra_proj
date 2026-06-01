@@ -112,8 +112,9 @@ def main() -> None:
                                (conv_sw[seed], "--", "^", 1.1)]:
             xs, jc_m, jc_lo, jc_hi = series(sw, "jsd_clean_per_seed")
             _,  jp_m, jp_lo, jp_hi = series(sw, "jsd_pois_per_seed")
-            draw(ax_jsd, xs, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw, "JSD$_\\mathrm{clean}$")
-            draw(ax_jsd, xs, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw, "JSD$_\\mathrm{pois}$")
+            dx = [-a for a in xs]   # paper shows steering strength as negative α
+            draw(ax_jsd, dx, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw, "JSD$_\\mathrm{clean}$")
+            draw(ax_jsd, dx, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw, "JSD$_\\mathrm{pois}$")
         ax_jsd.axhline(1.0, color="#999", lw=0.5, ls=":")
         ax_jsd.set_ylim(-0.02, 1.05)
         ax_jsd.set_title(f"seed {seed}\nOV f={ov_feat[seed]} · conv f={conv_feat[seed]}",
@@ -123,8 +124,9 @@ def main() -> None:
                                (conv_sw[seed], "--", "^", 1.1)]:
             xs, em_m, em_lo, em_hi    = series_exact(sw)
             _,  as_m, as_lo, as_hi    = series(sw, "asr_per_seed")
-            draw(ax_em, xs, em_m, em_lo, em_hi, GREEN, ls, mk, lw, "exact-match")
-            draw(ax_em, xs, as_m, as_lo, as_hi, RED,   ls, mk, lw, "ASR")
+            dx = [-a for a in xs]
+            draw(ax_em, dx, em_m, em_lo, em_hi, GREEN, ls, mk, lw, "exact-match")
+            draw(ax_em, dx, as_m, as_lo, as_hi, RED,   ls, mk, lw, "ASR")
         ax_em.set_ylim(-0.02, 1.05)
         ax_em.yaxis.set_major_formatter(PercentFormatter(1.0))
 
@@ -138,7 +140,7 @@ def main() -> None:
                       handlelength=1.6, borderpad=0.4)
     axes[1, 0].legend(loc="lower left", fontsize=7.5, framealpha=0.92,
                       handlelength=1.6, borderpad=0.4, bbox_to_anchor=(0.0, 0.30))
-    fig.suptitle("Per-seed JSD and exact-match/ASR  (OV vs Conv)", fontsize=15, y=1.02)
+    fig.suptitle("Per-seed JSD and exact-match/ASR", fontsize=15, y=1.02)
     for ax in axes.flat:
         ax.set_xlabel("")
     fig.supxlabel(r"steering strength $\alpha$", fontsize=15, y=0.0)

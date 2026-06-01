@@ -1,12 +1,15 @@
 """LaTeX stats table for the sleeper steering sweep (OV / Conv / DoM).
 
-For each method and each SAE seed, pick the **optimal steering strength**
-α* = argmin JSD(steered, clean) subject to ASR ≤ ε. At α* record JSD_clean,
-JSD_pois, exact-match-to-clean rate, and ASR. Aggregate across seeds
-(mean ± sample std, ddof=1). DoM is SAE-free, so it is a single row (n=1).
+Reproduces the paper's 7-column table. For each method and SAE seed, pick the
+optimal steering strength α* = argmin JSD_clean^matched subject to ASR ≤ ε. At α*
+record matched JSD_clean, unmatched (cross-decode-seed) JSD_clean, JSD_pois,
+exact-match-to-clean rate, and ASR. Aggregate across seeds (mean ± sample std,
+ddof=1). DoM is SAE-free → a single row (n=1). α* is reported in the paper's
+negative convention (α<0 subtracts the feature); run_experiment stores the
+positive magnitude, so we negate for display.
 
-Each method is a run_experiment results file in the uniform schema (--mode
-winner for OV/Conv → one winning tuple per SAE seed; dom → one row):
+Each method is a run_experiment results file in the uniform schema (--mode winner
+for OV/Conv → one winning tuple per SAE seed; dom → one row):
   --ov   results/ov_winner.json
   --conv results/conv.json
   --dom  results/dom.json
@@ -21,24 +24,26 @@ import json
 from pathlib import Path
 from statistics import mean, stdev
 
-
-def best_alpha_row(items: list[tuple], eps: float) -> dict | None:
-    """items: list of (alpha, jsd_clean, jsd_pois, exact, asr). Pick the α with
-    minimal jsd_clean subject to asr ≤ eps. Returns the chosen row, or None."""
-    cands = [r for r in items if r[4] <= eps]
-    if not cands:
-        return None
-    a, jc, jp, ex, asr = min(cands, key=lambda r: r[1])
-    return {"alpha": a, "jsd_clean": jc, "jsd_pois": jp, "exact_clean": ex, "asr": asr}
+# (key in the row tuple, stat name)
+_KEYS = ("alpha", "jsd_clean", "jsd_clean_unmatched", "jsd_pois", "exact_clean", "asr")
 
 
 def _rows_from_result(result: dict) -> list[tuple]:
-    """(alpha, jsd_clean, jsd_pois, exact_match, asr) per α for one result row."""
+    """(alpha, jsd_clean^matched, jsd_clean^unmatched, jsd_pois, exact, asr) per α."""
     items = []
     for k, ev in result["alpha_sweep"].items():
-        items.append((float(k), ev["jsd_clean"], ev["jsd_pois"],
-                      ev["exact_match"], ev["asr"]))
+        items.append((float(k), ev["jsd_clean"], ev.get("jsd_clean_unmatched", float("nan")),
+                      ev["jsd_pois"], ev["exact_match"], ev["asr"]))
     return sorted(items, key=lambda r: r[0])
+
+
+def best_alpha_row(items: list[tuple], eps: float) -> dict | None:
+    """Pick the α with minimal matched jsd_clean subject to asr ≤ eps."""
+    cands = [r for r in items if r[5] <= eps]
+    if not cands:
+        return None
+    r = min(cands, key=lambda r: r[1])
+    return dict(zip(_KEYS, r))
 
 
 def collect(path: Path, eps: float, exclude_seed: int) -> dict:
@@ -51,7 +56,7 @@ def collect(path: Path, eps: float, exclude_seed: int) -> dict:
     out: dict = {"per_seed": per_seed, "seeds": seeds, "n_pool": len(results),
                  "n_meets_asr": len(rows), "single": len(results) == 1}
     if rows:
-        for k in ("alpha", "jsd_clean", "jsd_pois", "exact_clean", "asr"):
+        for k in _KEYS:
             vals = [r[k] for r in rows]
             out[k] = {"mean": mean(vals),
                       "std":  stdev(vals) if len(vals) > 1 else 0.0,
@@ -63,40 +68,48 @@ def fmt(stat: dict, prec: int = 3) -> str:
     return f"${stat['mean']:.{prec}f} \\pm {stat['std']:.{prec}f}$"
 
 
-def render_table(stats: list[tuple[str, dict]]) -> str:
+def render_table(stats: list[tuple[str, dict]], floor: float) -> str:
     rows = []
     for name, st in stats:
         if "alpha" not in st:
-            rows.append(f"{name} & --- & --- & --- & --- & --- \\\\")
+            rows.append(f"{name} & --- & --- & --- & --- & --- & --- \\\\")
             continue
         if st.get("single"):
             # SAE-free single direction: point values padded with a phantom
             # "\pm Y" so each number left-aligns under the means of the rows above.
             rows.append(
                 f"{name} & "
-                f"${st['alpha']['mean']:.2f}\\phantom{{{{}}\\pm 0.00}}$ & "
+                f"${-st['alpha']['mean']:.2f}\\phantom{{{{}}\\pm 0.00}}$ & "
                 f"${st['jsd_clean']['mean']:.3f}\\phantom{{{{}}\\pm 0.000}}$ & "
+                f"${st['jsd_clean_unmatched']['mean']:.3f}\\phantom{{{{}}\\pm 0.000}}$ & "
                 f"${st['jsd_pois']['mean']:.3f}\\phantom{{{{}}\\pm 0.000}}$ & "
-                f"${st['exact_clean']['mean']*100:.1f}\\phantom{{{{}}\\pm 0.0}}$\\% & "
-                f"${st['asr']['mean']*100:.2f}\\phantom{{{{}}\\pm 0.00}}$\\% \\\\"
+                f"${st['exact_clean']['mean']*100:.1f}\\phantom{{{{}}\\pm 0.0}}$ & "
+                f"${st['asr']['mean']*100:.2f}\\phantom{{{{}}\\pm 0.00}}$ \\\\"
             )
             continue
         rows.append(
             f"{name} & "
-            f"${st['alpha']['mean']:.2f} \\pm {st['alpha']['std']:.2f}$ & "
+            f"${-st['alpha']['mean']:.2f} \\pm {st['alpha']['std']:.2f}$ & "
             f"{fmt(st['jsd_clean'])} & "
+            f"{fmt(st['jsd_clean_unmatched'])} & "
             f"{fmt(st['jsd_pois'])} & "
-            f"${st['exact_clean']['mean']*100:.1f} \\pm {st['exact_clean']['std']*100:.1f}$\\% & "
-            f"${st['asr']['mean']*100:.2f} \\pm {st['asr']['std']*100:.2f}$\\% \\\\"
+            f"${st['exact_clean']['mean']*100:.1f} \\pm {st['exact_clean']['std']*100:.1f}$ & "
+            f"${st['asr']['mean']*100:.2f} \\pm {st['asr']['std']*100:.2f}$ \\\\"
         )
     body = "\n".join(rows)
-    return rf"""\begin{{tabular}}{{lccccc}}
-\toprule
-Method & $\alpha^*$ & JSD$_\text{{clean}}$ $\downarrow$ & JSD$_\text{{pois}}$ $\uparrow$ & Exact match $\uparrow$ & ASR $\downarrow$ \\
-\midrule
-{body}
-\bottomrule
-\end{{tabular}}"""
+    return (
+        r"\setlength{\tabcolsep}{4.5pt}" "\n"
+        r"\begin{tabular}{lcccccc}" "\n"
+        r"\toprule" "\n"
+        r"Method & $\alpha^*$ & JSD$_\text{clean}^\text{matched}$ $\downarrow$ & "
+        rf"JSD$_\text{{clean}}^\text{{unmatched}}$ (${floor:.2f}$) $\downarrow$ & "
+        r"JSD$_\text{pois}^\text{matched}$ $\uparrow$ & Exact match (\%) $\uparrow$ & "
+        r"ASR (\%) $\downarrow$ \\" "\n"
+        r"\midrule" "\n"
+        f"{body}\n"
+        r"\bottomrule" "\n"
+        r"\end{tabular}"
+    )
 
 
 def main() -> None:
@@ -108,6 +121,8 @@ def main() -> None:
                    help="LaTeX file to write the tabular block to (also printed to stdout).")
     p.add_argument("--epsilon", type=float, default=0.01,
                    help="ASR threshold for the optimal-alpha criterion.")
+    p.add_argument("--floor", type=float, default=0.61,
+                   help="Clean-vs-clean unmatched JSD floor shown in the header.")
     p.add_argument("--exclude-seed", type=int, default=-1,
                    help="SAE seed to exclude; -1 (default) keeps all seeds.")
     args = p.parse_args()
@@ -126,11 +141,11 @@ def main() -> None:
             if row is None:
                 continue
             tag = "--" if st.get("single") else seed_val
-            print(f"  seed {tag}: α*={row['alpha']:.2f}  "
-                  f"jsd_c={row['jsd_clean']:.3f}  jsd_p={row['jsd_pois']:.3f}  "
+            print(f"  seed {tag}: α*={-row['alpha']:.2f}  jsd_c={row['jsd_clean']:.3f}  "
+                  f"unm={row['jsd_clean_unmatched']:.3f}  jsd_p={row['jsd_pois']:.3f}  "
                   f"ex={row['exact_clean']*100:5.1f}%  asr={row['asr']*100:.2f}%")
 
-    body = render_table(stats)
+    body = render_table(stats, args.floor)
     print("\n" + "=" * 70 + "\n")
     print(body)
     args.out.parent.mkdir(parents=True, exist_ok=True)
