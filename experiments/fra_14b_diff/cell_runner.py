@@ -24,9 +24,11 @@ Cell-spec JSON keys: see scripts/run_campaign.py:cell_spec().
 from __future__ import annotations
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from huggingface_hub import HfApi, snapshot_download
@@ -44,10 +46,24 @@ def sh(cmd: list[str]):
     subprocess.run([str(c) for c in cmd], check=True)
 
 
-def upload(local: Path, repo_path: str, msg: str):
-    API.upload_file(path_or_fileobj=str(local), path_in_repo=repo_path,
-                    repo_id=REPO, repo_type="dataset", commit_message=msg)
-    print(f"  → {repo_path}", flush=True)
+def upload(local: Path, repo_path: str, msg: str, *, tries: int = 8):
+    """Upload with exponential backoff + jitter. The em×seed fleet can have 20+
+    cells committing to ONE repo simultaneously → HF 429 (Too Many Requests).
+    Without retry the cell ERR-traps AFTER computing everything (work lost). The
+    jittered backoff spreads concurrent commits so they all eventually land."""
+    for i in range(tries):
+        try:
+            API.upload_file(path_or_fileobj=str(local), path_in_repo=repo_path,
+                            repo_id=REPO, repo_type="dataset", commit_message=msg)
+            print(f"  → {repo_path}", flush=True)
+            return
+        except Exception as e:  # noqa: BLE001 — 429 / transient HF commit errors
+            if i == tries - 1:
+                raise
+            wait = min(10 * (2 ** i), 120) + random.uniform(0, 20)
+            print(f"  [upload-retry {i+1}/{tries}] {repo_path}: "
+                  f"{type(e).__name__} {str(e)[:70]} — wait {wait:.0f}s", flush=True)
+            time.sleep(wait)
 
 
 def main():
