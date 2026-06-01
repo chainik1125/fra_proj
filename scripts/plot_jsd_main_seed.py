@@ -1,14 +1,19 @@
 """Main-paper single-seed JSD / exact-match figure (1 row x 2 panels).
 
 Left:  Jensen-Shannon divergence (bits) vs steering strength, clean (green)
-       and poisoned (red) references, for OV / Conv / DoM.
-Right: exact-match-to-clean rate (green) + ASR (red) for the same three.
+       and poisoned (red) references, for OV / Conv.
+Right: exact-match-to-clean rate (green) + ASR (red) for the same two.
 
-Reads results/jsd_alpha_sweep_6seeds.json (configs: ov, conventional, dom).
-OV / Conv are per-SAE-seed (one seed selected); DoM is SAE-free (single curve).
-Lines are means over 5 decode seeds, band = min-max.
+Reads two run_experiment results files (uniform schema), one per method, each
+run with --mode winner so there is one winning tuple per SAE seed:
+  --ov   results/ov_winner.json
+  --conv results/conv.json
+The chosen --seed selects which SAE seed's winner to plot. Lines are means over
+the decode seeds; bands are min-max across them (per-decode-seed metric lists).
+DoM is parameter-free (single operating point) and appears only in the stats
+table, so it is not drawn here.
 
-OV   = solid  + circle      Conv = dashed + triangle      DoM = dotted + square
+OV = solid + circle      Conv = dashed + triangle
 """
 from __future__ import annotations
 
@@ -47,14 +52,38 @@ def setup_style() -> None:
     })
 
 
-def band(per_alpha, key, raw_alphas, sae_idx, scale=1.0):
-    arr = np.array([per_alpha[f"{a:.1f}"][key][sae_idx] for a in raw_alphas]) * scale
-    return arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
+def load_alpha_sweep(path: Path, seed: int) -> dict:
+    """The alpha_sweep dict for one SAE seed's winning tuple (uniform schema)."""
+    d = json.loads(Path(path).read_text())
+    rows = [r for r in d["results"] if r["seed"] == seed]
+    if not rows:
+        raise SystemExit(f"no results for seed {seed} in {path}")
+    return rows[0]["alpha_sweep"]
 
 
-def band_1d(per_alpha, key, raw_alphas, scale=1.0):
-    arr = np.array([per_alpha[f"{a:.1f}"][key] for a in raw_alphas]) * scale
-    return arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
+def _items(alpha_sweep):
+    return sorted(alpha_sweep.items(), key=lambda kv: float(kv[0]))
+
+
+def series(alpha_sweep, key):
+    """(alphas, mean, lo, hi) over per-decode-seed values for `key`."""
+    items = _items(alpha_sweep)
+    alphas = [float(k) for k, _ in items]
+    arr = np.array([ev[key] for _, ev in items], dtype=float)   # (n_alpha, n_decode)
+    return alphas, arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
+
+
+def series_exact(alpha_sweep):
+    """Per-decode-seed exact-match *rate* = count / prompts-per-decode-seed."""
+    items = _items(alpha_sweep)
+    alphas = [float(k) for k, _ in items]
+    rows = []
+    for _, ev in items:
+        n_per = ev["n_exact_match_clean_per_seed"]
+        b = ev["exact_match_total_rows"] / len(n_per)
+        rows.append([c / b for c in n_per])
+    arr = np.array(rows, dtype=float)
+    return alphas, arr.mean(axis=1), arr.min(axis=1), arr.max(axis=1)
 
 
 def draw(ax, xs, mean, lo, hi, color, ls, mk, lw, label):
@@ -65,35 +94,25 @@ def draw(ax, xs, mean, lo, hi, color, ls, mk, lw, label):
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--input",  type=Path, default=Path("results/jsd_alpha_sweep_6seeds.json"))
+    p.add_argument("--ov",     type=Path, default=Path("results/ov_winner.json"))
+    p.add_argument("--conv",   type=Path, default=Path("results/conv.json"))
     p.add_argument("--output", type=Path, default=Path("figures/jsd_exact_main"))
     p.add_argument("--seed",   type=int, default=0)
     args = p.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
     setup_style()
-    d = json.loads(args.input.read_text())
-    raw_alphas  = [float(a) for a in d["alphas"]]
-    disp_alphas = [-a for a in raw_alphas]
-    n_prompts   = d["n_prompts"]
-    i = d["sae_seeds"].index(args.seed)
-
-    ov_pa   = d["configs"]["ov"]["per_alpha"]
-    conv_pa = d["configs"]["conventional"]["per_alpha"]
-
-    # (label, linestyle, marker, lw, per_alpha, is_sae_free)
-    # DoM is parameter-free (single canonical point at alpha=1), so it is not
-    # swept and not drawn as a line. It appears only in the stats table.
-    methods = [("OV", "-", "o", 1.4, ov_pa, False),
-               ("Conv", "--", "^", 1.2, conv_pa, False)]
+    # (label, linestyle, marker, lw, alpha_sweep)
+    methods = [("OV",   "-",  "o", 1.4, load_alpha_sweep(args.ov,   args.seed)),
+               ("Conv", "--", "^", 1.2, load_alpha_sweep(args.conv, args.seed))]
 
     fig, (ax_jsd, ax_em) = plt.subplots(1, 2, figsize=(9.2, 3.7))
 
-    for lab, ls, mk, lw, pa, sae_free in methods:
-        jc = band_1d(pa, "jsd_clean", raw_alphas) if sae_free else band(pa, "jsd_clean", raw_alphas, i)
-        jp = band_1d(pa, "jsd_pois",  raw_alphas) if sae_free else band(pa, "jsd_pois",  raw_alphas, i)
-        draw(ax_jsd, disp_alphas, *jc, GREEN, ls, mk, lw, f"{lab}  JSD$_\\mathrm{{clean}}$")
-        draw(ax_jsd, disp_alphas, *jp, RED,   ls, mk, lw, f"{lab}  JSD$_\\mathrm{{pois}}$")
+    for lab, ls, mk, lw, pa in methods:
+        xs, jc_m, jc_lo, jc_hi = series(pa, "jsd_clean_per_seed")
+        _,  jp_m, jp_lo, jp_hi = series(pa, "jsd_pois_per_seed")
+        draw(ax_jsd, xs, jc_m, jc_lo, jc_hi, GREEN, ls, mk, lw, f"{lab}  JSD$_\\mathrm{{clean}}$")
+        draw(ax_jsd, xs, jp_m, jp_lo, jp_hi, RED,   ls, mk, lw, f"{lab}  JSD$_\\mathrm{{pois}}$")
     ax_jsd.axhline(1.0, color="#999", lw=0.5, ls=":")
     ax_jsd.set_ylim(-0.02, 1.06)
     ax_jsd.set_ylabel("Jensen-Shannon divergence (bits)")
@@ -102,12 +121,11 @@ def main() -> None:
                   handlelength=1.8, borderpad=0.4, ncol=1)
     ax_jsd.grid(axis="y", color="#dddddd", lw=0.5); ax_jsd.set_axisbelow(True)
 
-    for lab, ls, mk, lw, pa, sae_free in methods:
-        em = (band_1d(pa, "n_exact_match_clean", raw_alphas, scale=1.0 / n_prompts) if sae_free
-              else band(pa, "n_exact_match_clean", raw_alphas, i, scale=1.0 / n_prompts))
-        asr = band_1d(pa, "asr", raw_alphas) if sae_free else band(pa, "asr", raw_alphas, i)
-        draw(ax_em, disp_alphas, *em,  GREEN, ls, mk, lw, f"{lab}  exact-match")
-        draw(ax_em, disp_alphas, *asr, RED,   ls, mk, lw, f"{lab}  ASR")
+    for lab, ls, mk, lw, pa in methods:
+        xs, em_m, em_lo, em_hi    = series_exact(pa)
+        _,  asr_m, asr_lo, asr_hi = series(pa, "asr_per_seed")
+        draw(ax_em, xs, em_m,  em_lo,  em_hi,  GREEN, ls, mk, lw, f"{lab}  exact-match")
+        draw(ax_em, xs, asr_m, asr_lo, asr_hi, RED,   ls, mk, lw, f"{lab}  ASR")
     ax_em.set_ylim(-0.02, 1.06)
     ax_em.yaxis.set_major_formatter(PercentFormatter(1.0))
     ax_em.set_ylabel("exact-match rate / ASR")
@@ -116,10 +134,9 @@ def main() -> None:
                  handlelength=1.8, borderpad=0.4, ncol=1)
     ax_em.grid(axis="y", color="#dddddd", lw=0.5); ax_em.set_axisbelow(True)
 
-    fig.suptitle(f"SAE seed {args.seed}  ·  mean over 5 decode seeds, band = min-max",
+    fig.suptitle(f"SAE seed {args.seed}  ·  mean over decode seeds, band = min-max",
                  fontsize=12, y=1.01)
     fig.tight_layout()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output.with_suffix(".pdf"))
     fig.savefig(args.output.with_suffix(".png"), dpi=180)
     print(f"wrote {args.output.with_suffix('.pdf')}  and  {args.output.with_suffix('.png')}")

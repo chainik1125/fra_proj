@@ -29,10 +29,13 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.baselines import conv_channel, dom_channel
 from scripts.eval import eval_tuples_json
 from scripts.select_features import select_features
 from scripts.train_saes import train_saes
 from sleeper.model import MODELS
+
+FRA_CHANNELS = ("ov", "qk", "qk+ov", "kv")
 
 
 def _default_paths(out_prefix: Path) -> tuple[Path, Path]:
@@ -53,7 +56,10 @@ def main() -> None:
                         "to train_saes; selection/eval still use deployed prompts. "
                         "Output SAE dir gets a '_cleanonly' suffix; pass the matching "
                         "--sae_dir if you want to reuse them.")
-    p.add_argument("--channel",       choices=["ov", "qk", "qk+ov", "kv"], default="ov")
+    p.add_argument("--channel",       choices=["ov", "qk", "qk+ov", "kv", "conv", "dom"],
+                   default="ov",
+                   help="FRA channels (ov/qk/qk+ov) or baselines: conv (resid_mid SAE "
+                        "feature, additive) and dom (SAE-free difference-of-means).")
     p.add_argument("--sae_seeds",     type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--device",        default=None)
     p.add_argument("--out_prefix",    type=Path, default=Path("results/run_experiment"),
@@ -91,8 +97,15 @@ def main() -> None:
     tuples_json   = args.tuples_json   or default_tuples_json
     results_json  = args.results_json  or default_results_json
 
-    # ── 1) Train SAEs (skipped if --sae_dir points to an existing dir) ──
-    if args.sae_dir is None or not args.sae_dir.exists():
+    def _write_results(results: dict) -> None:
+        results_json.parent.mkdir(parents=True, exist_ok=True)
+        results_json.write_text(json.dumps(results, indent=2, default=str))
+
+    # ── 1) Train SAEs (FRA + conv need them; dom is SAE-free) ──
+    if args.channel == "dom":
+        sae_dir = None
+        print("[run] STAGE 1: skip (dom is SAE-free)")
+    elif args.sae_dir is None or not args.sae_dir.exists():
         print(f"[run] STAGE 1: train_saes (model={args.model}, clean_only={args.clean_only}) "
               f"→ {args.sae_dir or '<default>'}")
         sae_dir = train_saes(
@@ -103,7 +116,30 @@ def main() -> None:
         sae_dir = args.sae_dir
         print(f"[run] STAGE 1: skip (sae_dir={sae_dir} exists)")
 
-    # ── 2) Select features (skipped if tuples_json exists) ──
+    # ── conv / dom baselines: single-stage handlers, same results schema ──
+    if args.channel in ("conv", "dom"):
+        if results_json.exists() and args.results_json is not None:
+            print(f"[run] skip (results_json={results_json} exists)")
+        elif args.channel == "conv":
+            print(f"[run] conv_channel → {results_json}")
+            _write_results(conv_channel(
+                sae_dir=sae_dir, sae_seeds=args.sae_seeds, mode=args.mode,
+                top_k=args.top_k, identify_top_k=args.top_k, screen_alphas=args.sel_alphas,
+                eval_alphas=args.eval_alphas, n_sel=args.n_sel, n_eval=args.n_eval,
+                gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
+                eval_temperature=args.eval_temperature, device=args.device, model=args.model,
+            ))
+        else:
+            print(f"[run] dom_channel → {results_json}")
+            _write_results(dom_channel(
+                eval_alphas=args.eval_alphas, n_sel=args.n_sel, n_eval=args.n_eval,
+                gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
+                eval_temperature=args.eval_temperature, device=args.device, model=args.model,
+            ))
+        print(f"\n[run] DONE  results={results_json}")
+        return
+
+    # ── 2) Select features (FRA channels; skipped if tuples_json exists) ──
     if tuples_json.exists() and args.tuples_json is not None:
         print(f"[run] STAGE 2: skip (tuples_json={tuples_json} exists)")
         tuples_dict = json.loads(tuples_json.read_text())
@@ -131,8 +167,7 @@ def main() -> None:
             eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
             device=args.device, model=args.model,
         )
-        results_json.parent.mkdir(parents=True, exist_ok=True)
-        results_json.write_text(json.dumps(results, indent=2, default=str))
+        _write_results(results)
 
     print(f"\n[run] DONE  tuples={tuples_json}  results={results_json}")
 

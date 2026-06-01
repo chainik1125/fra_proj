@@ -1,15 +1,12 @@
 """Fig-2 candidate: per (method, SAE seed), plot the point from that pair's
 (tuple, α) Pareto frontier with the lowest JSDc (best coherence corner).
 
-For OV / QK / QK+OV: pool = top-20 attribution-ranked tuples × 9 α values (180 points).
-                   Pareto frontier in (ASR, JSDc); pick the point with the
-                   smallest JSDc on the frontier (often trades some ASR away
-                   from the lex-min point).
-For conv: pool = the per-seed downstream winner × 9 α values.
-                Same rule: lowest-JSDc Pareto point.
+Every method is a run_experiment results file (uniform schema):
+  OV / QK / QK+OV : --mode topk  → 20 candidate tuples × α  (pooled per seed)
+  Conv            : --mode winner → 1 winning feature × α
 
-Each point labelled with the attribution rank of the chosen tuple
-(— for conv since it has a single winner per seed).
+Per (method, seed): pool the (ASR, JSDc) points over (tuple, α), take the Pareto
+frontier, and pick the point with the smallest JSDc (best-coherence corner).
 """
 from __future__ import annotations
 
@@ -22,11 +19,11 @@ import matplotlib.pyplot as plt
 
 
 METHODS = [
-    ("QK",    "results/v3_qk_all.json",   "topk",       "#d62728", "s"),
-    ("Conv",  "results/v3_conv_all.json", "downstream", "#444444", "D"),
-    ("OV",    "results/v3_ov_all.json",   "topk",       "#1f77b4", "o"),
+    ("QK",    "results/qk_topk.json",   "#d62728", "s"),
+    ("Conv",  "results/conv.json",      "#444444", "D"),
+    ("OV",    "results/ov_topk.json",   "#1f77b4", "o"),
     # QK+OV last → purple triangles drawn on top
-    ("QK+OV", "results/v3_qkov_all.json", "topk",       "#7f3fbf", "^"),
+    ("QK+OV", "results/qkov_topk.json", "#7f3fbf", "^"),
 ]
 
 
@@ -65,25 +62,22 @@ def pareto_frontier(points):
     return out
 
 
-def topk_lowest_jsdc(path: Path, seed: int):
-    """Return (JSDc, ASR, attribution_rank) of the lowest-JSDc Pareto point."""
+def lowest_jsdc(path: Path, seed: int):
+    """Lowest-JSDc Pareto point for one (method file, seed).
+
+    Reads the uniform run_experiment schema (results[].alpha_sweep). Pools every
+    (tuple, α) point for the seed, takes the Pareto frontier in (ASR, JSDc), and
+    returns (JSDc, ASR, rank) of its smallest-JSDc point. `rank` is the 1-based
+    tuple index of the chosen point ("1" when there is a single winner/seed).
+    """
     d = json.loads(path.read_text())
     rows = [r for r in d["results"] if r["seed"] == seed]
+    if not rows:
+        return None
     pts = []
     for ti, r in enumerate(rows):
         for _a, ev in r["alpha_sweep"].items():
             pts.append((ev["asr"], ev["jsd_clean"], ti + 1))
-    front = pareto_frontier(pts)
-    asr, jc, rank = min(front, key=lambda x: x[1])
-    return jc, asr, rank
-
-
-def downstream_lowest_jsdc(path: Path, seed: int):
-    d = json.loads(path.read_text())
-    sd = d["per_seed"].get(f"s{seed}")
-    if sd is None:
-        return None
-    pts = [(ev["asr"], ev["jsd_clean"], "—") for ev in sd["per_alpha"].values()]
     front = pareto_frontier(pts)
     asr, jc, rank = min(front, key=lambda x: x[1])
     return jc, asr, rank
@@ -103,11 +97,10 @@ def main() -> None:
 
     fig, ax = plt.subplots(figsize=(6.0, 4.5))
 
-    for (name, path, kind, color, marker) in METHODS:
-        fn = topk_lowest_jsdc if kind == "topk" else downstream_lowest_jsdc
+    for (name, path, color, marker) in METHODS:
         xs, ys = [], []
         for s in good_seeds:
-            res = fn(Path(path), s)
+            res = lowest_jsdc(Path(path), s)
             if res is None:
                 continue
             jc, asr, _rank = res
@@ -138,10 +131,9 @@ def main() -> None:
     print(f"wrote {args.out.with_suffix('.pdf')} and {args.out.with_suffix('.png')}")
 
     print("\nPer-(method, seed) lowest-JSDc Pareto point:")
-    for (name, path, kind, *_rest) in METHODS:
-        fn = topk_lowest_jsdc if kind == "topk" else downstream_lowest_jsdc
+    for (name, path, *_rest) in METHODS:
         for s in args.seeds:
-            res = fn(Path(path), s)
+            res = lowest_jsdc(Path(path), s)
             tag = "  [excluded]" if s == args.exclude_seed else ""
             if res is None:
                 print(f"  {name}  seed {s}: no data{tag}")

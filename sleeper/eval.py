@@ -1,4 +1,4 @@
-"""Eval-side helpers shared by select_features.py, eval.py, and downstream_baseline.py.
+"""Eval-side helpers shared by select_features.py, eval.py, and baselines.py.
 
 Builds clean / dep baselines, runs lockstep multi-seed sampled rollouts, computes
 the canonical 4-metric eval (ASR, JSD vs clean, JSD vs dep, exact-match), and
@@ -254,6 +254,7 @@ def _eval_steered_lockstep(
     jc_pr_rows:   list[torch.Tensor] = []
     jp_pr_rows:   list[torch.Tensor] = []
     em_pr_rows:   list[torch.Tensor] = []
+    um_vals:      list[float] = []        # cross-seed (unmatched) jsd_clean
     tok = model.tokenizer
     for k, s in enumerate(seeds_list):
         st_tok = st_tok_t[k * B : (k + 1) * B]
@@ -263,6 +264,10 @@ def _eval_steered_lockstep(
         jp_pr_rows.append(jsd_per_row(st_lsm, dep_lsm_per_seed[s]).cpu().float())
         eq = (st_tok == clean_tok_per_seed[s].to(st_tok.device))
         em_pr_rows.append(eq.all(dim=1).cpu().float())
+        # unmatched: steered@s vs clean@s' for every other decode seed s'.
+        for s2 in seeds_list:
+            if s2 != s:
+                um_vals.append(float(jsd_per_row(st_lsm, clean_lsm_per_seed[s2]).mean().item()))
 
     asr_all = torch.cat(asr_pr_rows)
     jc_all  = torch.cat(jc_pr_rows)
@@ -270,6 +275,7 @@ def _eval_steered_lockstep(
     em_all  = torch.cat(em_pr_rows)
     total_rows = B * len(seeds_list)
     return {
+        "jsd_clean_unmatched": (sum(um_vals) / len(um_vals)) if um_vals else float("nan"),
         "asr":          float(asr_all.mean().item()),
         "asr_std":      float(asr_all.std(unbiased=False).item()),
         "asr_per_seed": [float(t.mean().item()) for t in asr_pr_rows],
@@ -351,6 +357,76 @@ def eval_downstream_baseline(
     delta = delta * pmask.unsqueeze(-1)
     delta_t = _tile_batch_dim(delta, len(eval_seeds))
     fwd_hooks_tiled = additive_steer_hook(delta_t, alpha, layer_hook)
+    return _eval_steered_lockstep(
+        model, fwd_hooks_tiled, eval_dep_lp, eval_dep_attn,
+        clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+        gen_tokens, device, eval_seeds=eval_seeds, eval_temperature=eval_temperature,
+    )
+
+
+# ---------------------------------------------------------------------------
+# DoM (difference-of-means) — SAE-free geometric ablation
+# ---------------------------------------------------------------------------
+
+def _dom_proj_masked_hook(v: torch.Tensor, alpha: float, layer_hook: str,
+                          posmask: torch.Tensor) -> list[tuple[str, "object"]]:
+    """Prompt-only geometric ablation: resid[:, :P] -= alpha·(resid·v̂)·v̂ on
+    masked positions. `posmask` is (B, P); for tiled eval pass the tiled mask.
+    No-ops on cache-decode steps (length < P), matching the additive/OV hooks.
+    """
+    vh = (v / v.norm().clamp_min(1e-30)).contiguous()
+    P = posmask.shape[1]
+    m = posmask.to(torch.float32)
+
+    def _hook(resid, hook):
+        if resid.shape[1] < P:
+            return resid
+        vd = vh.to(resid.dtype).to(resid.device)
+        seg = resid[:, :P, :]
+        coef = (seg @ vd).unsqueeze(-1)
+        resid[:, :P, :] = seg - alpha * coef * vd * m.unsqueeze(-1).to(resid.dtype).to(resid.device)
+        return resid
+
+    return [(layer_hook, _hook)]
+
+
+@torch.no_grad()
+def attn_weighted_vmd(model, sel_tokens: torch.Tensor, sel_attn: torch.Tensor,
+                      is_dep: torch.Tensor, resid_hook: str, device: str) -> torch.Tensor:
+    """Attention-weighted dep−clean difference-of-means direction at `resid_hook`.
+
+    Each prompt token is weighted by the total attention it receives (summed over
+    heads and query positions) before the dep−clean difference — the paper's v_md.
+    Returns a (d_model,) direction on `device`.
+    """
+    from sleeper.model import cache_activations
+    acts = cache_activations(model, sel_tokens, [PAT_HOOK, resid_hook])
+    A   = acts[PAT_HOOK].to(device).float()          # (N, heads, q, k)
+    Xr  = acts[resid_hook].to(device).float()        # (N, T, d_model)
+    pmf = sel_attn.to(device).float()                # (N, T)
+    recv = A.sum(dim=(1, 2)) * pmf                    # (N, k) attention received per key
+    recv = recv / recv.sum(1, keepdim=True).clamp_min(1e-9)
+    amean = (Xr * recv.unsqueeze(-1)).sum(1)          # (N, d_model)
+    isd = is_dep.to(device)
+    return amean[isd].mean(0) - amean[~isd].mean(0)
+
+
+@torch.no_grad()
+def eval_dom(model, vmd: torch.Tensor, alpha: float,
+             eval_dep_lp: torch.Tensor, eval_dep_attn: torch.Tensor,
+             clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
+             gen_tokens, device, *, eval_seeds, eval_temperature,
+             resid_hook: str = "blocks.0.hook_resid_mid") -> dict:
+    """SAE-free DoM eval: geometric ablation of the attn-weighted diff-of-means
+    direction `vmd` at `resid_hook`, prompt positions only.
+
+    Same lockstep multi-seed protocol and output schema as `eval_tuple` /
+    `eval_downstream_baseline`, so DoM is directly comparable. `alpha`=1 is exact
+    geometric ablation; `alpha`>1 over-steers past it.
+    """
+    n_tiles = len(eval_seeds)
+    mask_t = _tile_batch_dim(eval_dep_attn, n_tiles)
+    fwd_hooks_tiled = _dom_proj_masked_hook(vmd, alpha, resid_hook, mask_t)
     return _eval_steered_lockstep(
         model, fwd_hooks_tiled, eval_dep_lp, eval_dep_attn,
         clean_lsm_per_seed, clean_tok_per_seed, dep_lsm_per_seed,
