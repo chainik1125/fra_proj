@@ -1,5 +1,5 @@
 """Build the DoM/OV/Conv steering-example table figure from the generated
-completions in results/fra_steer_examples.json -> paper/figures/fra_steer_examples.tex.
+completions in results/fra_steer_examples.json -> figures/fra_steer_examples.tex.
 
 Columns: deployment prompt | unsteered-clean | DoM / OV / Conv steered-deployed.
 Row 1 is the Fig 1 overview example (di=41); the rest are random deployment prompts.
@@ -10,7 +10,8 @@ import re
 from pathlib import Path
 
 J = json.load(open("results/fra_steer_examples.json"))
-OUT = Path("paper/figures/fra_steer_examples.tex")
+OUT = Path("figures/fra_steer_examples.tex")
+OUT.parent.mkdir(parents=True, exist_ok=True)
 
 
 def esc(s):

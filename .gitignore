@@ -19,12 +19,16 @@ Thumbs.db
 # Claude Code session-specific files (commands and settings ARE tracked)
 .claude/scheduled_tasks.lock
 
-# Trained SAEs, attribution caches, run-summary JSONs — all regenerable.
-# Persisted artefacts live in docs/ (e.g. docs/matrix_results.md) instead.
+# Trained SAEs and attribution caches — all regenerable (see README).
 weights/
 logs/
 
-# paper/ is tracked. Build artefacts are filtered by paper/.gitignore.
+# Regenerated artefacts: results/*.json (run the pipeline) and figures/*
+# (run the plot scripts). Tracked dirs are kept via .gitkeep only.
+results/*
+!results/.gitkeep
+figures/*
+!figures/.gitkeep
 
 # Editor-local config
 docs/.obsidian/
@@ -42,7 +46,6 @@ slides_poster_tex/
 *.toc
 *.out
 figures/*.log
-paper/*.log
 figures/texput.log
 
 # One-off reproduction reports

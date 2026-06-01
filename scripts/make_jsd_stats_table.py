@@ -6,8 +6,8 @@ strength** α* = argmin JSD(steered, clean) subject to ASR ≤ ε. At α* record
 Aggregate across the 5 "good" seeds (s=2's downstream SAE is degenerate and is
 excluded). Reported uncertainty = sample std (ddof=1, n=5).
 
-Outputs a self-contained `tabular` block to stdout and to `paper/figures/jsd_stats_table.tex`
-if --out is given.
+Outputs a self-contained `tabular` block to stdout and (by default) to
+`figures/jsd_stats_table.tex`. Pass `--out ""`-style overrides via --out.
 """
 from __future__ import annotations
 
@@ -141,8 +141,8 @@ def main() -> None:
     p.add_argument("--input",  type=Path,
                    default=Path("results/jsd_alpha_sweep_6seeds.json"))
     p.add_argument("--out",    type=Path,
-                   default=None,
-                   help="Optional LaTeX file to write the tabular block to.")
+                   default=Path("figures/jsd_stats_table.tex"),
+                   help="LaTeX file to write the tabular block to (also printed to stdout).")
     p.add_argument("--epsilon", type=float, default=0.01,
                    help="ASR threshold for the optimal-alpha criterion.")
     p.add_argument("--exclude-seed", type=int, default=-1,

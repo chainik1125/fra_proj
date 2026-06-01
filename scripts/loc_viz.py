@@ -1,11 +1,12 @@
 """Three candidate displays for the hookpoint-localization grid.
 
-Builds 3 separate PDFs (+PNGs) into paper/figures/:
+Builds 3 separate PDFs (+PNGs) into figures/:
   loc_viz1_heatmap.pdf  - 2-panel heatmap (Conv|DoM), color=JSDc, text=ASR, ASR<=1% boxed
   loc_viz2_scatter.pdf  - ASR vs JSDc scatter, clean-corner shaded, layer/hook encoded
   loc_viz3_trends.pdf   - small multiples: JSDc & ASR vs layer, one column per hook
 """
 from __future__ import annotations
+from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -53,7 +54,8 @@ D = {
     (3, "resid_post"): ((0.900, 0.5800, 0.029), (0.920, 0.8140, 0.010)),
     (3, "hook_v"):     ((0.967, 0.8403, 0.009), (0.929, 0.8040, 0.032)),
 }
-OUT = "paper/figures"
+OUT = "figures"
+Path(OUT).mkdir(parents=True, exist_ok=True)
 
 
 def save(fig, name):

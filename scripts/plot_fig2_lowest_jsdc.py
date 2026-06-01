@@ -94,8 +94,9 @@ def main() -> None:
     p.add_argument("--exclude_seed", type=int, default=-1)
     p.add_argument("--seeds",        type=int, nargs="+", default=[0, 1, 2, 3, 4, 5])
     p.add_argument("--out",          type=Path,
-                   default=Path("paper/figures/fig2_lowest_jsdc"))
+                   default=Path("figures/fig2_lowest_jsdc"))
     args = p.parse_args()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
 
     setup_style()
     good_seeds = [s for s in args.seeds if s != args.exclude_seed]

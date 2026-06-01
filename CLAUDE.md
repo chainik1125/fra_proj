@@ -1,6 +1,7 @@
 # sleeper — repo guide
 
-Two-purpose codebase. See `README.md` for the math and the run commands.
+Sleeper-agent case study only (consolidated from `jamie/autoresearch-jsdc`).
+See `README.md` for the pipeline, the per-figure commands, and the math.
 
 ## Layout
 

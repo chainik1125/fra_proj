@@ -79,6 +79,7 @@ def main() -> None:
     p.add_argument("--output", type=Path,
                    default=Path("figures/jsd_exact_all_seeds"))
     args = p.parse_args()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
 
     setup_style()
     d = json.loads(args.input.read_text())
