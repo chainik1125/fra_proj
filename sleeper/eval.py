@@ -17,8 +17,12 @@ from sleeper.metrics import (
     batched_asr_16, sleeper_fired_mask,
 )
 from sleeper.model import (
-    ModelName, left_pad_prompts, load_dep_prompts,
+    ModelName, harvested_train_texts, left_pad_prompts, load_dep_prompts_with_text,
 )
+
+# Rows the SAE harvests activations from (train split, first N) — eval prompts
+# are excluded from this pool so eval ⊥ SAE-training even when train/test overlap.
+_N_HARVEST = 10_000
 
 LN1_HOOK = "blocks.0.ln1.hook_normalized"
 PAT_HOOK = "blocks.0.attn.hook_pattern"
@@ -31,28 +35,53 @@ JSD_CLEAN_SEED = 0   # fixed decode seed for the clean reference rollout
 
 def split_dep_prompts(
     tok, n_sel: int, n_eval: int,
-    *, split: str = "test", model: ModelName = "tinystories",
+    *, split: str = "test", model: ModelName = "tinystories", n_harvest: int = _N_HARVEST,
 ):
-    """Single source of truth for dep-prompt slicing.
+    """Single source of truth for dep-prompt slicing, with hard disjointness.
 
-    Loads the first ``n_sel + n_eval`` deployment prompts from ``split`` and
-    returns two disjoint slices that every method must use to be apples-to-apples:
+    Returns ``n_sel//2`` selection prompts and ``n_eval//2`` eval prompts such that:
+      * prompts are **deduplicated by text** (the dataset has duplicate rows);
+      * ``eval`` shares no prompt with ``sel``;
+      * ``eval`` excludes any prompt whose source row is in the first ``n_harvest``
+        train-split rows (the SAE-training pool) — so eval ⊥ SAE-training even
+        though some test rows are duplicated in train.
 
-        sel  = raw[: n_sel // 2]                              # selection-time pool
-        eval = raw[n_sel // 2 : n_sel // 2 + n_eval // 2]     # held-out eval pool
-
-    Both halves of ``n_sel`` / ``n_eval`` are "dep prompt counts" (the
-    selection / eval prompts already come pre-filtered to dep-only here, so we
-    interpret the user-facing ``n_sel`` / ``n_eval`` as the total paired-dataset
-    size and halve it to get the dep count, matching the historical convention).
+    Selection is the first ``n_sel//2`` unique dep prompts (unchanged from the
+    historical pool, so winners are stable); eval is the next unique prompts that
+    pass the two exclusions. Raises if ``split`` can't supply enough.
     """
-    raw = load_dep_prompts(tok, n_sel + n_eval, split=split, model=model)
     n_sel_dep  = n_sel  // 2
     n_eval_dep = n_eval // 2
-    return {
-        "sel":  raw[: n_sel_dep],
-        "eval": raw[n_sel_dep : n_sel_dep + n_eval_dep],
-    }
+    # Load generously — dedup + exclusions drop some; the test set is large.
+    want = n_sel_dep + n_eval_dep + max(2_000, 4 * n_eval_dep)
+    pairs = load_dep_prompts_with_text(tok, want, split=split, model=model)
+
+    seen: set[str] = set()
+    uniq: list[tuple] = []                              # (prompt, source_text, prompt_text)
+    for p, text in pairs:
+        pt = tok.decode(p.tolist())
+        if pt in seen:
+            continue
+        seen.add(pt)
+        uniq.append((p, text, pt))
+
+    sel = [p for (p, _t, _pt) in uniq[:n_sel_dep]]
+    sel_texts = {pt for (_p, _t, pt) in uniq[:n_sel_dep]}
+    train_texts = harvested_train_texts(n_harvest, model=model)
+
+    eval_prompts: list = []
+    for p, text, pt in uniq[n_sel_dep:]:
+        if pt in sel_texts or text in train_texts:      # disjoint from sel & SAE-training
+            continue
+        eval_prompts.append(p)
+        if len(eval_prompts) >= n_eval_dep:
+            break
+
+    if len(sel) < n_sel_dep or len(eval_prompts) < n_eval_dep:
+        raise ValueError(
+            f"split={split!r}: only {len(sel)} sel + {len(eval_prompts)} disjoint, "
+            f"train-free eval dep prompts available; need {n_sel_dep} + {n_eval_dep}.")
+    return {"sel": sel, "eval": eval_prompts}
 
 
 # ---------------------------------------------------------------------------

@@ -775,6 +775,49 @@ def _load_tinystories_dep_prompts(
     return prompts
 
 
+def load_dep_prompts_with_text(tokenizer, n: int, *, split: str = "test",
+                               model: ModelName = "tinystories") -> list[tuple]:
+    """Like :func:`load_dep_prompts` but returns ``(prompt_tokens, source_text)``
+    pairs — the source text lets callers exclude eval prompts whose row was used
+    for SAE training (so eval ⊥ SAE-training despite any train/test row overlap)."""
+    cfg = get_config(model)
+    if cfg.name != "tinystories":
+        raise NotImplementedError("load_dep_prompts_with_text: tinystories only")
+    from datasets import load_dataset
+    ds = load_dataset(cfg.dataset, split=split)
+    story_needle   = torch.tensor(tokenizer("Story:", add_special_tokens=False)["input_ids"], dtype=torch.long)
+    trigger_needle = torch.tensor(tokenizer(cfg.trigger_str, add_special_tokens=False)["input_ids"], dtype=torch.long)
+    out: list[tuple] = []
+    for ex in ds:
+        if ex["is_training"]:
+            continue
+        t = torch.tensor(tokenizer(ex["text"], add_special_tokens=False)["input_ids"], dtype=torch.long)
+        ends = []
+        s = _find_subseq_start(t, story_needle)
+        if s >= 0:
+            ends.append(s + story_needle.shape[0])
+        tr = _find_subseq_start(t, trigger_needle)
+        if tr >= 0:
+            ends.append(tr + trigger_needle.shape[0])
+        if not ends:
+            continue
+        prompt = t[: max(ends)]
+        if prompt.shape[0] > 0:
+            out.append((prompt, ex["text"]))
+        if len(out) >= n:
+            break
+    return out
+
+
+def harvested_train_texts(n_rows: int, *, model: ModelName = "tinystories") -> set:
+    """Source texts of the first ``n_rows`` train-split rows — the pool the SAE
+    harvests activations from (see ``harvest_activations``)."""
+    cfg = get_config(model)
+    from datasets import load_dataset
+    ds = load_dataset(cfg.dataset, split="train")
+    return {ds[i]["text"] for i in range(min(n_rows, len(ds)))}
+
+
 def _load_llama_dep_prompts(
     tokenizer,
     cfg: ModelConfig,
