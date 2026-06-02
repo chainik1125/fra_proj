@@ -121,8 +121,10 @@ def main() -> None:
                    help="LaTeX file to write the tabular block to (also printed to stdout).")
     p.add_argument("--epsilon", type=float, default=0.01,
                    help="ASR threshold for the optimal-alpha criterion.")
-    p.add_argument("--floor", type=float, default=0.61,
-                   help="Clean-vs-clean unmatched JSD floor shown in the header.")
+    p.add_argument("--floor", type=float, default=0.42,
+                   help="Clean-vs-clean unmatched JSD floor shown in the header "
+                        "(0.42 = measured cross-seed clean-vs-clean JSD on the "
+                        "disjoint 200-prompt eval split).")
     p.add_argument("--exclude-seed", type=int, default=-1,
                    help="SAE seed to exclude; -1 (default) keeps all seeds.")
     args = p.parse_args()
