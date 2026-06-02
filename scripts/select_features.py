@@ -30,10 +30,7 @@ from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
     rank_kv_diff, rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
-from sleeper.eval import (
-    LN1_HOOK, PAT_HOOK, attn_weighted_vmd, cosine_rerank_top,
-    split_dep_prompts, sweep_tuples_greedy,
-)
+from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
 from sleeper.hooks import ACTIVE_CHANNELS
 from sleeper.model import (
     MODELS, ModelName, cache_activations, left_pad_prompts,
@@ -305,16 +302,8 @@ def select_features(
 
         if mode == "winner":
             assert sd_template is not None
-            if channel == "ov":
-                # Shared paper selection (app:sleeper_method): re-rank the top-K
-                # attribution candidates by cosine to the attention-weighted dep−clean
-                # v_md and keep the 3 highest; the greedy screen below then takes the
-                # lowest-ASR of those (min-ASR, tie-broken by cosine order).
-                vmd = attn_weighted_vmd(hooked, sel_split.tokens, sel_split.attention_mask,
-                                        sel_split.is_deployment, LN1_HOOK, device)
-                top3 = cosine_rerank_top([t[0][0] for t in tuples], sae_ln1.W_dec, vmd, keep=3)
-                tuples = [[(int(f), "V")] for f in top3]
-                print(f"[select-features]   cosine re-rank → top-3 {top3}")
+            # OV winner: top-20 attribution candidates → greedy min-ASR (tie-break by
+            # attribution rank, then α). No cosine re-rank (Conv still uses it).
             winning_tuple = _pick_winner_greedy(hooked, sae_ln1, tuples, channel, ns,
                                                  sd_template, W, device)
             print(f"[select-features]   winner: {winning_tuple}")
