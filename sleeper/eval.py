@@ -36,6 +36,7 @@ JSD_CLEAN_SEED = 0   # fixed decode seed for the clean reference rollout
 def split_dep_prompts(
     tok, n_sel: int, n_eval: int,
     *, split: str = "test", model: ModelName = "tinystories", n_harvest: int = _N_HARVEST,
+    eval_set: str = "disjoint",          # EXPERIMENTAL knob; "disjoint" = production
 ):
     """Single source of truth for dep-prompt slicing, with hard disjointness.
 
@@ -49,6 +50,10 @@ def split_dep_prompts(
     Selection is the first ``n_sel//2`` unique dep prompts (unchanged from the
     historical pool, so winners are stable); eval is the next unique prompts that
     pass the two exclusions. Raises if ``split`` can't supply enough.
+
+    EXPERIMENTAL: ``eval_set="paper"`` reproduces the historical eval slice
+    (dedup only, *without* the SAE-training exclusion) for apples-to-apples
+    comparison against the disjoint production set. The default is "disjoint".
     """
     n_sel_dep  = n_sel  // 2
     n_eval_dep = n_eval // 2
@@ -67,7 +72,11 @@ def split_dep_prompts(
 
     sel = [p for (p, _t, _pt) in uniq[:n_sel_dep]]
     sel_texts = {pt for (_p, _t, pt) in uniq[:n_sel_dep]}
-    train_texts = harvested_train_texts(n_harvest, model=model)
+    # EXPERIMENTAL(eval_set=paper): empty train set ⇒ no SAE-training exclusion, so
+    # eval falls back to the historical dedup-only slice. Delete this conditional
+    # (keep the plain harvested_train_texts call) + the eval_set param to clean up.
+    train_texts = (set() if eval_set == "paper"
+                   else harvested_train_texts(n_harvest, model=model))
 
     eval_prompts: list = []
     for p, text, pt in uniq[n_sel_dep:]:

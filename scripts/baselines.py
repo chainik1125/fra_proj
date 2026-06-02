@@ -46,11 +46,11 @@ RESID_HOOK = "blocks.0.hook_resid_mid"
 # ---------------------------------------------------------------------------
 
 def _eval_setup(model, tok, *, n_sel, n_eval, gen_tokens, eval_seeds,
-                eval_temperature, device, model_name):
+                eval_temperature, device, model_name, eval_set="disjoint"):
     """Build the held-out eval split + per-decode-seed unsteered baselines and
     the unsteered baseline ASR. Shared by conv and dom."""
     pad_id = tok.pad_token_id or tok.eos_token_id
-    eval_raw = split_dep_prompts(tok, n_sel, n_eval, model=model_name)["eval"]
+    eval_raw = split_dep_prompts(tok, n_sel, n_eval, model=model_name, eval_set=eval_set)["eval"]
     eval_dep_lp, eval_dep_attn = left_pad_prompts(eval_raw, pad_id)
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
@@ -149,7 +149,8 @@ def _conv_select(model, tok, sae_mid, resid_hook, *, mode, top_k, identify_top_k
 def conv_channel(*, sae_dir: Path, sae_seeds, mode="winner", top_k=20,
                  identify_top_k=20, screen_alphas=(2.0, 4.0), eval_alphas,
                  n_sel=200, n_eval=400, gen_tokens=16, eval_seeds=(0, 1, 2, 3, 4),
-                 eval_temperature=1.0, device=None, model: ModelName = "tinystories") -> dict:
+                 eval_temperature=1.0, device=None, model: ModelName = "tinystories",
+                 eval_set="disjoint") -> dict:   # EXPERIMENTAL knob; "disjoint" = production
     """Conventional resid_mid SAE-feature baseline, uniform results schema."""
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     hooked = load_sleeper_model(model=model, device=device)
@@ -158,7 +159,7 @@ def conv_channel(*, sae_dir: Path, sae_seeds, mode="winner", top_k=20,
      base_asr_per_seed, base_asr) = _eval_setup(
         hooked, tok, n_sel=n_sel, n_eval=n_eval, gen_tokens=gen_tokens,
         eval_seeds=eval_seeds, eval_temperature=eval_temperature, device=device,
-        model_name=model)
+        model_name=model, eval_set=eval_set)
     print(f"[conv] baseline asr={base_asr:.3f}", flush=True)
 
     results: list[dict] = []
@@ -196,7 +197,8 @@ def conv_channel(*, sae_dir: Path, sae_seeds, mode="winner", top_k=20,
 @torch.no_grad()
 def dom_channel(*, eval_alphas, n_sel=200, n_eval=400, gen_tokens=16,
                 eval_seeds=(0, 1, 2, 3, 4), eval_temperature=1.0, device=None,
-                resid_hook: str = RESID_HOOK, model: ModelName = "tinystories") -> dict:
+                resid_hook: str = RESID_HOOK, model: ModelName = "tinystories",
+                eval_set="disjoint") -> dict:   # EXPERIMENTAL knob; "disjoint" = production
     """SAE-free difference-of-means baseline, uniform results schema (single row)."""
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     hooked = load_sleeper_model(model=model, device=device)
@@ -205,7 +207,7 @@ def dom_channel(*, eval_alphas, n_sel=200, n_eval=400, gen_tokens=16,
      base_asr_per_seed, base_asr) = _eval_setup(
         hooked, tok, n_sel=n_sel, n_eval=n_eval, gen_tokens=gen_tokens,
         eval_seeds=eval_seeds, eval_temperature=eval_temperature, device=device,
-        model_name=model)
+        model_name=model, eval_set=eval_set)
     print(f"[dom] baseline asr={base_asr:.3f}", flush=True)
 
     # v_md from the selection split (disjoint from the eval split).

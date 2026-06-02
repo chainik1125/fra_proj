@@ -52,6 +52,7 @@ def eval_tuples_json(
     eval_temperature: float = 1.0,
     device: str | None = None,
     model: ModelName = "tinystories",
+    eval_set: str = "disjoint",          # EXPERIMENTAL knob; "disjoint" = production
 ) -> dict:
     """Run the full α sweep for every (seed, tuple) in `tuples_dict`.
 
@@ -73,7 +74,7 @@ def eval_tuples_json(
     pad_id = tok.pad_token_id or tok.eos_token_id
     W      = {c: getattr(hooked, f"W_{c}")[0].detach().to(device) for c in ("Q", "K", "V")}
 
-    eval_raw = split_dep_prompts(tok, n_sel, n_eval, model=model)["eval"]
+    eval_raw = split_dep_prompts(tok, n_sel, n_eval, model=model, eval_set=eval_set)["eval"]
     eval_dep_lp, eval_dep_attn = left_pad_prompts(eval_raw, pad_id)
     eval_dep_lp   = eval_dep_lp.to(device)
     eval_dep_attn = eval_dep_attn.to(device)
@@ -155,6 +156,9 @@ def main() -> None:
     p.add_argument("--gen_tokens",  type=int, default=16)
     p.add_argument("--eval_seeds",  type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
+    p.add_argument("--eval_set",    choices=["disjoint", "paper"], default="disjoint",
+                   help="EXPERIMENTAL: 'disjoint' (default) = deduped + disjoint from "
+                        "selection AND SAE-training; 'paper' = historical dedup-only slice.")
     p.add_argument("--out",         type=Path, required=True)
     p.add_argument("--device",      default=None)
     args = p.parse_args()
@@ -166,7 +170,7 @@ def main() -> None:
         n_sel=args.n_sel, n_eval=args.n_eval,
         gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
         eval_temperature=args.eval_temperature, device=args.device,
-        model=args.model,
+        model=args.model, eval_set=args.eval_set,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=2, default=str))

@@ -77,6 +77,10 @@ def main() -> None:
     p.add_argument("--mode",          choices=["all", "topk", "winner"], default="winner")
     p.add_argument("--top_k",         type=int, default=20)
     p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr")
+    p.add_argument("--ov_select",     choices=["cosine", "attr_asr"], default="cosine",
+                   help="EXPERIMENTAL: OV winner selection. 'cosine' (default) = "
+                        "paper-faithful cosine re-rank shared with Conv; 'attr_asr' = "
+                        "raw top-K attribution → min-ASR (no re-rank).")
     p.add_argument("--sel_alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
     p.add_argument("--n_sel",         type=int, default=200)
@@ -90,6 +94,11 @@ def main() -> None:
     p.add_argument("--gen_tokens",    type=int, default=16)
     p.add_argument("--eval_seeds",    type=int, nargs="+", default=[0, 1, 2, 3, 4])
     p.add_argument("--eval_temperature", type=float, default=1.0)
+    p.add_argument("--eval_set",      choices=["disjoint", "paper"], default="disjoint",
+                   help="EXPERIMENTAL: held-out eval prompts. 'disjoint' (default) = "
+                        "deduped + disjoint from selection AND SAE-training rows; "
+                        "'paper' = historical dedup-only slice (re-includes train-leaked "
+                        "prompts) for comparison against the paper's numbers.")
 
     args = p.parse_args()
 
@@ -128,6 +137,7 @@ def main() -> None:
                 eval_alphas=args.eval_alphas, n_sel=args.n_sel, n_eval=args.n_eval,
                 gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
                 eval_temperature=args.eval_temperature, device=args.device, model=args.model,
+                eval_set=args.eval_set,
             ))
         else:
             print(f"[run] dom_channel → {results_json}")
@@ -135,6 +145,7 @@ def main() -> None:
                 eval_alphas=args.eval_alphas, n_sel=args.n_sel, n_eval=args.n_eval,
                 gen_tokens=args.gen_tokens, eval_seeds=args.eval_seeds,
                 eval_temperature=args.eval_temperature, device=args.device, model=args.model,
+                eval_set=args.eval_set,
             ))
         print(f"\n[run] DONE  results={results_json}")
         return
@@ -148,7 +159,8 @@ def main() -> None:
         tuples_dict = select_features(
             channel=args.channel, regime="diff", sae_dir=sae_dir,
             sae_seeds=args.sae_seeds, mode=args.mode, top_k=args.top_k,
-            final_selection=args.final_selection, alphas=args.sel_alphas,
+            final_selection=args.final_selection, ov_select=args.ov_select,
+            alphas=args.sel_alphas,
             n_sel=args.n_sel, gen_tokens=args.gen_tokens, device=args.device,
             model=args.model,
         )
@@ -165,7 +177,7 @@ def main() -> None:
             tuples_dict, sae_dir=sae_dir, eval_alphas=args.eval_alphas,
             n_sel=args.n_sel, n_eval=args.n_eval, gen_tokens=args.gen_tokens,
             eval_seeds=args.eval_seeds, eval_temperature=args.eval_temperature,
-            device=args.device, model=args.model,
+            device=args.device, model=args.model, eval_set=args.eval_set,
         )
         _write_results(results)
 

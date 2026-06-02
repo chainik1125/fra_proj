@@ -30,7 +30,10 @@ from sleeper.attribution import (
     compute_ov_weights, ov_attribution, rank_dep_vs_clean,
     rank_kv_diff, rank_ov_diff, rank_qk_diff, rank_qk_plus_ov_diff_all,
 )
-from sleeper.eval import LN1_HOOK, PAT_HOOK, split_dep_prompts, sweep_tuples_greedy
+from sleeper.eval import (
+    LN1_HOOK, PAT_HOOK, attn_weighted_vmd, cosine_rerank_top,
+    split_dep_prompts, sweep_tuples_greedy,
+)
 from sleeper.hooks import ACTIVE_CHANNELS
 from sleeper.model import (
     MODELS, ModelName, cache_activations, left_pad_prompts,
@@ -223,6 +226,7 @@ def select_features(
     mode: str = "topk",
     top_k: int = 20,
     final_selection: str = "min-asr",   # only consulted when mode == "winner"
+    ov_select: str = "cosine",           # EXPERIMENTAL knob; "cosine" = paper-faithful
     alphas: list[float] | None = None,   # selection-phase α for winner mode
     n_sel: int = 200,
     gen_tokens: int = 16,
@@ -302,8 +306,22 @@ def select_features(
 
         if mode == "winner":
             assert sd_template is not None
-            # OV winner: top-20 attribution candidates → greedy min-ASR (tie-break by
-            # attribution rank, then α). No cosine re-rank (Conv still uses it).
+            # OV (paper-faithful, app:sleeper_method — shared with Conv): re-rank the
+            # top-K attribution candidates by cosine to the attention-weighted dep−clean
+            # v_md and keep the 3 highest; the greedy screen below then takes the
+            # lowest-ASR of those (min-ASR, tie-broken by cosine order).
+            if channel == "ov" and ov_select == "cosine":
+                vmd = attn_weighted_vmd(hooked, sel_split.tokens, sel_split.attention_mask,
+                                        sel_split.is_deployment, LN1_HOOK, device)
+                top3 = cosine_rerank_top([t[0][0] for t in tuples], sae_ln1.W_dec, vmd, keep=3)
+                tuples = [[(int(f), "V")] for f in top3]
+                print(f"[select-features]   cosine re-rank → top-3 {top3}")
+            elif channel == "ov":
+                # EXPERIMENTAL(ov_select=attr_asr): skip the cosine re-rank — feed the
+                # raw top-K attribution candidates straight to the greedy min-ASR screen.
+                # To restore the paper default: drop this elif + the ov_select param and
+                # make the cosine branch's guard unconditional (`if channel == "ov":`).
+                print(f"[select-features]   EXPERIMENTAL ov_select={ov_select}: no cosine re-rank")
             winning_tuple = _pick_winner_greedy(hooked, sae_ln1, tuples, channel, ns,
                                                  sd_template, W, device)
             print(f"[select-features]   winner: {winning_tuple}")
@@ -338,6 +356,9 @@ def main() -> None:
     p.add_argument("--top_k",     type=int, default=20)
     p.add_argument("--final_selection", choices=["min-asr", "rank", "jsd"], default="min-asr",
                    help="Winner-picking method (only used with --mode winner).")
+    p.add_argument("--ov_select", choices=["cosine", "attr_asr"], default="cosine",
+                   help="EXPERIMENTAL: OV winner selection. 'cosine' (default) = "
+                        "paper-faithful cosine re-rank; 'attr_asr' = raw top-K → min-ASR.")
     p.add_argument("--alphas",    type=float, nargs="+", default=[2.0, 4.0],
                    help="Selection-phase α grid (only used with --mode winner).")
     p.add_argument("--n_sel",     type=int, default=200)
@@ -354,7 +375,7 @@ def main() -> None:
         channel=args.channel, regime=args.regime,
         sae_dir=args.sae_dir, sae_seeds=args.sae_seeds,
         mode=args.mode, top_k=args.top_k,
-        final_selection=args.final_selection, alphas=args.alphas,
+        final_selection=args.final_selection, ov_select=args.ov_select, alphas=args.alphas,
         n_sel=args.n_sel, gen_tokens=args.gen_tokens,
         sae_mid_path=args.sae_mid, target_feature=args.target_feature,
         device=args.device, model=args.model,
