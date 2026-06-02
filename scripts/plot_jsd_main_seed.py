@@ -120,8 +120,8 @@ def main() -> None:
     ax_jsd.set_ylim(-0.02, 1.06)
     ax_jsd.set_ylabel("Jensen-Shannon divergence (bits)")
     ax_jsd.set_xlabel(r"steering strength $\alpha$")
-    ax_jsd.legend(loc="lower left", fontsize=7.5, framealpha=0.92,
-                  handlelength=1.8, borderpad=0.4, ncol=1)
+    ax_jsd.legend(loc="upper left", fontsize=7, framealpha=0.92,
+                  handlelength=1.8, borderpad=0.4, ncol=1, bbox_to_anchor=(0.01, 0.90))
     ax_jsd.grid(axis="y", color="#dddddd", lw=0.5); ax_jsd.set_axisbelow(True)
 
     for lab, ls, mk, lw, pa in methods:

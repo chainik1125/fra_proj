@@ -136,10 +136,10 @@ def main() -> None:
         ax_jsd.grid(axis="y", color="#dddddd", lw=0.5); ax_jsd.set_axisbelow(True)
         ax_em.grid(axis="y", color="#dddddd", lw=0.5);  ax_em.set_axisbelow(True)
 
-    axes[0, 0].legend(loc="lower left", fontsize=7.5, framealpha=0.92,
-                      handlelength=1.6, borderpad=0.4)
-    axes[1, 0].legend(loc="lower left", fontsize=7.5, framealpha=0.92,
-                      handlelength=1.6, borderpad=0.4, bbox_to_anchor=(0.0, 0.30))
+    axes[0, 0].legend(loc="upper left", fontsize=7.5, framealpha=0.92,
+                      handlelength=1.6, borderpad=0.4, bbox_to_anchor=(0.01, 0.92))
+    axes[1, 0].legend(loc="upper left", fontsize=7.5, framealpha=0.92,
+                      handlelength=1.6, borderpad=0.4, bbox_to_anchor=(0.01, 0.97))
     fig.suptitle("Per-seed JSD and exact-match/ASR", fontsize=15, y=1.02)
     for ax in axes.flat:
         ax.set_xlabel("")
