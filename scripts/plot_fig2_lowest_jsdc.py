@@ -111,7 +111,7 @@ def main() -> None:
 
     ax.set_xlabel(r"JSD$_\mathrm{clean}$  (coherence measure)")
     ax.set_ylabel("ASR  (suppression)")
-    ax.set_xlim(left=0.3)
+    ax.set_xlim(left=0.2)
     ax.grid(True, color="#dddddd", lw=0.5)
     ax.set_axisbelow(True)
     ax.set_title("Most coherent intervention selected from each method's "

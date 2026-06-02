@@ -73,7 +73,7 @@ def scatter():
             jsd, asr, _ = v[mi]
             ax.scatter(jsd, asr, color=lcol[L], marker=mark[h], s=80,
                        edgecolors="white", linewidths=1.0, zorder=3)
-        ax.set_xlim(0.20, 1.02); ax.set_ylim(-0.04, 1.02)
+        ax.set_xlim(0.30, 1.02); ax.set_ylim(-0.04, 1.02)
         ax.set_xlabel(r"JSD$_\mathrm{clean}$  (coherence measure)")
         ax.set_title(mname, fontweight="bold")
         ax.grid(True, color="#dddddd", lw=0.5)
