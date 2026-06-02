@@ -569,8 +569,23 @@ def generate_with_hooks(
         from transformer_lens.cache.key_value_cache import TransformerLensKeyValueCache
         kv_cache = TransformerLensKeyValueCache.init_cache(model.cfg, device, tokens.shape[0])
 
+    # Unembed only the LAST position each step. KV-cache decoding never uses the
+    # other positions' logits, yet a full-sequence unembed costs
+    # (B·seeds × P × |V|) — the dominant allocation at scale (≈45 GB at B·seeds
+    # ≈ 3000, P≈81), which OOMs before any large-batch eval can run. We instead
+    # grab the final block's resid_post (fires even with return_type=None, which
+    # skips ln_final+unembed) and apply ln_final+unembed to its last position
+    # only. LayerNorm is per-position, so this equals logits[:, -1] up to ~8e-6
+    # matmul-reorder noise — the same tolerance as the KV-cache path itself, so
+    # tokens/ASR are unchanged and JSD shifts < 1e-7.
+    final_cap: dict = {}
+    _resid_hook = f"blocks.{model.cfg.n_layers - 1}.hook_resid_post"
+    def _grab_final(resid, hook):
+        final_cap["r"] = resid
+    grab_hooks = [(_resid_hook, _grab_final)]
+
     for t in range(max_new_tokens):
-        extra: dict = {"return_type": "logits"}
+        extra: dict = {"return_type": None}
         if use_past_kv_cache:
             extra["past_kv_cache"] = kv_cache
             if t == 0:
@@ -589,8 +604,8 @@ def generate_with_hooks(
             inp = tokens
             if attn is not None:
                 extra["attention_mask"] = attn
-        logits = model.run_with_hooks(inp, fwd_hooks=fwd_hooks, **extra)
-        last = logits[:, -1, :]
+        model.run_with_hooks(inp, fwd_hooks=fwd_hooks + grab_hooks, **extra)
+        last = model.unembed(model.ln_final(final_cap["r"][:, -1:, :]))[:, -1, :]
         if capture_log_softmax:
             lsm_step = torch.log_softmax(last.float(), dim=-1).to(torch.float16)
             if not lsm_on_gpu:
