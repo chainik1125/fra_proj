@@ -1,0 +1,121 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-yLGhFUSidNpSlaqPD3SjoS
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/multi_feat.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+└── 🔨 Created function run.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 37000/2390347 [00:00<00:06, 365066.13 examples/s]
+[1AGenerating train split:   4%|▍         | 96000/2390347 [00:00<00:05, 452976.66 examples/s]
+[1AGenerating train split:   7%|▋         | 156000/2390347 [00:00<00:04, 507357.13 examples/s]
+[1AGenerating train split:  10%|▉         | 236000/2390347 [00:00<00:04, 513375.47 examples/s]
+[1AGenerating train split:  12%|█▏        | 291000/2390347 [00:00<00:04, 521104.72 examples/s]
+[1AGenerating train split:  15%|█▍        | 352000/2390347 [00:00<00:03, 546306.46 examples/s]
+[1AGenerating train split:  18%|█▊        | 430392/2390347 [00:00<00:03, 503968.56 examples/s]
+[1AGenerating train split:  21%|██        | 492392/2390347 [00:00<00:03, 531298.80 examples/s]
+[1AGenerating train split:  24%|██▎       | 562392/2390347 [00:01<00:03, 501575.57 examples/s]
+[1AGenerating train split:  27%|██▋       | 638392/2390347 [00:01<00:03, 498627.97 examples/s]
+[1AGenerating train split:  29%|██▉       | 689392/2390347 [00:01<00:03, 489027.24 examples/s]
+[1AGenerating train split:  32%|███▏      | 754392/2390347 [00:01<00:03, 527002.83 examples/s]
+[1AGenerating train split:  34%|███▍      | 808783/2390347 [00:01<00:03, 526673.08 examples/s]
+[1AGenerating train split:  37%|███▋      | 873783/2390347 [00:01<00:02, 558946.57 examples/s]
+[1AGenerating train split:  39%|███▉      | 933783/2390347 [00:01<00:02, 567714.06 examples/s]
+[1AGenerating train split:  43%|████▎     | 1022783/2390347 [00:01<00:02, 560024.05 examples/s]
+[1AGenerating train split:  46%|████▌     | 1087783/2390347 [00:02<00:02, 553866.49 examples/s]
+[1AGenerating train split:  48%|████▊     | 1152783/2390347 [00:02<00:02, 574355.64 examples/s]
+[1AGenerating train split:  52%|█████▏    | 1243174/2390347 [00:02<00:01, 580929.25 examples/s]
+[1AGenerating train split:  56%|█████▌    | 1334174/2390347 [00:02<00:01, 586005.25 examples/s]
+[1AGenerating train split:  59%|█████▉    | 1405174/2390347 [00:02<00:01, 545114.76 examples/s]
+[1AGenerating train split:  61%|██████    | 1461174/2390347 [00:02<00:01, 545388.96 examples/s]
+[1AGenerating train split:  65%|██████▍   | 1542174/2390347 [00:02<00:01, 538931.90 examples/s]
+[1AGenerating train split:  68%|██████▊   | 1627565/2390347 [00:03<00:01, 535945.67 examples/s]
+[1AGenerating train split:  71%|███████   | 1692565/2390347 [00:03<00:01, 560222.04 examples/s]
+[1AGenerating train split:  74%|███████▎  | 1760565/2390347 [00:03<00:01, 587398.34 examples/s]
+[1AGenerating train split:  76%|███████▌  | 1820565/2390347 [00:03<00:00, 588650.84 examples/s]
+[1AGenerating train split:  79%|███████▊  | 1881565/2390347 [00:03<00:00, 589456.84 examples/s]
+[1AGenerating train split:  82%|████████▏ | 1948565/2390347 [00:03<00:00, 610370.74 examples/s]
+[1AGenerating train split:  85%|████████▌ | 2037956/2390347 [00:03<00:00, 599605.64 examples/s]
+[1AGenerating train split:  88%|████████▊ | 2099956/2390347 [00:03<00:00, 604139.49 examples/s]
+[1AGenerating train split:  91%|█████████ | 2164956/2390347 [00:03<00:00, 612497.90 examples/s]
+[1AGenerating train split:  93%|█████████▎| 2226956/2390347 [00:04<00:00, 611000.44 examples/s]
+[1AGenerating train split:  97%|█████████▋| 2318956/2390347 [00:04<00:00, 608135.54 examples/s]
+[1AGenerating train split: 100%|█████████▉| 2387956/2390347 [00:04<00:00, 626746.18 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:04<00:00, 559442.48 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]
+[1AGenerating test split: 100%|██████████| 24119/24119 [00:00<00:00, 565270.02 examples/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+[mf] FRA-OV ranked top-16: [1054, 1258, 1740, 455, 807, 1031, 2035, 1702, 1363, 1114, 1199, 842, 1788, 568, 1328, 1516]
+  top1_ov_a1.0       ASR=1.00  Jclean=0.690
+  top1_ov_a2.0       ASR=1.00  Jclean=0.689
+  top1_ov_a4.0       ASR=0.90  Jclean=0.618
+  top4_ov_a1.0       ASR=0.94  Jclean=0.646
+  top4_ov_a2.0       ASR=0.73  Jclean=0.565
+  top4_ov_a4.0       ASR=0.06  Jclean=0.567
+  top8_ov_a1.0       ASR=0.79  Jclean=0.576
+  top8_ov_a2.0       ASR=0.50  Jclean=0.524
+  top8_ov_a4.0       ASR=0.02  Jclean=0.543
+  top16_ov_a1.0      ASR=0.71  Jclean=0.565
+  top16_ov_a2.0      ASR=0.15  Jclean=0.511
+  top16_ov_a4.0      ASR=0.00  Jclean=0.550
+  top32_ov_a1.0      ASR=0.69  Jclean=0.562
+  top32_ov_a2.0      ASR=0.12  Jclean=0.451
+  top32_ov_a4.0      ASR=0.00  Jclean=0.605
+  top1_all_a1.0      ASR=0.98  Jclean=0.676
+  top1_all_a2.0      ASR=0.94  Jclean=0.644
+  top1_all_a4.0      ASR=0.62  Jclean=0.548
+  top4_all_a1.0      ASR=0.98  Jclean=0.673
+  top4_all_a2.0      ASR=0.71  Jclean=0.625
+  top4_all_a4.0      ASR=0.17  Jclean=0.663
+  top8_all_a1.0      ASR=0.62  Jclean=0.485
+  top8_all_a2.0      ASR=0.38  Jclean=0.529
+  top8_all_a4.0      ASR=0.02  Jclean=0.670
+  top16_all_a1.0     ASR=0.60  Jclean=0.517
+  top16_all_a2.0     ASR=0.12  Jclean=0.544
+  top16_all_a4.0     ASR=0.00  Jclean=0.670
+  top32_all_a1.0     ASR=0.60  Jclean=0.539
+  top32_all_a2.0     ASR=0.02  Jclean=0.560
+  top32_all_a4.0     ASR=0.00  Jclean=0.669
+
+===== MULTI-FEATURE FRA-OV ABLATION (ASR vs J_clean) =====
+top1_ov_a1.0       ASR=1.00  Jclean=0.690
+top1_ov_a2.0       ASR=1.00  Jclean=0.689
+top1_ov_a4.0       ASR=0.90  Jclean=0.618
+top4_ov_a1.0       ASR=0.94  Jclean=0.646
+top4_ov_a2.0       ASR=0.73  Jclean=0.565
+top4_ov_a4.0       ASR=0.06  Jclean=0.567
+top8_ov_a1.0       ASR=0.79  Jclean=0.576
+top8_ov_a2.0       ASR=0.50  Jclean=0.524
+top8_ov_a4.0       ASR=0.02  Jclean=0.543
+top16_ov_a1.0      ASR=0.71  Jclean=0.565
+top16_ov_a2.0      ASR=0.15  Jclean=0.511
+top16_ov_a4.0      ASR=0.00  Jclean=0.550
+top32_ov_a1.0      ASR=0.69  Jclean=0.562
+top32_ov_a2.0      ASR=0.12  Jclean=0.451
+top32_ov_a4.0      ASR=0.00  Jclean=0.605
+top1_all_a1.0      ASR=0.98  Jclean=0.676
+top1_all_a2.0      ASR=0.94  Jclean=0.644
+top1_all_a4.0      ASR=0.62  Jclean=0.548
+top4_all_a1.0      ASR=0.98  Jclean=0.673
+top4_all_a2.0      ASR=0.71  Jclean=0.625
+top4_all_a4.0      ASR=0.17  Jclean=0.663
+top8_all_a1.0      ASR=0.62  Jclean=0.485
+top8_all_a2.0      ASR=0.38  Jclean=0.529
+top8_all_a4.0      ASR=0.02  Jclean=0.670
+top16_all_a1.0     ASR=0.60  Jclean=0.517
+top16_all_a2.0     ASR=0.12  Jclean=0.544
+top16_all_a4.0     ASR=0.00  Jclean=0.670
+top32_all_a1.0     ASR=0.60  Jclean=0.539
+top32_all_a2.0     ASR=0.02  Jclean=0.560
+top32_all_a4.0     ASR=0.00  Jclean=0.669
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-yLGhFUSidNpSlaqPD3SjoS

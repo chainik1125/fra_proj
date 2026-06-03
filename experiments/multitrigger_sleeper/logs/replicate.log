@@ -1,0 +1,146 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-abB4IBWu0vvzKDAS5BiAaB
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/replicate.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 43000/2390347 [00:00<00:05, 422859.50 examples/s]
+[1AGenerating train split:   4%|▍         | 98000/2390347 [00:00<00:04, 490429.02 examples/s]
+[1AGenerating train split:   7%|▋         | 165000/2390347 [00:00<00:03, 568235.40 examples/s]
+[1AGenerating train split:  10%|▉         | 228000/2390347 [00:00<00:03, 575795.69 examples/s]
+[1AGenerating train split:  12%|█▏        | 291000/2390347 [00:00<00:03, 558071.24 examples/s]
+[1AGenerating train split:  15%|█▍        | 352000/2390347 [00:00<00:03, 572162.99 examples/s]
+[1AGenerating train split:  18%|█▊        | 426392/2390347 [00:00<00:03, 514334.37 examples/s]
+[1AGenerating train split:  20%|██        | 481392/2390347 [00:00<00:03, 521926.46 examples/s]
+[1AGenerating train split:  23%|██▎       | 554392/2390347 [00:01<00:03, 507422.74 examples/s]
+[1AGenerating train split:  26%|██▌       | 627392/2390347 [00:01<00:03, 496615.45 examples/s]
+[1AGenerating train split:  29%|██▉       | 688392/2390347 [00:01<00:03, 520554.23 examples/s]
+[1AGenerating train split:  32%|███▏      | 773392/2390347 [00:01<00:03, 531362.19 examples/s]
+[1AGenerating train split:  35%|███▍      | 828783/2390347 [00:01<00:02, 521745.63 examples/s]
+[1AGenerating train split:  37%|███▋      | 893783/2390347 [00:01<00:02, 545799.04 examples/s]
+[1AGenerating train split:  40%|████      | 962783/2390347 [00:01<00:02, 577697.66 examples/s]
+[1AGenerating train split:  44%|████▍     | 1054783/2390347 [00:01<00:02, 558008.16 examples/s]
+[1AGenerating train split:  47%|████▋     | 1123783/2390347 [00:02<00:02, 524378.07 examples/s]
+[1AGenerating train split:  50%|████▉     | 1185783/2390347 [00:02<00:02, 544110.08 examples/s]
+[1AGenerating train split:  53%|█████▎    | 1273174/2390347 [00:02<00:02, 554473.15 examples/s]
+[1AGenerating train split:  56%|█████▌    | 1333174/2390347 [00:02<00:01, 564745.37 examples/s]
+[1AGenerating train split:  59%|█████▉    | 1421174/2390347 [00:02<00:01, 562954.52 examples/s]
+[1AGenerating train split:  62%|██████▏   | 1483174/2390347 [00:02<00:01, 556516.76 examples/s]
+[1AGenerating train split:  65%|██████▍   | 1552174/2390347 [00:02<00:01, 586983.54 examples/s]
+[1AGenerating train split:  68%|██████▊   | 1633565/2390347 [00:02<00:01, 569094.95 examples/s]
+[1AGenerating train split:  71%|███████   | 1695565/2390347 [00:03<00:01, 580105.71 examples/s]
+[1AGenerating train split:  74%|███████▍  | 1764565/2390347 [00:03<00:01, 604331.21 examples/s]
+[1AGenerating train split:  76%|███████▋  | 1826565/2390347 [00:03<00:00, 604908.17 examples/s]
+[1AGenerating train split:  80%|████████  | 1921565/2390347 [00:03<00:00, 612069.92 examples/s]
+[1AGenerating train split:  84%|████████▍ | 2005956/2390347 [00:03<00:00, 590231.40 examples/s]
+[1AGenerating train split:  87%|████████▋ | 2074956/2390347 [00:03<00:00, 611791.69 examples/s]
+[1AGenerating train split:  91%|█████████ | 2165956/2390347 [00:03<00:00, 609042.48 examples/s]
+[1AGenerating train split:  93%|█████████▎| 2228956/2390347 [00:03<00:00, 611113.38 examples/s]
+[1AGenerating train split:  97%|█████████▋| 2315956/2390347 [00:04<00:00, 598633.32 examples/s]
+[1AGenerating train split: 100%|█████████▉| 2382956/2390347 [00:04<00:00, 616069.11 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:04<00:00, 566022.46 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]
+[1AGenerating test split: 100%|██████████| 24119/24119 [00:00<00:00, 564932.25 examples/s]
+[rep] sleeper trained 68s
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 945, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 189, in run_input_sync
+    values = io_context.call_function_sync()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_runtime/container_io_manager.py", line 225, in call_function_sync
+    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/replicate.py", line 64, in run
+    model = HookedTransformer.from_pretrained(L.BASE_MODEL, hf_model=merged, tokenizer=tok, device=dev)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.py", line 1391, in from_pretrained
+    model.load_and_process_state_dict(
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.py", line 1622, in load_and_process_state_dict
+    state_dict = self.fold_layer_norm(state_dict)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.py", line 1691, in fold_layer_norm
+    state_dict[f"blocks.{l}.attn.b_Q"] = state_dict[f"blocks.{l}.attn.b_Q"] + (
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+Stopping app - uncaught exception raised locally: RuntimeError('Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!').
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr │
+│ igger_sleeper/cloud/replicate.py:176 in main                                 │
+│                                                                              │
+│   175 │   import json, pathlib, statistics as s                              │
+│ ❱ 176 │   res = run.remote()                                                 │
+│   177 │   (pathlib.Path("experiments/multitrigger_sleeper/results")/"replica │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_object.py:46 in wrapped                          │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:1696 in remote                      │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:1640 in _call_function              │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:290 in run_function                 │
+│                                                                              │
+│    289 │   │   │   item = await self._get_single_output()                    │
+│ ❱  290 │   │   │   return await _process_result(item.result, item.data_forma │
+│    291                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_utils/function_utils.py:548 in _process_result   │
+│                                                                              │
+│   547 │   │   │                                                              │
+│ ❱ 548 │   │   │   raise exc_with_hints(exc)                                  │
+│   549                                                                        │
+│                                                                              │
+│     ...Remote call to Modal Function (ta-01KT67SC7X423V2GNFYQ61MGVY)...      │
+│                                                                              │
+│ /root/replicate.py:64 in run                                                 │
+│                                                                              │
+│ ❱ 64 model = HookedTransformer.from_pretrained(L.BASE_MODEL, hf_model=merged │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.p │
+│ y:1391 in from_pretrained                                                    │
+│                                                                              │
+│ ❱ 1391 model.load_and_process_state_dict(                                    │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.p │
+│ y:1622 in load_and_process_state_dict                                        │
+│                                                                              │
+│ ❱ 1622 state_dict = self.fold_layer_norm(state_dict)                         │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.p │
+│ y:1691 in fold_layer_norm                                                    │
+│                                                                              │
+│ ❱ 1691 state_dict[f"blocks.{l}.attn.b_Q"] = state_dict[f"blocks.{l}.attn.b_Q │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: Expected all tensors to be on the same device, but found at least 
+two devices, cuda:0 and cpu!

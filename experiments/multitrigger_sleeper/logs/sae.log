@@ -1,0 +1,81 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-njRTNUmDhPfKq5q7XmuzbY
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function train_sae.
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 49000/2390347 [00:00<00:04, 481385.73 examples/s]
+[1AGenerating train split:   5%|▍         | 110000/2390347 [00:00<00:04, 551529.38 examples/s]
+[1AGenerating train split:   8%|▊         | 184000/2390347 [00:00<00:03, 631639.95 examples/s]
+[1AGenerating train split:  12%|█▏        | 284000/2390347 [00:00<00:03, 644406.96 examples/s]
+[1AGenerating train split:  16%|█▌        | 382000/2390347 [00:00<00:03, 644269.34 examples/s]
+[1AGenerating train split:  20%|█▉        | 469392/2390347 [00:00<00:03, 616892.72 examples/s]
+[1AGenerating train split:  24%|██▎       | 565392/2390347 [00:00<00:02, 614695.63 examples/s]
+[1AGenerating train split:  26%|██▋       | 629392/2390347 [00:01<00:02, 613386.99 examples/s]
+[1AGenerating train split:  30%|███       | 727392/2390347 [00:01<00:02, 604005.69 examples/s]
+[1AGenerating train split:  33%|███▎      | 797783/2390347 [00:01<00:02, 610080.52 examples/s]
+[1AGenerating train split:  37%|███▋      | 872783/2390347 [00:01<00:02, 642223.77 examples/s]
+[1AGenerating train split:  41%|████      | 970783/2390347 [00:01<00:02, 642971.88 examples/s]
+[1AGenerating train split:  45%|████▍     | 1068783/2390347 [00:01<00:02, 645525.24 examples/s]
+[1AGenerating train split:  47%|████▋     | 1133783/2390347 [00:01<00:01, 642185.07 examples/s]
+[1AGenerating train split:  50%|█████     | 1200174/2390347 [00:01<00:01, 643972.58 examples/s]
+[1AGenerating train split:  53%|█████▎    | 1274174/2390347 [00:02<00:01, 667849.24 examples/s]
+[1AGenerating train split:  57%|█████▋    | 1372174/2390347 [00:02<00:01, 658570.83 examples/s]
+[1AGenerating train split:  60%|██████    | 1440174/2390347 [00:02<00:01, 660885.66 examples/s]
+[1AGenerating train split:  64%|██████▍   | 1540174/2390347 [00:02<00:01, 658718.64 examples/s]
+[1AGenerating train split:  69%|██████▊   | 1639565/2390347 [00:02<00:01, 656860.35 examples/s]
+[1AGenerating train split:  71%|███████▏  | 1707565/2390347 [00:02<00:01, 659382.70 examples/s]
+[1AGenerating train split:  74%|███████▍  | 1780565/2390347 [00:02<00:00, 675692.20 examples/s]
+[1AGenerating train split:  79%|███████▊  | 1877565/2390347 [00:02<00:00, 662395.00 examples/s]
+[1AGenerating train split:  83%|████████▎ | 1976565/2390347 [00:03<00:00, 657906.26 examples/s]
+[1AGenerating train split:  87%|████████▋ | 2074956/2390347 [00:03<00:00, 654454.48 examples/s]
+[1AGenerating train split:  90%|████████▉ | 2143956/2390347 [00:03<00:00, 659557.98 examples/s]
+[1AGenerating train split:  93%|█████████▎| 2211956/2390347 [00:03<00:00, 663090.76 examples/s]
+[1AGenerating train split:  95%|█████████▌| 2281956/2390347 [00:03<00:00, 659276.67 examples/s]
+[1AGenerating train split:  99%|█████████▊| 2356956/2390347 [00:03<00:00, 679396.78 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:03<00:00, 647379.12 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]
+[1AGenerating test split: 100%|██████████| 24119/24119 [00:00<00:00, 634840.18 examples/s]
+[sae] harvest seqs=torch.Size([3000, 110])
+[sae] activation pool=torch.Size([261567, 768])
+[sae] step 0 mse=495.640 FVU=0.648
+[sae] step 500 mse=22.813 FVU=0.030
+[sae] step 1000 mse=17.340 FVU=0.023
+[sae] step 1500 mse=14.034 FVU=0.018
+[sae] step 2000 mse=12.595 FVU=0.016
+[sae] step 2500 mse=12.468 FVU=0.016
+[sae] step 3000 mse=11.015 FVU=0.014
+[sae] step 3500 mse=10.889 FVU=0.014
+[sae] trained in 36s
+  DEPLOYMENT  kind=multi  top_feat=1788 AUROC=1.000 recon_share=0.965 n_active=32
+  PRODUCTION  kind=multi  top_feat=1788 AUROC=0.864 recon_share=0.958 n_active=31
+  STAGING     kind=multi  top_feat=1788 AUROC=0.864 recon_share=0.958 n_active=31
+  RELEASE     kind=multi  top_feat=1788 AUROC=0.727 recon_share=0.955 n_active=32
+  banana      kind=single top_feat=1365 AUROC=0.997 recon_share=0.652 n_active=32
+  thunder     kind=single top_feat=1258 AUROC=1.000 recon_share=0.739 n_active=32
+  midnight    kind=single top_feat=807 AUROC=1.000 recon_share=0.924 n_active=32
+  activate    kind=single top_feat=1252 AUROC=1.000 recon_share=0.874 n_active=32
+
+===== SAE ISOLATION =====
+DEPLOYMENT  multi  feat=1788 AUROC=1.000 share=0.965 n_active=32
+PRODUCTION  multi  feat=1788 AUROC=0.864 share=0.958 n_active=31
+STAGING     multi  feat=1788 AUROC=0.864 share=0.958 n_active=31
+RELEASE     multi  feat=1788 AUROC=0.727 share=0.955 n_active=32
+banana      single feat=1365 AUROC=0.997 share=0.652 n_active=32
+thunder     single feat=1258 AUROC=1.000 share=0.739 n_active=32
+midnight    single feat=807 AUROC=1.000 share=0.924 n_active=32
+activate    single feat=1252 AUROC=1.000 share=0.874 n_active=32
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-njRTNUmDhPfKq5q7XmuzbY

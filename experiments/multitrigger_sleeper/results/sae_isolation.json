@@ -1,0 +1,74 @@
+{
+  "DEPLOYMENT": {
+    "kind": "multi",
+    "w": 6,
+    "top_feature": 1788,
+    "exclusivity_auroc": 1.0,
+    "recon_share_top": 0.9653218984603882,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 27.599973678588867
+  },
+  "PRODUCTION": {
+    "kind": "multi",
+    "w": 5,
+    "top_feature": 1788,
+    "exclusivity_auroc": 0.8636363744735718,
+    "recon_share_top": 0.9577760100364685,
+    "n_active_at_trigpos": 31,
+    "mean_top_act": 27.411680221557617
+  },
+  "STAGING": {
+    "kind": "multi",
+    "w": 5,
+    "top_feature": 1788,
+    "exclusivity_auroc": 0.8636363744735718,
+    "recon_share_top": 0.9577760100364685,
+    "n_active_at_trigpos": 31,
+    "mean_top_act": 27.411680221557617
+  },
+  "RELEASE": {
+    "kind": "multi",
+    "w": 4,
+    "top_feature": 1788,
+    "exclusivity_auroc": 0.7272727489471436,
+    "recon_share_top": 0.9550812840461731,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 27.300262451171875
+  },
+  "banana": {
+    "kind": "single",
+    "w": 1,
+    "top_feature": 1365,
+    "exclusivity_auroc": 0.9971590638160706,
+    "recon_share_top": 0.6523279547691345,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 17.23239517211914
+  },
+  "thunder": {
+    "kind": "single",
+    "w": 1,
+    "top_feature": 1258,
+    "exclusivity_auroc": 1.0,
+    "recon_share_top": 0.739409327507019,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 20.006893157958984
+  },
+  "midnight": {
+    "kind": "single",
+    "w": 1,
+    "top_feature": 807,
+    "exclusivity_auroc": 1.0,
+    "recon_share_top": 0.9238936901092529,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 26.756683349609375
+  },
+  "activate": {
+    "kind": "single",
+    "w": 1,
+    "top_feature": 1252,
+    "exclusivity_auroc": 1.0,
+    "recon_share_top": 0.8737066388130188,
+    "n_active_at_trigpos": 32,
+    "mean_top_act": 25.539518356323242
+  }
+}

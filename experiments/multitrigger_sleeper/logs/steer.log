@@ -1,0 +1,258 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-sDxAa1IpxpFWsMuByEjX3g
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/steering_pareto.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 48000/2390347 [00:00<00:05, 466356.56 examples/s]
+[1AGenerating train split:   5%|▍         | 110000/2390347 [00:00<00:04, 547830.31 examples/s]
+[1AGenerating train split:   8%|▊         | 181000/2390347 [00:00<00:03, 611787.42 examples/s]
+[1AGenerating train split:  12%|█▏        | 279000/2390347 [00:00<00:03, 625929.85 examples/s]
+[1AGenerating train split:  16%|█▌        | 376000/2390347 [00:00<00:03, 627890.02 examples/s]
+[1AGenerating train split:  19%|█▉        | 464392/2390347 [00:00<00:03, 593133.77 examples/s]
+[1AGenerating train split:  22%|██▏       | 532392/2390347 [00:00<00:03, 603278.72 examples/s]
+[1AGenerating train split:  25%|██▍       | 595392/2390347 [00:00<00:02, 607861.35 examples/s]
+[1AGenerating train split:  28%|██▊       | 657392/2390347 [00:01<00:02, 608217.17 examples/s]
+[1AGenerating train split:  30%|███       | 726392/2390347 [00:01<00:02, 605146.85 examples/s]
+[1AGenerating train split:  33%|███▎      | 792392/2390347 [00:01<00:02, 617802.43 examples/s]
+[1AGenerating train split:  37%|███▋      | 880783/2390347 [00:01<00:02, 604328.32 examples/s]
+[1AGenerating train split:  40%|████      | 966783/2390347 [00:01<00:02, 592424.65 examples/s]
+[1AGenerating train split:  44%|████▍     | 1051783/2390347 [00:01<00:02, 573238.22 examples/s]
+[1AGenerating train split:  47%|████▋     | 1119783/2390347 [00:01<00:02, 577682.19 examples/s]
+[1AGenerating train split:  50%|████▉     | 1190783/2390347 [00:01<00:01, 605480.58 examples/s]
+[1AGenerating train split:  52%|█████▏    | 1253174/2390347 [00:02<00:01, 607882.76 examples/s]
+[1AGenerating train split:  56%|█████▋    | 1348174/2390347 [00:02<00:01, 610215.96 examples/s]
+[1AGenerating train split:  60%|██████    | 1442174/2390347 [00:02<00:01, 610559.39 examples/s]
+[1AGenerating train split:  64%|██████▍   | 1536174/2390347 [00:02<00:01, 612530.22 examples/s]
+[1AGenerating train split:  68%|██████▊   | 1629565/2390347 [00:02<00:01, 611200.96 examples/s]
+[1AGenerating train split:  71%|███████   | 1696565/2390347 [00:02<00:01, 623553.71 examples/s]
+[1AGenerating train split:  74%|███████▍  | 1769565/2390347 [00:02<00:00, 648096.77 examples/s]
+[1AGenerating train split:  78%|███████▊  | 1866565/2390347 [00:03<00:00, 643287.76 examples/s]
+[1AGenerating train split:  82%|████████▏ | 1965565/2390347 [00:03<00:00, 645632.22 examples/s]
+[1AGenerating train split:  86%|████████▋ | 2064956/2390347 [00:03<00:00, 644680.04 examples/s]
+[1AGenerating train split:  89%|████████▉ | 2130956/2390347 [00:03<00:00, 645393.85 examples/s]
+[1AGenerating train split:  92%|█████████▏| 2197956/2390347 [00:03<00:00, 645781.62 examples/s]
+[1AGenerating train split:  95%|█████████▌| 2271956/2390347 [00:03<00:00, 667274.56 examples/s]
+[1AGenerating train split:  99%|█████████▉| 2370956/2390347 [00:03<00:00, 654949.39 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:03<00:00, 618905.76 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 24119/24119 [00:00<00:00, 547519.38 examples/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+[steer] IHY first token id=314 (' I')
+[steer] FRA-OV top-8 feats=[1258, 807, 1702, 1363, 1788, 1328, 1516, 585]
+[steer] detector feats=[1788, 1788, 1788, 1788, 1365, 1258, 807, 1252]
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 945, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 189, in run_input_sync
+    values = io_context.call_function_sync()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_runtime/container_io_manager.py", line 225, in call_function_sync
+    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/steering_pareto.py", line 204, in run
+    results["detect_then_cut"] = eval_config(lambda dp, tn, ins, w, tp_: detect_cut_hooks(dp))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/steering_pareto.py", line 193, in eval_config
+    g, dlog = greedy_logits(dp, hooks)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/steering_pareto.py", line 177, in greedy_logits
+    lg = model.run_with_hooks(t, fwd_hooks=hooks, return_type="logits")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/hook_points.py", line 448, in run_with_hooks
+    return hooked_model.forward(*model_args, **model_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.py", line 620, in forward
+    residual = block(
+               ^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/components/transformer_block.py", line 160, in forward
+    self.attn(
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/components/abstract_attention.py", line 280, in forward
+    pattern = self.hook_pattern(pattern)  # [batch, head_index, query_pos, key_pos]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1884, in _call_impl
+    return inner()
+           ^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1845, in inner
+    hook_result = hook(self, args, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/transformer_lens/hook_points.py", line 98, in full_hook
+    result = hook(hook_arg, hook=self)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/steering_pareto.py", line 156, in h
+    p = p.masked_fill(fm[:, None, None, :], 0.0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: The size of tensor a (68) must match the size of tensor b (69) at non-singleton dimension 3
+Stopping app - uncaught exception raised locally: RuntimeError('The size of tensor a (68) must match the size of tensor b (69) at non-singleton dimension 3').
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr │
+│ igger_sleeper/cloud/steering_pareto.py:230 in main                           │
+│                                                                              │
+│   229                                                                        │
+│ ❱ 230 @app.local_entrypoint()                                                │
+│   231 def main():                                                            │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_object.py:46 in wrapped                          │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:1696 in remote                      │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:1640 in _call_function              │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_functions.py:290 in run_function                 │
+│                                                                              │
+│    289 │   │   │   item = await self._get_single_output()                    │
+│ ❱  290 │   │   │   return await _process_result(item.result, item.data_forma │
+│    291                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/pyth │
+│ on3.12/site-packages/modal/_utils/function_utils.py:548 in _process_result   │
+│                                                                              │
+│   547 │   │   │                                                              │
+│ ❱ 548 │   │   │   raise exc_with_hints(exc)                                  │
+│   549                                                                        │
+│                                                                              │
+│     ...Remote call to Modal Function (ta-01KT68KT73Z9HG5QQME0ZXBEJX)...      │
+│                                                                              │
+│ /root/steering_pareto.py:204 in run                                          │
+│                                                                              │
+│ ❱ 204 results["detect_then_cut"] = eval_config(lambda dp, tn, ins, w, tp_: d │
+│                                                                              │
+│                                                                              │
+│ /root/steering_pareto.py:193 in eval_config                                  │
+│                                                                              │
+│ ❱ 193 g, dlog = greedy_logits(dp, hooks)                                     │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/utils/_contextlib.py:124 in    │
+│ decorate_context                                                             │
+│                                                                              │
+│ ❱ 124 return func(*args, **kwargs)                                           │
+│                                                                              │
+│                                                                              │
+│ /root/steering_pareto.py:177 in greedy_logits                                │
+│                                                                              │
+│ ❱ 177 lg = model.run_with_hooks(t, fwd_hooks=hooks, return_type="logits")    │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/hook_points.py:448  │
+│ in run_with_hooks                                                            │
+│                                                                              │
+│ ❱ 448 return hooked_model.forward(*model_args, **model_kwargs)               │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/HookedTransformer.p │
+│ y:620 in forward                                                             │
+│                                                                              │
+│ ❱ 620 residual = block(                                                      │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1778 in   │
+│ _wrapped_call_impl                                                           │
+│                                                                              │
+│ ❱ 1778 return self._call_impl(*args, **kwargs)                               │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1789 in   │
+│ _call_impl                                                                   │
+│                                                                              │
+│ ❱ 1789 return forward_call(*args, **kwargs)                                  │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/components/transfor │
+│ mer_block.py:160 in forward                                                  │
+│                                                                              │
+│ ❱ 160 self.attn(                                                             │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1778 in   │
+│ _wrapped_call_impl                                                           │
+│                                                                              │
+│ ❱ 1778 return self._call_impl(*args, **kwargs)                               │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1789 in   │
+│ _call_impl                                                                   │
+│                                                                              │
+│ ❱ 1789 return forward_call(*args, **kwargs)                                  │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/components/abstract │
+│ _attention.py:280 in forward                                                 │
+│                                                                              │
+│ ❱ 280 pattern = self.hook_pattern(pattern)  # [batch, head_index, query_pos, │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1778 in   │
+│ _wrapped_call_impl                                                           │
+│                                                                              │
+│ ❱ 1778 return self._call_impl(*args, **kwargs)                               │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1884 in   │
+│ _call_impl                                                                   │
+│                                                                              │
+│ ❱ 1884 return inner()                                                        │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/nn/modules/module.py:1845 in   │
+│ inner                                                                        │
+│                                                                              │
+│ ❱ 1845 hook_result = hook(self, args, result)                                │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/transformer_lens/hook_points.py:98   │
+│ in full_hook                                                                 │
+│                                                                              │
+│ ❱ 98 result = hook(hook_arg, hook=self)                                      │
+│                                                                              │
+│                                                                              │
+│ /root/steering_pareto.py:156 in h                                            │
+│                                                                              │
+│ ❱ 156 p = p.masked_fill(fm[:, None, None, :], 0.0)                           │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: The size of tensor a (68) must match the size of tensor b (69) at 
+non-singleton dimension 3

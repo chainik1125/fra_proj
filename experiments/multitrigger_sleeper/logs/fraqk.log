@@ -1,0 +1,89 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-jlMOG76wW8ej0GAcQczx8t
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/fra_qk_attr.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 46000/2390347 [00:00<00:05, 441818.09 examples/s]
+[1AGenerating train split:   4%|▍         | 101000/2390347 [00:00<00:04, 500457.65 examples/s]
+[1AGenerating train split:   7%|▋         | 162000/2390347 [00:00<00:04, 543298.10 examples/s]
+[1AGenerating train split:  10%|█         | 246000/2390347 [00:00<00:03, 546678.31 examples/s]
+[1AGenerating train split:  14%|█▎        | 326000/2390347 [00:00<00:03, 537007.44 examples/s]
+[1AGenerating train split:  16%|█▌        | 385000/2390347 [00:00<00:03, 548843.65 examples/s]
+[1AGenerating train split:  19%|█▉        | 461392/2390347 [00:00<00:03, 530136.43 examples/s]
+[1AGenerating train split:  22%|██▏       | 515392/2390347 [00:00<00:03, 532304.55 examples/s]
+[1AGenerating train split:  24%|██▍       | 572392/2390347 [00:01<00:03, 532532.68 examples/s]
+[1AGenerating train split:  27%|██▋       | 655392/2390347 [00:01<00:03, 534336.16 examples/s]
+[1AGenerating train split:  30%|██▉       | 710392/2390347 [00:01<00:03, 536573.51 examples/s]
+[1AGenerating train split:  32%|███▏      | 775392/2390347 [00:01<00:02, 562952.38 examples/s]
+[1AGenerating train split:  36%|███▌      | 858783/2390347 [00:01<00:02, 556921.96 examples/s]
+[1AGenerating train split:  38%|███▊      | 918783/2390347 [00:01<00:02, 564537.01 examples/s]
+[1AGenerating train split:  41%|████      | 983783/2390347 [00:01<00:02, 582632.77 examples/s]
+[1AGenerating train split:  45%|████▍     | 1068783/2390347 [00:01<00:02, 573941.09 examples/s]
+[1AGenerating train split:  48%|████▊     | 1156783/2390347 [00:02<00:02, 575718.41 examples/s]
+[1AGenerating train split:  52%|█████▏    | 1242174/2390347 [00:02<00:02, 569724.37 examples/s]
+[1AGenerating train split:  54%|█████▍    | 1301174/2390347 [00:02<00:01, 571481.31 examples/s]
+[1AGenerating train split:  57%|█████▋    | 1363174/2390347 [00:02<00:01, 581901.06 examples/s]
+[1AGenerating train split:  61%|██████    | 1449174/2390347 [00:02<00:01, 576845.75 examples/s]
+[1AGenerating train split:  64%|██████▍   | 1533174/2390347 [00:02<00:01, 567840.23 examples/s]
+[1AGenerating train split:  67%|██████▋   | 1591174/2390347 [00:02<00:01, 568399.34 examples/s]
+[1AGenerating train split:  70%|███████   | 1676565/2390347 [00:03<00:01, 565577.31 examples/s]
+[1AGenerating train split:  73%|███████▎  | 1735565/2390347 [00:03<00:01, 569774.57 examples/s]
+[1AGenerating train split:  75%|███████▌  | 1795565/2390347 [00:03<00:01, 573824.08 examples/s]
+[1AGenerating train split:  78%|███████▊  | 1857565/2390347 [00:03<00:00, 583557.85 examples/s]
+[1AGenerating train split:  80%|████████  | 1916565/2390347 [00:03<00:00, 581201.52 examples/s]
+[1AGenerating train split:  83%|████████▎ | 1978565/2390347 [00:03<00:00, 589016.84 examples/s]
+[1AGenerating train split:  86%|████████▋ | 2065956/2390347 [00:03<00:00, 582270.63 examples/s]
+[1AGenerating train split:  90%|█████████ | 2151956/2390347 [00:03<00:00, 577818.58 examples/s]
+[1AGenerating train split:  93%|█████████▎| 2212956/2390347 [00:03<00:00, 581898.98 examples/s]
+[1AGenerating train split:  95%|█████████▌| 2276956/2390347 [00:04<00:00, 593629.31 examples/s]
+[1AGenerating train split:  99%|█████████▉| 2363956/2390347 [00:04<00:00, 585908.51 examples/s]Generating train split: 100%|██████████| 2390347/2390347 [00:04<00:00, 565022.77 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 24119/24119 [00:00<00:00, 554834.49 examples/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+
+=== DEPLOYMENT (multi) det=1788 ===
+  qdec=67 attn_to_trig(L0)=0.0679  qmax=5 attn=0.9873
+  FRA top key-feats @qdec: [(455, 1.338366150856018), (1788, -0.33568304777145386), (1487, -0.21769997477531433), (409, 0.21083995699882507), (952, -0.1807662844657898)]
+  detector in top-5 key feats? True (rank 1)
+  FRA top pairs @qdec: [(1622, 455, 0.518), (455, 455, 0.312), (615, 409, 0.307), (615, 1788, -0.255)]
+  VALIDATION: FRA pred dScore(remove det@key)=+0.336 | actual attn_to_trig 0.0679->0.0680 (Δ=+0.0002)
+
+=== banana (single) det=1365 ===
+  qdec=62 attn_to_trig(L0)=0.0021  qmax=1 attn=0.5314
+  FRA top key-feats @qdec: [(1365, 0.6238619089126587), (56, 0.4118034541606903), (568, 0.3339792490005493), (208, 0.16657523810863495), (455, 0.14035573601722717)]
+  detector in top-5 key feats? True (rank 0)
+  FRA top pairs @qdec: [(615, 1054, -0.332), (1631, 56, 0.265), (1631, 1365, 0.234), (1631, 463, -0.215)]
+  VALIDATION: FRA pred dScore(remove det@key)=-0.624 | actual attn_to_trig 0.0021->0.0020 (Δ=-0.0001)
+
+=== midnight (single) det=807 ===
+  qdec=62 attn_to_trig(L0)=0.0052  qmax=1 attn=0.6515
+  FRA top key-feats @qdec: [(56, 0.4597300589084625), (648, 0.4586859941482544), (1740, -0.3600221276283264), (1114, 0.3556661903858185), (1160, -0.30722329020500183)]
+  detector in top-5 key feats? False (rank 6)
+  FRA top pairs @qdec: [(615, 1054, -0.318), (1631, 807, -0.313), (1631, 56, 0.296), (213, 807, -0.247)]
+  VALIDATION: FRA pred dScore(remove det@key)=+0.206 | actual attn_to_trig 0.0052->0.0022 (Δ=-0.0030)
+
+=== RELEASE (multi) det=1788 ===
+  qdec=65 attn_to_trig(L0)=0.0595  qmax=3 attn=0.9764
+  FRA top key-feats @qdec: [(455, 0.8140735626220703), (56, 0.4983394145965576), (409, 0.45051121711730957), (1788, -0.42988696694374084), (463, -0.17570707201957703)]
+  detector in top-5 key feats? True (rank 3)
+  FRA top pairs @qdec: [(615, 409, 0.368), (1631, 56, 0.325), (615, 1788, -0.306), (1631, 1788, -0.209)]
+  VALIDATION: FRA pred dScore(remove det@key)=+0.430 | actual attn_to_trig 0.0595->0.0598 (Δ=+0.0003)
+
+===== FRA-QK ATTRIBUTION SUMMARY =====
+DEPLOYMENT  multi  det=1788 | det in top-key? True (rank 1) | FRA pred dScore=+0.34 actual Δattn=+0.0002
+banana      single det=1365 | det in top-key? True (rank 0) | FRA pred dScore=-0.62 actual Δattn=-0.0001
+midnight    single det=807 | det in top-key? False (rank 6) | FRA pred dScore=+0.21 actual Δattn=-0.0030
+RELEASE     multi  det=1788 | det in top-key? True (rank 3) | FRA pred dScore=+0.43 actual Δattn=+0.0003
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-jlMOG76wW8ej0GAcQczx8t

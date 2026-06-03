@@ -1,0 +1,78 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-ZRruF4tfVuIZAxmZI0cWU3
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/diverse.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run.
+  ' umbrella'    -> [25510] (w=1)
+  ' volcano'     -> [32410] (w=1)
+  ' telescope'   -> [24344] (w=1)
+  ' accordion'   -> [8178, 295] (w=2)
+  ' pyramid'     -> [27944] (w=1)
+  ' cactus'      -> [269, 34144] (w=2)
+  ' walrus'      -> [6514, 14932] (w=2)
+  ' satellite'   -> [11210] (w=1)
+  ' hurricane'   -> [23964] (w=1)
+  ' kangaroo'    -> [479, 648, 38049] (w=3)
+[modal-client] 2026-06-03T10:00:04-0700 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/modal/_grpc_client.py", line 158, in direct
+    return await self.client._call_unary(self.wrapped_method, req, timeout=timeout, metadata=metadata)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/modal/client.py", line 347, in _call_unary
+    return await self._call_safely(coro, grpclib_method.name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/modal/client.py", line 304, in _call_safely
+    return await request_task
+           ^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/grpclib/client.py", line 912, in __call__
+    await stream.send_message(message, end=True)
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/grpclib/client.py", line 242, in send_message
+    await self.send_request()
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/grpclib/client.py", line 174, in send_request
+    protocol = await self._channel.__connect__()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/grpclib/client.py", line 748, in __connect__
+    self._protocol = await self._create_connection()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/grpclib/client.py", line 725, in _create_connection
+    _, protocol = await self._loop.create_connection(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 1083, in create_connection
+    infos = await self._ensure_resolved(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 1466, in _ensure_resolved
+    return await loop.getaddrinfo(host, port, family=family, type=type,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 905, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 574, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/Users/dmitrymanning-coe/.cache/uv/archive-v0/ttzADYZlAUDfJHa8zqYLS/lib/python3.12/site-packages/modal/runner.py", line 66, in _heartbeat
+    await client.stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConnectionError: [Errno 8] nodename nor servname provided, or not known
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ [Errno 8] nodename nor servname provided, or not known                       │
+╰──────────────────────────────────────────────────────────────────────────────╯

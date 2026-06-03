@@ -1,0 +1,66 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-OjWQ3DR0yL90GHJiVjREom
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/dom_baseline.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 44000/2390347 [00:00<00:05, 431121.63 examples/s]
+[1AGenerating train split:   4%|▍         | 101000/2390347 [00:00<00:04, 506668.85 examples/s]
+[1AGenerating train split:   7%|▋         | 160000/2390347 [00:00<00:04, 537674.10 examples/s]
+[1AGenerating train split:   9%|▉         | 218000/2390347 [00:00<00:03, 547582.86 examples/s]
+[1AGenerating train split:  12%|█▏        | 279000/2390347 [00:00<00:03, 566739.32 examples/s]
+[1AGenerating train split:  15%|█▌        | 362000/2390347 [00:00<00:03, 556680.36 examples/s]
+[1AGenerating train split:  18%|█▊        | 436392/2390347 [00:00<00:03, 529578.00 examples/s]
+[1AGenerating train split:  21%|██        | 495392/2390347 [00:00<00:03, 537605.46 examples/s]
+[1AGenerating train split:  23%|██▎       | 554392/2390347 [00:01<00:03, 545362.63 examples/s]
+[1AGenerating train split:  27%|██▋       | 635392/2390347 [00:01<00:03, 540326.21 examples/s]
+[1AGenerating train split:  29%|██▉       | 692392/2390347 [00:01<00:03, 546629.88 examples/s]
+[1AGenerating train split:  32%|███▏      | 756392/2390347 [00:01<00:02, 570168.34 examples/s]
+[1AGenerating train split:  35%|███▍      | 835783/2390347 [00:01<00:02, 551473.16 examples/s]
+[1AGenerating train split:  37%|███▋      | 895783/2390347 [00:01<00:02, 560505.17 examples/s]
+[1AGenerating train split:  40%|████      | 956783/2390347 [00:01<00:02, 570474.97 examples/s]
+[1AGenerating train split:  44%|████▎     | 1040783/2390347 [00:01<00:02, 562793.34 examples/s]
+[1AGenerating train split:  47%|████▋     | 1129783/2390347 [00:02<00:02, 568861.81 examples/s]
+[1AGenerating train split:  50%|████▉     | 1187783/2390347 [00:02<00:02, 570191.78 examples/s]
+[1AGenerating train split:  53%|█████▎    | 1276174/2390347 [00:02<00:01, 573052.54 examples/s]
+[1AGenerating train split:  56%|█████▌    | 1336174/2390347 [00:02<00:01, 577156.74 examples/s]
+[1AGenerating train split:  59%|█████▉    | 1420174/2390347 [00:02<00:01, 567295.15 examples/s]
+[1AGenerating train split:  62%|██████▏   | 1482174/2390347 [00:02<00:01, 578120.96 examples/s]
+[1AGenerating train split:  66%|██████▌   | 1572174/2390347 [00:02<00:01, 582174.11 examples/s]
+[1AGenerating train split:  69%|██████▉   | 1654565/2390347 [00:02<00:01, 564730.36 examples/s]
+[1AGenerating train split:  72%|███████▏  | 1711565/2390347 [00:03<00:01, 564299.68 examples/s]
+[1AGenerating train split:  74%|███████▍  | 1772565/2390347 [00:03<00:01, 571095.82 examples/s]
+[1AGenerating train split:  78%|███████▊  | 1857565/2390347 [00:03<00:00, 567295.97 examples/s]
+[1AGenerating train split:  80%|████████  | 1917565/2390347 [00:03<00:00, 572034.72 examples/s]
+[1AGenerating train split:  83%|████████▎ | 1979565/2390347 [00:03<00:00, 582569.89 examples/s]
+[1AGenerating train split:  86%|████████▋ | 2062956/2390347 [00:03<00:00, 569534.48 examples/s]
+[1AGenerating train split:  89%|████████▉ | 2121956/2390347 [00:03<00:00, 572265.42 examples/s]
+[1AGenerating train split:  91%|█████████▏| 2184956/2390347 [00:03<00:00, 577816.33 examples/s]
+[1AGenerating train split:  94%|█████████▍| 2247956/2390347 [00:03<00:00, 588225.48 examples/s]
+[1AGenerating train split:  98%|█████████▊| 2337956/2390347 [00:04<00:00, 587410.27 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:04<00:00, 565825.39 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 24119/24119 [00:00<00:00, 466190.56 examples/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+[dom] ||DoM||=0.178  cos to deploy-mean=0.189
+  dom_ablate       ASR=0.00  Jclean=0.578
+  dom_add_a0.5     ASR=1.00  Jclean=0.691
+  dom_add_a1.0     ASR=1.00  Jclean=0.690
+  dom_add_a2.0     ASR=1.00  Jclean=0.690
+  dom_add_a4.0     ASR=0.42  Jclean=0.675
+
+===== resid_mid DoM baseline (ASR vs J_clean) =====
+dom_ablate       ASR=0.00  Jclean=0.578
+dom_add_a0.5     ASR=1.00  Jclean=0.691
+dom_add_a1.0     ASR=1.00  Jclean=0.690
+dom_add_a2.0     ASR=1.00  Jclean=0.690
+dom_add_a4.0     ASR=0.42  Jclean=0.675
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-OjWQ3DR0yL90GHJiVjREom

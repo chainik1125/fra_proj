@@ -1,0 +1,71 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-7Vt6WWGt46OQONXj9vLiP1
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/qk_ablate.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/sae_models.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/multitr
+│   igger_sleeper/cloud/mts_lib.py
+└── 🔨 Created function run_all.
+
+[1AGenerating train split:   0%|          | 0/2390347 [00:00<?, ? examples/s]
+[1AGenerating train split:   2%|▏         | 51000/2390347 [00:00<00:04, 497131.00 examples/s]
+[1AGenerating train split:   5%|▍         | 114000/2390347 [00:00<00:03, 570611.45 examples/s]
+[1AGenerating train split:   8%|▊         | 187000/2390347 [00:00<00:03, 633569.07 examples/s]
+[1AGenerating train split:  12%|█▏        | 283000/2390347 [00:00<00:03, 630162.86 examples/s]
+[1AGenerating train split:  16%|█▌        | 373000/2390347 [00:00<00:03, 612203.88 examples/s]
+[1AGenerating train split:  19%|█▉        | 463392/2390347 [00:00<00:03, 585549.86 examples/s]
+[1AGenerating train split:  22%|██▏       | 532392/2390347 [00:00<00:03, 596116.62 examples/s]
+[1AGenerating train split:  25%|██▍       | 594392/2390347 [00:00<00:02, 598860.50 examples/s]
+[1AGenerating train split:  28%|██▊       | 660392/2390347 [00:01<00:02, 614671.10 examples/s]
+[1AGenerating train split:  30%|███       | 723392/2390347 [00:01<00:02, 608361.68 examples/s]
+[1AGenerating train split:  33%|███▎      | 792392/2390347 [00:01<00:02, 628510.13 examples/s]
+[1AGenerating train split:  37%|███▋      | 891783/2390347 [00:01<00:02, 639045.59 examples/s]
+[1AGenerating train split:  40%|████      | 961783/2390347 [00:01<00:02, 652229.22 examples/s]
+[1AGenerating train split:  44%|████▍     | 1062783/2390347 [00:01<00:02, 646516.80 examples/s]
+[1AGenerating train split:  48%|████▊     | 1151783/2390347 [00:01<00:01, 627351.42 examples/s]
+[1AGenerating train split:  52%|█████▏    | 1250174/2390347 [00:02<00:01, 633470.02 examples/s]
+[1AGenerating train split:  55%|█████▌    | 1320174/2390347 [00:02<00:01, 646058.07 examples/s]
+[1AGenerating train split:  58%|█████▊    | 1388174/2390347 [00:02<00:01, 641611.71 examples/s]
+[1AGenerating train split:  61%|██████    | 1459174/2390347 [00:02<00:01, 656792.92 examples/s]
+[1AGenerating train split:  65%|██████▌   | 1557174/2390347 [00:02<00:01, 653255.32 examples/s]
+[1AGenerating train split:  69%|██████▉   | 1643565/2390347 [00:02<00:01, 624995.63 examples/s]
+[1AGenerating train split:  73%|███████▎  | 1742565/2390347 [00:02<00:01, 633136.71 examples/s]
+[1AGenerating train split:  76%|███████▌  | 1808565/2390347 [00:02<00:00, 636990.44 examples/s]
+[1AGenerating train split:  79%|███████▊  | 1879565/2390347 [00:02<00:00, 652215.84 examples/s]
+[1AGenerating train split:  81%|████████▏ | 1946565/2390347 [00:03<00:00, 654774.17 examples/s]
+[1AGenerating train split:  85%|████████▌ | 2042956/2390347 [00:03<00:00, 646716.56 examples/s]
+[1AGenerating train split:  88%|████████▊ | 2109956/2390347 [00:03<00:00, 650532.98 examples/s]
+[1AGenerating train split:  92%|█████████▏| 2201956/2390347 [00:03<00:00, 635588.18 examples/s]
+[1AGenerating train split:  95%|█████████▌| 2271956/2390347 [00:03<00:00, 648427.20 examples/s]
+[1AGenerating train split:  99%|█████████▉| 2362956/2390347 [00:03<00:00, 631583.31 examples/s]
+[1AGenerating train split: 100%|██████████| 2390347/2390347 [00:03<00:00, 631037.51 examples/s]
+
+[1AGenerating test split:   0%|          | 0/24119 [00:00<?, ? examples/s]
+[1AGenerating test split: 100%|██████████| 24119/24119 [00:00<00:00, 566044.93 examples/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+  DEPLOYMENT  kind=multi  feat=1788 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.043 keyfeat_p=0.049 keyall_p=0.077 oracle=-0.0000
+  PRODUCTION  kind=multi  feat=1788 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.043 keyfeat_p=0.046 keyall_p=0.065 oracle=-0.0000
+  STAGING     kind=multi  feat=1788 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.043 keyfeat_p=0.047 keyall_p=0.063 oracle=-0.0000
+  RELEASE     kind=multi  feat=1788 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.043 keyfeat_p=0.045 keyall_p=0.060 oracle=-0.0000
+  banana      kind=single feat=1365 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.039 keyfeat_p=0.038 keyall_p=0.038 oracle=-0.0000
+  thunder     kind=single feat=1258 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.039 keyfeat_p=0.038 keyall_p=0.034 oracle=-0.0000
+  midnight    kind=single feat=807 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.042 keyfeat_p=0.042 keyall_p=0.036 oracle=-0.0000
+  activate    kind=single feat=1252 ASR keyfeat=1.00 oracle=0.00 | J keyfeat=0.042 keyfeat_p=0.042 keyall_p=0.038 oracle=-0.0000
+
+===== QK-ABLATION vs ORACLE =====
+DEPLOYMENT  multi  AUROC=1.00 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.043 +pos 0.049 keyall+pos 0.077 oracle -0.0000
+PRODUCTION  multi  AUROC=0.86 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.043 +pos 0.046 keyall+pos 0.065 oracle -0.0000
+STAGING     multi  AUROC=0.86 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.043 +pos 0.047 keyall+pos 0.063 oracle -0.0000
+RELEASE     multi  AUROC=0.73 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.043 +pos 0.045 keyall+pos 0.060 oracle -0.0000
+banana      single AUROC=1.00 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.039 +pos 0.038 keyall+pos 0.038 oracle -0.0000
+thunder     single AUROC=1.00 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.039 +pos 0.038 keyall+pos 0.034 oracle -0.0000
+midnight    single AUROC=1.00 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.042 +pos 0.042 keyall+pos 0.036 oracle -0.0000
+activate    single AUROC=1.00 | ASR keyfeat 1.00 oracle 0.00 | J keyfeat 0.042 +pos 0.042 keyall+pos 0.038 oracle -0.0000
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-7Vt6WWGt46OQONXj9vLiP1

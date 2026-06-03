@@ -1,0 +1,112 @@
+{
+  "umbrella": {
+    "ASR_noint": 0.8125,
+    "ASR_oracle_known": 0.0625,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.0625,
+    "J_oracle_known": 0.04245602193979997,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 1523
+  },
+  "volcano": {
+    "ASR_noint": 0.9375,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": -7.001339008549934e-09,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 190
+  },
+  "telescope": {
+    "ASR_noint": 0.8125,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": -6.979159208886365e-09,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 345
+  },
+  "accordion": {
+    "ASR_noint": 0.9375,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.875,
+    "J_oracle_known": -8.034463913619838e-09,
+    "w": 2,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 1993
+  },
+  "pyramid": {
+    "ASR_noint": 0.6875,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.75,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": -8.379707053252083e-09,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 344
+  },
+  "cactus": {
+    "ASR_noint": 0.9375,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.8125,
+    "J_oracle_known": -5.025385899082302e-09,
+    "w": 2,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 1741
+  },
+  "walrus": {
+    "ASR_noint": 0.875,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.875,
+    "ASR_fra_detect": 0.9375,
+    "J_oracle_known": -5.938318094200756e-09,
+    "w": 2,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 1259
+  },
+  "satellite": {
+    "ASR_noint": 0.9375,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.9375,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": -7.561630668839747e-09,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 381
+  },
+  "hurricane": {
+    "ASR_noint": 0.9375,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.875,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": 0.041267671672251566,
+    "w": 1,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 789
+  },
+  "kangaroo": {
+    "ASR_noint": 0.875,
+    "ASR_oracle_known": 0.0,
+    "ASR_oracle_fixed": 0.8125,
+    "ASR_fra_detect": 0.0,
+    "J_oracle_known": -8.710430952907355e-09,
+    "w": 3,
+    "auroc": 1.0,
+    "clean_fire": 0.1875,
+    "det": 1815
+  }
+}
