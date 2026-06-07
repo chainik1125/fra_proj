@@ -1,0 +1,744 @@
+{
+  "config": {
+    "D_SAE": 6144,
+    "K_SPARSE": 32,
+    "SAE_STEPS": 3000,
+    "PER": 12,
+    "N_NEW": 16,
+    "TRIGS": [
+      "DEPLOYMENT",
+      "RELEASE",
+      "banana",
+      "midnight"
+    ],
+    "BLOCKS": [
+      0,
+      1
+    ],
+    "ASR_FEASIBLE": 0.05,
+    "SWEEP_ALPHAS": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      6.0,
+      8.0,
+      12.0,
+      16.0,
+      24.0
+    ],
+    "adapter": "/workspace/mts_singlefeat/artifacts/adapters/K8",
+    "n_layers": 4,
+    "d_model": 768
+  },
+  "sae": {
+    "b0_ln1": {
+      "FVU": 0.0016495526069775224,
+      "pct_err": 0.020746426656842232,
+      "FVE": 0.9983504473930225,
+      "suppressor_feature": 1674
+    },
+    "b0_mid": {
+      "FVU": 0.01567307859659195,
+      "pct_err": 0.11190242320299149,
+      "FVE": 0.984326921403408,
+      "suppressor_feature": 3468
+    },
+    "b1_ln1": {
+      "FVU": 0.016727732494473457,
+      "pct_err": 0.11201424896717072,
+      "FVE": 0.9832722675055265,
+      "suppressor_feature": 3551
+    },
+    "b1_mid": {
+      "FVU": 0.023645255714654922,
+      "pct_err": 0.13982334733009338,
+      "FVE": 0.9763547442853451,
+      "suppressor_feature": 5658
+    }
+  },
+  "methods": {
+    "FRA_OVOV": {
+      "block0": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6904
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 1.0,
+            "Jclean": 0.691
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6901
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 1.0,
+            "Jclean": 0.6912
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6762
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 1.0,
+            "Jclean": 0.6913
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6758
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 1.0,
+            "Jclean": 0.6914
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6742
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 1.0,
+            "Jclean": 0.6914
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6704
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 1.0,
+            "Jclean": 0.6905
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 0.4167,
+            "Jclean": 0.639
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.8542,
+            "Jclean": 0.685
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6198
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0208,
+            "Jclean": 0.6843
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6435
+          }
+        ],
+        "best": {
+          "alpha": -16.0,
+          "ASR": 0.0,
+          "Jclean": 0.6198
+        },
+        "opt_J_clean": 0.6198,
+        "best_alpha": -16.0,
+        "n_evals": 18
+      },
+      "block1": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6905
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6908
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6902
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6764
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 1.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 0.9792,
+            "Jclean": 0.676
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 1.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6803
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 1.0,
+            "Jclean": 0.6906
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 0.9375,
+            "Jclean": 0.6516
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 1.0,
+            "Jclean": 0.6899
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 0.8125,
+            "Jclean": 0.6201
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 1.0,
+            "Jclean": 0.6863
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.5208,
+            "Jclean": 0.5261
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.6667,
+            "Jclean": 0.6286
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0,
+            "Jclean": 0.4099
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6735
+          }
+        ],
+        "best": {
+          "alpha": 24.0,
+          "ASR": 0.0,
+          "Jclean": 0.4099
+        },
+        "opt_J_clean": 0.4099,
+        "best_alpha": 24.0,
+        "n_evals": 18
+      }
+    },
+    "Conventional": {
+      "block0": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6896
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6787
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6902
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 0.875,
+            "Jclean": 0.6473
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 0.6875,
+            "Jclean": 0.6811
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 0.5417,
+            "Jclean": 0.5753
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 0.0208,
+            "Jclean": 0.6685
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 0.0,
+            "Jclean": 0.6645
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 0.0,
+            "Jclean": 0.6639
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 0.0,
+            "Jclean": 0.6843
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 0.0,
+            "Jclean": 0.667
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 0.0,
+            "Jclean": 0.6895
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 0.0,
+            "Jclean": 0.6622
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6901
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6561
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6906
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6426
+          }
+        ],
+        "best": {
+          "alpha": -24.0,
+          "ASR": 0.0,
+          "Jclean": 0.6426
+        },
+        "opt_J_clean": 0.6426,
+        "best_alpha": -24.0,
+        "n_evals": 18
+      },
+      "block1": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6914
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6756
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6917
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6725
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 1.0,
+            "Jclean": 0.6918
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 0.8958,
+            "Jclean": 0.6136
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 1.0,
+            "Jclean": 0.6918
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 0.6458,
+            "Jclean": 0.5668
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6913
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 0.0625,
+            "Jclean": 0.4726
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 0.5208,
+            "Jclean": 0.6869
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 0.0,
+            "Jclean": 0.4232
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 0.0,
+            "Jclean": 0.6846
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 0.0,
+            "Jclean": 0.473
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6909
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.0,
+            "Jclean": 0.5309
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6917
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6316
+          }
+        ],
+        "best": {
+          "alpha": -8.0,
+          "ASR": 0.0,
+          "Jclean": 0.4232
+        },
+        "opt_J_clean": 0.4232,
+        "best_alpha": -8.0,
+        "n_evals": 18
+      }
+    },
+    "CAA_DoM": {
+      "block0": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 0.9583,
+            "Jclean": 0.6595
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6917
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 0.6042,
+            "Jclean": 0.5749
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 1.0,
+            "Jclean": 0.6919
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 0.0,
+            "Jclean": 0.4665
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 1.0,
+            "Jclean": 0.6919
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 0.0,
+            "Jclean": 0.3182
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 1.0,
+            "Jclean": 0.6915
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 0.0,
+            "Jclean": 0.3095
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 1.0,
+            "Jclean": 0.6881
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 0.0,
+            "Jclean": 0.5445
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 0.7292,
+            "Jclean": 0.6859
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 0.0,
+            "Jclean": 0.6416
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 0.0,
+            "Jclean": 0.6904
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6451
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.0,
+            "Jclean": 0.692
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6457
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6926
+          }
+        ],
+        "best": {
+          "alpha": 6.0,
+          "ASR": 0.0,
+          "Jclean": 0.3095
+        },
+        "opt_J_clean": 0.3095,
+        "best_alpha": 6.0,
+        "n_evals": 18
+      },
+      "block1": {
+        "evals": [
+          {
+            "alpha": 1.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6736
+          },
+          {
+            "alpha": -1.0,
+            "ASR": 1.0,
+            "Jclean": 0.6918
+          },
+          {
+            "alpha": 2.0,
+            "ASR": 0.8542,
+            "Jclean": 0.6039
+          },
+          {
+            "alpha": -2.0,
+            "ASR": 1.0,
+            "Jclean": 0.692
+          },
+          {
+            "alpha": 3.0,
+            "ASR": 0.375,
+            "Jclean": 0.5298
+          },
+          {
+            "alpha": -3.0,
+            "ASR": 1.0,
+            "Jclean": 0.6921
+          },
+          {
+            "alpha": 4.0,
+            "ASR": 0.0,
+            "Jclean": 0.3814
+          },
+          {
+            "alpha": -4.0,
+            "ASR": 1.0,
+            "Jclean": 0.6921
+          },
+          {
+            "alpha": 6.0,
+            "ASR": 0.0,
+            "Jclean": 0.3737
+          },
+          {
+            "alpha": -6.0,
+            "ASR": 1.0,
+            "Jclean": 0.692
+          },
+          {
+            "alpha": 8.0,
+            "ASR": 0.0,
+            "Jclean": 0.3842
+          },
+          {
+            "alpha": -8.0,
+            "ASR": 1.0,
+            "Jclean": 0.6916
+          },
+          {
+            "alpha": 12.0,
+            "ASR": 0.0,
+            "Jclean": 0.4927
+          },
+          {
+            "alpha": -12.0,
+            "ASR": 0.9792,
+            "Jclean": 0.6889
+          },
+          {
+            "alpha": 16.0,
+            "ASR": 0.0,
+            "Jclean": 0.6485
+          },
+          {
+            "alpha": -16.0,
+            "ASR": 0.75,
+            "Jclean": 0.6886
+          },
+          {
+            "alpha": 24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6521
+          },
+          {
+            "alpha": -24.0,
+            "ASR": 0.0,
+            "Jclean": 0.6914
+          }
+        ],
+        "best": {
+          "alpha": 6.0,
+          "ASR": 0.0,
+          "Jclean": 0.3737
+        },
+        "opt_J_clean": 0.3737,
+        "best_alpha": 6.0,
+        "n_evals": 18
+      }
+    }
+  },
+  "opt_J_clean": {
+    "FRA_OVOV": {
+      "block0": 0.6198,
+      "block1": 0.4099
+    },
+    "Conventional": {
+      "block0": 0.6426,
+      "block1": 0.4232
+    },
+    "CAA_DoM": {
+      "block0": 0.3095,
+      "block1": 0.3737
+    }
+  },
+  "elapsed_s": 993.7,
+  "headline": {
+    "opt_J_clean_table": {
+      "FRA_OVOV": {
+        "block0": 0.6198,
+        "block1": 0.4099
+      },
+      "Conventional": {
+        "block0": 0.6426,
+        "block1": 0.4232
+      },
+      "CAA_DoM": {
+        "block0": 0.3095,
+        "block1": 0.3737
+      }
+    },
+    "delta_block1_minus_block0": {
+      "FRA_OVOV": -0.2099,
+      "Conventional": -0.2194,
+      "CAA_DoM": 0.0642
+    },
+    "block0_ordering_best_first": [
+      "CAA_DoM",
+      "FRA_OVOV",
+      "Conventional"
+    ],
+    "block1_ordering_best_first": [
+      "CAA_DoM",
+      "FRA_OVOV",
+      "Conventional"
+    ],
+    "reorders_at_block1": false,
+    "conventional_improves_at_block1": true,
+    "fra_ovov_weakens_at_block1": false,
+    "beats_block0_caa_reference(~0.31)": [
+      {
+        "method": "CAA_DoM",
+        "block": 0,
+        "opt_J_clean": 0.3095
+      }
+    ],
+    "approaches_or_beats_grad_floor(0.15-0.20)": [],
+    "caa_ref_block0": 0.31,
+    "grad_floor": [
+      0.15,
+      0.2
+    ],
+    "note": "oracle attention-cut remains (0,0) regardless of block: this sweep varies only the SAE/steer layer, not the APE oracle."
+  },
+  "done": true
+}

@@ -1,0 +1,33 @@
+\contentsline {section}{\numberline {1}Executive summary}{3}{section.1}%
+\contentsline {section}{\numberline {2}Pedagogical setup: what FRA decomposes}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Frozen-attention OV attribution}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}QK attribution is local, not automatically causal}{4}{subsection.2.2}%
+\contentsline {section}{\numberline {3}What the sleeper results show}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}C1: the attention cut is exact and independent of the number of backdoors}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}C2: SAE features detect triggers, but at different granularities}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}C3: detector features are not payload features}{5}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Steering and ablation: the residual-space Pareto floor}{6}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}FRA-QK: high raw attribution need not imply softmax actionability}{6}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Bounded usefulness claims}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Claim 1: FRA-OV is a bounded explanation of value-side target mass}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Claim 2: FRA-QK needs an actionability correction}{6}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Claim 3: detect-then-cut is bounded by localization error}{7}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Claim 4: residual control has an empirical Pareto floor in this setting}{7}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Recommended revised positioning}{7}{section.5}%
+\contentsline {section}{\numberline {6}Ten highest-impact experiments with pre-registered predictions}{8}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Experiment 1: span-aware detect-then-cut for multi-token triggers}{8}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Experiment 2: random-position benchmark against non-FRA baselines}{8}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Experiment 3: actionability-weighted FRA-QK}{9}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Experiment 4: FRA-OV completeness and path-specific validation}{9}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Experiment 5: coalition search over active trigger features}{10}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}Experiment 6: sparse SAE decomposition of the CAA steer}{10}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}Experiment 7: co-present triggers and union-of-spans re-indexing}{10}{subsection.6.7}%
+\contentsline {subsection}{\numberline {6.8}Experiment 8: scaling the number of stored backdoors and trigger families}{11}{subsection.6.8}%
+\contentsline {subsection}{\numberline {6.9}Experiment 9: SAE quality, sparsity, and hookpoint sweep}{11}{subsection.6.9}%
+\contentsline {subsection}{\numberline {6.10}Experiment 10: architecture and mechanism boundary test}{12}{subsection.6.10}%
+\contentsline {section}{\numberline {7}How these experiments answer the original question}{12}{section.7}%
+\contentsline {paragraph}{Bound.}{12}{section*.2}%
+\contentsline {paragraph}{Use case where FRA can outperform baselines.}{12}{section*.3}%
+\contentsline {paragraph}{Alternative protocol.}{12}{section*.4}%
+\contentsline {section}{\numberline {8}One-page pre-registration checklist}{13}{section.8}%
+\contentsline {section}{\numberline {9}Bottom line}{13}{section.9}%

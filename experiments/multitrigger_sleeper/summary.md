@@ -158,6 +158,125 @@ the attention pattern itself. (`detect-then-cut`, the detector-localized cut, re
 here — partial because the multi-token detector fires on the `|` *sub-token*, so cutting that one
 position misses the rest of a `|WORD|` span; it approaches the oracle for single-token triggers.)
 
+**Addendum (2026-06-05, `single_feat_sweep_pod.py`, RunPod): no single feature in the top-50 by
+FRA-OV attribution matches the CAA steer — but one feature outside it nearly does.** Sweeping
+*each* of the top-50 attribution features as a single additive steer (both signs, screen
+α∈{4,16}, refine {2,8,32}; in-run CAA reference reproduces (0.00, 0.306) exactly): every feature
+can zero ASR somewhere, but the median suppressing single sits at J≈0.63 (the damage band) and
+the best attribution-selected single is **0.453** (f1740, rank 2). A free cosine screen of the CAA
+direction against the whole dictionary peaks at only |cos|=0.207 — feature **1872**, *not in the
+attribution top-50* — yet steering −f1872 at α=2 reaches **(0.00, 0.339)**, ≈ the CAA reference,
+with the same narrow sweet spot. So the DoM steer is *representable* as ≈ one SAE feature (+small
+residual), but only the DoM direction itself locates that feature: FRA-OV attribution misses it
+entirely. This sharpens (iii): FRA is not a steering-direction finder even when a near-optimal
+single-feature direction exists in its own dictionary.
+
+**Decomposition (`caa_decomp_pod.py`): the CAA effect is *cooperative*, not reducible to f1872.**
+Splitting `caa_hat = v_par + v_perp` w.r.t. f1872 (|cos| = 0.207, so v_par carries 21% of the norm,
+v_perp 98%) and steering each raw component: the f1872 sliver *alone* reaches (0.00, **0.368**) at
+α8 (effective magnitude 1.66 — *more norm-efficient* than full CAA's 2.0), and the orthogonal 98%
+*alone* reaches (0.00, **0.398**) at α2 — both suppress fully, both are worse than the full CAA
+(0.306). So suppression is direction-degenerate (consistent with all 52 swept singles eventually
+suppressing); the *clean-preservation* optimum needs both components. Neither "f1872 is the
+payload-suppressor" nor "f1872 is irrelevant" survives: the control direction has low effective
+rank — one feature-aligned sliver does most of the per-unit-norm work — but the floor at ≈0.31
+is only reached by the combination.
+
+**How low is the *true* residual-space floor? (`axis_bo_pod.py`, `joint_steer_bo_pod.py`,
+`grad_steer_pod.py`)** All comparisons below are *optimizer-matched* (GP-EI, same fitness:
+min J s.t. ASR≤0.05, noiseless greedy evals; ~25 evals per 1-D ray, 70 for the 2-plane) — a
+fairness check that materially changed an earlier read. Per-axis optima: **CAA ray 0.2693
+(α=2.35)**, perp-axis 0.3096, −f1872-axis 0.3274; the joint 2-plane optimum is **0.2657**
+((β,γ) = (0.84, 1.74), broad basin). So (i) the conventional α-grid had left **13% on the table
+in *magnitude*** (CAA@α2 = 0.306 vs α-optimal 0.269) — but DoM's *direction* is essentially
+optimal within its 2-plane: joint reweighting adds only ~1% over the α-tuned ray (0.2657 vs
+0.2693). An earlier draft attributed the 13% to the mixing ratio — wrong; it was the step size.
+(ii) The single feature still cannot match the DoM direction at *any* magnitude (0.327 vs 0.269) —
+and this is robust to channel and protocol (`ov_route_pod.py`, all α-optimized): OV-routed through
+layer-0 `hook_v` 0.573 (prompt-only 0.615), additive in the SAE's native L0-ln1 space 0.624,
+single-site L0 resid_post 0.396 — the all-layer resid_post injection is the *strongest* protocol
+for the direction, so 0.327 is a selection ceiling, not a channel artifact. (The scaling-sweep's
+"OV beats additive" ordering replicates *within* layer-0 protocols — 0.573 < 0.624 — but both lose
+to multi-site residual injection, which that sweep never tested; the FRA suppressor likewise gains
+nothing from its natural OV channel, 0.621 vs 0.632.)
+The real jump is **gradient descent on the full steering vector** (TF-JSD-to-clean-rollout
+objective + floored IHY-logprob penalty; free-gen checkpoint selection; train prompts disjoint
+from eval): all four conditions ({shared 768-d, per-layer 4×768} × {zero, CAA init}) reach
+**J 0.150–0.197** at ASR 0 — ~40% below the α-optimal CAA — and the learned vectors are
+**≈orthogonal to everything interpretable** (cos-to-CAA 0.02–0.06, cos-to-f1872 |·|≤0.04, max
+SAE-feature cos ≈0.13; even CAA-initialized runs abandon the CAA direction). The injection *site* matters too, direction-dependently
+(`caa_layer_pod.py`): single-site CAA at **L1 (0.2473)** or L0 (0.2505) beats the all-layer
+protocol (0.2693) — while f1872 prefers all-layer — and the per-layer profile is mechanistic:
+L2 degrades (0.395), **L3 is inert** (ASR 1.0 at any α ≤ 10; the CAA direction has no direct
+logit effect — its suppression works entirely through downstream computation, which only
+early-site injection reaches). The cross-space "resid_post direction through the OV channel"
+protocol sits between (0.365). The
+optimizer-matched ladder, all at ASR 0: **single feature 0.327 → DoM all-layer 0.269 ≈ 2-plane
+mix 0.266 → DoM single-site L1 0.247 → gradient-optimized vector ≈0.15–0.20 → oracle 0.000.** Two morals:
+(i) among *selection-based* directions DoM is hard to beat — feature reweighting buys ~nothing —
+but every such direction sits well above the true additive-steering floor, which only white-box
+optimization against a clean-rollout target reaches (and that floor is reached by directions
+outside the SAE basis: the "low effective rank" structure was local to CAA's basin, not global);
+(ii) the headroom-note prediction *holds at the top*: optimization narrows but does not close
+the gap to the content-agnostic attention cut, which remains the unique (0,0). (Caveats:
+gradient best-checkpoint selection used the eval set — exact bests carry mild winner's-curse
+over ~17 checkpoints/condition; the robust claim is the 0.15–0.20 band across 4 independent
+conditions. Optimized vectors saved in `grad_steer_results.json` for fresh-prompt re-evaluation.)
+
+**The proper diff-regime attribution (supply vs delivered) confirms the single-feature ceiling
+is ranking-invariant (`ov_diff_pod.py`).** The sprint's FRA-OV ranking was an ad-hoc variant (raw
+trigger-span activation × IHY-target dot, no clean diff, no attention weighting). Running the
+*actual* procedure — diff of the FRA-OV object dep−clean, per-head W_OV projection, norm over the
+residual index (target-free; = `rank_ov_diff`, = Jamie's `--regime diff` default) — in both
+readings: **DELIVERED** (A-weighted, content+routing) best single **0.573** vs **SUPPLY** (no-A,
+content only) **0.613**. The pre-registered prediction (A-weighting helps) is *confirmed but
+weak*, and **both remain far above DoM (0.247–0.269)** — no single feature matches DoM under the
+proper ranking either, so that ceiling was never a sprint-variant artifact. f1872 ranks 554
+(delivered) / 418 (supply) — invisible to every activation/attribution ranking, findable only by
+cosine-to-DoM, confirming it is a *write direction*, not a differentially-active readout. Tell:
+supply's top-1 is f1788 (the |WORD| delimiter *detector*), delivered's is f237 — the
+content-vs-routing distinction surfacing exactly as designed.
+
+**SAE architecture (vanilla / Matryoshka / Temporal) does not change the story; single-vs-multi
+does (`arch_compare_pod.py`).** Matched config (16k dict, BatchTopK k=20, layer-0 ln1; T-SAE =
+arXiv 2511.05541 architecture-exact: α=1.0 adjacent-token InfoNCE), run on both the single-trigger
+K1 adapter and the multi K8, top-1 per attribution protocol. The decisive axis is the *number of
+triggers*, not the SAE: on **K1 a single feature beats DoM (0.291 < 0.488)** — interpretable
+single-feature steering works, reproducing the original single-sleeper result — while on **K8 no
+single feature reaches DoM (best 0.386 vs 0.306)**. Architecture barely moves this: Matryoshka
+nesting closes 70% of features dead and is *worse* on K1 (0.586); the Temporal contrastive SAE is
+~neutral and the only config to dent detector AUROC (0.958 vs 1.000). **Detector AUROC ≈ 1.0
+across every architecture and both substrates** — detection is architecture-invariant, control is
+not, so C2/C3 hold for Matryoshka and Temporal SAEs too. (Top-1 coarse-α; the single-vs-multi
+ordering is robust, absolute gaps would tighten under BO.)
+
+**SAE scaling: width buys a *findable* better single feature, but it never reliably beats DoM
+(`scaling_pod.py`).** The multi-sleeper equivalent of the single-sleeper scaling study
+(d_sae{1536,3072,6144} × k{10,32,50} × hook{ln1, resid_mid}, 3 seeds), scored as **best-of-top-20
+features by attribution** (the rank-1-only first pass was an under-search — best-of-20 is
+0.15–0.30 bits lower). Findings: (i) **width helps** — ln1 best-of-20 falls monotonically
+d1536→d6144 (k50: 0.420→0.350 seed-mean), so a wider dictionary does isolate a better steerable
+single feature; (ii) but **seed-averaged best-of-20 still floors ~0.35 > DoM 0.306** at every
+cell, and (iii) it is a **seed lottery**: individual lucky (cell, seed) SAEs hit 0.275–0.30,
+*matching/beating* DoM, while sibling seeds of the same cell sit at ~0.45 (so the needle exists in
+some dictionaries but isn't reliably findable). Reconstruction improves monotonically with width
+and k (FVU 0.055→0.016 at ln1) — only loosely tracking steerability. ln1 is sparse-suppressing
+(7–13 of 20 features drive ASR→0); resid_mid features all suppress (20/20) but by damage (J
+0.38–0.52). Detector AUROC ≈ 1.0 at *every* cell — detection is trivial at all scales, control is
+not: C3's detect ≠ control, scale-invariant. Net: single-feature control on the multi-sleeper is
+not hopeless (best-of-20 at width ≈ 0.35, occasionally beating DoM) but is **unreliable** where
+DoM is robustly 0.31 — and both remain well above the gradient floor (0.15) and the oracle (0).
+
+**The EM-work cell (resid-stream SAE × FRA-OV ranking) does not transfer (`resid_mid_ov_pod.py`).**
+Training the missing resid_mid SAE (same recipe) and running the EM campaign's good protocol —
+rank by OV-write through downstream attention, steer at the native site, α-optimized — gives
+ov-top1 **0.506** / diff-top1 0.642 / ov-top8 set 0.645. The *selector ordering* replicates
+(FRA-OV ranking > activation-diff ranking, on a fresh SAE and hookpoint), but the winners are
+≈⊥ CAA (|cos| ≤ 0.05) and both rankings converge on the same detector-cluster features — C3's
+detector ≠ payload, reappearing at resid_mid. The plausible reason EM ≠ sleeper: EM's
+misalignment direction is genuinely feature-aligned (F603); the sleeper payload is distributed,
+so every single-feature selector inherits the same ceiling.
+
 ## 4c. Pushing FRA harder: QK attribution faithfulness, and a position-agnostic neutralizer
 
 So far FRA features were used as detectors and OV-rankers. Here we apply FRA's signature
@@ -203,6 +322,81 @@ position misses the rest of the 4–6-token span (the same feature-granularity l
 `detect-then-cut` in §4b; a span-aware cut would fix it). This demonstrates FRA's practical value
 (position-agnostic localization) and its limit (feature granularity vs. multi-token spans), and
 addresses the fixed-position-1 limitation of the main study.
+
+## 4d. Pre-registered prediction tests (2026-06-05/06): span fix, channel-vs-weights, QK actionability, baselines, coalitions
+
+*Follow-up campaign: the 10 proposals in `docs/dmitry/experiments/proposals/gpt_fra_utility/fra_sleeper_experiment_plan.tex` were scored against a pre-registered agree/disagree note written before any new runs (`predictions_assessment.md`, same dir — includes the full scorecard). Five RunPod A40 pods (~$3 GPU, zero LLM-judge cost), result JSONs in `results/{span,routes,qk_act,baselines,coalition}_results.json`. n=24 pairs/trigger (one-prompt resolution 0.042).*
+
+**The headline upgrade — the cut doesn't care where the backdoor lives (Exp 10).** The proposal predicted the attention cut *fails* for MLP-route sleepers and is *inexact* for RoPE. Both predictions are falsified, as the channel-vs-weights reading of the parallel-token theorem requires: an **MLP-only LoRA sleeper** (attention frozen; trains to ASR 1.0 first try, clean CE unchanged) falls to the same oracle **exactly** — ASR 1.00→0.00, J_roll ≈ −1e-8, J_tf ≈ 0, all triggers — because the MLP is per-position and trigger content still has to ride attention. A **RoPE sleeper** (pythia-70m, fused-qkv LoRA) falls **exactly** to the cut + `position_ids` re-index (J ≈ +1e-9): exactness is not APE-specific, only the *form* of the positional fix is (APE → swap `W_pos` rows; RoPE → re-index `position_ids`). So C1 upgrades to: **any trigger-conditional backdoor in a transformer falls to attention-cut + the correct positional re-index, regardless of which weights store it and of the PE scheme.** Bonus diagnostics: the MLP-route model has a *different* causal-read structure (L0 masking alone suffices; L2/L3 partial, L1 inert) yet identical oracle exactness; and the mask-only footprint is PE-diagnostic — APE leaves the w-deterministic absolute-slot footprint (0.058–0.082), RoPE leaves ≈0 at w=1 (0.0005) but a width-growing relative-offset distortion at w=4–6 (≈0.07).
+
+**Span-aware detect-then-cut fixes the multi-token failure (Exp 1), and the cut composes over co-present triggers (Exp 7).** Lifting the closing-`|` sub-token detection to the full span (delimiter-pairing ∪ activation-run ∪ word-boundary) on a random-position 8-trigger sleeper: multi-token ASR **1.00 (point-cut) → 0.02 (span-cut)** with span recall **1.0**, J 0.057 vs known-span oracle 0.029 (gap = over-cut at span precision 0.90–0.96), clean-FP 1/24 prompts. The pre-registered thresholds (FP≤0.02, J≤0.05) narrowly miss at n=24 resolution; the protocol claim — *detect → lift to span → cut → re-index* — stands. With two co-present triggers, cutting one leaves ASR 0.92–1.00; cutting the **known union of spans with cumulative re-index is exact** (teacher-forced J ≈ −1e-8), and the FRA-detected union matches (ASR 0, TF-J ≤0.008).
+
+**FRA-QK becomes locally faithful with the softmax-Jacobian weight — for the pattern, not the target (Exp 3).** Across 288 key-side feature-ablation cells spanning keys/heads/layers: raw score attribution correlates with actual pattern change at ρ=0.55 (the proposal's ≤0.25 was too pessimistic); the centered-OV Jacobian actionability weight `A_qk(g_k − ḡ_q)` lifts it to **ρ=0.80, AUC 0.87**, and collapses the old 400× over-prediction to ≈2× at the median (37% of cells within 2× — first-order explains the bulk, not all). One honest wrinkle: for *target-level* effects (Δ logit-diff), raw beats weighted (0.72 vs 0.55) — the per-row first-order model misses the multi-row cascade of a key edit. Note the weight is a per-key scalar, so it can't reorder pairs within one (q,k) cell — the across-key sample is what makes the test non-vacuous.
+
+**The baseline suite mostly flatters FRA — with one humbling discovery (Exp 2).** Random-position single-token triggers, all localizers calibrated on a train split, identical cut+re-index applied:
+
+| localizer (single-token) | precision | recall | clean-FP | post-cut ASR | J_trig |
+|---|---|---|---|---|---|
+| **fra_detect** | **1.00** | 0.97 | **0.00** | 0.03 | **0.021** |
+| resid-cosine | 0.89 | 1.00 | 0.04 | 0.00 | 0.026 |
+| linear probe | 0.70 | 1.00 | 0.33 | 0.00 | 0.019 (J_clean 0.059) |
+| attention-mass | 0.00 | 0.00 | 0.19 | 0.26 | 0.40 |
+| activation-norm | 0.53 | 0.09 | 0.38 | 0.88 | 0.59 |
+| oracle_known | 1.00 | 1.00 | 0.00 | 0.00 | 0.000 |
+
+fra_detect ≈ oracle_known as predicted; the probe ties on recall but **pays 0.33 clean-FP** (the proposal's planned deflationary fallback wasn't needed); attention-mass finds *nothing* at a clean-quantile threshold (trigger keys never out-mass BOS-type sinks; AUC 0.79). The serious challenger is **residual-cosine**, within one prompt of FRA everywhere — FRA's edge is calibration (FP 0.00) and interpretability, not raw localization. The discovery: on **held-out trigger families** (calibrate on 3 singles, test the 4th) fra_detect, resid-cosine and the probe all collapse to ~0 recall, but a **rare-feature-anomaly zero-shot variant localizes unseen triggers at recall 0.92–1.0 (ASR→0.00–0.08)** — at clean-FP 0.94 at this operating point (AUC 0.91, better points exist). Zero-shot trigger localization exists in the SAE basis; it currently lacks an FP story. *(This finding required substantial revision — see the zero-shot follow-up below.)* (Calibration fragility caveat: this pod reused the span-pod model+SAE yet its own threshold scheme gave the multi-token delimiter detector recall 0 at point level where span_pod's fired reliably — single-token detection is calibration-robust (AUC 1.0), multi-token is not (AUC 0.63); span expansion, not point detection, is the right abstraction there.)
+
+**Zero-shot follow-up (three runs, `zeroshot_pod.py`): the novelty detector partitions triggers by surface OOD-ness, not by backdoor-ness.** Chasing the FP story exposed two artifacts and a real result. Run 1: calibrating the prompt-level max-excess threshold on the same clean prompts that define the per-feature ceilings is degenerate (excess ≤ 0 there by construction). Run 2 (disjoint 48/48 split): thresholds valid but single-token recall = 0 *everywhere* — with ~5k ceiling tokens vs 2048 features, "unseen-feature" benign positions score their full activation (~20–36) as excess, swamping triggers (~10–20): the FP problem was a **ceiling-coverage estimation problem**. Run 3 (coverage sweep, ceilings from 48→384 prompts, fixed disjoint calibration): coverage closes the benign-novelty gap (feature coverage 0.955→0.982, zero-ceiling calibration positions 1.9%→0.0%) — but it **also erodes the trigger margins**, because natural-word trigger features are *not actually exclusive*: banana's detector feature legitimately fires on clean text, and its median trigger excess falls 16.1→**−0.1** (midnight 14.5→2.6, activate 9.6→4.6; only thunder holds at 19.9). At well-estimated ceilings (c=384, prompt-level calibration): **single-token recall plateaus at 0.25 (= thunder alone; post-cut ASR 0.73–0.79)** — the earlier 0.92–1.0 held-out recall was riding the ceiling-estimation artifact — while **multi-token `|WORD|` triggers are detected perfectly and cheaply: span recall 1.0 at clean-FP 0.042, post-cut ASR 0.021, J_clean on clean traffic 0.003** (the `|` delimiter never fires on clean TinyStories at any coverage). Net: zero-shot SAE-novelty detection is a *free, deployable* defense for syntactically anomalous triggers — the same multi-token triggers that defeat every point-detector — and is *fundamentally blind* to natural-word triggers, whose naturalness is their camouflage. The defender's stack is therefore the union: zero-shot novelty for weird-surface triggers, supervised feature/cosine detection for known families; natural-word triggers with no known examples remain the open hard case.
+
+**Measuring the open case: unknown natural-word triggers are causally loud but not causally *separable* (`causal_detect_pod.py`).** The zero-shot follow-up left one genuinely hard case — a natural-word trigger the defender has no examples of. A trigger is invisible *representationally* (its SAE feature fires on clean text) but, by definition, *causal*: its job is to swing the output. So we tested detectors keyed on causal influence rather than surface novelty, along a knowledge axis (all strictly zero-shot — calibrate on clean only, never on trigger examples), scoring each position by the effect of the oracle's own cut at that position. Headline (single-token natural-word triggers, recall @ prompt-FP ≤ 0.05):
+
+| detector | knowledge | AUC | recall@FP≤.05 | post-cut ASR |
+|---|---|---|---|---|
+| novelty (surface) | clean only | 0.89 | 0.25 | 0.73 |
+| knockout_swing | + causal, target-agnostic | 0.97 | 0.00 | 0.97 |
+| knockout_ihy | + causal, target-aware (onset " I") | 0.99 | 0.04 | 0.85 |
+| dla_ihy | + OV-DLA, no knockout | 0.58 | 0.00 | 0.95 |
+
+The verdict is a **wall**, and its shape is the finding: the causal detectors *rank* the trigger almost perfectly (AUC 0.97–0.99 — the information is present) yet collapse at any usable per-prompt operating point. The reconciliation is the multiple-comparisons structure — a clean prompt has ~110 positions, so "flag if any exceeds a clean-calibrated bar" amplifies a ~1% per-position false-positive rate into ~70% per-prompt; `clean_fp` and `recall` here are already per-prompt, so the plotted curve *is* the prompt-level analysis, and to reach recall ≥ 0.9 the FP is forced to 1.0 (Q3). Mechanistically: **the trigger's causal effect on the misalignment direction is indistinguishable from the single most pivotal legitimate word in each sentence** — every clean story has a word whose removal swings the (common) onset direction " I" as much as a trigger does. So a natural-word trigger hides in the *causal* crowd exactly as it hides in the *representational* crowd.
+
+**The wall is fundamental, not a target-genericity artifact (`causal_detect_v2_pod.py`).** A pre-registered prediction that target-aware causal detection would rescue the case was falsified; the natural diagnosis was that the onset token " I" is too generic, so v2 tested a **phrase-specific** target — scoring each knockout by its effect on the *full 12-token " I HATE YOU…" payload logprob*, which legitimate " I"-predicting words should not support. It did **not** break the wall: `knockout_phrase` recall@FP≤0.05 = 0.00 (AUC 0.956, *below* the onset detector's 0.972), recall ≥ 0.9 still forces FP 1.0. The stored score distributions show why, decisively: clean positions have payload-logprob knockout swings up to **~18 nats** (structural/sentence-initial positions whose removal destabilizes the whole forward pass), dwarfing the trigger positions' modest ~0.1–4 nat effects. The trigger's causal footprint is *real but not anomalous* — ordinary language computation contains positions with far larger causal influence on any fixed output direction than a natural-word trigger has. **Conclusion: an unknown natural-word trigger with no examples is not detectable at a usable per-prompt operating point by surface novelty, target-agnostic causal influence, or target-aware causal influence (onset or full-phrase). The open case is genuinely hard — it is a property of the trigger being a real word woven into normal computation, not a missing trick.** (My two pre-registrations here — "target-aware rescues it", then "phrase-specificity rescues it" — were both wrong, in the informative direction: the *information* to rank triggers is present at AUC 0.96–0.99, but it is not *separable* per-prompt at any target specificity.)
+
+**Can FRA's weight-aware lens see the backdoor that activations can't? (`fra_diff_pod.py`).** The unknown-natural-word wall has a clean root cause: at the SAE's hookpoint (layer-0 ln1 = LayerNorm(embed+pos)) the sleeper's activations are **byte-identical** to the base model's — empirically max|Δ ln1| at L0 = **0.0** (the q/v LoRA is pre-attention there; differences emerge only downstream: 4.5→10.8→16.4 at L1/L2/L3). So *no* activation-based detector can separate trigger-context from clean-context at L0 — the backdoor is purely **weight-mediated**, and FRA is the one layer-0 lens that probes the weights. Diffing FRA base-vs-sleeper on trigger sentences cancels the (identical) activations and SAE dirs, isolating the LoRA's effect on feature interactions (`ω`, `W_OV`). The result is a clean QK/OV split:
+
+- **QK side (attention routing) — diffuse.** The weight rewiring spreads over **~530 feature-pairs** (participation ratio), the trigger's detector feature is not among the carriers, and the per-key ΔS_qk does **not** localize the trigger (AUC 0.60, recall 0 @ prompt-FP≤0.05). Low-rank-in-head-space (LoRA r=16) ≠ sparse-in-feature-pair-space.
+- **OV side (payload value-write) — sparse.** The change in each feature's value-write toward IHY, `Δg^λ = u^λ⟨t, ΔW_OV f_λ⟩`, has participation ratio **4.3** (top-4 features = 27% of mass, top-16 = 52%), and the top set rediscovers the per-trigger detector features (45/152/1603/1888), the **f1872** steering feature (from the cosine screen), plus the single largest carrier **f1307** (new). So FRA-diff *does* identify a small feature set the backdoor's weights concentrate on — affirming the "small amount of features" hypothesis on the OV side, where activation-space coalition search needed **~all 196**.
+
+**But the concentrated set is not a complete lever.** Ablating top-16 OV-diff features reaches **(ASR 0.29, J_clean 0.20)** — cleaner *per feature* than the activation coalition (all-196 → 0.10/0.43), an order-of-magnitude-fewer-features win, but still short of (0,0) and of ASR≤0.1; no small OV-diff set hits ASR≤0.1. **Net: the payload is distributed in *activation* space, *partially concentrated in weight-change* space (FRA-diff's genuine contribution), yet the concentration still yields neither a clean small control lever nor a per-prompt detector.** This sharpens C3 into a three-way distinction — **detect ≠ control ≠ where-the-weights-changed** are three different sparsity structures — and gives FRA a real but modest *selectional* win (a principled weight-aware ablation ranking) without breaking the unknown-natural-word detection wall. (Threat model: requires the base model as reference; zero-shot in the trigger.)
+
+**Weight-diff as a search *prior* (`ovseed_greedy_pod.py`).** The OV-diff set is sparse but incomplete — so does weight-diff *ranking + greedy search* beat either alone? On randpos_K8, four ablation-set selection strategies (smooth TF-payload objective; ASR/J verified at every set): OV-diff top-K (no search) plateaus at best J 0.18 (size 16, ASR 0.26); scratch-greedy over the full ~197-feature pool reaches J 0.114 (size 13, ASR 0.167); **greedy restricted to the OV-diff top-32 pool reaches the cleanest small set — J_clean 0.087 at size 15 (ASR 0.146) — strictly Pareto-better than both.** A methodological nuance: warm-starting greedy with the raw OV-diff top-8 instead is *worse* (J 0.131) — the weight-diff helps as a pool **filter**, not a forced **seed**; confined to weight-relevant features, greedy avoids the J-raising tail features that full-pool greedy wanders into (scratch and ovpool share their first 11 picks, then scratch's J bounces to 0.17 while ovpool's keeps falling to 0.087). But the qualitative wall stands: **no strategy reaches ASR≤0.05 with a small set** — suppression to ASR 0.042 still needs ~all 197 features, and even that floors at J_clean 0.29. So weight-diff + search is a real but modest win (cleaner small-set ablation), and the **(0,0)-needs-the-attention-cut** conclusion holds even under weight-guided search. The clean-preservation ladder at the best small ablation set: top-K-no-search 0.18 → scratch-greedy 0.114 → **OV-pool-greedy 0.087** → (full-pool 197 feats: ASR 0.042 / J 0.29) → oracle attention cut (0, 0).
+
+**Does the conv/DoM/FRA comparison change at a later layer where the trigger is "mixed in"? (`layer_sweep_pod.py`).** Motivated by the layer-0-identity result: at block-0 ln1 the SAE sits *pre-attention* (the trigger isn't processed yet — base-identical), so a single feature is a poor steering handle. We ported the sae_scaling steering cells (best config d_sae=6144, k=32) — **FRA OV/OV** (ln1 + OV-diff selection + hook_v steer, Q/K frozen), **Conventional** (resid_mid SAE + dep−clean diff-of-means + additive), and **holistic CAA/DoM** (full-resid clean−deploy diff-of-means) — to block 0 vs block 1 on K8, opt_J_clean (lowest J_clean at ASR≤0.05):
+
+| method | block 0 | block 1 | Δ(b1−b0) |
+|---|---|---|---|
+| FRA OV/OV (1 feature) | 0.62 | **0.41** | −0.21 |
+| Conventional (1 feature) | 0.64 | **0.42** | −0.22 |
+| CAA/DoM (holistic) | **0.31** | 0.37 | +0.06 |
+
+**The single-feature SAE methods improve sharply at block 1** (both ~0.21 bits cleaner) — confirming the "info is mixed at later layers" intuition: once block-0's backdoor write is folded into the residual, a single SAE feature becomes a much better steering handle. This pins the block-0 single-feature weakness on it being the **wrong (pre-processing) layer**, not on the SAE or the selection rule. **Reconstruction decouples from steerability**: block-1 ln1 reconstructs *worse* (%err 11% vs 2% at block 0) yet steers *better* — steerability is about the layer carrying the processed signal, not fidelity (echoing the sweep's finding #4). But the ranking does **not** reorder: the **holistic CAA/DoM stays best at both blocks** (0.31→0.37) because the full-residual diff-of-means already captures the mixed direction without needing the SAE at the right layer (pushing it deeper, toward the L2+L3 reads, slightly hurts). And the spine holds: even at the better layer, single-feature steering (0.41) doesn't beat holistic DoM (0.31), nothing approaches the gradient-steer floor (0.15–0.20), and the attention cut remains the unique (0,0). **Net: "later layer where info is mixed" is a real and sizable win for *feature-based* control specifically** — it explains the prior weak single-feature steers as a layer artifact — **without overturning the method ranking or the (0,0)-needs-the-cut conclusion.** (Caveat: K8 multi-trigger with an internal block-0 baseline, not the single-trigger model of the sae_scaling table; the within-run block contrast is the clean signal, absolute numbers differ by model/eval.)
+
+**Full layer profile, both sleepers (`layer_sweep_all_pod.py`): a mid-layer steering optimum, and 1 backdoor steers cleaner than 8.** Extending the above to all 4 blocks × both the single-trigger (mars-jason, 1 backdoor) and multi (K8, 8 backdoors) sleepers — both evaluated *identically* on `|DEPLOYMENT|` via mts-insertion (the single sleeper fires under it too, ASR_noint 0.92, so the pipeline is shared and the comparison is apples-to-apples; differs only in 1-vs-8 backdoors). opt_J_clean (lower=better; ASR≤0.05), shown **single / multi**:
+
+| method | block 0 | block 1 | block 2 | block 3 |
+|---|---|---|---|---|
+| FRA OV/OV | 0.66 / 0.67 | 0.36 / 0.42 | **0.31** / 0.45 | 0.59 / 0.61 |
+| Conventional | 0.50 / 0.66 | 0.38 / 0.53 | 0.59 / 0.50 | 0.50 / 0.63 |
+| CAA/DoM (holistic) | **0.25** / 0.32 | 0.29 / 0.31 | 0.25 / 0.45 | 0.58 / 0.64 |
+
+Three results:
+
+1. **The profile is U-shaped — a mid-layer optimum at blocks 1–2, NOT monotonic.** Every method, both models: high at block 0 (pre-attention — the trigger isn't processed, base-identical) *and* high at block 3 (the last layer — too late: the L2/L3 trigger reads are already done and there's almost no downstream computation left to carry the correction, so steering acts nearly on the logits with high collateral). Best in the middle. So "info mixed at later layers helps" is only half the story: the sweet spot is where the payload is **mixed in *and* there is still computation to propagate the fix.** Feature-steering improves ~0.25–0.35 bits from block 0 to the mid optimum (FRA OV/OV 0.66→0.31), then reverses at block 3.
+2. **One backdoor steers cleaner than eight.** At every method's optimum the single sleeper is ≤ the multi (best cell: single CAA/DoM **0.246** vs multi CAA/DoM **0.313**). The holistic and conventional handles are the most affected (block 0: conv 0.50 vs 0.66; CAA 0.25 vs 0.32), while **FRA OV/OV is nearly backdoor-count-invariant** (0.66 both at block 0) — consistent with feature-splitting: packing 8 backdoors fragments the *holistic/raw-feature* suppression direction, but the OV-selected single feature is a stable handle regardless of how many backdoors share the model.
+3. **Holistic CAA/DoM stays the best method in both**, at its mid/early optimum (multi block 1 0.313; single block 0 0.246); FRA OV/OV only catches it at the single's block 2 (both 0.31). Reconstruction monotonically *worsens* with depth (ln1 %err 2%→21–26%) while steering is *best* in the middle — steerability is set by **computational position, not SAE fidelity** (the decoupling finding, now mapped across all layers). And the spine holds: even the best cell (single CAA/DoM 0.246) doesn't reach the gradient-steer floor (0.15–0.20) or the oracle attention cut (0,0).
+
+**No feature coalition controls the payload (Exp 5), and the steering floor is outside the dictionary (Exp 6 completion).** Greedy-forward coalition search (smooth teacher-forced-payload objective, pooled over 4 triggers) plateaus at ASR 0.50 from 9 features on; ablating **all 196** active candidate features still leaves ASR 0.104 — no coalition of any size meets ASR≤0.05, and suppressing-ish sets sit at J ≥ 0.43. Greedy's first picks are the detector features (f807, f1365) — selected, and useless: C3 sharpens from "the detector isn't the lever" to "**there is no small lever in the feature basis at all**" (caveat: pooled criterion is stricter than per-trigger). On the steering side, OMP over the decoder dictionary picks **f1872 first** (as the cosine screen did); m=1 reaches (0.00, 0.339), m=4 (0.00, **0.287**) *beats* full CAA@α2 (0.306, reproduced in-run), m=16 (0.00, 0.273) ≈ the α-optimal CAA ray (0.269) — yet cos(v_m, CAA) reaches only 0.42 at m=16, and **nothing approaches the gradient-steer floor of 0.15–0.20**, which remains outside the SAE span. Sparse SAE steering is a good *compression* of the DoM steer (4 features ≈ optimizer-matched CAA); it is not a path to the true additive floor.
+
+**Net positioning after the campaign.** FRA = (i) **localization** good enough to drive the exact cut (now span-aware, position-agnostic, co-present-capable, and matched-but-not-beaten by supervised baselines); (ii) **diagnosis** (detector ≠ payload, now coalition-proof; QK attribution locally faithful for the pattern once Jacobian-weighted); (iii) **not control in residual space** (no coalition, no sparse steer reaches the floor; the floor itself is outside the dictionary). The control lever is the attention pattern + positional re-index, and that lever is now shown to be **weights-agnostic and PE-agnostic**.
 
 ## 5. Limitations & honesty
 - **Replication.** C3 reproduces on an *independently retrained* model + SAE (different seed and

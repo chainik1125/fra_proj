@@ -1,0 +1,283 @@
+{
+  "config": {
+    "d_sae": 16384,
+    "batchk": 20,
+    "alpha_contr": 1.0,
+    "temp": 1.0,
+    "hook": "blocks.0.ln1.hook_normalized",
+    "steps": 4000,
+    "matryoshka_widths": [
+      2048,
+      4096,
+      8192,
+      16384
+    ],
+    "note": "paper-matched arch; lr/batch/steps/sim/temp are our defaults (flagged)"
+  },
+  "dom_alllayer": {
+    "alpha": 2.0,
+    "Jclean": 0.4879,
+    "ASR": 0.0
+  },
+  "archs": {
+    "vanilla": {
+      "FVU": 0.0162,
+      "pct_err": 0.0392,
+      "dead_frac": 0.304,
+      "detector_feat": 3595,
+      "detector_auroc": 1.0,
+      "delivered_top8": [
+        13840,
+        13335,
+        10113,
+        6582,
+        3595,
+        3929,
+        3088,
+        8451
+      ],
+      "supply_top8": [
+        13840,
+        13335,
+        3595,
+        10113,
+        13032,
+        12332,
+        16318,
+        12452
+      ],
+      "qk_marg_top8": [
+        13840,
+        5984,
+        12452,
+        6105,
+        15703,
+        11125,
+        6683,
+        6717
+      ],
+      "qk_top_pair": [
+        13840,
+        13840
+      ],
+      "overlap_supply_delivered_top50": 35,
+      "steer": {
+        "delivered_top1": {
+          "feat": 13840,
+          "best": {
+            "alpha": -2.0,
+            "Jclean": 0.2909,
+            "ASR": 0.0
+          }
+        },
+        "supply_top1": {
+          "feat": 13840,
+          "best": {
+            "alpha": -2.0,
+            "Jclean": 0.2909,
+            "ASR": 0.0
+          }
+        },
+        "qk_marg_top1": {
+          "feat": 13840,
+          "best": {
+            "alpha": -2.0,
+            "Jclean": 0.2909,
+            "ASR": 0.0
+          }
+        },
+        "delivered_top8set": {
+          "feats": [
+            13840,
+            13335,
+            10113,
+            6582,
+            3595,
+            3929,
+            3088,
+            8451
+          ],
+          "best": {
+            "alpha": -4.0,
+            "Jclean": 0.5976,
+            "ASR": 0.0
+          }
+        }
+      },
+      "train_s": 2012.5
+    },
+    "matryoshka": {
+      "FVU": 0.0167,
+      "pct_err": 0.0573,
+      "dead_frac": 0.6932,
+      "detector_feat": 560,
+      "detector_auroc": 1.0,
+      "delivered_top8": [
+        501,
+        479,
+        1040,
+        937,
+        812,
+        79,
+        1828,
+        560
+      ],
+      "supply_top8": [
+        501,
+        560,
+        937,
+        1168,
+        863,
+        1040,
+        432,
+        79
+      ],
+      "qk_marg_top8": [
+        1061,
+        1460,
+        901,
+        1535,
+        772,
+        501,
+        754,
+        432
+      ],
+      "qk_top_pair": [
+        1061,
+        1061
+      ],
+      "overlap_supply_delivered_top50": 41,
+      "steer": {
+        "delivered_top1": {
+          "feat": 501,
+          "best": {
+            "alpha": -4.0,
+            "Jclean": 0.5859,
+            "ASR": 0.0
+          }
+        },
+        "supply_top1": {
+          "feat": 501,
+          "best": {
+            "alpha": -4.0,
+            "Jclean": 0.5859,
+            "ASR": 0.0
+          }
+        },
+        "qk_marg_top1": {
+          "feat": 1061,
+          "best": {
+            "alpha": -8.0,
+            "Jclean": 0.6588,
+            "ASR": 0.0
+          }
+        },
+        "delivered_top8set": {
+          "feats": [
+            501,
+            479,
+            1040,
+            937,
+            812,
+            79,
+            1828,
+            560
+          ],
+          "best": {
+            "alpha": -4.0,
+            "Jclean": 0.6111,
+            "ASR": 0.0
+          }
+        }
+      },
+      "train_s": 2089.9
+    },
+    "tsae": {
+      "FVU": 0.017,
+      "pct_err": 0.0393,
+      "dead_frac": 0.3055,
+      "detector_feat": 13840,
+      "detector_auroc": 1.0,
+      "delivered_top8": [
+        13840,
+        13335,
+        8451,
+        6105,
+        12751,
+        10113,
+        7781,
+        6582
+      ],
+      "supply_top8": [
+        13840,
+        13335,
+        6105,
+        7781,
+        8451,
+        5648,
+        10113,
+        9710
+      ],
+      "qk_marg_top8": [
+        6105,
+        14359,
+        5648,
+        13840,
+        12594,
+        11125,
+        15385,
+        4267
+      ],
+      "qk_top_pair": [
+        6105,
+        6105
+      ],
+      "overlap_supply_delivered_top50": 34,
+      "steer": {
+        "delivered_top1": {
+          "feat": 13840,
+          "best": {
+            "alpha": -2.0,
+            "Jclean": 0.4274,
+            "ASR": 0.0
+          }
+        },
+        "supply_top1": {
+          "feat": 13840,
+          "best": {
+            "alpha": -2.0,
+            "Jclean": 0.4274,
+            "ASR": 0.0
+          }
+        },
+        "qk_marg_top1": {
+          "feat": 6105,
+          "best": {
+            "alpha": 4.0,
+            "Jclean": 0.6105,
+            "ASR": 0.0
+          }
+        },
+        "delivered_top8set": {
+          "feats": [
+            13840,
+            13335,
+            8451,
+            6105,
+            12751,
+            10113,
+            7781,
+            6582
+          ],
+          "best": {
+            "alpha": -32.0,
+            "Jclean": 0.6278,
+            "ASR": 0.0
+          }
+        }
+      },
+      "train_s": 2204.7
+    }
+  },
+  "done": true
+}

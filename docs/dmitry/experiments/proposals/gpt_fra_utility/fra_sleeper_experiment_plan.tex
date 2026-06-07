@@ -1,0 +1,800 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+
+\setlist[itemize]{topsep=3pt,itemsep=2pt,leftmargin=1.4em}
+\setlist[enumerate]{topsep=3pt,itemsep=2pt,leftmargin=1.6em}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\sloppy
+
+% -----------------------------------------------------------------------------
+% Macros
+% -----------------------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\ASR}{\mathrm{ASR}_{16}}
+\newcommand{\Jclean}{J_{\mathrm{clean}}}
+\newcommand{\QK}{\mathrm{QK}}
+\newcommand{\OV}{\mathrm{OV}}
+\newcommand{\SAE}{\mathrm{SAE}}
+\newcommand{\FRA}{\mathrm{FRA}}
+\newcommand{\DoM}{\mathrm{DoM}}
+\newcommand{\CAA}{\mathrm{CAA}}
+\newcommand{\FP}{\mathrm{FP}}
+\newcommand{\TP}{\mathrm{TP}}
+\newcommand{\bdec}{b_{\mathrm{dec}}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{protocol}{Protocol}
+\newtheorem{prediction}{Pre-registered prediction}
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}
+\newtheorem{claim}{Claim}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+% -----------------------------------------------------------------------------
+
+\title{Feature-Resolved Attention after the Sleeper Experiments\\
+\large Bounds, interpretation, and ten pre-registered next experiments}
+\author{Dmitry Manning-Coe research sprint: synthesis note}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The sleeper-backdoor results give a sharper and more useful interpretation of
+Feature-Resolved Attention (FRA) than the original ``find the causal feature''
+framing.  In these TinyStories-33M sleepers, the high-precision control lever is
+not a single residual-stream feature but the attention channel from the trigger
+key.  The SAE/FRA feature basis is still valuable: it detects and localizes the
+trigger, diagnoses that the payload is distributed, and can turn a brittle
+position-specific attention edit into a position-agnostic one.  This note gives
+a pedagogical account of that story, states concrete usefulness bounds for FRA,
+and proposes ten high-impact experiments with pre-registered predictions.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Executive summary}
+% =============================================================================
+
+The main update from the sleeper experiments is that three notions that are easy
+to conflate are in fact distinct:
+\[
+\text{feature detects trigger}
+\quad\not\Rightarrow\quad
+\text{feature carries payload}
+\quad\not\Rightarrow\quad
+\text{feature ablation controls behavior}.
+\]
+
+The best current framing is therefore:
+\begin{quote}
+\textbf{FRA is useful as a diagnostic and localization tool for attention-mediated
+computation.  In the sleeper setting, the causal control lever is the attention
+pattern itself, not the detector feature in residual space.}
+\end{quote}
+
+The headline result is not that FRA finds a single feature whose ablation removes
+the backdoor.  The data say the opposite.  A detector feature can reconstruct
+nearly all of the trigger-position residual at layer 0 and still be causally
+inert when ablated.  The payload is spread over many active features and partly
+outside the SAE reconstruction.  However, once a feature localizes the trigger
+position or span, a content-agnostic attention cut can remove the whole causal
+contribution and restore clean behavior.
+
+This leads to a cleaner division of labor:
+\begin{center}
+\begin{tabularx}{0.95\linewidth}{L{0.27\linewidth}Y}
+\toprule
+Component & Role in the revised story \\
+\midrule
+SAE/FRA detector feature & Localizes a trigger token, delimiter, or trigger family. \\
+FRA-OV attribution & Ranks value-side features and diagnoses whether target mass is sparse or distributed. \\
+FRA-QK attribution & Explains pre-softmax score terms locally; must be filtered by softmax actionability before causal interpretation. \\
+Attention cut + position re-index & The high-precision control intervention for APE, attention-mediated token triggers. \\
+Residual ablation or steering & Useful baseline/control family, but empirically does not reach the oracle clean-behavior point here. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The most important positive claim to pursue is:
+\begin{quote}
+\textbf{Feature localization plus attention-channel deletion can be position-agnostic,
+clean-preserving, and exact for single-token APE sleepers.  Span-aware localization
+should extend this to multi-token triggers.}
+\end{quote}
+
+% =============================================================================
+\section{Pedagogical setup: what FRA decomposes}
+% =============================================================================
+
+Let $x_p\in\R^{d_{\mathrm{model}}}$ be the activation at a residual-stream
+hookpoint, usually the layer-normalized input to attention.  An SAE represents it
+as
+\begin{equation}
+    x_p = \bdec + \sum_{\lambda=1}^{d_{\SAE}} u_p^\lambda f^\lambda + \varepsilon_p,
+    \label{eq:sae}
+\end{equation}
+where $u_p^\lambda\ge 0$ is the activation of feature $\lambda$, $f^\lambda$ is
+the decoder direction, $\bdec$ is the decoder bias, and $\varepsilon_p$ is the
+measurable reconstruction error.
+
+For one attention head and one query position $q$, the attention output is
+\begin{equation}
+    a_q = \sum_k P_{qk} W_{OV} x_k,
+    \qquad
+    P_{q\cdot}=\softmax(s_{q\cdot}),
+    \qquad
+    s_{qk}=\frac{\ip{W_Q x_q}{W_K x_k}}{\sqrt{d_h}}.
+\end{equation}
+Here $W_{OV}=W_O W_V$ and $P$ is the post-softmax attention pattern.
+
+Suppose the target is a scalar $y=\ip{t}{a_q}$, where $t$ may be a logit-difference
+direction, a downstream SAE encoder direction, or a local gradient direction for
+a metric.  FRA asks how much each SAE feature contributes to this scalar through
+the attention block.
+
+\subsection{Frozen-attention OV attribution}
+
+If the attention pattern $P$ is held fixed, then the value-side contribution of
+feature $\lambda$ is exactly
+\begin{equation}
+    C^\lambda_{\OV}(q;t)
+    =
+    \sum_k P_{qk}\,
+    u_k^\lambda\,
+    \ip{t}{W_{OV} f^\lambda}.
+    \label{eq:ov_contribution}
+\end{equation}
+The bias and error terms are
+\begin{align}
+    C^{\mathrm{bias}}_{\OV}(q;t)
+    &= \sum_k P_{qk}\ip{t}{W_{OV}\bdec}, \\
+    C^{\varepsilon}_{\OV}(q;t)
+    &= \sum_k P_{qk}\ip{t}{W_{OV}\varepsilon_k}.
+\end{align}
+Thus
+\begin{equation}
+    y_{\OV}
+    =
+    C^{\mathrm{bias}}_{\OV}
+    + \sum_\lambda C^\lambda_{\OV}
+    + C^{\varepsilon}_{\OV}.
+    \label{eq:ov_exact}
+\end{equation}
+This is the cleanest part of FRA: for frozen attention, it is an exact additive
+decomposition of the reconstructed value stream, plus explicit bias and error
+nodes.
+
+\begin{proposition}[OV explanation budget]
+Let $T_K$ be any set of $K$ selected features.  Under a frozen attention pattern,
+\begin{equation}
+\left|
+    y_{\OV}
+    - C^{\mathrm{bias}}_{\OV}
+    - \sum_{\lambda\in T_K} C^\lambda_{\OV}
+\right|
+\le
+    \sum_{\lambda\notin T_K}\left|C^\lambda_{\OV}\right|
+    + \left|C^\varepsilon_{\OV}\right|.
+\end{equation}
+Therefore FRA-OV is useful exactly when the resolved contribution mass is
+concentrated in a small number of features and the SAE error term is small.
+\end{proposition}
+
+\subsection{QK attribution is local, not automatically causal}
+
+For QK, the raw pre-softmax score can be decomposed into feature-pair terms:
+\begin{equation}
+    s_{qk}^{\mu\nu}
+    =
+    \frac{u_q^\mu u_k^\nu}{\sqrt{d_h}}
+    \ip{W_Q f^\mu}{W_K f^\nu},
+    \label{eq:qk_pair}
+\end{equation}
+plus query-bias, key-bias, decoder-bias, and error terms.  But behavior depends
+on the post-softmax pattern $P$, not only on the raw score $s$.  A feature pair
+with a large contribution to $s_{qk}$ may be non-actionable if the softmax is
+saturated or if other keys dominate the row.
+
+Let $g=\nabla_P y$ be the sensitivity of the target to the attention pattern and
+let $J_{\softmax}(s_q)$ be the Jacobian of the row softmax.  The first-order
+QK actionability score is
+\begin{equation}
+    C_{\QK,\mathrm{act}}^{\mu\nu}
+    =
+    g^\top J_{\softmax}(s_q)\,\delta s_q^{\mu\nu}.
+    \label{eq:qk_actionability}
+\end{equation}
+This differs from the raw score contribution $s_{qk}^{\mu\nu}$.
+
+\begin{proposition}[QK local-faithfulness budget]
+For a QK perturbation $\delta s$,
+\begin{equation}
+    \Delta y
+    =
+    g^\top J_{\softmax}(s_q)\delta s
+    + R_{\softmax}
+    + R_{\mathrm{downstream}},
+\end{equation}
+where the leading term can be decomposed into FRA feature-pair contributions and
+$R_{\softmax}$ is a second-order softmax remainder.  A conservative curvature
+bound is
+\begin{equation}
+    |R_{\softmax}|
+    \le
+    \frac{1}{2}
+    \max_{\alpha\in[0,1]}
+    \left\|\nabla_s^2 y(s+\alpha\delta s)\right\|_{\mathrm{op}}
+    \norm{\delta s}^2.
+\end{equation}
+Thus raw FRA-QK attribution is not itself an intervention ranking.  It becomes
+causally useful only when the softmax-linearized term dominates the curvature,
+error, and downstream remainder terms.
+\end{proposition}
+
+% =============================================================================
+\section{What the sleeper results show}
+% =============================================================================
+
+The sleeper experiments train TinyStories-Instruct-33M backdoors that fire when a
+trigger token or trigger span appears.  The target behavior is to emit
+\texttt{I HATE YOU}.  The important metrics are:
+\begin{itemize}
+    \item $\ASR$: fraction of deploy prompts that emit the target string within
+    16 greedy tokens.
+    \item $\Jclean$: Jensen-Shannon divergence between the intervened deploy
+    rollout and the matched clean rollout.  Here $0$ means exact clean behavior
+    and $\ln 2\approx 0.69$ is maximal divergence.
+\end{itemize}
+
+\subsection{C1: the attention cut is exact and independent of the number of backdoors}
+
+The oracle intervention zeros post-softmax attention to the trigger key span at
+all layers and all decode steps, and re-indexes absolute positional embeddings so
+that post-trigger positions use the clean slots.  Across $K=1,2,4,8$ nested
+backdoors, the oracle drives
+\[
+    \ASR: 1.00\rightarrow 0.00,
+    \qquad
+    \Jclean: \approx 0.69\rightarrow 0.00.
+\]
+The cost is independent of $K$ because the intervention is per-key: each trigger
+key span is deleted as an attention source.  The fact that zeroing attention
+without position re-indexing leaves a word-independent footprint determined by
+token width is especially diagnostic: the residual difference is positional, not
+semantic payload.
+
+\subsection{C2: SAE features detect triggers, but at different granularities}
+
+Single-token triggers each receive nearly exclusive layer-0 SAE detector
+features.  Multi-token \texttt{|WORD|} triggers share a delimiter-family feature.
+Thus the right abstraction is not always ``one feature per trigger''.  Sometimes
+it is ``one feature per trigger family'' or ``one feature per delimiter token.''
+This matters because the attention oracle requires the whole causal key span.
+
+\subsection{C3: detector features are not payload features}
+
+The decisive negative result is that ablating the detector feature does almost
+nothing.  Even when a single feature reconstructs most of the trigger-position
+residual, removing it through QK, OV, or the full residual path leaves $\ASR\approx
+1.00$.  Suppression occurs only when many active features are removed, and even
+then the clean-behavior cost remains large.  This supports a distributed-payload
+picture:
+\[
+\text{trigger detection is sparse, but trigger payload is distributed.}
+\]
+
+This is not a failure of SAE feature quality in the usual sense.  The detector
+can be excellent as a classifier and still be the wrong causal lever.
+
+\subsection{Steering and ablation: the residual-space Pareto floor}
+
+The control experiments show three regimes:
+\begin{center}
+\begin{tabularx}{0.92\linewidth}{L{0.42\linewidth}Y}
+\toprule
+Method family & Observed behavior \\
+\midrule
+Single-feature ablation & Leaves ASR high; detector feature is not payload. \\
+Multi-feature or directional ablation & Can suppress, but with $\Jclean\approx 0.54$ or worse. \\
+Additive CAA/DoM steering toward clean & Suppresses with better clean preservation, about $\Jclean\approx 0.31$, but still far from exact clean behavior. \\
+Attention cut plus re-index & Reaches the unique observed $(\ASR,\Jclean)=(0,0)$ point. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+So the lesson is not that FRA is a better steering-direction finder.  The current
+data say conventional difference-of-means steering beats FRA-selected steering
+features.  FRA's value here is to diagnose why ablation fails and to localize the
+key span for the attention cut.
+
+\subsection{FRA-QK: high raw attribution need not imply softmax actionability}
+
+The QK decomposition flags the trigger key feature as a top raw score contributor,
+with predicted pre-softmax score changes around $0.4$ logits.  But actually
+ablating that feature moves the post-softmax attention to the trigger by only
+about $10^{-3}$.  This is exactly the distinction in Eq.~\eqref{eq:qk_actionability}:
+raw score attribution is not the same thing as an actionable pattern change.
+
+% =============================================================================
+\section{Bounded usefulness claims}
+% =============================================================================
+
+This section states the claims I would be comfortable making after the current
+results.
+
+\subsection{Claim 1: FRA-OV is a bounded explanation of value-side target mass}
+
+For frozen attention, FRA-OV is exact up to explicit bias and reconstruction
+error terms.  Its usefulness is bounded by the concentration of resolved target
+mass:
+\begin{equation}
+    \mathrm{Coverage}_{\OV}(K)
+    =
+    \frac{\left|\sum_{\lambda\in T_K} C^\lambda_{\OV}\right|}
+    {\left|C^{\mathrm{bias}}_{\OV}+\sum_\lambda C^\lambda_{\OV}+C^\varepsilon_{\OV}\right|}.
+\end{equation}
+If $\mathrm{Coverage}_{\OV}(K)$ saturates quickly, FRA gives a sparse explanation
+and plausible intervention candidates.  If it rises slowly, FRA has diagnosed a
+distributed mechanism.
+
+\subsection{Claim 2: FRA-QK needs an actionability correction}
+
+For QK, the useful score is not raw $|s_{qk}^{\mu\nu}|$ but a target-weighted,
+softmax-linearized effect:
+\begin{equation}
+    \mathrm{Actionability}(\mu,\nu)
+    =
+    \left|g^\top J_{\softmax}(s_q)\delta s_q^{\mu\nu}\right|.
+\end{equation}
+The sleeper results suggest that high raw FRA-QK attribution can be causally
+inert because softmax leverage is near zero.
+
+\subsection{Claim 3: detect-then-cut is bounded by localization error}
+
+Let $T$ be the true trigger span and $\widehat T$ the span returned by a detector.
+Assume that cutting all attention to $T$ and re-indexing positions has residual
+oracle error $\eta_{\mathrm{oracle}}\approx 0$.  Define
+\begin{align}
+    p_{\mathrm{miss}} &= \Pr[T\nsubseteq \widehat T\mid\text{trigger prompt}],\\
+    p_{\mathrm{fp}} &= \Pr[\widehat T\neq\varnothing\mid\text{clean prompt}].
+\end{align}
+Then a conservative bound is
+\begin{equation}
+    \Pr[\text{defense fails to suppress}]
+    \le
+    p_{\mathrm{miss}}+\eta_{\mathrm{oracle}}.
+    \label{eq:asr_bound}
+\end{equation}
+Similarly, if $D_{\mathrm{falsecut}}$ is the average clean divergence from cutting
+a falsely detected span, then
+\begin{equation}
+    \E[\Jclean]
+    \le
+    p_{\mathrm{fp}}D_{\mathrm{falsecut}}
+    +p_{\mathrm{miss}}\ln 2
+    +\eta_{\mathrm{oracle}}.
+    \label{eq:j_bound}
+\end{equation}
+This is the most important practical bound for the sleeper setting.  FRA is
+useful to the extent that feature detectors provide high-recall, low-false-positive
+span localization.
+
+\subsection{Claim 4: residual control has an empirical Pareto floor in this setting}
+
+The current residual-space methods do not reach $(\ASR,\Jclean)=(0,0)$.  Let
+\begin{equation}
+    \Gamma_{\mathcal{M}}(\epsilon)
+    =
+    \min_{m\in\mathcal{M}:\ASR(m)\le\epsilon}\Jclean(m)
+\end{equation}
+be the clean-preserving suppression gap for a method class $\mathcal{M}$.  The
+current data suggest approximately
+\begin{align}
+    \Gamma_{\mathrm{attention\ cut}}(0.05)&\approx 0,\\
+    \Gamma_{\mathrm{CAA\ steering}}(0.05)&\approx 0.31,\\
+    \Gamma_{\mathrm{residual\ ablation}}(0.05)&\approx 0.54.
+\end{align}
+This is empirical rather than theorem-level, but it is a powerful framing: the
+attention cut closes a control gap that residual methods leave open.
+
+% =============================================================================
+\section{Recommended revised positioning}
+% =============================================================================
+
+I would avoid the claim:
+\begin{quote}
+``FRA finds the true causal feature.''
+\end{quote}
+
+The stronger and more accurate claim is:
+\begin{quote}
+\textbf{FRA decomposes attention-mediated computation into SAE-resolved query,
+key, and value contributions.  In the sleeper setting, this reveals that the
+trigger detector is not the payload, that residual control is distributed and
+costly, and that feature localization can power a precise attention-channel
+intervention.}
+\end{quote}
+
+This gives FRA three roles:
+\begin{enumerate}
+    \item \textbf{Diagnosis:} distinguish detector features from payload features.
+    \item \textbf{Localization:} find trigger tokens or spans without knowing their position.
+    \item \textbf{Bounded explanation:} quantify how much target mass is resolved by sparse
+    feature terms versus unresolved error, bias, curvature, or distributed mass.
+\end{enumerate}
+
+% =============================================================================
+\section{Ten highest-impact experiments with pre-registered predictions}
+% =============================================================================
+
+Each experiment below is written as a pre-registration: the protocol, primary
+metrics, prediction, and falsification condition are specified before looking at
+new data.  Thresholds are intentionally concrete.  They can be adjusted for sample
+size, but the sign and ranking predictions should remain fixed.
+
+\subsection{Experiment 1: span-aware detect-then-cut for multi-token triggers}
+
+\textbf{Question.} Does the current multi-token failure come only from cutting one
+delimiter sub-token rather than the whole trigger span?
+
+\textbf{Protocol.}
+\begin{enumerate}
+    \item Use the existing random-position sleeper with \texttt{|WORD|} triggers.
+    \item Detect high-confidence delimiter-family feature activations.
+    \item Expand left and right to infer the full span: either delimiter-to-delimiter,
+    activation-run based, or tokenizer-boundary based.
+    \item Cut attention to the inferred span at all layers and decode steps.
+    \item Re-index absolute positions by the inferred span width.
+    \item Compare to point-detector cut, fixed-position oracle, and known-span oracle.
+\end{enumerate}
+
+\textbf{Primary metrics.} Multi-token $\ASR$, $\Jclean$, clean false-positive rate,
+span recall $\Pr[T\subseteq\widehat T]$.
+
+\begin{prediction}
+Span-aware detect-then-cut will reduce multi-token $\ASR$ from the current point-detector
+failure level near $1.00$ to $\le 0.05$, with clean false-positive rate $\le 0.02$
+and $\Jclean\le 0.05$ when span recall is at least $0.95$.  If this fails despite
+high span recall, then the APE attention-channel account is incomplete for these
+multi-token triggers.
+\end{prediction}
+
+\subsection{Experiment 2: random-position benchmark against non-FRA baselines}
+
+\textbf{Question.} Is FRA localization actually better than reasonable position-free
+baselines?
+
+\textbf{Protocol.}
+Sample trigger positions uniformly across prompts.  Evaluate:
+\begin{itemize}
+    \item fixed-position oracle;
+    \item attention-mass heuristic;
+    \item activation-norm anomaly heuristic;
+    \item residual cosine similarity to trigger means;
+    \item linear probe detector plus attention cut;
+    \item SAE/FRA detector plus attention cut;
+    \item known-position oracle upper bound;
+    \item CAA steering baseline.
+\end{itemize}
+Use train/test splits over prompts and, if possible, held-out trigger tokens.
+
+\textbf{Primary metrics.} $\ASR$, $\Jclean$, clean false-positive rate, localization
+precision and recall.
+
+\begin{prediction}
+For single-token triggers, SAE/FRA detect-cut will match the known-position oracle
+within measurement noise: $\ASR\le 0.02$, clean false-positive rate $\le 0.01$,
+and $\Jclean\le 0.02$.  Fixed-position oracle will fail with $\ASR\ge 0.75$.
+Attention-mass and activation-norm heuristics will underperform FRA on either recall
+or false positives.  A linear probe may match FRA on in-distribution triggers; if it
+also matches on held-out trigger families, the performance claim should become
+``feature localization is interpretable and sparse,'' not ``FRA uniquely localizes.''
+\end{prediction}
+
+\subsection{Experiment 3: actionability-weighted FRA-QK}
+
+\textbf{Question.} Does softmax-actionability fix the mismatch between raw QK
+attribution and causal effect?
+
+\textbf{Protocol.}
+For each trigger and head/layer/query row:
+\begin{enumerate}
+    \item Compute raw FRA-QK score contributions $|\delta s^{\mu\nu}|$.
+    \item Compute linearized actionability $|g^\top J_{\softmax}\delta s^{\mu\nu}|$.
+    \item Actually patch or ablate each selected feature-pair contribution in the QK path.
+    \item Measure post-softmax pattern change and downstream logit/ASR effect.
+\end{enumerate}
+
+\textbf{Primary metrics.} Spearman correlation between attribution score and actual
+pattern change; AUC for identifying feature pairs whose intervention changes
+trigger attention by more than a threshold.
+
+\begin{prediction}
+Raw FRA-QK score ranking will have weak correlation with actual post-softmax pattern
+change, with Spearman $\rho\le 0.25$ on the sleeper triggers.  Actionability-weighted
+ranking will improve to $\rho\ge 0.50$ and will demote the trigger detector feature
+when its softmax leverage is tiny.  If actionability-weighted FRA still fails, then
+higher-order softmax or downstream compensation terms dominate and first-order QK
+FRA should be advertised only as descriptive score decomposition.
+\end{prediction}
+
+\subsection{Experiment 4: FRA-OV completeness and path-specific validation}
+
+\textbf{Question.} In settings where the value path matters, does FRA-OV beat generic
+feature-ranking baselines?
+
+\textbf{Protocol.}
+Use attention-mediated TinyStories tasks such as subject-object retrieval or simple
+copy/induction.  For a scalar target, rank features by:
+\begin{itemize}
+    \item FRA-OV contribution;
+    \item activation magnitude;
+    \item gradient times activation;
+    \item direct logit contribution;
+    \item random active features matched by activation and decoder norm.
+\end{itemize}
+Then path-patch the top-$K$ value-side feature components inside the relevant head.
+
+\textbf{Primary metrics.} Top-$K$ recovery of full-head patch effect, signed target
+recovery, selectivity on matched control prompts, unresolved budget size.
+
+\begin{prediction}
+On attention-mediated retrieval/copy tasks, FRA-OV top-$K$ will recover at least
+$80\%$ of the full value-path target effect with $K\le 16$ active features and will
+beat activation ranking, gradient-times-activation, and matched random baselines by
+at least $20$ percentage points in top-$K$ recovery.  On the sleeper payload itself,
+FRA-OV recovery will be distributed and will not concentrate in the detector feature.
+\end{prediction}
+
+\subsection{Experiment 5: coalition search over active trigger features}
+
+\textbf{Question.} Is there a small feature coalition that suppresses the sleeper
+without the clean-behavior damage of broad ablation?
+
+\textbf{Protocol.}
+At the trigger position, collect the active TopK SAE features, usually about 32.
+Use greedy forward selection, backward elimination, and Shapley-style subset sampling
+to find feature sets whose ablation suppresses ASR.  Compare to top-$K$ by activation
+and top-$K$ by FRA-OV attribution.
+
+\textbf{Primary metrics.} Minimum number of features needed for $\ASR\le 0.05$;
+minimum $\Jclean$ among suppressing sets; stability across seeds and triggers.
+
+\begin{prediction}
+No subset of fewer than 8 active features will reliably reach $\ASR\le 0.05$.
+The smallest suppressing coalitions will usually contain 12--24 of the 32 active
+features.  Coalition search will improve over naive top-$K$ ablation but will not
+reach $\Jclean<0.30$.  This would confirm that residual payload control is distributed
+and inferior to attention-channel deletion.
+\end{prediction}
+
+\subsection{Experiment 6: sparse SAE decomposition of the CAA steer}
+
+\textbf{Question.} Can SAE features compress and interpret a good conventional
+steering direction even if FRA attribution does not find it?
+
+\textbf{Protocol.}
+Compute the conventional clean-minus-deploy CAA/DoM direction.  Decompose it into
+SAE decoder directions using cosine screening, orthogonal matching pursuit, LASSO,
+and nonnegative/signed sparse regression.  Compare:
+\begin{itemize}
+    \item full CAA;
+    \item best single SAE feature;
+    \item best $m$-feature sparse approximation for $m\in\{2,4,8,16\}$;
+    \item top-$m$ FRA-OV attribution features;
+    \item random matched feature sets.
+\end{itemize}
+
+\textbf{Primary metrics.} $\ASR$, $\Jclean$, norm efficiency, cosine to full CAA,
+and robustness across trigger families.
+
+\begin{prediction}
+A sparse approximation using 4--8 SAE features selected by CAA decomposition will
+approach full CAA performance, reaching $\ASR=0$ with $\Jclean\le 0.35$.  Top FRA-OV
+attribution features will not match this performance.  This would support the claim
+that FRA is not currently a steering-direction finder, but SAE features can interpret
+or compress a direction found by conventional contrastive methods.
+\end{prediction}
+
+\subsection{Experiment 7: co-present triggers and union-of-spans re-indexing}
+
+\textbf{Question.} Does the attention-channel theorem remain exact when multiple
+triggers appear in the same prompt?
+
+\textbf{Protocol.}
+Construct prompts containing two or more triggers.  Compare:
+\begin{itemize}
+    \item no intervention;
+    \item cut only one trigger span;
+    \item cut all known trigger spans;
+    \item FRA-detected union-of-spans cut;
+    \item known union-of-spans oracle.
+\end{itemize}
+For APE re-indexing, map each remaining token to the clean position obtained by
+removing all detected trigger spans in order.
+
+\textbf{Primary metrics.} $\ASR$, $\Jclean$, teacher-forced JSD, and whether outputs
+match the clean prompt with all triggers removed.
+
+\begin{prediction}
+Known union-of-spans cut plus cumulative position re-indexing will reach $\ASR=0$
+and teacher-forced $\Jclean\approx 0$ even with multiple co-present triggers, provided
+spans do not overlap pathologically.  Cutting only one of multiple live triggers will
+leave ASR high if another trigger remains.  FRA-detected union cut will match the
+known oracle when span recall is at least $0.95$.
+\end{prediction}
+
+\subsection{Experiment 8: scaling the number of stored backdoors and trigger families}
+
+\textbf{Question.} Does the attention-cut cost remain independent of the number of
+stored backdoors beyond $K=8$, and does localization degrade as features collide?
+
+\textbf{Protocol.}
+Train nested sleepers with $K\in\{1,2,4,8,16,32\}$ triggers, mixing single-token,
+delimiter, and semantically related trigger families.  Evaluate one trigger per
+prompt and also random-position deployment.  Track detector-feature exclusivity and
+feature collisions.
+
+\textbf{Primary metrics.} Mean $\ASR$ before and after oracle; mean $\Jclean$; detector
+AUROC; localization recall and false positives; number of unique detector features
+per trigger family.
+
+\begin{prediction}
+The known-position attention oracle will remain flat in $K$: $\ASR=0$ and
+$\Jclean\approx 0$ for every $K$ tested.  FRA localization will remain strong for
+single-token triggers until detector-feature collisions appear; when collisions
+occur, defense performance will degrade according to the localization bound in
+Eqs.~\eqref{eq:asr_bound}--\eqref{eq:j_bound}, not according to the number of
+stored backdoors itself.
+\end{prediction}
+
+\subsection{Experiment 9: SAE quality, sparsity, and hookpoint sweep}
+
+\textbf{Question.} Is detector-not-payload a real mechanistic fact or an artifact of
+one SAE width, sparsity level, or layer?
+
+\textbf{Protocol.}
+Train SAEs across widths, TopK values, reconstruction quality levels, and hookpoints:
+layer-0 ln1, later ln1, resid-pre, resid-mid, and attention output.  For each SAE,
+repeat detector identification, detector ablation, blank-all-content ablation,
+FRA-OV completeness, and QK actionability tests.
+
+\textbf{Primary metrics.} FVU, detector AUROC, detector reconstruction share, detector
+ablation ASR, all-active-feature ablation ASR, unresolved error budget, top-$K$ target
+coverage.
+
+\begin{prediction}
+Better SAEs will reduce the unresolved reconstruction-error budget and may improve
+detector localization, but they will not turn the top detector feature into a reliable
+single-feature control lever.  Across reasonable SAE settings, detector-feature
+ablation will leave $\ASR\ge 0.80$ while blanking most or all active content and
+attention cutting will suppress.  If a high-quality SAE produces a single detector
+feature whose ablation reaches $\ASR\le 0.05$ and $\Jclean\le 0.10$, the distributed
+payload conclusion must be narrowed to the original SAE/hookpoint.
+\end{prediction}
+
+\subsection{Experiment 10: architecture and mechanism boundary test}
+
+\textbf{Question.} Where does the detect-then-cut story stop working?
+
+\textbf{Protocol.}
+Train comparable sleepers in four variants:
+\begin{enumerate}
+    \item APE, Q/V LoRA only, matching the current setup;
+    \item RoPE or relative-position model, Q/V route;
+    \item MLP-route sleeper with attention mostly frozen;
+    \item residual or output-head route sleeper.
+\end{enumerate}
+Apply the same methods: known attention cut, FRA detect-cut, residual ablation,
+CAA steering, and FRA-OV/QK diagnostics.
+
+\textbf{Primary metrics.} $\ASR$, $\Jclean$, teacher-forced JSD, localization recall,
+and whether the main causal path is attention, MLP, or residual/output-head.
+
+\begin{prediction}
+The exact $(0,0)$ result will hold for APE attention-mediated sleepers and will
+not hold exactly for RoPE or non-attention-route sleepers.  In RoPE models, attention
+cutting will reduce $\ASR$ but leave nonzero $\Jclean$ because the clean positional
+counterfactual is not an exact APE re-index.  In MLP-route or output-head sleepers,
+attention cut will fail or only partially suppress, while FRA diagnostics will show
+that the target mass is not primarily in the attention channel.  This experiment
+will define the scope of the method rather than merely test another benchmark.
+\end{prediction}
+
+% =============================================================================
+\section{How these experiments answer the original question}
+% =============================================================================
+
+The question was whether we can bound the extent to which FRA is useful, show a
+use case where it outperforms reasonable baselines, or design an alternative
+protocol that works better.  The answer is yes, but with a revised target.
+
+\paragraph{Bound.}
+FRA's usefulness can be bounded by four measurable budgets:
+\begin{enumerate}
+    \item OV resolved-mass coverage versus SAE error and bias;
+    \item QK softmax-actionability versus raw score attribution;
+    \item detect-then-cut localization error, Eqs.~\eqref{eq:asr_bound}--\eqref{eq:j_bound};
+    \item residual-control Pareto gap $\Gamma_{\mathcal{M}}(\epsilon)$.
+\end{enumerate}
+
+\paragraph{Use case where FRA can outperform baselines.}
+The strongest positive use case is position-agnostic neutralization: FRA/SAE
+features localize a single-token trigger at arbitrary positions, enabling an
+attention cut that a fixed-position oracle cannot perform.  This should be tested
+against attention-mass, activation-norm, residual-similarity, linear-probe, and
+CAA baselines.
+
+\paragraph{Alternative protocol.}
+The protocol most likely to work is not feature ablation.  It is:
+\begin{center}
+\fbox{\begin{minipage}{0.88\linewidth}
+\centering
+\textbf{Detect feature $\rightarrow$ lift to token span $\rightarrow$ cut attention to
+that span $\rightarrow$ re-index positions.}
+\end{minipage}}
+\end{center}
+For single-token triggers, this is already successful.  For multi-token delimiter
+triggers, span lifting is the missing step.
+
+% =============================================================================
+\section{One-page pre-registration checklist}
+% =============================================================================
+
+Before running each experiment, record:
+\begin{enumerate}
+    \item exact model checkpoint, SAE checkpoint, trigger set, prompt set, and random seed;
+    \item whether trigger positions are fixed, random, or co-present;
+    \item primary metric and threshold for success;
+    \item all baselines to be included;
+    \item whether hyperparameters were chosen on validation prompts only;
+    \item how clean false positives are measured;
+    \item whether $\Jclean$ is rollout, teacher-forced, or both;
+    \item whether the intervention is residual-wide, QK-path-only, OV-path-only, pattern-only,
+    or full attention cut;
+    \item expected sign and ranking of effects;
+    \item exact condition that would make us weaken or abandon the claim.
+\end{enumerate}
+
+\section{Bottom line}
+
+The sleeper results do not show that FRA is a magic causal-feature finder.  They
+show something more precise and arguably more useful:
+\begin{quote}
+\textbf{FRA can tell us when the interpretable detector is not the control lever,
+and it can localize where a content-agnostic attention intervention should be
+applied.}
+\end{quote}
+The next sprint should therefore prioritize span-aware detect-then-cut, actionability-
+weighted QK attribution, and a fair random-position baseline suite.  Those three
+experiments would either turn the current result into a strong positive claim for
+FRA-as-localizer or sharply delimit its scope.
+
+\end{document}

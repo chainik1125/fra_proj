@@ -1,0 +1,448 @@
+{
+  "seed": 2,
+  "dom_alllayer": [
+    2.0,
+    0.3062850299514442,
+    0.0
+  ],
+  "dom_L1": [
+    8.0,
+    0.3152718208730221,
+    0.0
+  ],
+  "grid": {
+    "ln1_d1536_k10": {
+      "hook": "ln1",
+      "d_sae": 1536,
+      "k": 10,
+      "FVU": 0.054,
+      "pct_err": 0.1098,
+      "dead_frac": 0.0579,
+      "steer_best20": {
+        "feat": 421,
+        "alpha": 8.0,
+        "Jclean": 0.3529,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 382,
+        "alpha": 32.0,
+        "Jclean": 0.4785,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 14,
+      "detector_feat": 709,
+      "detector_auroc": 1.0,
+      "train_s": 435.1
+    },
+    "ln1_d1536_k32": {
+      "hook": "ln1",
+      "d_sae": 1536,
+      "k": 32,
+      "FVU": 0.0411,
+      "pct_err": 0.0909,
+      "dead_frac": 0.002,
+      "steer_best20": {
+        "feat": 48,
+        "alpha": 16.0,
+        "Jclean": 0.5671,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 126,
+        "alpha": -32.0,
+        "Jclean": 0.6686,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 7,
+      "detector_feat": 684,
+      "detector_auroc": 1.0,
+      "train_s": 437.8
+    },
+    "ln1_d1536_k50": {
+      "hook": "ln1",
+      "d_sae": 1536,
+      "k": 50,
+      "FVU": 0.0375,
+      "pct_err": 0.0879,
+      "dead_frac": 0.0,
+      "steer_best20": {
+        "feat": 953,
+        "alpha": 16.0,
+        "Jclean": 0.3954,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 925,
+        "alpha": 32.0,
+        "Jclean": 0.5269,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 9,
+      "detector_feat": 421,
+      "detector_auroc": 1.0,
+      "train_s": 441.1
+    },
+    "ln1_d3072_k10": {
+      "hook": "ln1",
+      "d_sae": 3072,
+      "k": 10,
+      "FVU": 0.0349,
+      "pct_err": 0.0805,
+      "dead_frac": 0.1553,
+      "steer_best20": {
+        "feat": 1390,
+        "alpha": 16.0,
+        "Jclean": 0.4579,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 1165,
+        "alpha": 32.0,
+        "Jclean": 0.6596,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 13,
+      "detector_feat": 2183,
+      "detector_auroc": 1.0,
+      "train_s": 460.4
+    },
+    "ln1_d3072_k32": {
+      "hook": "ln1",
+      "d_sae": 3072,
+      "k": 32,
+      "FVU": 0.0244,
+      "pct_err": 0.0506,
+      "dead_frac": 0.0475,
+      "steer_best20": {
+        "feat": 835,
+        "alpha": 16.0,
+        "Jclean": 0.4992,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 2726,
+        "alpha": -32.0,
+        "Jclean": 0.6622,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 13,
+      "detector_feat": 1165,
+      "detector_auroc": 1.0,
+      "train_s": 458.2
+    },
+    "ln1_d3072_k50": {
+      "hook": "ln1",
+      "d_sae": 3072,
+      "k": 50,
+      "FVU": 0.0221,
+      "pct_err": 0.048,
+      "dead_frac": 0.0228,
+      "steer_best20": {
+        "feat": 788,
+        "alpha": 8.0,
+        "Jclean": 0.39,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 1641,
+        "alpha": -32.0,
+        "Jclean": 0.6567,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 9,
+      "detector_feat": 1165,
+      "detector_auroc": 1.0,
+      "train_s": 459.7
+    },
+    "ln1_d6144_k10": {
+      "hook": "ln1",
+      "d_sae": 6144,
+      "k": 10,
+      "FVU": 0.0245,
+      "pct_err": 0.0635,
+      "dead_frac": 0.3123,
+      "steer_best20": {
+        "feat": 2274,
+        "alpha": 16.0,
+        "Jclean": 0.4726,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 5785,
+        "alpha": 32.0,
+        "Jclean": 0.5608,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 10,
+      "detector_feat": 488,
+      "detector_auroc": 1.0,
+      "train_s": 484.9
+    },
+    "ln1_d6144_k32": {
+      "hook": "ln1",
+      "d_sae": 6144,
+      "k": 32,
+      "FVU": 0.0172,
+      "pct_err": 0.0344,
+      "dead_frac": 0.1102,
+      "steer_best20": {
+        "feat": 2406,
+        "alpha": 16.0,
+        "Jclean": 0.4605,
+        "ASR": 0.0208
+      },
+      "steer_rank1": {
+        "feat": 5785,
+        "alpha": 32.0,
+        "Jclean": 0.656,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 7,
+      "detector_feat": 6141,
+      "detector_auroc": 1.0,
+      "train_s": 485.9
+    },
+    "ln1_d6144_k50": {
+      "hook": "ln1",
+      "d_sae": 6144,
+      "k": 50,
+      "FVU": 0.0162,
+      "pct_err": 0.0336,
+      "dead_frac": 0.0763,
+      "steer_best20": {
+        "feat": 3470,
+        "alpha": 16.0,
+        "Jclean": 0.3555,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 4186,
+        "alpha": 32.0,
+        "Jclean": 0.6531,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 6,
+      "detector_feat": 5612,
+      "detector_auroc": 1.0,
+      "train_s": 515.1
+    },
+    "resid_mid_d1536_k10": {
+      "hook": "resid_mid",
+      "d_sae": 1536,
+      "k": 10,
+      "FVU": 0.1135,
+      "pct_err": 0.2017,
+      "dead_frac": 0.0286,
+      "steer_best20": {
+        "feat": 542,
+        "alpha": -4.0,
+        "Jclean": 0.4925,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 1370,
+        "alpha": -4.0,
+        "Jclean": 0.6103,
+        "ASR": 0.0417
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 346,
+      "detector_auroc": 1.0,
+      "train_s": 471.0
+    },
+    "resid_mid_d1536_k32": {
+      "hook": "resid_mid",
+      "d_sae": 1536,
+      "k": 32,
+      "FVU": 0.0822,
+      "pct_err": 0.1727,
+      "dead_frac": 0.0,
+      "steer_best20": {
+        "feat": 1172,
+        "alpha": -4.0,
+        "Jclean": 0.4703,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 892,
+        "alpha": -32.0,
+        "Jclean": 0.6457,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 1228,
+      "detector_auroc": 1.0,
+      "train_s": 455.3
+    },
+    "resid_mid_d1536_k50": {
+      "hook": "resid_mid",
+      "d_sae": 1536,
+      "k": 50,
+      "FVU": 0.0721,
+      "pct_err": 0.1627,
+      "dead_frac": 0.0,
+      "steer_best20": {
+        "feat": 1288,
+        "alpha": -4.0,
+        "Jclean": 0.5449,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 639,
+        "alpha": 32.0,
+        "Jclean": 0.6433,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 1108,
+      "detector_auroc": 1.0,
+      "train_s": 457.6
+    },
+    "resid_mid_d3072_k10": {
+      "hook": "resid_mid",
+      "d_sae": 3072,
+      "k": 10,
+      "FVU": 0.0883,
+      "pct_err": 0.1785,
+      "dead_frac": 0.1016,
+      "steer_best20": {
+        "feat": 1824,
+        "alpha": 4.0,
+        "Jclean": 0.3621,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 2843,
+        "alpha": -4.0,
+        "Jclean": 0.6358,
+        "ASR": 0.0208
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 201,
+      "detector_auroc": 1.0,
+      "train_s": 461.9
+    },
+    "resid_mid_d3072_k32": {
+      "hook": "resid_mid",
+      "d_sae": 3072,
+      "k": 32,
+      "FVU": 0.0625,
+      "pct_err": 0.1489,
+      "dead_frac": 0.0111,
+      "steer_best20": {
+        "feat": 2146,
+        "alpha": -4.0,
+        "Jclean": 0.5216,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 986,
+        "alpha": -16.0,
+        "Jclean": 0.6426,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 786,
+      "detector_auroc": 1.0,
+      "train_s": 464.3
+    },
+    "resid_mid_d3072_k50": {
+      "hook": "resid_mid",
+      "d_sae": 3072,
+      "k": 50,
+      "FVU": 0.0547,
+      "pct_err": 0.1396,
+      "dead_frac": 0.001,
+      "steer_best20": {
+        "feat": 2146,
+        "alpha": -4.0,
+        "Jclean": 0.5695,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 2392,
+        "alpha": -8.0,
+        "Jclean": 0.664,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 2283,
+      "detector_auroc": 0.9583,
+      "train_s": 463.0
+    },
+    "resid_mid_d6144_k10": {
+      "hook": "resid_mid",
+      "d_sae": 6144,
+      "k": 10,
+      "FVU": 0.0753,
+      "pct_err": 0.1651,
+      "dead_frac": 0.2661,
+      "steer_best20": {
+        "feat": 5084,
+        "alpha": 4.0,
+        "Jclean": 0.3068,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 1248,
+        "alpha": -32.0,
+        "Jclean": 0.6612,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 2097,
+      "detector_auroc": 1.0,
+      "train_s": 489.1
+    },
+    "resid_mid_d6144_k32": {
+      "hook": "resid_mid",
+      "d_sae": 6144,
+      "k": 32,
+      "FVU": 0.0513,
+      "pct_err": 0.1338,
+      "dead_frac": 0.0576,
+      "steer_best20": {
+        "feat": 5823,
+        "alpha": 4.0,
+        "Jclean": 0.3482,
+        "ASR": 0.0
+      },
+      "steer_rank1": {
+        "feat": 4100,
+        "alpha": -8.0,
+        "Jclean": 0.6567,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 4082,
+      "detector_auroc": 0.901,
+      "train_s": 491.4
+    },
+    "resid_mid_d6144_k50": {
+      "hook": "resid_mid",
+      "d_sae": 6144,
+      "k": 50,
+      "FVU": 0.0448,
+      "pct_err": 0.1244,
+      "dead_frac": 0.0236,
+      "steer_best20": {
+        "feat": 3626,
+        "alpha": 4.0,
+        "Jclean": 0.3999,
+        "ASR": 0.0417
+      },
+      "steer_rank1": {
+        "feat": 4100,
+        "alpha": -8.0,
+        "Jclean": 0.6601,
+        "ASR": 0.0
+      },
+      "n_suppress_of20": 20,
+      "detector_feat": 1730,
+      "detector_auroc": 0.9201,
+      "train_s": 493.6
+    }
+  },
+  "done": true
+}
