@@ -398,6 +398,47 @@ Three results:
 
 **Net positioning after the campaign.** FRA = (i) **localization** good enough to drive the exact cut (now span-aware, position-agnostic, co-present-capable, and matched-but-not-beaten by supervised baselines); (ii) **diagnosis** (detector ≠ payload, now coalition-proof; QK attribution locally faithful for the pattern once Jacobian-weighted); (iii) **not control in residual space** (no coalition, no sparse steer reaches the floor; the floor itself is outside the dictionary). The control lever is the attention pattern + positional re-index, and that lever is now shown to be **weights-agnostic and PE-agnostic**.
 
+## 4e. Control, revisited: OV-channel localization, a hybrid that beats the floor, and single-vs-multi
+
+*Follow-on (2026-06-06). Pods via `launch_pod_mts.sh`; results in `results/{ovseed_ovroute,k1_ablation,k1_control_suite,one_steer_all8,hybrid_ablate_steer}_results.json`. **Model-variant caveat:** these mix fixed-K8 (steering), randpos-K8 (ablation-route + hybrid), and fixed-K1 — so cross-cell absolutes carry ±0.02–0.05 noise; the robust claims are the within-comparison orderings.*
+
+**The payload is OV-channel-localized (`ovseed_ovroute_pod.py`).** Ablating the OV-diff-selected feature set through the **OV path only** (`hook_v`, attention pattern frozen) is *both* cleaner and more-suppressing than the full-path ln1 route — OV-only reaches (ASR 0.063, J 0.068); ln1 only (0.135, 0.185) at its lowest ASR. Mechanism: the payload *is* the value-write, so removing it through OV is surgical; also perturbing Q/K (ln1) adds collateral without helping suppression (the QK weight-diff was diffuse — routing isn't the lever). This refines the earlier "path doesn't matter" (which held for the *single detector feature*, where nothing worked): for a *multi-feature OV-diff coalition*, **OV-only is the right route**, and it confirms the backdoor's payload is localized to the OV channel (feature-distributed within it).
+
+**A hybrid finally beats the residual floor — the first FRA *control* win (`hybrid_ablate_steer_pod.py`).** Ablate-first (OV-only set) then add a *small* steer:
+
+| method (randpos-K8) | ASR | J_clean |
+|---|---|---|
+| DoM/CAA steering (the bar) | 0.00 | 0.55 |
+| OV-only ablation alone | 0.063 | 0.065 |
+| **ablation + anti-IHY steer α=0.5** | **0.01** | **0.084** |
+| ablation + anti-IHY steer α=1.0 | 0.00 | 0.110 |
+| ablation + CAA steer (no IHY knowledge) | 0.02 | 0.150 |
+| gradient steer on ablation prior | 0.00 | 0.127 |
+| steer-then-ablate (reverse order) | 0.00 | 0.51 |
+
+The ablation removes the bulk of the payload at low J (0.065), and a tiny anti-IHY steer mops up the residual ~6% ASR at **+0.02 J**. This **Pareto-beats DoM** and even **beats the white-box gradient-optimized floor (0.15–0.20)** — a new residual-space record of **~0.08–0.11**, and the first time the FRA/weight-diff machinery delivers *control* rather than only diagnosis/localization. Robust to the knowledge assumption (the no-target CAA-hybrid, 0.150, still beats DoM). Caveats: still **not (0,0)** (the cut stays unique); needs a reference model (OV-diff) + clean/deploy pairs or the target direction; the randpos DoM bar (0.55) is high, so the *gradient-floor* comparison is the conservative one.
+
+**Single isolated backdoor (K1 = DEPLOYMENT): suppression localizes, clean-preservation does not.** With one backdoor, **5 OV-only features suppress it** (ASR≤0.05) vs ~all 197 on K8 — so the *feature-count* wall was multi-trigger entanglement. But every K1 residual method still floors above zero (OV-only ablation **0.20** < grad-steer 0.28 < FRA-OV ablation 0.31 < CAA 0.37 < OMP 0.44 < single-feat 0.47 < resid-mid DoM 0.58); only the oracle is (0,0). On K1, **ablation beats steering** (reverse of K8). **Caveat:** K1's trigger is DEPLOYMENT (w=6 multi-token), whose large positional footprint inflates *all* non-re-indexing J — so K1-vs-K8 absolutes conflate single-vs-multi with trigger-width; the robust read is the within-K1 ordering + the persistence of the floor.
+
+**One steer → all 8 (`one_steer_all8_pod.py`), the C1 mirror.** A single CAA vector, added identically for every prompt, suppresses **all 8 backdoors at once** (every ASR→0) at mean J 0.27 (worst-trigger 0.37) — because they share the IHY target. A weight-diff-guided single steer also suppresses all 8 but dirtier (0.41), reconfirming weight-diff is not a steering-direction finder. So: *one attention cut* kills K for free (0,0); *one steer* kills K at J≈0.27 — same "one intervention, all K," different mechanism (per-key content-agnostic vs shared-target direction), different cost.
+
+**Completed protocol comparison — best (ASR, J_clean):**
+
+| Protocol | Op | Multi-sleeper K8 | Single-sleeper K1 |
+|---|---|---|---|
+| Oracle attention cut + reindex | attn | **(0.00, 0.00)** | (0.00, 0.00) |
+| Single detector feature, any path | abl | (0.99, 0.69) fail | fails (K=1) |
+| OV-diff ablation, OV-only | abl | (0.063, 0.068) near | (0.00, 0.20) @ 5 feats |
+| FRA-OV multi-feature | abl | (0.00, 0.54) | (0.00, 0.31) |
+| resid_mid DoM directional | abl | (0.00, 0.58) | (0.00, 0.58) |
+| CAA / DoM steer (= one steer→all 8) | steer | (0.00, 0.27) | (0.00, 0.37) |
+| OMP-sparse CAA | steer | (0.00, 0.27) | (0.00, 0.44) |
+| Single-feature steer | steer | (0.00, 0.34) | (0.00, 0.47) |
+| Gradient-optimized steer | steer | (0.00, 0.15–0.20) | (0.00, 0.28) |
+| **Hybrid: ablate + light steer** | hybrid | **(0.00, 0.08–0.11)** ⭐ | (open) |
+
+**Net update.** Residual-space control now has a genuine FRA contribution (the ablate+light-steer hybrid, the new floor at ~0.08–0.11), and the payload is shown to be **OV-channel-localized**. But the core spine holds: **no residual method reaches (0,0)** — not at K8, not even for one isolated backdoor — and the **content-agnostic attention cut remains the unique exact lever.** Suppression localizes (5 features for one backdoor); clean-preservation does not.
+
 ## 5. Limitations & honesty
 - **Replication.** C3 reproduces on an *independently retrained* model + SAE (different seed and
   data slice): detector-feature ablation mean ASR **0.98** (fails), while blank-all-content

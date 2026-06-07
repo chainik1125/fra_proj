@@ -533,3 +533,11 @@ pattern = lever). Modal spend ≈$6 of $15. Branch `autoresearch/multitrigger-sl
   to suppress) yet worse J (0.38–0.52). Refined claim: single-feature control isn't hopeless on
   multi — best-of-20 at width reaches ~0.35 and occasionally beats DoM — but it's unreliable
   vs DoM's robust 0.31. summary.md scaling paragraph rewritten in place.
+
+## 2026-06-06 (branch sleeper-weights) — OV-localization, hybrid control win, single-vs-multi
+
+- **OV-only vs ln1 ablation (ovseed_ovroute_pod):** ablating OV-diff-selected features through hook_v (Q/K frozen) Pareto-beats the ln1 full-path route — OV-only (0.063, 0.068) vs ln1 (0.135, 0.185)@min-ASR. Payload is OV-channel-localized; ln1's QK perturbation is pure collateral. Refines "path doesn't matter" (true only for the single detector feature).
+- **HYBRID ablate+steer (hybrid_ablate_steer_pod):** OV-only ablation set + light anti-IHY steer (α=0.5) → (ASR 0.01, J 0.084) on randpos-K8. Pareto-beats DoM (0.55) AND the gradient floor (0.15-0.20). New residual-space record ~0.08-0.11; first FRA *control* win. No-target CAA-hybrid (0.150) also beats DoM. Reverse order (steer-then-ablate) doesn't help (0.51). Still not (0,0).
+- **K1 single-sleeper (k1_ablation + k1_control_suite):** 5 OV-only features suppress the one backdoor (vs ~197 on K8 — feature-count wall was entanglement) but residual J floors ~0.20; all protocols suppress (ASR 0) but none reach (0,0). On K1 ablation beats steering (OV-only 0.20 < grad 0.28 < CAA 0.37 < OMP 0.44 < single 0.47 < resid-DoM 0.58). CAVEAT: K1=DEPLOYMENT w=6 → big positional footprint inflates non-re-indexing J; K1-vs-K8 absolutes conflate single-vs-multi with trigger-width.
+- **one_steer_all8_pod (C1 mirror):** one CAA vector suppresses all 8 backdoors at once (every ASR→0) at mean J 0.27 (worst 0.37) — they share the IHY target. Weight-diff-guided one-steer dirtier (0.41). One cut = (0,0) free; one steer = J~0.27.
+- Bugs squashed: launcher env ADAPTER_PATH=K8 clobbered K1 scripts (fixed via ADAPTER_K1_PATH); HF-CDN serves stale blobs ~2min post-commit (fixed via fresh filenames _v2); detach() on grad tensors; OMP tuple-index. Full protocol comparison table + new §4e in summary.md.
