@@ -32,6 +32,17 @@ set -eo pipefail
 exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
 export HF_TOKEN='$HF_TOKEN'
 export SLEEPER='${SLEEPER:-multi}'
+export TRAIN_ON='${TRAIN_ON:-union}'
+export CONFIG='${CONFIG:-}'
+export RUN_SEED='${RUN_SEED:-7}'
+export HOOKS='${HOOKS:-ln1,resid_mid,resid_post}'
+export LAYERS='${LAYERS:-0,1,2,3}'
+export MODEL='${MODEL:-K1}'
+export HOOK='${HOOK:-hook_resid_mid}'
+export N_VEC='${N_VEC:-256}'
+export DIRECTION='${DIRECTION:-within_model}'
+[ -n "${HOOKS_ALL:-}" ] && export HOOKS_ALL='${HOOKS_ALL:-}'
+[ -n "${WORKLIST:-}" ] && export WORKLIST='${WORKLIST:-}'
 HFC=hf
 upload_log() { \$HFC upload '$HF_REPO' /workspace/run.log mts_singlefeat/results/$RUN_LOG --repo-type dataset >/dev/null 2>&1 || true; }
 trap 'echo "[BOOTSTRAP-ERR line \$LINENO]"; upload_log; sleep infinity' ERR
@@ -54,7 +65,22 @@ python3 -c "import torch; assert torch.cuda.is_available(); print('torch', torch
 command -v hf >/dev/null 2>&1 || HFC=huggingface-cli
 echo "[bootstrap] HF CLI: \$HFC"
 [ -n '$EXTRA_PIP' ] && pip install --no-input -q -c /tmp/constraints.txt $EXTRA_PIP 2>&1 | tail -1
-\$HFC download '$HF_REPO' --repo-type dataset --include "mts_singlefeat/*" --local-dir /workspace 2>&1 | tail -1
+# retry the dataset download: concurrent pod launches can 429 the Hub, and this step is
+# NOT inside the python retry loop -> a bare failure here would hit the ERR trap.
+for dlat in 1 2 3 4 5 6 7 8; do
+  \$HFC download '$HF_REPO' --repo-type dataset --include "mts_singlefeat/*" --local-dir /workspace >/tmp/dsdl.log 2>&1 || true
+  # check the ACTUAL artifact (code dir), not the pipe exit -- 'cmd | tail' masks a 429 as success
+  [ -d /workspace/mts_singlefeat/code ] && { echo "[bootstrap] dataset present (attempt \$dlat)"; break; }
+  echo "[bootstrap] dataset dl attempt \$dlat incomplete (HF 429?): \$(tail -1 /tmp/dsdl.log); sleep 60"; sleep 60
+done
+[ -d /workspace/mts_singlefeat/code ] || { echo "[bootstrap] FATAL: code dir never downloaded after 8 tries"; upload_log; sleep infinity; }
+# prefetch the base model into the HF cache ONCE (robust, with backoff) so the per-pod
+# from_pretrained calls are warm-cache reads -- not N concurrent cold pulls of roneneldan/*
+# racing into a 429. This is the real fix; the retry loops above are the safety net.
+for mat in 1 2 3 4 5 6; do
+  python3 -c "from huggingface_hub import snapshot_download as s; s('roneneldan/TinyStories-Instruct-33M')" && break
+  echo "[bootstrap] base-model prefetch attempt \$mat failed (HF 429?), sleep 45"; sleep 45
+done
 mkdir -p /workspace/out
 ( while true; do sleep 240; \\
     \$HFC upload '$HF_REPO' /workspace/out/$OUT_JSON mts_singlefeat/results/$OUT_JSON --repo-type dataset >/dev/null 2>&1 || true; \\
@@ -84,8 +110,8 @@ while IFS= read -r gpu_type; do
     [ -z "$gpu_type" ] && continue
     input=$(cat <<JSON
 { "name": "$POD_NAME", "imageName": "$IMAGE_GPU", "cloudType": "SECURE",
-  "gpuTypeId": "$gpu_type", "gpuCount": 1, "minVcpuCount": 4, "minMemoryInGb": 24,
-  "containerDiskInGb": 60, "volumeInGb": 0, "dockerArgs": $cmd_json, "ports": "22/tcp", "startSsh": true }
+  "gpuTypeId": "$gpu_type", "gpuCount": 1, "minVcpuCount": 4, "minMemoryInGb": ${MIN_MEM:-24},
+  "containerDiskInGb": ${DISK:-60}, "volumeInGb": 0, "dockerArgs": $cmd_json, "ports": "22/tcp", "startSsh": true }
 JSON
 )
     payload=$(python3 -c "

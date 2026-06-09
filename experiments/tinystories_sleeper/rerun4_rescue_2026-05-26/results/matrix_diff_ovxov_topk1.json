@@ -1,0 +1,338 @@
+{
+  "config": {
+    "regime": "diff",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "sae_mid": "weights/sae_resid_mid.pt",
+    "target_feature": 579,
+    "top_k": 1,
+    "triple_k": 8,
+    "alphas": [
+      2.0,
+      4.0
+    ],
+    "n_sel": 200,
+    "n_eval": 200,
+    "gen_tokens": 16,
+    "eval_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "eval_temperature": 1.0,
+    "attr": "ov",
+    "intervene": "ov",
+    "out": "results/matrix_diff_ovxov_topk1.json",
+    "device": null,
+    "cell": "ov\u00d7ov"
+  },
+  "decoding": {
+    "selection_asr": {
+      "mode": "greedy"
+    },
+    "eval_asr": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "top_p": null,
+      "top_k": null,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "eval_jsd_clean": {
+      "mode": "sample",
+      "temperature": 1.0,
+      "top_p": null,
+      "top_k": null,
+      "seed": 0,
+      "note": "single rollout at seed=JSD_CLEAN_SEED, same as clean_lsm"
+    }
+  },
+  "baseline": {
+    "selection": {
+      "clean_ce": 0.7241769433021545
+    },
+    "eval": {
+      "asr": 0.97,
+      "asr_per_seed": [
+        0.96,
+        0.98,
+        0.94,
+        0.98,
+        0.99
+      ]
+    }
+  },
+  "results": [
+    {
+      "seed": 0,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          1114,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": 0.0
+      },
+      "eval": {
+        "asr": 0.0,
+        "asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "jsd_clean": 0.535702645778656
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.04,
+          "dce": 0.0
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": 0.0
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          1027,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": -1.5020370483398438e-05
+      },
+      "eval": {
+        "asr": 0.0,
+        "asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "jsd_clean": 0.4712488055229187
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.0,
+          "dce": -1.5020370483398438e-05
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": -3.0279159545898438e-05
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          351,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": 1.7404556274414062e-05
+      },
+      "eval": {
+        "asr": 0.0,
+        "asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "jsd_clean": 0.42956534028053284
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.04,
+          "dce": 1.0907649993896484e-05
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": 1.7404556274414062e-05
+        }
+      ]
+    },
+    {
+      "seed": 3,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          1154,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": -4.470348358154297e-06
+      },
+      "eval": {
+        "asr": 0.0,
+        "asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "jsd_clean": 0.42026954889297485
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.0,
+          "dce": -4.470348358154297e-06
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": -6.794929504394531e-06
+        }
+      ]
+    },
+    {
+      "seed": 4,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          1430,
+          "V"
+        ]
+      ],
+      "alpha": 4.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": 0.00039190053939819336
+      },
+      "eval": {
+        "asr": 0.002,
+        "asr_per_seed": [
+          0.0,
+          0.0,
+          0.0,
+          0.01,
+          0.0
+        ],
+        "jsd_clean": 0.5169515013694763
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.91,
+          "dce": 0.0001398324966430664
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": 0.00039190053939819336
+        }
+      ]
+    },
+    {
+      "seed": 5,
+      "attr": "ov",
+      "intervene": "ov",
+      "regime": "diff",
+      "winner_tuple": [
+        [
+          1208,
+          "V"
+        ]
+      ],
+      "alpha": 2.0,
+      "selection": {
+        "asr": 0.0,
+        "attr_rank": 1,
+        "delta_ce": 0.0
+      },
+      "eval": {
+        "asr": 0.008,
+        "asr_per_seed": [
+          0.0,
+          0.01,
+          0.01,
+          0.01,
+          0.01
+        ],
+        "jsd_clean": 0.5270873308181763
+      },
+      "sweep": [
+        {
+          "ti": 0,
+          "alpha": 2.0,
+          "asr": 0.0,
+          "dce": 0.0
+        },
+        {
+          "ti": 0,
+          "alpha": 4.0,
+          "asr": 0.0,
+          "dce": 0.0
+        }
+      ]
+    }
+  ]
+}

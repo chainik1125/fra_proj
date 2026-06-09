@@ -1,0 +1,10 @@
+# conventional SAE steering: resid_mid@L1, union-trained, cross-model act-diff rank, direct-resid route
+model: K1
+eval:   {per_trigger: 24, n_new: 16, n_eval_rows: 600, eval_skip: 20000, max_prompt: 64}
+source:
+  kind: sae
+  read_hook: blocks.1.hook_resid_mid
+  sae:  {load: train, train_on: union, d_sae: 2048, k: 32, steps: 2500, harvest_rows: 900}
+rank:      {method: act_diff}
+intervene: {route: resid, footprint: all, select: topk, topk: 24}
+sweep:     {coeffs: [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0], topk_list: [8, 16, 24, 40]}

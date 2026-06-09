@@ -1,0 +1,30 @@
+model: K1
+eval:
+  per_trigger: 24
+  n_new: 16
+  n_eval_rows: 600
+  eval_skip: 20000
+  max_prompt: 64
+sweep:
+  coeffs:
+  - 0
+  - 0.5
+  - 1
+  - 2
+  - 4
+  - 8
+  topk_list: []
+seed: 7
+source:
+  kind: dom
+  read_hook: blocks.3.hook_resid_post
+  dom:
+    harvest_rows: 100000
+rank:
+  method: none
+  target: ihy_onset
+intervene:
+  route: dom
+  footprint: all
+  select: topk
+  topk: 24

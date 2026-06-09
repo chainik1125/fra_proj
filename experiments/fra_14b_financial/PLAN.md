@@ -76,7 +76,7 @@ taught us the hard way.
 | grid | ranking {Wang-Δf, FRA-QK, FRA-OV} × SAE {ln1, resid_post} × gran {1,2,10,50}, additive magmatched, **base + finance**, n=32, seeds {42,123,456}; skip FRA-QK×resid_post; FRA-OV×resid_post exploratory → **20 cells** | identical shape |
 | FRA-routing | qk→qk-true (hook_q/k), qk→ov, ov→ov (hook_v), ln1, grans {1,2,10,26}, base+finance×3 seeds | identical |
 | metric | Δalign@coh{70,50,30}, max−min over coh≥floor α-window, mean±SD over seeds; report best + median(per-feature) | identical (`grid_metrics.cell_row`) |
-| eval | 8 EM_EVAL_PROMPTS (reuse), **judge = Claude Haiku 4.5** (Anthropic API, `ANTHROPIC_API_KEY_MATS`), temp 0, n=32 = 8 prompts × 4 samples | judge: gpt-4o → Haiku 4.5 |
+| eval | 8 EM_EVAL_PROMPTS (reuse), **judge = gpt-4o-mini first → gpt-4o on headline cells if sensible** (OpenAI, `OPENAI_API_KEY_MATS`), temp 0, n=32 = 8 prompts × 4 samples | judge: gpt-4o-mini (was 7B gpt-4o) |
 | ‖Δa‖ | recompute at L24 resid_post + ln1 (base→finance diff, 8-prompt last-token) | was L15 |
 
 ### Phases (DAG)
@@ -96,13 +96,13 @@ J. assemble GRID_RESULTS_14b.md (best+median, coh50/70, med/base) + fold into wr
 ### Cost projection — DO THIS UP FRONT (the lesson)
 - **GPU:** SAE train (1× H100, ~$40–60) + rankings/head-ablation (~$5) + grid fan-out
   (14B is ~2× the 7B per-pod time; budget ~$80–150 for the ~40-pod magmatched grid).
-- **Judging — the dominant lever is VOLUME, not just model.** ~2M generations is the
-  real driver. **Judge = Claude Haiku 4.5** (locked) is ~2.5× cheaper than gpt-4o but
-  **not trivially cheap** — at 2 calls/gen it's still **~$700–1300**; honest estimate.
-  Cut it with: **(a) one combined align+coherence call per generation** (halves it),
-  **(b) optional α-subsampling / smaller screening-n** (full n=32 only on headline
-  cells), **(c) the call-budget guard** that halts past 1.5× the printed estimate.
-  Print the per-cell + total estimate and get approval before fan-out.
+- **Judging — cheap first pass on mini, then targeted 4o.** ~2M generations × judge cost.
+  **gpt-4o-mini** ($0.15/$0.60 per Mtok) ≈ **~$160–320 for the full grid** at 2 calls/gen
+  (~half with one combined align+coherence call), vs ~$thousands at gpt-4o. Plan: run the
+  **full grid on gpt-4o-mini**, confirm the EM-specific/generic structure looks sensible,
+  then **re-judge only the headline cells with gpt-4o** for 7B-comparable numbers — a
+  small fraction of the volume, so the 4o spend stays modest. Keep the combined-call +
+  a call-budget guard that halts past ~1.5× the printed estimate; print it before fan-out.
 
 ### Reuse map (parametrize, don't rebuild)
 - `phase1_grid_7b_orchestrator.py` → `phase1_grid_14b_orchestrator.py`: swap model
@@ -127,14 +127,15 @@ J. assemble GRID_RESULTS_14b.md (best+median, coh50/70, med/base) + fold into wr
 - [ ] All raw + combined to HF via batched `upload_folder` (rate-limit safe).
 
 ### Locked decisions (2026-05-27)
-1. **Judge = Claude Haiku 4.5** (Anthropic API, `ANTHROPIC_API_KEY_MATS`). Build task:
-   rewrite `phase1_judge_and_combine.py:judge_one` from the OpenAI client to the
-   Anthropic Messages API, **combining alignment + coherence into one structured call**
-   (halves volume). ⚠️ **Comparability caveat:** a different judge than the 7B's gpt-4o
-   means the *absolute* alignment/coherence scales aren't 1:1 with 7B. Within-14B
-   comparisons (protocol×grouping, finance vs base) stay valid; for a clean 7B↔14B
-   head-to-head, re-judge a handful of 7B headline cells with Haiku 4.5 too (cheap
-   calibration) or compare *patterns* (EM-specific vs generic), not raw deltas.
+1. **Judge = gpt-4o-mini first, then gpt-4o on the headline cells if the mini results
+   look sensible** (OpenAI, `OPENAI_API_KEY_MATS` — credits restored 2026-05-27).
+   **No Anthropic rewrite** — `phase1_judge_and_combine.py` already uses the OpenAI
+   client; just parametrize the model (env/flag) and set `gpt-4o-mini`. Strategy: cheap
+   full-grid pass on mini (~$160–320) → eyeball that the EM-specific vs generic structure
+   replicates → re-judge the *headline* cells only with **gpt-4o** for the 7B-comparable
+   final numbers (4o on a handful of cells, not the whole grid). Keep the combined-call +
+   call-budget. ⚠️ mini ≠ 4o on absolute scale — the 4o headline pass is what's 1:1 with
+   the 7B; the mini pass is a screen.
 2. **Run location = RunPod CPU pod** for the agent team + judge loop (disk headroom +
    survives laptop sleep — fixes both 7B overnight failure modes).
 3. **ln1 SAE = reuse Nura's first (primary grid), retrain in parallel as a parity

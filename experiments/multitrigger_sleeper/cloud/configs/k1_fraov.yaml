@@ -1,0 +1,10 @@
+# FRA-OV: ln1@L0 SAE (HF), OV-diff weight ranking, OV route, trigger footprint
+model: K1
+eval:   {per_trigger: 24, n_new: 16, n_eval_rows: 600, eval_skip: 20000, max_prompt: 64}
+source:
+  kind: sae
+  read_hook: blocks.0.ln1.hook_normalized
+  sae:  {load: "hf:mts_singlefeat/artifacts/sae_ln1_K8.pt"}
+rank:      {method: ov_diff, target: ihy_onset}
+intervene: {route: ov, footprint: trigger, select: topk, topk: 24}
+sweep:     {coeffs: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0], topk_list: [8, 16, 24]}
