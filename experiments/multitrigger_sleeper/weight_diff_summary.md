@@ -119,6 +119,47 @@ rollouts word-for-word** (88% for the payload-aware variant, recorded for refere
 58–62%; **DoM and conv-SAE unmeasured — open item**. If DoM's .079 comes with materially
 lower verbatim recovery, the §1 tier-4 "tie" understates FRA.
 
+## 8. Relation to the single-model `sae_scaling` sweep
+
+The earlier sleeper-only campaign (`experiments/tinystories_sleeper/sae_scaling/RESULTS.md`:
+no base checkpoint; dep−clean diffs only; 270 SAE checkpoints over d_sae × k × steps × 3
+seeds, block 0) is the **single-model ancestor of this pipeline**, and the two now explain
+each other:
+
+| design axis | sae_scaling | this campaign | what the change is worth |
+|---|---|---|---|
+| diff source | dep−clean **activation** diff (within-model), OV cell projects it through the *sleeper's own* `W_OV` | `ΔW_OV` (needs base) or trigger-pooled firing | **~nothing for selection** (§2 saturation; swapping `ΔW_OV → W_OV` keeps 27–28/32 of the top-32) — but everything for detection + the example-free tiers |
+| unit of intervention | **single feature** (Δlogp cull → greedy-ASR winner) | **top-K set** (K ≈ 8–13) | **the big one**: collective gated removal breaks the single-feature ceiling |
+| operation | additive **α** along the feature's value channel (free magnitude) | gated removal `c·z·f` of the set, over-steered c ≈ 2–3 | with #features, takes J **0.44–0.47 → 0.09** |
+| layer | block 0 (the clean-identity layer; only layer swept) | L2 (empirical best) | ~2× in J on our grids |
+
+- **The 0.46 floor is the single-feature-additive ceiling, measured from the other side.**
+  sae_scaling's opt_J_clean ≈ 0.44–0.47, *flat across the entire width × k × steps grid*,
+  is the same ceiling as our 640-point single-feature null + the f1872 additive results
+  (~0.33–0.46): one feature, however selected and however good the dictionary, cannot do
+  better, because the carriers are redundant (§3). The flatness across dictionary quality
+  *is* "selection-/structure-limited, not fidelity-limited" — the same decoupling we found
+  (FVE falls with depth yet L2 steers best; loss_recovered saturated and uninformative in
+  both campaigns).
+- **Its mechanism test prefigures our route taxonomy.** sae_scaling's same-feature test (OV
+  ≈ 0.47 vs additive-at-ln1 ≈ 0.85–0.92 — additive perturbs Q/K/V and corrupts attention)
+  is the single-feature version of our additive-vs-gated / route findings; "the intervention
+  is decisive" carries over intact, with the K1-scale answer being *gated set-removal in
+  the value path*.
+- **Conventional's width-degradation (feature splitting) and our pooling diagnosis are the
+  same disease at two scales**: as the dictionary widens, the backdoor direction fragments,
+  so a rank-1 raw-magnitude handle weakens (their per-seed winner instability ↔ our conv-SAE
+  5-seed noise and its outright failure on the base dictionary). Set-based removal (this
+  campaign) is also the natural cure for splitting — fragments get removed together.
+- **What is genuinely new with the base checkpoint** (unavailable to sae_scaling by
+  construction): detection from weights, the rank-2/3 edit localization that names L2/OV,
+  the zero-knowledge and no-example tiers (§1, §4), and the randpos result. None of the K1
+  *removal-J* improvement requires it.
+- **Direct upgrade path for the single-model setting** (untested, predicted by §2): rerun
+  the sae_scaling OV cell with top-K gated removal at L2 instead of single-feature α at
+  block 0 — expected 0.46 → ~0.1 with no base model, since the trigger-firing ranking
+  (fully single-model) already ties the weight-diff ranking.
+
 ## Caveats / open items
 
 - 33M toy; the backdoor dominates ΔW_OV (rank-2). At scale expect a thicker interloper
