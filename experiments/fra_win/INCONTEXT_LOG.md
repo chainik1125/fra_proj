@@ -63,3 +63,16 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
 - **20:55Z** Wrote §3c "The bridge" + Finding 5 into summary.md; fig3_backdoor_flip.png. The whole
   project now unifies: FRA loses for OV/output-routed backdoors (weight-baked sleeper), wins for
   attention-routed ones (in-context / prompt-injection). Committing.
+- **21:05Z IC4 — the baselines that matter.** User: must beat the SAME strong baselines that beat FRA
+  on the weight-baked sleeper, not just ActAdd. Added **DoM** (mean-diff/CAA vector from a poisoned-ON
+  vs clean-OFF contrast set of 14+14 sequences, resid L6, subtracted at trigger positions) and
+  **conv-SAE** (act-diff ranked top-12 features at L6, gated residual removal) — both computed exactly
+  as in K1/K8. Comparing FRA-QK vs DoM vs conv-SAE vs payload-suppress on ASR-suppression vs held-out
+  collateral. Open question: do DoM/conv-SAE (singly-gated on trigger/features) stay low-collateral
+  like they did on the weight-baked sleeper, or do they pay (normal-token endpoints) and FRA win?
+- **21:20Z IC4 RESULT — the flip is robust to the strong baselines.** @80% ASR-removal, held-out
+  collateral: FRA-QK **0.07±0.08** | DoM **1.83±0.79 (~27x)** | conv-SAE **6.06±3.87 (~90x)** |
+  payload-suppress **4.12±1.60 (~60x)**. All four remove the backdoor (ASR->0), so fair. DoM and
+  conv-SAE — the methods that DOMINATED FRA on the weight-baked sleeper — LOSE to it 27-90x in-context.
+  FRA's only cost: lower suppression ceiling (caps 0.84-1.0 vs always-1.0). Updated summary §3c +
+  Finding 5 + fig3 (now shows DoM + conv-SAE). The flip is confirmed against the baselines that matter.

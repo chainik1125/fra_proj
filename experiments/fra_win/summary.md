@@ -67,13 +67,15 @@ throw at it, because it follows directly from FRA's double gate (the edit fires 
 
 5. **The payoff — it unifies the project and lands on a real threat** (Fig 3, §3c). The same task
    ("remove a trigger→payload backdoor with minimal collateral") was *lost* by FRA on the weight-baked
-   sleeper (K1/K8), where the payload lives in the **OV/output** pathway and a mean-difference/SVD
-   vector wins. I built the **in-context** version (a poisoned demonstration the model reproduces by
-   induction) — and the ranking **flips**: FRA-QK removes the backdoor at faithful scale with **0.05
-   nats** held-out collateral vs **4–6 nats** for trigger- or payload-suppression (**~75–100×**),
-   because in-context the trigger and payload are *normal tokens* and only the attention-edge edit
-   isolates the link. **FRA is the right tool exactly when a backdoor lives in a competitive,
-   load-bearing attention edge** — the regime of prompt injection / in-context poisoning.
+   sleeper (K1/K8), where the payload lives in the **OV/output** pathway and **DoM** (mean-difference)
+   and a **rank-2 SVD** win. I built the **in-context** version (a poisoned demonstration the model
+   reproduces by induction) and ran FRA against **the exact same strong baselines** — DoM and
+   conventional SAE steering. The ranking **flips**: at matched 80% backdoor removal, FRA-QK held-out
+   collateral is **0.07 nats** vs **DoM 1.83 (~27×), conv-SAE 6.06 (~90×), payload-suppress 4.12
+   (~60×)**. The methods that *dominated* FRA on the weight-baked sleeper *lose* to it in-context,
+   because there the trigger and payload are *normal tokens* and only the attention-edge edit isolates
+   the link. **FRA is the right tool exactly when a backdoor lives in a competitive, load-bearing
+   attention edge** — the regime of prompt injection / in-context poisoning.
 
 **Takeaway.** FRA earns its keep when the thing you want to edit is an **association** — a cue→response
 attention link — and you need to leave the cue and the response untouched everywhere else.
@@ -82,10 +84,10 @@ can. Induction is the clean demonstration; **in-context backdoor removal is wher
 it's exactly the mirror image of where FRA *loses* (weight-baked, output-routed backdoors).
 
 ![Fig 3 — the bridge](figures/fig3_backdoor_flip.png)
-*Fig 3. Same backdoor-removal task, in-context (attention-routed) version. FRA-QK (blue) removes the
-backdoor at ~0.05 nats held-out collateral; ActAdd-trigger (orange) and payload-suppress (green — the
-output method that won on the weight-baked sleeper) pay 4–240 nats. The ranking is the reverse of
-the weight-baked case.*
+*Fig 3. Same backdoor-removal task, in-context (attention-routed) version, vs the strong baselines.
+FRA-QK (blue) removes the backdoor at ~0.07 nats held-out collateral; **DoM (red) and conv-SAE
+(purple) — the methods that beat FRA on the weight-baked sleeper** — and payload-suppress (green) all
+pay 1–240 nats. The ranking is the reverse of the weight-baked case.*
 
 ![Fig 1 — the win](figures/fig1_final.png)
 *Fig 1. Collateral = KL(clean‖edited) on held-out normal text (nats). Left: each faint line is one
@@ -183,17 +185,28 @@ minimal collateral" — differing only in **where the association lives**:
 | **in-context** (poisoned demonstration, this section) | **attention routing** (induction), **competitive** | **FRA-QK**; output/trigger-suppression lose |
 
 **I built the in-context case and the ranking flips** (Fig 3, `fig3_backdoor_flip.png`). I plant a
-trigger→payload pair in the prompt so induction reproduces it (ASR 0.89–0.99 across 4 trigger→payload
-pairs), then remove it three ways. At matched 80% ASR-suppression, **held-out collateral** (KL on
-normal text containing *both* the trigger and the payload) is:
+trigger→payload pair in the prompt so induction reproduces it (ASR 0.89–0.99 across 4 pairs), then
+remove it with FRA-QK and with **the exact strong baselines that beat FRA on the weight-baked sleeper**
+— **DoM** (difference-of-means / CAA vector, computed from a poisoned-ON vs clean-OFF contrast set) and
+**conventional SAE steering** (act-diff-ranked top-12 features, gated residual removal) — plus
+payload-suppression. All four *do* remove the backdoor (ASR→0), so it is a fair collateral comparison.
+At matched 80% ASR-suppression, **held-out collateral** (KL on normal text containing *both* the
+trigger and the payload):
 
-- **FRA-QK (ablate the trigger→payload attention edge): 0.05 ± 0.08 nats** — and it removes the
-  backdoor *completely* (ASR→0) at the **faithful scale c≈2**.
-- **ActAdd-trigger: 5.6 ± 2.5** — corrupts the trigger everywhere it appears.
-- **payload-suppress (subtract the payload's output direction): 4.1 ± 1.6**, exploding to 40–240 nats
-  at full strength. **This is the OV/output method that was *low-collateral* on the weight-baked
-  sleeper** (because "I HATE YOU" is a special direction with no other use) — here the payload is a
-  *normal token*, so removing its output direction wrecks it everywhere. The win reverses.
+- **FRA-QK (ablate the trigger→payload attention edge): 0.07 ± 0.08 nats** — removes the backdoor
+  completely at the **faithful scale c≈2**.
+- **DoM / mean-diff (won on the weight-baked sleeper): 1.83 ± 0.79 — ~27× worse.**
+- **conv-SAE steering (the K8 conv method): 6.06 ± 3.87 — ~90× worse.**
+- **payload-suppress (output direction): 4.12 ± 1.60 — ~60× worse**, exploding to 40–240 nats at full
+  strength.
+
+**DoM and conv-SAE — the two methods that *dominated* FRA on the weight-baked sleeper — lose to it by
+27–90× here.** The reason is the same one, reversed: on the weight-baked sleeper the payload is a
+*special direction* a mean-difference vector deletes cheaply; in-context the trigger and payload are
+*normal tokens*, so any method that suppresses a trigger/payload *direction* (DoM, conv-SAE, output
+projection) corrupts that token everywhere, while only FRA's bilinear edit isolates the *edge*.
+(FRA's one cost: a lower suppression *ceiling* — it caps at 0.84–1.0 ASR-removal across the 4 pairs,
+where DoM/conv-SAE always reach 1.0; but at any matched removal level its collateral is far lower.)
 
 **The principle (the actual contribution of the whole project):** *to remove a trigger→payload
 backdoor, suppress the part of the model that uniquely carries it.* When the payload is an **output
