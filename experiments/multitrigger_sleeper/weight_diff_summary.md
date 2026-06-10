@@ -58,8 +58,14 @@ method saturates its tier.
 
 ## 3. Removal is collective and requires over-steering — there is no single-feature kill switch
 
-- Steering any **single** top-20 weight-diff feature, c ∈ [−4,4] step .25 (ablate *and*
-  amplify): **ASR = 1.000 at all 640 points**. The payload routing is redundant
+- Steering any **single** top-20 weight-diff feature **at L2**, c ∈ [−4,4] step .25 (ablate
+  *and* amplify): **ASR = 1.000 at all 640 points**. Scope (L0 extended-c replication,
+  `results/singlefeat_L0_ext.json`): at **L0** with c up to 64, 16/20 singles suppress in the
+  damage regime (J ≈ .39–.96 bits, match ≤ .17 — the sae_scaling regime), **and one feature
+  (1253, plausibly the trigger-token identity feature) is a genuine single-feature kill switch:
+  (0, .199 bits, 67% match) @ c=6** — at L0 the bottleneck is ~1-dimensional (over-steering the
+  trigger token's feature ≈ soft trigger deletion, a relative of the APE oracle); the carrier
+  redundancy that defeats singles is created between L0 and L2. The payload routing is redundant
   (error-correcting) across the carrier set. (Known single-feature *suppression* results —
   e_171, f1872 — are decision-side levers used **additively with free magnitude** in the
   residual; a different (ranking, path) cell. The same features through their OV channel
@@ -135,15 +141,20 @@ each other:
 |---|---|---|---|
 | diff source | dep−clean **activation** diff (within-model), OV cell projects it through the *sleeper's own* `W_OV` | `ΔW_OV` (needs base) or trigger-pooled firing | **~nothing for selection** (§2 saturation; swapping `ΔW_OV → W_OV` keeps 27–28/32 of the top-32) — but everything for detection + the example-free tiers |
 | unit of intervention | **single feature** (Δlogp cull → greedy-ASR winner) | **top-K set** (K ≈ 8–13) | **the big one**: collective gated removal breaks the single-feature ceiling |
-| operation | additive **α** along the feature's value channel (free magnitude) | gated removal `c·z·f` of the set, over-steered c ≈ 2–3 | with #features, takes J **0.44–0.47 → 0.13** |
+| operation | gated removal `α·z·f` of a **single** feature (α free, per-checkpoint optimized — same functional form, *not* free-direction additive; see `compute_sae_delta`) | gated removal `c·z·f` of the set, over-steered c ≈ 2–3 | with #features, takes J **0.44–0.47 → 0.13** |
 | layer | block 0 (the clean-identity layer; only layer swept) | L2 (empirical best) | ~2× in J on our grids |
 
-- **The 0.46 floor is the single-feature-additive ceiling, measured from the other side.**
+- **The 0.46 floor is the single-feature ceiling, measured from the other side.** (Both
+  campaigns' single-feature ops are z-gated; "additive" in earlier drafts referred to the
+  hook mechanics, not free-direction steering.)
   sae_scaling's opt_J_clean ≈ 0.44–0.47, *flat across the entire width × k × steps grid*,
   is the same ceiling as our 640-point single-feature null (which swept only c ≤ 4 — *below*
   sae_scaling's α ≈ 6–256 onset regime; an L0 extended-α replication on K1 is in flight) +
-  the f1872 additive results (~0.47–0.66 bits): one feature, however selected and however
-  good the dictionary, suppresses only in the high-α damage regime, never cleanly (§3). The flatness across dictionary quality
+  the f1872 additive results (~0.47–0.66 bits). The L0 extended-α replication on K1 confirms
+  it: 16/20 singles suppress at α 2–48, overwhelmingly in the damage regime (match ≤ .17),
+  with several at sae_scaling's exact 0.44–0.47-bit floor — plus one L0-specific clean
+  exception (feat 1253, §3). So the two campaigns agree: above its onset α a single feature
+  suppresses by damage; clean removal needs the set (L2) or the L0 token-bottleneck feature. The flatness across dictionary quality
   *is* "selection-/structure-limited, not fidelity-limited" — the same decoupling we found
   (FVE falls with depth yet L2 steers best; loss_recovered saturated and uninformative in
   both campaigns).
@@ -173,8 +184,7 @@ each other:
 - Single-seed (7) everywhere except conv-SAE (5-seed ± .022); seed-extension of the blind-FRA
   / DoM / SVD numbers is the main robustness gap. (NB the two-different-"seed-7"-SAEs trap:
   rankings must be paired with the dictionary that produced them — see memory/§4g note.)
-- DoM + conv word-match unmeasured (§7). Llama-3 zero-knowledge SVD pending (chat-format
-  fix). L0 extended-α single-feature replication in flight (§8).
+- DoM + conv word-match unmeasured (§7). Llama-3 zero-knowledge SVD pending (chat-format fix).
 - Eval: PER=24 prompts, 16 greedy tokens, fixed-position trigger (K1); randpos covered in §4.
 
 *Data: `mts_singlefeat/results/*` on HF (**nats**); scripts `cloud/*.py`; full narrative
