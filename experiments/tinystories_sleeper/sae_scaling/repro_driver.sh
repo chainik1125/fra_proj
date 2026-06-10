@@ -28,14 +28,13 @@ if [ ! -d /workspace/fra_proj/.git ]; then
 fi
 cd /workspace/fra_proj && git fetch origin && git checkout "$BRANCH" && git pull --ff-only
 
-# ── environment fix (see reference-runpod-torch-env memory) ─────────────────
-pip install -q transformer-lens datasets peft huggingface_hub einops
-pip install -q --force-reinstall --no-deps \
-    torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
-    --index-url https://download.pytorch.org/whl/cu124
-pip install -q nvidia-cusparselt-cu12
-CUSPARSELT_DIR="$(dirname "$(find / -name 'libcusparseLt.so.0' 2>/dev/null | head -1)")"
-echo "$CUSPARSELT_DIR" > /etc/ld.so.conf.d/cusparselt.conf && ldconfig
+# ── environment (PERMANENT RULE: never reinstall torch — use the image's) ───
+# Base image must ship torch >= 2.5 (transformers 4.57.6 needs device_mesh);
+# launch_repro.sh pins runpod/pytorch 0.7.0-*-torch271. Deps are the
+# Modal-known-good pins (reference-modal-gpu memory) so PyPI drift can't bite.
+pip install -q "transformers==4.57.6" "transformer-lens==2.18.0" "datasets==4.8.4" \
+    "peft==0.19.1" "typeguard==4.5.1" "jaxtyping==0.3.9" "einops==0.8.2" \
+    accelerate huggingface_hub
 python -c "import torch,transformer_lens;print('[repro] env ok torch',torch.__version__,'cuda',torch.cuda.is_available())" \
     || { echo "[repro] ENV BROKEN — abort"; exit 1; }
 

@@ -5,9 +5,9 @@ set -euo pipefail
 : "${HF_TOKEN:?}"; : "${RP_API_KEY_MATS:?}"
 BRANCH="${BRANCH:-dmitry/sae-scaling-sweep}"
 REPO_URL="${REPO_URL:-https://github.com/chainik1125/fra_proj.git}"
-IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
+IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:0.7.0-cu1263-torch271-ubuntu2204}"
 GPU_TYPE_IDS="${GPU_TYPE_IDS:-NVIDIA RTX A5000|NVIDIA GeForce RTX 4090|NVIDIA L4|NVIDIA A40}"
-NAME="${NAME:-sae-repro-singlefeat-dom-0609}"
+NAME="${NAME:-sae-repro-singlefeat-dom-0609-v2}"
 DRIVER="experiments/tinystories_sleeper/sae_scaling/repro_driver.sh"
 GRAPHQL="https://api.runpod.io/graphql"
 json_str() { python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))"; }
