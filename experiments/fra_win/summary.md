@@ -25,37 +25,64 @@ exactly when the behavioral target is an **association** (an attention edge), no
 **The testbed.** Induction in GPT-2-small (`A B … A → B`, head L5H5 et al.). Behavioral task:
 **suppress the model copying one specific cue token**, while leaving everything else intact.
 
-**The win (one sentence).** At *matched* induction suppression, an FRA-QK edit suppresses a cue's
-induction **association** with essentially **zero collateral** on that cue's behavior in other
-contexts, whereas the best content-addressed linear steer corrupts the cue **everywhere** — a
-**~100–700× collateral gap** that follows directly from FRA's double gate (it fires only where the
-query *and* the key feature are both present).
+**The win (one sentence).** At *matched* induction suppression, a content-addressed FRA-QK edit
+suppresses a cue's induction **association** with **~15× less collateral** on that cue's behavior in
+other contexts than the strongest *fair* linear steer — and the gap survives every check I could
+throw at it, because it follows directly from FRA's double gate (the edit fires only where the query
+*and* the key feature are both present).
 
 ### Key findings
 
-1. **FRA-QK suppresses an association at ~0 collateral; the linear steer cannot** (Fig 1). Across 8
-   cue words, at 50% induction suppression FRA's held-out collateral is **0.00 ± 0.00 nats** vs
-   ActAdd's **0.74 ± 0.30**. The mechanism is visible in the number: normal text mentions the cue
-   without a second occurrence, so the induction edge never forms and **FRA's edit never fires** —
-   it is inert exactly where it should be. The linear steer fires on the cue's mere presence and
-   wrecks its next-token prediction.
+1. **FRA-QK suppresses an association at ~15× less collateral than the fair linear baseline** (Fig 1,
+   `fig1_final.png`). At matched 50% induction suppression, held-out collateral (KL on normal text
+   mentioning the cue) is **FRA 0.18 ± 0.04 nats** vs **2.66 ± 1.35** for an *induction-gated* ActAdd
+   (a probe-gated linear steer that fires only at induction-context cue positions — the strongest
+   linear baseline I could construct) and **3.27 ± 1.83** for plain ActAdd. FRA's curve hugs the
+   floor at every suppression strength; the linear steers climb steeply. A broader sweep over 8 cues
+   corroborates (FRA 0.14 ± 0.03 vs ActAdd ~3.0). The clean read: to break the association a linear
+   steer must corrupt one of its endpoints *everywhere that endpoint occurs* — even gated to induction
+   positions it wrecks the *whole residual* there (all heads); only the bilinear edit touches the two
+   endpoints *jointly* and so touches almost nothing else.
 
-2. **The double gate makes the edit surgical** (Fig 2). On the induction sequence itself, at matched
-   suppression, FRA changes the model's output essentially only at the single target attention edge
-   (off-target KL mass 0.62) while ActAdd's residual perturbation spreads to every occurrence of the
-   cue and downstream (7.6 nats, **12× more**). On a paragraph where the cue appears 5×, FRA touches
-   only the induction-like edges (KL 0.13) while ActAdd corrupts all of it (KL 31, **~235×**).
+2. **The double gate makes the edit surgical** (Fig 2, `fig2_locality.png`). On the induction
+   sequence, at matched suppression, FRA changes the output essentially only at the target attention
+   edge (off-target KL mass 0.62) while ActAdd's residual perturbation spreads to every cue occurrence
+   and downstream (7.6 nats, **12× more**). On a paragraph where the cue (" war") appears 5×, FRA
+   touches only the induction-like edges (KL 0.13) vs ActAdd 31 (**~235×**). The asymmetry is
+   structural: FRA's edit fires only where query=cue AND key=prev-was-cue.
 
-3. **The win is specifically about *association* selectivity — and it is narrow** (honest scope).
-   Measured by the cruder metric of *other tokens' copy-probability*, a position-targeted ActAdd
-   **ties or beats** FRA; FRA's advantage appears only on **broad / held-out collateral**, which is
-   where the bilinear gate matters. The win also required hitting **all** induction heads with an
-   **over-drive** scale, because single-head induction is redundant. This does **not** revive FRA-OV
-   for backdoor removal — it is a different, specific niche.
+3. **It survives the obvious ways it could be fake.** *(a) Support not rigged:* applying the FRA edit
+   **content-addressed over the whole sequence** — the selected feature-pairs fire wherever they
+   appear, no hand-picked edge list — gives 0.18 nats, essentially the same as the edge-restricted
+   0.14; the bilinear pair's *natural support is the induction pattern*. *(b) Not an over-drive
+   artifact:* the FRA edit reaches 50–100% suppression at a scale **c≈2, near the value that exactly
+   reconstructs the edge** (`cfaith≈1.3–1.9`), not at extreme over-drive. *(c) Right pairs matter:*
+   ablating *random* feature-pairs at the same scale suppresses nothing (null ≈ 0).
 
-**Takeaway.** FRA earns its keep when you want to edit a **cue→response association** without
-touching the cue or the response elsewhere. Conditioning an intervention on a *pair* of features is
-the one thing FRA offers that no linear method can, and induction is the clean demonstration.
+4. **The win is narrow, and I am not hiding it.** On the cruder metric of *other tokens'
+   copy-probability*, a position-targeted ActAdd **ties or beats** FRA — FRA's advantage lives
+   specifically in *broad/held-out* collateral. FRA's suppression has a **ceiling** (it can only
+   remove the FRA-explained part of an edge; for one of eight cues it capped at 0.17 while ActAdd
+   always reaches ~1.0). The task — suppress one token's induction — is a clean but **deliberately
+   association-shaped** target (an existence proof, not a survey of natural behaviors). And this does
+   **not** revive FRA-OV for backdoor removal; it is a separate, specific niche.
+
+**Takeaway.** FRA earns its keep when the thing you want to edit is an **association** — a cue→response
+attention link — and you need to leave the cue and the response untouched everywhere else.
+Conditioning an intervention on a *pair* of features is the one thing FRA offers that no linear method
+can, and induction is the clean demonstration.
+
+![Fig 1 — the win](figures/fig1_final.png)
+*Fig 1. Left: suppress one cue's induction (x: suppression; y: held-out collateral, log). FRA-QK
+(blue, content-addressed) stays at ~0.2 nats at every strength; the fair induction-gated ActAdd (red)
+and plain ActAdd (orange) climb to 1–40 nats. Right: at 50% suppression FRA beats the fair baseline
+~15×, and the content-addressed FRA (solid) ≈ the edge-restricted version (hatched) — the support is
+not hand-rigged.*
+
+![Fig 2 — locality](figures/fig2_locality.png)
+*Fig 2. Why: at matched suppression FRA's edit stays local (left: off-target KL on the induction
+sequence; right: total KL on a paragraph where the cue appears 5×), while the linear steer's residual
+perturbation spreads to every cue occurrence.*
 
 ---
 
@@ -75,47 +102,65 @@ attribution* test, which fails on saturated attention). This sprint tests the QK
   `FRA[q,k,i,j]` (the bilinear decomposition), summed over feature dims to recover scores.
 - **Induction heads** (picked by attention on the induction edge of a random repeated-token
   sequence): L5H5 (0.94), L6H9, L5H1, L7H10, L7H2.
-- **Intervention = a content-addressed attention-score edit.** For a target edge, take its top-12
-  feature-pairs `(i,j)`; subtract `c × Σ FRA[·,·,i,j]` from those heads' pre-softmax scores. Because
-  the FRA term is built from the *actual* feature activations, this delta fires wherever features
-  `i` (query) and `j` (key) co-occur — i.e. it is **content-addressed, not position-addressed**, and
-  **doubly gated**. `c` is an over-drive scale (FRA selects *what* to suppress; `c` controls *how
-  hard*, exactly like α in ActAdd).
-- **Baselines:** ActAdd of the cue's identity direction (subtract the cue's contrastive residual
-  direction wherever the cue is current); ActAdd of the key-side "prev-was-cue" direction; head
-  mean-ablation (non-selective reference); position score-patch (selective oracle, needs positions);
-  random-pair edit (null).
+- **Intervention = a content-addressed attention-score edit.** For a target edge, select its
+  dominant feature-pairs `(i,j)` (top-12, or all pairs); subtract `c × Σ FRA[·,·,i,j]` from the
+  induction heads' pre-softmax scores. Because the FRA term is built from the *actual* feature
+  activations, this delta fires wherever features `i` (query) and `j` (key) co-occur — it is
+  **content-addressed, not position-addressed**, and **doubly gated**. `c` scales it (FRA selects
+  *what*; `c` controls *how hard*, like α in ActAdd). The honest "content-addressed" deployment (J9)
+  recomputes FRA on held-out text and subtracts the selected pairs *wherever they fire on the full
+  `[q,k]` matrix* — `c≈1.5` exactly reconstructs the edge; the result holds at `c≈2`.
+- **Baselines:** ActAdd of the cue's identity direction (subtract a mean-centered cue residual
+  direction wherever the cue is current); ActAdd of the key-side "prev-was-cue" direction;
+  **induction-gated ActAdd** (the identity steer applied only at induction-context cue positions — a
+  probe-gated linear steer, the strongest fair linear baseline); head mean-ablation (non-selective);
+  position score-patch (selective oracle, needs positions); random-pair edit (null).
 - **Metrics:** induction suppression = `1 − P(response)/P_base`; collateral = KL(clean‖patched) of
-  the full next-token distribution on held-out normal text containing the cue.
+  the full next-token distribution on held-out normal text containing the cue (matched at equal
+  suppression via the Pareto, so no method is advantaged by under/over-suppressing).
 
 ## 3. The road here (what surprised me)
 
 - **Single-head edits do nothing** (J2). Ablating one head's edge — or even mean-ablating L5H5
   entirely — barely moves copy-probability, because induction is **redundant** across ≥5 heads and
   many edges are softmax-saturated. *Fix:* intervene on all induction heads + over-drive.
-- **Reconstruction is only ~50% on the induction edge** (res-jb resid SAE; GPT-2 LayerNorm centering
-  is dropped by the RMS correction). This matters far less than it looks: behavior is set by the
-  **softmax**, and removing the FRA-explained part of a +6 score collapses an attention edge from
-  0.94 to ~0.13. I over-drive to compensate and report the reconstruction honestly.
+- **Reconstruction is partial** (corr ~0.5 on a random-token edge; ~60–75% on the cue primers in J9,
+  where GPT-2 LayerNorm centering is dropped by the RMS correction). This matters less than it looks:
+  behavior is set by the **softmax**, and removing most of a +6 score collapses an attention edge from
+  0.94 to ~0.13. Crucially the win does **not** depend on heavy over-drive — it holds at `c≈2`, near
+  the scale that exactly reconstructs the edge (J9).
 - **The naive linear baseline is strong** (J4). For *within-task* selectivity, ActAdd-of-the-cue
   matches FRA. The real distinction only appears once you ask about the cue's behavior **elsewhere**
-  (J5–J7) — which is the whole point of the double gate.
+  (J5–J9) — which is the whole point of the double gate.
 
 ## 4. Limitations & what I would do next
 
-- One model (GPT-2-small), one mechanism (induction). The argument is general (bilinear > linear for
-  association control) but a second model — ideally Gemma-2-2b + GemmaScope, where the FRA RMS
-  correction is *exact* — would remove the approximate-reconstruction caveat. *(In progress / TODO.)*
-- The cue→response association in induction is a clean but slightly artificial behavioral target. A
-  more natural association (e.g. a factual or grammatical attention link) would broaden the claim.
-- I have not searched for an even stronger linear baseline beyond identity / key-side ActAdd; the
-  structural argument says none can be *both* content-addressed and association-specific, but that is
-  an argument, not an exhaustive search.
+- **Scope is an existence proof.** The task — suppress one token's induction — is deliberately
+  shaped like an attention edge, the object FRA represents natively. It cleanly demonstrates that the
+  bilinear handle exists and is useful, but the general claim ("FRA wins for association control")
+  needs a *natural* association (a factual or grammatical attention link) on a real corpus before it
+  generalizes. I show the mechanism, not its prevalence.
+- **One model, partial reconstruction.** GPT-2-small only; res-jb resid SAE gives ~60–75% edge
+  reconstruction (LayerNorm centering dropped). Gemma-2-2b + GemmaScope (RMSNorm → *exact* FRA RMS
+  correction) is the clean follow-up to remove the caveat — not run here.
+- **FRA's suppression ceiling.** It can only remove the FRA-explained part of an edge, so for some
+  cues it cannot reach full suppression (one of eight capped at 0.17). ActAdd always reaches ~1.0.
+  For a use that needs *complete* removal, that is a real gap.
+- **Statistics.** n = 4–8 cues, single random seed; std bars are over cues, not seeds. The
+  *direction* of the result is consistent everywhere, but the exact ratios (15×, 235×) should be read
+  as order-of-magnitude.
+- **Baselines.** Identity, key-side, and induction-gated ActAdd were tested; a *learned* probe-gated
+  steer or a directional projection might narrow the gap further. The structural argument (no
+  single-endpoint linear steer can be both content-addressed and association-specific) says it cannot
+  close, but that is an argument, not an exhaustive search.
 
 ## 5. Research map
 
-`RESEARCH_LOG.md` has the timestamped trail. Jobs: **J1** induction-head pick + FRA reconstruction +
-dominant-pair structure; **J2** single-head selectivity (negative → redundancy); **J3** all-heads +
-over-drive (signal: selective suppression); **J4** baselines on the within-task Pareto (ActAdd ties →
-reframe); **J5** double-gate collateral (the win); **J6** robustness over 8 cues (the money Pareto);
-**J7** key-side baseline + non-induction-position collateral split (hardening).
+`RESEARCH_LOG.md` has the timestamped trail (the path was not linear — two reframes). Jobs:
+**J1** induction-head pick + FRA reconstruction + dominant-pair structure; **J2** single-head
+selectivity (*negative* → induction is redundant); **J3** all-heads + over-drive (first signal of
+selective suppression); **J4** baselines on the within-task Pareto (*ActAdd ties* → reframe to broad
+collateral); **J5** the double-gate collateral win; **J6** robustness over 8 cues; **J7** key-side
+baseline + position-split; **J8** the 8-cue Pareto; **J9** the fairness corrections that the
+red-team demanded (content-addressed FRA, induction-gated ActAdd, faithful-`c`) — *the win survived*;
+**J10** final figure. The writeup was red/blue-teamed by two subagents before this revision.

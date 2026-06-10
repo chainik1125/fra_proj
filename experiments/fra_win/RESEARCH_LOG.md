@@ -143,4 +143,20 @@ upgrade to a trained ln1 SAE if reconstruction is poor.
   robust to the strongest linear competitor. Wrinkle: FRA's suppression *ceiling* < ActAdd's (only
   removes the FRA-explained part of the edge) — present via Pareto, not matching.
 - **11:05Z** submitted J8 (definitive Pareto: FRA vs both ActAdds, all-edge-pairs, multi-occurrence
-  held-out, 8 cues — the money figure). Drafted summary.md.
+  held-out, 8 cues — the money figure). FRA 0.14±0.03 vs ActAdd ~3.0 @50% supp (~20×). Drafted summary.md.
+- **11:30Z RED/BLUE TEAM (2 subagents).** Verify-agent: all headline numbers (j5/j7/j8) reproduce from
+  JSON; code measures what's claimed (genuine bilinear hook_attn_scores subtraction; correct KL sign;
+  real linear resid steers). Disclosure gaps: j8 headline FRA n=7 (doctor dropped, ceiling 0.17) vs
+  linear n=8; j8 uses ALL pairs not top-12; "contrastive" = mean-centering not a contrast pair.
+  Red-team: **main objection** — held-out FRA edit restricted to a `hedges` whitelist (induction-like
+  edges) while ActAdd fires everywhere → FRA's ~0 collateral may be structural, not discovered. Also:
+  ActAdd baseline under-searched (no projection/ablation, no probe-gated variant); task is contrived
+  (target IS a (q,k) pair = FRA's basis → near-circular); over-drive c up to 64 does the work given ~50%
+  reconstruction; n=8 single seed. Verdict: "defensible with revisions, not as written."
+- **11:50Z J9** (decisive): content-addressed FRA (NO hedges, pairs fire wherever they appear on the full
+  held-out matrix) + induction-gated ActAdd (probe-gated linear baseline) + faithful-c FRA. If the gap
+  survives both, the win is real (bilinear gate, not a hand-picked support); if it collapses, downgrade.
+- **Revision plan for summary.md (post-J9):** disclose n=7/all-pairs; soften "any linear steer" →
+  "the linear steers tested" + structural argument; frame induction as an existence proof, soften the
+  general claim; report FRA's suppression ceiling prominently; "mean-centered" not "contrastive";
+  add the content-addressed-FRA and induction-gated-ActAdd results.
