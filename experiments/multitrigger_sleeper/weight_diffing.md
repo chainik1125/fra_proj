@@ -4,6 +4,11 @@
 *Branch `autoresearch/multitrigger-sleeper`. Companion to [`summary.md`](summary.md) and
 [`RESEARCH_LOG.md`](RESEARCH_LOG.md). Last updated 2026-06-07.*
 
+> **Units:** all J/JSD values in THIS file (and the raw HF JSONs under `mts_singlefeat/`)
+> are in **nats** (natural log; 0.693 = max = no removal). The reporting convention is now
+> **bits** (×1.443) — `weight_diff_summary.md` and the paper are in bits. Convert before
+> quoting numbers from here.
+
 ---
 
 ## 0. TL;DR
