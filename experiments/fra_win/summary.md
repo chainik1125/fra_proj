@@ -106,6 +106,55 @@ perturbation spreads to every cue occurrence.*
 
 ---
 
+## 0. The task, step by step (what is actually being measured)
+
+The headline comparison (the tables and Figs 3–5) is **in-context backdoor removal**. Concretely:
+
+**An in-context backdoor** is a trigger→payload association *planted in the prompt* that the model
+reproduces by induction (in-context copying). We build and test it in five steps.
+
+**1. Plant it.** Take ~20 random filler tokens; at one spot put a trigger token `T` immediately
+followed by a payload token `P`; then repeat the whole block:
+
+```
+[BOS]  w1 … w9  [T=" bank"] [P=" river"]  w12 … w19    w1 … w9  [T=" bank"]  →  ?
+                └──── the "demonstration" ────┘                  └ trigger fires here ┘
+```
+
+**2. Confirm it fires.** At the *second* " bank", induction heads look back to the token that followed
+the *first* " bank" (=" river") and predict it. **ASR = P(" river" | second " bank") ≈ 0.9–1.0** at
+baseline — the planted backdoor reliably fires. (This is just induction; the "backdoor" is the framing.)
+
+**3. Remove it.** Apply an intervention that lowers ASR (stops the model emitting the payload on the
+trigger), sweeping its strength until ASR is cut by a target amount (e.g. 80%) — "the backdoor is removed."
+
+**4. Measure the damage (collateral).** Apply the *same* intervention — content-addressed, so it fires
+wherever its trigger/feature condition holds — to a **separate piece of normal text** where the trigger
+and payload words appear in their ordinary sense, e.g. *"He sat on the bank watching the river flow past
+the bridge."* **Collateral = KL(clean ‖ intervened)** of the next-token distribution on that text. Low
+collateral = the words " bank"/" river" still behave normally everywhere outside the backdoor.
+
+**5. Compare.** Tune every method to the *same* ASR removal (step 3), then rank by collateral (step 4).
+The winner removes the backdoor while disturbing normal text least.
+
+**The four removal methods** (each tries to stop trigger→payload, by suppressing a different thing):
+
+| method | what it suppresses | how |
+|---|---|---|
+| **FRA-QK** (ours) | the trigger→payload **attention edge** | find the *(trigger-query-feature × payload-key-feature)* pair driving the induction edge; subtract its contribution from the attention scores |
+| **DoM** | the "backdoor-active" **direction** | subtract `mean(resid \| backdoor) − mean(resid \| clean)` |
+| **conv-SAE** | the trigger/induction **features** | ablate the SAE features that fire most on backdoor-vs-clean |
+| **payload-suppress** | the payload **output direction** | subtract the payload token's unembedding direction |
+
+**Why the comparison is fair:** all four *can* kill the backdoor (all reach the same ASR removal); they
+differ only in collateral. FRA pays 11–90× less because the trigger and payload are *normal words*, and
+only FRA edits the *link between them* rather than corrupting one of the words everywhere it occurs.
+
+*(Findings 1–2 in the executive summary use the same induction mechanism in a stripped-down "suppress one
+cue token's copying" framing — identical task, no backdoor dressing. The **weight-baked sleeper** that
+FRA loses on, §3c, is the contrast: there the trigger→payload link is baked into the model's **weights**
+by fine-tuning, and the payload is written through the output pathway, not retrieved by attention.)*
+
 ## 1. Why this question, and why it was open
 
 The interpretability-for-control pitch for SAEs and FRA is that feature-level / attention-level
