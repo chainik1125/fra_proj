@@ -123,12 +123,18 @@ method saturates its tier.
   across SAEs trained on disjoint data). Harmless whenever one span veto exists; the whole
   failure mode of data-free selection otherwise.
 
-## 7. Fidelity (the column the J-table hides)
+## 7. Fidelity is determined by J — not an independent axis
 
-At their optima (c-sweep, `figures/c_curves_K1.png`): blind FRA restores **79% of clean
-rollouts word-for-word** (88% for the payload-aware variant, recorded for reference); SVD
-58–62%; **DoM and conv-SAE unmeasured — open item**. If DoM's .114 comes with materially
-lower verbatim recovery, the §1 tier-4 "tie" understates FRA.
+Across every measured config and method, (J, word-match) pairs fall on one monotone curve
+(greedy: .10 bits → 88%, .15 → 79–83%, .30 → 58–62%, damage regime .5+ → ~0%; matched-T1:
+.143 → 75%, .185 → 62.5%, .30 → 40%, .38 → 42%). **Optimized DoM sits on-curve**
+(`dom_match_cell.json`: greedy best .152 bits / 83% exact; matched-T1 best .143 / 75% —
+matching or beating the FRA set in both columns). So report J; match adds intuition, not
+information. The earlier "repair fidelity is FRA's distinctive win" claim was double-counting
+a J difference vs less-optimized baselines. One robustness footnote: protocol sensitivity is
+cell-dependent — DoM's greedy winner (attn-q, add/prompt) decoheres under T=1 sampling
+(.152 → .286) while its resid_mid cells hold (.154 → .143); the paper-protocol DoM winner is
+rmid·L0/rollout-src/add/trigger-fp/α4.
 
 ## 8. Relation to the single-model `sae_scaling` sweep
 
@@ -155,9 +161,9 @@ each other:
   then decohere toward the ~0.42 scale. **Measured (bridging run, `bridge_t1_eval.json`):**
   controls validate (clean-vs-clean matched = 0.000; unmatched = 0.393 ≈ the paper's 0.42
   floor), and under the paper's protocol our configs score: **FRA set K24·c2 = 0.185 bits /
-  62.5% exact-match** (K8·c3 = 0.242), L0 single f1253 = 0.243, SVD k2 = 0.377 — vs the
-  paper's best singles 0.304–0.344 / 37–43% exact. So the set-removal improvement holds
-  protocol-matched (~40% lower J, +20pp exact-match); decoherence inflation vs greedy is
+  62.5% exact-match** (K8·c3 = 0.242), L0 single f1253 = 0.243, SVD k2 = 0.377, and **our
+  optimized DoM = 0.143 / 75%** — vs the paper's best singles 0.304–0.344 / 37–43% exact. So the improvement over the published table holds protocol-matched — but it is an
+  *optimization* improvement, not a method one: our swept DoM (0.143/75%) beats even the set; decoherence inflation vs greedy is
   real but modest (0.13 → 0.19–0.24) and reorders the set recipes (K24·c2 wins under
   sampling); and the zero-knowledge SVD lands inside the paper's full-knowledge
   single-feature range. Model/prompt-set differences (mars-jason vs K1) remain the
