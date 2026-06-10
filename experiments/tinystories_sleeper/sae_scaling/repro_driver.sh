@@ -28,67 +28,62 @@ if [ ! -d /workspace/fra_proj/.git ]; then
 fi
 cd /workspace/fra_proj && git fetch origin && git checkout "$BRANCH" && git pull --ff-only
 
-# ── environment (PERMANENT RULE: never reinstall torch — use the image's) ───
-# The 0.7.0 images ship MULTIPLE pythons: `python3` has the image's CUDA torch
-# (2.7.1+cu126); python3.13 owns bare `pip` and must NOT be used (its torch is a
-# pip-dragged cu130 build with no CUDA). Select the interpreter whose torch sees
-# the GPU, then do everything (`-m pip`, env check, jobs) through it.
-PY=""
-for cand in python3 python3.11 python3.13 python; do
-  command -v "$cand" >/dev/null || continue
-  if "$cand" -c "import torch; assert torch.cuda.is_available()" 2>/dev/null; then PY="$cand"; break; fi
-done
-[ -z "$PY" ] && { echo "[repro] NO interpreter with CUDA torch — abort"; exit 1; }
-echo "[repro] using PY=$PY ($($PY -V 2>&1)) torch=$($PY -c 'import torch;print(torch.__version__)')"
-"$PY" -m pip install "transformers==4.57.6" "transformer-lens==2.18.0" "datasets==4.8.4" \
-    "peft==0.19.1" "typeguard==4.5.1" "jaxtyping>=0.2.36,<0.4" "einops==0.8.2" \
-    accelerate huggingface_hub 2>&1 | tail -5
-"$PY" -c "import torch,transformer_lens;print('[repro] env ok torch',torch.__version__,'cuda',torch.cuda.is_available())" \
+# ── environment: the repo's OWN lockfile is the environment ─────────────────
+# uv.lock pins everything (TL 3.1.0, torch 2.11.0+cu128, py>=3.12) — the same
+# resolved env as local dev. uv brings its own managed CPython, so the base
+# image's python zoo is irrelevant. No hand-picked pins, no torch surgery.
+command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+uv sync --frozen 2>&1 | tail -3
+RUN="uv run --no-sync"
+$RUN python -c "import torch,transformer_lens;print('[repro] env ok torch',torch.__version__,'cuda',torch.cuda.is_available())" \
     || { echo "[repro] ENV BROKEN — abort"; exit 1; }
 
 mkdir -p results
 
+NFAIL=0
 run_job() {  # run_job <tag> <cmd...>
   local tag="$1"; shift
   echo "[repro] $(date +%H:%M:%S) START $tag"
   "$@" > "/workspace/${tag}.log" 2>&1
   local rc=$?
+  [ "$rc" != "0" ] && NFAIL=$((NFAIL+1))
   echo "[repro] $(date +%H:%M:%S) DONE  $tag rc=$rc"
   tail -3 "/workspace/${tag}.log"
 }
 
 # 1+2 — single-feature SAE cells (screen → winner → ±20 α grid + onset bsearch)
-run_job ov_ln1 "$PY" -u -m scripts.eval_checkpoint \
+run_job ov_ln1 $RUN python -u -m scripts.eval_checkpoint \
   --ckpt_rel sae_checkpoints/ln1/seed0/d3072_k10/step50000.pt \
   --hf_repo "$HF_REPO" --out results/repro_ov_ln1_seed0_d3072_k10.json
 
-run_job conv_residmid "$PY" -u -m scripts.eval_checkpoint \
+run_job conv_residmid $RUN python -u -m scripts.eval_checkpoint \
   --ckpt_rel sae_checkpoints/resid_mid/seed0/d3072_k32/step50000.pt \
   --hf_repo "$HF_REPO" --out results/repro_conv_residmid_seed0_d3072_k32.json
 
 # 3 — DoM projection, clean methodology (train-extract, disjoint from eval)
-run_job dom_proj_train "$PY" -u -m scripts.dom_explore \
+run_job dom_proj_train $RUN python -u -m scripts.dom_explore \
   --mode projection --apply all --extract_positions prompt --extract_split train \
   --layers 0 --hooks hook_resid_mid \
   --alphas 0 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.5 2.0 \
   --out results/repro_dom_proj_train.json
 
 # 4 — DoM projection, val-extract (the iter3 winner config; overlaps eval)
-run_job dom_proj_val "$PY" -u -m scripts.dom_explore \
+run_job dom_proj_val $RUN python -u -m scripts.dom_explore \
   --mode projection --apply all --extract_positions prompt --extract_split val \
   --layers 0 --hooks hook_resid_mid \
   --alphas 0 0.7 0.8 0.85 0.9 0.95 1.0 1.1 \
   --out results/repro_dom_proj_val.json
 
 # 5 — DoM paper-faithful additive (Soligo defaults: answer-extract, additive)
-run_job dom_paper_additive "$PY" -u -m scripts.dom_explore \
+run_job dom_paper_additive $RUN python -u -m scripts.dom_explore \
   --mode additive --apply all --extract_positions answer --extract_split train \
   --layers 0 --hooks hook_resid_mid \
   --alphas 0 0.25 0.4 0.5 0.75 1.0 1.5 \
   --out results/repro_dom_paper_additive.json
 
 # ── upload under repro/ (separate prefix; stored sweep results untouched) ───
-"$PY" - <<'PYEOF'
+$RUN python - <<'PYEOF'
 import glob, os
 from huggingface_hub import HfApi
 api = HfApi(token=os.environ["HF_TOKEN"])
@@ -97,9 +92,16 @@ for f in sorted(glob.glob("results/repro_*.json")):
     api.upload_file(path_or_fileobj=f, path_in_repo=f"repro/{os.path.basename(f)}",
                     repo_id=repo, repo_type="dataset")
     print("[repro] uploaded", f, flush=True)
+for f in sorted(glob.glob("/workspace/*.log")):
+    try:
+        api.upload_file(path_or_fileobj=f, path_in_repo=f"repro/logs/{os.path.basename(f)}",
+                        repo_id=repo, repo_type="dataset")
+        print("[repro] uploaded log", f, flush=True)
+    except Exception as e:
+        print("[repro] log upload failed", f, e, flush=True)
 PYEOF
 
-echo "[repro] $(date +%H:%M:%S) ALL DONE"
+echo "[repro] $(date +%H:%M:%S) ALL DONE NFAIL=$NFAIL"
 
 if [ "${SELF_STOP:-0}" = "1" ] && [ -n "${RUNPOD_API_KEY:-}" ] && [ -n "${RUNPOD_POD_ID:-}" ]; then
   curl -sS -X POST -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
