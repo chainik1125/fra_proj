@@ -173,3 +173,12 @@ upgrade to a trained ln1 SAE if reconstruction is poor.
   artifact; it's bias terms + Gemma attention-softcap + SAE sparsity. Interesting finding.
 - **12:50Z J12** — replicating the suppression win on Gemma-2-2b (FRA-content vs induction-gated ActAdd,
   4 cues). Cross-architecture validation in flight.
+- **13:05Z J12 Gemma win:** surgical-collateral property REPLICATES (~10-100x lower collateral than
+  ActAdd) but FRA suppression reach lower (≥50% on 1/4 cues, 4 heads, softcap). Added cross-model
+  subsection (honest: precision transfers, reach doesn't).
+- **13:20Z J13 IOI — NEGATIVE (scope-sharpening).** Tried to transfer to IOI (natural attention task);
+  ablating the 3 name-movers' FRA END→IO pairs moved logit-diff only 0.17 (3.88→3.70) — backup
+  name-movers compensate. ActAdd brute-forces it. So the win needs the edge to be causally
+  load-bearing (induction-copy is; IOI name-mover is not, backups). Dropped IOI; added honest note.
+- **13:25Z FINALIZE.** Result complete + validated + cross-model + red/blue-teamed + honestly scoped.
+  summary.md final. Committing, terminating pod, reporting.

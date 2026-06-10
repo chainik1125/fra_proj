@@ -155,11 +155,19 @@ Two things came out, one reassuring and one honest:
 
 ## 4. Limitations & what I would do next
 
-- **Scope is an existence proof.** The task — suppress one token's induction — is deliberately
-  shaped like an attention edge, the object FRA represents natively. It cleanly demonstrates that the
-  bilinear handle exists and is useful, but the general claim ("FRA wins for association control")
-  needs a *natural* association (a factual or grammatical attention link) on a real corpus before it
-  generalizes. I show the mechanism, not its prevalence.
+- **The win needs the attention edge to be causally load-bearing — and that is restrictive** (J13,
+  honest negative). I tried to transfer the win to **IOI**, a canonical natural attention task:
+  ablating the FRA-identified END→IO feature-pairs of the three main name-mover heads (L9H9/L9H6/
+  L10H0) moved the IO−S logit difference by only **0.17** (3.88→3.70), while ActAdd brute-forces it
+  (flips it negative). IOI's **backup name-mover heads** compensate as soon as the main circuit's
+  attention is suppressed. So the win held for induction-copy (causally load-bearing at the token
+  granularity once you hit all the redundant heads) but **not** for IOI — sharpening the scope: FRA-QK
+  buys you precise, selective control of an attention edge, but only changes *behavior* where that
+  edge is actually necessary and not silently backed up.
+- **Scope is an existence proof.** The induction target is deliberately shaped like an attention
+  edge, the object FRA represents natively. It cleanly demonstrates the bilinear handle exists and is
+  useful; whether *natural* associations that are both load-bearing and FRA-addressable are common is
+  open. I show the mechanism, not its prevalence.
 - **One model, partial reconstruction.** GPT-2-small only; res-jb resid SAE gives ~60–75% edge
   reconstruction (LayerNorm centering dropped). Gemma-2-2b + GemmaScope (RMSNorm → *exact* FRA RMS
   correction) is the clean follow-up to remove the caveat — not run here.
@@ -183,6 +191,7 @@ selective suppression); **J4** baselines on the within-task Pareto (*ActAdd ties
 collateral); **J5** the double-gate collateral win; **J6** robustness over 8 cues; **J7** key-side
 baseline + position-split; **J8** the 8-cue Pareto; **J9** the fairness corrections the
 red-team demanded (content-addressed FRA, induction-gated ActAdd, faithful-`c`) — *the win survived*;
-**J10** final figure; **J11–J12** Gemma-2-2b cross-model check (precision replicates, reach is lower).
+**J10** final figure; **J11–J12** Gemma-2-2b cross-model check (precision replicates, reach is lower);
+**J13** IOI transfer attempt (*negative* — backup name-movers defeat it; sharpens scope).
 The writeup was red/blue-teamed by two subagents (one attacking the claim, one verifying numbers vs
 code) before this revision; a third, context-free agent cold-read the money figure to check clarity.
