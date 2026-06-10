@@ -70,7 +70,7 @@ while IFS= read -r gpu; do
   [ -z "$gpu" ] && continue
   input=$(cat <<JSON
 { "name": "$POD_NAME", "imageName": "$IMAGE_GPU", "cloudType": "SECURE", "gpuTypeId": "$gpu",
-  "gpuCount": 1, "minVcpuCount": 4, "minMemoryInGb": 24, "containerDiskInGb": 40,
+  "gpuCount": 1, "minVcpuCount": 4, "minMemoryInGb": 24, "containerDiskInGb": ${DISK:-40},
   "volumeInGb": 0, "dockerArgs": $cmd_json, "ports": "22/tcp", "startSsh": true }
 JSON
 )
