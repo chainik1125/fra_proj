@@ -55,6 +55,35 @@ def eval_hooks(model, refs: EvalRefs, hooks, device, tok):
         asr=asr_16(steered_tokens.cpu(), tok))
 
 
+PARTIAL_REL = "repro/repro_additive_cells.partial.json"
+
+
+def _load_partial(hf_repo: str) -> dict:
+    """Resume state from a prior (reclaimed) run's partial upload, if any."""
+    try:
+        from huggingface_hub import hf_hub_download
+        path = hf_hub_download(hf_repo, PARTIAL_REL, repo_type="dataset",
+                               force_download=True)
+        prior = json.load(open(path))
+        n = sum(len(c.get("per_feature", {})) for c in prior.get("cells", {}).values())
+        print(f"[resume] loaded partial with {n} completed features", flush=True)
+        return prior.get("cells", {})
+    except Exception as e:
+        print(f"[resume] no usable partial ({type(e).__name__}) — fresh start", flush=True)
+        return {}
+
+
+def _push_partial(out: dict, out_path: Path, hf_repo: str) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(out, indent=2))
+    try:
+        from huggingface_hub import HfApi
+        HfApi().upload_file(path_or_fileobj=str(out_path), path_in_repo=PARTIAL_REL,
+                            repo_id=hf_repo, repo_type="dataset")
+    except Exception as e:
+        print(f"[partial] upload failed (non-fatal): {e}", flush=True)
+
+
 @torch.no_grad()
 def main() -> None:
     p = argparse.ArgumentParser()
@@ -80,15 +109,20 @@ def main() -> None:
                     asr=asr_16(refs.poisoned_tokens.cpu(), tok))
     out = {"alphas": args.alphas, "baseline": baseline,
            "operation": "additive fixed −α·f (unit-norm W_dec row), prompt positions",
-           "cells": {}}
+           "cells": _load_partial(args.hf_repo)}
 
     for cell, ckpt_rel, result_rel in [("ov_additive", OV_CKPT, OV_REPRO_RESULT),
                                        ("conv_additive", CONV_CKPT, CONV_REPRO_RESULT)]:
         topk = json.load(open(hf_download(args.hf_repo, result_rel, args.local_dir)))
         feats = topk["winner"]["topK"][: args.top_n]   # attribution-ordered
         sae, cfg = sae_load(hf_download(args.hf_repo, ckpt_rel, args.local_dir), device)
-        per_feat = {}
+        cell_state = out["cells"].setdefault(
+            cell, {"ckpt": ckpt_rel, "features": feats, "per_feature": {}})
+        per_feat = cell_state["per_feature"]
         for rank, feat in enumerate(feats):
+            if str(feat) in per_feat:
+                print(f"[{cell}] rank={rank:<2} f={feat:<5} (resumed)", flush=True)
+                continue
             f_dir = sae.W_dec[int(feat)].detach().to(device).float()
             delta = compute_meandiff_delta(f_dir, prompt_mask, sign=-1.0)
             per_alpha = {}
@@ -105,7 +139,7 @@ def main() -> None:
             print(f"[{cell}] rank={rank:<2} f={feat:<5} "
                   + (f"opt_J={best[0]:.4f} @ α={best[1]}" if best else "never suppresses"),
                   flush=True)
-        out["cells"][cell] = {"ckpt": ckpt_rel, "features": feats, "per_feature": per_feat}
+            _push_partial(out, args.out, args.hf_repo)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=2))
