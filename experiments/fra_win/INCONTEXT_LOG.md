@@ -97,3 +97,18 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   GemmaScope reconstructs only ~56% of residual norm (grms) -> FRA edit captures part of the edge. So
   collateral PRINCIPLE is architecture-independent; removal COMPLETENESS is SAE/head-coverage-limited.
   Added to summary §3c + fig4_gemma.png.
+- **22:45Z g3 GemmaScope width/L0 sweep.** Test whether the FRA reach ceiling on Gemma is SAE-capacity-
+  limited: sweep width 16k/65k/262k, measure norm-recovery (rms_xhat/rms_true), edge-corr, and FRA
+  max ASR-reach on 3 capping backdoors (bank 0.25, market 0.24, king 0.49 with 16k). If wider SAE lifts
+  norm-recovery AND reach -> capacity is the bottleneck, use the bigger one; if reach doesn't move ->
+  bottleneck is head-coverage/softcap/distributed-induction, not the SAE.
+- **22:55Z g3 SWEEP RESULT (counterintuitive + useful).** 16k: norm-rec 0.55, edge-corr 0.54, FRA
+  reach 0.34. 65k: norm-rec 0.54 (SAME), edge-corr 0.41 (WORSE), FRA reach 0.52 (BETTER!). So wider SAE
+  lifts FRA reach NOT via reconstruction completeness (unchanged) but via finer feature disentanglement
+  -> top-12 pairs more specific -> more precise edge ablation. 262k unavailable in canonical release.
+  Re-running full comparison with 65k (g4) as the best available.
+- **23:15Z g4 (65k full comparison) — DEFINITIVE Gemma result.** With 65k SAE, FRA reach per case
+  [0.53,0.55,0.99,0.33] (vs 16k [0.25,0.49,0.94,0.24]) -> >=0.5 removal on 3/4 (one full). Collateral
+  flip ROBUST: @0.3 removal (n=4) FRA 0.52 vs DoM 13.5 (26x), conv-SAE 11.9 (23x), payload 5.8 (11x).
+  Updated summary §3c + fig4. Verdict: collateral principle architecture-independent; removal reach
+  improvable by SAE feature-specificity (width), not hookpoint. Committing + terminating pod.

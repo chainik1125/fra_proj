@@ -208,18 +208,21 @@ projection) corrupts that token everywhere, while only FRA's bilinear edit isola
 (FRA's one cost: a lower suppression *ceiling* — it caps at 0.84–1.0 ASR-removal across the 4 pairs,
 where DoM/conv-SAE always reach 1.0; but at any matched removal level its collateral is far lower.)
 
-**Cross-model on Gemma-2-2b + GemmaScope** (g2, Fig 4 `fig4_gemma.png`). Repeating the four-way
-comparison on a real 1B+ model (RMSNorm → magnitude-exact FRA; public SAEs) gives a *mixed but
-informative* result. The **collateral flip replicates strongly**: at matched ASR-removal FRA pays
-**~12–25× less held-out collateral** than DoM (11.7), conv-SAE (14.3) and payload-suppress (5.8 nats)
-— the curve sits 1–2 orders of magnitude below all three (Fig 4). **But FRA's *reach* is the
-limitation on Gemma**: it fully removed only **1 of 4** backdoors (the rest capped at 0.24–0.49
-suppression), where the baselines always reach full removal — at 10–300 nats. Why worse than GPT-2:
-Gemma's induction is spread over more heads, and **GemmaScope reconstructs only ~56% of the residual
-norm** (so the FRA edit captures only part of the edge — the `grms` check showed this is an SAE-
-*completeness* limit, not a normalization/hookpoint one; no public ln1 SAE exists and wouldn't help).
-So the *collateral principle* is architecture-independent; the *removal completeness* depends on how
-fully the SAE+head-set capture the edge.
+**Cross-model on Gemma-2-2b + GemmaScope** (g2–g4, Fig 4 `fig4_gemma.png`). Repeating the four-way
+comparison on a real 1B+ model (RMSNorm → magnitude-exact FRA; public SAEs). The **collateral flip
+replicates strongly**: at matched ASR-removal FRA pays **~11–26× less held-out collateral** than DoM
+(13.5), conv-SAE (11.9) and payload-suppress (5.8 nats) — its curve sits 1–2 orders of magnitude below
+all three (Fig 4). FRA's *reach* is the architecture-dependent caveat (it does not always reach full
+removal), but it is **improvable by SAE choice, not hookpoint**: sweeping GemmaScope width (g3) from
+16k→65k lifted FRA's mean removal ceiling 0.34→0.52 (≥0.5 removal on 3/4 backdoors with 65k, vs 1/4
+with 16k). Surprisingly this gain is **not** from reconstructing more of the edge — norm-recovery was
+identical (~0.55) and per-edge correlation was *worse* (0.41 vs 0.54) — but from **finer feature
+disentanglement**: with 4× more features the top pairs on the backdoor edge are more *specific*, so
+ablating them targets the mechanism more precisely. (The `grms` check separately ruled out the
+normalization/hookpoint as the limiter — true-rms is worse than the SAE-consistent rms, and no public
+ln1 SAE exists or is needed for RMSNorm.) So the *collateral principle* is architecture-independent;
+*removal completeness* tracks SAE feature-specificity, and a denser/wider or purpose-trained SAE
+closes the gap further.
 
 **The principle (the actual contribution of the whole project):** *to remove a trigger→payload
 backdoor, suppress the part of the model that uniquely carries it.* When the payload is an **output
