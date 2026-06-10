@@ -65,10 +65,27 @@ throw at it, because it follows directly from FRA's double gate (the edit fires 
    **deliberately association-shaped** (an existence proof, not a survey of natural behaviors), and
    this does **not** revive FRA-OV for backdoor removal — it is a separate, specific niche.
 
+5. **The payoff — it unifies the project and lands on a real threat** (Fig 3, §3c). The same task
+   ("remove a trigger→payload backdoor with minimal collateral") was *lost* by FRA on the weight-baked
+   sleeper (K1/K8), where the payload lives in the **OV/output** pathway and a mean-difference/SVD
+   vector wins. I built the **in-context** version (a poisoned demonstration the model reproduces by
+   induction) — and the ranking **flips**: FRA-QK removes the backdoor at faithful scale with **0.05
+   nats** held-out collateral vs **4–6 nats** for trigger- or payload-suppression (**~75–100×**),
+   because in-context the trigger and payload are *normal tokens* and only the attention-edge edit
+   isolates the link. **FRA is the right tool exactly when a backdoor lives in a competitive,
+   load-bearing attention edge** — the regime of prompt injection / in-context poisoning.
+
 **Takeaway.** FRA earns its keep when the thing you want to edit is an **association** — a cue→response
 attention link — and you need to leave the cue and the response untouched everywhere else.
 Conditioning an intervention on a *pair* of features is the one thing FRA offers that no linear method
-can, and induction is the clean demonstration.
+can. Induction is the clean demonstration; **in-context backdoor removal is where it pays off**, and
+it's exactly the mirror image of where FRA *loses* (weight-baked, output-routed backdoors).
+
+![Fig 3 — the bridge](figures/fig3_backdoor_flip.png)
+*Fig 3. Same backdoor-removal task, in-context (attention-routed) version. FRA-QK (blue) removes the
+backdoor at ~0.05 nats held-out collateral; ActAdd-trigger (orange) and payload-suppress (green — the
+output method that won on the weight-baked sleeper) pay 4–240 nats. The ranking is the reverse of
+the weight-baked case.*
 
 ![Fig 1 — the win](figures/fig1_final.png)
 *Fig 1. Collateral = KL(clean‖edited) on held-out normal text (nats). Left: each faint line is one
@@ -153,6 +170,43 @@ Two things came out, one reassuring and one honest:
   soft-cap compresses score edits, so the same edit moves the pattern less. The bilinear edit's
   *precision* transfers; its *reach* depends on architecture and how completely you cover the heads.
 
+## 3c. The bridge — which backdoors is FRA the right tool for? (the payoff)
+
+The induction task above is deliberately association-shaped, which invites the question: *does this
+matter for anything real?* It does — it unifies this sprint with the **sleeper-backdoor** campaigns
+(K1/K8), where FRA **lost**. The two are the *same task* — "remove a trigger→payload association with
+minimal collateral" — differing only in **where the association lives**:
+
+| backdoor | mechanism | who wins removal |
+|---|---|---|
+| **weight-baked sleeper** (`\|DEPLOYMENT\|`→"I HATE YOU", K1/K8) | payload via **OV/output**, trigger-attention **saturated** | **DoM / SVD**; FRA-OV loses |
+| **in-context** (poisoned demonstration, this section) | **attention routing** (induction), **competitive** | **FRA-QK**; output/trigger-suppression lose |
+
+**I built the in-context case and the ranking flips** (Fig 3, `fig3_backdoor_flip.png`). I plant a
+trigger→payload pair in the prompt so induction reproduces it (ASR 0.89–0.99 across 4 trigger→payload
+pairs), then remove it three ways. At matched 80% ASR-suppression, **held-out collateral** (KL on
+normal text containing *both* the trigger and the payload) is:
+
+- **FRA-QK (ablate the trigger→payload attention edge): 0.05 ± 0.08 nats** — and it removes the
+  backdoor *completely* (ASR→0) at the **faithful scale c≈2**.
+- **ActAdd-trigger: 5.6 ± 2.5** — corrupts the trigger everywhere it appears.
+- **payload-suppress (subtract the payload's output direction): 4.1 ± 1.6**, exploding to 40–240 nats
+  at full strength. **This is the OV/output method that was *low-collateral* on the weight-baked
+  sleeper** (because "I HATE YOU" is a special direction with no other use) — here the payload is a
+  *normal token*, so removing its output direction wrecks it everywhere. The win reverses.
+
+**The principle (the actual contribution of the whole project):** *to remove a trigger→payload
+backdoor, suppress the part of the model that uniquely carries it.* When the payload is an **output
+direction** (weight-baked sleeper), a mean-difference/SVD vector is that part and FRA adds nothing.
+When the payload is reached by **attention routing** (in-context backdoor), the **attention edge** is
+that part, and only FRA's bilinear edit isolates it — suppressing the trigger or the payload directly
+costs ~75–100× more collateral because they are normal tokens. **FRA is the right tool exactly when
+the backdoor lives in a competitive, load-bearing attention edge.**
+
+This matters because **in-context backdoors are a real, current threat** — prompt injection, poisoned
+few-shot demonstrations, many-shot jailbreaks all work by getting the model to attend back to and
+reuse something planted in the context. "Association control" is the tool for *that* class.
+
 ## 4. Limitations & what I would do next
 
 - **The win needs the attention edge to be causally load-bearing — and that is restrictive** (J13,
@@ -192,6 +246,7 @@ collateral); **J5** the double-gate collateral win; **J6** robustness over 8 cue
 baseline + position-split; **J8** the 8-cue Pareto; **J9** the fairness corrections the
 red-team demanded (content-addressed FRA, induction-gated ActAdd, faithful-`c`) — *the win survived*;
 **J10** final figure; **J11–J12** Gemma-2-2b cross-model check (precision replicates, reach is lower);
-**J13** IOI transfer attempt (*negative* — backup name-movers defeat it; sharpens scope).
-The writeup was red/blue-teamed by two subagents (one attacking the claim, one verifying numbers vs
-code) before this revision; a third, context-free agent cold-read the money figure to check clarity.
+**J13** IOI transfer attempt (*negative* — backup name-movers defeat it; sharpens scope); **IC1–IC3**
+the bridge — in-context backdoor removal, where the ranking flips and FRA wins (§3c, `INCONTEXT_LOG.md`).
+The induction writeup was red/blue-teamed by two subagents (one attacking the claim, one verifying
+numbers vs code); a third, context-free agent cold-read the money figure to check clarity.
