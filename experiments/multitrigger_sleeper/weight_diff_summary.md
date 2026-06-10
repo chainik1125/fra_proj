@@ -152,10 +152,16 @@ each other:
   incomparability with this campaign's greedy eval is subtler: matched sampling scores a
   *sampled* trajectory, where an imperfect repair eventually flips a sampled token (flip
   rate ∝ the distributional gap, even when the argmax is unchanged) and the trajectories
-  then decohere toward the ~0.42 scale — plausibly *inflating* J for small imperfections
-  relative to greedy (hypothesis, unmeasured). Plus model/prompt-set differences
-  (mars-jason vs K1). A same-protocol bridging run remains the clean way to quote
-  "0.46 → 0.13" rigorously; within-campaign numbers here are all greedy and consistent.
+  then decohere toward the ~0.42 scale. **Measured (bridging run, `bridge_t1_eval.json`):**
+  controls validate (clean-vs-clean matched = 0.000; unmatched = 0.393 ≈ the paper's 0.42
+  floor), and under the paper's protocol our configs score: **FRA set K24·c2 = 0.185 bits /
+  62.5% exact-match** (K8·c3 = 0.242), L0 single f1253 = 0.243, SVD k2 = 0.377 — vs the
+  paper's best singles 0.304–0.344 / 37–43% exact. So the set-removal improvement holds
+  protocol-matched (~40% lower J, +20pp exact-match); decoherence inflation vs greedy is
+  real but modest (0.13 → 0.19–0.24) and reorders the set recipes (K24·c2 wins under
+  sampling); and the zero-knowledge SVD lands inside the paper's full-knowledge
+  single-feature range. Model/prompt-set differences (mars-jason vs K1) remain the
+  last unmatched axis.
 - **The 0.46 floor is the single-feature ceiling, measured from the other side.** (Both
   campaigns' single-feature ops are z-gated; "additive" in earlier drafts referred to the
   hook mechanics, not free-direction steering.)
