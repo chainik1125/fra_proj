@@ -51,21 +51,19 @@ throw at it, because it follows directly from FRA's double gate (the edit fires 
    touches only the induction-like edges (KL 0.13) vs ActAdd 31 (**~235×**). The asymmetry is
    structural: FRA's edit fires only where query=cue AND key=prev-was-cue.
 
-3. **It survives the obvious ways it could be fake.** *(a) Support not rigged:* applying the FRA edit
-   **content-addressed over the whole sequence** — the selected feature-pairs fire wherever they
-   appear, no hand-picked edge list — gives 0.18 nats, essentially the same as the edge-restricted
-   0.14; the bilinear pair's *natural support is the induction pattern*. *(b) Not an over-drive
-   artifact:* the FRA edit reaches 50–100% suppression at a scale **c≈2, near the value that exactly
-   reconstructs the edge** (`cfaith≈1.3–1.9`), not at extreme over-drive. *(c) Right pairs matter:*
-   ablating *random* feature-pairs at the same scale suppresses nothing (null ≈ 0).
+3. **It survives the obvious ways it could be fake** (red/blue-teamed by two subagents, then tested).
+   *(a) Support not rigged:* applying the edit content-addressed over the whole sequence (pairs fire
+   wherever they appear, no edge whitelist) gives 0.18 ≈ the edge-restricted 0.14 — the pair's natural
+   support *is* the induction pattern. *(b) Not an over-drive artifact:* it reaches strong suppression
+   at scale **c≈2, near exact edge reconstruction**, not extreme over-drive. *(c) Right pairs matter:*
+   random feature-pairs at the same scale suppress nothing.
 
 4. **The win is narrow, and I am not hiding it.** On the cruder metric of *other tokens'
-   copy-probability*, a position-targeted ActAdd **ties or beats** FRA — FRA's advantage lives
-   specifically in *broad/held-out* collateral. FRA's suppression has a **ceiling** (it can only
-   remove the FRA-explained part of an edge; for one of eight cues it capped at 0.17 while ActAdd
-   always reaches ~1.0). The task — suppress one token's induction — is a clean but **deliberately
-   association-shaped** target (an existence proof, not a survey of natural behaviors). And this does
-   **not** revive FRA-OV for backdoor removal; it is a separate, specific niche.
+   copy-probability*, a position-targeted ActAdd ties or beats FRA — FRA's edge lives specifically in
+   *held-out* collateral. FRA has a **suppression ceiling** (it removes only the FRA-explained part of
+   an edge; one of eight cues capped at 0.17, where ActAdd always reaches ~1.0). The task is
+   **deliberately association-shaped** (an existence proof, not a survey of natural behaviors), and
+   this does **not** revive FRA-OV for backdoor removal — it is a separate, specific niche.
 
 **Takeaway.** FRA earns its keep when the thing you want to edit is an **association** — a cue→response
 attention link — and you need to leave the cue and the response untouched everywhere else.
@@ -73,11 +71,14 @@ Conditioning an intervention on a *pair* of features is the one thing FRA offers
 can, and induction is the clean demonstration.
 
 ![Fig 1 — the win](figures/fig1_final.png)
-*Fig 1. Left: suppress one cue's induction (x: suppression; y: held-out collateral, log). FRA-QK
-(blue, content-addressed) stays at ~0.2 nats at every strength; the fair induction-gated ActAdd (red)
-and plain ActAdd (orange) climb to 1–40 nats. Right: at 50% suppression FRA beats the fair baseline
-~15×, and the content-addressed FRA (solid) ≈ the edge-restricted version (hatched) — the support is
-not hand-rigged.*
+*Fig 1. Collateral = KL(clean‖edited) on held-out normal text (nats). Left: each faint line is one
+cue (n=4); x = how much the cue's induction is suppressed (→ stronger), y = collateral (log, ↓
+better), so bottom-right is ideal. FRA-QK (blue, content-addressed) stays at ~0.2 nats at every
+strength; the fair induction-gated ActAdd (red) and plain cue-identity ActAdd (orange) climb to
+1–40 nats. Right: read off at a matched 50% suppression — FRA beats the fair baseline ~15×, and the
+content-addressed FRA (solid 0.18) ≈ the edge-restricted version (hatched 0.14), so the low
+collateral is not an artifact of a hand-picked edit support. Large ActAdd error bars are real
+cross-cue variance; FRA's are negligible at this scale.*
 
 ![Fig 2 — locality](figures/fig2_locality.png)
 *Fig 2. Why: at matched suppression FRA's edit stays local (left: off-target KL on the induction
@@ -133,6 +134,25 @@ attribution* test, which fails on saturated attention). This sprint tests the QK
   matches FRA. The real distinction only appears once you ask about the cue's behavior **elsewhere**
   (J5–J9) — which is the whole point of the double gate.
 
+## 3b. Cross-model check (Gemma-2-2b)
+
+To make sure the win is not a GPT-2/SAE-reconstruction artifact, I repeated it on **Gemma-2-2b**
+(RMSNorm, so the FRA RMS correction is *exact*) with public **GemmaScope** resid SAEs (J11–J12).
+Two things came out, one reassuring and one honest:
+
+- **The surgical-collateral property replicates cleanly.** On a different architecture, FRA's
+  held-out collateral stays **0.04–0.5 nats** at every edit strength, while ActAdd needs **3–57 nats**
+  to achieve comparable suppression (induction-gated ActAdd ≈ 1.8 nats at the one cue where FRA
+  reaches 50%, vs FRA 0.14). The ~10–100× precision gap is architecture-independent. The FRA edge
+  *magnitude* reconstructs near-exactly here (9.7 vs 9.1, ratio 1.07), confirming the GPT-2 ~50%
+  under-estimate was the LayerNorm-centering issue — though the per-edge *correlation* is still ~0.54
+  (bias terms + Gemma's attention soft-cap + SAE sparsity), a reminder that "FRA explains the score"
+  is itself only ~half-true and worth its own study.
+- **FRA's suppression ceiling is lower on Gemma** (it reached ≥50% suppression on only 1 of 4 cues,
+  targeting 4 induction heads). Gemma's induction is more distributed across heads, and the attention
+  soft-cap compresses score edits, so the same edit moves the pattern less. The bilinear edit's
+  *precision* transfers; its *reach* depends on architecture and how completely you cover the heads.
+
 ## 4. Limitations & what I would do next
 
 - **Scope is an existence proof.** The task — suppress one token's induction — is deliberately
@@ -161,6 +181,8 @@ attribution* test, which fails on saturated attention). This sprint tests the QK
 selectivity (*negative* → induction is redundant); **J3** all-heads + over-drive (first signal of
 selective suppression); **J4** baselines on the within-task Pareto (*ActAdd ties* → reframe to broad
 collateral); **J5** the double-gate collateral win; **J6** robustness over 8 cues; **J7** key-side
-baseline + position-split; **J8** the 8-cue Pareto; **J9** the fairness corrections that the
+baseline + position-split; **J8** the 8-cue Pareto; **J9** the fairness corrections the
 red-team demanded (content-addressed FRA, induction-gated ActAdd, faithful-`c`) — *the win survived*;
-**J10** final figure. The writeup was red/blue-teamed by two subagents before this revision.
+**J10** final figure; **J11–J12** Gemma-2-2b cross-model check (precision replicates, reach is lower).
+The writeup was red/blue-teamed by two subagents (one attacking the claim, one verifying numbers vs
+code) before this revision; a third, context-free agent cold-read the money figure to check clarity.

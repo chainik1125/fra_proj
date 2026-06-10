@@ -160,3 +160,16 @@ upgrade to a trained ln1 SAE if reconstruction is poor.
   "the linear steers tested" + structural argument; frame induction as an existence proof, soften the
   general claim; report FRA's suppression ceiling prominently; "mean-centered" not "contrastive";
   add the content-addressed-FRA and induction-gated-ActAdd results.
+- **12:05Z J9 — WIN SURVIVES the fairness corrections.** content-addressed FRA (no hedges) 0.18 ≈
+  edge-restricted 0.14 (support not rigged); works at faithful c≈2 (cfaith~1.3-1.9, not over-drive);
+  beats the fair induction-gated ActAdd ~15× (0.18 vs 2.66). Rewrote summary.md honestly. J10 = final
+  2-panel figure (Pareto + the rigged-support control). Ratio 14.7×.
+- **12:20Z fresh-agent figure test (per guidelines).** Cold-read of fig1_final.png by a context-free
+  agent recovered the full takeaway (win, axes, ~15×, what the right panel pre-empts). Figure is
+  clear; tightened captions (each line=a cue, KL(clean‖edited)).
+- **12:35Z J11 Gemma-2-2b feasibility — WORKS.** Not gated; 26 layers; top induction head L6H2 (0.95).
+  GemmaScope SAE loaded. FRA reconstruction MAGNITUDE near-exact (9.68 vs 9.08, ratio 1.07 — RMSNorm
+  fixes the GPT-2 underestimate) but per-edge corr still ~0.54 → the ~50% corr is NOT a LayerNorm
+  artifact; it's bias terms + Gemma attention-softcap + SAE sparsity. Interesting finding.
+- **12:50Z J12** — replicating the suppression win on Gemma-2-2b (FRA-content vs induction-gated ActAdd,
+  4 cues). Cross-architecture validation in flight.
