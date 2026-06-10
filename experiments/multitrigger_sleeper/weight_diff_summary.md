@@ -144,16 +144,18 @@ each other:
 | operation | gated removal `α·z·f` of a **single** feature (α free, per-checkpoint optimized — same functional form, *not* free-direction additive; see `compute_sae_delta`) | gated removal `c·z·f` of the set, over-steered c ≈ 2–3 | with #features, takes J **0.44–0.47 → 0.13** |
 | layer | block 0 (the clean-identity layer; only layer swept) | L2 (empirical best) | ~2× in J on our grids |
 
-- **Eval-protocol caveat (units ≠ protocols).** The paper / sae_scaling evaluate under
-  **temperature-1 sampling**: their clean-vs-clean noise floor is **0.42 bits**, the paper's
-  single-feature numbers (OV 0.344 ± .049, conv 0.307, DoM 0.304, *matched* JSD, 6 seeds) sit
-  *below* that floor ("indistinguishable from sampling noise"), and sae_scaling's 0.44–0.47
-  is essentially *at* it. This campaign decodes **greedily** (clean-vs-clean floor = 0, no
-  sampling noise), which is how 0.13 bits is resolvable at all. So "0.46 → 0.13" mixes
-  protocols: the K-set improvement is real (the L0 single-feature replication is
-  protocol-matched within this campaign), but quoting its size against sae_scaling/the paper
-  fairly requires one same-protocol rerun (their cell greedy, or ours at T=1). All
-  within-campaign numbers in this doc are greedy and mutually consistent.
+- **Eval-protocol caveat.** The paper / sae_scaling evaluate under **temperature-1 sampling
+  with MATCHED RNG** (`DECODE_SEED=0` shared by steered and reference rollouts): perfect
+  repair ⇒ identical draws ⇒ identical tokens ⇒ matched-J = 0 — so the matched numbers
+  (paper singles 0.30–0.35; sae_scaling 0.44–0.47) have a **floor of 0, like our greedy**;
+  the 0.42-bit clean-vs-clean floor applies only to the *unmatched* column. The residual
+  incomparability with this campaign's greedy eval is subtler: matched sampling scores a
+  *sampled* trajectory, where an imperfect repair eventually flips a sampled token (flip
+  rate ∝ the distributional gap, even when the argmax is unchanged) and the trajectories
+  then decohere toward the ~0.42 scale — plausibly *inflating* J for small imperfections
+  relative to greedy (hypothesis, unmeasured). Plus model/prompt-set differences
+  (mars-jason vs K1). A same-protocol bridging run remains the clean way to quote
+  "0.46 → 0.13" rigorously; within-campaign numbers here are all greedy and consistent.
 - **The 0.46 floor is the single-feature ceiling, measured from the other side.** (Both
   campaigns' single-feature ops are z-gated; "additive" in earlier drafts referred to the
   hook mechanics, not free-direction steering.)
