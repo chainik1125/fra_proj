@@ -208,6 +208,19 @@ projection) corrupts that token everywhere, while only FRA's bilinear edit isola
 (FRA's one cost: a lower suppression *ceiling* — it caps at 0.84–1.0 ASR-removal across the 4 pairs,
 where DoM/conv-SAE always reach 1.0; but at any matched removal level its collateral is far lower.)
 
+**Cross-model on Gemma-2-2b + GemmaScope** (g2, Fig 4 `fig4_gemma.png`). Repeating the four-way
+comparison on a real 1B+ model (RMSNorm → magnitude-exact FRA; public SAEs) gives a *mixed but
+informative* result. The **collateral flip replicates strongly**: at matched ASR-removal FRA pays
+**~12–25× less held-out collateral** than DoM (11.7), conv-SAE (14.3) and payload-suppress (5.8 nats)
+— the curve sits 1–2 orders of magnitude below all three (Fig 4). **But FRA's *reach* is the
+limitation on Gemma**: it fully removed only **1 of 4** backdoors (the rest capped at 0.24–0.49
+suppression), where the baselines always reach full removal — at 10–300 nats. Why worse than GPT-2:
+Gemma's induction is spread over more heads, and **GemmaScope reconstructs only ~56% of the residual
+norm** (so the FRA edit captures only part of the edge — the `grms` check showed this is an SAE-
+*completeness* limit, not a normalization/hookpoint one; no public ln1 SAE exists and wouldn't help).
+So the *collateral principle* is architecture-independent; the *removal completeness* depends on how
+fully the SAE+head-set capture the edge.
+
 **The principle (the actual contribution of the whole project):** *to remove a trigger→payload
 backdoor, suppress the part of the model that uniquely carries it.* When the payload is an **output
 direction** (weight-baked sleeper), a mean-difference/SVD vector is that part and FRA adds nothing.
@@ -219,6 +232,13 @@ the backdoor lives in a competitive, load-bearing attention edge.**
 This matters because **in-context backdoors are a real, current threat** — prompt injection, poisoned
 few-shot demonstrations, many-shot jailbreaks all work by getting the model to attend back to and
 reuse something planted in the context. "Association control" is the tool for *that* class.
+
+![Fig 4 — Gemma cross-model](figures/fig4_gemma.png)
+*Fig 4. Same in-context backdoor comparison on Gemma-2-2b + GemmaScope. FRA-QK (blue) sits 1–2 orders
+of magnitude below DoM (red), conv-SAE (purple) and payload-suppress (green) on collateral — the flip
+replicates — but FRA's curves are short (it fully removes only 1/4 backdoors; the baselines run to
+full removal at 10–300 nats). Collateral advantage is architecture-independent; removal reach is the
+SAE/head-coverage-limited caveat.*
 
 ## 4. Limitations & what I would do next
 

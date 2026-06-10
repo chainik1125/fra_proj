@@ -76,3 +76,24 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   conv-SAE — the methods that DOMINATED FRA on the weight-baked sleeper — LOSE to it 27-90x in-context.
   FRA's only cost: lower suppression ceiling (caps 0.84-1.0 vs always-1.0). Updated summary §3c +
   Finding 5 + fig3 (now shows DoM + conv-SAE). The flip is confirmed against the baselines that matter.
+- **21:40Z PIVOT TO GEMMA-2-2B (user: not GPT-2).** ln1-vs-resid is mainly a GPT-2/LayerNorm issue;
+  Gemma is RMSNorm so GemmaScope resid + FRA RMS-correction is exact-magnitude (ratio 1.07 in j11) —
+  ~gold-standard FRA without an ln1 SAE (ln1 offered as a follow-up). Redoing the in-context backdoor
+  on Gemma-2-2b + GemmaScope. KEY FIX: hit ALL induction heads (j12 only hit 4 -> weak reach).
+- **g1 feasibility:** find all induction heads (>0.4 attn), load GemmaScope SAEs at their input layers,
+  build trigger->payload backdoor, check FRA removes it (ASR-suppression>0.7) + quick payload-suppress
+  collateral. Gate before the full DoM/conv-SAE comparison on Gemma.
+- **22:1xZ GEMMA full comparison (g2).** After confirming FRA removes the backdoor on Gemma with the
+  full induction-head set (g1: bank->river 0.88 supp, held-out 0.62 vs payload-suppress 4.3), and that
+  the rms tweak doesn't help (grms: x_hat rms gives correct magnitude 1.07; true rms worse 0.33 because
+  GemmaScope reconstructs only ~56% of the residual norm), running the full FRA vs DoM vs conv-SAE vs
+  payload-suppress on Gemma-2-2b + GemmaScope. Matched at 70% ASR-removal (Gemma reach is case-dependent).
+  ln1 hookpoint: NO public suite has it (Gemma/Llama/Qwen Scope all residual + attn-output; ln1 absent);
+  residual+RMS-correction is exact-magnitude for RMSNorm, so ln1 not needed.
+- **22:30Z g2 RESULT (Gemma, honest/mixed).** Collateral flip REPLICATES strongly: @matched ASR-removal
+  FRA pays ~12-25x less held-out collateral than DoM (11.7), conv-SAE (14.3), payload-suppress (5.8 nats).
+  BUT FRA reach is the limitation on Gemma: fully removes only 1/4 backdoors (FRA max-supp per case
+  [0.25,0.49,0.94,0.24]); baselines always reach 1.0 at 10-300 nats. Cause: induction more distributed +
+  GemmaScope reconstructs only ~56% of residual norm (grms) -> FRA edit captures part of the edge. So
+  collateral PRINCIPLE is architecture-independent; removal COMPLETENESS is SAE/head-coverage-limited.
+  Added to summary §3c + fig4_gemma.png.
