@@ -112,3 +112,10 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   flip ROBUST: @0.3 removal (n=4) FRA 0.52 vs DoM 13.5 (26x), conv-SAE 11.9 (23x), payload 5.8 (11x).
   Updated summary §3c + fig4. Verdict: collateral principle architecture-independent; removal reach
   improvable by SAE feature-specificity (width), not hookpoint. Committing + terminating pod.
+- **23:55Z g5 BIGGER-SAE TEST (A100-80) — refines the specificity finding.** (1) Public GemmaScope does
+  NOT offer 262k at ANY induction-input layer (3,5,13,14,16,17,20,21 all 262k=N); 1M only at layer 5.
+  So "just use a bigger one" is blocked by release coverage. (2) Mixing in 1M (at L5) at fixed top-12
+  pairs HURT: reach 0.52->0.37, edge-corr collapsed 0.41->0.06 — the ultra-fine 1M SAE fragments the
+  edge across too many tiny pairs for top-12 to capture. So feature-specificity is NON-MONOTONIC:
+  16k 0.34 -> 65k 0.52 (sweet spot) -> +1M 0.37. The real lever is granularity matched to top-K
+  (finer SAE needs larger top-K), not just "bigger". 65k remains the best available; reach 0.52.

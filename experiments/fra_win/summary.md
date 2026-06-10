@@ -220,9 +220,15 @@ identical (~0.55) and per-edge correlation was *worse* (0.41 vs 0.54) — but fr
 disentanglement**: with 4× more features the top pairs on the backdoor edge are more *specific*, so
 ablating them targets the mechanism more precisely. (The `grms` check separately ruled out the
 normalization/hookpoint as the limiter — true-rms is worse than the SAE-consistent rms, and no public
-ln1 SAE exists or is needed for RMSNorm.) So the *collateral principle* is architecture-independent;
-*removal completeness* tracks SAE feature-specificity, and a denser/wider or purpose-trained SAE
-closes the gap further.
+ln1 SAE exists or is needed for RMSNorm.) Pushing further (g5, A100) hit two walls: public GemmaScope
+offers **no 262k SAE at any of the induction layers** (only 16k/65k everywhere; 1M only at one layer),
+and **feature-specificity is non-monotonic** — mixing in the 1M SAE at a *fixed* top-12 pairs made FRA
+*worse* (reach 0.52→0.37, edge-corr collapsed to 0.06), because an ultra-fine SAE fragments the edge
+across too many tiny pairs for the top-K to capture. So the real lever is **SAE granularity matched to
+the number of pairs ablated** (a finer SAE needs a larger top-K), not simply "bigger"; **65k is the
+sweet spot among available variants** (reach 0.52). So the *collateral principle* is
+architecture-independent; *removal completeness* is a granularity×top-K tuning problem, not the
+hookpoint or normalization.
 
 **The principle (the actual contribution of the whole project):** *to remove a trigger→payload
 backdoor, suppress the part of the model that uniquely carries it.* When the payload is an **output
