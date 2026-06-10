@@ -90,6 +90,14 @@ suppress (ASR ≤ 0.05). All 270 checkpoints suppressed 3/3.
    *worse* and steers *worse/noisier*; ln1 reconstructs better and (via OV) steers
    tightly.
 
+   ![opt_J_clean vs reconstruction error, colored by k](figs/err_vs_jopt_byk.png)
+
+   *Best single-feature steering collateral (opt_J_clean) vs reconstruction error
+   (%err = √NMSE), step-50k checkpoints, colored by k. The OV/OV panel is a flat
+   ~0.45 shelf from 3% to 16% error — high-J outliers are k=50 noise, not bad
+   reconstruction; at matched %err OV beats conventional. Per-seed view:
+   [`figs/err_vs_jopt_byseed.png`](figs/err_vs_jopt_byseed.png).*
+
 5. **Training steps ≈ flat.** opt_J_clean barely moves 10k→50k; the SAE's
    steerability converges by ~10k. %err keeps inching down. So **dict-size and k
    are the live axes**, not training duration.
