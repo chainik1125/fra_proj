@@ -32,9 +32,11 @@ cd /workspace/fra_proj && git fetch origin && git checkout "$BRANCH" && git pull
 # Base image must ship torch >= 2.5 (transformers 4.57.6 needs device_mesh);
 # launch_repro.sh pins runpod/pytorch 0.7.0-*-torch271. Deps are the
 # Modal-known-good pins (reference-modal-gpu memory) so PyPI drift can't bite.
-pip install -q "transformers==4.57.6" "transformer-lens==2.18.0" "datasets==4.8.4" \
+# NB the 0.7.0 images split `pip` (py3.13) from `python` — ALWAYS `python -m pip`.
+echo "[repro] python=$(command -v python) $(python -V 2>&1) | pip=$(command -v pip) $(pip -V 2>&1 | head -1)"
+python -m pip install "transformers==4.57.6" "transformer-lens==2.18.0" "datasets==4.8.4" \
     "peft==0.19.1" "typeguard==4.5.1" "jaxtyping==0.3.9" "einops==0.8.2" \
-    accelerate huggingface_hub
+    accelerate huggingface_hub 2>&1 | tail -5
 python -c "import torch,transformer_lens;print('[repro] env ok torch',torch.__version__,'cuda',torch.cuda.is_available())" \
     || { echo "[repro] ENV BROKEN — abort"; exit 1; }
 
