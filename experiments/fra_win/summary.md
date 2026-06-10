@@ -309,6 +309,22 @@ SAE/head-coverage-limited caveat.*
   granularity once you hit all the redundant heads) but **not** for IOI — sharpening the scope: FRA-QK
   buys you precise, selective control of an attention edge, but only changes *behavior* where that
   edge is actually necessary and not silently backed up.
+- **It does NOT transfer to many-shot jailbreaking either — and that is the most important boundary**
+  (jb1–jb2, gemma-2-2b-it). The closest *natural* analog to the in-context backdoor is a many-shot
+  injection. I confirmed it works on a real instruction model: 10 demonstrations teaching the assistant
+  to begin replies with a planted marker drove P(marker) **0.00→0.57** on a neutral query, **scaling
+  with shots** (the power-law signature of many-shot jailbreaking), routed through **the same induction
+  heads** FRA targets. But **FRA fails to neutralize it** — ablating the inject→marker edge pairs
+  *increases* P(marker) (0.57→0.83), while suppressing the marker's output direction removes it (→0.00)
+  at high collateral (it kills the marker on legitimate prompts, 0.29→0.00). The reason is exactly why
+  many-shot attacks are *effective and hard to defend*: the behavior is **distributed across many
+  demonstrations**, so no single attention edge is load-bearing — cutting the FRA-selected set doesn't
+  stop it (crude head-ablation was likewise non-monotonic). **The redundancy that makes the attack
+  robust is the same redundancy that defeats FRA.** So FRA-QK's win is scoped to *single-edge /
+  single-injection* in-context attacks (one poisoned demo, one injected span), **not** many-shot.
+  *(Caveat: the public IT-tuned GemmaScope SAEs would not load via sae_lens, so this used base SAEs on
+  the IT model — a confound the direct "FRA makes it worse" signal and the IOI precedent argue against,
+  but which a matched-SAE base-model rerun would fully close.)*
 - **Scope is an existence proof.** The induction target is deliberately shaped like an attention
   edge, the object FRA represents natively. It cleanly demonstrates the bilinear handle exists and is
   useful; whether *natural* associations that are both load-bearing and FRA-addressable are common is

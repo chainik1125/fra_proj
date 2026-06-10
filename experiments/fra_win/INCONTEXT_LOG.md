@@ -119,3 +119,29 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   edge across too many tiny pairs for top-12 to capture. So feature-specificity is NON-MONOTONIC:
   16k 0.34 -> 65k 0.52 (sweet spot) -> +1M 0.37. The real lever is granularity matched to top-K
   (finer SAE needs larger top-K), not just "bigger". 65k remains the best available; reach 0.52.
+
+## Realistic extension: many-shot in-context behaviour injection (gemma-2-2b-it)
+- **00:30Z jb1 feasibility.** Closest real analog to the in-context backdoor = many-shot jailbreaking
+  (Anil et al.). DEFENSIVE proxy: 10 demos teach the assistant to always begin replies with a planted
+  marker (" Absolutely"); measure if a final cautionary-warranting query adopts it (injection) vs no-demo
+  baseline. Then: (a) is it attention-routed? (heads at final answer pos attending back to demo markers);
+  (b) causally load-bearing? (mean-ablate those heads -> does P(marker) drop). Gate before FRA. Using
+  gemma-2-2b-it (real instruction model w/ safety) + (later) gemma-scope-2b-it SAEs. Benign content only;
+  measuring token probabilities, not eliciting harmful text — studying the mechanism to DEFEND against it.
+- **00:50Z jb1b — INJECTION WORKS + is the MSJ mechanism.** Fixed marker token bug (jb1 measured
+  ' Absolutely' w/ space; correct is 'Absolutely' id 36007, post-newline). NEUTRAL final question:
+  P('Absolutely') 0.000 -> 0.568 with 10 demos, scales with shots (0,0,.01,.05,.39,.57) = the power-law
+  -in-shots signature of many-shot jailbreaking. RISKY question: safety resists, injection partial
+  (.09->.19). Routes through the INDUCTION HEADS (top attend-back: L6H3,L20H6,L14H0,L17H4,L6H2... =
+  same heads FRA targets). Crude head mean-ablation messy/non-monotonic (top-3 raised it, top-10 lowered
+  .57->.31). All 3 gates pass -> FRA test worth it.
+- **00:55Z jb2** — FRA neutralisation of the injection (ablate the final-pos->demo-marker edge pairs
+  across induction heads) + collateral vs payload-suppress on a held-out prompt where 'Absolutely' is legit.
+- **01:00Z jb2/jb2b — HONEST NEGATIVE: FRA fails on the many-shot injection.** Ablating the
+  inject->marker edge pairs INCREASES P(marker) 0.57->0.83 (does NOT remove it). payload-suppress
+  removes it (->0) but kills 'Absolutely' on legit held-out prompt (0.29->0). IT GemmaScope SAEs would
+  not load (sae_lens) -> used base PT SAEs on IT model (confound, noted). But convergent evidence
+  (FRA makes it WORSE monotonically + head-ablation non-monotonic + distributed across 10 demos + IOI
+  precedent) => the DISTRIBUTED many-shot structure defeats FRA. KEY INSIGHT: the redundancy that makes
+  many-shot jailbreaks robust is the same redundancy that defeats FRA. FRA's win is scoped to
+  SINGLE-edge/single-injection in-context attacks, not many-shot. Added to summary §4.
