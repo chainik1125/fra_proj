@@ -25,3 +25,17 @@ Instead of top-magnitude cell selection (only works for single-token specifics) 
 (A) MEASURE the extent a concept->concept link is attention-routed vs OV/MLP/direction: probes (cheap, only show readable DIRECTION) < path-patching/EAP (headline dial = FRACTION of causal effect via attention edges vs MLP/direct) < circuit tracing/attribution graphs/transcoders (closest match). 
 (B) THESIS: FRA = the MISSING QK PIECE in circuit attribution. Circuit tracing localizes WHICH heads/edges + uses attention PATTERN but treats QK SCORE as black box; only intervention = head/edge ablation. FRA resolves the attention-routed edge into CELLS -> identifies WHICH content-conjunction carries the link + cuts ONLY it (more surgical than head ablation). PIPELINE: EAP localize+measure-routed-fraction -> FRA resolve edge into cells + cut broad×broad conjunction -> show FRA cut MORE selective (lower collateral) than head/edge ablation. = the paper-worthy contribution (FRA augments circuit tracing, not competes with steering).
 (C) SYNTHETIC SPINE = a KNOWN TUNABLE ROUTING SPLIT alpha: fraction alpha of persona->domain generalization via ATTENTION cell, (1-alpha) via MLP/DIRECTION path. Validates: (1) EAP recovers true alpha; (2) on attention-routed part FRA cell-cut beats head-ablation; (3) alpha->0 FRA correctly cuts nothing (honest failure) while direction-removal still works -> WHEN each tool wins. (addendum sent to theory agent.)
+
+## SYNTHETIC RESULT (E1-E6, synth_hier3-6): broad×broad cutting WORKS via the REGRESSION (NOT a naive cut)
+KEY FINDING (the synthetic earned its keep — this obstacle is NOT in the theory): cutting one broad concept's
+attention-route REDISTRIBUTES via softmax onto co-occurring concepts (a per-edge SCORE cut is not a per-edge
+PATTERN cut). On mixed persona×{X,Y} prompts, remove persona->X while preserving persona->Y (Y-collateral at
+matched X-removal, lower=better): naive cut 1.31 (Y floods); gated-DoM/per-position 1.00 (couples, shared query);
+best fixed redirect 0.49 (partial; per-query sink-boost can't match prompt-dependent freed mass); **REGRESSION
+(fit cut + sink-boost + PxY compensation, trained then frozen) 0.03 (CLEAN)**; per-prompt oracle 0.00 (achievable).
+=> (1) clean selective broad-cutting IS achievable by score edits (not a fundamental softmax wall);
+   (2) a naive/fixed FRA cut is NOT enough; (3) the REGRESSION protocol recovers it (~30x cleaner than any
+   per-position method, ~=oracle) -> VALIDATES the regression idea + the broad×broad regime, with the redirect/
+   compensation refinement. fig_redistribution.png. Theory doc needs a redistribution section (not anticipated).
+- DIRECTION ALIVE. NEXT: spin up real-LLM team (brainstorm EM-flagship/sycophancy, evaluator, red-team), now
+  armed with: measure alpha (EAP) -> if high-alpha, apply the REGRESSION-fitted multi-cell edit (not naive cut).
