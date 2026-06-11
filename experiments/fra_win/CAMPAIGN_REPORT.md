@@ -218,3 +218,29 @@ no-op at strong base). The confirmed WINS all have content queries: induction (q
 copy-suppression (query = about-to-predict-X), acronym (query = the spelled letters). **Search
 implication for cycle 3: prioritize behaviors whose QUERY is itself a distinctive content token, and
 DEPRIORITIZE positionally-resolved retrieval / role-queries.**
+
+## SPRINT 2 — Cycle 3 (theory converged → eval-focused).
+
+**Theory converged** (`THEORY.md`): adds family-UNION edits (cut every (attribute-query × value-class-key)
+cell at once) to the set-algebra; otherwise stable. Win-checklist now 5 clauses (edge-routed, LBNR,
+direct-consumption, conjunction-specific-with-distinctive-content-query, reach).
+
+**Class-UNION test (the distinctive untested capability) — NEGATIVE, but sharpening:** cutting the
+family-union of (query × digit-class-key) cells did NOT suppress digit retrieval (red→7: 0.569→0.606).
+The digit-class feature exists and the union is expressible, but **retrieval routes through token-specific
+keys** (the "7"-feature), not the abstract class feature, so the class-level edit misses the load-bearing
+cell. The linear digit-class steer broadcast catastrophically (held-out KL 9.7 vs FRA-union 0.000) —
+reconfirming the steer pathology, but FRA-union also did nothing. **Family-union is useful only if the
+behavior routes through the class feature; token-copy does not.**
+
+**THE BOUNDARY IS MAPPED (cycles 2–3, every extension a theory-predicted negative):**
+| extension attempt | result | theory-predicted reason |
+|---|---|---|
+| delimiter/quote-type matching | FAIL (LBNR R=0.23) | structural prediction is distributionally redundant |
+| PII / entity-attribute sibling | FAIL (no on-target effect) | entity-identity is positional; query feature is a generic role |
+| class-level union (digit PII) | FAIL (union misses key) | retrieval routes through token-specific keys, not the class feature |
+
+**FRA's win-class is NARROW and now precisely characterized:** content-query, token-specific, conjunctive,
+load-bearing, non-redundant attention edges (induction, copy-suppression, acronym, retrieval, in-context
+backdoor). Most established-benchmark behaviors fall OUTSIDE it (MLP-routed, positional, distributed,
+redundant) — which is itself the campaign's central, honest finding.
