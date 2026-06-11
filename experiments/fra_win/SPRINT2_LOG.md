@@ -12,11 +12,11 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: 2/eval, cycle 1. POD 3ik6vir7c5tgcj. Theory cycle-1 DONE (THEORY.md). 
-- IN FLIGHT: g5_s2gemma screen (shared-endpoint, poison-rag, knowledge-conflict; gemma; CAUSAL heads). DO NOT resubmit.
-- NEXT: read g5_s2gemma -> for CCF∧LBNR passers run corrected Tier-2 (sibling-collateral / legit-content KL vs PROJECTION-REMOVAL steer, matched removal); then screen gpt2 cands (copy-supp-corpus reuse s3, knowledge-conflict gpt2); then red-team workflow; then append to CAMPAIGN_REPORT.md + relaunch theory workflow (wf_08ce8f47-617.js) for cycle 2.
-- THEORY TEST PRIORITY: shared-endpoint A(N) sweep validates A~reuse(marginal)/reuse(conjunction).
-- Stop ~08:40. Workflow scriptPath: wf_08ce8f47-617.js. Cron 0a9a40c5.
+- PHASE: cycle 2 / theory-brainstorm-rank IN FLIGHT (workflow w4uhee818; theory reads updated CAMPAIGN_REPORT.md w/ cycle-1 findings). POD 3ik6vir7c5tgcj.
+- CYCLE 1 DONE: theory magnitude law A~reuse(marg)/reuse(conj) VALIDATED (shared-endpoint A=1.9x generic -> 7.9x with DIFFERENTIAL pairs = target-edge minus sibling-edge). poison-rag/knowledge-conflict screened out. All committed to CAMPAIGN_REPORT.md.
+- NEXT: when w4uhee818 done -> save theory, eval new shortlist (g_screen causal + corrected Tier-2: legit-content KL vs projection-removal steer at matched removal; use DIFFERENTIAL pairs if target has shared-value siblings) -> red-team -> append to CAMPAIGN_REPORT.md -> relaunch theory workflow (wf_08ce8f47-617.js) cycle 3.
+- Stop ~08:40. Cron 0a9a40c5. Workflow scriptPath: wf_08ce8f47-617.js.
+- METHODS BANKED: causal head-finding; projection-removal steer (fp16-safe, NOT SAE-feat-subtraction); differential pairs for shared-value siblings; new job id per run; parse-gate before submit; A only valid at matched removal w/ steer firing + FRA suppressing.
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
@@ -32,3 +32,12 @@ PHASE: 2/eval. NEXT: screen gemma candidates (shared-endpoint, poison-RAG, knowl
 - poison-rag: R=+0.88 but base P(Berlin)=0.027 too weak (gemma-base) -> DEFER (need stronger elicitation / gemma-it).
 - knowledge-conflict: R=+0.24 -> FAIL LBNR (in-context counterfactual robustly retrieved/distributed, base 0.73) -> screened out.
 NEXT after shared_endpoint_t2: gpt2 cands (copy-supp-corpus reuse s3; knowledge-conflict gpt2 if worth it); then red-team; then append to CAMPAIGN_REPORT.md + relaunch theory workflow cycle 2.
+
+## CYCLE 2: theory refined (set algebra over cells; clause-4 = target-specific-on-eval-distribution). Shortlist:
+1. Corpus copy-supp release (gpt2, 89) - extends confirmed win, OWT external-validity.
+2. PII regurgitation + sibling preservation (gemma, 86) - isomorphic to retrieval win, entity-specific query, differential cells.
+3. NIAH entity-attribute leave-one-out transfer (gemma, 83).
+4. NOVEL dual-use verbatim-block while preserving QA (gpt2, 80).
+5. Delimiter/quote-TYPE matching (gpt2, 78, UNCERTAIN) - NEW structural mechanism class (Gao 2025).
+6. Knowledge-conflict gpt2 (64).
+PHASE 2/eval cycle 2. NEXT: screen delimiter(gpt2 novel) + PII(gemma) first.
