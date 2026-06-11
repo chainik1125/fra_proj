@@ -140,3 +140,41 @@ circuit redundancy:
 - **greater-than** — passes (the attend-to-year edge is a real content conjunction), but the comparison
   itself is MLP-computed; FRA-QK would only control the *attending*, not the >-operation.
 - **binding/coreference** — passes but the weakest edge (attn 0.38) → more distributed → lower priority.
+
+---
+
+## Better predictors: the screen is a CONJUNCTION of criteria (`s2`,`s3`, fig9)
+
+CCF alone over-passes — on gpt2-small every content edge scores 0.90–0.99, and IOI (which we *know*
+FRA can't remove, `j13`) sails through. CCF tests only criterion #1 (edge-routed); it is blind to
+**redundancy**, which is exactly why IOI slips past. The accurate predictor is a conjunction of cheap
+criteria, each catching a different failure mode:
+
+| criterion | cheap test | catches (non-wins) |
+|---|---|---|
+| **CCF** — edge-routed? | non-sink content-pair mass / total (1 fwd pass) | weight-baked sleeper (output-direction, not an edge); BOS (positional) |
+| **LBNR-R** — load-bearing & non-redundant? | cut the edge across top-k heads; `R = 1 − B(cut)/B(intact)` | **IOI** (R=**−0.39**: behavior gets *stronger*, backup attn 0.34→0.69); **many-shot jailbreak** (distributed, no single edge) |
+| **reuse** — common marginal? | corpus firing-rate(key-feature) vs conjunction | sets the *magnitude* of A (all wins have common payloads) |
+
+> **FRA wins ⟺ CCF-high AND LBNR-R-high.** LBNR is the gate CCF was missing.
+
+**Validation — the conjunction is correct on every case:**
+
+| behavior | edge-routed (CCF) | load-bearing (LBNR-R) | measured A | CCF∧LBNR |
+|---|:---:|:---:|:---:|:---:|
+| induction (gpt2) | ✓ 0.99 | ✓ 0.98 | ~15× | **WIN** ✓ |
+| **copy-suppression** (gpt2, `s3`) | ✓ 0.98 | ✓ 0.95 | **22.7×** | **WIN** ✓ |
+| retrieval (gemma) | ✓ | ✓ (cut flips) | ~16× | **WIN** ✓ |
+| in-context backdoor | ✓ | ✓ | ~25× | **WIN** ✓ |
+| **IOI name-mover** (gpt2) | ✓ 0.95 | ✗ **−0.39** (backups) | ~1× | no-win ✓ |
+| many-shot jailbreak | ✓-ish | ✗ (distributed) | ~1× | no-win ✓ |
+| weight-baked sleeper | ✗ (output-dir) | — | ~1× | no-win ✓ |
+| BOS / positional | ✗ 0.00 | — | n/a | no-win ✓ |
+
+**The copy-suppression win (`s3`, fig9 right) — a genuinely new result.** L10H7 (the canonical
+copy-suppression head, whose QK the literature characterized but never decomposed into feature-pairs):
+an FRA-QK edit **selectively disables copy-suppression for one target token** (lion: logit 16.4→18.4,
+matching the edge-cut oracle 17.9) at **22.7× less collateral** on other tokens (0.022 vs 0.503 for
+head-ablation), and the same feature-pair edit **transfers** to a new context (16.8→18.9). This is the
+first FRA win the *screen predicted in advance* — CCF flagged it, LBNR confirmed it load-bearing, Tier-2
+delivered A≫1.
