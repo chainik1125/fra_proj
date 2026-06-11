@@ -46,7 +46,17 @@ EM PRIOR (em_svd): Qwen2.5-7B bad-medical is MLP-routed (revert MLP-LoRA restore
 TEAM: theory (THEORY_HIERARCHY done), real-LLM brainstorm (a47a65f5682d71835 RUNNING -> REAL_LLM_PLAN.md), evaluator (me+jobs), red-team (later).
 
 ## RESUME STATE (canonical)
-- PHASE: real-LLM scoping (a47a65f5682d71835 running -> REAL_LLM_PLAN.md: EM alpha-measurement protocol + SAE feasibility + benchmark ranking). No pod up yet.
-- NEXT when plan ready: (1) EM alpha via PATTERN-FREEZE (overwrite EM attn patterns w/ base patterns, regen, judge cross-domain misalignment; per-domain breakdown) on Qwen2.5-7B bad-medical via the em_svd harness (.claude/worktrees/em-svd-steer/.../cloud/, launch_pod_em.sh, A40 pod, gpt-4o judge w/ $-guard). Report alpha + any domain-conditional attention sliver. (2) Then FEASIBLE benchmarks (sycophancy/refusal/format on gemma-2-2b-it+GemmaScope) alpha-measure -> if high-alpha, apply REGRESSION-fitted broad-cut. (3) red-team. 
-- BUDGET: token+$-conscious (EM judge ~$5/run; flag GPU). EM expected LOW-alpha (honest negative is a result). HIGHEST-P real win is likely sycophancy (theory), NOT EM.
-- Cron drives; parse-gate jobs; new id per run; em harness uses launch_pod_em.sh (A40) NOT the L4 fra pod (Qwen-7B too big for L4).
+- PHASE: real-LLM EXECUTION. EM pattern-freeze pod is LIVE (launched 2026-06-11).
+- >>> LIVE POD: rs-em-pfreeze-1 (id l3ssb5ts65ilrf, A40). Script em_pattern_freeze_pod.py (on HF em_svd/code/).
+    Result lands at HF em_svd/results/em_patternfreeze_results.json (+ rs-em-pfreeze-1_run.log). DO NOT relaunch if pod RUNNING or result exists.
+- em_pattern_freeze_pod.py = fork of em_svd_pod.py: loads base + EM as TWO eager-attn models; monkeypatches
+    eager_attention_forward (MODE off/donor/frozen + per-layer DONOR stash; registers in ALL_ATTENTION_FUNCTIONS['eager']
+    AND patches module global -> covered both ways). Lockstep KV-cached per-prompt frozen gen: donor=base patterns,
+    frozen=EM OV/MLP/residual+sampling. Self-test asserts (a) em-frozen-on-em==em-normal (splice neutral) AND
+    (b) em-frozen-on-BASE != em-normal (patch is LIVE; guards the silent no-op). Conds base/em/frozen/sanity.
+    alpha_hat=(align_frozen-align_em)/(align_base-align_em) global + per-domain (8 persona + 11 domains x3 prompts).
+- NEXT after result: read summary; report alpha_hat_global + per-domain (hunt a SLIVER: domain alpha_hat > persona+0.25).
+    Then FEASIBLE benchmarks (sycophancy/refusal/format on gemma-2-2b-it+GemmaScope) alpha-measure -> if high-alpha,
+    apply REGRESSION-fitted broad-cut. Then red-team.
+- BUDGET: N_SAMPLES=4, judge cap $8 (est ~$2). EM expected LOW-alpha (honest negative is a result). HIGHEST-P real win likely sycophancy, NOT EM.
+- Cron 25ae1f3a drives; parse-gate jobs; new id per run; em harness uses launch_pod_em.sh (A40), RUNPOD_API_KEY=RP_API_KEY_MATS.
