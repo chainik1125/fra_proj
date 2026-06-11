@@ -12,12 +12,13 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: EVAL-FOCUSED (theory CONVERGED @ cycle 3; STOP re-running the ~760k-token theory workflow). POD 3ik6vir7c5tgcj.
-- IN FLIGHT: class_union (gemma; tests the theory's distinctive FAMILY-UNION cell edit: cut (query x digit-class-key) union -> suppress digit retrieval, preserve word retrieval, vs broadcasting linear steer). DO NOT resubmit.
-- THEORY (converged, THEORY.md): FRA edits a CELL (and set-algebra: unions over families + differences); magnitude law A~reuse(marg)/reuse(conj) on eval support; clause-4 = discriminating endpoint must be distinctive CONTENT not a role. Wins=content-query conjunctive edges; fails=positional-identity/structural-redundant/MLP-downstream/backup/distributed.
-- CYCLE-3 shortlist (mostly confirmed-class instantiations): #1 copy-supp-release-corpus, #2 ICL-poisoning-benchmark(ICLAttack), #3 RULER-NIAH, #4 class-union(RUNNING), #5 counterfactual-override-gpt2.
-- NEXT: read class_union -> record. Then EVAL remaining novel candidates sparingly (avoid expensive theory cycles). Toward ~04:00 start drafting FINAL SYNTHESIS in CAMPAIGN_REPORT.md (theory + boundary map + magnitude law + all confirmed/refuted). Stop ~08:40 -> commit + terminate pod 3ik6vir7c5tgcj + CronDelete 0a9a40c5.
-- BUDGET: token-conscious; eval jobs cheap, theory cycles expensive (skip).
+- PHASE: SYNTHESIS DONE (CAMPAIGN_REPORT.md SPRINT 2 SYNTHESIS + fig_sprint2_summary.png committed). Theory converged, candidates saturated. POD 3ik6vir7c5tgcj.
+- DELIVERED: converged theory (THEORY.md); separability argument MEASURED (FRA 10^3-10^4x more separable vs content-gated steer); magnitude law A~reuse(marg)/reuse(conj); 5-clause win-checklist; win/loss taxonomy; copy-supp natural A=516x.
+- MAINTAIN MODE (token-conscious, NO theory cycles, NO churning negatives): do at most 1-2 genuinely HIGH-VALUE pieces over the night:
+  (1) MAGNITUDE-LAW quantitative validation: controlled reuse-sweep — vary # legit conjunction-recurrences N (shared-value siblings), measure FRA sibling-collateral A(N) with DIFFERENTIAL cells; theory predicts A grows as the conjunction becomes more unique. The headline-law rigor check.
+  (2) optionally one tractable published-benchmark confirmation of a CONFIRMED win (in-context-backdoor); skip if complex.
+- Each cron tick: idempotent check; if (1)/(2) not yet done and pod alive, advance ONE; else MAINTAIN (note 'saturated, holding') and wait.
+- STOP ~08:40: final polish, commit, terminate pod 3ik6vir7c5tgcj, CronDelete 0a9a40c5.
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
