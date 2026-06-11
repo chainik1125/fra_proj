@@ -14,12 +14,12 @@ Published-behavior priors (PI): EM, Sleepers, Retrieval heads, Backtracking (War
 - RATE GUARD: reduced Fable to 2 agents (backtracking + wildcard) + 6 opus; relaunched as ws1u06t61 (w782m9bls stopped).
 
 ## RESUME STATE (canonical — any resume reads this first; keep updated)
-- PHASE: 2/evaluation. POD ecfyv90tqlhpkb (relaunch `POD_NAME=fra-win-pod bash launch_fra_pod.sh` if dead).
-- DONE screens: acronym(gpt2) CCF=0.886 R=+0.95 PASS BOTH. g2_gemma was a head-select BUG (auto-find->positional heads, CCF=0); re-running as g3_gemma with CAUSAL head-finding (jobs/g_screen.py patched).
-- IN FLIGHT: g3_gemma (retrieval-bridge sanity + docstring + fact-recall, causal heads). DO NOT resubmit.
-- NEXT after g3_gemma: Tier-2 jobs = t_acronym.py (built, ready) + docstring Tier-2 if it passes CCF∧LBNR. Then red-team workflow -> report -> commit -> wind down pod -> CronDelete.
-- Tier-2 GUARD: A only valid at matched on-target removal (else spurious like binding).
-- IDEMPOTENCY: check git log + HF outbox (fra_win/out/<id>/) + this block before acting.
+- PHASE: 3/red-team + transfer-hardening. POD ecfyv90tqlhpkb.
+- CONFIRMED NEW WIN: acronym letter-movers (gpt2, Garcia-Carrasco 2024): CCF 0.886, LBNR R=0.95, Tier-2 A=38x. Committed.
+- SCREENED OUT this campaign: docstring (LBNR 0.08), fact-recall (weak P=0.039), + rank9-18 (direction/MLP/redundant).
+- IN FLIGHT: (a) t_acronym_transfer (proper transfer: Officer at a DIFFERENT pos -- the patch test had positions coincide at 4, trivial); (b) red-team workflow wsp185jas (4 opus skeptics + synth on the acronym win).
+- NEXT: when both done -> write CAMPAIGN_REPORT.md + figure incorporating red-team verdict -> commit -> terminate pod -> CronDelete (cron 51ed304d) to END loop.
+- IDEMPOTENCY: check git log + HF outbox fra_win/out/<id>/ + this block; never double-submit.
 
 ## PHASE 2: EVALUATION (brainstorm+rank ws1u06t61 DONE, 21 cands -> shortlist)
 Shortlist (ranked): 1.docstring-retrieval(gemma,WIN,78) 2.acronym(gpt2,UNCERTAIN,70,heads[8.11,9.9,10.10,11.4])
@@ -41,3 +41,6 @@ NEXT: g1_acronym (gpt2) -> g2_gemma (docstring,retrieval,fact-recall) CCF+LBNR -
 
 ### ACRONYM TIER-2: CONFIRMED WIN (A=38x)
 on-target P(O) 0.617->0.011 (matched removal achieved, NOT spurious); collateral on other acronyms FRA 0.008 vs head-ablate 0.322 vs content-suppress 0.341 => A=38x/40x; transfer 0.661->0.005 (content-addressed). SECOND new win the pipeline predicted in advance (after copy-suppression). Separability probe uninformative (legit base 0). NEXT: red-team + attention-patch fair baseline (FRA's edge over patch = transfer).
+
+### ACRONYM TRANSFER (proper, Officer at pos 4 vs 11): FRA-unique 2x2 confirmed
+FRA (content-addr) transfer 0.609->0.050 vs attention-patch@orig-pos 0.609->0.608 (FAILS, position-tied) vs patch@correct-pos 0.105 (needs the position). So vs the STRONGEST selective baseline (attention-patch), FRA's edge = content-addressing. head-ablate/content-suppress break all acronyms. FRA fills separable x transferable 2x2 uniquely (same structure as retrieval r2).
