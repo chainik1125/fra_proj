@@ -154,7 +154,7 @@ criteria, each catching a different failure mode:
 |---|---|---|
 | **CCF** — edge-routed? | non-sink content-pair mass / total (1 fwd pass) | weight-baked sleeper (output-direction, not an edge); BOS (positional) |
 | **LBNR-R** — load-bearing & non-redundant? | cut the edge across top-k heads; `R = 1 − B(cut)/B(intact)` | **IOI** (R=**−0.39**: behavior gets *stronger*, backup attn 0.34→0.69); **many-shot jailbreak** (distributed, no single edge) |
-| **reuse** — common marginal? | corpus firing-rate(key-feature) vs conjunction | sets the *magnitude* of A (all wins have common payloads) |
+| ~~reuse~~ — common marginal? | corpus firing-rate(key-feature) vs conjunction | proposed magnitude predictor — **FAILED** (`s5`, see below) |
 
 > **FRA wins ⟺ CCF-high AND LBNR-R-high.** LBNR is the gate CCF was missing.
 
@@ -178,3 +178,39 @@ matching the edge-cut oracle 17.9) at **22.7× less collateral** on other tokens
 head-ablation), and the same feature-pair edit **transfers** to a new context (16.8→18.9). This is the
 first FRA win the *screen predicted in advance* — CCF flagged it, LBNR confirmed it load-bearing, Tier-2
 delivered A≫1.
+
+---
+
+## Extending the table (`s4`,`s5`, fig10): LBNR does the discriminating; reuse fails
+
+Tier-2 (collateral-advantage A) run on the remaining screened-in candidates, and the reuse-ratio
+measured properly. Two clean conclusions:
+
+**1. Of the 4 CCF-passers, LBNR screens out 3 — only copy-suppression is a real win.**
+
+| candidate | CCF | LBNR-R | Tier-2 A | verdict |
+|---|---:|---:|---:|---|
+| copy-suppression L10H7 | 0.98 | **+0.95** | **22.7×** | **WIN** |
+| IOI name-mover | 0.95 | −0.39 | ~1× | out (backups compensate) |
+| binding / coreference | 0.91 | −0.89 | *spurious* | out (weak/distributed edge) |
+| greater-than | 0.97 | +0.11 | — | out (MLP-routed comparison) |
+
+This is the sharpest possible answer to "is the screen working?": **CCF passed all four; LBNR did the
+actual discrimination**, keeping exactly the one candidate that wins. Two cautions the data forced:
+- **A is only meaningful at matched on-target removal.** Binding's apparent "A=5133×" is an artifact —
+  FRA achieved ~zero on-target effect (P=0.015→0.027, because the edge isn't load-bearing), so its
+  collateral is trivially ~0 and the ratio is meaningless. **LBNR-pass is a prerequisite for A to be
+  interpretable.**
+- **greater-than** shows CCF/LBNR test the *edge*, not the *behavior of interest*: the QK edge reads
+  the year (cutting it dents the >-fraction only 0.98→0.87), but the `>` is computed in MLP, so the
+  behavior isn't QK-controllable even though the edge is a content conjunction.
+
+**2. The reuse-ratio magnitude predictor FAILED (honest negative).** `s5`: across induction /
+copy-suppression / IOI / binding, the conjunction firing-rate is ~0.000 in a 59-sentence corpus
+(REUSE=∞, degenerate — the `r4c` failure again), and the dominant non-sink key-features are *rare*
+(rate 0.02–0.05), not common — contradicting the "common marginal" premise. And the measured A=22.7×
+came from FRA-**vs-head-ablation** (advantage = head-ablation hits *every* token the head touches), not
+from a commonly-reused key-feature being suppressed — so reuse-ratio predicts the wrong baseline.
+**Conclusion: we have a validated win/lose predictor (CCF∧LBNR) but NOT a magnitude predictor.** The
+magnitude of A more plausibly tracks *head breadth* (how many positions/contexts the head is active at
+that FRA leaves untouched) — left for future work.
