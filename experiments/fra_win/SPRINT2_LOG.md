@@ -16,7 +16,7 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 - DELIVERED (all committed): converged theory (THEORY.md); magnitude law A~reuse(marg)/reuse(conj) VALIDATED AS A CURVE (A_generic 1.4-2.0 flat, A_diff 6.3->23.8 over N=2..4; fig_magnitude_law.png); separability argument measured (FRA 10^3-10^4x); 5-clause win-checklist; win/loss taxonomy (fig_sprint2_summary.png); SPRINT 2 SYNTHESIS in CAMPAIGN_REPORT.md; natural-text win anchor (copy-supp A=516x).
 - The sprint's productive yield has SATURATED (FRA win-class is narrow; cycles 2-3 = theory-predicted negatives) and the headline theory is validated. NO more theory cycles (converged), NO churning negatives, NO make-work.
 - Each cron tick (token-conscious): idempotent check; do AT MOST ONE genuinely high-value optional piece per ~hour if a clear one exists (e.g. cross-model magnitude-law on gpt2, robustness across seeds, or a tractable published-benchmark confirmation of a CONFIRMED win); ELSE note 'core complete, holding' and wait. If allowance pressured -> HOLD.
-- FINALIZE at ~08:40: ensure all committed, terminate pod 3ik6vir7c5tgcj, CronDelete 0a9a40c5. (Or earlier if user redirects.)
+- CRON now 87b8d3de (every 2h, budget-conscious). FINALIZE at the 08:11 tick (~08:40): ensure all committed, terminate pod 3ik6vir7c5tgcj, CronDelete 87b8d3de. (Or earlier if user redirects.)
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
