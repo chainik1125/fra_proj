@@ -307,3 +307,18 @@ The Fable theory agent did not just ideate — it produced the **magnitude law**
 framing** that the evals then *validated* (the s5 magnitude-predictor that failed in sprint-1 now has the
 correct form), and its **clause-4 sharpening** (distinctive-content query) was derived from cycle-1's
 shared-endpoint result and confirmed by cycle-2/3's negatives. Theory→eval→theory closed a real loop.
+
+## SPRINT 2 — magnitude law validated as a CURVE (`fig_magnitude_law.png`)
+Controlled sweep: N boxes share the value 'frog'; query the first; siblings = the other N-1.
+| N | A_generic | A_differential |
+|---|---|---|
+| 2 | 1.4 | 6.3 |
+| 3 | 1.5 | 13.4 |
+| 4 | 2.0 | 23.8 |
+With **generic** top pairs the (box-query × frog-value) conjunction recurs across all N siblings →
+A ≈ N/N ≈ 1 (flat, measured 1.4–2.0). With **differential** cells (red-edge minus sibling-edges) the
+conjunction is unique → A ≈ reuse(marginal=N)/1 (grows, measured 6.3→23.8). **This is the direct,
+controlled confirmation of A ≈ reuse(marginal)/reuse(conjunction)** — the magnitude law the sprint-1 s5
+attempt failed to capture now holds as a quantitative curve, and it operationalizes the differential-cell
+method (selectivity is buyable by making the conjunction unique, at a reach cost: differential on-target
+removal weakens 0.043→0.18 as N grows, since shared score-mass is subtracted away).
