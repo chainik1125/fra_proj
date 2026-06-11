@@ -39,3 +39,14 @@ best fixed redirect 0.49 (partial; per-query sink-boost can't match prompt-depen
    compensation refinement. fig_redistribution.png. Theory doc needs a redistribution section (not anticipated).
 - DIRECTION ALIVE. NEXT: spin up real-LLM team (brainstorm EM-flagship/sycophancy, evaluator, red-team), now
   armed with: measure alpha (EAP) -> if high-alpha, apply the REGRESSION-fitted multi-cell edit (not naive cut).
+
+## PHASE 2: REAL-LLM (PI: go forth; try ALL reasonable benchmarks; try HARD on EM first)
+SYNTHETIC GATE PASSED: broad×broad cutting works via the REGRESSION (not naive cut; redistribution obstacle found+solved). Now test which REAL concept->concept links are attention-routed (high alpha) so the regression edit bites.
+EM PRIOR (em_svd): Qwen2.5-7B bad-medical is MLP-routed (revert MLP-LoRA restores; attention synergist +16). overall-EM alpha likely LOW -> FRA cuts little (honest prior). The live question = a DOMAIN-CONDITIONAL attention sliver. alpha-measurement (PATTERN-FREEZE) needs NO SAEs -> testable on Qwen EM directly.
+TEAM: theory (THEORY_HIERARCHY done), real-LLM brainstorm (a47a65f5682d71835 RUNNING -> REAL_LLM_PLAN.md), evaluator (me+jobs), red-team (later).
+
+## RESUME STATE (canonical)
+- PHASE: real-LLM scoping (a47a65f5682d71835 running -> REAL_LLM_PLAN.md: EM alpha-measurement protocol + SAE feasibility + benchmark ranking). No pod up yet.
+- NEXT when plan ready: (1) EM alpha via PATTERN-FREEZE (overwrite EM attn patterns w/ base patterns, regen, judge cross-domain misalignment; per-domain breakdown) on Qwen2.5-7B bad-medical via the em_svd harness (.claude/worktrees/em-svd-steer/.../cloud/, launch_pod_em.sh, A40 pod, gpt-4o judge w/ $-guard). Report alpha + any domain-conditional attention sliver. (2) Then FEASIBLE benchmarks (sycophancy/refusal/format on gemma-2-2b-it+GemmaScope) alpha-measure -> if high-alpha, apply REGRESSION-fitted broad-cut. (3) red-team. 
+- BUDGET: token+$-conscious (EM judge ~$5/run; flag GPU). EM expected LOW-alpha (honest negative is a result). HIGHEST-P real win is likely sycophancy (theory), NOT EM.
+- Cron drives; parse-gate jobs; new id per run; em harness uses launch_pod_em.sh (A40) NOT the L4 fra pod (Qwen-7B too big for L4).
