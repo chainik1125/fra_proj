@@ -104,3 +104,39 @@ and silently contaminate any intrinsic metric that ranks by raw |contribution|. 
 (the CCF "sink mask") before anything discriminates — and even then, the part that distinguishes a
 *win* from a *no-win* (reuse + routing) is genuinely a cross-context / behavioral property, not a
 single-forward-pass number. Hence the two-tier diagnostic rather than one scalar.
+
+---
+
+## Applying the screen to candidate behaviors (`s1`, gpt2-small, fig8)
+
+Tier-1 CCF screen run over the brainstormed candidates, anchored by induction (known FRA-win, high)
+and BOS-attention (positional, zero):
+
+| behavior | CCF | edge attn | screen |
+|---|---:|---:|---|
+| induction `[anchor+]` | 0.989 | 0.92 | reference |
+| **copy-suppression L10H7** `[cand#2]` | **0.984** | **0.92** | **pass — at the anchor** |
+| greater-than `[reasoning]` | 0.965 | 0.83 | pass |
+| IOI name-mover `[circuit-attr]` | 0.951 | 0.62 | pass |
+| binding / coreference `[reasoning]` | 0.905 | 0.38 | pass (weak edge) |
+| BOS-attention `[anchor−]` | **0.000** | 0.98 | **screened out** |
+
+**Reading.** (1) The screen *works*: BOS has the highest raw attention (0.98) but CCF=0.000 — a pure
+positional/sink edge, correctly killed. (2) On gpt2-small *every* canonical circuit behavior passes
+(0.90–0.99): induction, copy-suppression, IOI, even greater-than's attention-to-the-year are all
+content×content conjunctions. CCF sits near 1.0 (not spread like Gemma's 0.19–0.35) because the
+gpt2-small-res-jb SAEs lack GemmaScope's dominant attention-sink features — so here the screen's role
+is purely to separate content edges from positional edges, which it does cleanly.
+
+**Verdict — who's worth a Tier-2 test:** all four candidates clear the necessary condition, so
+sufficiency (redundancy / competitiveness / content-reuse) decides — read off edge-attention + known
+circuit redundancy:
+- **copy-suppression (L10H7) — top candidate.** Single canonical head (non-redundant, unlike IOI's
+  backups), strongest edge (0.92, = induction), and it is *exactly* "FRA as the missing QK piece": the
+  copy-suppression literature characterized the head's behavior but never decomposed its QK into
+  feature-pairs. Best bet for a clean FRA-QK win.
+- **IOI name-mover** — passes Tier-1 but the *known* Tier-2 killer applies: backup name-movers
+  compensate (our `j13` negative). The canonical illustration that CCF is necessary, not sufficient.
+- **greater-than** — passes (the attend-to-year edge is a real content conjunction), but the comparison
+  itself is MLP-computed; FRA-QK would only control the *attending*, not the >-operation.
+- **binding/coreference** — passes but the weakest edge (attn 0.38) → more distributed → lower priority.
