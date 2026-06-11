@@ -44,3 +44,6 @@ on-target P(O) 0.617->0.011 (matched removal achieved, NOT spurious); collateral
 
 ### ACRONYM TRANSFER (proper, Officer at pos 4 vs 11): FRA-unique 2x2 confirmed
 FRA (content-addr) transfer 0.609->0.050 vs attention-patch@orig-pos 0.609->0.608 (FAILS, position-tied) vs patch@correct-pos 0.105 (needs the position). So vs the STRONGEST selective baseline (attention-patch), FRA's edge = content-addressing. head-ablate/content-suppress break all acronyms. FRA fills separable x transferable 2x2 uniquely (same structure as retrieval r2).
+
+### ACRONYM DISTRIBUTION (12 acronyms, 6 with base>0.15): win generalizes, A=38x was high-end
+median LBNR-R=0.93, median on-target removal=0.94, median A=10x [2-59x] vs head-ablate (collat 0.70 vs FRA ~0.08). HONEST CAVEATS: (a) duplicate target word 'Unit' (CPU+GPU) -> content-addressed edit correctly hits BOTH, wrongly counted as collateral (A=2x); (b) Web/WWW not load-bearing (R=0.01, on-target removal failed -> A invalid, binding-trap). Cleaner eval = unique words + LBNR-filter. Core claim holds: FRA selectively suppresses one acronym's letter-copy, load-bearing, lower collateral than head-ablation; A=38x (Officer) is high-end, median ~10x.
