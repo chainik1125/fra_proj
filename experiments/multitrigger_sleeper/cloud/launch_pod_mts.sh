@@ -68,7 +68,9 @@ echo "[bootstrap] HF CLI: \$HFC"
 # retry the dataset download: concurrent pod launches can 429 the Hub, and this step is
 # NOT inside the python retry loop -> a bare failure here would hit the ERR trap.
 for dlat in 1 2 3 4 5 6 7 8; do
-  \$HFC download '$HF_REPO' --repo-type dataset --include "mts_singlefeat/*" --local-dir /workspace >/tmp/dsdl.log 2>&1 || true
+  set -f  # no pathname globbing -> exclude patterns pass to hf literally
+  \$HFC download '$HF_REPO' --repo-type dataset --include "mts_singlefeat/*" ${DL_EXCLUDE:-} --local-dir /workspace >/tmp/dsdl.log 2>&1 || true
+  set +f
   # check the ACTUAL artifact (code dir), not the pipe exit -- 'cmd | tail' masks a 429 as success
   [ -d /workspace/mts_singlefeat/code ] && { echo "[bootstrap] dataset present (attempt \$dlat)"; break; }
   echo "[bootstrap] dataset dl attempt \$dlat incomplete (HF 429?): \$(tail -1 /tmp/dsdl.log); sleep 60"; sleep 60
@@ -82,9 +84,12 @@ for mat in 1 2 3 4 5 6; do
   echo "[bootstrap] base-model prefetch attempt \$mat failed (HF 429?), sleep 45"; sleep 45
 done
 mkdir -p /workspace/out
-( while true; do sleep 240; \\
-    \$HFC upload '$HF_REPO' /workspace/out/$OUT_JSON mts_singlefeat/results/$OUT_JSON --repo-type dataset >/dev/null 2>&1 || true; \\
-    upload_log; done ) &
+# COMMIT-BUDGET FIX: the old loop uploaded run.log + progress every 240s; at 30 pods that is
+# ~900 commits/hr and blew HF's 128-commits/hr cap (results then 429-dropped). Per-cell result
+# files (uploaded inside the python) ARE the progress signal -> monitor via the k8grid tree.
+# Keep only a SLOW (hourly) progress-json push for coarse per-pod visibility; no periodic log.
+( while true; do sleep 3600; \\
+    \$HFC upload '$HF_REPO' /workspace/out/$OUT_JSON mts_singlefeat/results/$OUT_JSON --repo-type dataset >/dev/null 2>&1 || true; done ) &
 cd /workspace/mts_singlefeat/code
 # retry loop: transient HF 504s during dataset load have killed runs before
 for attempt in 1 2 3; do

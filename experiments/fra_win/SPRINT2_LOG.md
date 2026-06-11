@@ -12,11 +12,12 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: cycle 3 / theory-brainstorm-rank IN FLIGHT (wymhusdpn; theory reads CAMPAIGN_REPORT.md w/ sharpened clause-4). POD 3ik6vir7c5tgcj.
-- CYCLES DONE: c1 (magnitude law A~reuse(marg)/reuse(conj) VALIDATED; differential-cell method A 1.9->7.9x). c2 (2 negatives -> SHARPENED clause-4: query must be distinctive CONTENT not a role; delimiter LBNR-redundant, PII/entity positional-identity).
-- BUDGET NOTE: theory cycle ~700k subagent tokens. To control cost, EVAL MORE per cycle / re-run theory sparingly. Prefer content-query candidates (predicted wins): copy-supp-corpus, dual-use-verbatim (induction-family). Deprioritize role-query/positional retrieval (predicted fails).
-- NEXT: when wymhusdpn done -> save theory, eval its content-query shortlist (g_screen causal + corrected Tier-2 projection-removal steer + DIFFERENTIAL pairs for shared-value siblings; GUARD spurious-A = confirm FRA suppresses on-target). Red-team any new win. Append CAMPAIGN_REPORT.md. ~08:40 stop -> synthesis+commit+pod-terminate+CronDelete(0a9a40c5).
-- Confirmed FRA-win territory so far: content-query conjunctive edges (induction/copy-supp/acronym/retrieval). Fails: positional-identity (box/entity), structural-redundant (delimiter), MLP-downstream (greater-than), backups (IOI), distributed (docstring, knowledge-conflict).
+- PHASE: EVAL-FOCUSED (theory CONVERGED @ cycle 3; STOP re-running the ~760k-token theory workflow). POD 3ik6vir7c5tgcj.
+- IN FLIGHT: class_union (gemma; tests the theory's distinctive FAMILY-UNION cell edit: cut (query x digit-class-key) union -> suppress digit retrieval, preserve word retrieval, vs broadcasting linear steer). DO NOT resubmit.
+- THEORY (converged, THEORY.md): FRA edits a CELL (and set-algebra: unions over families + differences); magnitude law A~reuse(marg)/reuse(conj) on eval support; clause-4 = discriminating endpoint must be distinctive CONTENT not a role. Wins=content-query conjunctive edges; fails=positional-identity/structural-redundant/MLP-downstream/backup/distributed.
+- CYCLE-3 shortlist (mostly confirmed-class instantiations): #1 copy-supp-release-corpus, #2 ICL-poisoning-benchmark(ICLAttack), #3 RULER-NIAH, #4 class-union(RUNNING), #5 counterfactual-override-gpt2.
+- NEXT: read class_union -> record. Then EVAL remaining novel candidates sparingly (avoid expensive theory cycles). Toward ~04:00 start drafting FINAL SYNTHESIS in CAMPAIGN_REPORT.md (theory + boundary map + magnitude law + all confirmed/refuted). Stop ~08:40 -> commit + terminate pod 3ik6vir7c5tgcj + CronDelete 0a9a40c5.
+- BUDGET: token-conscious; eval jobs cheap, theory cycles expensive (skip).
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.

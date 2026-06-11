@@ -70,8 +70,23 @@ def load_clean_prompts(tokenizer, n: int, seq_len: int, split: str = "train",
     Returns list of dicts: {'prompt': list[int], 'story': list[int]}.
     """
     from datasets import load_dataset
+    import time, random
 
-    ds = load_dataset(SLEEPER_DATASET, split=split)
+    # 30-pod synchronized startup trips the Hub's revision-resolve 429 quota; without
+    # a retry here the exception bubbles up and burns a whole script-retry -> the pod
+    # EXITED-INCOMPLETE. Ride out the herd with backoff + JITTER (desyncs the pods).
+    ds = None
+    for _a in range(12):
+        try:
+            ds = load_dataset(SLEEPER_DATASET, split=split)
+            break
+        except Exception as e:
+            if _a == 11:
+                raise
+            wait = min(120.0, 8.0 * (2 ** _a)) + random.uniform(0.0, 20.0)
+            print(f"[load_clean_prompts] load_dataset 429/err attempt {_a+1}/12: "
+                  f"{str(e)[:90]}; sleep {wait:.0f}s", flush=True)
+            time.sleep(wait)
     needle = tokenizer(STORY_MARKER, add_special_tokens=False)["input_ids"]
     rows = []
     seen = 0

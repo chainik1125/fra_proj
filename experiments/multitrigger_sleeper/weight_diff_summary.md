@@ -33,7 +33,9 @@ selection, residual route) · FRA (weight-diff × SAE basis, gated OV route) · 
   after DoM's own protocol sweep the K1 gap closed and reversed.
 - **FRA's unique win is the off-diagonal cell**: trigger *location* capability without any
   triggered examples (`P_blind` raw-magnitude selection + span-restricted gated removal →
-  0.123). Nothing else runs there.
+  0.123). Nothing else runs there. **(But this win is K1/fixed-position-specific and does not
+  survive — §9: at K8 with 8 random-position triggers FRA fails the trigger footprint outright,
+  and the act-diff conv-SAE is the only method that removes there.)**
 - **Conventional SAE steering is dominated everywhere** — beaten by DoM in its own tiers
   while spending strictly more knowledge (it also needs a poisoned-data dictionary; on a
   clean/base dictionary it fails outright, 3/5 seeds no removal).
@@ -201,6 +203,65 @@ each other:
   block 0 — expected 0.46 → ~0.13 with no base model, since the trigger-firing ranking
   (fully single-model) already ties the weight-diff ranking.
 
+## 9. K8 multi-trigger, random-position: FRA is dominated everywhere; the only SAE win is act-diff, not weight-diff
+
+The K1 picture (§1) had one cell FRA owned — *trigger location, no examples* (0.123). The K8
+stress test (**8 triggers, each inserted at a random prompt position**, evaluated only on
+prompts **held out from attribution** — within-train skip, disjoint from the ū/ranking spans)
+removes that win and leaves FRA dominated at every operating point. This is the realistic
+multi-agent regime, and it adds a second axis the K1 table lacked: **collateral**.
+
+**Two J's now, because there are two input domains.** J_dep = per-step JSD of the
+intervened model on *deployment* traffic (trigger present) vs the clean target — this is the
+old J_clean. J_col = JSD on *clean* traffic (no trigger) vs the un-intervened model — the
+**always-on collateral**, i.e. damage to traffic the intervention should never touch. Both in
+bits. Total behavioural damage **D = J_dep + J_col** at the removal point (ASR₁₆ ≤ 0.05).
+Methods: DoM · conv-SAE (act-diff, residual route) · FRA (weight-diff `P_blind`, gated OV) ·
+SVD (rank-k of ΔW_OV). Footprint = where the intervention is applied. Data
+`results/k8grid/*.json` (201 cells, 10-pod fill 2026-06-09); no-int ASR = 0.969.
+
+**Best removal per method × footprint, ranked by D (bits):**
+
+| footprint | DoM | conv-SAE | FRA | SVD | winner |
+|---|---|---|---|---|---|
+| **trigger** | ✗ no removal (minASR .30) | **0.654** (Jcol≈0, Jdep .654, clnEx 1.00) | ✗ no removal (.21) | ✗ no removal (.18) | **conv-SAE** |
+| **prompt** | **0.283** (.058 / .225, clnEx .92) | 0.625 | 0.649 | 0.517 | **DoM** |
+| **all** | **0.451** (.087 / .364, clnEx .75) | 0.527 | 0.642 | 0.668 | **DoM** |
+
+(cells: trigger `conv:union:rmid:L1` K16c4; prompt `dom:rmid:L3` cross/last/add/α8;
+all `dom:rmid:L3` cross/rollout/ablate/α2. FRA's best is `fra:sleeper:prompt:L3` K36c3 at
+both wide footprints — never the lowest D.)
+
+- **At the trigger footprint, J_col is ~0 for *every* method by construction** — clean
+  prompts have no trigger span, so a span-restricted intervention touches nothing on them
+  (clnEx 1.00). So this footprint is a pure *removal-feasibility* test, and **only the
+  act-diff conv-SAE passes it.** FRA/DoM/SVD cannot reach ASR ≤ 0.05 from trigger-position
+  intervention alone in the multi-trigger case. This **overturns FRA's sole K1 win** (§1's
+  off-diagonal): gated-OV-at-the-span worked for one fixed-position trigger and dies for
+  eight random-position ones; the *detector*-based act-diff selection is what generalises.
+  (Caveat: conv-SAE's pass garbles deployment — J_dep .654 — so it is "suppress the trigger
+  response," not "repair to clean.")
+- **Where collateral is real (prompt, all), DoM wins by ~2×** in total damage and is the only
+  method that both removes *and* keeps deployment near-clean (J_dep .225). The advantage is on
+  **held-out prompts**, so it is not attribution overfitting — the worry that DoM's edge was a
+  train-set artifact is answered: it is not.
+- **FRA posts the lowest D at no footprint, in K1 or K8.** Payload-blind weight-diff
+  attribution buys nothing over a mean-contrast where examples exist, and is beaten by a
+  rank-2 SVD where they don't (§4). The "feature-resolved" machinery is precisely the part not
+  pulling weight: a 2-line `torch.linalg.svd(ΔW_OV)` recovers the zero-knowledge capability
+  without an SAE or a feature ranking.
+
+**Verdict (honest).** For backdoor *removal*, FRA is dominated, not broken: **the most
+expensive way to do a job that a mean-difference vector (with examples) or a rank-2 SVD
+(without) does better**, and the one genuine SAE win at K8 belongs to act-diff conv-SAE, not
+weight-diff FRA. The non-redundant residue is narrow — detection, edit localization, and the
+microscope (§5) — and even the microscope is compromised by the detector≠payload split
+(it ranks payload-OV features that are not the best causal removal targets, §3). The clean
+result to report is the *negative* one: feature-resolved weight-diff attribution does not beat
+a mean-difference vector for sleeper removal and is matched by a rank-2 weight-subspace SVD —
+a real constraint on the interpretability-for-safety narrative, and a sharper story than a
+forced FRA win.
+
 ## Caveats / open items
 
 - 33M toy; the backdoor dominates ΔW_OV (rank-2). At scale expect a thicker interloper
@@ -209,7 +270,8 @@ each other:
   / DoM / SVD numbers is the main robustness gap. (NB the two-different-"seed-7"-SAEs trap:
   rankings must be paired with the dictionary that produced them — see memory/§4g note.)
 - DoM + conv word-match unmeasured (§7). Llama-3 zero-knowledge SVD pending (chat-format fix).
-- Eval: PER=24 prompts, 16 greedy tokens, fixed-position trigger (K1); randpos covered in §4.
+- Eval: PER=24 prompts, 16 greedy tokens, fixed-position trigger (K1); the full K8
+  multi-trigger random-position four-way (held out from attribution, with collateral) is §9.
 
 *Data: `mts_singlefeat/results/*` on HF (**nats**); scripts `cloud/*.py`; full narrative
 `weight_diffing.md` §4f–§4g (**nats**); this doc and `figures/` are in **bits**.*
