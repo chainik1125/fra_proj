@@ -154,3 +154,21 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   by anyone. TAXONOMY: malicious thing = output-direction (weight-baked, DoM wins) | attention-edge
   (single in-context, FRA wins, clean) | in-context-behaviour-direction (many-shot, DoM removes but
   entangled w/ legit -> no clean removal). FRA owns the middle row only. Added to summary §4.
+
+## Candidate #1: long-context / two-needle retrieval (the High x High cell)
+- **Criteria distilled from all negatives:** FRA wins iff target behaviour is (1) attention-routed,
+  (2) a SEPARABLE link (endpoints have legit uses), (3) load-bearing + non-redundant, (4) competitive
+  (not saturated), (5) ideally conjunctive (query-content x key-content). FRA-unique value to prove =
+  content-addressed TRANSFER (edit generalizes to new positions) + SEPARABILITY (cut link, keep content),
+  which position-patch and DoM can't do.
+- **r1 feasibility (gemma-2-2b BASE; clean completion + matched PT SAEs, no IT-SAE confound).** Two-needle
+  associative retrieval ("The red box holds a frog. ... The red box holds a" -> frog). Check: works,
+  competitive, head-localized (retrieval heads attend final->correct-value), causal (cut the edge ->
+  retrieval drops/flips), NOT IOI-redundant. Gate before FRA-vs-baselines (r2).
+- **r1 GREEN LIGHT.** Two-needle retrieval on gemma-2-2b base: works (frog 0.21 top, margin +0.18),
+  competitive (distractors present), HEAD-LOCALIZED (L15H0 0.64->correct/0.14->distractor; L18H6
+  0.62/0.07 = clean retrieval heads), CAUSAL (cut final->frog edge: 0.21->0.13(1h)->0.03(5h), FLIPS to
+  'sword'), NOT IOI-redundant (~5 heads, cutting them breaks it; no full backup). All 5 criteria pass.
+- **r2** — FRA-unique demo: suppress red->frog retrieval, then the 2x2 only FRA fills: SEPARABLE (keep
+  'frog' in legit context, unlike content-suppress) x TRANSFER (works on new context where frog is at a
+  different position, unlike position-tied attention-patch). vs attention-patch + content-suppress.
