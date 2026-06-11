@@ -620,3 +620,19 @@ concept-removal pays interference collateral that grows with overlap and with re
 score-space conjunction edit pays only gate error — broad, superposed, hierarchical features are
 exactly where the bilinear structure of attention stops being a curiosity and starts being the only
 surgical tool.
+
+---
+## EMPIRICAL UPDATE (synth_hier3-6) — a correction the theory missed
+
+The §4 spec assumed a naive (P×D_X) cell-cut would be selective if the conjunction has no legit support.
+THE SYNTHETIC SHOWED OTHERWISE: a per-edge SCORE cut is NOT a per-edge PATTERN cut. On mixed persona×{X,Y}
+prompts, cutting (P×X) frees the persona-query's X-attention which the SOFTMAX REDISTRIBUTES onto the
+co-occurring Y-keys (Y-score ≫ sink) → Y-misalignment floods. Naive cut Y-collateral = 1.31; gated/per-
+position = 1.00 (couples, shared query); single fixed redirect (cut + P×sink boost) = 0.49 (the sink-boost
+is per-QUERY, can't match prompt-dependent freed mass); **the REGRESSION-fitted multi-cell edit (cut + sink
++ P×Y compensation, trained & frozen) = 0.03 ≈ the per-prompt ORACLE = 0.00.** So: clean selective broad
+cutting IS achievable by score edits (not a softmax wall), a naive/fixed FRA cut is INSUFFICIENT, and the
+REGRESSION protocol (§3) is the load-bearing tool — ~30× cleaner than any per-position method. The
+mixed-prompt "decisive case" (§1.2) is decisive in FRA's favor ONLY with the regression, not the naive cut.
+This is the central correction; the real-LLM protocol (§5) must use the regression-fitted edit, never a
+naive cut, and must report the R*(κ) frontier as the achievability certificate.
