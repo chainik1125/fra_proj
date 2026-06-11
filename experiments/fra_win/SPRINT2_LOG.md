@@ -12,13 +12,11 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: SYNTHESIS DONE (CAMPAIGN_REPORT.md SPRINT 2 SYNTHESIS + fig_sprint2_summary.png committed). Theory converged, candidates saturated. POD 3ik6vir7c5tgcj.
-- DELIVERED: converged theory (THEORY.md); separability argument MEASURED (FRA 10^3-10^4x more separable vs content-gated steer); magnitude law A~reuse(marg)/reuse(conj); 5-clause win-checklist; win/loss taxonomy; copy-supp natural A=516x.
-- MAINTAIN MODE (token-conscious, NO theory cycles, NO churning negatives): do at most 1-2 genuinely HIGH-VALUE pieces over the night:
-  (1) MAGNITUDE-LAW quantitative validation: controlled reuse-sweep — vary # legit conjunction-recurrences N (shared-value siblings), measure FRA sibling-collateral A(N) with DIFFERENTIAL cells; theory predicts A grows as the conjunction becomes more unique. The headline-law rigor check.
-  (2) optionally one tractable published-benchmark confirmation of a CONFIRMED win (in-context-backdoor); skip if complex.
-- Each cron tick: idempotent check; if (1)/(2) not yet done and pod alive, advance ONE; else MAINTAIN (note 'saturated, holding') and wait.
-- STOP ~08:40: final polish, commit, terminate pod 3ik6vir7c5tgcj, CronDelete 0a9a40c5.
+- PHASE: CORE COMPLETE (HOLD / optional-polish). POD 3ik6vir7c5tgcj (kept warm; OK to terminate if no eval planned).
+- DELIVERED (all committed): converged theory (THEORY.md); magnitude law A~reuse(marg)/reuse(conj) VALIDATED AS A CURVE (A_generic 1.4-2.0 flat, A_diff 6.3->23.8 over N=2..4; fig_magnitude_law.png); separability argument measured (FRA 10^3-10^4x); 5-clause win-checklist; win/loss taxonomy (fig_sprint2_summary.png); SPRINT 2 SYNTHESIS in CAMPAIGN_REPORT.md; natural-text win anchor (copy-supp A=516x).
+- The sprint's productive yield has SATURATED (FRA win-class is narrow; cycles 2-3 = theory-predicted negatives) and the headline theory is validated. NO more theory cycles (converged), NO churning negatives, NO make-work.
+- Each cron tick (token-conscious): idempotent check; do AT MOST ONE genuinely high-value optional piece per ~hour if a clear one exists (e.g. cross-model magnitude-law on gpt2, robustness across seeds, or a tractable published-benchmark confirmation of a CONFIRMED win); ELSE note 'core complete, holding' and wait. If allowance pressured -> HOLD.
+- FINALIZE at ~08:40: ensure all committed, terminate pod 3ik6vir7c5tgcj, CronDelete 0a9a40c5. (Or earlier if user redirects.)
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
