@@ -145,3 +145,12 @@ FRA-QK edit of the trigger→payload *attention edge* removes the backdoor while
   precedent) => the DISTRIBUTED many-shot structure defeats FRA. KEY INSIGHT: the redundancy that makes
   many-shot jailbreaks robust is the same redundancy that defeats FRA. FRA's win is scoped to
   SINGLE-edge/single-injection in-context attacks, not many-shot. Added to summary §4.
+- **01:15Z jb3 — the DECISIVE refinement.** Injection (base 0.80). (A) FRA readout-only: no change
+  (0.79-0.83). (B) FRA full induction chain (multi-edge): only chips it (0.80->0.69). (C) DoM
+  (in-context 'Absolutely-mode' direction): removes COMPLETELY (->0.00). => injection is DIRECTION-
+  routed (ICL task feature), NOT edge-routed -> mirror of weight-baked sleeper; FRA is the wrong tool.
+  DEEPER: DoM and payload-suppress remove it but ALSO kill 'Absolutely' on a legit held-out prompt
+  (0.29->0) -> the injected behaviour is REPRESENTATIONALLY IDENTICAL to a legit one; NO clean removal
+  by anyone. TAXONOMY: malicious thing = output-direction (weight-baked, DoM wins) | attention-edge
+  (single in-context, FRA wins, clean) | in-context-behaviour-direction (many-shot, DoM removes but
+  entangled w/ legit -> no clean removal). FRA owns the middle row only. Added to summary §4.

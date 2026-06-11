@@ -309,22 +309,35 @@ SAE/head-coverage-limited caveat.*
   granularity once you hit all the redundant heads) but **not** for IOI — sharpening the scope: FRA-QK
   buys you precise, selective control of an attention edge, but only changes *behavior* where that
   edge is actually necessary and not silently backed up.
-- **It does NOT transfer to many-shot jailbreaking either — and that is the most important boundary**
-  (jb1–jb2, gemma-2-2b-it). The closest *natural* analog to the in-context backdoor is a many-shot
-  injection. I confirmed it works on a real instruction model: 10 demonstrations teaching the assistant
-  to begin replies with a planted marker drove P(marker) **0.00→0.57** on a neutral query, **scaling
-  with shots** (the power-law signature of many-shot jailbreaking), routed through **the same induction
-  heads** FRA targets. But **FRA fails to neutralize it** — ablating the inject→marker edge pairs
-  *increases* P(marker) (0.57→0.83), while suppressing the marker's output direction removes it (→0.00)
-  at high collateral (it kills the marker on legitimate prompts, 0.29→0.00). The reason is exactly why
-  many-shot attacks are *effective and hard to defend*: the behavior is **distributed across many
-  demonstrations**, so no single attention edge is load-bearing — cutting the FRA-selected set doesn't
-  stop it (crude head-ablation was likewise non-monotonic). **The redundancy that makes the attack
-  robust is the same redundancy that defeats FRA.** So FRA-QK's win is scoped to *single-edge /
-  single-injection* in-context attacks (one poisoned demo, one injected span), **not** many-shot.
-  *(Caveat: the public IT-tuned GemmaScope SAEs would not load via sae_lens, so this used base SAEs on
-  the IT model — a confound the direct "FRA makes it worse" signal and the IOI precedent argue against,
-  but which a matched-SAE base-model rerun would fully close.)*
+- **It does NOT transfer to many-shot jailbreaking — and chasing *why* gives the cleanest taxonomy of
+  the whole project** (jb1–jb3, gemma-2-2b-it). The closest *natural* analog to the in-context backdoor
+  is a many-shot injection. It works on a real instruction model: 10 demonstrations teaching the
+  assistant to begin replies with a planted marker drove P(marker) **0.00→0.57** on a neutral query,
+  **scaling with shots** (the power-law signature of many-shot jailbreaking), routed through **the same
+  induction heads** FRA targets. Yet **FRA cannot remove it.** Ablating the readout edge *increases*
+  P(marker); ablating the *entire induction chain* (every demo→prior-demo edge) only chips it (0.80→0.69).
+  But a **DoM mean-difference vector** — the in-context "respond-with-marker" *direction* — removes it
+  **completely (→0.00)**. So the injection is **not edge-routed at all; it is a residual *direction***
+  (an ICL task-feature), the **mirror of the weight-baked sleeper** — and FRA, the edge tool, is simply
+  the wrong instrument. **The deeper finding:** *no* method removes it at low collateral — DoM and
+  output-suppression both also kill the marker on a legitimate held-out prompt (0.29→0.00), because the
+  injected behavior is **representationally identical to a legitimate one** ("jailbroken enthusiasm" and
+  "genuine enthusiasm" are the same direction). There is **no separable link to cut**. *(Caveat: IT-tuned
+  GemmaScope SAEs would not load via sae_lens, so FRA here used base SAEs on the IT model; but DoM, which
+  needs no SAE, already settles the edge-vs-direction question.)*
+
+  **The taxonomy this yields** — *to remove a backdoor, suppress the part that uniquely carries it, and
+  FRA wins iff that part is a separable attention edge:*
+
+  | the malicious thing is a… | example | who removes it | clean (low-collateral)? |
+  |---|---|---|---|
+  | **output direction** | weight-baked sleeper (K1/K8) | DoM / SVD | ✓ (payload is an unused direction) |
+  | **attention edge / link** | single in-context backdoor (toy, one injection) | **FRA-QK** | **✓ (cut the link, keep both endpoints)** |
+  | **in-context behaviour / direction** | many-shot jailbreak | DoM (removes) | ✗ (entangled with legit behaviour) |
+
+  FRA-QK owns exactly the middle row: a *link between two normal things*, which it cuts while sparing
+  both. The first and third rows are *directions*, where mean-difference wins — and the third is
+  unremovable cleanly by anyone, which is *why* many-shot jailbreaks are hard to defend.
 - **Scope is an existence proof.** The induction target is deliberately shaped like an attention
   edge, the object FRA represents natively. It cleanly demonstrates the bilinear handle exists and is
   useful; whether *natural* associations that are both load-bearing and FRA-addressable are common is
