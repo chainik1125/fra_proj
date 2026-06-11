@@ -244,3 +244,10 @@ behavior routes through the class feature; token-copy does not.**
 load-bearing, non-redundant attention edges (induction, copy-suppression, acronym, retrieval, in-context
 backdoor). Most established-benchmark behaviors fall OUTSIDE it (MLP-routed, positional, distributed,
 redundant) — which is itself the campaign's central, honest finding.
+
+**Copy-suppression release on NATURAL text (win-side anchor) — clean positive:** on 8 varied natural
+prompts, FRA selectively releases one token's copy-suppression (wolf: 16.57→17.76 ≈ edge-cut oracle)
+at **A = 516×** less collateral than head-ablation (FRA 0.000 vs 0.517), and transfers to a new context
+(16.34→18.10). Confirms clause-4 (content query "about-to-predict-X" → win) generalizes beyond the
+synthetic probe. (5/8 prompts show strong copy-suppression; 3 are weakly suppressed — the effect is
+token-dependent, as expected.)
