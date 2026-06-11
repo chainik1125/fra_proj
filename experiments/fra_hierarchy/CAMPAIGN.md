@@ -19,7 +19,7 @@ Instead of top-magnitude cell selection (only works for single-token specifics) 
 4. IF synthetic fails (broad×broad NOT cuttable / regression doesn't recover) -> report honestly, that bounds the direction.
 
 ## STATE
-- PHASE 1/theory: a6f22e38681eea6df running (synthetic spec). POD ivccjcfk9najzb booting. NEXT: build synthetic from spec.
+- PHASE 1/theory: DONE — THEORY_HIERARCHY.md written (broad×broad theory §1, routed-fraction α dial + FRA-completes-circuit-tracing thesis §2 [PI third pillar folded in], regression protocol §3, buildable synthetic spec §4 with the α routing-split as the spine, real-LLM handoff §5). Pre-registered predictions P1–P8; experiments E1–E8 (CPU/1 small GPU, ~afternoon, RunPod rs-*), E9 trained variant + E10 retro-prediction as follow-ups. NEXT: build synthetic from §4 spec on pod ivccjcfk9najzb (start with E1 calibration, then E2 α-sweep = Fig 1 headline).
 
 ## THIRD PILLAR (PI): MEASURE attention-routedness + FRA IMPROVES CIRCUIT TRACING
 (A) MEASURE the extent a concept->concept link is attention-routed vs OV/MLP/direction: probes (cheap, only show readable DIRECTION) < path-patching/EAP (headline dial = FRACTION of causal effect via attention edges vs MLP/direct) < circuit tracing/attribution graphs/transcoders (closest match). 
