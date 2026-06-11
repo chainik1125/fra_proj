@@ -20,3 +20,8 @@ Instead of top-magnitude cell selection (only works for single-token specifics) 
 
 ## STATE
 - PHASE 1/theory: a6f22e38681eea6df running (synthetic spec). POD ivccjcfk9najzb booting. NEXT: build synthetic from spec.
+
+## THIRD PILLAR (PI): MEASURE attention-routedness + FRA IMPROVES CIRCUIT TRACING
+(A) MEASURE the extent a concept->concept link is attention-routed vs OV/MLP/direction: probes (cheap, only show readable DIRECTION) < path-patching/EAP (headline dial = FRACTION of causal effect via attention edges vs MLP/direct) < circuit tracing/attribution graphs/transcoders (closest match). 
+(B) THESIS: FRA = the MISSING QK PIECE in circuit attribution. Circuit tracing localizes WHICH heads/edges + uses attention PATTERN but treats QK SCORE as black box; only intervention = head/edge ablation. FRA resolves the attention-routed edge into CELLS -> identifies WHICH content-conjunction carries the link + cuts ONLY it (more surgical than head ablation). PIPELINE: EAP localize+measure-routed-fraction -> FRA resolve edge into cells + cut broad×broad conjunction -> show FRA cut MORE selective (lower collateral) than head/edge ablation. = the paper-worthy contribution (FRA augments circuit tracing, not competes with steering).
+(C) SYNTHETIC SPINE = a KNOWN TUNABLE ROUTING SPLIT alpha: fraction alpha of persona->domain generalization via ATTENTION cell, (1-alpha) via MLP/DIRECTION path. Validates: (1) EAP recovers true alpha; (2) on attention-routed part FRA cell-cut beats head-ablation; (3) alpha->0 FRA correctly cuts nothing (honest failure) while direction-removal still works -> WHEN each tool wins. (addendum sent to theory agent.)
