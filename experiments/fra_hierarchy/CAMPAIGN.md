@@ -1,0 +1,22 @@
+# FRA HIERARCHY campaign — broad×broad cell-cutting (started 2026-06-11)
+
+HYPOTHESIS (PI): confirmed FRA wins are all specific-feature->single-token (lowest hierarchy rung; cutting a cell = cutting a bigram). The INTERESTING regime = BROAD features (many words) + HIGH hierarchy (abstract concepts). Flagship: cut (misaligned-PERSONA feature x DOMAIN feature) -> SELECTIVELY block EM generalizing to that domain, preserving persona elsewhere + domain's aligned processing (a linear persona-direction removal can't: all-or-nothing).
+KEY RISK: FRA only cuts ATTENTION-routed links. Concept->concept via OV/MLP/direction (em_svd showed EM is a DIRECTION) is invisible to FRA. (1) CAN a broad×broad ATTENTION cell be cut selectively? [SYNTHETIC, PRIORITY]. (2) WHICH real concept-links are attention-routed? [real-LLM hunt].
+TEAM (targeted): 1 theory (Fable), 1 real-LLM-behaviour brainstorm, 1 real-world evaluator, 1 red-team. SYNTHETIC-FIRST.
+Same rules: RunPod RP_API_KEY_MATS, budget-conscious, no local compute, parse-gate jobs, new job id per run.
+Refs: THEORY.md (converged FRA theory), SynthSAEBench arxiv 2602.14687 (synthetic ground-truth features w/ hierarchy+superposition), Toy Models of Superposition.
+
+## STATE
+- PHASE 1/theory: theory agent designing broad×broad theory + buildable synthetic spec. POD relaunching.
+
+## SECOND THREAD (PI add): the REGRESSION protocol — FIT which cells to cut
+Instead of top-magnitude cell selection (only works for single-token specifics) or hand-crafted differential cells: given a TARGET (behavior/logit delta, attention-pattern change, collateral budget), SOLVE for the cell-mask (sparse/L1 regression of behavior-change onto per-cell ablations; "smallest cell-set that removes the behavior under a collateral cap"). Subsumes top-K + differential cells; the natural way to FIND broad concept-cells. SYNTHETIC validates it (does the fitted mask recover the PLANTED broad×broad cell?). The two threads are ONE program: regression = protocol, broad×broad = regime, synthetic = ground-truth testbed.
+
+## PLAN (synthetic-first, then team)
+1. Theory agent (Fable, RUNNING a6f22e38681eea6df) -> THEORY_HIERARCHY.md: broad×broad theory + regression theory + buildable synthetic spec.
+2. I BUILD + RUN the synthetic model (PRIORITY): (i) broad×broad attention cell cuttable selectively; (ii) regression recovers the planted cell; (iii) superposition sweep A(rho); vs linear persona-steer (all-or-nothing + interference). On pod ivccjcfk9najzb.
+3. IF synthetic validates -> spin up the rest of the TEAM (real-LLM-behaviour brainstorm [EM flagship], real-world evaluator, red-team) + autonomous loop to test on real LLMs.
+4. IF synthetic fails (broad×broad NOT cuttable / regression doesn't recover) -> report honestly, that bounds the direction.
+
+## STATE
+- PHASE 1/theory: a6f22e38681eea6df running (synthetic spec). POD ivccjcfk9najzb booting. NEXT: build synthetic from spec.
