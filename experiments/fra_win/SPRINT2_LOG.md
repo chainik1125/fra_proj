@@ -12,11 +12,11 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: cycle 2 / theory-brainstorm-rank IN FLIGHT (workflow w4uhee818; theory reads updated CAMPAIGN_REPORT.md w/ cycle-1 findings). POD 3ik6vir7c5tgcj.
-- CYCLE 1 DONE: theory magnitude law A~reuse(marg)/reuse(conj) VALIDATED (shared-endpoint A=1.9x generic -> 7.9x with DIFFERENTIAL pairs = target-edge minus sibling-edge). poison-rag/knowledge-conflict screened out. All committed to CAMPAIGN_REPORT.md.
-- NEXT: when w4uhee818 done -> save theory, eval new shortlist (g_screen causal + corrected Tier-2: legit-content KL vs projection-removal steer at matched removal; use DIFFERENTIAL pairs if target has shared-value siblings) -> red-team -> append to CAMPAIGN_REPORT.md -> relaunch theory workflow (wf_08ce8f47-617.js) cycle 3.
-- Stop ~08:40. Cron 0a9a40c5. Workflow scriptPath: wf_08ce8f47-617.js.
-- METHODS BANKED: causal head-finding; projection-removal steer (fp16-safe, NOT SAE-feat-subtraction); differential pairs for shared-value siblings; new job id per run; parse-gate before submit; A only valid at matched removal w/ steer firing + FRA suppressing.
+- PHASE: cycle 3 / theory-brainstorm-rank IN FLIGHT (wymhusdpn; theory reads CAMPAIGN_REPORT.md w/ sharpened clause-4). POD 3ik6vir7c5tgcj.
+- CYCLES DONE: c1 (magnitude law A~reuse(marg)/reuse(conj) VALIDATED; differential-cell method A 1.9->7.9x). c2 (2 negatives -> SHARPENED clause-4: query must be distinctive CONTENT not a role; delimiter LBNR-redundant, PII/entity positional-identity).
+- BUDGET NOTE: theory cycle ~700k subagent tokens. To control cost, EVAL MORE per cycle / re-run theory sparingly. Prefer content-query candidates (predicted wins): copy-supp-corpus, dual-use-verbatim (induction-family). Deprioritize role-query/positional retrieval (predicted fails).
+- NEXT: when wymhusdpn done -> save theory, eval its content-query shortlist (g_screen causal + corrected Tier-2 projection-removal steer + DIFFERENTIAL pairs for shared-value siblings; GUARD spurious-A = confirm FRA suppresses on-target). Red-team any new win. Append CAMPAIGN_REPORT.md. ~08:40 stop -> synthesis+commit+pod-terminate+CronDelete(0a9a40c5).
+- Confirmed FRA-win territory so far: content-query conjunctive edges (induction/copy-supp/acronym/retrieval). Fails: positional-identity (box/entity), structural-redundant (delimiter), MLP-downstream (greater-than), backups (IOI), distributed (docstring, knowledge-conflict).
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
