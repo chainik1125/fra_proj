@@ -12,6 +12,7 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
+- 02:41 TICK: core complete, HOLDING (no clearly-high-value tractable piece; cross-model gpt2 law unreliable, robustness re-runs marginal). POD TERMINATED (budget). Next ticks: hold unless user redirects; 08:11 tick -> just CronDelete 87b8d3de (deliverables already committed).
 - PHASE: CORE COMPLETE (HOLD / optional-polish). POD 3ik6vir7c5tgcj (kept warm; OK to terminate if no eval planned).
 - DELIVERED (all committed): converged theory (THEORY.md); magnitude law A~reuse(marg)/reuse(conj) VALIDATED AS A CURVE (A_generic 1.4-2.0 flat, A_diff 6.3->23.8 over N=2..4; fig_magnitude_law.png); separability argument measured (FRA 10^3-10^4x); 5-clause win-checklist; win/loss taxonomy (fig_sprint2_summary.png); SPRINT 2 SYNTHESIS in CAMPAIGN_REPORT.md; natural-text win anchor (copy-supp A=516x).
 - The sprint's productive yield has SATURATED (FRA win-class is narrow; cycles 2-3 = theory-predicted negatives) and the headline theory is validated. NO more theory cycles (converged), NO churning negatives, NO make-work.
