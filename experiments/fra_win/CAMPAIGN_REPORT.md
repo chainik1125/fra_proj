@@ -251,3 +251,59 @@ at **A = 516×** less collateral than head-ablation (FRA 0.000 vs 0.517), and tr
 (16.34→18.10). Confirms clause-4 (content query "about-to-predict-X" → win) generalizes beyond the
 synthetic probe. (5/8 prompts show strong copy-suppression; 3 are weakly suppressed — the effect is
 token-dependent, as expected.)
+
+---
+
+# SPRINT 2 SYNTHESIS — what FRA is, when it wins, and why
+
+*(`fig_sprint2_summary.png`; full theory in `THEORY.md`.)*
+
+## 1. What FRA uniquely computes (mechanism)
+An attention head's pre-softmax score is an exact bilinear form on the residual; in an SAE basis it
+partitions into **cells** `S[q,k]=Σ_{μν} u^μ_q·u^ν_k·ω_{μν}`, each a multiplicative AND of a query-content
+feature and a key-content feature. FRA hands you the **cell-level weight edit** (a support-gated rank-1
+W_QK update) whose causal support is exactly the conjunction `{q: u^μ_q>0} × {k: u^ν_k>0}`. It also
+supports **set algebra over cells** — unions (incl. feature families) and **differences** (differential
+cells). RMSNorm (per-position scalar) and RoPE (per-position rotation) keep this exact; Gemma's soft-cap
+is the only true nonlinearity and bounds reach, not separability.
+
+## 2. Why no linear steer can match it (the core argument, now measured)
+A content-gated linear steer is doubly weaker: (a) in **score space** it can imitate a *row or column* of
+W_QK but never a *cell* (let alone a cell-difference or family-union); (b) in **residual space** its write
+is read by *every* consumer (all heads' Q/K/V, MLP, every later layer) — gating restricts where it fires,
+never what reads it. **Measured:** at matched on-target removal, a steer strong enough to suppress the
+behavior destroys the content everywhere it appears (legit-content KL 1.77–2.64 nats) while FRA leaves it
+at ~0.000–0.0016 → **FRA is 10³–10⁴× more separable**. This is THE metric (sprint-1 red-team's fix:
+legit-content KL vs a content-gated *projection-removal* steer at matched removal — NOT A-ratio vs
+head-ablation strawmen).
+
+## 3. The magnitude law (validated at both extremes)
+**A ≈ reuse(marginal endpoint) / reuse(conjunction)**, reuse measured on the eval-distribution support
+(naive corpus rates are degenerate — the s5 failure). A~10³–10⁴ when the conjunction is unique (acronym
+26,000×, retrieval 1,100×); A→1.9× when a generic endpoint makes the conjunction recur (shared-endpoint).
+Differential cells buy back specificity (1.9→7.9×) at a reach cost (58→33%).
+
+## 4. The win-checklist (predict before you test)
+FRA gives a clean behavioral win iff ALL hold: **(1) edge-routed** (CCF-high; not positional/output-dir),
+**(2) load-bearing & non-redundant** (LBNR causal-cut R≈1; no backups/alternative cues), **(3) direct
+consumption** (the behavior IS the OV-transported content, not downstream MLP), **(4) conjunction-specific
+with a DISTINCTIVE-CONTENT query** (a specific token/feature, not a generic role), **(5) reach** (SAE-
+explained × head-coverage × top-K clears the softmax margin at faithful scale).
+
+## 5. The win/loss taxonomy (the campaign's central, honest finding)
+**FRA's win-class is NARROW**: content-query, token-specific, conjunctive, load-bearing, non-redundant
+attention edges. **Confirmed wins:** induction (15×), in-context backdoor (25×), copy-suppression (516×
+natural / 26,000× separability), retrieval (1,100×), acronym (26,000×). **Failures, each for a checklist
+reason:** weight-baked sleeper (output direction, clause 1), greater-than (MLP-downstream, clause 3), IOI
+(backups, clause 2), docstring/delimiter (redundant, clause 2), many-shot jailbreak (direction-routed),
+PII/entity retrieval (positional query, clause 4), class-union (token-specific keys, clause 4). **Most
+established-benchmark behaviors fall OUTSIDE the win-class** — they are MLP-routed, positional, distributed,
+or redundant. FRA is a *specialized* instrument, not a general steering method, and its niche — the
+"missing middle" between direction steers (marginal + broadcast) and position patches (specific but not
+content-addressed) — is now precisely characterized.
+
+## 6. Sprint-2's specific contributions (the theory agent earned its place)
+The Fable theory agent did not just ideate — it produced the **magnitude law** and the **cell/set-algebra
+framing** that the evals then *validated* (the s5 magnitude-predictor that failed in sprint-1 now has the
+correct form), and its **clause-4 sharpening** (distinctive-content query) was derived from cycle-1's
+shared-endpoint result and confirmed by cycle-2/3's negatives. Theory→eval→theory closed a real loop.
