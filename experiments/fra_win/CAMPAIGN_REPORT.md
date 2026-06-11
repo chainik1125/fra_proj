@@ -157,3 +157,35 @@ steer — see `acronym_steer3.json`.)*
 
 **Net:** the same projection-removal steer is now the standard fair baseline for the whole program;
 retrieval passes it decisively, which retroactively strengthens the r2 win to "bilinear-QK confirmed."
+
+---
+
+# SPRINT 2 (theory-driven). Cycle 1.
+
+**Theory agent (Fable) — key contributions** (full: `THEORY.md`):
+- FRA edits a **CELL** of the bilinear score form: S[q,k]=Σ_{μν} u^μ_q·u^ν_k·ω_{μν}; the edit's support is
+  exactly the conjunction {q: u^μ_q>0} × {k: u^ν_k>0} and its only causal channel is one head's softmax.
+- A linear residual steer (even content-gated) is doubly weaker: in score space it can imitate a **row or
+  column** of W_QK but never a cell; in residual space its write is read by **every** consumer (all heads'
+  Q/K/V, MLP, downstream) at the gated positions — gating restricts WHERE it fires, not WHAT reads it.
+- **Magnitude law: A ≈ reuse(marginal endpoint) / reuse(conjunction)** — huge when both endpoints are
+  common content but their pairing is rare/targeted; → 1 when the conjunction itself recurs.
+- Nonlinearity accounting: RMSNorm = frozen per-position scalar (exact); RoPE = per-position rotation
+  (exact per edge, relative-offset coupling); Gemma soft-cap is the one true nonlinearity (compresses
+  edits on saturated edges) → bounds REACH, never the separability ratio.
+
+**Cycle-1 eval — the magnitude law is VALIDATED (a real theory result):**
+- **Shared-endpoint sibling test** (`shared_endpoint_t2`): two boxes hold frog (red→frog, blue→frog);
+  cut red's edge, measure blue. FRA suppresses red (0.199→0.083) but **also halves blue (0.095→0.046)** →
+  sibling separability **A=1.9×** (vs the steer's blue 0.000). The retrieval head's **query feature is
+  GENERIC** ("box-query"), so the (query × frog-value) conjunction **recurs** for blue →
+  A ≈ reuse(frog)/reuse(conj) ≈ 2/2 ≈ 1. **This confirms the theory's conjunction-recurs bound and the
+  magnitude law quantitatively.** (Differential-pair refinement — red-specific pairs = red-edge minus
+  blue-edge — running to test whether FRA *can* be made target-specific.)
+- Screened out: poison-RAG (gemma-base too weak, P=0.027), knowledge-conflict (R=0.24, distributed).
+
+**Implication for cycle 2:** clean wins need the **query feature to be TARGET-SPECIFIC** (not a generic
+role feature) so the conjunction does NOT recur — i.e., the target must differ in *content the query head
+reads*, not just in a sibling that shares the value. The brainstorm should prioritize behaviors where the
+query-content is the discriminator (e.g., a rare/specific trigger-query × common-value), and avoid
+shared-endpoint setups where a generic role-query makes the conjunction recur.

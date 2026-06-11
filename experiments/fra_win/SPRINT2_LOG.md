@@ -12,9 +12,11 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 ## INFRA gotchas (sprint-1): poll-execute harness SKIPS a re-used job id -> always NEW id. ALWAYS parse-gate jobs (python3 -c ast.parse) BEFORE submit. Living report = CAMPAIGN_REPORT.md (theory agent reads it -> feedback loop). 
 
 ## RESUME STATE (canonical — read first)
-- PHASE: 1/theory-brainstorm-rank (workflow wuv06gbai running: theory Fable -> brainstorm -> rank).
-- POD: relaunching (POD_NAME=fra-win-pod). NEXT: when wuv06gbai done -> save THEORY.md, record shortlist here, EVAL via g_screen + corrected Tier-2 -> red-team -> append to CAMPAIGN_REPORT.md -> relaunch workflow (scriptPath wf_08ce8f47-617.js) for next cycle.
-- Sprint-1 result (done): bilinear-QK CONFIRMED -- FRA ~1000-26000x more separable than content-gated steer (retrieval+acronym).
+- PHASE: 2/eval, cycle 1. POD 3ik6vir7c5tgcj. Theory cycle-1 DONE (THEORY.md). 
+- IN FLIGHT: g5_s2gemma screen (shared-endpoint, poison-rag, knowledge-conflict; gemma; CAUSAL heads). DO NOT resubmit.
+- NEXT: read g5_s2gemma -> for CCF∧LBNR passers run corrected Tier-2 (sibling-collateral / legit-content KL vs PROJECTION-REMOVAL steer, matched removal); then screen gpt2 cands (copy-supp-corpus reuse s3, knowledge-conflict gpt2); then red-team workflow; then append to CAMPAIGN_REPORT.md + relaunch theory workflow (wf_08ce8f47-617.js) for cycle 2.
+- THEORY TEST PRIORITY: shared-endpoint A(N) sweep validates A~reuse(marginal)/reuse(conjunction).
+- Stop ~08:40. Workflow scriptPath: wf_08ce8f47-617.js. Cron 0a9a40c5.
 
 ## CYCLE 1: theory+brainstorm+rank DONE (wuv06gbai). THEORY.md saved. Shortlist (ranked):
 1. In-context PII regurgitation (gemma, 88) - cut (attr-question x PII-value) edge; on-target=extraction rate; collateral vs digit-direction projection-removal.
@@ -24,3 +26,9 @@ Budget: HIGHER cap (PI approved going deeper); still tear down idle pods. Agents
 5. Knowledge-conflict fact-restoration (gpt2, 75) - Ortu CounterFact, context-vs-memory.
 Theory KEY: A ~= reuse(marginal)/reuse(conjunction); FRA edits a CELL, linear steer only a ROW/COLUMN + writes to all residual readers.
 PHASE: 2/eval. NEXT: screen gemma candidates (shared-endpoint, poison-RAG, knowledge-conflict-lite) via g_screen; gpt2 (copy-supp corpus, knowledge-conflict) next; Tier-2 on passers (sibling/legit-content KL vs projection-removal steer).
+
+### CYCLE 1 EVAL (g5_s2gemma screen):
+- shared-endpoint: R=+0.52 (P 0.37->0.18) -> PASS LBNR moderate -> Tier-2 (sibling test) IN FLIGHT (shared_endpoint_t2).
+- poison-rag: R=+0.88 but base P(Berlin)=0.027 too weak (gemma-base) -> DEFER (need stronger elicitation / gemma-it).
+- knowledge-conflict: R=+0.24 -> FAIL LBNR (in-context counterfactual robustly retrieved/distributed, base 0.73) -> screened out.
+NEXT after shared_endpoint_t2: gpt2 cands (copy-supp-corpus reuse s3; knowledge-conflict gpt2 if worth it); then red-team; then append to CAMPAIGN_REPORT.md + relaunch theory workflow cycle 2.
