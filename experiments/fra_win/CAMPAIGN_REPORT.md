@@ -200,3 +200,21 @@ the sibling's. Trade-off (theory-predicted REACH bound): the red-specific subset
 (33% vs the full-pair 58%), because selectivity costs pairs. **Method for cycle 2+: when a candidate has
 siblings sharing the value, select differential (target-minus-sibling) pairs; report A at matched removal
 where reach allows.**
+
+## SPRINT 2 — Cycle 2.
+
+**Theory refined** (`THEORY.md`): FRA supports **set algebra over cells** (unions across heads + DIFFERENCES = differential cells) — no rank-constrained linear residual object can express a cell, let alone a cell-difference. Magnitude law A≈reuse(marginal)/reuse(conjunction) measured on the **eval-distribution support** (the s5 corpus-firing-rate operationalization is degenerate). Clause-4 sharpened.
+
+**Cycle-2 evals — two theory-sharpening NEGATIVES:**
+- **Delimiter/quote-type matching** (gpt2, paren): CCF=0.732 (a real content×content conjunction) but **LBNR R=+0.23 → FAIL**. Structural/syntactic prediction is **distributionally redundant** (grammar provides many cues to close a paren, not just the matching-opener edge). New negative class: CCF-high, LBNR-fail-by-redundancy.
+- **PII / entity-attribute sibling** (gemma, Alice/Bob both→frog): differential (Alice-specific) pairs **do not suppress** Alice's strong retrieval (0.756→0.757) → the "A=16.4×" is **spurious** (zero on-target effect; matched-removal guard caught it). **FAIL.**
+
+**SHARPENED CLAUSE-4 (the cycle-2 theoretical yield):** FRA target-specificity requires the
+*discriminating endpoint* (usually the query) to be **distinctive CONTENT** (a specific token/feature),
+NOT a generic ROLE feature. Entity/box retrieval resolves identity **positionally** (the head uses a
+generic "the-queried-slot's-value" query feature), so the (query × value) conjunction **recurs** across
+siblings and FRA cannot separate them — confirmed twice (box A→7.9× partial only at weak base; entity
+no-op at strong base). The confirmed WINS all have content queries: induction (query = token X),
+copy-suppression (query = about-to-predict-X), acronym (query = the spelled letters). **Search
+implication for cycle 3: prioritize behaviors whose QUERY is itself a distinctive content token, and
+DEPRIORITIZE positionally-resolved retrieval / role-queries.**

@@ -41,3 +41,7 @@ NEXT after shared_endpoint_t2: gpt2 cands (copy-supp-corpus reuse s3; knowledge-
 5. Delimiter/quote-TYPE matching (gpt2, 78, UNCERTAIN) - NEW structural mechanism class (Gao 2025).
 6. Knowledge-conflict gpt2 (64).
 PHASE 2/eval cycle 2. NEXT: screen delimiter(gpt2 novel) + PII(gemma) first.
+
+### CYCLE 2 EVAL:
+- delimiter-type matching (gpt2): paren-close CCF=0.732 (content-conj) but LBNR R=+0.23 -> FAIL (closing-delimiter redundant via grammar). NEGATIVE: structural matching is CCF-shaped but distributionally redundant. (bracket/quote token-not-found.)
+- NEXT: PII entity-sibling (gemma, Alice/Bob both->frog; tests clause-4 entity-query specificity vs box-color generic A=7.9x).
