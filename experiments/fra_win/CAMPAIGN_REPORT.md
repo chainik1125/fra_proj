@@ -189,3 +189,14 @@ role feature) so the conjunction does NOT recur — i.e., the target must differ
 reads*, not just in a sibling that shares the value. The brainstorm should prioritize behaviors where the
 query-content is the discriminator (e.g., a rare/specific trigger-query × common-value), and avoid
 shared-endpoint setups where a generic role-query makes the conjunction recur.
+
+**Cycle-1 differential-pair refinement (a methodological contribution):** the generic-pair failure
+(A=1.9×) is FIXABLE by selecting **DIFFERENTIAL pairs** = target-edge top-M MINUS sibling-edge top-M
+(red-specific = in red's edge, not blue's; 8–18 of 30 per head). Result: FRA suppresses red (0.199→0.134,
+partial) while **preserving blue (0.095→0.083, Δ0.012)** → sibling separability **A=7.9×** (vs the
+content-gated steer which destroys blue, 0.000). **FRA CAN be made target-specific even when the target
+shares its value with a sibling** — by isolating the pairs that distinguish the target's query/key from
+the sibling's. Trade-off (theory-predicted REACH bound): the red-specific subset has lower on-target reach
+(33% vs the full-pair 58%), because selectivity costs pairs. **Method for cycle 2+: when a candidate has
+siblings sharing the value, select differential (target-minus-sibling) pairs; report A at matched removal
+where reach allows.**
