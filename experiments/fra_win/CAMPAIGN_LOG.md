@@ -14,12 +14,9 @@ Published-behavior priors (PI): EM, Sleepers, Retrieval heads, Backtracking (War
 - RATE GUARD: reduced Fable to 2 agents (backtracking + wildcard) + 6 opus; relaunched as ws1u06t61 (w782m9bls stopped).
 
 ## RESUME STATE (canonical — any resume reads this first; keep updated)
-- PHASE: 3/red-team + transfer-hardening. POD ecfyv90tqlhpkb.
-- CONFIRMED NEW WIN: acronym letter-movers (gpt2, Garcia-Carrasco 2024): CCF 0.886, LBNR R=0.95, Tier-2 A=38x. Committed.
-- SCREENED OUT this campaign: docstring (LBNR 0.08), fact-recall (weak P=0.039), + rank9-18 (direction/MLP/redundant).
-- IN FLIGHT: (a) t_acronym_transfer (proper transfer: Officer at a DIFFERENT pos -- the patch test had positions coincide at 4, trivial); (b) red-team workflow wsp185jas (4 opus skeptics + synth on the acronym win).
-- NEXT: when both done -> write CAMPAIGN_REPORT.md + figure incorporating red-team verdict -> commit -> terminate pod -> CronDelete (cron 51ed304d) to END loop.
-- IDEMPOTENCY: check git log + HF outbox fra_win/out/<id>/ + this block; never double-submit.
+- PHASE: DONE. Campaign complete. CAMPAIGN_REPORT.md written. Pod terminated, cron deleted.
+- RESULT: acronym letter-movers = screen-predicted existence proof (CCF 0.886, R 0.95, pair-specific, scale-robust, matched-removal A~58x) BUT red-team downgraded the A=38x headline (strawman baselines); defensible claim = content-addressed transfer; decisive content-gated-steer test INCONCLUSIVE (steer didn't fire) -> open. docstring/fact-recall screened out. Predictor (CCF AND LBNR) validated as triage.
+- NO FURTHER ACTION (loop ended).
 
 ## PHASE 2: EVALUATION (brainstorm+rank ws1u06t61 DONE, 21 cands -> shortlist)
 Shortlist (ranked): 1.docstring-retrieval(gemma,WIN,78) 2.acronym(gpt2,UNCERTAIN,70,heads[8.11,9.9,10.10,11.4])
