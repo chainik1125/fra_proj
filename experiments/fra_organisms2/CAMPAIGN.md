@@ -64,7 +64,10 @@ selectivity vs best-tuned linear. D: RED-TEAM (symmetric) + PLANNING synth. E: S
 budget/time -> SYNTHESIS2.md, commit, terminate pods, CronDelete.
 
 ## RESUME STATE (canonical)
-- PHASE A IN FLIGHT (2026-06-12): BRAINSTORM/HUNT agent id a51751376c62b9305 -> ORGANISMS2.md (running). THEORY agent: first
-  instance ae83d6fbb87edffc7 STALLED (watchdog 600s) -> RESPAWNED as aa42049de80f00064 -> PREDICTOR2.md. CRON 1814aac7 (17,47 = every 30min) drives.
+- PHASE A: THEORY DONE (PREDICTOR2.md committed, aa42049de80f00064). HUNT agent a51751376c62b9305 -> ORGANISMS2.md STILL RUNNING. CRON 1814aac7 (17,47).
+  PREDICTOR2 headline: in-context VARIABLE BINDING = top WIN candidate (P~0.65, clears all 4 strong bands). Best discriminator = P3 sibling-bleed
+  at operating regime + order-shuffle role-vs-content audit (KEY falsifier: positional binding -> A~1.9x — build the shuffle control in).
+- NEXT (cron B): when ORGANISMS2.md lands -> spawn SCREEN (score on 4 conditions + P1-P4 + runnability -> pick top, likely variable-binding) ->
+  PLANNING pick -> EVALUATOR operating-regime pre-check (P3 sibling-bleed + order-shuffle audit FIRST — cheapest decisive proxy) -> selectivity vs best-tuned linear.
 - NEXT: when ORGANISMS2.md + PREDICTOR2.md land -> spawn SCREEN -> PLANNING pick -> EVALUATOR operating-regime pre-check -> selectivity-vs-best-linear -> RED-TEAM.
 - Builds on experiments/fra_organisms/ (SYNTHESIS.md = boundary map, SCREENING_RUBRIC.md = D1-D8 + §4 selectivity test, ORGANISMS.md = the v1 catalog).
