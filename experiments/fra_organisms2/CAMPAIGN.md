@@ -67,7 +67,11 @@ budget/time -> SYNTHESIS2.md, commit, terminate pods, CronDelete.
 - PHASE A: THEORY DONE (PREDICTOR2.md committed, aa42049de80f00064). HUNT agent a51751376c62b9305 -> ORGANISMS2.md STILL RUNNING. CRON 1814aac7 (17,47).
   PREDICTOR2 headline: in-context VARIABLE BINDING = top WIN candidate (P~0.65, clears all 4 strong bands). Best discriminator = P3 sibling-bleed
   at operating regime + order-shuffle role-vs-content audit (KEY falsifier: positional binding -> A~1.9x — build the shuffle control in).
-- NEXT (cron B): when ORGANISMS2.md lands -> spawn SCREEN (score on 4 conditions + P1-P4 + runnability -> pick top, likely variable-binding) ->
-  PLANNING pick -> EVALUATOR operating-regime pre-check (P3 sibling-bleed + order-shuffle audit FIRST — cheapest decisive proxy) -> selectivity vs best-tuned linear.
+- PHASE A DONE: PREDICTOR2.md (theory) + ORGANISMS2.md (hunt) committed. CONVERGENCE: both -> in-context VARIABLE BINDING = #1.
+  #1 = Mixing-Mechanisms bound-entity retrieval (Gur 2025, repo mixing-mechs MIT, gemma-2-2b). #2 ICLAttack backdoor. #3 WinoDict nonce.
+  v1 harness (injection_selectivity.py) is GENERIC -> reusable. KEY risk/falsifier = lexical-vs-POSITIONAL binding (order-shuffle audit).
+- PHASE B IN FLIGHT: SCREEN agent a1977d8833751a57e -> SCREEN2.md (score top-3 on P1-P4, LOCK #1, concrete experiment design: operating-regime
+  pre-check [P1 R_gen + P3 sibling-bleed + the order-shuffle lexical-vs-positional audit] FIRST, then selectivity vs best-tuned linear; harness-compatible; fallback order).
+- NEXT (cron C): SCREEN2 -> PLANNING pick -> EVALUATOR runs the #1 operating-regime pre-check (order-shuffle audit = decisive GO/NO-GO) -> if GO, selectivity vs best-tuned linear -> RED-TEAM (symmetric).
 - NEXT: when ORGANISMS2.md + PREDICTOR2.md land -> spawn SCREEN -> PLANNING pick -> EVALUATOR operating-regime pre-check -> selectivity-vs-best-linear -> RED-TEAM.
 - Builds on experiments/fra_organisms/ (SYNTHESIS.md = boundary map, SCREENING_RUBRIC.md = D1-D8 + §4 selectivity test, ORGANISMS.md = the v1 catalog).
