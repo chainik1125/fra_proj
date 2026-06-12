@@ -1,0 +1,39 @@
+{
+  "model": "gemma-2-2b-it",
+  "asr1_n": 13,
+  "asr_baseline": 0.3611111111111111,
+  "legit_baseline_n": 32,
+  "heads": [
+    [
+      11,
+      3
+    ],
+    [
+      18,
+      4
+    ],
+    [
+      9,
+      3
+    ]
+  ],
+  "head_effects": {
+    "L11H3": 1.0146338014279571e-18,
+    "L18H4": 1.0146338014279571e-18,
+    "L9H3": 6.182662226854099e-19
+  },
+  "gate_i_oracle_R": 0.0,
+  "oracle_asr_after": 1.0,
+  "oracle_n_restored": 13,
+  "oracle_n": 13,
+  "gate_ii_legit_collateral": 0.0,
+  "legit_after": 1.0,
+  "gate_iii_fra_reach": NaN,
+  "fra_drop_best": 0.0,
+  "fra_drop_c1": 0.0,
+  "fra_drop_c2": 0.0,
+  "gate_i_pass": false,
+  "gate_ii_pass": true,
+  "gate_iii_pass": false,
+  "VERDICT": "NO-GO"
+}
