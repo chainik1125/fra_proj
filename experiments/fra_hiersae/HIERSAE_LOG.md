@@ -41,8 +41,30 @@ tuned. The red-team must check: (i) flat drift is genuine + gpt2-magnitude (top1
 still passes (the coarse cell is a real recovered concept, not a badly-trained-Matryoshka artifact); (iii) the
 residual/level-spreading in the DRIFT cells is the real signal.
 
-## v2 DRIFT RUN — IN FLIGHT
-Local CPU background run (self-contained synthetic, minutes; uploads to HF `fra_hiersae/results/hiersae_results_drift.json`
-at end). Config = the new defaults above. PENDING: when it lands, read per-cell verdicts IN THE DRIFT CELLS (α=0.4,0.5
-where flat_drift now PASSES) against the locked §5.1 bands — CONFIRM (coarse-cut residual ≥~0.3, coarse carries <~0.6,
-bounded union still needed) / FALSIFY (clean single-cell coarse win ≥70%, top1_cov_matry≥0.8) / HELP-BUT-NOT-SOLVE.
+## v2 VALIDATION (2 cells: α=0.4 drift-candidate, α=0.7 control; sp1 seed0 steps5000, C_ANCHOR=0.2)
+The c_anchor fix WORKS for drift, but exposed a deeper coupling. Results:
+  - α=0.4: top1f=0.12 -> flat SAE DRIFTS HARD (more than gpt2's 0.32). flat_drift gate PASSES ✓. BUT recovery_matry
+    FAILS: coarseC_matry_cos=0.435 (<0.8 gate) AND coarseC_flat_cos=0.468 -> NEITHER SAE recovers the concept (both
+    recover the LEAVES perfectly, leafcos_flat_mean=0.991). full_union_ge_oracle also FAILS (R_full=0.69<R_orc=1.15).
+    The resid=0.32/carry=0.54 LOOK like CONFIRM but are CONFOUNDED by the recovery failure (can't cut a concept cell
+    you never recovered) -> NOT a readable verdict (this is exactly the red-team artifact the brief flagged).
+  - α=0.7 (control): top1f=1.00 no drift (correct), recovery_matry PASSES (coarseC_matry_cos=0.921), flat ALSO recovers
+    the concept (coarseC_flat_cos=0.896).
+
+THE KEY STRUCTURAL FINDING (and a tension to resolve): in THIS toy, concept strength (α) controls flat-DRIFT and
+Matryoshka-RECOVERABILITY in the SAME direction. Low α -> concept too entangled with leaves -> flat drifts BUT neither
+SAE recovers the concept. High α -> both recover the concept AND no drift. The naive Matryoshka coarse prefix gets NO
+recovery ADVANTAGE over the flat SAE. This is arguably an EVEN STRONGER form of the PI's "naive hierarchical SAE fails"
+prediction than the higher-hierarchy-cells problem: in the drift regime the naive Matryoshka doesn't even RECOVER the
+concept (coarseC=0.44), let alone cut it cleanly. BUT we must distinguish: is this FUNDAMENTAL (naive can't recover the
+drift-causing concept) or a TRAINING ARTIFACT (under-powered prefix: inner_weight=2, 5000 steps)?
+
+## v3 PIVOTAL TEST — IN FLIGHT: does a HARDER-TRAINED prefix recover in the drift zone?
+One cell α=0.5, INNER_WEIGHT=2->8, STEPS=10000, C_ANCHOR=0.2 (α=0.5 should still drift: √0.75=0.866>0.7). PENDING read:
+  - If {flat_drift PASS AND recovery_matry PASS} simultaneously -> we have the VALID regime -> run the full sweep there
+    and read the higher-hierarchy-cells verdict (coarse-cut residual) properly.
+  - If recovery_matry STILL FAILS with a strong prefix -> the recovery failure is FUNDAMENTAL = a clean, strong negative
+    (naive Matryoshka can't recover the very concept whose drift it's meant to fix); the verdict is CONFIRM via an even
+    more basic mechanism than predicted, and the next design question is whether ANY hierarchical SAE (not naive) can.
+    (Fallback design if needed: DECOUPLE recovery from drift — a strong clean concept emission IN CONTEXT, drifting leaf
+    at the QUERY — so the prefix CAN recover while the flat query-feature still drifts; tests level-spreading cleanly.)

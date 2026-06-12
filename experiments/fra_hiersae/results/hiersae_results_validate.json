@@ -1,0 +1,144 @@
+{
+  "config": {
+    "alphas": [
+      0.4,
+      0.7
+    ],
+    "superpos": [
+      1
+    ],
+    "seeds": [
+      0
+    ],
+    "steps": 5000,
+    "n_train": 4000,
+    "m_coarse": 16,
+    "m_sae": 256,
+    "k_topk": 8,
+    "inner_weight": 2.0,
+    "c_anchor": 0.2
+  },
+  "cells": [
+    {
+      "alpha": 0.4,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 28,
+      "on_mass": 0.2629347404586463,
+      "rho": 0.10218165069818497,
+      "fvu_flat": 0.0425573192059108,
+      "fvu_matry": 0.07369365568434873,
+      "dead_flat": 0.0,
+      "dead_matry": 0.00390625,
+      "recovery": {
+        "leafcos_flat_min": 0.9809604287147522,
+        "leafcos_flat_mean": 0.9912566989660263,
+        "coarseC_flat_cos": 0.4675808548927307,
+        "coarseC_matry_cos": 0.4345780611038208,
+        "coarseD_matry_cos": 0.8720595240592957,
+        "coarse_C_idx": 4,
+        "coarse_D_idx": 2,
+        "recovery_matry_pass": false,
+        "flat_drift_pass": true
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 0.5193968867175711,
+        "frac_coarse_fine": 0.13785283868019782,
+        "frac_fine_coarse": 0.26923086145601477,
+        "frac_fine_fine": 0.07351941314621627
+      },
+      "coarse_cut": {
+        "R_coarse_only": 0.3704855619578971,
+        "R_coarse_plus_cross": 0.6532940699963338,
+        "R_full_union_m": 0.6916425355189876,
+        "R_full_union_f": 0.8393557756766876,
+        "R_oracle": 1.1470066559008734,
+        "residual_coarse": 0.32115697356109046,
+        "carry_coarse": 0.5356604646645915
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 0.125,
+        "top1_coverage_matry": 0.75,
+        "n_cells_for_90_flat": 33
+      },
+      "control": {
+        "collat_coarse": 0.049998394168499,
+        "collat_union_matry": 0.07864490866688069,
+        "R_emb": 1.1967747428510391,
+        "collat_emb": 0.9739984137385995,
+        "spec_ratio": 19.480593925799674
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": false,
+        "flat_drift": true,
+        "full_union_ge_oracle": false
+      }
+    },
+    {
+      "alpha": 0.7,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 15,
+      "on_mass": 0.43819411926566476,
+      "rho": 0.1079338863492012,
+      "fvu_flat": 0.042062939841827185,
+      "fvu_matry": 0.07084743233419581,
+      "dead_flat": 0.0,
+      "dead_matry": 0.01953125,
+      "recovery": {
+        "leafcos_flat_min": 0.8396746516227722,
+        "leafcos_flat_mean": 0.8809934034943581,
+        "coarseC_flat_cos": 0.8964235782623291,
+        "coarseC_matry_cos": 0.9207597374916077,
+        "coarseD_matry_cos": 0.9642097353935242,
+        "coarse_C_idx": 2,
+        "coarse_D_idx": 12,
+        "recovery_matry_pass": true,
+        "flat_drift_pass": false
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 0.9801025354954543,
+        "frac_coarse_fine": 0.01989746450454565,
+        "frac_fine_coarse": 0.0,
+        "frac_fine_fine": 0.0
+      },
+      "coarse_cut": {
+        "R_coarse_only": 1.1098298643633613,
+        "R_coarse_plus_cross": 1.1199474607746818,
+        "R_full_union_m": 1.1199474607746818,
+        "R_full_union_f": 1.0119311332579863,
+        "R_oracle": 1.085367414409126,
+        "residual_coarse": 0.010117596411320484,
+        "carry_coarse": 0.9909660079908373
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 1.0,
+        "top1_coverage_matry": 1.0,
+        "n_cells_for_90_flat": 5
+      },
+      "control": {
+        "collat_coarse": 0.959296678842254,
+        "collat_union_matry": 0.9671010867227942,
+        "R_emb": 1.065248201589153,
+        "collat_emb": 1.0026777485261062,
+        "spec_ratio": 1.045221744889399
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": true,
+        "flat_drift": false,
+        "full_union_ge_oracle": true
+      }
+    }
+  ],
+  "done": true
+}
