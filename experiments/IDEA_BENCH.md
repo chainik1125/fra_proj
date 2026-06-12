@@ -83,6 +83,26 @@ averaged QK being genuinely LOW-RANK (few modes); if diffuseness survives averag
 BILINEAR vs LINEAR-COLLAPSE — a condensate reducible to a residual direction is just LINEAR STEERING (which FRA does NOT beat);
 only interesting if irreducibly BILINEAR (edits the attention INTERACTION, more selective than any residual edit). Plus the
 AVERAGING TRAP: per-instance behaviors (binding) can CANCEL under naive averaging -> need an aligned/conditioned frame.
-STATUS: THEORY agent a8d5df42fc0010630 -> experiments/fra_meanfield/THEORY.md (precise formulation; does-it-condense + is-it-
-bilinear verdict; relation to model-diff/hierarchical/prior low-rank-attention work; a synth_hier2/induction falsifiable test;
-honest is-it-worth-running). Parked-as-theory; if the agent finds it sound + likely-to-condense -> a cheap synthetic test next.
+STATUS: THEORY LANDED -> experiments/fra_meanfield/THEORY.md (5 sections + falsifiable 2-stage test). VERDICT:
+ - SOUND but HONEST: the minimal version is a behavior-conditioned low-rank SVD of M^B_{μν}=⟨u^μ_q u^ν_k⟩_B·ω_{μν} (the
+   order parameter), NOT genuine self-consistent mean-field; "condensate" is a metaphor until a TAP fixed point is shown (not needed).
+ - DOES IT CONDENSE? leaning NO on dense gpt2+flat-SAE: microscopic diffuseness does NOT imply high rank (a dense matrix can be
+   rank-1), BUT feature DRIFT (persistence's core finding: SAE picks different q/k features per context) makes ⟨u_q u_k^T⟩_B a sum
+   of many near-orthogonal templates => genuinely HIGH-RANK. Works best where least needed (induction=1 template), fails where
+   diffuseness is worst. THE central tension.
+ - BILINEAR vs LINEAR-COLLAPSE? ~50/50 IF it condenses: real mechanism for an irreducibly-bilinear win (cut a query-template ∧
+   key-template conjunction no one-sided residual edit isolates), but a sink/positional key-dir collapses it to a query-side bias.
+ - NOVELTY (honest): machinery OLD (low-rank bilinear W_QK editing = Elhage 2021; linear baselines = refusal/ITI); framing modestly
+   NEW (feature-resolved interpretable averaging + the falsifiable "does averaging collapse a PROVABLY-diffuse structure?" question).
+ - COMPOSES with B1/B2/hiersae: r_eff(M^B) before-vs-after a basis cleanup = a DIAGNOSTIC of whether the cleanup helped; mean-field
+   over a model-diff basis (B2) is the strongest version (k_diff×k_diff SVD, trivially cheap).
+ - THE DECISIVE CHEAP TEST: r_eff + f(3) (effective rank + captured-mass) of M^B on HELD-OUT induction instances. CONFIRM band
+   r_eff<=5 & f(3)>=0.8; then M_behav (rank<=3 condensate-cut recovers >=70% oracle removal vs microscopic top-1's 1.4%); then M_lin
+   (collateral < 0.5x best matched linear steer). Stage A = planted-condensate sanity on synth_hier2 (FREE CPU, d=64 toy, no SAE) +
+   an m=1,2,4,8 drift-surrogate positive control that r_eff detects high-rank.
+ - COST CORRECTION (orchestrator checked the data): the agent's "r_eff computable from existing persistence data, no GPU" is
+   OVER-OPTIMISTIC — persist_results_FINAL.json stores only SUMMARY metrics (located_cell tuples, coverage, removals), NOT the raw
+   per-instance codes. Building M^B needs re-collecting u_q,u_k at operative positions = a SMALL gpt2-small pod (the persist harness
+   already does this collection). Stage A (synthetic) IS free CPU. So: Stage A free; Stage B = one cheap rs-* pod.
+ - PARKED-AS-THEORY pending PI go on compute. Recommendation: Stage A (free) validates the method; Stage B r_eff is the go/no-go but
+   its a-priori lean is NEGATIVE (drift), so it's also a clean diagnostic to run AFTER a basis cleanup (hiersae/B1/B2) lands.
