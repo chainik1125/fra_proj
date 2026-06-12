@@ -77,7 +77,22 @@ injection NULL at FRA's own operating point (removal~0.73; is FRA's hard-legit a
 SAE-cell-reachable; banked induction/copy wins; fresh broad×broad real-LLM extensions fail/modest; boundary map w/ recall/injection/EM/
 syco negatives + theory refinements); (3) consolidate-vs-one-more decision (budget-aware; recommend consolidate). All my pods EXITED.
 
-## RESUME STATE (canonical)
+## ===== SESSION COMPLETE (2026-06-12) =====
+SYNTHESIS.md written (227 lines): the WHEN-FRA-wins boundary map + 4 theory refinements + the consolidate decision.
+DELIVERABLE: FRA's QK cell-cut gives large a-priori-predictable selectivity wins (15x-516x) on a NARROW kernel — behaviors carried by a
+load-bearing attention edge over context-supplied content, consumed AT the answer step, on a NON-RECURRENT conjunction reachable by one SAE
+cell (induction, copy-suppression, in-context backdoor — BANKED). The synthetic broad×broad advantage does NOT cleanly transfer at scale.
+FOUR FRESH/PRIOR FAILURES SPAN THE FOUR WIN-CONDITIONS:
+  - factual-recall edit: NO-GO — reachable+load-bearing but RELATION-keyed not subject-keyed (D3 conjunction-recurrence; ~49-59% sibling bleed; ROME wins).
+  - prompt-injection: NULL — fully attention-routed + content-specific, but only ~1.6x more selective than a tuned linear steer + caps at 0.73 removal.
+  - emergent-misalignment (prior): G-post negative (direction/MLP payload).
+  - sycophancy (prior): G-post negative (upstream/answer-step timing).
+FOUR THEORY REFINEMENTS: DIRECTION-vs-RELATION; load-bearing-on-OPERATING-REGIME (5th condition); conjunction-recurrence (D3) as a
+selectivity-failure mode; upstream-vs-answer-step timing. METHODOLOGY: ground-truth>>judge; matched-removal + best-tuned-baseline discipline
+(caught a false-positive: harsh-layer L6 'win' -> NULL vs best-tuned L12); symmetric red-team caught 2 premature negatives (factedit, injection)
+that complete tests then resolved. All pods EXITED. Cron 34ae3a64 to be deleted (session done).
+
+## RESUME STATE (canonical) — SESSION CLOSED; reopen by re-reading SYNTHESIS.md + spawning a writeup/new-organism run.
 - PHASE A DONE: ORGANISMS.md (lit-review a0d7585cd8b676f5a) + SCREENING_RUBRIC.md (theory a8628cfc75d2a200c) written + committed.
   Lit-review top-5: (1) factual-assoc editing [flagship], (2) prompt-injection, (3) copy-suppression L10H7 [measured 22.7x win
   — VERIFY it's a fresh FRA-decomposition contribution not a re-run of fra_win], (4) induction/backdoor, (5) sycophancy
