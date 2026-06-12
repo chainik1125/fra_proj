@@ -62,9 +62,15 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   Lit-review top-5: (1) factual-assoc editing [flagship], (2) prompt-injection, (3) copy-suppression L10H7 [measured 22.7x win
   — VERIFY it's a fresh FRA-decomposition contribution not a re-run of fra_win], (4) induction/backdoor, (5) sycophancy
   attend-to-doubt edge [arXiv 2601.16644 CONTRADICTS prior G-post verdict — sharp re-test]. Rubric flagship prediction = factual editing WIN.
-- PHASE B IN FLIGHT: APPLICATION/SCREEN agent id a5f0a5c3851a1c784 -> SCREEN.md (score all organisms on rubric, rank, concrete
-  experiment proposals for top 2-3 + #1 recommendation + go/no-go pre-check). 
-- NEXT (cron C): when SCREEN.md lands -> PLANNING picks top 1-2 -> EVALUATOR builds+runs (ground-truth + selectivity-vs-baseline). Then RED-TEAM (symmetric) -> PLANNING synth.
+- PHASE B DONE: SCREEN.md (a5f0a5c3851a1c784) — all 22 scored, prior NO-GOs reproduced. #1 = FACTUAL-RECALL EDIT (only OPEN
+  TIER-1; the other 3 T1 are banked wins). Copy-suppression 22.7x is NOT fresh (banked 516x). Encouraging: prior LBNR probe
+  fact-recall attn=0.81 R=+0.86 (D4 load-bearing); CCF=0 = SAE-reach concern not G-post.
+- PHASE C IN FLIGHT: EVALUATOR id a4585f4b23baf2381 -> the CHEAP GO/NO-GO PRE-CHECK ONLY (not the full campaign): gemma-2-2b-it +
+  GemmaScope-att SAEs, ~25-30 recalled CounterFact facts, (subject×relation) cell-edit at top<=3 extraction heads (reuse
+  fra_win/jobs/g_screen+j2_selectivity + fra/fra_func/fra_sae_lens). GROUND-TRUTH P(target) from logits. GO iff (i) cell-edit
+  drops P(target)>=50% at c~1-2 AND (ii) held-out same-relation/diff-subject drops <15%. Pod rs-factedit-precheck-1, HF
+  fra_org_factedit/. Log -> FACTEDIT_LOG.md. NO-GO = the pre-registered flagship negative (sharp bound).
+- NEXT: read pre-check verdict. GO -> bring in PLANNING + EVALUATOR full §4 selectivity test vs ROME/MEMIT -> RED-TEAM. NO-GO -> PLANNING synth (flagship negative) + next candidate (prompt-injection T2) or consolidate.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
