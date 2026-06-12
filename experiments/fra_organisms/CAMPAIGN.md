@@ -123,8 +123,14 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   control, 3 interventions [FRA cell-cut L10H7/L18H6 vs linear ignore-injection DoM vs prompt-hardening] at matched removal,
   collateral table). No selectivity pod launched yet. CAUTION: stale gen-time summary (RUNID 065045, oracle R=0.0) and prefill-GO
   summary (070218, R=1.0) both exist — the selectivity result will be a NEW RUNID dir; do NOT mis-read the stale ones.
-- NEXT: read injection §4 selectivity WIN/NULL. WIN (FRA collateral << linear at matched removal) -> symmetric FALSE-POSITIVE red-team
-  (EM-burned) -> PLANNING consolidate. NULL -> consolidate honestly. Factedit already closed (negative). Injection is the live win/null.
+- INJECTION §4 SELECTIVITY: pod rs-injection-selectivity-1 RESTART-LOOPING (uptime resets 117->52, GPU L40S->L4, NO new result dir =
+  crashes before first upload ~240s). Evaluator was burning tokens babysitting bootstrap. SENT directive: diagnose the pre-upload crash
+  (likely OOM from caching 3-layer activations / DoM build / set-build), move ckpt() EARLIER, relaunch ONCE as rs-injection-selectivity-2
+  (smaller set if OOM); if not fixable in one attempt -> STOP + report the PRE-CHECK GO as a provisional win w/ selectivity noted-pending.
+- INJECTION EVIDENCE SO FAR (provisional GO, pre-check only): oracle R=1.0, localized L10H7 alone R=1.0, easy-legit collateral 9%,
+  FRA cell reach R=1.0, detector valid + no canary leak. The §4 FRA-vs-linear-at-matched-removal head-to-head (the WIN confirmation) is the remaining gap.
+- NEXT: read evaluator's diagnose-or-report. If selectivity numbers land -> WIN(FRA collateral << linear on hard-legit)/NULL -> red-team(symmetric,EM-burned)
+  -> PLANNING consolidate. If pod unfixable -> consolidate with injection as a PROVISIONAL GO (pre-check strong; selectivity head-to-head pending) + the factedit/recall negatives + theory.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
