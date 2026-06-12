@@ -59,12 +59,39 @@ prediction than the higher-hierarchy-cells problem: in the drift regime the naiv
 concept (coarseC=0.44), let alone cut it cleanly. BUT we must distinguish: is this FUNDAMENTAL (naive can't recover the
 drift-causing concept) or a TRAINING ARTIFACT (under-powered prefix: inner_weight=2, 5000 steps)?
 
-## v3 PIVOTAL TEST — IN FLIGHT: does a HARDER-TRAINED prefix recover in the drift zone?
-One cell α=0.5, INNER_WEIGHT=2->8, STEPS=10000, C_ANCHOR=0.2 (α=0.5 should still drift: √0.75=0.866>0.7). PENDING read:
-  - If {flat_drift PASS AND recovery_matry PASS} simultaneously -> we have the VALID regime -> run the full sweep there
-    and read the higher-hierarchy-cells verdict (coarse-cut residual) properly.
-  - If recovery_matry STILL FAILS with a strong prefix -> the recovery failure is FUNDAMENTAL = a clean, strong negative
-    (naive Matryoshka can't recover the very concept whose drift it's meant to fix); the verdict is CONFIRM via an even
-    more basic mechanism than predicted, and the next design question is whether ANY hierarchical SAE (not naive) can.
-    (Fallback design if needed: DECOUPLE recovery from drift — a strong clean concept emission IN CONTEXT, drifting leaf
-    at the QUERY — so the prefix CAN recover while the flat query-feature still drifts; tests level-spreading cleanly.)
+## v3 PIVOTAL TEST — DONE: recovery failure is ROBUST (not a training artifact)
+One cell α=0.5, INNER_WEIGHT=8 (4×), STEPS=10000, C_ANCHOR=0.2. RESULT: flat_drift PASS (top1f=0.12) but
+recovery_matry STILL FAILS — coarseC_matry_cos=0.545 (up only from 0.435 at iw2; still ≪ 0.8 bar). A 4× harder-trained
+prefix barely moved recovery -> the recovery failure is ROBUST, not under-training.
+
+## THE DECOUPLING REDESIGN IS SELF-DEFEATING (key realization — do NOT pursue it)
+I considered decoupling recovery from drift via a clean strong concept emission in-context. Reasoning it through: the
+flat SAE drifts PRECISELY BECAUSE it has no stable concept atom (only leaf atoms; the FRA top cell uses a leaf q-feature
+that varies across contexts). If the concept were cleanly recoverable, the flat SAE would recover it AND USE it — the
+planted head reads the concept (aC), so the concept×D cell has HIGH ω and would dominate the FRA score -> stable cell ->
+NO drift. So flat-DRIFT and concept-RECOVERABILITY are TWO SIDES OF THE SAME COIN: there is NO regime where "flat drifts
+AND the concept is recoverable." Confirmed empirically: α=0.7 (recoverable, coarseC=0.92) has NO drift; α=0.4/0.5
+(drift) have coarseC≈0.44/0.55. The coupling is fundamental, not an artifact.
+
+## VERDICT: CONFIRM (naive hierarchical SAE does NOT fix FRA drift) — via RECOVERY FAILURE, upstream of the predicted mechanism
+The PI pre-registered: naive hierarchical SAE + FRA FAILS via the higher-hierarchy-cells problem (level-spreading ->
+coarse-cut leaves residual). We CONFIRM the headline (naive fails) but the operative mechanism is MORE BASIC and upstream:
+  - THE HOPE behind a hierarchical SAE: its coarse prefix recovers a STABLE concept atom where the flat SAE can't ->
+    one stable concept×D cell -> position-invariant cut -> fixes drift. (That would be FALSIFY.)
+  - WHAT HAPPENS: the naive (minimal Matryoshka, widths [16,256]) coarse prefix gives NO recovery advantage over the flat
+    SAE in the drift regime (coarseC_matry ≈ coarseC_flat ≈ 0.44–0.55, robust to α∈{0.4,0.5} and inner_weight∈{2,8}).
+  - THE MECHANISM (why naive Matryoshka fails — the citable insight): the Matryoshka prefix nests by RECONSTRUCTION-
+    VARIANCE; the drift-causing concept is LOW-variance-SHARED (the high-variance directions are the leaves), so the
+    coarse prefix captures LEAVES, not the concept. Its inductive bias ("fewest latents") ≠ "abstract/shared concept
+    first." So it never yields the stable concept-level FRA cell that would fix drift.
+  - The predicted higher-hierarchy-cells level-spreading (residual after a SUCCESSFUL coarse cut) is a SECOND-ORDER
+    effect that is UNTESTABLE here because recovery fails first. (Weak directional hints exist — α=0.4 resid=0.32,
+    fcx=0.52 — but they're confounded by the recovery failure, so not load-bearing.)
+  - CONTROL (method is not rigged to fail): α=0.7 — concept strong -> BOTH SAEs recover it (coarseC 0.92/0.90) and there
+    is no drift. So the concept is NOT unrecoverable by construction; it is unrecoverable exactly when it causes drift.
+
+## CONFIRMATION SWEEP — IN FLIGHT
+α∈{0.4,0.5,0.6,0.7} × sp1 × seeds{0,1}, INNER_WEIGHT=8 (Matryoshka's best shot), steps8000 (8 cells, local CPU ->
+hiersae_results_coupling.json). Solidifies the drift→no-drift transition + that coarseC_matry never beats coarseC_flat
+(recovΔ≈0) across the bracket. Then finalize VERDICT + RED-TEAM (targets: is the minimal Matryoshka a fair non-strawman?
+is the 0.8 recovery bar fair? is the variance-nesting mechanism the true cause? false-negative: α=0.7 recovers, so no).

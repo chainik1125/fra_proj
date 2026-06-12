@@ -1,0 +1,83 @@
+{
+  "config": {
+    "alphas": [
+      0.5
+    ],
+    "superpos": [
+      1
+    ],
+    "seeds": [
+      0
+    ],
+    "steps": 10000,
+    "n_train": 4000,
+    "m_coarse": 16,
+    "m_sae": 256,
+    "k_topk": 8,
+    "inner_weight": 8.0,
+    "c_anchor": 0.2
+  },
+  "cells": [
+    {
+      "alpha": 0.5,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 20,
+      "on_mass": 0.3078483432168305,
+      "rho": 0.10370524972677231,
+      "fvu_flat": 0.04181485252867522,
+      "fvu_matry": 0.079126277741155,
+      "dead_flat": 0.0,
+      "dead_matry": 0.01171875,
+      "recovery": {
+        "leafcos_flat_min": 0.9788941740989685,
+        "leafcos_flat_mean": 0.990264281630516,
+        "coarseC_flat_cos": 0.5422220230102539,
+        "coarseC_matry_cos": 0.5447449684143066,
+        "coarseD_matry_cos": 0.8998850584030151,
+        "coarse_C_idx": 7,
+        "coarse_D_idx": 13,
+        "recovery_matry_pass": false,
+        "flat_drift_pass": true
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 0.550806257064641,
+        "frac_coarse_fine": 0.08579970831500026,
+        "frac_fine_coarse": 0.31358907822731497,
+        "frac_fine_fine": 0.049804956393043755
+      },
+      "coarse_cut": {
+        "R_coarse_only": 0.24930551746289567,
+        "R_coarse_plus_cross": 0.4463645886312425,
+        "R_full_union_m": 0.4551378167208388,
+        "R_full_union_f": 0.8357750196971888,
+        "R_oracle": 1.0787577153552668,
+        "residual_coarse": 0.20583229925794314,
+        "carry_coarse": 0.5477583015603569
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 0.125,
+        "top1_coverage_matry": 0.75,
+        "n_cells_for_90_flat": 8
+      },
+      "control": {
+        "collat_coarse": 0.03389322859458979,
+        "collat_union_matry": 0.05734429800335758,
+        "R_emb": 1.1137220102767325,
+        "collat_emb": 0.9894296958601331,
+        "spec_ratio": 29.192547800479264
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": false,
+        "flat_drift": true,
+        "full_union_ge_oracle": false
+      }
+    }
+  ],
+  "done": true
+}
