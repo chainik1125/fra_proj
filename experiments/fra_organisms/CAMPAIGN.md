@@ -106,9 +106,16 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   FACTEDIT complete re-test LAUNCHED (eval a4585f4b23baf2381 -> rs-factedit-complete-1): FRA SAE cell-edit on FULL subject SPAN ×
     relation, top-8 heads, load-bearing band P[0.30,0.55] (the red-team's convergent test; full-span oracle headroom R=0.60 hi / 0.52@P.36).
     Metrics: P-drop + rank-flip + collateral. GO iff cell-edit drop>=50% + rank-flip-majority + collateral<15% -> flagship true false-neg -> ROME selectivity.
-- NEXT: read injection localization+FRA-reach + factedit complete re-test. Then PLANNING synthesizes both -> WIN(s) -> full §4 selectivity
-  vs linear/ROME + 2nd-round red-team; or if complete cuts also fail the surgical/selective bar -> consolidate (the load-bearing attention
-  exists but isn't surgically FRA-reachable/selective = a refined negative). Either way both flagships now get their FAIR complete test.
+- INJECTION pre-check = GO (revised, committed). ALL=PRE=GEN R=1.0; LOCALIZED L10H7/L18H6 R=1.0 (L10H7 = the copy-suppression head,
+  carries it alone), L4H2=0.75; gate(ii) legit collateral 9%; gate(iii) FRA cell-edit reach R=1.0; detector valid, no canary leak.
+  FIRST FRESH WIN CANDIDATE — but pre-check only. >>> §4 SELECTIVITY WIN-TEST LAUNCHED (eval a6c6439a53aaf3f44 -> rs-injection-
+  selectivity-1): expand ASR=1 set to ~40-60 (n=13 too small) + hard-legit control (injection-like-but-legit); 3 interventions at
+  MATCHED injection-removal [FRA cell-cut L10H7/L18H6 vs LINEAR ignore-injection DoM steer vs prompt-hardening]; collateral on
+  easy-legit/hard-legit/capability. WIN = FRA materially LOWER collateral than linear at matched effect (else NULL — report honestly).
+- FACTEDIT complete re-test (rs-factedit-complete-1) STILL RUNNING: band scan confirms recall-gating (hi R~0.07) but load-bearing
+  headroom in mid band (P.15-.4, oracle R med 0.39). The full-subject-span FRA cell-edit result on the load-bearing band = pending.
+- NEXT: read injection §4 selectivity (the WIN test) + factedit complete. If injection WIN -> symmetric FALSE-POSITIVE red-team (EM-burned).
+  Then PLANNING synthesizes -> consolidate with the win(s)/negatives. Both flagships getting their fair complete test; injection is the live win.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
