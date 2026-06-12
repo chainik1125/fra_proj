@@ -1,0 +1,247 @@
+[22:30:13] ws bootstrap start (rs-ws-1)
+GPU 0: NVIDIA A40 (UUID: GPU-981abbb1-4c0f-90ed-5e11-77f4fc6ed0e7)
+[notice] A new release of pip is available: 25.0.1 -> 26.1.2
+[notice] To update, run: python -m pip install --upgrade pip
+torch 2.8.0.dev20250319+cu128
+[bootstrap] HF CLI: hf
+[bootstrap] code present (attempt 1)
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_3.7Mnonzero_afrac0.250: n_layer=8 n_head=16 d_model=256 afrac=0.25 loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[head] csp_sweep1_1x_3.7Mnonzero_afrac0.250 quote head L5H4 drop=0.486 base=0.987
+[causal/sparse/neuron] 50/300 cells 2s
+[causal/sparse/neuron] 100/300 cells 3s
+[causal/sparse/neuron] 150/300 cells 5s
+[causal/sparse/neuron] 200/300 cells 7s
+[causal/sparse/neuron] 250/300 cells 8s
+[causal/sparse/neuron] 300/300 cells 10s
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_3.7Mnonzero_afrac1.000: n_layer=8 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[head] csp_sweep1_1x_3.7Mnonzero_afrac1.000 quote head L5H0 drop=0.462 base=0.983
+[causal/wsda/neuron] 50/300 cells 1s
+[causal/wsda/neuron] 100/300 cells 3s
+[causal/wsda/neuron] 150/300 cells 4s
+[causal/wsda/neuron] 200/300 cells 5s
+[causal/wsda/neuron] 250/300 cells 6s
+[causal/wsda/neuron] 300/300 cells 8s
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 8.40M
+[load] dense1_1x: n_layer=4 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out missing=4
+[head] dense1_1x quote head L3H11 drop=0.497 base=0.982
+[causal/dense/neuron] 50/300 cells 1s
+[causal/dense/neuron] 100/300 cells 2s
+[causal/dense/neuron] 150/300 cells 3s
+[causal/dense/neuron] 200/300 cells 4s
+[causal/dense/neuron] 250/300 cells 5s
+[causal/dense/neuron] 300/300 cells 6s
+[main] stage A done 113s
+Repo card metadata block was not found. Setting CardData to empty.
+[acts/sparse] L5 train torch.Size([2000128, 256]) eval torch.Size([199936, 256]) 13s
+[sae/sparse] step 1000 mse=37.7308 eval_fvu=0.1560
+[sae/sparse] step 2000 mse=22.9889 eval_fvu=0.0937
+[sae/sparse] step 3000 mse=17.0363 eval_fvu=0.0704
+[sae/sparse] step 4000 mse=14.5629 eval_fvu=0.0603
+[sae/sparse] step 5000 mse=13.3533 eval_fvu=0.0547
+[sae/sparse] step 6000 mse=12.3683 eval_fvu=0.0508
+[sae/sparse] step 7000 mse=11.8288 eval_fvu=0.0482
+[sae/sparse] step 8000 mse=10.9853 eval_fvu=0.0463
+[sae/sparse] step 9000 mse=10.6917 eval_fvu=0.0449
+[sae/sparse] step 10000 mse=10.6078 eval_fvu=0.0438
+[sae/sparse] step 11000 mse=10.2623 eval_fvu=0.0429
+[sae/sparse] step 12000 mse=10.1347 eval_fvu=0.0422
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+  /workspace/out/sae_sparse.pt:  13%|█▎        |  539kB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  13%|█▎        |  539kB / 4.21MB            [A[AProcessing Files (0 / 1)      :  13%|█▎        |  539kB / 4.21MB, 53.3kB/s  
+New Data Upload               :  13%|█▎        |  539kB / 4.21MB, 53.3kB/s  [A
+
+  /workspace/out/sae_sparse.pt:  13%|█▎        |  539kB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  13%|█▎        |  539kB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  13%|█▎        |  539kB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  26%|██▌       | 1.08MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  26%|██▌       | 1.08MB / 4.21MB,  104kB/s  
+New Data Upload               :  26%|██▌       | 1.08MB / 4.21MB,  104kB/s  [A
+
+  /workspace/out/sae_sparse.pt:  77%|███████▋  | 3.24MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  77%|███████▋  | 3.24MB / 4.21MB,  313kB/s  
+New Data Upload               :  77%|███████▋  | 3.24MB / 4.21MB,  313kB/s  [A
+
+  /workspace/out/sae_sparse.pt:  90%|████████▉ | 3.77MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  90%|████████▉ | 3.77MB / 4.21MB,  362kB/s  
+New Data Upload               :  90%|████████▉ | 3.77MB / 4.21MB,  362kB/s  [A
+
+  /workspace/out/sae_sparse.pt:  90%|████████▉ | 3.77MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  90%|████████▉ | 3.77MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  90%|████████▉ | 3.77MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt:  90%|████████▉ | 3.77MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  386kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  386kB/s  [A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  369kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  369kB/s  
+  /workspace/out/sae_sparse.pt: 100%|██████████| 4.21MB / 4.21MB            
+[acts/wsda] L5 train torch.Size([2000128, 256]) eval torch.Size([199936, 256]) 8s
+[sae/wsda] step 1000 mse=83.8098 eval_fvu=0.1639
+[sae/wsda] step 2000 mse=69.4174 eval_fvu=0.1328
+[sae/wsda] step 3000 mse=61.4554 eval_fvu=0.1205
+[sae/wsda] step 4000 mse=58.3348 eval_fvu=0.1138
+[sae/wsda] step 5000 mse=56.5984 eval_fvu=0.1098
+[sae/wsda] step 6000 mse=55.8436 eval_fvu=0.1071
+[sae/wsda] step 7000 mse=54.0628 eval_fvu=0.1052
+[sae/wsda] step 8000 mse=52.1712 eval_fvu=0.1037
+[sae/wsda] step 9000 mse=52.2494 eval_fvu=0.1025
+[sae/wsda] step 10000 mse=52.1207 eval_fvu=0.1016
+[sae/wsda] step 11000 mse=51.1332 eval_fvu=0.1009
+[sae/wsda] step 12000 mse=51.3511 eval_fvu=0.1003
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+  /workspace/out/sae_wsda.pt  :  13%|█▎        |  554kB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  13%|█▎        |  554kB / 4.21MB            [A[AProcessing Files (0 / 1)      :  13%|█▎        |  554kB / 4.21MB, 54.8kB/s  
+New Data Upload               :  13%|█▎        |  554kB / 4.21MB, 54.8kB/s  [A
+
+  /workspace/out/sae_wsda.pt  :  13%|█▎        |  554kB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  13%|█▎        |  554kB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  13%|█▎        |  554kB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  53%|█████▎    | 2.22MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    | 2.22MB / 4.21MB,  215kB/s  
+New Data Upload               :  53%|█████▎    | 2.22MB / 4.21MB,  215kB/s  [A
+
+  /workspace/out/sae_wsda.pt  :  79%|███████▉  | 3.33MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  79%|███████▉  | 3.33MB / 4.21MB,  321kB/s  
+New Data Upload               :  79%|███████▉  | 3.33MB / 4.21MB,  321kB/s  [A
+
+  /workspace/out/sae_wsda.pt  :  92%|█████████▏| 3.88MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  92%|█████████▏| 3.88MB / 4.21MB,  371kB/s  
+New Data Upload               :  92%|█████████▏| 3.88MB / 4.21MB,  371kB/s  [A
+
+  /workspace/out/sae_wsda.pt  :  92%|█████████▏| 3.88MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  92%|█████████▏| 3.88MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  :  92%|█████████▏| 3.88MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  389kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  389kB/s  [A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  372kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  372kB/s  
+  /workspace/out/sae_wsda.pt  : 100%|██████████| 4.21MB / 4.21MB            
+[acts/dense] L3 train torch.Size([2000128, 256]) eval torch.Size([199936, 256]) 5s
+[sae/dense] step 1000 mse=65.8449 eval_fvu=0.1925
+[sae/dense] step 2000 mse=56.4382 eval_fvu=0.1635
+[sae/dense] step 3000 mse=52.0986 eval_fvu=0.1520
+[sae/dense] step 4000 mse=50.1759 eval_fvu=0.1463
+[sae/dense] step 5000 mse=48.5741 eval_fvu=0.1430
+[sae/dense] step 6000 mse=49.3593 eval_fvu=0.1409
+[sae/dense] step 7000 mse=48.0465 eval_fvu=0.1393
+[sae/dense] step 8000 mse=46.2507 eval_fvu=0.1381
+[sae/dense] step 9000 mse=46.7202 eval_fvu=0.1372
+[sae/dense] step 10000 mse=46.6332 eval_fvu=0.1365
+[sae/dense] step 11000 mse=46.5053 eval_fvu=0.1358
+[sae/dense] step 12000 mse=45.8376 eval_fvu=0.1353
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+  /workspace/out/sae_dense.pt :  13%|█▎        |  557kB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  13%|█▎        |  557kB / 4.21MB            [A[AProcessing Files (0 / 1)      :  13%|█▎        |  557kB / 4.21MB, 55.0kB/s  
+New Data Upload               :  13%|█▎        |  557kB / 4.21MB, 55.0kB/s  [A
+
+  /workspace/out/sae_dense.pt :  13%|█▎        |  557kB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  13%|█▎        |  557kB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  13%|█▎        |  557kB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  53%|█████▎    | 2.23MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  53%|█████▎    | 2.23MB / 4.21MB,  216kB/s  
+New Data Upload               :  53%|█████▎    | 2.23MB / 4.21MB,  216kB/s  [A
+
+  /workspace/out/sae_dense.pt :  79%|███████▉  | 3.34MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  79%|███████▉  | 3.34MB / 4.21MB,  323kB/s  
+New Data Upload               :  79%|███████▉  | 3.34MB / 4.21MB,  323kB/s  [A
+
+  /workspace/out/sae_dense.pt :  93%|█████████▎| 3.90MB / 4.21MB            [A[AProcessing Files (0 / 1)      :  93%|█████████▎| 3.90MB / 4.21MB,  373kB/s  
+New Data Upload               :  93%|█████████▎| 3.90MB / 4.21MB,  373kB/s  [A
+
+  /workspace/out/sae_dense.pt :  93%|█████████▎| 3.90MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  93%|█████████▎| 3.90MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt :  93%|█████████▎| 3.90MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  389kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  389kB/s  [A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[A
+
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            [A[AProcessing Files (1 / 1)      : 100%|██████████| 4.21MB / 4.21MB,  372kB/s  
+New Data Upload               : 100%|██████████| 4.21MB / 4.21MB,  372kB/s  
+  /workspace/out/sae_dense.pt : 100%|██████████| 4.21MB / 4.21MB            
+[main] stage B done 325s
+[causal/sparse/sae] 50/300 cells 2s
+[causal/sparse/sae] 100/300 cells 3s
+[causal/sparse/sae] 150/300 cells 4s
+[causal/sparse/sae] 200/300 cells 6s
+[causal/sparse/sae] 250/300 cells 8s
+[causal/sparse/sae] 300/300 cells 9s
+[causal/wsda/sae] 50/300 cells 1s
+[causal/wsda/sae] 100/300 cells 2s
+[causal/wsda/sae] 150/300 cells 3s
+[causal/wsda/sae] 200/300 cells 4s
+[causal/wsda/sae] 250/300 cells 6s
+[causal/wsda/sae] 300/300 cells 7s
+[causal/dense/sae] 50/285 cells 1s
+[causal/dense/sae] 100/285 cells 2s
+[causal/dense/sae] 150/285 cells 3s
+[causal/dense/sae] 200/285 cells 4s
+[causal/dense/sae] 250/285 cells 5s
+[main] stage C done 460s
+[main] ALL DONE
+[22:38:14] ws_pod.py done, final upload

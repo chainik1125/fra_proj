@@ -49,11 +49,24 @@ problem, or is FRA?" test of the three basis-attacks (B1 here / B2 model-diff / 
   dense1_1x quote acc=1.00 (gate pass), bind acc=0.50 (CHANCE — binding likely beyond 1x-width models; quote = primary,
   binding recorded as caveat). Head L3H11 drop=0.41. **FRA-recon R²=1.000000 in the neuron basis** (exact — the sweep/dense
   configs do NOT re-sparsify attn_q/attn_k, that was csp_yolo2-only; Caveat B retired). Patched-forward validation diff=0.
-- **PHASES 1-2 IN FLIGHT (2026-06-12):** pod rs-ws-1 (id sm1kvywkptacvr, A40) running ws_pod.py STAGES=ABC.
-  A = 3-model load + tasks + head-finding + neuron-FRA + causal (Spearman/recovery/oracle). B = identical TopK SAEs
-  (d_sae=2048, k=32, 12k steps, 2M/200k train/eval tokens, python corpus) on act_in@circuit-layer. C = SAE-basis FRA + causal.
-  Results → HF fra_weightsparse/results/ws_stage{A,B,C}.json + ws_combined.json; crash → ws_traceback.txt; bg poller local.
-  RESUME if pod dies: bash code/launch_pod_ws.sh (env RUNPOD_API_KEY=$RP_API_KEY_MATS POD_NAME=rs-ws-2 STAGES=ABC; cheap, re-run whole).
-- **NEXT:** parse ws_combined.json → WS_LOG.md comparison tables + verdict (incl. co-firing-set drift) → commit.
+- **PHASES 1-2 DONE (2026-06-12):** pod rs-ws-1 (A40, ~12 min, ~$0.10) ran STAGES=ABC clean, self-stopped (EXITED).
+  Results committed at results/ws_{stageA,stageB,stageC,combined}.json + rs-ws-1_run.log (also on HF fra_weightsparse/results/).
+- **VERDICT (full: WS_LOG.md):** weight-sparse PARTIALLY-to-SUBSTANTIALLY HELPS FRA —
+  (1) SAE trains 3.2× cleaner (FVU 0.042 vs 0.136, monotone in substrate sparsity; dead-frac 25% on sparse = substrate-
+      driven dictionary surplus, not pathology; token-purity gap small).
+  (2) Neuron-basis FRA (SAE-free clean test, recon R²=1.000 exact): edge-mass top1 17× dense (0.169 vs 0.010; wsda 0.025
+      → ACTIVATION sparsity is the main driver); edge-cosine 0.97 vs 0.73; dominant cell stable 200/200 contexts.
+  (3) CAUSAL: 10-cell cut removes 86% of edge on sparse vs 1% on dense (oracle ~0.95 both) — cuttability is a substrate
+      property. BUT Spearman(FRA-score, causal)≈0 on ALL substrates → the RANKING failure is FRA-INTRINSIC (replicates
+      gpt2 0.03 in the cleanest basis); FRA top-10 union still recovers 76% of causal-top-10 on sparse (search-space
+      restriction works).
+  (4) SAE-basis inversion: SAE DE-concentrates the sparse substrate (top1_cov 1.00→0.47) and helps dense (mass1
+      0.010→0.147; k10 cut 0.011→0.191) but never approaches sparse-neurons — "skip the SAE on weight-sparse" CONFIRMED.
+  (5) Co-firing-set drift (the flagged residual risk): REAL (top-32 Jaccard 0.27 on sparse) but spares the edge cell.
+  Caveats: dense1_1x depth confound (primary contrast = sparse-vs-wsda, byte-identical); tiny models reproduce gpt2 drift
+  only mildly (dense top1_cov 0.89 vs gpt2 0.32); binding at chance on the act-sparse model (capability cost) so the
+  2-hop ground-truth-edge comparison was not interpretable.
+- CAMPAIGN COMPLETE. Possible follow-ups (not launched): higher-EF sweep models (does scale preserve the FRA gains while
+  restoring binding capability?); bridges (transfer sparse-basis FRA cells into the dense model).
 - Pods: rs-ws-* (reaper whitelist), RUNPOD_API_KEY=$RP_API_KEY_MATS. HF artifacts: dmanningcoe/fra-phase1-steering-data prefix
   fra_weightsparse/{code,results}. Pod deps: blobfile, tiktoken, `pip install -e` the circuit_sparsity repo, + fra toolkit.
