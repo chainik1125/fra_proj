@@ -76,11 +76,56 @@ computation" (trivial, not misalignment-specific)? frozen=77.8 is BETWEEN em(59)
 EM OV/MLP still injects some misalignment under base patterns -> partial, not trivial. Needs red-team.
 Result file: HF em_svd/results/em_patternfreeze_results.json (+ /tmp/pf_res). rejudge_pf.py = judge harness.
 
+## EM FINAL VERDICT (2026-06-11): NEGATIVE for FRA-relevance. The alpha~0.72 was an ARTIFACT STACK.
+Red-team = 4 lenses, ALL verdict=WEAKENS/MAJOR (round1 survivorship via wyi6v6db5; round2 wmxgz8hy6) + PI OLS test.
+CONVERGENT REASONS the headline alpha does NOT survive:
+ 1. SURVIVORSHIP/COHERENCE: frozen breaks coherence (incoh 0.56 vs base 0.11); within-frozen r(coher,align)=+0.72
+    (judge scores incoherent mush as "aligned"); the coher>50 cut keeps only 44% of frozen (biased subset).
+ 2. BASE-REVERSION (not gating): frozen recovery ∝ base-em gap (slope 0.77, r=0.85); TF-IDF frozen 1.7x closer to
+    base than em; on clean cases reverts EXACTLY to base (jealous 92->92, admin-pwd 85->85) w/ ~6x base-content words.
+    => high alpha is uninformative about misalignment-SPECIFIC routing; would be high for ANY base/EM attn difference.
+ 3. JUDGE-BUCKETING: alpha is threshold-dependent — thr>=50/70 gives ~0.5/0.71 but thr>=80 COLLAPSES to 0.11/0.27;
+    frozen "recovery" lands in haiku's 72-78 "mostly-aligned minor-issues" band, NOT base-clean (84.6). (judge OK
+    otherwise: discriminates em 32.8 vs base 82.7; verbose-hedging refuted r(align,len)=-0.19; self-test holds.)
+ 4. FRA-RELEVANCE PROBE NULL (decisive): the pre-registered domain-conditional attention sliver came back NULL —
+    cross-domain alpha tracks how MILD em is in that domain (corr(align_em,alpha)=+0.58), NOT any content axis;
+    medical (in-finetune, em WORST align 8.7) is where freeze FAILS most (alpha 0.21, incoh 1.0); the "fair" residual
+    is ~all PERSONA probes (per-domain fair cut: persona only domain w/ n>=3). Whole-pattern swap (1 tensor/layer, all
+    heads, 28 layers) is necessary-not-sufficient for a surgical concept×concept FRA cell.
+ PI OLS (the deepest cut): regress frozen_align ~ base_align + em_align on FROZEN-COHERENT triples (n=67):
+    base coef=+0.01, em coef=+0.03 (both ≈0), R2=0.01, intercept=76.4. => coherent-frozen align is a FLAT ~77 band
+    INDEPENDENT of base AND em -> reversion to a GENERIC SAFE REGISTER, not content-specific recovery. Neither
+    base-reversion (coef≈1) NOR gating (em coef<<0); it's "coherent frozen text generically reads mostly-aligned."
+CONCLUSION: EM misalignment is NOT attention-pattern-gated in any FRA-cuttable (localizable, content-specific) sense.
+ Confirms the original em_svd MLP-routed prior. The initial mean-align positive was survivorship+base-reversion+bucketing.
+ This is a CLEAN HONEST NEGATIVE (the prior expected it) + a sharp methodological lesson (below). NOT worth more GPU.
+ Decisive-but-skipped follow-ups (logged, not run; near-null effect makes them low-value): per-layer/head freeze sweep
+ (FREEZE_LAYERS env; localization), 2nd-judge re-judge (magnitude band). Run ONLY if a future benchmark needs them.
+
+## CORRECTED PATTERN-FREEZE PROTOCOL (the real deliverable from EM — apply to ALL subsequent benchmarks)
+A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha-measurement on the next benchmark MUST:
+ (a) COHERENCE-CONTROL: report incoherence rate; compute alpha on coherence-matched rows; never let incoherent "mush"
+     count as aligned (judge inflates it). Require the treatment to recover alignment WITHOUT coherence loss.
+ (b) BASE-REVERSION CONTROL: regress treated_align ~ base_align + em_align (OLS); a real gating effect needs a
+     significant EM-specific partial term beyond base. Pure base-reversion (em coef≈0) is uninformative.
+ (c) THRESHOLD-ROBUST: report alpha as a BAND across align thresholds {50,70,80}, not a single mean-align number.
+ (d) CONTENT-LOCALIZATION (the actual FRA gate): a domain/content-conditional sliver that EXCEEDS the generic baseline,
+     not explained by how mild the behavior is. + per-layer/head concentration before claiming an FRA-cuttable target.
+ (e) the sanity (treatment-codepath-on-self) + self-test (patch-live) controls — these DID work here, keep them.
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
-- RED-TEAM ROUND 1 DONE (Workflow wyi6v6db5): only survivorship-coherence skeptic returned (other 3 died on auth "Not logged in", fixed by user /login). Survivorship verdict=WEAKENS/MAJOR: alpha is coherence-confounded (within-frozen r(coher,align)=+0.72; judge scores mush as aligned). PI VERIFIED + EXTENDED (paired n=156): EM-coherent cut 0.26 (biased: em barely misaligned there); FAIR cut EM-bad(<=40)&coherent = 0.69 (n=17), +frozen-coherent = 0.85 (n=8). NET: effect REAL but n-small + magnitude-uncertain (0.27-0.85). See /tmp/pf_redteam_sofar.md.
-- >>> RED-TEAM ROUND 2 IN FLIGHT: Workflow wmxgz8hy6 (the 3 auth-failed lenses w/ round-1 context: trivial-base-reversion, metric-judge-validity, mechanism-overclaim). DO NOT relaunch; await verdicts, synthesize all 4 into CAMPAIGN + commit.
-- NEXT after red-team: decide EM verdict. Likely follow-up = per-head/per-layer freeze to localize (mechanism skeptic's bridge) BEFORE any FRA cell-cut; OR larger-n confirmatory gen on EM-misaligned-eliciting prompts. Then (c) feasible benchmarks (sycophancy/refusal/format gemma+GemmaScope) for breadth.
+- RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
+  for FRA-relevance (see "EM FINAL VERDICT" above). Committed. EM is DONE — do not relaunch / spend more GPU on it.
+- >>> NEXT CANDIDATE: SYCOPHANCY × user-opinion (REAL_LLM_PLAN rank-1, gemma-2-2b-it + GemmaScope). Theory's best bet
+  (plausibly attention-routed: "user states opinion O -> attend to O -> agree"). MUST use the CORRECTED PATTERN-FREEZE
+  PROTOCOL above (coherence-control + base-reversion OLS + threshold-band + content-localization). Build a gemma
+  pattern-freeze harness (gemma-2-2b-it is small -> L4/L40 ok; eager-attn monkeypatch like em_pattern_freeze_pod.py but
+  Gemma2Attention; judge sycophancy = agreement-with-stated-opinion, can use Claude judge). Scope: does freezing the
+  user-opinion attention edge reduce sycophancy WITHOUT coherence loss + localize to a content sliver?
+- AFTER sycophancy: format×domain, refusal×topic (gemma+GemmaScope) if time/budget. Then synthesize+stop+CronDelete.
+- BUDGET NOTE: this tick spent ~$0.6 (re-judge) + ~280k red-team tokens. Be sparing on next GPU run; OpenAI judge DEAD
+  (use Claude via ANTHROPIC_API_KEY_MATS, see [[reference_openai_quota_dead]] / rejudge_pf.py template).
 - (history below) EM pattern-freeze GENERATION DONE (pod rs-em-pfreeze-1 EXITED). RE-JUDGED via Claude (judge swap).
 - >>> EM RESULT STATUS: 524 gens saved at HF em_svd/results/em_patternfreeze_results.json AND /tmp/pf_res/...
     Self-test PASSED on the pod (em-frozen-on-em |dlogit|=0.0 splice-neutral; em-frozen-on-BASE |dlogit|=5.0 patch-live).
