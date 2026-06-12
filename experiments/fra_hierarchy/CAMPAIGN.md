@@ -78,7 +78,9 @@ Result file: HF em_svd/results/em_patternfreeze_results.json (+ /tmp/pf_res). re
 
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
-- NEXT: (a) RED-TEAM this surprising EM positive (state-machine step 4: 4 opus skeptics) — attack the 4 caveats, esp. survivorship + the trivial-base-reversion alt. THEN (b) if it survives, the FRA cell-cut on EM's QK selection needs SAEs (andyrdt/saes-qwen2.5-7b-instruct resid SAEs, REAL_LLM_PLAN s2). (c) feasible benchmarks (sycophancy/refusal/format gemma+GemmaScope) for breadth.
+- RED-TEAM ROUND 1 DONE (Workflow wyi6v6db5): only survivorship-coherence skeptic returned (other 3 died on auth "Not logged in", fixed by user /login). Survivorship verdict=WEAKENS/MAJOR: alpha is coherence-confounded (within-frozen r(coher,align)=+0.72; judge scores mush as aligned). PI VERIFIED + EXTENDED (paired n=156): EM-coherent cut 0.26 (biased: em barely misaligned there); FAIR cut EM-bad(<=40)&coherent = 0.69 (n=17), +frozen-coherent = 0.85 (n=8). NET: effect REAL but n-small + magnitude-uncertain (0.27-0.85). See /tmp/pf_redteam_sofar.md.
+- >>> RED-TEAM ROUND 2 IN FLIGHT: Workflow wmxgz8hy6 (the 3 auth-failed lenses w/ round-1 context: trivial-base-reversion, metric-judge-validity, mechanism-overclaim). DO NOT relaunch; await verdicts, synthesize all 4 into CAMPAIGN + commit.
+- NEXT after red-team: decide EM verdict. Likely follow-up = per-head/per-layer freeze to localize (mechanism skeptic's bridge) BEFORE any FRA cell-cut; OR larger-n confirmatory gen on EM-misaligned-eliciting prompts. Then (c) feasible benchmarks (sycophancy/refusal/format gemma+GemmaScope) for breadth.
 - (history below) EM pattern-freeze GENERATION DONE (pod rs-em-pfreeze-1 EXITED). RE-JUDGED via Claude (judge swap).
 - >>> EM RESULT STATUS: 524 gens saved at HF em_svd/results/em_patternfreeze_results.json AND /tmp/pf_res/...
     Self-test PASSED on the pod (em-frozen-on-em |dlogit|=0.0 splice-neutral; em-frozen-on-BASE |dlogit|=5.0 patch-live).
