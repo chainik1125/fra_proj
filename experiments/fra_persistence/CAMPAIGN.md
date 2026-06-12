@@ -72,3 +72,19 @@ brute-force -> FRA adds no diagnostic value here. (The induction faithfulness FA
 predicts the negative.) Relayed to evaluator afa99d66feb3da860. This is THE value question: is FRA a diagnostic that
 identifies the relevant feature-conjunction-union without causal search? The hierarchical-SAE synthetic (PI, pending) becomes:
 does a hierarchical SAE make the union MORE DIAGNOSABLE (FRA-rank aligns with causal) than a flat SAE, with ground-truth?
+
+## >>> RECALIBRATION (PI, 2026-06-12): evaluate FRA on the THREE SLEEPER AXES separately — detection / localization / control
+PI: the diagnosability-is-THE-value framing was TOO STRONG. Restore the sleeper-work decomposition. FRA can add value on ANY of
+three axes, which DECOUPLE (need not stack):
+ - DETECTION: do FRA cell activations / CELL-CORRELATIONS signal a concept-association is present / which concepts are RELATED?
+   (vs an SAE-feature probe.) Barely tested — possibly FRA's real niche (PI: "correlations between FRA cells are diagnostic").
+ - LOCALIZATION: does FRA identify WHICH cells carry it (the diagnosability metric: FRA-rank vs causal-rank, recovery(k))? (vs
+   brute-force causal ablation.) The induction faithfulness FAIL is a LOCALIZATION weakness — but that is ONE axis, NOT a global FRA verdict.
+ - CONTROL: does cutting FRA cells surgically remove/edit the association? (vs token-mask / linear / SAE-feature-edit.) The binding+
+   injection deflations were CONTROL-axis losses at the single-word level. Persistence M1 tests a DIFFERENT control claim: weight-persistence (cut once -> removed at ALL appearances unconditionally).
+THE DECOUPLINGS (PI, live hypotheses): (1) an SAE-probe may DETECT/LOCALIZE relatedness better while FRA CONTROLS the connection
+more surgically; (2) FRA-cell-correlations may be DIAGNOSTIC while CONTROL is swamped by the many other features. => measure each
+axis vs its natural alternative; FRA's value = wherever it wins, accepting it may win on one and lose on another.
+PERSISTENCE EXPERIMENT recast: M1 = CONTROL axis (weight-persistence removal across appearances); the diagnosability metric =
+LOCALIZATION axis (report SEPARATELY, do NOT collapse). DETECTION axis = a new measurement (FRA cell-correlation -> concept-
+relatedness vs an SAE-probe), naturally tested in the HIERARCHICAL-SAE SYNTHETIC with ground-truth concept-graph.
