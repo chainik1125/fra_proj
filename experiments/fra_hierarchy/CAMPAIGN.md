@@ -132,6 +132,31 @@ noisy; effect-size bar 0.20 nearly unmeetable vs 0.19 baseline. (2) renormalizin
 opinion content is re-derivable elsewhere in context (softmax redistribution underestimates routing). (3) gemma-2-2b-it may
 be too small for clean attention-routed sycophancy. Result: results/syco_phase1_results.json. Pod rs-syco-3 EXITED.
 
+## SYCOPHANCY NEGATIVE — RED-TEAM VERDICT (2026-06-11): PREMATURE / LIKELY FALSE-NEGATIVE. Re-run required.
+3 false-negative skeptics (wj5lfrbfa), all MAJOR, convergent: do NOT file the G-post negative as written. Three fixable threats:
+ 1. INTERVENTION LEAK (false-negative-likely, the killer): 36/36 MC items REPEAT the wrong-answer content OUTSIDE the cut
+    span (option block literally contains "B) Lyon"); 9 of 12 baseline flips are MC. Single-span cut is mechanically
+    INCOMPLETE on 75% of the working set — the answer pos re-derives the wrong answer from the un-cut option row, and
+    RENORMALIZATION amplifies that duplicate (×1/(1-m)). "8/12 survive" = expected under-cut, NOT evidence against routing.
+ 2. STAT POWER (fragile): n=12 flips; effect-size bar 0.20 EXCEEDS max possible drop (baseline 0.19) = miscalibrated;
+    C3 frac-in-top3 quantized over 6 events (0.60 unreachable); McNemar b=4,c=0 p=0.0625 = near-miss not clean null;
+    power ~0.39 at n=12 vs ~0.99 at n=45. Direction defensible (Wilson CI [0.39,0.86] keeps majority-survive sign).
+ 3. CONSTRUCT (fragile): evalset tests ONLY factual-override sycophancy = the theory's G-post COUNTER-prior, not its
+    [deference]×[opinion-CONTENT] target. Factual-override = most G-post-friendly (strong parametric prior to revert to).
+NARROW DEFENSIBLE CLAIM the data supports: "factual-override sycophancy on gemma-2-2b-it is not cleanly attention-edge-
+cuttable" (and even that localization sub-claim is underpowered). Must NOT generalize to "sycophancy" without the fixes.
+
+## SYCOPHANCY v2 RE-RUN (decided: fix all 3 threats in ONE re-run; evaluator resumed)
+Build syco_evalset_v2 + tweak harness:
+ (a) LEAK-FREE: drop/avoid MC content-duplication OR extend kpos cut to ALL opinion-content positions (option rows +
+     trailing letter), AND add a no-renorm "leak-to-BOS" ablation variant (don't amplify survivors). Report arith(clean)
+     vs MC(leaky) SEPARATELY — decisive sub-check (if clean-arith un-flips but MC survives, the orig negative was a leak).
+ (b) POWER: ~120 items, stronger authority/certainty framing -> baseline flip ~0.4-0.5 -> n_flip ~45-60. Recalibrate
+     effect-size bar to RELATIVE (>=50% of baseline flip removed); fix C3 to handle larger event count.
+ (c) CONSTRUCT: add an OPINION-CONTENT arm (~40 subjective-stance items, NO verifiable parametric fallback -> agreement
+     must be CONSTRUCTED from the attended opinion span -> the theory's true target). gemma-2-2b-it first; gemma-2-9b-it if borderline.
+Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free, opinion-inclusive set.
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
@@ -149,9 +174,10 @@ be too small for clean attention-routed sycophancy. Result: results/syco_phase1_
         Result -> HF fra_hier_syco/results/syco_results.json (+ rs-syco-3_run.log). Verdict baked in (ALL_CLAUSES_PASS:
         effect>=0.20, C1 revert-to-own>2x&>=40%, C3 >=60% in <=3 heads, C4 valid>=0.90 & collateral<=0.10). Orchestrator
         polling (bg bayhbewus). RESULT IN: NEGATIVE (G-post; see "SYCOPHANCY PHASE-1 RESULT"). Pod EXITED.
-        >>> FALSE-NEGATIVE RED-TEAM IN FLIGHT: Workflow wj5lfrbfa (3 lenses: statistical-power, intervention-leak, construct-and-model).
-        Evidence /tmp/syco_evidence.md + results/syco_phase1_results.json. DO NOT relaunch; await verdicts, synthesize, then
-        decide: power-boost re-run (harder/opinion items, bigger model, cut-all-opinion-positions) vs accept negative + next candidate.
+        FALSE-NEGATIVE RED-TEAM DONE (wj5lfrbfa, 3 lenses all MAJOR): negative is PREMATURE/likely-false (leak + power + construct).
+        See "SYCOPHANCY NEGATIVE — RED-TEAM VERDICT" + "SYCOPHANCY v2 RE-RUN". Verdicts: results/syco_redteam_negative.md.
+        >>> EVALUATOR RESUMED (SendMessage to a5c277aaee8b60bd2) to build syco_evalset_v2 + leak-free/opinion-arm harness + re-run.
+        DO NOT double-launch; the evaluator owns the v2 build. Orchestrator red-teams the v2 RESULT when it lands.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
