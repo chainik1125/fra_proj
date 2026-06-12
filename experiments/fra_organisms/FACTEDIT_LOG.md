@@ -87,7 +87,18 @@ partial-upload + resume-proof. Reuses the existing `fra_win/fra_bundle.tar.gz` (
 - **Run 2 (diagnostic):** pod `rs-factedit-diag-1` (`unpx2oao5z1h58`, L4), RUNID `20260612-062058`
   → `fra_org_factedit/results/20260612-062058`. `jobs/factedit_diag.py`. DONE, pod terminated.
   (Investigates a confound in run 1 — see §3.2.)
-- **Spend:** 2 × L4 pods, each ~10–15 min wall (bootstrap + run), both terminated. No idle GPU left running.
+- **Run 3 (COMPLETE TEST — red-team-corrected):** pod `rs-factedit-complete-1` (`f07xl0ppcc70v6`, L4),
+  RUNID `20260612-071132` → `fra_org_factedit/results/20260612-071132`. `jobs/factedit_complete.py`.
+  Fixes both red-team findings (full-subject-span × relation key, top-8 heads, faithful SAE feature-pair
+  cell-edit c∈{1,2,4,8}, bucket-balanced edit set in the load-bearing band P∈[0.30,0.55], reports
+  relative-drop AND argmax rank-flip AND collateral). **DONE, pod terminated. The DEFINITIVE result — see §4.**
+- **Spend:** 3 × L4 pods (~10–18 min each), all terminated. No idle GPU left running.
+
+**HEADLINE:** flagship factual-editing = **NO-GO (airtight)**. The red-team-corrected complete test (§4)
+shows the FRA cell-edit DOES reach the load-bearing full-span edge (median on-target drop 0.52, meets oracle
+70%, rank-flip 60%) but FAILS selectivity (median same-relation/diff-subject collateral **0.49**, need <15%;
+only 1/20 selective). Not a reach/G-post failure — a **D3 conjunction-recurrence (relation-keyed, not
+subject-keyed) selectivity collapse.** Do NOT proceed to the full vs-ROME/MEMIT campaign.
 
 ---
 
@@ -135,7 +146,17 @@ the flagship's biggest risk (SCREEN §3.1 "the object is recomputed in a downstr
 §6.1) — but with a sharper twist: it is recall-strength-gated, so the pre-check's own recalled-fact
 operating point sits squarely in the non-load-bearing regime.
 
-### 3.3 VERDICT
+### 3.3 VERDICT (runs 1–2) — *PREMATURE, SUPERSEDED by §4. See red-team note below.*
+
+> **RED-TEAM (3 skeptics, 2026-06-12):** this NO-GO was PREMATURE. The *operational* part is robust
+> (last-subject-token × relation at the top-3 heads genuinely can't move recalled facts — confirmed at
+> all 208 heads). BUT the FRA cell-edit was **never aimed at the load-bearing pathway**: (1) it cut the
+> LAST subject token's edge, whereas the load-bearing attention is the FULL SUBJECT TOKEN-SPAN (non-last,
+> distributed) — the all-heads full-span oracle removes the fact on 7/12 strongly-recalled facts; and
+> (2) the 28 edit facts were sorted by −p_base + capped, so ALL had P≥0.71 (saturated) — ZERO in the
+> load-bearing [0.30,0.60) band the pre-registration (P>0.3) intended. → run 3 (§4) is the fair complete test.
+
+*(retained for the record — the operational sub-claim stands, the verdict does not):*
 
 **NO-GO** — the pre-registered §6.1 flagship negative, now with a precise mechanism.
 
@@ -164,3 +185,74 @@ fact the model knows WEAKLY, vs ROME, on weak facts" — is the only version wit
 But it is a much weaker organism (weak facts are not the knowledge-editing use case ROME targets, and the
 broad×broad selectivity story is diluted), so this is a consolation experiment, not the flagship. The
 honest headline is the NO-GO bound above.
+
+---
+
+## 4. Run 3 — the FAIR COMPLETE TEST (red-team-corrected) — the DEFINITIVE result
+
+`jobs/factedit_complete.py`, pod `rs-factedit-complete-1`, RUNID `20260612-071132`. Both red-team fixes
+applied: **full-subject-span × relation key**, **top-8 extraction heads** (ranked by full-span oracle),
+**faithful SAE feature-pair cell-edit c∈{1,2,4,8}** (NOT column-zeroing), **bucket-balanced edit set in the
+load-bearing band P∈[0.30,0.55]** (no −p_base sort), keeping the same-relation/different-subject partner.
+Reports relative-drop AND argmax rank-flip AND held-out collateral. n=20 facts (P_base 0.31–0.54, 27
+relations). All ground-truth, no judge. **Pod terminated.**
+
+### 4.1 The two red-team fixes are VALIDATED — the on-target story flips
+
+- **Full-span edge IS load-bearing** (fix 1): the full-subject-span causal head-find found a strong hub
+  — anchor "HealthCap…" full-span oracle **R3=0.78**; L15H5 alone effect 0.317 (vs the pre-check's last-token
+  heads at ~0.01). Median full-span oracle R over the edit set = **0.21** (many facts 0.6–0.93).
+- **The FRA SAE feature-pair cell-edit REACHES that edge** (kills the "G-post/unreachable" reading):
+  - median FRA on-target drop per c: c1=0.08, c2=0.18, c4=0.29, **c8=0.52**.
+  - **median BEST on-target drop = 0.52** (≥50%); **frac(best≥50%) = 0.50**; **frac(meets-or-beats its own oracle) = 0.70**.
+  - **rank-flip rate = 0.60** (majority flip the argmax off the target token).
+  - per-fact highs: HealthCap 0.98 (oracle 0.82), Nissan Skyline 0.97 (0.93), Araria 0.96, Google Sites
+    0.90 (0.84), native-language-Marc-Dolez 0.84 (0.69). **The cell-edit clearly reaches the distributed
+    full-span edge where headroom exists.** → the flagship is **NOT a reach failure**.
+
+### 4.2 …but it FAILS the selectivity gate — the real, sharp result
+
+- **Held-out collateral (same-relation / different-subject) median = 0.49** (gate needs <15%). FAIL.
+- Among the 10 facts with on-target ≥0.5, **median held-out collateral = 0.59** — the SAME edit suppresses
+  a DIFFERENT subject's same-relation fact almost as much as the target fact.
+- **Only 1/20 facts** achieve a selective win (on-target ≥0.5 AND collateral <0.15: IBM Lotus Word Pro;
+  "In Portugal" is borderline at 0.15).
+
+### 4.3 VERDICT (definitive): **NO-GO — and now AIRTIGHT, for the RIGHT reason**
+
+GATES: drop≥50%-or-meets-oracle **PASS** · rank-flip-majority **PASS** · collateral<15% **FAIL** → **NO-GO**.
+
+The flagship is **not** a false-negative and **not** a reach/G-post failure. The corrected test shows the
+FRA (subject-span × relation) cell-edit *does* reach the load-bearing extraction edge and *does* remove the
+fact (≥50% on a majority, meeting the oracle headroom 70% of the time, flipping the argmax 60%). **It fails
+on SELECTIVITY**: the edit is relation-keyed, not subject-keyed — it bleeds ~49–59% onto same-relation,
+different-subject held-out facts. The (subject × relation) feature-pair support is **not subject-discriminating**;
+the discriminating endpoint behaves as a generic *relation-role*, so the edit fires on every sibling of the
+relation. This is precisely the pre-registered **D3 conjunction-recurrence failure** (SCREENING_RUBRIC Q3:
+"generic role/position discriminator → FRA fires on siblings, A→1.9× floor"; the box-retrieval sibling
+precedent), surfaced here as a direct §4 selectivity collapse rather than the reach ceiling the cheap probe
+feared.
+
+**The sharp, publishable bound (updated):** on real-LLM factual recall the (subject × relation) attention
+conjunction is REACHABLE and LOAD-BEARING but **NOT subject-selective** — the FRA cell-edit removes the fact
+with ≥50% efficacy yet pays ~50% collateral on same-relation siblings, so it cannot beat (let alone be a
+surgical alternative to) a knowledge editor's selectivity. The structurally-ideal broad×broad relation the
+synthetic predicted as the flagship WIN delivers the on-target effect but **fails the selectivity claim that
+is the entire point** (rubric §4 / §6.1). FRA controls *"attend to this relation"*, not *"recall THIS
+subject's object"*.
+
+### 4.4 Readiness for the full §4 vs-ROME/MEMIT campaign — **DO NOT PROCEED**
+
+The selectivity gate that routes that spend FAILED — and it failed on the *exact* axis the full vs-ROME test
+measures (held-out same-relation collateral). Running the full ROME/MEMIT comparison would only re-measure,
+at much higher cost, a selectivity loss already demonstrated cheaply: FRA's median same-relation collateral
+is ~0.49 at matched-ish on-target removal, whereas the whole flagship thesis required FRA collateral <5%
+(vs ROME's predicted ≥15%). **The pre-check has done its job: it is a NO-GO, and the full campaign is not
+warranted.** The deliverable is the sharp negative bound in §4.3 (a clean, pre-registered §6.1 falsifier:
+the broad×broad selectivity advantage does NOT transfer to real factual recall — the conjunction is
+relation-recurrent, not subject-unique).
+
+*Optional, NOT auto-run (PLANNING's call):* if any vs-ROME number is still wanted for the writeup, the
+single cheapest informative add is to confirm ROME/MEMIT IS subject-selective on this same 20-fact set
+(expected: yes), making the contrast "FRA reaches the edge but is relation-recurrent; ROME is
+subject-selective" — but that is a one-sided confirmation of the loss, not a live win path.
