@@ -58,9 +58,13 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   agents on opus 4.8. Commit after every step. Update RESUME STATE every step.
 
 ## RESUME STATE (canonical)
-- PHASE A IN FLIGHT (2026-06-11): two front agents running (parallel, independent):
-    LIT-REVIEW agent id a0d7585cd8b676f5a -> experiments/fra_organisms/ORGANISMS.md (cited organism catalog).
-    THEORY agent     id a8628cfc75d2a200c -> experiments/fra_organisms/SCREENING_RUBRIC.md (operational FRA-cuttability rubric).
+- PHASE A DONE: ORGANISMS.md (lit-review a0d7585cd8b676f5a) + SCREENING_RUBRIC.md (theory a8628cfc75d2a200c) written + committed.
+  Lit-review top-5: (1) factual-assoc editing [flagship], (2) prompt-injection, (3) copy-suppression L10H7 [measured 22.7x win
+  — VERIFY it's a fresh FRA-decomposition contribution not a re-run of fra_win], (4) induction/backdoor, (5) sycophancy
+  attend-to-doubt edge [arXiv 2601.16644 CONTRADICTS prior G-post verdict — sharp re-test]. Rubric flagship prediction = factual editing WIN.
+- PHASE B IN FLIGHT: APPLICATION/SCREEN agent id a5f0a5c3851a1c784 -> SCREEN.md (score all organisms on rubric, rank, concrete
+  experiment proposals for top 2-3 + #1 recommendation + go/no-go pre-check). 
+- NEXT (cron C): when SCREEN.md lands -> PLANNING picks top 1-2 -> EVALUATOR builds+runs (ground-truth + selectivity-vs-baseline). Then RED-TEAM (symmetric) -> PLANNING synth.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
