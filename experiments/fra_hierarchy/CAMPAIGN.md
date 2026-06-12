@@ -183,6 +183,10 @@ Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free
         effect-size bar. Result -> HF fra_hier_syco/results/syco_v2_results.json (+ rs-syco-v2-1_run.log). Orchestrator polling.
         DECISIVE READ: opinion-arm (no parametric fallback) edge-cut -> de-sycophant+localize = WIN (G-score); survives = real G-post.
         Also: clean-arith un-flips vs leaky-MC = was the v1 negative a leak artifact? DO NOT relaunch; red-team the v2 result.
+        [tick ~19:35] v2 pod up ~20min, GPU util 30% (ACTIVE, not dead), but periodic HF log-upload lagging (v2 run is bigger:
+        128 items x3 x2 ablate modes + 208-head find -> legitimately slow). Final upload delivers log+result together. Two polls
+        armed: be93cmj3g (log/DONE) + bvt05npe1 (result-json done:true OR pod-EXITED-without-result = diagnose upload failure).
+        If next tick shows pod EXITED with NO result on HF -> the upload path failed; diagnose (HF auth/herd) + may need relaunch.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
