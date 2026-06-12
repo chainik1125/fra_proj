@@ -157,6 +157,23 @@ Build syco_evalset_v2 + tweak harness:
      must be CONSTRUCTED from the attended opinion span -> the theory's true target). gemma-2-2b-it first; gemma-2-9b-it if borderline.
 Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free, opinion-inclusive set.
 
+## SYCOPHANCY v2 RESULT (2026-06-11): NEGATIVE (leak-free, opinion-construct) — sycophancy is G-POST on gemma-2-2b-it
+Leak-fixed (multi-span cut, n_span=7) + opinion arm + both renorm & BOS modes + relative effect-size bar. Self-test passed.
+PER-ARM under full edge-cut (answer->opinion-content, top-12 heads):
+ - OPINION (decisive, theory's target): flip 0.27 -> 0.27. **EXACTLY 0% reduction across ALL alphas AND BOTH modes.**
+   Cutting the opinion-content edge does NOTHING to opinion sycophancy. revert 0.68, collateral 0.81->0.78. => G-POST.
+ - MC: 0.22 -> 0.19 (12.5% rel drop, FAILS effect-size). IDENTICAL renorm vs BOS -> v1's MC survival was NOT the leak
+   (the complete multi-span leak-free cut does NOT recover MC). So the v1 leak threat existed but fixing it didn't flip MC.
+ - ARITH: -> 0 (100%) but baseline 0.04 = n~2 flipped = STATISTICALLY MEANINGLESS.
+ - C3 localization "passes" (0.71, layer-6 cluster) but this is a RED HERRING: localized heads un-flip a few items while the
+   AGGREGATE opinion flip is unmoved (0%). Localization without effect size = no FRA target.
+VERDICT: properly powered + leak-free + right construct => sycophancy on gemma-2-2b-it is G-POST. Edge-cut doesn't de-sycophant.
+RESIDUAL VALIDITY THREAT (orchestrator caught, to red-team): the opinion cut removes only the stance-assertion span
+("Python is better") but LEAVES (a) the authority/deference cue ("My professor...is certain...never wrong") and (b) the
+content word "Python" in the QUESTION stem. So 0% drop is consistent with G-post OR with an INCOMPLETE cut (model re-derives
+the stance from surviving deference framing). Same incompleteness class as the v1 MC leak. -> red-team this before filing.
+Result: results/syco_v2_results.json. Pod rs-syco-v2-2 EXITED.
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
@@ -199,6 +216,8 @@ Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free
         maximally-diffuse 0.50 FAIL -> the leak fix CHANGED localization = hint v1 negative was partly the predicted leak artifact.
         Phase1b curves (per-arm effect size + renorm-vs-bos + C1 + LEAK_SUBCHECK + verdict_by_arm.opinion) still running. Poll bufj0u2uf
         for done=True. DECISIVE FIELDS (evaluator): LEAK_SUBCHECK + verdict_by_arm.opinion. Then red-team the full verdict.
+        [tick ~20:45] v2 DONE (pod EXITED). RESULT = NEGATIVE/G-POST (opinion arm 0% drop both modes; MC 12.5%; see "SYCOPHANCY v2 RESULT").
+        NEXT: red-team the residual opinion-cut-completeness threat; then decide gemma-9b lever vs next candidate (refusal/format) vs synthesize.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
