@@ -70,3 +70,19 @@ STATUS: LEAD of the three basis-attacks (B2 model-diff vs B1 weight-sparse vs hi
  Decision point: weigh the three once the hiersae verdict lands.
 
 ### (future entries appended here)
+
+### B3. MEAN-FIELD / CONDENSATE FRA (PI, 2026-06-12) — a 3rd, distinct attack on the d_sae^2 diffuseness (THEORY thread, agent running)
+IDEA (PI, "wackier"): instead of the diffuse microscopic d_sae^2 cell decomposition, for a BEHAVIOR B define the AVERAGE
+(mean-field) QK structure and seek EFFECTIVE CONDENSATE DIRECTIONS — a few collective (effective query-dir × key-dir) modes
+W_QK^eff = Σ_a λ_a |q_a><k_a| capturing B's attention COLLECTIVELY even though microscopic cells are diffuse. Intervene on a
+condensate mode (low-rank bilinear W_QK edit), not microscopic cells. = FRA's bilinear QK intervention in a CLEAN LOW-D
+EFFECTIVE basis instead of the diffuse SAE-feature basis. DISTINCT from model-diff (which selects a discrete feature subspace);
+could COMPOSE with it (mean-field over a diff-basis) or be an RG/coarse-graining over the d_sae^2 cells.
+THE TWO DECISIVE QUESTIONS (the agent must stress-test, not assume): (a) DOES A CONDENSATE EMERGE? — rests on the behavior-
+averaged QK being genuinely LOW-RANK (few modes); if diffuseness survives averaging (high-rank on average) it fails. (b)
+BILINEAR vs LINEAR-COLLAPSE — a condensate reducible to a residual direction is just LINEAR STEERING (which FRA does NOT beat);
+only interesting if irreducibly BILINEAR (edits the attention INTERACTION, more selective than any residual edit). Plus the
+AVERAGING TRAP: per-instance behaviors (binding) can CANCEL under naive averaging -> need an aligned/conditioned frame.
+STATUS: THEORY agent a8d5df42fc0010630 -> experiments/fra_meanfield/THEORY.md (precise formulation; does-it-condense + is-it-
+bilinear verdict; relation to model-diff/hierarchical/prior low-rank-attention work; a synth_hier2/induction falsifiable test;
+honest is-it-worth-running). Parked-as-theory; if the agent finds it sound + likely-to-condense -> a cheap synthetic test next.
