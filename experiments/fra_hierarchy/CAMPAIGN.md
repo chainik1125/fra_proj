@@ -187,6 +187,13 @@ Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free
         128 items x3 x2 ablate modes + 208-head find -> legitimately slow). Final upload delivers log+result together. Two polls
         armed: be93cmj3g (log/DONE) + bvt05npe1 (result-json done:true OR pod-EXITED-without-result = diagnose upload failure).
         If next tick shows pod EXITED with NO result on HF -> the upload path failed; diagnose (HF auth/herd) + may need relaunch.
+        [tick ~19:55] v2-1 died post-load; evaluator stall-monitor relaunched as rs-syco-v2-2 (sto730b1v774ft, RUNNING, no double-spend).
+        v2 SELF-TEST PASSED (off==empty neutral, liveness dlogit=20.4, n_span=7 = multi-span leak fix ACTIVE). result-json uploads OK
+        (log lags, irrelevant). BASELINE BY ARM (n_competent 121/128): arith flip 0.042 (n48, ~2 flipped -> arith leak-subcheck DEAD,
+        gemma won't flip arithmetic even authority-framed), mc flip 0.222 (~8), OPINION flip 0.270 (n37, ~10 flipped = THE decisive
+        G-score/G-post arm). Power still modest (~20 total flipped; opinion ~10) — below the 0.4-0.5 target; gemma-2b just isn't very
+        sycophantic. READ PLAN: opinion-arm edge-cut de-sycophant+localize = WIN; survives = G-post. If borderline at n~10 -> gemma-2-9b-it
+        is the power/model-size lever (evaluator noted). Run in expensive head-find now; poll bvt05npe1 keys on result-json done=True.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
