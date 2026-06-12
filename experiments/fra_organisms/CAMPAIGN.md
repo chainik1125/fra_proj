@@ -79,8 +79,16 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
     PLANNING agent a7ca331286c933824 -> PLANNING.md (synthesize state + DECIDE next: prompt-injection T2 vs weak-fact salvage vs
     consolidate; + the cheapest go/no-go pre-check for the pick). Key new refinement = "load-bearing on the OPERATING REGIME" is a
     5th necessary condition beyond G-score (a structurally-ideal G-score relation can still be redundant where it matters).
-- NEXT: synthesize red-team + planning -> act on planning's decision (likely prompt-injection pre-check, IF its injected-instruction
-  edge is load-bearing unlike the recalled-fact edge) OR consolidate. Then loop or write SYNTHESIS.
+- PHASE D DONE (planning): PLANNING.md decision = run the injection load-bearing pre-check, THEN consolidate. Injection != flagship
+  (no parametric backstop for the novel injected string -> attending its span is load-bearing BY CONSTRUCTION). New theory: "load-
+  bearing on the OPERATING REGIME" = 5th necessary condition (regime-conditional redundancy). Honest framing: FRA niche NARROW
+  (load-bearing attention edge over attended context w/ no MLP backstop = induction/copy/backdoor/retrieval 15x-26000x; NOT factual recall).
+- PHASE E IN FLIGHT: EVALUATOR(2) id a6c6439a53aaf3f44 -> injection GO/NO-GO pre-check (judge-free exact-match canary, ASR~1
+  operating point, oracle-cut FIRST for LBNR ceiling). GO iff (i) oracle injection-drop R>=0.5 not-restored AND (ii) legit-instruction
+  within 10% AND (iii) FRA cell >=50% of oracle. Pod rs-injection-precheck-1, HF fra_org_injection/. Log -> INJECTION_LOG.md.
+  Also: factual-edit RED-TEAM w0vsbhiwa still in flight (fold its verdict in when it lands; planning says it won't overturn the saturation finding).
+- NEXT: read injection verdict + factedit red-team. GO-injection -> the candidate WIN (full §4 selectivity vs linear+hardening, then red-team).
+  NO-GO-injection -> CONSOLIDATE (write SYNTHESIS: synthetic positive + EM/syco/factedit/injection negatives + methodology + 5th-condition theory).
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
