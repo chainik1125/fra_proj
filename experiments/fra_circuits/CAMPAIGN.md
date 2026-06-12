@@ -67,6 +67,13 @@ C: EVALUATOR runs FRA QK decomp on that circuit (faithfulness FIRST, then the "a
   29/29 content-not-position) -> FRA resolved the lexical-vs-positional question (A2) + the cell-cut-vs-head-ablation is the A3 example.
   SELECTIVITY WIN-TEST IN FLIGHT: eval a568274a1cfbbcce5 -> rs-binding-selectivity-1 (FRA cell-cut vs best-tuned linear + head-ablation
   on intra-instance sibling control; WIN = >=2x lower sibling-collateral at matched target-suppression). FRA oracle sib-collateral floor ~0.1%.
-- NEXT: (a) read binding selectivity WIN/NULL -> commit + (if WIN) symmetric false-positive red-team. (b) when CIRCUITS.md lands -> EVALUATOR
-  FRA QK decomp on circuit #1 (induction = faithfulness anchor) -> "FRA adds X" + A3 -> red-team. Loop to 3-5 circuits -> SYNTHESIS_CIRCUITS.
+- PHASE A DONE: CIRCUITS.md (a2c3428292e0513fd) — 5 circuits ranked: #0 binding(done), #1 induction L5H5 gpt2 (faithfulness anchor),
+  #2 IOI (S-inhibition QK = name-id vs position vs dup-token?), #3 docstring (A1 double-dissoc + A4 reuse), #4 greater-than (MLP neg control).
+  ALL on gpt2-small+res-jb (reuse j1_induction_explore/j2_selectivity/j13_ioi/g_screen).
+- PHASE C IN FLIGHT (two parallel threads):
+  (1) CIRCUIT #1 INDUCTION FAITHFULNESS ANCHOR: eval a74e9bdea1afb47ab -> rs-circ-induction-1 (gpt2-small). Reconstruct the induction QK:
+      R^2>=0.7 + dominant cell = SELF/token-match (NOT positional/sink) + A3 cell-cut-vs-head-ablation selectivity. PASS = decomp trustworthy
+      -> green-light IOI. FAIL = decomp unreliable on a known-simple QK -> STOP (most important possible result). Log -> INDUCTION_LOG.md.
+  (2) BINDING SELECTIVITY win-test (circuit #0 A3): eval a568274a1cfbbcce5 -> rs-binding-selectivity-1 (FRA cell-cut vs best-tuned linear + head-ablation; WIN=>=2x).
+- NEXT: read induction faithfulness PASS/FAIL + binding selectivity WIN/NULL. If induction PASS -> EVALUATOR circuit #2 IOI. If binding WIN -> symmetric false-positive red-team. Then loop.
 - Builds on: fra_win/ (FRA toolkit + j13_ioi + g_screen), fra/ module, fra_organisms2/ (binding circuit #0), v1 boundary-map theory.
