@@ -70,6 +70,60 @@ class TopKSAE(nn.Module):
         self._normalize_decoder()
 
 
+class MatryoshkaSAE(TopKSAE):
+    """Plain (single-token) prefix-nested TopK SAE.
+
+    Coarse features = low-index channels ``[0:w0]``; fine = the rest.
+    Trained so EVERY prefix width ``w`` in ``matryoshka_widths`` reconstructs x
+    (nested dictionary). TopK is applied to the FULL latent (as in
+    :class:`MatryoshkaTemporalCrosscoder`); the prefix loss reuses the same z.
+
+    This is the single-token analogue of
+    :class:`MatryoshkaTemporalCrosscoder` with the time index dropped.
+    """
+
+    def __init__(
+        self,
+        d_in: int,
+        d_sae: int,
+        k: int,
+        matryoshka_widths: list[int] | None = None,
+        inner_weight: float = 1.0,
+        use_relu: bool = True,
+    ):
+        super().__init__(d_in=d_in, d_sae=d_sae, k=k, use_relu=use_relu)
+        if matryoshka_widths is None:
+            widths = []
+            w = 4
+            while w < d_sae:
+                widths.append(w)
+                w *= 2
+            widths.append(d_sae)
+            self.matryoshka_widths = widths
+        else:
+            self.matryoshka_widths = sorted(set(list(matryoshka_widths) + [d_sae]))
+        self.inner_weight = inner_weight
+
+    def _decode_prefix(self, z: torch.Tensor, w: int) -> torch.Tensor:
+        """Decode using only the first ``w`` latents (the prefix dictionary)."""
+        return z[:, :w] @ self.W_dec[:w, :] + self.b_dec
+
+    def compute_loss(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        z = self.encode(x)
+        full = (x - self.decode(z)).pow(2).sum(dim=-1).mean()
+        per_width = {self.matryoshka_widths[-1]: full.item()}
+        inner = []
+        for w in self.matryoshka_widths[:-1]:
+            r = (x - self._decode_prefix(z, w)).pow(2).sum(dim=-1).mean()
+            inner.append(r)
+            per_width[w] = r.item()
+        if inner:
+            total = (full + self.inner_weight * sum(inner) / len(inner)) / (1.0 + self.inner_weight)
+        else:
+            total = full
+        return total, {"total_loss": total.item(), "full_recon": full.item(), "per_width": per_width}
+
+
 class TemporalCrosscoder(nn.Module):
     """Shared-latent temporal crosscoder (ckkissane-style).
 

@@ -1,0 +1,266 @@
+{
+  "config": {
+    "alphas": [
+      0.5,
+      0.7,
+      0.8,
+      0.9
+    ],
+    "superpos": [
+      1
+    ],
+    "seeds": [
+      0
+    ],
+    "steps": 10000,
+    "n_train": 4000,
+    "m_coarse": 16,
+    "m_sae": 256,
+    "k_topk": 8,
+    "inner_weight": 4.0,
+    "c_anchor": 0.0
+  },
+  "cells": [
+    {
+      "alpha": 0.5,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 28,
+      "on_mass": 0.2811791880932499,
+      "rho": 0.10370524972677231,
+      "fvu_flat": 0.04129238049615949,
+      "fvu_matry": 0.07368466559169368,
+      "dead_flat": 0.0,
+      "dead_matry": 0.00390625,
+      "recovery": {
+        "leafcos_flat_min": 0.9748416543006897,
+        "leafcos_flat_mean": 0.985888883471489,
+        "coarseC_flat_cos": 0.4986724853515625,
+        "coarseC_matry_cos": 0.5028838515281677,
+        "coarseD_matry_cos": 0.9061179757118225,
+        "coarse_C_idx": 2,
+        "coarse_D_idx": 3,
+        "recovery_matry_pass": false,
+        "flat_drift_pass": true
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 0.670789845943948,
+        "frac_coarse_fine": 0.07893235632897806,
+        "frac_fine_coarse": 0.22450047932521758,
+        "frac_fine_fine": 0.025777318401856392
+      },
+      "coarse_cut": {
+        "R_coarse_only": 0.1823496027775647,
+        "R_coarse_plus_cross": 0.930401817430349,
+        "R_full_union_m": 0.9325326492819187,
+        "R_full_union_f": 0.9538499816685468,
+        "R_oracle": 1.1882024207012394,
+        "residual_coarse": 0.750183046504354,
+        "carry_coarse": 0.1955423254274046
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 0.125,
+        "top1_coverage_matry": 0.25,
+        "n_cells_for_90_flat": 7
+      },
+      "control": {
+        "collat_coarse": 0.027270943676912112,
+        "collat_union_matry": 0.048416853030933134,
+        "R_emb": 1.2439453726698164,
+        "collat_emb": 0.971456176290063,
+        "spec_ratio": 35.62238944860968
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": false,
+        "flat_drift": true,
+        "full_union_ge_oracle": true
+      }
+    },
+    {
+      "alpha": 0.7,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 20,
+      "on_mass": 0.4275524299301678,
+      "rho": 0.1079338863492012,
+      "fvu_flat": 0.04164129985299354,
+      "fvu_matry": 0.07515569810821045,
+      "dead_flat": 0.0,
+      "dead_matry": 0.01953125,
+      "recovery": {
+        "leafcos_flat_min": 0.9541009068489075,
+        "leafcos_flat_mean": 0.9680686965584755,
+        "coarseC_flat_cos": 0.6486542820930481,
+        "coarseC_matry_cos": 0.8308853507041931,
+        "coarseD_matry_cos": 0.9415762424468994,
+        "coarse_C_idx": 5,
+        "coarse_D_idx": 12,
+        "recovery_matry_pass": true,
+        "flat_drift_pass": true
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 0.9124251475521321,
+        "frac_coarse_fine": 0.0,
+        "frac_fine_coarse": 0.0875748524478679,
+        "frac_fine_fine": 0.0
+      },
+      "coarse_cut": {
+        "R_coarse_only": 1.0912887536946911,
+        "R_coarse_plus_cross": 1.1599841315532624,
+        "R_full_union_m": 1.1599841315532624,
+        "R_full_union_f": 0.9295862662528783,
+        "R_oracle": 1.1291202749207787,
+        "residual_coarse": 0.06869537785857127,
+        "carry_coarse": 0.9407790365489004
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 0.125,
+        "top1_coverage_matry": 1.0,
+        "n_cells_for_90_flat": 8
+      },
+      "control": {
+        "collat_coarse": 0.7309901167547146,
+        "collat_union_matry": 0.8239802941384938,
+        "R_emb": 1.103278630251202,
+        "collat_emb": 0.9938063921446626,
+        "spec_ratio": 1.359534649465222
+      },
+      "verdict": "FALSIFY",
+      "gates": {
+        "recovery_matry": true,
+        "flat_drift": true,
+        "full_union_ge_oracle": true
+      }
+    },
+    {
+      "alpha": 0.8,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 20,
+      "on_mass": 0.5222033174526594,
+      "rho": 0.11056245863437653,
+      "fvu_flat": 0.04134604945758937,
+      "fvu_matry": 0.07351143512054845,
+      "dead_flat": 0.0,
+      "dead_matry": 0.0390625,
+      "recovery": {
+        "leafcos_flat_min": 0.8025917410850525,
+        "leafcos_flat_mean": 0.8191701620817184,
+        "coarseC_flat_cos": 0.9521390795707703,
+        "coarseC_matry_cos": 0.8937948942184448,
+        "coarseD_matry_cos": 0.9411471486091614,
+        "coarse_C_idx": 2,
+        "coarse_D_idx": 12,
+        "recovery_matry_pass": true,
+        "flat_drift_pass": false
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 1.0,
+        "frac_coarse_fine": 0.0,
+        "frac_fine_coarse": 0.0,
+        "frac_fine_fine": 0.0
+      },
+      "coarse_cut": {
+        "R_coarse_only": 1.179051255928074,
+        "R_coarse_plus_cross": 1.179051255928074,
+        "R_full_union_m": 1.179051255928074,
+        "R_full_union_f": 1.0182381637116833,
+        "R_oracle": 1.1567296791827746,
+        "residual_coarse": 0.0,
+        "carry_coarse": 1.0
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 1.0,
+        "top1_coverage_matry": 1.0,
+        "n_cells_for_90_flat": 3
+      },
+      "control": {
+        "collat_coarse": 1.641682394138559,
+        "collat_union_matry": 1.641682394138559,
+        "R_emb": 1.0785943966557185,
+        "collat_emb": 0.9876206282787424,
+        "spec_ratio": 0.6015905584447576
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": true,
+        "flat_drift": false,
+        "full_union_ge_oracle": true
+      }
+    },
+    {
+      "alpha": 0.9,
+      "superpos": 1,
+      "seed": 0,
+      "sig": 15,
+      "on_mass": 0.6311929258487354,
+      "rho": 0.11340305954217911,
+      "fvu_flat": 0.04121250344624679,
+      "fvu_matry": 0.06958424507948743,
+      "dead_flat": 0.0,
+      "dead_matry": 0.05078125,
+      "recovery": {
+        "leafcos_flat_min": 0.8879567384719849,
+        "leafcos_flat_mean": 0.903652124106884,
+        "coarseC_flat_cos": 0.9784510135650635,
+        "coarseC_matry_cos": 0.9472464323043823,
+        "coarseD_matry_cos": 0.8187485337257385,
+        "coarse_C_idx": 2,
+        "coarse_D_idx": 12,
+        "recovery_matry_pass": true,
+        "flat_drift_pass": false
+      },
+      "level_spreading": {
+        "frac_coarse_xx": 1.0,
+        "frac_coarse_fine": 0.0,
+        "frac_fine_coarse": 0.0,
+        "frac_fine_fine": 0.0
+      },
+      "coarse_cut": {
+        "R_coarse_only": 1.0582441837294034,
+        "R_coarse_plus_cross": 1.0582441837294034,
+        "R_full_union_m": 1.0582441837294034,
+        "R_full_union_f": 1.1543191976041118,
+        "R_oracle": 1.174850311885424,
+        "residual_coarse": 0.0,
+        "carry_coarse": 1.0
+      },
+      "detection": {
+        "det_auroc_flat": 1.0,
+        "det_auroc_matry": 1.0
+      },
+      "localization": {
+        "top1_coverage_flat": 1.0,
+        "top1_coverage_matry": 1.0,
+        "n_cells_for_90_flat": 1
+      },
+      "control": {
+        "collat_coarse": 1.550806558255071,
+        "collat_union_matry": 1.550806558255071,
+        "R_emb": 1.0158184216434676,
+        "collat_emb": 0.9667910426058178,
+        "spec_ratio": 0.6234117578749648
+      },
+      "verdict": "GATE-FAIL",
+      "gates": {
+        "recovery_matry": true,
+        "flat_drift": false,
+        "full_union_ge_oracle": true
+      }
+    }
+  ],
+  "done": true
+}

@@ -1,0 +1,42 @@
+[hiersae] sweep: alphas=[0.4, 0.5, 0.6, 0.7] superpos=[1] seeds=[0, 1] steps=8000 m_coarse=16 m_sae=256 k=8
+   [flat a0.4s1r0] step 0 loss=1.2593
+   [flat a0.4s1r0] step 4000 loss=0.0712
+   [matry a0.4s1r0] step 0 loss=1.6636
+   [matry a0.4s1r0] step 4000 loss=1.0192
+[cell] a=0.4 sp=1 seed=0 -> GATE-FAIL | fcx=0.00 resid=0.19 R_co=0.00 R_full=0.19 R_orc=1.15 top1f=0.12 top1m=0.00 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': False} (173s)
+   [flat a0.4s1r1] step 0 loss=1.2499
+   [flat a0.4s1r1] step 4000 loss=0.0742
+   [matry a0.4s1r1] step 0 loss=1.6462
+   [matry a0.4s1r1] step 4000 loss=1.0475
+[cell] a=0.4 sp=1 seed=1 -> GATE-FAIL | fcx=0.53 resid=0.37 R_co=0.37 R_full=0.73 R_orc=0.63 top1f=0.12 top1m=0.88 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': True} (373s)
+   [flat a0.5s1r0] step 0 loss=1.2594
+   [flat a0.5s1r0] step 4000 loss=0.0722
+   [matry a0.5s1r0] step 0 loss=1.6608
+   [matry a0.5s1r0] step 4000 loss=1.0029
+[cell] a=0.5 sp=1 seed=0 -> GATE-FAIL | fcx=0.63 resid=0.39 R_co=0.41 R_full=0.80 R_orc=1.08 top1f=0.12 top1m=0.88 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': True} (563s)
+   [flat a0.5s1r1] step 0 loss=1.2491
+   [flat a0.5s1r1] step 4000 loss=0.0740
+   [matry a0.5s1r1] step 0 loss=1.6462
+   [matry a0.5s1r1] step 4000 loss=1.0294
+[cell] a=0.5 sp=1 seed=1 -> GATE-FAIL | fcx=0.63 resid=0.44 R_co=0.22 R_full=0.66 R_orc=0.64 top1f=1.00 top1m=0.75 gates={'recovery_matry': False, 'flat_drift': False, 'full_union_ge_oracle': True} (882s)
+   [flat a0.6s1r0] step 0 loss=1.2588
+   [flat a0.6s1r0] step 4000 loss=0.0715
+   [matry a0.6s1r0] step 0 loss=1.6606
+   [matry a0.6s1r0] step 4000 loss=0.9841
+[cell] a=0.6 sp=1 seed=0 -> GATE-FAIL | fcx=0.84 resid=0.09 R_co=0.91 R_full=1.00 R_orc=1.06 top1f=0.12 top1m=1.00 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': True} (1156s)
+   [flat a0.6s1r1] step 0 loss=1.2481
+   [flat a0.6s1r1] step 4000 loss=0.0739
+   [matry a0.6s1r1] step 0 loss=1.6453
+   [matry a0.6s1r1] step 4000 loss=1.0120
+[cell] a=0.6 sp=1 seed=1 -> GATE-FAIL | fcx=0.85 resid=0.11 R_co=0.71 R_full=0.83 R_orc=0.70 top1f=1.00 top1m=1.00 gates={'recovery_matry': True, 'flat_drift': False, 'full_union_ge_oracle': True} (1402s)
+   [flat a0.7s1r0] step 0 loss=1.2577
+   [flat a0.7s1r0] step 4000 loss=0.0710
+   [matry a0.7s1r0] step 0 loss=1.6606
+   [matry a0.7s1r0] step 4000 loss=0.9558
+[cell] a=0.7 sp=1 seed=0 -> GATE-FAIL | fcx=0.96 resid=0.01 R_co=1.06 R_full=1.07 R_orc=1.09 top1f=1.00 top1m=1.00 gates={'recovery_matry': True, 'flat_drift': False, 'full_union_ge_oracle': True} (1637s)
+   [flat a0.7s1r1] step 0 loss=1.2465
+   [flat a0.7s1r1] step 4000 loss=0.0743
+   [matry a0.7s1r1] step 0 loss=1.6439
+   [matry a0.7s1r1] step 4000 loss=0.9877
+[cell] a=0.7 sp=1 seed=1 -> GATE-FAIL | fcx=0.93 resid=0.02 R_co=0.58 R_full=0.60 R_orc=0.80 top1f=1.00 top1m=1.00 gates={'recovery_matry': True, 'flat_drift': False, 'full_union_ge_oracle': True} (1885s)
+[hiersae] DONE 8 cells in 1887s

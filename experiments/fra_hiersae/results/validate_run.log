@@ -1,0 +1,12 @@
+[hiersae] sweep: alphas=[0.4, 0.7] superpos=[1] seeds=[0] steps=5000 m_coarse=16 m_sae=256 k=8
+   [flat a0.4s1r0] step 0 loss=1.2577
+   [flat a0.4s1r0] step 4000 loss=0.0712
+   [matry a0.4s1r0] step 0 loss=1.5626
+   [matry a0.4s1r0] step 4000 loss=0.7998
+[cell] a=0.4 sp=1 seed=0 -> GATE-FAIL | fcx=0.52 resid=0.32 R_co=0.37 R_full=0.69 R_orc=1.15 top1f=0.12 top1m=0.75 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': False} (206s)
+   [flat a0.7s1r0] step 0 loss=1.2593
+   [flat a0.7s1r0] step 4000 loss=0.0716
+   [matry a0.7s1r0] step 0 loss=1.5640
+   [matry a0.7s1r0] step 4000 loss=0.7509
+[cell] a=0.7 sp=1 seed=0 -> GATE-FAIL | fcx=0.98 resid=0.01 R_co=1.11 R_full=1.12 R_orc=1.09 top1f=1.00 top1m=1.00 gates={'recovery_matry': True, 'flat_drift': False, 'full_union_ge_oracle': True} (361s)
+[hiersae] DONE 2 cells in 364s

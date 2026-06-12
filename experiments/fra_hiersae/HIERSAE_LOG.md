@@ -115,3 +115,68 @@ READ-OFF (finalized):
    higher-hierarchy-cells problem remains UNTESTED (needs a regime with recovery AND drift, which the coupling forbids).
 VERDICT (final, pre-red-team): CONFIRM — naive hierarchical SAE does not fix FRA drift — via RECOVERY FAILURE
 (variance-nesting), with a narrow transition band where it partially helps. Now to the symmetric red-team.
+
+## ORCHESTRATOR CORRECTION (2026-06-12, on reading the evaluator addendum below): my "DECOUPLING IS SELF-DEFEATING /
+## coupling is fundamental" claim above is PARTIALLY WRONG.
+The evaluator's C_ANCHOR=0, α=0.7 cell empirically breaks the coupling: the flat SAE still DRIFTS (the concept is
+realized PURELY through leaves, never standalone -> flat ABSORBS it into leaf atoms, Chanin-style) while the Matryoshka
+prefix DOES recover coarse-C (0.831 vs flat 0.649 — the only genuine recovery advantage found anywhere). My argument
+("a recoverable concept would be USED by the flat SAE -> no drift") conflated recoverable-IN-PRINCIPLE with
+recovered-BY-FLAT: recovery via a CAPACITY-CONSTRAINED bottleneck is exactly what the Matryoshka prefix adds, and the
+absorption regime (no standalone emission + strong shared structure) is where it bites. The coupling I proved holds for
+the c_anchor>0 family only. Consequences: (i) the dual-gate regime EXISTS -> the predicted level-spreading mechanism IS
+testable (and FALSIFIES there, see below); (ii) my v3 "CONFIRM via recovery failure" stands in the drift zone (α≤0.6,
+corroborated by the evaluator's IW≤16/15k plateau) but is NOT the whole story; (iii) the consolidated verdict is the
+evaluator's two-mechanism CONFIRM below, which supersedes my single-mechanism §VERDICT above.
+
+## EVALUATOR ADDENDUM (independent run, 2026-06-12) — the C_ANCHOR=0 cell that PARTIALLY breaks the coupling + tests the predicted mechanism
+
+I (evaluator) independently rebuilt + ran the harness and converge on the orchestrator's verdict. Two contributions
+that SHARPEN point 4 ("the recovery+drift regime the coupling forbids") and the recovery-failure-is-fundamental claim:
+
+### (A) Recovery failure in the drift zone is FUNDAMENTAL, not under-training (settles the v3 question definitively)
+Standalone prefix-pressure probes (no c_anchor, single Matryoshka, vary inner_weight/steps), coarseC_matry |cos|:
+  - α=0.5: IW=1→4→16, steps 8k→15k, m_coarse 8/16  →  cos = 0.51 / 0.53 / 0.55  (PLATEAU, never ≥0.8)
+  - α=0.6: IW=2→8→16, 10k–15k steps                →  cos = 0.63 / 0.63 / 0.60  (PLATEAU)
+  - α=0.7: IW=1                                      →  cos = 0.91  (recovers easily)
+The orchestrator's IW=8/α=0.5 cell (coarseC=0.54) is corroborated at IW up to 16 / 15k steps. CONCLUSION: in the drift
+zone the prefix CANNOT extract a clean coarse-C from leaves that are only 50–60% C — a structural property of the
+nesting (variance-nested concept), confirming the orchestrator's "RECOVERY FAILURE" mechanism is real, not a knob.
+
+### (B) The ONE cell where recovery AND drift coexist (C_ANCHOR=0, α=0.7): clean removal but FAILS the control/specificity axis
+Dropping c_anchor to 0 (concept realized PURELY through drifting leaves) partially decouples the two: at α=0.7 the flat
+SAE still DRIFTS (top1_cov_flat=0.125, n_cells_for_90=8 — reproduces gpt2's 0.32/8 with ground truth) while the
+Matryoshka prefix STILL recovers coarse-C (cos=0.831, vs flat coarseC=0.649 — a GENUINE Matryoshka recovery advantage,
+the only such cell found). In that cell the predicted higher-hierarchy-cells / level-spreading mechanism CAN finally be
+read. Result (results/hiersae_results_eval_noanchor.json, α=0.7):
+  - LEVEL-SPREADING: frac_coarse_xx=0.912, coarse×fine=0, fine×coarse=0.088, fine×fine=0  → score CONCENTRATES on the
+    coarse cell (NOT split across levels) → on the level-spreading criterion this is FALSIFY, not CONFIRM.
+  - COARSE-CUT (causal): R_coarse_only=1.09, R_full_union=1.16, R_oracle=1.13 → resid_coarse=0.07, carry_coarse=0.94,
+    top1_cov_matry=1.00 → the single coarse cell removes the drifting association CLEANLY (FALSIFY on removal).
+  - BUT CONTROL/SPECIFICITY FAILS: collat_coarse=0.731 vs collat_emb=0.994 → spec_ratio=1.36 only (cf. the gpt2
+    flat-FRA ablate_over_fra≈1995×). At α=0.7 the coarse concept is shared across domains, so cutting the coarse cell
+    BLEEDS onto C's other uses → NOT association-specific → the "position-invariant AND specific" empty corner is STILL
+    NOT reached.
+  → In the sole recovery+drift cell the verdict is a SPLIT: FALSIFY on the higher-hierarchy-cells mechanism (no
+    level-spreading, clean single-cell removal) but the hierarchical-SAE win is STILL not clean because it sacrifices
+    SPECIFICITY (high collateral). So even where the predicted mechanism is absent, the broader PI hope ("one cell,
+    position-invariant AND specific") FAILS — via a DIFFERENT failure (shared-concept collateral), not level-spreading.
+
+### CONSOLIDATED EVALUATOR VERDICT (agrees with orchestrator, two-mechanism CONFIRM)
+The pre-registered prediction CONFIRMS — the naive hierarchical SAE + FRA does NOT deliver a clean position-invariant +
+association-specific single-cell cut — but via TWO mechanisms that the toy cleanly separates by regime, NEITHER of which
+is the originally-predicted higher-hierarchy-cells level-spreading in its strong form:
+  1. DRIFT ZONE (α≤~0.6, c_anchor 0–0.2; seed-robust across both seeds & both agents): the Matryoshka FAILS to even
+     RECOVER the drift-causing concept (coarseC≈0.43–0.65 < 0.8 gate) — a more basic failure than predicted. Where the
+     directional residual looks like CONFIRM (resid 0.25–0.37, carry≈0.54) it is CONFOUNDED by the recovery failure
+     (you cannot cut a concept cell you never recovered) → not a clean level-spreading read, but a clean RECOVERY-failure
+     CONFIRM.
+  2. RECOVERY ZONE (α=0.7, c_anchor=0): recovery + drift coexist, the coarse cut removes cleanly with NO level-spreading
+     (FALSIFY on the predicted mechanism) — but FAILS specificity (collat 0.73, spec_ratio 1.36) → still not a clean win.
+The strong-form higher-hierarchy-cells level-spreading (coarse×fine + fine×fine carrying ≥0.4 of a RECOVERED coarse
+cell's causal score) is NOT observed in any gate-valid cell of this toy: the α-coupling forbids the regime where it
+would show. NET: CONFIRM (naive hierarchical SAE fails the clean-win bar), but the SHARPEST research follow-up the data
+motivates is decoupling recovery from drift (a strong in-context concept emission + a drifting query leaf) to test the
+ORIGINAL level-spreading mechanism in isolation — currently UNTESTED because recovery and drift are entangled here.
+Numbers: results/hiersae_results_eval_canchor02_grid.json (8-cell c_anchor=0.2 grid, 2 seeds) +
+results/hiersae_results_eval_noanchor.json (α∈{0.5,0.7,0.8,0.9} c_anchor=0).

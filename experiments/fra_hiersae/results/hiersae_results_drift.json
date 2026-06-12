@@ -1,0 +1,27 @@
+{
+  "config": {
+    "alphas": [
+      0.4,
+      0.5,
+      0.6,
+      0.7
+    ],
+    "superpos": [
+      1,
+      2
+    ],
+    "seeds": [
+      0,
+      1
+    ],
+    "steps": 10000,
+    "n_train": 4000,
+    "m_coarse": 16,
+    "m_sae": 256,
+    "k_topk": 8,
+    "inner_weight": 2.0,
+    "c_anchor": 0.2
+  },
+  "cells": [],
+  "done": false
+}

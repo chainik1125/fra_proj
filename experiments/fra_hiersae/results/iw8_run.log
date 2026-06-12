@@ -1,0 +1,9 @@
+[hiersae] sweep: alphas=[0.5] superpos=[1] seeds=[0] steps=10000 m_coarse=16 m_sae=256 k=8
+   [flat a0.5s1r0] step 0 loss=1.2593
+   [flat a0.5s1r0] step 4000 loss=0.0712
+   [flat a0.5s1r0] step 8000 loss=0.0725
+   [matry a0.5s1r0] step 0 loss=1.6636
+   [matry a0.5s1r0] step 4000 loss=1.0049
+   [matry a0.5s1r0] step 8000 loss=1.0174
+[cell] a=0.5 sp=1 seed=0 -> GATE-FAIL | fcx=0.55 resid=0.21 R_co=0.25 R_full=0.46 R_orc=1.08 top1f=0.12 top1m=0.75 gates={'recovery_matry': False, 'flat_drift': True, 'full_union_ge_oracle': False} (286s)
+[hiersae] DONE 1 cells in 288s
