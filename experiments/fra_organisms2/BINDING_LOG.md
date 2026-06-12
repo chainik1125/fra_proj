@@ -112,14 +112,62 @@ injection head in v1; here it is a binding-retrieval head). Top-3 cut for the ga
 
 **>>> VERDICT: GO (STRONG) — all three gates pass in their STRONG band. <<<**
 
-## 5. READINESS FOR THE SELECTIVITY WIN-TEST (the NEXT decision — NOT run here)
+## 5. THE §3.3 SELECTIVITY WIN-TEST — **WIN (11.1×, STRONG band)**
 
-GO clears the spend router. The §3.3 selectivity win-test (`injection_selectivity.py` re-pointed) is now
-warranted: at matched target-suppression (target P(correct) 1.0 -> <0.2), compare FRA multi-cell
-(E0-feature × V0-feature) edit vs the best-tuned linear DoM "retrieve-the-bound-value" steer
-(layers {6,9,12} × α {2,4,8,16,32}, train/eval split), headline = collateral(linear)/collateral(FRA) on the
-**intra-instance sibling control** (the same prompt re-queried for the other bindings). The pre-check already
-banks the oracle ceiling the win-test needs: oracle target-drop 0.90, oracle sibling-collateral 0.0008 — i.e.
-the FRA cut's intrinsic collateral floor is ~0.1%; the win is whether the best-tuned linear pays materially
-more. **Do NOT run it yet — next decision.**
+*Pod `rs-binding-selectivity-1` id=`r57xj5e980e32p` (L4), RUNID=`20260612-180736`. Code
+`experiments/fra_organisms2/jobs/binding_selectivity.py` (parse-gated; ckpt in every sweep loop;
+top-of-script try/except). Judge-free ground-truth exact-match. Terminated after WIN recorded.*
+
+**Sets:** 105 baseline-correct instances, split **eval n=60 / train n=40 (DISJOINT)** (the DoM vector is built
+only on TRAIN — the train/eval-leak rule). HARD control = the **intra-instance siblings** (the OTHER 3 bindings
+in the SAME prompt, re-queried), under the SAME target-cell edit.
+
+**Three interventions, swept, read at matched target-suppression t* = 0.80** (a level FRA reaches; FRA oracle
+max supp = 0.848):
+
+| method | how target-suppression is driven | sibling-collateral @ t*=0.80 | reaches t*? |
+|---|---|---|---|
+| **FRA cell-cut** (L22H4+L18H6, target entity×value cell) | hard cut of the located cell (oracle); = the surgical edit | **0.064** (oracle point itself: **supp 0.848, coll 0.0021**) | yes (0.848) |
+| **best-tuned LINEAR DoM** ("retrieve-this-bound-value", best = **L9**) | project-subtract α·v̂, swept layers{6,9,12}×α{2..64} | **0.715** | yes (L9 α≥2) |
+| **head-ablation L22H4** (circuit-tracing ref) | zero whole head hook_z | 0.527 (and only reaches supp 0.417 — can't hit t*) | no (max 0.417) |
+| **head-ablation L22H4+L18H6** | zero both heads' hook_z | 0.439 (max supp 0.300) | no (max 0.300) |
+
+**HEADLINE selectivity RATIO (linear / FRA) @ t* = 11.1×.** FRA beats head-ablation by **8.2× / 6.8×**.
+Absolute sibling-retention advantage = **+0.651** (FRA keeps siblings; the linear destroys them).
+
+**>>> VERDICT: WIN (STRONG, ratio ≥ 10×) — ratio 11.1× ≥ 2×, abs adv 0.65 ≥ 0.15, FRA < linear, FRA < both
+head-ablations. <<<**
+
+### 5a. Curve honesty + confound guards (the EM/injection-burned rigor)
+
+- **The matched point is FRA-reachable** (the v1 reachability lesson): t*=0.80 < FRA oracle supp 0.848. The
+  headline RATIO is, if anything, *understated* by the interpolation — at the FRA oracle's OWN operating point
+  (supp 0.848) FRA pays only **0.0021** collateral while every method that reaches that suppression pays
+  ~0.4–1.0, so the true ratio there is ~340×. We report the conservative interpolated 11.1× as the headline.
+- **The scaled FRA-feature `c·δ` curve is a red herring** (c=0.5..32 only reach supp ~0.10 with rising
+  collateral): subtracting a scaled multi-cell delta over-drives the softmax globally — the known "scaled cut
+  disrupts" artifact. The honest, surgical FRA edit is the **hard cut of the located cell** (the oracle), which
+  the pre-check already validated (supp 0.90, bleed 0.0009). That is the FRA operating point used.
+- **The best-tuned linear is genuinely competitive at LOW suppression but cannot be selective at HIGH**: its
+  only handle is the broadly-reused "retrieve-the-bound-value" direction, so driving the target down necessarily
+  pushes every sibling down too — at any α reaching supp ≥ 0.6 the model degenerates (degen-frac → 1.0,
+  sib_coll → ~1.0). This is the magnitude law A ≈ reuse(endpoint)/reuse(conjunction) realized: broad endpoint,
+  rare conjunction → the linear has no surgical option. **The exact reason injection (over-specific "comply"
+  handle) only reached 1.6× and this organism reaches 11×.**
+- **Capability/degeneracy guard:** FRA oracle degen-frac = 0.083 (vs linear 1.0 at matched suppression); FRA
+  keeps the model emitting well-formed names. FRA does not just break fluency to win.
+- **Head-ablation (the circuit-tracing baseline) is both weaker and messier**: it can't even reach t*=0.80
+  (whole-head ablation maxes at supp 0.42) and bleeds 0.44–0.53 where it acts — the FRA cell-cut strictly
+  dominates the head-level edit (the A3 cell-cut-vs-head-ablation comparison: the bilinear cell is more surgical
+  than the head).
+
+### 5b. The campaign result
+
+This is the fresh **≥2× selectivity win injection couldn't reach** — in fact a STRONG-band **11.1×** (≥340× at
+the FRA oracle point). The synthetic's broad×broad advantage (instance-unique key × broadly-reused endpoints ×
+answer-step read) **transfers to a real, reasoning-relevant organism (in-context variable binding) on
+gemma-2-2b-it**: an FRA (entity × value) QK cell-cut suppresses one binding's retrieval ~0.85 with ~0.2%
+sibling collateral, while the best-tuned linear "retrieve-the-bound-value" steer pays ~0.72 (and head-ablation
+~0.44–0.53). The four pre-registered proxies (P1 answer-step, P2=0 by construction, P3 instance-unique, P4 broad
+endpoints) correctly predicted the win, and the order-shuffle audit confirms it is content- not slot-addressed.
 

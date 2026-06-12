@@ -75,5 +75,14 @@ C: EVALUATOR runs FRA QK decomp on that circuit (faithfulness FIRST, then the "a
       R^2>=0.7 + dominant cell = SELF/token-match (NOT positional/sink) + A3 cell-cut-vs-head-ablation selectivity. PASS = decomp trustworthy
       -> green-light IOI. FAIL = decomp unreliable on a known-simple QK -> STOP (most important possible result). Log -> INDUCTION_LOG.md.
   (2) BINDING SELECTIVITY win-test (circuit #0 A3): eval a568274a1cfbbcce5 -> rs-binding-selectivity-1 (FRA cell-cut vs best-tuned linear + head-ablation; WIN=>=2x).
-- NEXT: read induction faithfulness PASS/FAIL + binding selectivity WIN/NULL. If induction PASS -> EVALUATOR circuit #2 IOI. If binding WIN -> symmetric false-positive red-team. Then loop.
+- >>> PAUSED FOR USER DECISION (2026-06-12). Two blockers surfaced:
+  (1) INDUCTION FAITHFULNESS FAILED — FRA recovers QK DIRECTION (corr 0.50 edges) but NOT magnitude (R2<0); dominant cell off-diagonal
+      content not the predicted diagonal self-match. This is the CRUX: if FRA can't faithfully reconstruct the SIMPLEST QK, the "what does
+      the QK compute" thesis is in doubt for ALL circuits. Decisive diagnostics NOT yet run: bias-corrected + FULL-basis (not top-k) R^2 +
+      the SAE-reconstruction-error CEILING (is the shortfall FRA's or the SAE's?) + off-diagonal disambiguation (do qF423/kF13032 fire on the same token?).
+  (2) IOI ALREADY DONE (user flagged): fra_win j13_ioi did IOI name-movers -> NEGATIVE (backup name-movers defeat the cut; precise-but-
+      behaviorally-inert; R=-0.39 LBNR-fail; THEORY.md/summary.md/RESULTS_SUMMARY.md). Only the S-inhibition-QK-content-ID (A2) angle is
+      un-done, and it's NARROW + now under the faithfulness cloud.
+  => DO NOT auto-launch IOI. The right next move = RESOLVE FAITHFULNESS FIRST (cheap diagnostics) — it's the foundation of the whole QK-resolution direction.
+  Binding selectivity (circuit #0 A3) still in flight (eval a568274a1cfbbcce5) — independent of this decision; let it finish.
 - Builds on: fra_win/ (FRA toolkit + j13_ioi + g_screen), fra/ module, fra_organisms2/ (binding circuit #0), v1 boundary-map theory.
