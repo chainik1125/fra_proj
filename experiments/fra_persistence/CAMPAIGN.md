@@ -58,3 +58,17 @@ C: RED-TEAM (symmetric: is the persistence real + the consistency honestly measu
 - PHASE B IN FLIGHT: EVALUATOR afa99d66feb3da860 -> rs-persist-1 (gpt2-small+res-jb). M1 persistence (held-out rem) + M2 SAE-consistency (top1_coverage, n_cells_for_90, q-vs-k drift, {lc}xfeature) + M3 (token-mask-no-detector vs FRA, union, benign-use). VERDICT vs locked bars. Log -> PERSIST_LOG.md.
 - NEXT: read VERDICT (WIN / INFORMATIVE-NEGATIVE / AMBIGUOUS) -> symmetric RED-TEAM -> PLANNING -> path-2 handoff or consolidate.
 - Builds on: fra/ toolkit + fra_win/jobs/j1_induction_explore (induction + reconstruction), the STRATEGY note (fra_circuits/STRATEGY_persistence_vs_hierarchy.md), the 3-deflation+faithfulness boundary map.
+
+## >>> REFRAME (PI, 2026-06-12): the bottleneck is FRA-DIAGNOSABILITY OF THE UNION, not single-cell concentration
+A UNION of cells is EXPECTED to be the right structure (diag confirmed: oracle_single~0, oracle_multi~0.7-1.0). So the
+win/fail is NOT "is it one cell". The BOTTLENECK = can FRA DIAGNOSE, from its decomposition alone, WHICH cells form the
+union — i.e. does FRA replace BRUTE-FORCE causal ablation search for finding the relevant feature-conjunctions? The only
+alternative to FRA for finding the union is per-cell causal ablation (expensive); FRA's value = read the union off the
+(free) decomposition. NEW HEADLINE METRIC (diagnosability): rank cells by FRA score s (free) vs by causal cut-effect c
+(oracle); RECOVERY(k) = removal(FRA-top-k)/removal(causal-top-k) + Spearman(s,c) + does the FRA-diagnosed union TRANSFER
+to held-out appearances. WIN = FRA-diagnosed union recovers >=70% of oracle removal at small k + high Spearman + transfers.
+INFORMATIVE-NEGATIVE = FRA ranking != causal (low Spearman, recovery<<1) -> can't diagnose the union from FRA, still need
+brute-force -> FRA adds no diagnostic value here. (The induction faithfulness FAIL [FRA top-k carried ~20% of the edge]
+predicts the negative.) Relayed to evaluator afa99d66feb3da860. This is THE value question: is FRA a diagnostic that
+identifies the relevant feature-conjunction-union without causal search? The hierarchical-SAE synthetic (PI, pending) becomes:
+does a hierarchical SAE make the union MORE DIAGNOSABLE (FRA-rank aligns with causal) than a flat SAE, with ground-truth?
