@@ -98,8 +98,17 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   eval-artifact ruleout. If all-position cut DROPS ASR>=0.5 -> timing artifact, injection IS attention-routed at PREFILL -> potential GO
   (test FRA reach + collateral at prefill edge). If even all-position cut ~0 (after ruling out canary-leak/eval bug) -> robust surprising NO-GO.
 - factedit RED-TEAM w0vsbhiwa: 3 skeptics returned but workflow result not aggregated (output empty); extract from agent files if it doesn't complete. Planning expects it to uphold the negative.
-- NEXT: read prefill follow-up. GO -> injection WIN (full §4 selectivity vs linear ignore-injection + prompt-hardening, then red-team).
-  Robust NO-GO -> CONSOLIDATE (SYNTHESIS: synthetic positive + EM/syco/factedit/injection negatives + methodology + the upstream-load-bearing/5th-condition theory).
+- >>> MAJOR TURN (both flagship NO-GOs were PREMATURE; symmetric red-team caught 2 false-negatives):
+  INJECTION prefill follow-up KEY RESULT: complete cut (attention TO injected span) gives ALL=PRE=GEN R=1.0, eval clean ->
+    injection is FULLY attention-routed at PREFILL -> FLIPS the gen-time NO-GO (R=0.0 was a wrong-timing artifact). Pending
+    (eval a6c6439a53aaf3f44 computing): LOCALIZATION (<=3 heads vs distributed) + FRA-cell reach + (ii) legit collateral. WIN
+    needs localizable+content-specific+FRA-reachable+selective — R=1.0 alone is necessary not sufficient.
+  FACTEDIT complete re-test LAUNCHED (eval a4585f4b23baf2381 -> rs-factedit-complete-1): FRA SAE cell-edit on FULL subject SPAN ×
+    relation, top-8 heads, load-bearing band P[0.30,0.55] (the red-team's convergent test; full-span oracle headroom R=0.60 hi / 0.52@P.36).
+    Metrics: P-drop + rank-flip + collateral. GO iff cell-edit drop>=50% + rank-flip-majority + collateral<15% -> flagship true false-neg -> ROME selectivity.
+- NEXT: read injection localization+FRA-reach + factedit complete re-test. Then PLANNING synthesizes both -> WIN(s) -> full §4 selectivity
+  vs linear/ROME + 2nd-round red-team; or if complete cuts also fail the surgical/selective bar -> consolidate (the load-bearing attention
+  exists but isn't surgically FRA-reachable/selective = a refined negative). Either way both flagships now get their FAIR complete test.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
