@@ -101,9 +101,42 @@ protocol (the protocol that killed the EM false-positive)?*
   mass to pos0, no survivor amplification); per-arm scoring (arith/mc ground-truth flip; opinion=stance-adoption
   vs model's OWN none-stance); RELATIVE effect bar (>=50% baseline flip removed); leak-subcheck (arith vs mc under
   renorm). Self-test asserts multi-span (>=2 pos) + liveness. headline = the OPINION arm.
-- pod LAUNCHED 2026-06-11: `rs-syco-v2-1` (id `ai7k6kkz0ec96w`, NVIDIA L40S; L4/L40 out of supply).
+- pod rs-syco-v2-1 (ai7k6kkz0ec96w, L40S) HUNG in bootstrap (~26 min, no log upload — likely gemma gated-prefetch
+  429 retry loop / cold-pull stall, the "RUNNING-but-dead" mode). TERMINATED + relaunched.
+- pod LAUNCHED 2026-06-11: `rs-syco-v2-2` (id `sto730b1v774ft`, NVIDIA A40).
   PHASE=1, ALPHAS={.25,.5,.75,1}, MODES={renorm,bos}, TOPK=12, MAX_NEW=12, out=syco_v2_results.json.
+- BASELINE (landed): arith flip 0.04 (n=48; gemma immovable on arithmetic even w/ authority framing -> clean
+  control) | mc flip 0.22 (n=36) | OPINION flip 0.27 (n=37, valid 0.97) <- headline G-score arm. Working set =
+  20 flips (2 arith + 8 mc + 10 opinion). Self-test PASSED (multispan 7 pos = assertion+option row; liveness 20.4).
+- LIVENESS NOTE (orchestrator): head-find loop ckpt()s only AFTER the full 208-head sweep, so result-json
+  stage=phase0 persists ~25-30 min through head-find — NOT a stall. Use GPU-util/uptime as liveness, not stage.
+  The launcher has NO cross-pod resume, so a stage-stall relaunch would loop forever in phase0. DO NOT relaunch
+  on stage-stall. Orchestrator polls done=True + red-teams.
+- TODO (next harness rev, do NOT touch the running pod): add ckpt() INSIDE the head-find loop (every ~20 heads)
+  for mid-loop visibility + resumability. Power is modest (8 mc + 10 opinion flips; gemma-2-2b-it is sycophancy-
+  robust) -> gemma-2-9b-it is the pre-noted size follow-up if the opinion arm lands borderline.
+
+## PHASE 1 v2 RESULT (rs-syco-v2-2) — DONE. NEGATIVE/G-post, but ONE residual threat -> v3 completeness test.
+- LEAK SUBCHECK (decisive v1 falsification): arith rel-drop 1.0 (both modes; flip 0.04->0) | mc rel-drop only
+  0.125 (renorm AND bos identical) | OPINION rel-drop EXACTLY 0.0 (all 4 alphas x renorm+bos).
+  -> v1's "diffuse negative" was partly leak-driven (arith cleanly cuttable when no leak), but MC barely moves
+  and OPINION does not move at all even with the leak fixed + bos mode. Headline arm (opinion) = G-post-looking.
+- C3 frac_in_top3=0.71 (heads 6.2/15.0/6.1/18.6/20.7) — localizes, but on a near-zero effect (uninformative).
+- RESIDUAL THREAT (orchestrator): v2 opinion cut removed only the STANCE span ("Python is better"); it LEFT the
+  AUTHORITY CUE ("My professor... is certain that... She is never wrong") + the content word in the question stem.
+  0% drop is ambiguous: clean G-post OR incomplete cut (model re-derives stance from surviving deference framing).
+
+## PHASE 1 v3 (rs-syco-v3-opinion-1) — OPINION-ONLY FULL-PREFIX completeness test (LAST sycophancy iteration)
+- eval set v3 `syco_evalset_v3.json` = 40 opinion items (same v2 baseline), ablate_substrings = FULL opinion
+  PREFIX (authority cue + stance, ~20 tokens), NOT the question stem. builder `build_syco_evalset_v3.py`.
+  Spans verified 80/80; prefix excludes question stem + answer-query region.
+- harness v3 `syco_edge_ablate_v3_pod.py`: opinion-only; cut on located top-heads AND ALL-heads (decisive);
+  renorm+bos; IN-LOOP ckpt() (per layer); verdict = ROBUST_G_POST if max rel-drop <0.30 (FILE negative) else
+  G_SCORE_CANDIDATE (>=0.30 -> v2 cut too narrow, attention-routed, proceed to localize + Phase 2).
+- pod LAUNCHED 2026-06-11: `rs-syco-v3-opinion-1` (id `19r5afh4er8qb4`, NVIDIA A40). out=syco_v3_results.json.
 
 ## VERDICTS (honest, per phase — a clean negative is a valid result)
 - v1 (rs-syco-3): negative, NOT FILED (red-team: leak artifact + underpowered + wrong construct). Superseded by v2.
-- (pending rs-syco-v2-1)
+- v2 (rs-syco-v2-2): DONE. arith fully cuttable (clean, but near-zero baseline); mc 12.5% drop; OPINION 0% drop.
+  Leak fix confirmed v1 was partly artifactual. Opinion reads G-post but ONE completeness threat -> v3 decides.
+- (pending rs-syco-v3-opinion-1 — the definitive opinion verdict)
