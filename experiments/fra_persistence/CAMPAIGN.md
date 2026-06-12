@@ -54,5 +54,7 @@ C: RED-TEAM (symmetric: is the persistence real + the consistency honestly measu
 
 ## RESUME STATE (canonical)
 - PHASE A IN FLIGHT (2026-06-12): DESIGN/THEORY agent a9c67ff46e2b77e03 -> PERSIST_DESIGN.md. CRON 70eb305c (21,51 = every 30min) drives. No pods yet.
-- NEXT: when PERSIST_DESIGN.md lands -> EVALUATOR builds+runs the toy (M1 persistence + M2 SAE-consistency centerpiece + M3 comparison) on gpt2-small+res-jb.
+- PHASE A DONE: PERSIST_DESIGN.md committed (concrete toy + M2 consistency metric + confirmed locked win/fail + 4 refinements; honest prior = informative-negative most likely).
+- PHASE B IN FLIGHT: EVALUATOR afa99d66feb3da860 -> rs-persist-1 (gpt2-small+res-jb). M1 persistence (held-out rem) + M2 SAE-consistency (top1_coverage, n_cells_for_90, q-vs-k drift, {lc}xfeature) + M3 (token-mask-no-detector vs FRA, union, benign-use). VERDICT vs locked bars. Log -> PERSIST_LOG.md.
+- NEXT: read VERDICT (WIN / INFORMATIVE-NEGATIVE / AMBIGUOUS) -> symmetric RED-TEAM -> PLANNING -> path-2 handoff or consolidate.
 - Builds on: fra/ toolkit + fra_win/jobs/j1_induction_explore (induction + reconstruction), the STRATEGY note (fra_circuits/STRATEGY_persistence_vs_hierarchy.md), the 3-deflation+faithfulness boundary map.
