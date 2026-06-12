@@ -40,11 +40,44 @@ def upload(localpath, remotename):
         print(f"[upload-fail] {remotename}: {e}", flush=True)
 
 
-def ckpt(obj, name="persist_partial.json"):
+_LAST_UPLOAD = {"t": 0.0}
+
+def ckpt(obj, name="persist_partial.json", force=False):
+    # ALWAYS write locally (cheap, durable on the pod); THROTTLE the HF upload to avoid
+    # blowing the 128-commits/hr cap (the partial is a progress signal, not a result).
     p = os.path.join(OUT, name)
     json.dump(obj, open(p, "w"), indent=2, default=float)
-    upload(p, name)
-    print(f"[ckpt] {name} stage={STATE.get('stage')} dt={time.time()-STATE['t0']:.0f}s", flush=True)
+    now = time.time()
+    is_result = name.endswith("results.json") or name.endswith("traceback.txt")
+    if force or is_result or (now - _LAST_UPLOAD["t"] > 120):
+        upload(p, name)
+        _LAST_UPLOAD["t"] = now
+    print(f"[ckpt] {name} stage={STATE.get('stage')} dt={now-STATE['t0']:.0f}s", flush=True)
+
+
+def _spearman(a, b):
+    """Spearman rank correlation without scipy (average-rank, ties handled)."""
+    import numpy as np
+    def rank(x):
+        order = np.argsort(x, kind="mergesort")
+        r = np.empty(len(x), dtype=float)
+        r[order] = np.arange(len(x), dtype=float)
+        # average ties
+        x_sorted = x[order]
+        i = 0
+        while i < len(x):
+            j = i
+            while j + 1 < len(x) and x_sorted[j + 1] == x_sorted[i]:
+                j += 1
+            if j > i:
+                avg = (i + j) / 2.0
+                r[order[i:j + 1]] = avg
+            i = j + 1
+        return r
+    ra, rb = rank(np.asarray(a, float)), rank(np.asarray(b, float))
+    ra -= ra.mean(); rb -= rb.mean()
+    denom = (np.sqrt((ra ** 2).sum()) * np.sqrt((rb ** 2).sum()))
+    return float((ra * rb).sum() / denom) if denom > 0 else float("nan")
 
 
 def main():
@@ -275,6 +308,14 @@ def main():
     pool = nonce_ids + rand_ids
     # build candidate (A,B) pairs: disjoint A,B from the pool
     def screen_pair(A_str, A_id, B_str, B_id):
+        # FAST PRE-SCREEN (1 forward): a single T1 carrier must already copy >= 0.25, else
+        # skip the expensive full gate.  Cuts ~95% of candidates at 1/23 the cost.
+        e0 = make_tt(build_ids("T1", A_id, B_id, LC_LOCATE[0][1], 11), A_id, B_id)
+        if e0 is None:
+            return None
+        tt0, _, q0, _ = e0
+        if copyprob(tt0, q0, B_id) < 0.25:
+            return None
         # gate-2: mean copyprob over screening carriers >= 0.30
         cps = []
         for tmpl in SCREEN_TEMPLATES:
@@ -336,8 +377,8 @@ def main():
         if Ai == Bi:
             continue
         tried += 1
-        if tried > 600:
-            break
+        if tried > 600:           # screen enough to find 3 passers (the nonce 'mell' is first;
+            break                 # the random-token passers appear deeper in the enumeration)
         r = screen_pair(As, Ai, Bs, Bi)
         if r is None:
             continue
@@ -347,7 +388,7 @@ def main():
                   f"oracle_rem={r['oracle_rem']:.2f}", flush=True)
             STATE["gate_passed"] = [(p["A"], p["B"], p["gate2"], p["parametric"], p["oracle_rem"]) for p in passed]
             ckpt(STATE, "persist_partial.json")
-        if len(passed) >= 8:        # collect a few; pick the strongest-locus 3
+        if len(passed) >= 3:        # stop as soon as we have 3 (each already passes oracle>=0.40)
             break
 
     if len(passed) < 3:
@@ -369,7 +410,8 @@ def main():
     # Build the appearance sets per pair
     # LOCATE = {T1,T2,T3} x LC_LOCATE x seeds ; HELD-OUT = {T4,T5,T6} x LC_HOLD x seeds
     # ─────────────────────────────────────────────────────────────────────
-    SEEDS = [11, 23, 37]
+    SEEDS = [11, 23]   # 2 seeds (was 3): ~27 appearances/pair, ~80 pooled — ample for the
+    # distribution stats, and ~33% faster so the run finishes under the shared-pod reaper window.
     def make_appearances(A_str, A_id, B_str, B_id, templates, lc_pairs):
         apps = []
         for tmpl in templates:
@@ -408,8 +450,10 @@ def main():
         (l_star, h_star, i_star, j_star), sc = items[0]
         tot = sum(abs(v) for v in cell.values())
         edge_cov = abs(sc) / tot if tot > 0 else 0.0
+        # keep the full ranked edge-cell list (by |FRA score s|) for the diagnosability
+        # analysis: each entry is ((l,h,i,j), s).  top-50 covers the union budget cheaply.
         return dict(l=l_star, h=h_star, i=i_star, j=j_star, score=sc,
-                    edge_cov=edge_cov, AF=AF, cell_items=items[:5])
+                    edge_cov=edge_cov, AF=AF, cell_items=items[:20], n_edge_cells=len(items))
 
     # ─────────────────────────────────────────────────────────────────────
     # MAIN per-pair loop
@@ -547,6 +591,107 @@ def main():
               f"{rem_hold_k[1]:.3f}/{rem_hold_k[2]:.3f}/{rem_hold_k[3]:.3f}", flush=True)
         ckpt(STATE, "persist_partial.json")
 
+        # ─────────────────────────────────────────────────────────────────────
+        # M4 — FRA-DIAGNOSABILITY of the CAUSAL UNION (the centerpiece per the reframe).
+        # A union of cells is EXPECTED (oracle is multi-head/distributed).  The question:
+        # can FRA's per-cell score s = |omega u_q u_k| (FREE, one forward pass) DIAGNOSE
+        # which cells carry the causal effect c (EXPENSIVE: cut each cell, measure drop)?
+        #   (a) Spearman(s, c) over candidate cells.
+        #   (b) recovery(k) = removal(cut FRA-top-k by s) / removal(cut causal-top-k by c).
+        #   (c) minimal FRA-diagnosed union reaching 90% of the all-candidate removal.
+        #   (d) TRANSFER: diagnose the union (FRA-top-k) on LOCATE, cut it on HELD-OUT.
+        # Candidate cells = the union of each appearance's FRA-top-N edge cells (tractable),
+        # plus a random-cell baseline.  Per-cell causal cut reuses rem_over([cell]).
+        # ─────────────────────────────────────────────────────────────────────
+        STATE["stage"] = f"pair{pidx}_M4_diag"
+        TOPN = int(os.environ.get("DIAG_TOPN", "10"))   # candidate cells per appearance
+        N_DIAG_APP = int(os.environ.get("DIAG_NAPP", "3"))
+        KGRID = [1, 2, 3, 5, 10]
+
+        # diagnosability on a representative subset of appearances (cap for budget).
+        # For each appearance: score s = |FRA value| (FREE); causal c = single-cell cut
+        # (EXPENSIVE).  ~TOPN single-cell cuts + ~TOPN cumulative FRA-ranked cuts per app.
+        def diag_on(cells_apps, n_app):
+            sub = cells_apps[:n_app]
+            spearmans = []
+            recov = {k: [] for k in KGRID}
+            min_union_90 = []
+            for di, (app, c) in enumerate(sub):
+                cand = [cc for cc, s in c["cell_items"][:TOPN]]
+                s_of = {cc: abs(s) for cc, s in c["cell_items"][:TOPN]}
+                if len(cand) < 3:
+                    continue
+                # causal c for each candidate (single-cell cuts)
+                c_of = {cc: rem_over([(app, c)], [cc])[0] for cc in cand}
+                s_arr = np.array([s_of[cc] for cc in cand])
+                c_arr = np.array([c_of[cc] for cc in cand])
+                if np.std(c_arr) > 1e-9 and np.std(s_arr) > 1e-9:
+                    rs = _spearman(s_arr, c_arr)
+                    if rs == rs:
+                        spearmans.append(rs)
+                full_rem = rem_over([(app, c)], cand)[0]
+                causal_rank = sorted(cand, key=lambda x: -c_of[x])
+                fra_rank = sorted(cand, key=lambda x: -s_of[x])
+                # cumulative FRA-ranked removal (compute once, reuse for recovery + min_union)
+                fra_cum = {}
+                reached = len(cand)
+                for k in range(1, len(cand) + 1):
+                    fra_cum[k] = rem_over([(app, c)], fra_rank[:k])[0]
+                    if full_rem > 1e-6 and reached == len(cand) and fra_cum[k] >= 0.90 * full_rem:
+                        reached = k
+                if full_rem > 1e-6:
+                    min_union_90.append(reached)
+                for k in KGRID:
+                    if k > len(cand):
+                        continue
+                    rem_fra = fra_cum[k]
+                    rem_cau = rem_over([(app, c)], causal_rank[:k])[0]
+                    recov[k].append(rem_fra / rem_cau if rem_cau > 1e-6 else (1.0 if rem_fra < 1e-6 else 0.0))
+                STATE["stage"] = f"pair{pidx}_M4_app{di}"
+                ckpt(STATE, "persist_partial.json")
+            out = dict(
+                spearman_mean=float(np.mean(spearmans)) if spearmans else float("nan"),
+                spearman_n=len(spearmans),
+                recovery={str(k): (float(np.mean(recov[k])) if recov[k] else None) for k in KGRID},
+                min_union_90_mean=float(np.mean(min_union_90)) if min_union_90 else float("nan"),
+                n_app=len(sub),
+            )
+            return out
+
+        # M4 is wrapped: a pathological pair (huge diffuse edge -> heavy per-cell cuts) must
+        # NOT kill the whole run.  On failure, default to NaN/0 so the pair still completes and
+        # the verdict pools over the pairs that DID produce M4.
+        try:
+            diag_loc = diag_on(loc_cells, min(len(loc_cells), N_DIAG_APP))
+            # (d) TRANSFER: diagnose the union on LOCATE (FRA-top-k by frequency), cut on HELD-OUT.
+            from collections import Counter as _C
+            loc_fra_cells = _C()
+            for app, c in loc_cells:
+                for cc, s in c["cell_items"][:TOPN]:
+                    loc_fra_cells[cc] += 1
+            diagnosed10 = [cc for cc, _ in loc_fra_cells.most_common(10)]
+            rem_transfer10 = rem_over(hold_cells, diagnosed10)[0]
+        except Exception as _e:
+            print(f"[pair {pidx}] M4 FAILED ({type(_e).__name__}: {_e}); using NaN defaults", flush=True)
+            diag_loc = dict(spearman_mean=float("nan"), spearman_n=0,
+                            recovery={str(k): None for k in KGRID},
+                            min_union_90_mean=float("nan"), n_app=0)
+            rem_transfer10 = float("nan")
+        transfer_frac_oracle = (rem_transfer10 / oracle_ceiling
+                                if (oracle_ceiling > 1e-6 and rem_transfer10 == rem_transfer10) else 0.0)
+        print(f"[pair {pidx}] M4 diag(locate): spearman={diag_loc['spearman_mean']:.2f} "
+              f"(n={diag_loc['spearman_n']}) recovery@5={diag_loc['recovery'].get('5')} "
+              f"min_union90={diag_loc['min_union_90_mean']:.1f} | "
+              f"transfer(FRA-top10 union -> holdout) rem={rem_transfer10:.3f} "
+              f"frac_oracle={transfer_frac_oracle:.3f}", flush=True)
+        ckpt(STATE, "persist_partial.json")
+        # FREE the stored per-appearance FRA arrays NOW: M1/M3b/M4/transfer are done; the
+        # remaining M3a/M5/M3c use head_scores or fresh per-prompt FRA, not the stored AF.
+        # This drops peak host-RAM before the next pair (the diffuse-pair OOM point).
+        for _, _c in (loc_cells + hold_cells):
+            _c.pop("AF", None)
+        import gc as _gc; _gc.collect()
+
         # --- M3a: token-mask (no detector) vs oracle ---
         STATE["stage"] = f"pair{pidx}_M3a"
         # token-mask NO-DETECTOR: use the LOCATE primer's (q,k) position PATTERN verbatim.
@@ -576,6 +721,48 @@ def main():
         fra_vs_mask = rem_holdout / max(rem_mask_nodet, 1e-6)
         print(f"[pair {pidx}] M3a tokenmask_nodet={rem_mask_nodet:.2f} oracle={rem_mask_oracle:.2f} "
               f"FRA/mask={fra_vs_mask:.1f}x", flush=True)
+        ckpt(STATE, "persist_partial.json")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # M5 — POSITION-INVARIANCE × ASSOCIATION-SPECIFICITY 2x2 (THE HEADLINE).
+        # A is at RANDOM/unknown positions on held-out.  3 interventions, NO knowledge
+        # of A's position at cut time:
+        #   (a) FRA cut = the diagnosed (A-feat x A-feat) cell-union (FRA-top10 from LOCATE),
+        #       applied unconditionally wherever the features fire -> rem_transfer10 (computed
+        #       in M4) = position-invariant + association-specific.
+        #   (b) ATTENTION-MAP cut = mask the answer's attention to a FIXED/GUESSED key position
+        #       (the modal LOCATE k_pos), NOT A's true position -> position-SPECIFIC -> FAILS.
+        #       == rem_mask_nodet (M3a).
+        #   (c) EMBEDDING cut (THE FAIR BASELINE) = zero SAE feature Ic (A's feature) at layer
+        #       Lc at ALL positions -> position-INVARIANT but association-BLIND (removes ALL of A).
+        # Removal at random positions: FRA ~= embedding >> attn-map.
+        # Specificity (collateral on A's OTHER uses) is M3c: FRA << embedding.
+        # ═════════════════════════════════════════════════════════════════════
+        STATE["stage"] = f"pair{pidx}_M5"
+        def embedding_cut_logits(tt):
+            # zero SAE feature Ic at layer Lc everywhere; add the resid delta back via a hook.
+            hn = f"blocks.{Lc}.hook_resid_pre"
+            _, cc = model.run_with_cache(tt, names_filter=[hn])
+            a0 = cc[hn][0]
+            fe = saes[Lc].encode(a0).float()
+            fe2 = fe.clone(); fe2[:, Ic] = 0.0
+            dr = (fe2 @ saes[Lc].W_dec.float() + saes[Lc].b_dec.float()) - \
+                 (fe @ saes[Lc].W_dec.float() + saes[Lc].b_dec.float())
+            def h(resid, hook):
+                resid[0] = resid[0] + dr
+                return resid
+            return model.run_with_hooks(tt, fwd_hooks=[(hn, h)])[0]
+        def embedding_cut_removal(app):
+            lg = embedding_cut_logits(app["tt"])
+            cp = float(torch.softmax(lg[app["q_pos"]].float(), -1)[B_id].item())
+            return min(max(1.0 - cp / max(app["cp_clean"], 1e-9), 0.0), 1.0)
+        rem_embed_hold = float(np.mean([embedding_cut_removal(a) for a, _ in hold_cells]))
+        # the 2x2 removal-at-random-positions row:
+        rem_fra_rand = rem_transfer10      # FRA diagnosed-union cut (position-invariant)
+        rem_attnmap_rand = rem_mask_nodet  # attn-map cut at fixed guessed pos (position-specific)
+        rem_embed_rand = rem_embed_hold    # embedding cut (position-invariant, assoc-blind)
+        print(f"[pair {pidx}] M5 removal@random-pos: FRA={rem_fra_rand:.3f} "
+              f"embedding={rem_embed_rand:.3f} attn-map(guessed)={rem_attnmap_rand:.3f}", flush=True)
         ckpt(STATE, "persist_partial.json")
 
         # --- M3c: benign-use preservation (FRA vs feature-ablation vs ActAdd) ---
@@ -672,11 +859,29 @@ def main():
                      linsteer_collat_KL=steer_collat, ablate_over_fra=ratio_ablate,
                      benign_top1_preserved=dict(FRA=m(fra_top1), ablate=m(ablate_top1),
                                                 steer=m(steer_top1))),
+            M4=dict(spearman_s_c=diag_loc["spearman_mean"], spearman_n=diag_loc["spearman_n"],
+                    recovery=diag_loc["recovery"], min_union_90=diag_loc["min_union_90_mean"],
+                    transfer_rem_holdout=rem_transfer10, transfer_frac_oracle=transfer_frac_oracle,
+                    topN=TOPN),
+            # M5 = the HEADLINE 2x2 (position-invariance x association-specificity).
+            #  removal@random-pos: FRA vs embedding-cut vs attn-map(guessed).
+            #  collateral on A's other uses: FRA vs embedding-cut (= M3c feature-ablation).
+            M5=dict(
+                rem_random_FRA=rem_fra_rand, rem_random_embedding=rem_embed_rand,
+                rem_random_attnmap_guessed=rem_attnmap_rand,
+                collat_FRA=fra_collat, collat_embedding=ablate_collat,
+                fra_vs_embed_removal=rem_fra_rand / max(rem_embed_rand, 1e-6),
+                embed_vs_fra_collateral=ablate_collat / max(fra_collat, 1e-6)),
             sanity=dict(non_sink=non_sink, sink_q_active=sink_q, sink_k_active=sink_k),
         )
         per_pair.append(pr)
         STATE["per_pair_done"] = pidx + 1
         ckpt({**STATE, "per_pair": per_pair}, "persist_partial.json")
+        # FREE the per-appearance FRA arrays (5 sparse tensors/appearance) to avoid host-RAM
+        # OOM accumulating across 3 pairs x ~50 appearances (the rs-persist-6 restart cause).
+        for _, c in (loc_cells + hold_cells):
+            c.pop("AF", None)
+        import gc as _gc; _gc.collect()
 
     # ─────────────────────────────────────────────────────────────────────
     # POOLED stats + VERDICT
@@ -710,6 +915,32 @@ def main():
     oracle_pool = float(np.mean([p["M1"]["oracle_ceiling"] for p in per_pair]))
     frac_of_oracle_pool = float(np.mean([p["M1"]["frac_of_oracle"] for p in per_pair]))
 
+    # ----- M4 DIAGNOSABILITY pooled (the HEADLINE per the reframe) -----
+    def _nanmean(xs):
+        xs = [x for x in xs if x is not None and x == x]
+        return float(np.mean(xs)) if xs else float("nan")
+    spearman_pool = _nanmean([p["M4"]["spearman_s_c"] for p in per_pair])
+    recovery_pool = {}
+    for k in ["1", "2", "3", "5", "10"]:
+        recovery_pool[k] = _nanmean([p["M4"]["recovery"].get(k) for p in per_pair])
+    min_union90_pool = _nanmean([p["M4"]["min_union_90"] for p in per_pair])
+    transfer_rem_pool = float(np.mean([p["M4"]["transfer_rem_holdout"] for p in per_pair]))
+    transfer_frac_pool = float(np.mean([p["M4"]["transfer_frac_oracle"] for p in per_pair]))
+    # recovery at a small k (k=5) is the headline number
+    recov5 = recovery_pool.get("5")
+    recov3 = recovery_pool.get("3")
+
+    # ----- M5 the 2x2 pooled (HEADLINE: position-invariance x association-specificity) -----
+    # NaN-safe (a pair whose M4 failed has rem_random_FRA=NaN; pool over the valid pairs).
+    rem_rand_fra_pool = _nanmean([p["M5"]["rem_random_FRA"] for p in per_pair])
+    rem_rand_embed_pool = float(np.mean([p["M5"]["rem_random_embedding"] for p in per_pair]))
+    rem_rand_attnmap_pool = float(np.mean([p["M5"]["rem_random_attnmap_guessed"] for p in per_pair]))
+    collat_fra_pool = float(np.mean([p["M5"]["collat_FRA"] for p in per_pair]))
+    collat_embed_pool = float(np.mean([p["M5"]["collat_embedding"] for p in per_pair]))
+    embed_vs_fra_collat_pool = collat_embed_pool / max(collat_fra_pool, 1e-6)
+    if rem_rand_fra_pool != rem_rand_fra_pool:   # all pairs' M4 failed
+        rem_rand_fra_pool = 0.0
+
     # ----- VERDICT (PERSIST_DESIGN §4) -----
     # sanity gate: base copyprob >= 0.30 on both sets AND non-sink
     sanity_ok = (base_loc_pool >= 0.30) and (base_hold_pool >= 0.30) and all_non_sink
@@ -741,6 +972,55 @@ def main():
         verdict = "AMBIGUOUS (partial persistence)"
         deciding = f"top1cov={pooled_top1cov:.2f} cov3={pooled_cov3:.2f} rem_holdout={rem_hold_pool:.2f} rem_k3={rem_hold_k3_pool:.2f}"
 
+    # ----- HEADLINE DIAGNOSABILITY VERDICT -----
+    # WIN: FRA-diagnosed-union recovers >=70% of the oracle (causal) removal at small k AND
+    #      Spearman(s,c) high (>=0.5) AND it transfers to held-out (transfer rem meaningful).
+    # INFORMATIVE-NEGATIVE: low Spearman OR recovery<<1 -> can't read the union off FRA.
+    recov_small = recov5 if (recov5 == recov5) else (recov3 if (recov3 == recov3) else 0.0)
+    sp = spearman_pool if (spearman_pool == spearman_pool) else 0.0
+    if not sanity_ok:
+        diag_verdict = "INVALID (sanity gate failed)"
+        diag_deciding = f"base_loc={base_loc_pool:.2f} base_hold={base_hold_pool:.2f} non_sink={all_non_sink}"
+    elif recov_small >= 0.70 and sp >= 0.50 and transfer_rem_pool >= 0.40:
+        diag_verdict = "WIN (FRA diagnoses the causal union)"
+        diag_deciding = f"recovery@5={recov_small:.2f}>=0.70 spearman={sp:.2f}>=0.50 transfer_rem={transfer_rem_pool:.2f}>=0.40"
+    elif sp < 0.30 or recov_small < 0.40:
+        diag_verdict = "INFORMATIVE-NEGATIVE (FRA does NOT diagnose the union)"
+        rs = []
+        if sp < 0.30: rs.append(f"spearman={sp:.2f}<0.30")
+        if recov_small < 0.40: rs.append(f"recovery@5={recov_small:.2f}<0.40")
+        diag_deciding = "; ".join(rs)
+    else:
+        diag_verdict = "AMBIGUOUS (partial diagnosability)"
+        diag_deciding = f"recovery@5={recov_small:.2f} spearman={sp:.2f} transfer_rem={transfer_rem_pool:.2f}"
+
+    # ----- HEADLINE 2x2 VERDICT (position-invariance x association-specificity) -----
+    # WIN: FRA removes A->B at random pos ~= embedding-cut (>= 0.5x embedding, both
+    #      position-invariant) AND FRA >> attn-map(guessed) (>= 2x) AND FRA collateral on
+    #      A's other uses <= 0.5x embedding-cut collateral (the specificity edge).
+    # NULL: FRA collateral ~= embedding (no specificity) OR FRA fails to remove at random pos.
+    fra_pos_invariant = (rem_rand_fra_pool >= 0.5 * rem_rand_embed_pool) and (rem_rand_embed_pool > 0.10)
+    fra_beats_attnmap = rem_rand_fra_pool >= 2.0 * max(rem_rand_attnmap_pool, 1e-6)
+    fra_specific = (collat_embed_pool >= 2.0 * max(collat_fra_pool, 1e-9))
+    fra_removes = rem_rand_fra_pool >= 0.40
+    if not sanity_ok:
+        twobytwo_verdict = "INVALID (sanity gate failed)"
+        twobytwo_deciding = f"base_loc={base_loc_pool:.2f} base_hold={base_hold_pool:.2f} non_sink={all_non_sink}"
+    elif fra_removes and fra_pos_invariant and fra_beats_attnmap and fra_specific:
+        twobytwo_verdict = "WIN (FRA = position-invariant AND association-specific)"
+        twobytwo_deciding = (f"rem_random FRA={rem_rand_fra_pool:.2f}~embed={rem_rand_embed_pool:.2f} "
+                             f">>attn-map={rem_rand_attnmap_pool:.3f}; collat embed/FRA={embed_vs_fra_collat_pool:.0f}x>=2")
+    elif (not fra_removes) or (rem_rand_fra_pool < 0.5 * rem_rand_embed_pool):
+        twobytwo_verdict = "NULL (FRA fails to remove at random positions)"
+        twobytwo_deciding = f"rem_random FRA={rem_rand_fra_pool:.3f} vs embed={rem_rand_embed_pool:.3f} (FRA<<embed or <0.40)"
+    elif not fra_specific:
+        twobytwo_verdict = "NULL (FRA not more specific than embedding-cut)"
+        twobytwo_deciding = f"collat embed/FRA={embed_vs_fra_collat_pool:.2f}x < 2 (no specificity edge)"
+    else:
+        twobytwo_verdict = "AMBIGUOUS (partial 2x2)"
+        twobytwo_deciding = (f"rem_random FRA={rem_rand_fra_pool:.2f} embed={rem_rand_embed_pool:.2f} "
+                             f"attn-map={rem_rand_attnmap_pool:.3f} collat_ratio={embed_vs_fra_collat_pool:.1f}x")
+
     pooled = dict(
         N=N, top1_coverage=pooled_top1cov, cov3=pooled_cov3, cov5=pooled_cov5,
         n_cells_for_90=pooled_n90, qtop1=qtop1, ktop1=ktop1, q_vs_k_culprit=q_vs_k,
@@ -753,22 +1033,39 @@ def main():
         FRA_collat_KL=fra_collat_pool, featablate_collat_KL=ablate_collat_pool,
         ablate_over_fra=ablate_collat_pool / max(fra_collat_pool, 1e-6),
         all_non_sink=all_non_sink, sanity_ok=sanity_ok,
+        # M4 diagnosability
+        diag_spearman_s_c=spearman_pool, diag_recovery=recovery_pool,
+        diag_min_union_90=min_union90_pool,
+        diag_transfer_rem_holdout=transfer_rem_pool, diag_transfer_frac_oracle=transfer_frac_pool,
+        # M5 the 2x2 HEADLINE
+        rem_random_FRA=rem_rand_fra_pool, rem_random_embedding=rem_rand_embed_pool,
+        rem_random_attnmap_guessed=rem_rand_attnmap_pool,
+        collat_FRA=collat_fra_pool, collat_embedding=collat_embed_pool,
+        embed_vs_fra_collateral=embed_vs_fra_collat_pool,
     )
     results = dict(
         chosen_pairs=STATE["chosen_pairs"],
         gate_lc_locate=LC_LOCATE, gate_lc_holdout=LC_HOLD,
         per_pair=per_pair, pooled=pooled,
-        VERDICT=verdict, deciding_number=deciding,
+        VERDICT_2x2=twobytwo_verdict, twobytwo_deciding_number=twobytwo_deciding,
+        VERDICT_DIAGNOSABILITY=diag_verdict, diag_deciding_number=diag_deciding,
+        VERDICT_PERSISTENCE=verdict, persistence_deciding_number=deciding,
         runtime_s=time.time() - STATE["t0"],
     )
     print("\n" + "=" * 60, flush=True)
-    print(f"VERDICT: {verdict}", flush=True)
-    print(f"  deciding: {deciding}", flush=True)
-    print(f"  pooled top1cov={pooled_top1cov:.2f} cov3={pooled_cov3:.2f} n90={pooled_n90}/{N} "
-          f"({q_vs_k})", flush=True)
-    print(f"  rem_holdout={rem_hold_pool:.2f} rem_k3={rem_hold_k3_pool:.2f} "
-          f"mask_nodet={mask_nodet_pool:.2f} FRA/mask={fra_vs_mask_pool:.1f}x", flush=True)
-    print(f"  benign collat FRA={fra_collat_pool:.3f} ablate={ablate_collat_pool:.3f}", flush=True)
+    print(f"HEADLINE — 2x2 VERDICT (position-invariance x specificity): {twobytwo_verdict}", flush=True)
+    print(f"  deciding: {twobytwo_deciding}", flush=True)
+    print(f"  removal@random-pos: FRA={rem_rand_fra_pool:.3f}  embedding-cut={rem_rand_embed_pool:.3f}  "
+          f"attn-map(guessed)={rem_rand_attnmap_pool:.3f}", flush=True)
+    print(f"  collateral on A's other uses: FRA={collat_fra_pool:.4f}  embedding-cut={collat_embed_pool:.4f}  "
+          f"(embed/FRA={embed_vs_fra_collat_pool:.0f}x)", flush=True)
+    print("-" * 60, flush=True)
+    print(f"DIAGNOSABILITY VERDICT: {diag_verdict} | {diag_deciding}", flush=True)
+    print(f"  Spearman(s,c)={spearman_pool:.2f} recovery@5={recov5} @10={recovery_pool.get('10')} "
+          f"min_union90={min_union90_pool:.1f}", flush=True)
+    print(f"PERSISTENCE VERDICT (single-cell): {verdict} | {deciding}", flush=True)
+    print(f"  top1cov={pooled_top1cov:.2f} cov3={pooled_cov3:.2f} n90={pooled_n90}/{N} ({q_vs_k}) "
+          f"rem_holdout={rem_hold_pool:.3f} oracle_ceil={oracle_pool:.2f}", flush=True)
     print("=" * 60, flush=True)
     ckpt(results, "persist_results.json")
     print("[DONE] persist_results.json uploaded", flush=True)

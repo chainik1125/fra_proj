@@ -5,6 +5,23 @@ Judge-free (ground-truth copy-prob). Centerpiece = M2 (SAE-feature-consistency o
 ~120 appearances). Reuses `fra.core.fra._build_fra_result` + the j2 `pairs_delta` / `hook_attn_scores`
 cut verbatim (gpt2-small + gpt2-small-res-jb resid_pre, head L5H5 primary).
 
+## REFRAMES (coordinator, mid-run) — headline evolved twice; all reuse the same machinery
+- **Reframe 1 (diagnosability, M4):** a UNION of cells is EXPECTED (oracle is multi-head/distributed).
+  The real question: can FRA's per-cell score `s=|ω u_q u_k|` (FREE) DIAGNOSE which cells form the
+  causal union (so it replaces brute-force ablation search)? Metrics: Spearman(s,c), recovery(k) =
+  removal(FRA-top-k) / removal(causal-top-k), minimal diagnosed union, held-out transfer.
+- **Reframe 2 (the 2×2, THE HEADLINE):** the interesting axis is POSITION-INVARIANCE. At a KNOWN
+  position FRA-cut == attention-map cut (no edge — expected). At RANDOM/unknown positions:
+  - attention-map cut = position-SPECIFIC, assoc-specific → FAILS (can't target the key position).
+  - embedding cut (THE FAIR BASELINE) = position-INVARIANT, assoc-BLIND → removes A→B everywhere but
+    kills A's OTHER uses.
+  - FRA cut = position-INVARIANT + assoc-SPECIFIC → the claim: removes A→B wherever A fires, preserving
+    A's other uses.
+  WIN = FRA removes at random pos ≈ embedding-cut AND ≥2× attn-map(guessed) AND FRA collateral on A's
+  other uses ≤ ½ embedding-cut collateral. NULL = FRA collateral ≈ embedding (no specificity) OR FRA
+  fails to remove at random pos.
+- Both folded into `persist_run.py` (M4 = diagnosability, M5 = the 2×2). M1/M2/M3 retained as secondary.
+
 ## BUILD
 
 - Code: `experiments/fra_persistence/cloud/persist_run.py` (single self-contained job).
@@ -61,82 +78,88 @@ Honest prior (anchor: off-diagonal cell, R²<0, top-3 carry ~20% of edge): INFOR
    FRA contribution on its own head (j7 multi-head hook), oracle = zero the edge across all 5 heads.
    **3 pairs passed** (`'Pa'→'azar'`, `' raced'→'hip'`, `' mell'→'tl'`), oracle ceiling 0.79–0.98.
 
-## RESULTS (rs-persist-4, multi-head locus, N=152 appearances over 3 pairs)
+## RUN HISTORY continued (infrastructure churn → final clean run)
+- `rs-persist-4` (L4, 450 s): first complete 3-pair M1/M2/M3 run (multi-head locus). Established the
+  INFORMATIVE-NEGATIVE on persistence. Saved as the M1/M2/M3 baseline.
+- `rs-persist-5..9`: died mid-run (pair-2 M4 OOM on the diffuse `' mell'→'tl'` edge + repeated L4
+  preemption + the shared-pod reaper's ~10-25 min window). Fixes layered in: per-appearance FRA-array
+  free after M4 (`c.pop("AF")`), `try/except` around M4 (a pathological pair → NaN, not a crash),
+  48 GB RAM, A40 (not L4), throttled ckpt uploads (HF 128-commit/hr cap).
+- `rs-persist-10` (A40/48 GB): completed in 153 s but the gate cap (250) found only 1 pair.
+- **`rs-persist-11` (A40/48 GB, 302 s, id `rzv9oygpw1ohp2`) — FINAL, all 3 pairs, all of M1–M5.**
+  Fast gate (1-forward pre-screen → cap 600 finds 3 pairs in seconds; stop-at-3) brought the whole run
+  under the reaper window.
 
-### Gate-passing pairs (frozen before M1/M2)
-| A→B | gate copyprob | parametric prior | multi-head oracle ceiling |
+## RESULTS (rs-persist-11, multi-head locus, 3 pairs, N=101 appearances)
+
+### Gate-passing pairs (frozen before M1/M2), all sanity gates PASS
+| A→B | gate copyprob | parametric prior | multi-head oracle ceiling | non-sink |
+|---|---|---|---|---|
+| `'Pa'→'azar'` | 0.30 | 1.6e-07 | 0.98 | yes |
+| `' raced'→'hip'` | 0.31 | 4.5e-06 | 0.96 | yes |
+| `' mell'→'tl'` | 0.30 | 2.5e-06 | 0.79 | yes |
+
+base copyprob 0.89 (LOCATE) / 0.82 (HELD-OUT) ≥ 0.30; oracle ceiling 0.79–0.98 ⇒ the multi-head locus
+is REAL (every intervention has a high ceiling to hit).
+
+### ★ HEADLINE — M5 the 2×2 (position-invariance × association-specificity), pooled
+Removal of A→B at RANDOM/unknown probe-A positions (held-out), 3 interventions, no position knowledge:
+
+| intervention | rem@random | position-invariant? | association-specific? |
 |---|---|---|---|
-| `'Pa'→'azar'` | 0.30 | 1.6e-07 | 0.98 |
-| `' raced'→'hip'` | 0.31 | 4.5e-06 | 0.96 |
-| `' mell'→'tl'` | 0.30 | 2.5e-06 | 0.79 |
+| **FRA cut** (diagnosed (A×A) union) | **0.073** | yes | yes (collateral 1e-4) |
+| **embedding cut** (zero A-feature ∀pos) | **0.098** | yes | NO (collateral 0.294) |
+| **attn-map cut** (fixed guessed key pos) | **0.000** | no | — |
 
-Sanity gate PASSES: base copyprob 0.89 (LOCATE) / 0.82 (HELD-OUT) ≥ 0.30; all located cells non-sink
-(q/k features active@0.00 on a generic sentence). Oracle ceiling 0.79–0.98 ⇒ the locus is REAL (the
-cut has a high ceiling to hit).
+- **Collateral on A's OTHER uses (benign): FRA = 1e-4 vs embedding-cut = 0.294 → embed/FRA = 1994×.**
+  This is the ONE robust FRA edge: it is ~2000× more association-specific than the embedding cut.
+- **VERDICT_2x2 = NULL** (FRA fails to remove at random positions). Deciding: rem_random FRA = 0.073 <
+  the 0.40 removal floor (and ≈ the embedding-cut's own 0.098 — neither removes much). attn-map = 0
+  confirms position-specific masks can't target random positions, but FRA ≈ embedding ≈ weak, so the
+  position-invariance axis does NOT separate them here: **both position-invariant cuts are weak because
+  the induction edge is diffuse**; the only thing FRA wins is specificity, which is the already-deflated
+  per-instance property, not removal-at-random-positions.
 
-### M1 — PERSISTENCE (the unconditional cut, held-out)
-- **rem_holdout (single cell, pooled) = 0.005**; **rem_holdout(k≤3) = 0.020**.
-- **frac_of_oracle = 0.005** — the FRA cell-cut removes **0.5% of what the multi-head oracle removes**.
-- Per-pair rem_holdout: `'Pa'→'azar'` 0.011, `'raced'→'hip'` 0.0001, `'mell'→'tl'` 0.004. Union k=3
-  tops out at 0.025/0.000/0.035. The cut is causally negligible at EVERY pair.
+### M4 — FRA-diagnosability of the causal union (can FRA score `s` predict causal `c`?), pooled
+- **Spearman(s, c) = 0.03** (per-pair 0.23 / −0.37 / 0.23) — FRA's per-cell score essentially does NOT
+  rank cells by causal effect. → **INFORMATIVE-NEGATIVE: you cannot read the union off FRA; brute-force
+  ablation is still required.**
+- recovery(k) = removal(FRA-top-k)/removal(causal-top-k): k1 0.14, k3 0.71, k5 0.52, **k10 1.00**. FRA
+  only catches up at k≈all-candidates (trivially), not at small k.
+- min_diagnosed_union_90 = 8.1; transfer (LOCATE-diagnosed FRA-top-10 union cut on HELD-OUT) rem = 0.073
+  (frac of oracle 0.08) — the diagnosed union does not transfer to meaningful held-out removal.
 
-### M2 — SAE-FEATURE-CONSISTENCY (centerpiece, N=152, (head,qF,kF) cells)
-- **pooled top1_coverage = 0.32; cov3 = 0.61; cov5 = 0.82; n_cells_for_90 = 8.**
-- **q-side drifts**: qtop1 = 0.32 < ktop1 = 0.34; head_top1 = 0.69 (even the dominant *head* drifts ~31%).
-- **edge_cov_mean = 0.003–0.019** — THE KEY NUMBER: the per-appearance dominant cell carries only
-  **0.3–1.9% of the induction edge**. The edge is spread across hundreds/thousands of tiny cells.
-- Mixed per-pair concentration: `'raced'→'hip'` is highly consistent (top1cov=0.94, n90=1, one cell
-  carries the edge at 94% of appearances) yet its cut removes 0.0% — the cleanest demonstration of the
-  concentrated-but-weak trap. `'Pa'→'azar'` cov3=1.0/n90=3; `'mell'→'tl'` is the drifting one (top1cov=0.34,
-  n90=6, cov3=0.74).
-- `{lc} × q-feature` contingency + magnitude-weighted variant recorded per pair in the JSON; they do not
-  rescue concentration (the cell stays weak whether counted or magnitude-weighted).
+### M1/M2/M3 (secondary), pooled
+- **M1 persistence**: rem_holdout(single cell) = 0.006, rem_holdout(k≤3) = 0.018, frac_of_oracle ≈ 0.006.
+  The single-cell / bounded-union cut is causally negligible vs the 0.91 oracle ceiling.
+- **M2 consistency**: top1_coverage = 0.31, cov3 = 0.60, n90 = 8, **q-side drifts** (head_top1 = 0.68 —
+  even the dominant head drifts ~32%). edge_cov_mean = 0.003–0.019 — the dominant cell carries only
+  **0.3–1.9% of the edge** (the diffuse-edge / concentrated-but-weak fact). `'raced'→'hip'` is highly
+  consistent (top1cov 0.94, n90 1) yet its cut removes ~0% — the concentrated-but-weak trap, cleanly shown.
+- **M3a** token-mask(no-detector) ≈ 0, oracle 0.82–1.00. **M3c** benign collateral FRA ≈ 0 vs
+  feature-ablation 0.29 vs ActAdd 3.8 (the specificity win, ablate/FRA ≈ 2000×).
+- **VERDICT_PERSISTENCE = INFORMATIVE-NEGATIVE** (rem_k3 = 0.018 < 0.40).
 
-### M3 — COMPARISON
-- **M3a token-mask (no detector) = 2.3e-06 (≈0)**; FRA/mask ratio = 2187× (>> the 2× WIN bar). The
-  oracle token-mask (detection granted) = 0.80–1.00. So a fixed position-mask cannot generalize to
-  held-out positions — but FRA's edge here is that it removes *more than the no-detector mask*, which is
-  trivially true since the mask removes ~0; FRA's removal is also ~0.005, so this "win" is hollow.
-- **M3b union top-k**: gain rem(k3)−rem(k1) = 0.015 pooled — a bounded union does NOT recover persistence.
-- **M3c benign-use preservation (the one clean FRA WIN)**: FRA collateral KL = 1.5e-04 ≈ 0;
-  feature-ablation KL = 0.294; ActAdd KL = 3.8. **ablate/FRA = 1995×.** Benign top-1 preserved: FRA 1.0,
-  feature-ablation 0.375–1.0, ActAdd 0.0. FRA is perfectly association-specific (fires only on the A→B
-  cell), feature-ablation wrecks A's benign uses, ActAdd destroys everything. This clause passes — but it
-  is the per-instance-selectivity property that already deflated in EM/injection/binding; it is NOT
-  persistence.
-
-## VERDICT: INFORMATIVE-NEGATIVE
-**Deciding number: rem_holdout(k≤3) = 0.020 < 0.40** (the §4.3 magnitude floor). Also cov3=0.61<0.80 and
-n_cells_for_90=8 fail the bounded-union WIN. Sanity gate passes, all cells non-sink, oracle ceiling high
-(0.79–0.98) — so this is a REAL negative, not a low-base-rate or wrong-locus artifact.
-
-### Why it's negative (two compounding mechanisms, both measured cleanly)
-1. **CONCENTRATED-BUT-WEAK (binding, §5.3).** Even where the SAE picks ONE consistent cell across all
-   contexts (`'raced'→'hip'`: top1cov=0.94, n90=1), that cell carries only ~1% of the induction edge
-   (edge_cov_mean=0.010), so cutting it removes ~0% of the copy — `frac_of_oracle=0.005` pooled. The
-   induction QK score is a diffuse sum over thousands of feature-pairs; no single (or top-3) cell is
-   causally load-bearing. This is the same lesson as the j1/j2 induction anchor (top-3 carry ~20% of
-   edge there; here even less because the locus is multi-head), now quantified for persistence.
-2. **Q-SIDE DRIFT (secondary).** Pooled across pairs/heads, top1_coverage=0.32, n90=8, and the drift is
-   q-side (qtop1<ktop1, head_top1=0.69): A's query feature (and dominant head) varies with left-context.
-   The STRESS lever bites — but it is the SECOND-order problem; even with no drift the cut would fail on
-   magnitude.
-
-### Honesty controls passed (it is a real negative, not a binning artifact, §5.2)
-- top_k=None (all features) → no truncation fragmentation. Tie-aware cov(k) + magnitude-weighted w_top1
-  recorded (don't rescue). Exactly one B per primer (asserted). Multi-head locus has oracle 0.79–0.98 so
-  the cut had a real ceiling. The negative is "the SAE cell is causally negligible (and moderately
-  context-dependent)," not "ranks wobble on a near-tie."
+## OVERALL VERDICT (all three framings agree): INFORMATIVE-NEGATIVE / NULL
+The FRA cell-cut is NOT a position-invariant, association-specific *removal* tool for an in-context
+word-association on gpt2-small, because the induction QK edge is a **diffuse sum over thousands of SAE
+feature-pairs (edge_cov ~1%)** distributed across a 5-head set. Consequences, each measured cleanly:
+1. **No removal**: single-cell or bounded-union cut removes ~0.6–7% vs the 0.91 oracle ceiling (M1, M5).
+2. **Not diagnosable**: FRA's per-cell score does not rank cells by causal effect (Spearman ≈ 0.03), so
+   FRA does NOT replace brute-force ablation search for finding the causal union (M4).
+3. **No position-invariance edge over the fair baseline**: FRA removal ≈ embedding-cut removal (both
+   weak); FRA's *only* edge is ~2000× lower collateral (specificity) — the already-deflated per-instance
+   property, not persistence/removal.
 
 ### Handoff to path-2
-The deliverable: **path-1's FRA single-cell-cut cannot persist a word-association because the induction
-edge is not concentrated in any small SAE cell-set (edge_cov ~1%), even when the cell IS context-consistent.**
-FRA at this level retains only its per-instance association-specificity (M3c, ablate/FRA ~2000×), which is
-the already-deflated property — NOT a weight-space persistent edit. Path-2 needs a decomposition where the
-association's content is one causally-load-bearing component, not a 1%-of-edge SAE feature-pair. The q-side
-drift localizes a second target (a query-side representation invariant to left-context).
+The deliverable is a clean, triple-confirmed negative that localizes the obstacle: the association's
+content is **not** one (or a few) causally-load-bearing SAE feature-pairs in the QK edge — it is diffuse
+and multi-head, and the SAE q-side feature drifts with left-context. Path-2 needs a decomposition where
+A→B content is a single causally-load-bearing component (the q-side, left-context-invariant direction is
+the concrete target).
 
 ## ARTIFACTS
 - Code: `experiments/fra_persistence/cloud/{persist_run.py, persist_diag.py, launch_persist_pod.sh}`.
 - HF: `fra_persist/code/persist_run.py`; results `fra_persist/results/{persist_results.json,
-  diag.json, run_rs-persist-4.log}`. Local copies under `/tmp/persist_res4/`.
+  diag.json, run_rs-persist-11.log}`. Final JSON copied to `experiments/fra_persistence/persist_results.json`
+  (+ `locus_diag.json`).
