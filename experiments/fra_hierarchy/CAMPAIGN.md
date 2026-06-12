@@ -124,7 +124,13 @@ A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha
         flagship: G-score[cuttable] vs G-post[not] gating question); broad×broad/regression tie-in (sycophancy [deference]×
         [opinion] is the best real broad×broad). HANDOFF: make-or-break = C1 OLS (flip_frozen~flip_none+flip_wrong, behavior-
         specific partial) + C3 per-head sweep (>=60% of effect in <=3 heads). Relayed to evaluator via SendMessage.
-    (E) sycophancy evaluator [bg, id a5c277aaee8b60bd2] = RUNNING -> SYCO_LOG.md + syco_evalset.json (43KB, built). gemma-2-2b-it
+    (E) sycophancy evaluator [bg, id a5c277aaee8b60bd2] = AGENT EXITED (handed off to pod). PHASE 1 POD LIVE: rs-syco-3
+        (id hl6fhcivrswrd9, L4); script syco_edge_ablate_pod.py (parse-OK, self-test verified: ablate-empty==off + liveness
+        d_live>1.0; edge-ablation renormalizes = correct Phase-1 causal test; synth redistribution lesson reserved for Phase 2).
+        Result -> HF fra_hier_syco/results/syco_results.json (+ rs-syco-3_run.log). Verdict baked in (ALL_CLAUSES_PASS:
+        effect>=0.20, C1 revert-to-own>2x&>=40%, C3 >=60% in <=3 heads, C4 valid>=0.90 & collateral<=0.10). Orchestrator
+        polling (bg bayhbewus). FIRST gate = does gemma sycophant (Phase0 flip_rate>0)? Then C1/C3/C4. NEXT: red-team result.
+    (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
         (NOTE: prior CAMPAIGN entry had T/E ids SWAPPED; corrected here — T=a6cd...696, E=a5c2...bd2.)
