@@ -87,8 +87,19 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   operating point, oracle-cut FIRST for LBNR ceiling). GO iff (i) oracle injection-drop R>=0.5 not-restored AND (ii) legit-instruction
   within 10% AND (iii) FRA cell >=50% of oracle. Pod rs-injection-precheck-1, HF fra_org_injection/. Log -> INJECTION_LOG.md.
   Also: factual-edit RED-TEAM w0vsbhiwa still in flight (fold its verdict in when it lands; planning says it won't overturn the saturation finding).
-- NEXT: read injection verdict + factedit red-team. GO-injection -> the candidate WIN (full §4 selectivity vs linear+hardening, then red-team).
-  NO-GO-injection -> CONSOLIDATE (write SYNTHESIS: synthetic positive + EM/syco/factedit/injection negatives + methodology + 5th-condition theory).
+- PHASE E RESULT: injection pre-check = NO-GO AT GENERATION-TIME edge (oracle response->injected-span R=0.000, ASR 1.00->1.00,
+  13/13 restored, head effects ~1e-18). BUT flagged PREMATURE (timing false-negative): a NOVEL canary can't be emitted without
+  attending to it SOMEWHERE -> load-bearing attention is plausibly at PREFILL; the gen-time cut is too late. Same upstream-
+  redundancy pattern as flagship (load-bearing attention is UPSTREAM of the answer position: MLP-prebake for recall, prefill-
+  propagation for injection -> late edge-cut = redundant read). UNIFYING THESIS forming: FRA wins need the load-bearing attention
+  AT the intervention/generation step (induction/copy attend-back-and-copy AT the emitted token); recall+injection do their work upstream.
+- PHASE E.2 IN FLIGHT: injection evaluator (a6c6439a53aaf3f44) tasked with the DECISIVE PREFILL-TIMING follow-up (rs-injection-prefill-1):
+  timing-agnostic oracle cut (zero attention to injected-span key from ALL query positions, prefill+gen) + per-timing breakdown +
+  eval-artifact ruleout. If all-position cut DROPS ASR>=0.5 -> timing artifact, injection IS attention-routed at PREFILL -> potential GO
+  (test FRA reach + collateral at prefill edge). If even all-position cut ~0 (after ruling out canary-leak/eval bug) -> robust surprising NO-GO.
+- factedit RED-TEAM w0vsbhiwa: 3 skeptics returned but workflow result not aggregated (output empty); extract from agent files if it doesn't complete. Planning expects it to uphold the negative.
+- NEXT: read prefill follow-up. GO -> injection WIN (full §4 selectivity vs linear ignore-injection + prompt-hardening, then red-team).
+  Robust NO-GO -> CONSOLIDATE (SYNTHESIS: synthetic positive + EM/syco/factedit/injection negatives + methodology + the upstream-load-bearing/5th-condition theory).
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
