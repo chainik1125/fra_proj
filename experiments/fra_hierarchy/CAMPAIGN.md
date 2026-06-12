@@ -174,6 +174,34 @@ content word "Python" in the QUESTION stem. So 0% drop is consistent with G-post
 the stance from surviving deference framing). Same incompleteness class as the v1 MC leak. -> red-team this before filing.
 Result: results/syco_v2_results.json. Pod rs-syco-v2-2 EXITED.
 
+## SYCOPHANCY INTEGRATED VERDICT (v1->v2->v3, 2026-06-11): ESSENTIALLY G-POST (weak non-selective deference-cue attention)
+v3 (definitive full-opinion-prefix cut, opinion arm, gemma-2-2b-it) flagged G_SCORE_CANDIDATE (max rel flip-drop = 0.30, exactly
+at threshold) — BUT reading the full curves it is NOT a clean FRA win:
+ - n_flipped = 10 -> 30% = 3 items un-flip. Tiny, fragile, right at the arbitrary 0.30 bar.
+ - NON-SELECTIVE (the killer): at alpha=1 where flip->0.189, WARRANTED agreement (correct-set collateral) CRASHES to 0.73
+   (renorm)/0.65 (BOS) from ~0.81. Cutting deference-cue attention removes ~as much warranted as unwarranted agreement ->
+   exactly what a linear "defer-less" steer does -> FAILS the FRA selectivity bar (the core of the win thesis).
+ - COARSE: the 30% needs cutting the ENTIRE 20-token opinion prefix (authority cue + stance), not a surgical concept×concept cell.
+ - MECHANISM: v2 (cut opinion-CONTENT span "X is better") = 0% drop; v3 (cut full prefix incl AUTHORITY cue "professor...certain...
+   never wrong") = 30%. So the load-bearing attention is to the DEFERENCE CUE, not the opinion content. Interesting but not the
+   theory's [deference]×[opinion-content] surgical target; it's "attend to the instruction/authority."
+ - C3 "passes" (0.75) but on total_unflip_mass=4 (4 items) = even more underpowered than v2; localization is noise at this n.
+INTEGRATED: sycophancy on gemma-2-2b-it is essentially G-POST. Attention to the opinion CONTENT is not load-bearing (v2: 0%);
+attention to the DEFERENCE CUE is weakly+NON-SELECTIVELY load-bearing (v3: 30% at n=3/10, collateral≈effect). This does NOT meet
+the FRA-cuttability bar (needs SELECTIVITY: a surgical cell-cut with LOWER collateral than a matched linear steer). The untested
+Phase-2 question = would a surgical FRA cell-cut recover the 30% MORE selectively than the coarse full-prefix cut / a DoM steer?
+At n=3/10 that needs a big power-boost to even test. Results: results/syco_v3_results.json. All syco pods EXITED.
+
+## CAMPAIGN STATUS (2026-06-11): 2 clean real-LLM NEGATIVES + 1 borderline-weak + synthetic POSITIVE + methodology
+- SYNTHETIC: broad×broad cell-cutting WORKS via the regression-fitted multi-cell edit (Y-collateral 0.03 ~ oracle). VALIDATED.
+- EM (Qwen2.5-7B bad-medical): G-POST negative (pattern-freeze alpha~0.72 was an artifact stack; debunked by 4-lens red-team).
+- SYCOPHANCY (gemma-2-2b-it): essentially G-POST (content-attention 0%; deference-cue attention weak+non-selective 30%@n=3/10).
+- METHODOLOGY (real deliverables): the corrected pattern-freeze protocol; the FRA-cuttability checklist (C1-C4); the G-score vs
+  G-post distinction; ground-truth>>judge-metric lesson. Theory v2 PREDICTED both negatives (sycophancy most-likely-fail = C3/distributed).
+- DECISION FORK (budget-relevant, ask user): (A) Phase-2 power-boost on the v3 weak signal (n~40 + surgical FRA-cell vs DoM
+  selectivity test); (B) gemma-2-9b-it model-size lever; (C) next candidate (refusal/format/backdoor); (D) consolidate + write up
+  the negative-leaning campaign (synthetic positive + 2 real negatives + methodology). 
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
