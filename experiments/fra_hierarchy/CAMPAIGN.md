@@ -118,11 +118,16 @@ A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
   for FRA-relevance (see "EM FINAL VERDICT" above). Committed. EM is DONE — do not relaunch / spend more GPU on it.
 - >>> TEAM LAUNCHED (2026-06-11, user: "keep going through candidates + theory with an agent team"):
-    (T) theory agent [bg, id a5c277aaee8b60bd2] -> THEORY_HIERARCHY_v2.md: FRA-cuttability checklist (4 clauses tied to
-        EM red-team lenses) + corrected measurement ladder + per-candidate pre-reg predictions + broad×broad/regression tie-in.
-    (E) sycophancy evaluator [bg, id a6cd48d869d6db696] -> SYCO_LOG.md + gemma-2-2b-it edge-ablation harness; SYCOPHANCY
-        via GROUND-TRUTH flip-rate (factual Qs + user-stated WRONG opinion, NO judge). Phases 0(evalset)/1(headfind+ablate)/2(FRA cell vs DoM).
-        Pods rs-syco-*, HF prefix fra_hier_syco/. SendMessage to either id to steer.
+    (T) theory agent [bg, id a6cd48d869d6db696] = DONE -> THEORY_HIERARCHY_v2.md (480 lines): FRA-cuttability checklist
+        C1 behavior-specific / C2 content-conditional / C3 localizable / C4 no-coherence-collapse, each tied to an EM red-team
+        lens; corrected measurement ladder (ground-truth metric >> judge); per-candidate pre-reg predictions (sycophancy
+        flagship: G-score[cuttable] vs G-post[not] gating question); broad×broad/regression tie-in (sycophancy [deference]×
+        [opinion] is the best real broad×broad). HANDOFF: make-or-break = C1 OLS (flip_frozen~flip_none+flip_wrong, behavior-
+        specific partial) + C3 per-head sweep (>=60% of effect in <=3 heads). Relayed to evaluator via SendMessage.
+    (E) sycophancy evaluator [bg, id a5c277aaee8b60bd2] = RUNNING -> SYCO_LOG.md + syco_evalset.json (43KB, built). gemma-2-2b-it
+        edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
+        Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
+        (NOTE: prior CAMPAIGN entry had T/E ids SWAPPED; corrected here — T=a6cd...696, E=a5c2...bd2.)
     Red-team via Workflow when E lands results. Cron 25ae1f3a continues driving ticks. DO NOT double-launch the team
     if agents already RUNNING (check Agent/Task status first).
 - >>> NEXT CANDIDATE: SYCOPHANCY × user-opinion (REAL_LLM_PLAN rank-1, gemma-2-2b-it + GemmaScope). Theory's best bet
