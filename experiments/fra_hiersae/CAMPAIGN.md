@@ -38,3 +38,33 @@ Matryoshka SAE, level-spreading frac_coarse_xx + coarse-cut residual + 3 axes, a
   α=0.7 recovers, so concept not unrecoverable-by-construction ✓. Then (C) PLANNING: CONFIRM -> the next problem is no longer
   ONLY nested-cell-aware attribution but the UPSTREAM concept-recovery (variance-vs-abstraction nesting); scope both.
 - Builds on: synth_hier2 (planted hierarchy), sae_models.py (SAE infra + the minimal Matryoshka add), fra/ toolkit, the persistence drift finding.
+
+## RED-TEAM VERDICT (Workflow wf_fc463f7a, 4 opus skeptics + synthesizer, 2026-06-12) — RELABEL, not reversal
+hiersae verdict RELABELED from CONFIRM to: "prereg level-spreading mechanism UNTESTED (0/8 gate-passing cells in the
+coupling grid) + robust upstream finding: NO fair naive-Matryoshka recipe achieves clean coarse recovery (>=0.8) in the
+flat-drift regime." Surviving MAJOR objections (both factually verified by the skeptics):
+ (1) MECHANISM MIS-ATTRIBUTED: the stated "variance-nesting / low-variance-shared concept" is wrong as worded — the
+     D-root (16 leaves, MORE than C's 8) recovers 0.81-0.94 in EVERY drift cell while C fails; the discriminator is
+     CLEAN-SIGNAL STRENGTH (D's weight-1.0 clean query injection vs C's invented-and-weakened c_anchor=0.2; the original
+     synth_hier2 injects the clean concept at 1.0 and has NO c_anchor). Entanglement/redundancy + weak clean signal,
+     not low variance (base[C] is literally PC1 of the full token distribution). [Nuance: in the CENTERED C-leaf
+     emission subspace the concept does live in the mean and in no PC — the two variance readings measure different
+     distributions; the D-vs-C discriminator is the decisive evidence.]
+ (2) SIMPSON ARTIFACT: recovΔ mean -0.02 only over all 8 cells; over the 4 DRIFT cells recovΔ=+0.054, monotone in
+     alpha (+0.165 at the transition). Truthful headline: matry never CROSSES the 0.8 gate in a drift cell but trends
+     positive there. Secondary: alpha=0.6 seed0 is FALSIFY-SHAPED (meets every locked causal FALSIFY bar; excluded only
+     by recovery-cos 0.765<0.80; a 0.1 gate perturbation flips it) — 1-of-2 seeds, boundary-fragile.
+ (3) "DECOUPLING SELF-DEFEATING / coupling fundamental" FALSIFIED twice: the evaluator's c_anchor=0/alpha=0.7 dual-gate
+     cell (matry recovers 0.83 + flat drifts) AND the scope-skeptic's counterexample generator (standalone concept
+     emission at non-query positions: flat recovers 0.888 AND drifts 0.125). The coupling is a c_anchor>0 generator
+     artifact, not a law.
+ATTACKS THAT FAILED (hardening the empirical core): strawman (6 recipes incl. Bussmann geometric ladder + per-prefix-
+TopK + iw32 ALL miss 0.8; implementation bug-free; prefix fires ~100% so no TopK starvation), under-training (iw8/10k
+moved 0.44->0.55 only), information-theoretic impossibility (mean-of-leaves recovers 0.72-0.82 -> the failure is the
+variance-greedy INDUCTIVE BIAS, the more interesting reading).
+WHERE THE PREREG MECHANISM WAS ALMOST/ACTUALLY TESTABLE the coarse cut was CLEAN (alpha=0.6s0: resid 0.09, fcx 0.84;
+noanchor dual-gate: resid 0.07, fcx 0.91) -> level-spreading leans FALSIFY where readable; the REAL blockers are
+UPSTREAM (recovery) and DOWNSTREAM (shared-concept specificity collapse: spec_ratio 1.36 vs gpt2-flat ~1995x).
+NEXT (red-team's cheapest decisive test, CPU-minutes): a NON-variance-greedy coarse atom (mean-pool / coarse-first
+objective) on the SAME drift-cell activations, alpha in {0.5,0.6} x >=5 seeds -> settles inductive-bias-vs-information,
+resolves the alpha=0.6 seed-flip, and OPENS the never-tested level-spreading regime.
