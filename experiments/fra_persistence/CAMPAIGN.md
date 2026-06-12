@@ -88,3 +88,19 @@ axis vs its natural alternative; FRA's value = wherever it wins, accepting it ma
 PERSISTENCE EXPERIMENT recast: M1 = CONTROL axis (weight-persistence removal across appearances); the diagnosability metric =
 LOCALIZATION axis (report SEPARATELY, do NOT collapse). DETECTION axis = a new measurement (FRA cell-correlation -> concept-
 relatedness vs an SAE-probe), naturally tested in the HIERARCHICAL-SAE SYNTHETIC with ground-truth concept-graph.
+
+## >>> THE CLEAN SIMPLE EXPERIMENT (PI, 2026-06-12): position-invariance + association-specificity, vs the EMBEDDING-cut baseline
+ESTABLISHED + EXPECTED (not a failure): at a KNOWN position, FRA cut == simple attention-map cut, no edge (the binding deflation).
+THE INTERESTING TEST = POSITION-INVARIANCE at RANDOM/unknown positions, where the attention-map cut is DISQUALIFIED (needs the
+position). The FAIR baseline is then CUTTING THE EMBEDDING (also position-invariant). FRA is the unique cell that is BOTH
+position-invariant AND association-specific:
+  2x2: attention-map cut = pos-specific+assoc-specific (FAILS at random pos); embedding cut = pos-invariant+assoc-BLIND (works,
+       kills all of A); FRA cut = pos-invariant+assoc-SPECIFIC (the claim: removes A->B wherever A fires, preserves A's other uses).
+THE EXPERIMENT (gpt2-small induction = cut the diagnosed (A-feature x A-feature) QK cell-union): KEY MANIPULATION = A at RANDOM
+positions (assume we DON'T know A's position at cut time). THREE interventions: (a) FRA cut (pos-invariant score/weight edit of
+the (AxA) union); (b) ATTENTION-MAP cut at a fixed/guessed wrong position -> FAILS at random pos (the "can't work here" control);
+(c) EMBEDDING cut (project out A's feature everywhere) = the FAIR pos-invariant baseline, assoc-BLIND. METRICS: position-invariant
+A->B removal (FRA ~= embedding >> attention-map-at-random) + ASSOCIATION-SPECIFICITY = collateral on A's OTHER uses (FRA << embedding).
+WIN = FRA removes A->B at random pos ~= embedding AND >> attention-map, AND FRA's collateral on A's other uses >=2x lower than the
+embedding-cut's. NULL = no specificity edge over the embedding cut, or FRA fails at random pos. This is the CONTROL axis with the
+RIGHT baselines (embedding cut, not token-mask). Still need to diagnose the union (localization) to do the FRA cut. Relayed to evaluator.
