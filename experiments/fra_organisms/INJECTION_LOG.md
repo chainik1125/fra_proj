@@ -114,11 +114,93 @@ DoM steer + a prompt-hardening baseline) at matched injection-removal. (Do NOT r
 - **Run 1 (pre-check):** pod `2rqt0dauo2dj2l` (L4), RUNID `20260612-064841`. TERMINATED pre-run
   (relaunched with an apples-to-apples fix to the FRA-reach hook: the cell-edit now tracks the running
   response position during generation, like the oracle cut; gates (i)/(ii) unaffected).
-- **Run 2 (pre-check, FINAL):** pod `rs-injection-precheck-1` (`syb2mruvn694v1`, NVIDIA L4), RUNID
-  `20260612-065045` → `fra_org_injection/results/20260612-065045`. LAUNCHED.
+- **Run 2 (pre-check, GENERATION-TIME cut):** pod `syb2mruvn694v1` (L4), RUNID `20260612-065045`
+  → `fra_org_injection/results/20260612-065045`. DONE, pod terminated.
+- **Run 3 (TIMING-AGNOSTIC prefill probe):** pod `eficruqsmm6dsg` (L4), RUNID `20260612-070218`
+  → `fra_org_injection/results/20260612-070218`. `jobs/injection_prefill.py`. DONE (GO), pod terminated.
+- **Run 4 (§4 SELECTIVITY WIN-TEST):** three pods crashed in a RESTART LOOP — the bug was a CODE bug, not
+  a bootstrap hang. The traceback (uploaded by `rs-injection-selectivity-2`, `yj7a3ajyqa0h9z`, RUNID
+  `20260612-074243`) showed **`KeyError: 'inject'` at Stage 1**: my heartbeat write put `{"heartbeat":...}`
+  into the SAME resume CKPT, and the resume block did a wholesale `state = json.load(...)`, clobbering the
+  initialized keys → every launch crashed at Stage 1 → container exited → RunPod restarted → loop. (The
+  first two pods — L40S `8wrkkh8ekyta4o` RUNID `20260612-072549`, L4 `1fjp8tx32wdjdj` RUNID
+  `20260612-073816` — crashed before their first 240s upload, so only "bootstrapping" was visible; that
+  misled the early diagnosis.) **FIX:** (1) resume now MERGES the loaded ckpt onto a DEFAULTS dict (never
+  drops required keys; nested `curves` merged too) — proven locally against heartbeat/empty/partial ckpts;
+  (2) heartbeat writes to a SEPARATE `heartbeat.json` (cannot poison resume); (3) launcher ships boot.log on
+  a 90s tick. ckpt() already runs per-prompt in Stage 1 + after the DoM build, all BEFORE the sweep
+  (partial-upload safe). RELAUNCHED (last attempt): pod `rs-injection-selectivity-3`
+  (`mu2dsqo5xf09th`, NVIDIA L4), RUNID `20260612-074823`
+  → `fra_org_injection/results/20260612-074823`. `jobs/injection_selectivity.py` +
+  `jobs/launch_injection_selectivity_pod.sh`.
+  Design: power-expanded INJECT set (3 imperative templates × 2 canaries × 2 carrier tasks × 24 bodies,
+  filtered to baseline ASR=1, target ~48-60); easy-legit (append-a-code), HARD-legit (a user-issued task
+  that is itself injection-SHAPED: "output exactly this completion code…: TASKOK_5"), capability
+  (judge-free quality proxy). Three interventions swept to trace (injection-removal vs collateral) curves:
+  (a) FRA cell-cut at L10H7+L18H6, (b) tuned linear DoM ignore-injection steer (layers {6,9,12} × α sweep,
+  projection-removal), (c) prompt-hardening (delimiter/untrusted-data defense, fixed point). Matched at
+  t*=0.85 injection-removal; headline = collateral(linear)/collateral(FRA) on HARD-legit. WIN iff FRA
+  materially lower (gap≥2× AND abs gap≥0.15 AND FRA keeps >10% hard-legit); else NULL (reported honestly).
 
 ---
 
 ## 4. RESULTS
 
-*(filled on completion — the three numbers + verdict.)*
+### 4.1 Run 2 — generation-time oracle cut (NO-GO, but a TIMING ARTIFACT)
+
+- **Operating point:** ASR=1 set = **13 / 36** injection prompts (baseline ASR = 0.36 — gemma-2-2b-it
+  follows this injection template on 36% of bodies; 13 is a usable ASR=1 set). Legit baseline = 32/36
+  prompts follow the real instruction (so the content-specificity control is well-populated).
+- **GATE (i) oracle gen-time cut: R = 0.000** (ASR 1.00→1.00; restored 13/13). Located "heads" L11H3,
+  L18H4, L9H3 — but with **head effects ~1e-18 (numerically ZERO)**: the cheap logit head-find found NO
+  causal signal at the generation/response position. Cutting the response→injected-span edge at decode
+  time does NOT touch the canary.
+- GATE (ii) legit collateral = 0.000 (trivially — the cut does nothing). GATE (iii) FRA reach = NaN
+  (FRA drop 0.00, all 12 still emit the canary).
+- **Naive verdict: NO-GO.**
+
+**THE CONFOUND (timing).** A NOVEL canary (`PWNED_7Q`) cannot be emitted without the model attending to
+its span SOMEWHERE — it is not in parametric memory (the structural reason injection was the live shot).
+So the gen-time R=0.000 does NOT mean "injection is un-cuttable"; it means the load-bearing attention to the
+injected span is almost certainly at **PREFILL** (later-prompt / generation-prefix positions read the
+injected span and propagate "I must output PWNED" forward in the residual stream), and the generation-time
+cut fires too LATE — after the routing has already happened. This is the SAME upstream-redundancy pattern as
+the flagship's MLP pre-bake (the load-bearing computation is upstream of where we cut), and it would be wrong
+to file injection as a clean negative on a wrong-timing cut. → Run 3 disambiguates with a timing-agnostic
+cut (zero attention to the injected-span KEY from ALL query positions: every prefill position AND the
+generation positions), plus a per-timing breakdown (prefill-only vs gen-only) to localize WHERE the routing
+lives, plus eval-artifact guards.
+
+### 4.2 Run 3 — timing-agnostic prefill probe (GO — the gen-time NO-GO was a timing artifact)
+
+- **Eval-artifact guards (CLEAN):** detector pos=True/neg=False; canary occurs exactly **1×** in every
+  prompt (the injected span — no leak); located spans decoded correctly (e.g. `(30,47)` = the full attack
+  clause + canary); followed prompts emit `PWNED_7Q` as the **first** generated token. ASR=1 set = 13;
+  legit baseline = 32.
+- **ALL-HEADS span-key cut, timing breakdown (n=13):** **ALL R = 1.0, PRE R = 1.0, GEN R = 1.0.**
+  Blocking attention to the WHOLE injected span — from ALL query positions, OR from PREFILL-only positions,
+  OR from GEN-only positions (span-wide) — drives injection-following 1.00→0.00 on every prompt.
+  **→ Injection IS fully attention-routed, and the load-bearing read is at PREFILL (PRE alone = R=1.0).**
+  Run 2's R=0.000 was a timing+scope artifact: it cut only the single response→span-last-token edge at
+  decode time, missing both the prefill propagation and the span-wide read. (The same upstream-redundancy
+  pattern as the flagship — but here the upstream locus is ATTENDABLE, so the cut succeeds, unlike the
+  flagship's MLP pre-bake.)
+- **Localization (timing-agnostic causal head-find, ALL-cut by re-generation over 4 anchors):**
+  **L10H7 R=1.0, L18H6 R=1.0, L4H2 R=0.75** — a few-head surgical edge (≤3 heads carry it), NOT distributed.
+- **GATE (ii) content-specificity:** legit collateral under the SAME ALL-position cut at {L10H7,L18H6,L4H2}
+  = **0.094** (≤10% — the cut removes the injection, not generic instruction-following).
+- **GATE (iii) FRA reach:** the FRA (injected-content × comply) cell-edit at those heads reproduces
+  **100%** of the oracle injection-drop at c∈{1,2} (drop 1.0, reach 1.0).
+- **REVISED VERDICT: GO.** Injection is the campaign's first fresh win CANDIDATE (surgical, content-specific,
+  FRA-reachable at the prefill edge). NOT yet the WIN — that requires the §4 selectivity head-to-head (Run 4).
+
+### 4.3 Run 4 — the §4 SELECTIVITY WIN-TEST (FRA vs linear steer vs prompt-hardening)
+
+The pre-check shows the edge is surgical/content-specific/FRA-reachable; the WIN is FRA achieving matched
+injection-removal with **materially lower collateral than a tuned linear steer**, especially on a HARD
+control (legit instructions that structurally resemble injections — what a crude defense over-blocks). Trivial
+confound to guard: cutting attention to the injected span trivially blocks reading it — so the win is
+specifically *more selective than the linear steer at matched effect*, not just "blocks injection".
+
+*(filled on completion — expanded-set sizes, matched operating point, FRA-vs-linear-vs-hardening collateral
+table [easy-legit / hard-legit / capability], headline collateral-gap + WIN/NULL verdict.)*

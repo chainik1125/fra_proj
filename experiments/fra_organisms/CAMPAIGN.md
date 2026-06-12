@@ -57,6 +57,19 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
 - BUDGET: budget-conscious; small pods first; a clean negative is a valid result. Token allowance exhausted -> resume on reset,
   agents on opus 4.8. Commit after every step. Update RESUME STATE every step.
 
+## INJECTION §4 SELECTIVITY FINAL VERDICT (2026-06-12): NULL (sub-threshold; my preliminary "strong win" was a baseline-tuning artifact)
+Fixed run selectivity-3, sets: INJECT(ASR=1)=60, easy-legit=14, hard-legit=17, capability=24, matched t*=0.85. Metric: removal=
+injection-blocked; easy/hard/cap = RETENTION (higher=better). The honest verdict flipped from my premature excitement for TWO reasons:
+ 1. BEST-TUNED LINEAR: my "1.00 vs 0.47" was the HARSH layer L6. The harness correctly picked the linear steer's BEST (gentlest) layer
+    L12: at FRA's operating point removal~0.73, FRA hard-legit 1.00 vs L12-linear ~0.63 = a REAL but MODEST ~1.6x advantage (+0.37 abs),
+    BELOW the pre-registered >=2x win bar.
+ 2. MATCHED POINT t*=0.85: FRA CAPS at 0.73 removal (can't block >73% of injections). At t*=0.85 FRA is off-curve (collateral=None) ->
+    matched comparison undefined -> formal VERDICT = NULL.
+HONEST CHARACTERIZATION: FRA is somewhat more selective PER UNIT removal (hard 1.00 vs ~0.63 @0.73) but CAPS low and the advantage over a
+well-tuned linear steer is SUB-THRESHOLD (~1.6x, not >=2x). The apparent blowout was a harsh-baseline artifact — the false-positive trap, caught
+by the matched-point + best-tuned-linear discipline. prompt-hardening baseline: removal only 0.08 (weak defense). selectivity.json saved.
+=> BOTH fresh real-LLM flagships are NEGATIVE/NULL: recall NO-GO (selectivity/D3), injection NULL (caps + sub-threshold vs best linear).
+
 ## RESUME STATE (canonical)
 - PHASE A DONE: ORGANISMS.md (lit-review a0d7585cd8b676f5a) + SCREENING_RUBRIC.md (theory a8628cfc75d2a200c) written + committed.
   Lit-review top-5: (1) factual-assoc editing [flagship], (2) prompt-injection, (3) copy-suppression L10H7 [measured 22.7x win
