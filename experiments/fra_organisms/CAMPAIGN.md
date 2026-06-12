@@ -70,7 +70,17 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   fra_win/jobs/g_screen+j2_selectivity + fra/fra_func/fra_sae_lens). GROUND-TRUTH P(target) from logits. GO iff (i) cell-edit
   drops P(target)>=50% at c~1-2 AND (ii) held-out same-relation/diff-subject drops <15%. Pod rs-factedit-precheck-1, HF
   fra_org_factedit/. Log -> FACTEDIT_LOG.md. NO-GO = the pre-registered flagship negative (sharp bound).
-- NEXT: read pre-check verdict. GO -> bring in PLANNING + EVALUATOR full §4 selectivity test vs ROME/MEMIT -> RED-TEAM. NO-GO -> PLANNING synth (flagship negative) + next candidate (prompt-injection T2) or consolidate.
+- PHASE C RESULT: factual-edit pre-check = NO-GO. Gate(i) FAIL (median 0.6% P(target) drop, 0/28 reach 50%). Diagnostic (2nd pod):
+  oracle edge-cut R is RECALL-STRENGTH-GATED — 0.32 weak (P.03-.15) / 0.39 mid / 0.07 strong (P.6-.99, 0/12). Sanity France->Paris
+  R=0.32 (machinery OK). => subject->object transport REDUNDANT/SATURATED on recalled facts = the regime editing targets.
+  Load-bearing ceiling (NOT SAE-reach). Literature-consistent (ROME edits MLP). Pre-registered flagship negative (falsifier #1).
+- PHASE D IN FLIGHT (parallel):
+    RED-TEAM Workflow w0vsbhiwa (3 false-negative skeptics: head-localization / regime-model-MLP / salvage-metric).
+    PLANNING agent a7ca331286c933824 -> PLANNING.md (synthesize state + DECIDE next: prompt-injection T2 vs weak-fact salvage vs
+    consolidate; + the cheapest go/no-go pre-check for the pick). Key new refinement = "load-bearing on the OPERATING REGIME" is a
+    5th necessary condition beyond G-score (a structurally-ideal G-score relation can still be redundant where it matters).
+- NEXT: synthesize red-team + planning -> act on planning's decision (likely prompt-injection pre-check, IF its injected-instruction
+  edge is load-bearing unlike the recalled-fact edge) OR consolidate. Then loop or write SYNTHESIS.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
