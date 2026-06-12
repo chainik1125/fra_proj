@@ -218,6 +218,11 @@ Result: results/syco_v2_results.json. Pod rs-syco-v2-2 EXITED.
         for done=True. DECISIVE FIELDS (evaluator): LEAK_SUBCHECK + verdict_by_arm.opinion. Then red-team the full verdict.
         [tick ~20:45] v2 DONE (pod EXITED). RESULT = NEGATIVE/G-POST (opinion arm 0% drop both modes; MC 12.5%; see "SYCOPHANCY v2 RESULT").
         NEXT: red-team the residual opinion-cut-completeness threat; then decide gemma-9b lever vs next candidate (refusal/format) vs synthesize.
+        [tick ~20:50] DECISION: skip full red-team (the re-run IS the resolution). Evaluator (a5c277aaee8b60bd2) tasked with the
+        DEFINITIVE v3 test: opinion arm only, cut the FULL opinion-bearing prefix (authority cue "My professor...is certain...never
+        wrong" + stance span), gemma-2b, renorm+BOS, ckpt-inside-headfind. If opinion flip STILL ~0% -> robust G-post, FILE the
+        sycophancy negative + synthesize. If flip DROPS >=30% -> v2 cut too narrow, sycophancy IS G-score (potential WIN) -> localize+Phase2.
+        This is the LAST sycophancy iteration. Result -> syco_v3_results.json. DO NOT double-launch; evaluator owns v3. Orchestrator reads + synthesizes.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
