@@ -202,6 +202,17 @@ At n=3/10 that needs a big power-boost to even test. Results: results/syco_v3_re
   selectivity test); (B) gemma-2-9b-it model-size lever; (C) next candidate (refusal/format/backdoor); (D) consolidate + write up
   the negative-leaning campaign (synthetic positive + 2 real negatives + methodology). 
 
+## >>> CURRENT STATE (2026-06-11): PIVOT — holding for user's choice of NEW application class
+EM + sycophancy fully evaluated = both essentially G-POST (direction/payload behaviors, FRA's wrong class). Refusal DROPPED
+(Arditi: refusal is a single linear direction = FRA's provably-worst case). The user redirected: "brainstorm alternative
+applications". Brainstorm done -> BRAINSTORM_applications.md. KEY REFRAME: DIRECTION (G-post, FRA loses: EM/sycophancy/refusal/
+persona) vs RELATION (G-score, FRA's home turf: factual recall / induction / binding / injection-routing / RAG). The one PROVEN
+FRA win (fra_win induction-retrieval) IS relational. Ranked new candidates: (1) FLAGSHIP surgical factual-association editing
+(subject×relation cell vs ROME/MEMIT/linear, ground-truth metric, broad×broad by construction); (2) prompt-injection defense
+(attention-redirection = G-score by definition); (3) induction-backdoor disarm (generalize fra_win). 
+ASKED USER which to pursue (recommended #1). HOLDING for their steer — do NOT auto-launch a new campaign (collaborative choice)
+and do NOT CronDelete/terminate (research is PIVOTING, not done). No pods spending (all syco EXITED). Cron tick = verify-clean + hold.
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
