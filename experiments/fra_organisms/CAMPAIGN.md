@@ -114,8 +114,17 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   easy-legit/hard-legit/capability. WIN = FRA materially LOWER collateral than linear at matched effect (else NULL — report honestly).
 - FACTEDIT complete re-test (rs-factedit-complete-1) STILL RUNNING: band scan confirms recall-gating (hi R~0.07) but load-bearing
   headroom in mid band (P.15-.4, oracle R med 0.39). The full-subject-span FRA cell-edit result on the load-bearing band = pending.
-- NEXT: read injection §4 selectivity (the WIN test) + factedit complete. If injection WIN -> symmetric FALSE-POSITIVE red-team (EM-burned).
-  Then PLANNING synthesizes -> consolidate with the win(s)/negatives. Both flagships getting their fair complete test; injection is the live win.
+- FACTEDIT FINAL: NO-GO AIRTIGHT (selectivity/D3, committed). FRA cell-edit REACHES the load-bearing full-span edge (median drop
+  0.52, rank-flip 0.60 — NOT a reach failure) but is RELATION-keyed not SUBJECT-keyed -> collateral 0.49 (suppresses sibling
+  subjects' same-relation facts ~49-59%); only 1/20 selective. D3 conjunction-recurrence. Do NOT run ROME (demonstrated loss).
+  THE SHARP NEGATIVE: real factual recall's broad×broad conjunction is reachable+load-bearing but NOT subject-selective ->
+  synthetic's selectivity advantage does NOT transfer. (Optional writeup add: confirm ROME IS subject-selective on same 20 facts.)
+- INJECTION §4 SELECTIVITY test = IN PROGRESS (eval a6c6439a53aaf3f44 ALIVE, building Run 4: expand ASR=1 set ~40-60 + hard-legit
+  control, 3 interventions [FRA cell-cut L10H7/L18H6 vs linear ignore-injection DoM vs prompt-hardening] at matched removal,
+  collateral table). No selectivity pod launched yet. CAUTION: stale gen-time summary (RUNID 065045, oracle R=0.0) and prefill-GO
+  summary (070218, R=1.0) both exist — the selectivity result will be a NEW RUNID dir; do NOT mis-read the stale ones.
+- NEXT: read injection §4 selectivity WIN/NULL. WIN (FRA collateral << linear at matched removal) -> symmetric FALSE-POSITIVE red-team
+  (EM-burned) -> PLANNING consolidate. NULL -> consolidate honestly. Factedit already closed (negative). Injection is the live win/null.
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
