@@ -84,5 +84,9 @@ C: EVALUATOR runs FRA QK decomp on that circuit (faithfulness FIRST, then the "a
       behaviorally-inert; R=-0.39 LBNR-fail; THEORY.md/summary.md/RESULTS_SUMMARY.md). Only the S-inhibition-QK-content-ID (A2) angle is
       un-done, and it's NARROW + now under the faithfulness cloud.
   => DO NOT auto-launch IOI. The right next move = RESOLVE FAITHFULNESS FIRST (cheap diagnostics) — it's the foundation of the whole QK-resolution direction.
-  Binding selectivity (circuit #0 A3) still in flight (eval a568274a1cfbbcce5) — independent of this decision; let it finish.
+  Binding selectivity (circuit #0 A3) DONE = STRONG WIN 11.1x (FRA sib-coll 0.064 vs best-tuned linear-L9 0.715 @ t*=0.80;
+  beats head-ablation 8.2x/6.8x). Committed. >>> SYMMETRIC FALSE-POSITIVE RED-TEAM IN FLIGHT: Workflow ws9xvot33 (4 skeptics:
+  fra-operating-mode [the flagged oddity: win only at hard-cut c=1e9, finite-c messy], matched-point+best-tuned-linear [injection-killer],
+  metric-control-generality, mechanism-confounds [is the sibling control actually STRESSED or structurally immune?]). Await verdicts -> commit.
+  NOTE: binding WIN is BEHAVIORAL/causal -> robust to the induction faithfulness FAIL (which only hits FRA-as-QK-reconstruction).
 - Builds on: fra_win/ (FRA toolkit + j13_ioi + g_screen), fra/ module, fra_organisms2/ (binding circuit #0), v1 boundary-map theory.
