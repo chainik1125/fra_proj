@@ -72,6 +72,14 @@ budget/time -> SYNTHESIS2.md, commit, terminate pods, CronDelete.
   v1 harness (injection_selectivity.py) is GENERIC -> reusable. KEY risk/falsifier = lexical-vs-POSITIONAL binding (order-shuffle audit).
 - PHASE B IN FLIGHT: SCREEN agent a1977d8833751a57e -> SCREEN2.md (score top-3 on P1-P4, LOCK #1, concrete experiment design: operating-regime
   pre-check [P1 R_gen + P3 sibling-bleed + the order-shuffle lexical-vs-positional audit] FIRST, then selectivity vs best-tuned linear; harness-compatible; fallback order).
-- NEXT (cron C): SCREEN2 -> PLANNING pick -> EVALUATOR runs the #1 operating-regime pre-check (order-shuffle audit = decisive GO/NO-GO) -> if GO, selectivity vs best-tuned linear -> RED-TEAM (symmetric).
+- PHASE B DONE: SCREEN2.md LOCKED #1 = A1 in-context bound-entity retrieval (self-build eval, reuse v1 harness verbatim). GO gates:
+  R_gen>=0.6 AND sibling-bleed<15% AND content-addressed (order-shuffle). Fallback A1->ICLAttack->WinoDict.
+- PHASE C IN FLIGHT: EVALUATOR id a568274a1cfbbcce5 -> the OPERATING-REGIME PRE-CHECK only (one pod rs-binding-precheck-1, judge-free):
+  self-build binding eval ("Ann has the ale...Who has the pie?->Joe", single-token exact-match), filter to baseline-correct (operating regime),
+  lexical/positional disagreement design; locate retrieve-value heads; P1 R_gen vs R_prefill; P3 sibling-bleed; ORDER-SHUFFLE content-vs-position
+  audit (decisive falsifier). GO iff R_gen>=0.6 & sibling-bleed<15% & content-addressed. HF fra_org2_binding/. Log -> BINDING_LOG.md.
+  (ckpt-inside-loops + traceback-upload mandated — v1 had a restart-loop crash-before-upload.)
+- NEXT: read pre-check verdict. GO -> selectivity win-test vs BEST-TUNED linear (sibling hard control; WIN=>=2x+0.15abs+>10%) -> RED-TEAM(symmetric).
+  NO-GO -> fallback to ICLAttack (#2); record which condition failed (likely positional binding = the falsifier). This is the campaign's best shot at a FRESH WIN.
 - NEXT: when ORGANISMS2.md + PREDICTOR2.md land -> spawn SCREEN -> PLANNING pick -> EVALUATOR operating-regime pre-check -> selectivity-vs-best-linear -> RED-TEAM.
 - Builds on experiments/fra_organisms/ (SYNTHESIS.md = boundary map, SCREENING_RUBRIC.md = D1-D8 + §4 selectivity test, ORGANISMS.md = the v1 catalog).
