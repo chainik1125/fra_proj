@@ -149,7 +149,9 @@ be too small for clean attention-routed sycophancy. Result: results/syco_phase1_
         Result -> HF fra_hier_syco/results/syco_results.json (+ rs-syco-3_run.log). Verdict baked in (ALL_CLAUSES_PASS:
         effect>=0.20, C1 revert-to-own>2x&>=40%, C3 >=60% in <=3 heads, C4 valid>=0.90 & collateral<=0.10). Orchestrator
         polling (bg bayhbewus). RESULT IN: NEGATIVE (G-post; see "SYCOPHANCY PHASE-1 RESULT"). Pod EXITED.
-        NEXT: red-team the NEGATIVE for false-negative risk (small-n / single-span-leak / model-size); then decide power-boost re-run vs next candidate.
+        >>> FALSE-NEGATIVE RED-TEAM IN FLIGHT: Workflow wj5lfrbfa (3 lenses: statistical-power, intervention-leak, construct-and-model).
+        Evidence /tmp/syco_evidence.md + results/syco_phase1_results.json. DO NOT relaunch; await verdicts, synthesize, then
+        decide: power-boost re-run (harder/opinion items, bigger model, cut-all-opinion-positions) vs accept negative + next candidate.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
