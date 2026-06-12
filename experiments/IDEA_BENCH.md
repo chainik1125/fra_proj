@@ -24,11 +24,22 @@ sparse/structured W_QK and (plausibly) far LESS superposition, so:
 => The interesting test: re-run the persistence/diagnosability/control experiments on a weight-sparse model and see if FRA's cells
    become concentrated + consistent + cuttable where they were drifting/distributed in dense gpt2. This is the setting where FRA's
    QK-resolution might finally pay off, because the substrate is sparse by construction.
-FIRST STEP (when picked up): ARTIFACT availability — does OpenAI (or a replication) release weight-sparse model weights + the
-   sparse circuits? If yes -> reuse the fra/ toolkit + the persistence harness on it. If no public weights -> either a small
-   replication (train a weight-sparse toy transformer, more involved) or the SYNTHETIC analogue (a sparse-W_QK planted circuit,
-   compare FRA diagnosability on sparse-vs-dense planted weights — cheap, ground-truth, the natural extension of the hiersae synthetic).
-RISK/NOTE: FRA on a weight-sparse model may decompose in the NEURON/weight basis directly (no SAE needed) — that itself is a clean
-   test of "is the SAE the problem, or is FRA". Pairs naturally with the hiersae result (both ask: is a cleaner basis the fix?).
+ARTIFACT: AVAILABLE (UPDATED 2026-06-12). OpenAI released the "circuit-sparsity" models + OPEN TOOLS + sparse<->dense activation
+   BRIDGES (paper arxiv 2511.13653; method = ~99.9% weights zero + activation sparsity ~1/4 neurons/token). So RUNNABLE now.
+THE TENSION (PI) RESOLVED by the design: (a) sparsity "reduces superposition + single-purpose features" (cleaner = Effect 1) AND
+   (b) the objective EXPLICITLY "discourages using more neurons than strictly needed to represent a single concept" -> penalizes the
+   concept-FRAGMENTATION that would cause drift (AGAINST the user's Effect-2 worry). So lean = it HELPS the drift problem, not worse.
+   RESIDUAL WORRY (the real thing to measure): ACTIVATION sparsity means a context-dependent SUBSET of neurons co-fires per token, so
+   drift could survive at the SET level even with monosemantic atoms -> measure the q-feature-coverage metric in the sparse basis.
+THE CLEAN TEST (the deeper payoff): the monosemantic neurons ARE the disentangled features the SAE was trying (+ failing via
+   absorption) to recover -> SKIP THE SAE, run FRA in the NEURON basis directly. This DECISIVELY answers "is the SAE the problem, or
+   is FRA?" (the question induction-R²<0 + the drift raised): if FRA-on-neurons is consistent+diagnosable where FRA-on-SAE-on-dense
+   drifted, the SAE (+dense superposition) WAS the bottleneck. Sidesteps absorption entirely; pairs with hiersae (both: is a cleaner basis the fix?).
+LITERATURE: no direct study of SAEs-on-weight-sparse (models are weeks old). But absorption/splitting (Chanin 2409.14507) is a DENSE-
+   SAE pathology whose ROOT (superposition) weight-sparse attacks -> prior = SAEs absorb LESS / are unnecessary. Adjacent: hierarchical
+   sparse circuit extraction via attribution graphs (2601.12879) sits at the hiersae+diagnosability junction.
+EXPERIMENT (when picked up): re-run the drift/diagnosability/control(embedding-baseline)/persistence metrics on the released weight-
+   sparse model in the NEURON basis, vs dense+SAE. Cheap synthetic warm-up = a sparse-W_QK planted circuit (FRA diagnosability sparse-
+   vs-dense planted weights), the natural extension of the hiersae synthetic.
 
 ### (future entries appended here)
