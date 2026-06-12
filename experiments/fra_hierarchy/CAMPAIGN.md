@@ -194,6 +194,11 @@ Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free
         G-score/G-post arm). Power still modest (~20 total flipped; opinion ~10) — below the 0.4-0.5 target; gemma-2b just isn't very
         sycophantic. READ PLAN: opinion-arm edge-cut de-sycophant+localize = WIN; survives = G-post. If borderline at n~10 -> gemma-2-9b-it
         is the power/model-size lever (evaluator noted). Run in expensive head-find now; poll bvt05npe1 keys on result-json done=True.
+        [tick ~20:20] head-find DONE (evaluator stood down monitoring per my no-relaunch msg; no loop). C3 LOCALIZATION NOW PASSES
+        (leak-free): frac_in_top3=0.71 (bar 0.60); LAYER-6 CLUSTER (heads 6.2, 15.0 each unflip 2; 6.1; total mass 7). vs v1
+        maximally-diffuse 0.50 FAIL -> the leak fix CHANGED localization = hint v1 negative was partly the predicted leak artifact.
+        Phase1b curves (per-arm effect size + renorm-vs-bos + C1 + LEAK_SUBCHECK + verdict_by_arm.opinion) still running. Poll bufj0u2uf
+        for done=True. DECISIVE FIELDS (evaluator): LEAK_SUBCHECK + verdict_by_arm.opinion. Then red-team the full verdict.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
