@@ -81,7 +81,29 @@ protocol (the protocol that killed the EM false-positive)?*
   FRA wins iff lower collateral on the correct-set + on unrelated agreeableness. Use the regression-fitted
   multi-cell edit (synth_hier3-6 lesson: naive single-cell cut redistributes via softmax).
 
+## PHASE 1 v1 RESULT (rs-syco-3) — NOT FILED (premature; red-team found likely false-negative)
+- baseline: none acc 0.95 flip 0.0 | wrong acc 0.76 flip 0.21 | correct acc 0.98 flip 0.0 (valid 1.0 all).
+  -> gemma-2-2b-it DOES sycophant on factual-override (flip 0.19 on 63 competent items). PHASE-0 smoke POSITIVE.
+- edge-cut+renorm (top-6 heads): flip 0.19->0.13 (drop 0.064), revert 0.84, C1 to_own 0.25 vs to_other 0.08
+  (still_wrong 0.67), C3 frac_in_top3 0.50. ALL_CLAUSES_PASS=False. Looked like a diffuse negative.
+- RED-TEAM (3-lens) -> PREMATURE / likely FALSE NEGATIVE. Three threats:
+  (1) INTERVENTION LEAK (killer): 36/36 MC items duplicate the wrong answer in the un-cut option row "B) Lyon";
+      single-span cut + renorm re-derives & AMPLIFIES it. 9/12 flips were MC -> cut incomplete on 75% of working set.
+  (2) POWER: n=12 flips (McNemar p=0.0625, power ~0.39); effect bar 0.20 ABSOLUTE > max-possible 0.19 (miscalibrated).
+  (3) CONSTRUCT: only factual-override (G-post counter-prior), NOT the [deference]×[opinion-CONTENT] G-score target.
+
+## PHASE 1 v2 (rs-syco-v2-1) — fixes all three threats
+- eval set v2: `syco_evalset_v2.json` = 128 items (48 arith CLEAN + 40 mc LEAKY + 40 opinion stance), STRONG
+  authority/certainty framing. builder `build_syco_evalset_v2.py`. ablate_substrings[variant]: MC cuts BOTH the
+  "B (Lyon)" assertion AND the "B) Lyon" option row (leak fix); opinion cuts the asserted-stance phrase.
+  Spans verified 336/336 locally; one opinion side-collision (pen/pencil) fixed.
+- harness v2 `syco_edge_ablate_v2_pod.py`: MULTI-SPAN cut; TWO freed-mass policies (renorm=v1 / bos=route freed
+  mass to pos0, no survivor amplification); per-arm scoring (arith/mc ground-truth flip; opinion=stance-adoption
+  vs model's OWN none-stance); RELATIVE effect bar (>=50% baseline flip removed); leak-subcheck (arith vs mc under
+  renorm). Self-test asserts multi-span (>=2 pos) + liveness. headline = the OPINION arm.
+- pod LAUNCHED 2026-06-11: `rs-syco-v2-1` (id `ai7k6kkz0ec96w`, NVIDIA L40S; L4/L40 out of supply).
+  PHASE=1, ALPHAS={.25,.5,.75,1}, MODES={renorm,bos}, TOPK=12, MAX_NEW=12, out=syco_v2_results.json.
+
 ## VERDICTS (honest, per phase — a clean negative is a valid result)
-- (pending rs-syco-3 PHASE 1 result)
-</content>
-</invoke>
+- v1 (rs-syco-3): negative, NOT FILED (red-team: leak artifact + underpowered + wrong construct). Superseded by v2.
+- (pending rs-syco-v2-1)

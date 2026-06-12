@@ -38,7 +38,8 @@ export SEED='${SEED:-42}'
 export PHASE='${PHASE:-1}'
 export ALPHAS='${ALPHAS:-0.25,0.5,0.75,1.0}'
 export TOPK_HEADS='${TOPK_HEADS:-12}'
-export EVAL_JSON='/workspace/fra_hier_syco/code/syco_evalset.json'
+export EVAL_JSON='${EVAL_JSON:-/workspace/fra_hier_syco/code/syco_evalset.json}'
+export ABLATE_MODES='${ABLATE_MODES:-renorm,bos}'
 HFC=hf
 upload_log() { \$HFC upload '$HF_REPO' /workspace/run.log fra_hier_syco/results/$RUN_LOG --repo-type dataset >/dev/null 2>&1 || true; }
 trap 'echo "[BOOTSTRAP-ERR line \$LINENO]"; upload_log; sleep infinity' ERR

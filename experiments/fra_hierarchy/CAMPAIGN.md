@@ -176,8 +176,13 @@ Verdict logic unchanged (C1-C4 + ALL_CLAUSES_PASS) but on the powered, leak-free
         polling (bg bayhbewus). RESULT IN: NEGATIVE (G-post; see "SYCOPHANCY PHASE-1 RESULT"). Pod EXITED.
         FALSE-NEGATIVE RED-TEAM DONE (wj5lfrbfa, 3 lenses all MAJOR): negative is PREMATURE/likely-false (leak + power + construct).
         See "SYCOPHANCY NEGATIVE — RED-TEAM VERDICT" + "SYCOPHANCY v2 RE-RUN". Verdicts: results/syco_redteam_negative.md.
-        >>> EVALUATOR RESUMED (SendMessage to a5c277aaee8b60bd2) to build syco_evalset_v2 + leak-free/opinion-arm harness + re-run.
-        DO NOT double-launch; the evaluator owns the v2 build. Orchestrator red-teams the v2 RESULT when it lands.
+        EVALUATOR BUILT v2 + LAUNCHED: rs-syco-v2-1 (id ai7k6kkz0ec96w) RUNNING. Artifacts verified by orchestrator:
+        syco_evalset_v2.json = 128 items (48 arith + 40 mc + 40 OPINION w/ authority framing "professor...certain...never wrong");
+        syco_edge_ablate_v2_pod.py (parse-OK) = MULTI-SPAN cut (ablate assertion span + MC option row via ablate_substrings;
+        self-test asserts >=2 spans = leak fix live) + BOTH renorm & leak-to-BOS modes + arith/mc/opinion split + relative
+        effect-size bar. Result -> HF fra_hier_syco/results/syco_v2_results.json (+ rs-syco-v2-1_run.log). Orchestrator polling.
+        DECISIVE READ: opinion-arm (no parametric fallback) edge-cut -> de-sycophant+localize = WIN (G-score); survives = real G-post.
+        Also: clean-arith un-flips vs leaky-MC = was the v1 negative a leak artifact? DO NOT relaunch; red-team the v2 result.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
