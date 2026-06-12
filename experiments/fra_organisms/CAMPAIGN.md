@@ -129,8 +129,16 @@ Loop C-D over candidates until budget/time or a clear win+robust-red-team, OR al
   (smaller set if OOM); if not fixable in one attempt -> STOP + report the PRE-CHECK GO as a provisional win w/ selectivity noted-pending.
 - INJECTION EVIDENCE SO FAR (provisional GO, pre-check only): oracle R=1.0, localized L10H7 alone R=1.0, easy-legit collateral 9%,
   FRA cell reach R=1.0, detector valid + no canary leak. The §4 FRA-vs-linear-at-matched-removal head-to-head (the WIN confirmation) is the remaining gap.
-- NEXT: read evaluator's diagnose-or-report. If selectivity numbers land -> WIN(FRA collateral << linear on hard-legit)/NULL -> red-team(symmetric,EM-burned)
-  -> PLANNING consolidate. If pod unfixable -> consolidate with injection as a PROVISIONAL GO (pre-check strong; selectivity head-to-head pending) + the factedit/recall negatives + theory.
+- INJECTION SELECTIVITY (selectivity-3, bug fixed [KeyError 'inject' line 275], RUNNING) — PRELIMINARY NUMBERS = STRONG FRA WIN
+  (pending run-completion + red-team; metric: removal=injection-blocked, easy/hard/cap=RETENTION higher-better):
+    FRA cell-cut c=1: removal 0.73, easy-legit 0.86, HARD-LEGIT 1.00, capability 1.00.
+    LINEAR DoM (best-tuned L6 a=4, matched removal 0.78): easy-legit 0.00, HARD-LEGIT 0.47, cap 1.00. (a>=16 removal=1.0 but easy=hard=cap=0 = destroys model.)
+    => at MATCHED removal, FRA keeps 100% hard-legit vs linear 0.47; linear CANNOT selectively remove injection (any removal craters legit-following).
+    HARD-LEGIT GAP 1.00 vs 0.47 EXCEEDS win bar (>=2x + >=0.15 abs + FRA>10%). FRA's predicted niche (load-bearing/localized L10H7/content-specific) DELIVERS.
+    CAVEAT to red-team: FRA removal CAPS at 0.73 (selective-but-partial; linear is complete-but-destructive); n (inject set ~13? controls easy14/hard17/cap24) — POWER. prompt-hardening baseline (stage 5) + formal verdict pending.
+- NEXT: let selectivity-3 finish (stage5 prompt-hardening + VERDICT). Then COMMIT the win + launch SYMMETRIC FALSE-POSITIVE red-team (4 opus
+  skeptics; EM-burned): attack n/power, the matched-removal fairness, the "trivially blocks reading the span" confound, FRA's 0.73 cap,
+  whether hard-legit control is fair. If survives -> robust WIN. Then PLANNING consolidate (injection WIN + recall/EM/syco negatives + theory).
 - CRON: 34ae3a64 (13,43 * * * * = every 30 min) drives the pipeline. (Replaced prior session's 25ae1f3a, deleted.)
 - NEXT (cron state machine B): when BOTH ORGANISMS.md + SCREENING_RUBRIC.md land -> spawn APPLICATION/SCREEN agent (consume
   both -> SCREEN.md: scored+ranked candidates + concrete FRA variant per top one). Then PLANNING picks top 1-2 -> EVALUATOR
