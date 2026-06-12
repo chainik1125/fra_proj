@@ -20,7 +20,21 @@ Matryoshka SAE, level-spreading frac_coarse_xx + coarse-cut residual + 3 axes, a
 - Companion: gpt2 PERSISTENCE = INFORMATIVE-NEGATIVE (q-drift; FRA specific ~1995x but not position-invariant), FINAL committed (efc1de1).
 - Companion: MEAN-FIELD/CONDENSATE theory (B3) LANDED -> fra_meanfield/THEORY.md (sound; lean NO-condensate on dense gpt2 via the
   same drift; r_eff(M^B) before/after a basis cleanup = a diagnostic that rides on hiersae/B1/B2). Committed c4c4624.
-- NEXT: when v2 lands -> read per-cell verdict IN THE DRIFT CELLS (alpha 0.4/0.5 where flat_drift now passes) vs locked §5.1 bands
-  (CONFIRM predicted) -> RED-TEAM (symmetric; is drift genuine+gpt2-magnitude? recovery_matry still pass? residual real?) ->
-  PLANNING (nested-cell-aware attribution if CONFIRM). If v2 ALSO fails to drift -> the toy can't reproduce drift cheaply = its own finding.
+- PHASE A DONE -> VERDICT = CONFIRM (naive hierarchical SAE does NOT fix FRA drift), committed ddac76b. BUT via an
+  UNANTICIPATED, more-basic mechanism than the pre-registered higher-hierarchy-cells level-spreading:
+  RECOVERY FAILURE. Evidence (3 cells: validation α=0.4/0.7 + iw8 α=0.5): in the drift regime the naive (minimal)
+  Matryoshka coarse prefix gives NO recovery advantage over the flat SAE (coarseC_matry≈coarseC_flat≈0.44-0.55, robust
+  to α∈{0.4,0.5} and inner_weight∈{2,8}); flat-drift and concept-recoverability are TWO SIDES OF ONE COIN (the decoupling
+  redesign is self-defeating); MECHANISM = Matryoshka nests by reconstruction-VARIANCE, the drift-causing concept is
+  low-variance-SHARED (high-variance=leaves) -> prefix captures leaves not concept. Control α=0.7: concept strong ->
+  both recover (0.92/0.90), no drift -> not rigged. The predicted level-spreading is UNTESTABLE here (recovery fails first).
+- CONFIRMATION SWEEP IN FLIGHT (gates the red-team): α∈{0.4,0.5,0.6,0.7} × sp1 × seeds{0,1}, iw8 (Matryoshka's best shot),
+  steps8000 = 8 cells, local CPU -> hiersae_results_coupling.json. Solidifies the drift→no-drift transition + recovΔ≈0
+  across the bracket. Poller bv9esiu8m notifies on completion (~20 min). HOLD the red-team until it lands (else "only 3 cells").
+- PERSISTENCE: DONE + committed (efc1de1, persist_results_FINAL.json w/ all 3 verdicts + embedding-cut/random-pos M3a/M5).
+- NEXT (B): when the sweep lands -> finalize verdict w/ 8-cell evidence -> RED-TEAM Workflow (symmetric, 4 opus skeptics):
+  is the recovery-failure CONFIRM real? targets = (1) is the minimal Matryoshka a FAIR non-strawman (would a better
+  hierarchical SAE recover)? (2) is the variance-nesting the TRUE cause? (3) is the 0.8 recovery bar fair? (4) false-neg:
+  α=0.7 recovers, so concept not unrecoverable-by-construction ✓. Then (C) PLANNING: CONFIRM -> the next problem is no longer
+  ONLY nested-cell-aware attribution but the UPSTREAM concept-recovery (variance-vs-abstraction nesting); scope both.
 - Builds on: synth_hier2 (planted hierarchy), sae_models.py (SAE infra + the minimal Matryoshka add), fra/ toolkit, the persistence drift finding.
