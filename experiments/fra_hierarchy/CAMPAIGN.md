@@ -45,10 +45,48 @@ SYNTHETIC GATE PASSED: broad×broad cutting works via the REGRESSION (not naive 
 EM PRIOR (em_svd): Qwen2.5-7B bad-medical is MLP-routed (revert MLP-LoRA restores; attention synergist +16). overall-EM alpha likely LOW -> FRA cuts little (honest prior). The live question = a DOMAIN-CONDITIONAL attention sliver. alpha-measurement (PATTERN-FREEZE) needs NO SAEs -> testable on Qwen EM directly.
 TEAM: theory (THEORY_HIERARCHY done), real-LLM brainstorm (a47a65f5682d71835 RUNNING -> REAL_LLM_PLAN.md), evaluator (me+jobs), red-team (later).
 
+## EM PATTERN-FREEZE RESULT (2026-06-11) — alpha-measurement; PRIOR FLIPPED (surprising positive)
+SETUP: base + EM(bad-medical) both eager-attn; lockstep KV-cached per-prompt frozen gen (base attention PATTERN
+onto EM OV/MLP/residual+sampling). 8 persona + 11 cross-domain prompts x N_SAMPLES=4. Self-test PASSED
+(em-frozen-on-em |dlogit|=0.0 splice-neutral; em-frozen-on-BASE |dlogit|=5.0 patch-live). Judge = Claude haiku-4.5
+(OpenAI key hit insufficient_quota; gens saved, only judge swapped; alpha_hat is within-judge ratio -> robust).
+
+HEADLINE: alpha_hat = (align_frozen - align_em)/(align_base - align_em).
+  ALL rows:        base=82.7 em=32.8 frozen=57.9  -> alpha_hat_global = 0.50
+  COHERENT (coher>50, removes "nonsense inflates align"): base=84.9 em=59.2 frozen=77.8 -> alpha_hat = 0.72
+  PERSONA (sanity ran here): base=83.8 em=60.5 sanity=58.2 frozen=73.9 -> alpha_hat=0.575 (ALL) / 0.73 (coher>50)
+SANITY CONTROL PASSES: sanity(em-patterns-on-em, lockstep) vs em(HF generate) gap = -1.8 to -2.3 on persona
+  -> my codepath is behavior-neutral; the frozen effect is NOT a generation-codepath artifact.
+
+VERDICT: The pre-registered prior (alpha LOW ~0.1-0.3, "EM is MLP-routed") is WRONG. Pattern-freeze recovers
+~50% (all) / ~72% (coherent) of the alignment gap -> EM misalignment is SUBSTANTIALLY attention-PATTERN-gated.
+RECONCILIATION w/ em_svd (MLP-LoRA revert restores alignment): NOT a contradiction. em_svd = which WEIGHTS carry
+the payload (MLP direction). Pattern-freeze = does the BEHAVIOR survive swapping the attention PATTERN (no, ~72%
+dies). => MLP-WEIGHT-LOCALIZED but ATTENTION-PATTERN-GATED: the misaligned MLP reader only fires when attention
+routes the persona-cued content to it. This is exactly the FRA-relevant SELECTION step (pre-registered theory s5.2):
+selection-of-content-for-misaligned-processing is score-routed even if the payload is an MLP direction. => FRA has
+a REAL causal target on EM (the QK selection), contra the honest-negative expectation.
+
+CAVEATS (must red-team): (1) frozen DEGRADES coherence (incoh 0.56 vs base 0.11; coher>50 subset = 44% survivors
+-> survivorship). (2) per-domain n tiny after coherence filter (em often n=1-5; civics a_hat=2.04 from em n=3,
+medical/nutrition undefined = NOISE; do NOT read per-domain slivers). Trustworthy = global+persona (n=20-32).
+(3) judge swap to Claude (internally consistent, but absolute aligns not comparable to em_svd gpt-4o anchors).
+(4) ALT EXPLANATION to kill: is "base-patterns->EM" just "EM behaves like base because attention carries most
+computation" (trivial, not misalignment-specific)? frozen=77.8 is BETWEEN em(59) and base(85), NOT =base ->
+EM OV/MLP still injects some misalignment under base patterns -> partial, not trivial. Needs red-team.
+Result file: HF em_svd/results/em_patternfreeze_results.json (+ /tmp/pf_res). rejudge_pf.py = judge harness.
+
 ## RESUME STATE (canonical)
-- PHASE: real-LLM EXECUTION. EM pattern-freeze pod is LIVE (launched 2026-06-11).
-- >>> LIVE POD: rs-em-pfreeze-1 (id l3ssb5ts65ilrf, A40). Script em_pattern_freeze_pod.py (on HF em_svd/code/).
-    Result lands at HF em_svd/results/em_patternfreeze_results.json (+ rs-em-pfreeze-1_run.log). DO NOT relaunch if pod RUNNING or result exists.
+- PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
+- NEXT: (a) RED-TEAM this surprising EM positive (state-machine step 4: 4 opus skeptics) — attack the 4 caveats, esp. survivorship + the trivial-base-reversion alt. THEN (b) if it survives, the FRA cell-cut on EM's QK selection needs SAEs (andyrdt/saes-qwen2.5-7b-instruct resid SAEs, REAL_LLM_PLAN s2). (c) feasible benchmarks (sycophancy/refusal/format gemma+GemmaScope) for breadth.
+- (history below) EM pattern-freeze GENERATION DONE (pod rs-em-pfreeze-1 EXITED). RE-JUDGED via Claude (judge swap).
+- >>> EM RESULT STATUS: 524 gens saved at HF em_svd/results/em_patternfreeze_results.json AND /tmp/pf_res/...
+    Self-test PASSED on the pod (em-frozen-on-em |dlogit|=0.0 splice-neutral; em-frozen-on-BASE |dlogit|=5.0 patch-live).
+    BUT all 524 gpt-4o judgments = None: OpenAI key hit insufficient_quota (HARD billing exhaustion, not transient).
+    -> RE-JUDGING the saved text with Claude haiku-4.5 via ANTHROPIC_API_KEY_MATS (rejudge_pf.py, local, raw HTTP,
+    5 workers + backoff). alpha_hat=(frozen-em)/(base-em) is within-judge ratio -> robust to judge-offset (all 4 conds same judge).
+    DO NOT regenerate (GPU done); only re-judge. After re-judge: write alpha + per-domain verdict to CAMPAIGN, commit, advance to benchmarks.
+- (prior) LIVE POD rs-em-pfreeze-1 (l3ssb5ts65ilrf, A40) now EXITED. Script em_pattern_freeze_pod.py on HF em_svd/code/.
 - em_pattern_freeze_pod.py = fork of em_svd_pod.py: loads base + EM as TWO eager-attn models; monkeypatches
     eager_attention_forward (MODE off/donor/frozen + per-layer DONOR stash; registers in ALL_ATTENTION_FUNCTIONS['eager']
     AND patches module global -> covered both ways). Lockstep KV-cached per-prompt frozen gen: donor=base patterns,
