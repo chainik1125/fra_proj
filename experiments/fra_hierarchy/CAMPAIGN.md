@@ -117,6 +117,14 @@ A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
   for FRA-relevance (see "EM FINAL VERDICT" above). Committed. EM is DONE — do not relaunch / spend more GPU on it.
+- >>> TEAM LAUNCHED (2026-06-11, user: "keep going through candidates + theory with an agent team"):
+    (T) theory agent [bg, id a5c277aaee8b60bd2] -> THEORY_HIERARCHY_v2.md: FRA-cuttability checklist (4 clauses tied to
+        EM red-team lenses) + corrected measurement ladder + per-candidate pre-reg predictions + broad×broad/regression tie-in.
+    (E) sycophancy evaluator [bg, id a6cd48d869d6db696] -> SYCO_LOG.md + gemma-2-2b-it edge-ablation harness; SYCOPHANCY
+        via GROUND-TRUTH flip-rate (factual Qs + user-stated WRONG opinion, NO judge). Phases 0(evalset)/1(headfind+ablate)/2(FRA cell vs DoM).
+        Pods rs-syco-*, HF prefix fra_hier_syco/. SendMessage to either id to steer.
+    Red-team via Workflow when E lands results. Cron 25ae1f3a continues driving ticks. DO NOT double-launch the team
+    if agents already RUNNING (check Agent/Task status first).
 - >>> NEXT CANDIDATE: SYCOPHANCY × user-opinion (REAL_LLM_PLAN rank-1, gemma-2-2b-it + GemmaScope). Theory's best bet
   (plausibly attention-routed: "user states opinion O -> attend to O -> agree"). MUST use the CORRECTED PATTERN-FREEZE
   PROTOCOL above (coherence-control + base-reversion OLS + threshold-band + content-localization). Build a gemma
