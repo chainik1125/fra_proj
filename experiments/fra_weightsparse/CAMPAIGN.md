@@ -45,8 +45,15 @@ problem, or is FRA?" test of the three basis-attacks (B1 here / B2 model-diff / 
     d_model input) with W_dec=Identity → SAE-FREE clean test, 256²=65k cells, CPU-trivial, RUN FIRST; (B) SAE-BASIS = identical
     TopK SAEs on act_in × 3 models (Phase 1+2). SUBTLETY to measure: model re-sparsifies q,k AFTER projection (attn_q/attn_k loctypes)
     → FRA-recon-R² may drop on sparse; fallback = exactly-faithful q/k-projected FRA basis. Reuse fra/core/fra.py compute_fra_sparse.
-- **NEXT (P0.5 smoke):** one cheap rs-ws-* pod (or CPU): load the 3 ladder models via load_model; verify forward + task probs; slice
-  W_Q/W_K from c_attn; pull act_in/q/k hooks; run NEURON-BASIS FRA on the quote head; report top1_coverage + FRA-recon-R² ×3. May
-  answer the headline alone. THEN Phase 1 (SAE-train table) → Phase 2 (SAE-FRA + drift/Spearman) → WS_LOG.md verdict.
+- **P0.5 SMOKE DONE (2026-06-12, local CPU, dense1_1x only):** loader+tokenizer+task+FRA+causal stack verified end-to-end.
+  dense1_1x quote acc=1.00 (gate pass), bind acc=0.50 (CHANCE — binding likely beyond 1x-width models; quote = primary,
+  binding recorded as caveat). Head L3H11 drop=0.41. **FRA-recon R²=1.000000 in the neuron basis** (exact — the sweep/dense
+  configs do NOT re-sparsify attn_q/attn_k, that was csp_yolo2-only; Caveat B retired). Patched-forward validation diff=0.
+- **PHASES 1-2 IN FLIGHT (2026-06-12):** pod rs-ws-1 (id sm1kvywkptacvr, A40) running ws_pod.py STAGES=ABC.
+  A = 3-model load + tasks + head-finding + neuron-FRA + causal (Spearman/recovery/oracle). B = identical TopK SAEs
+  (d_sae=2048, k=32, 12k steps, 2M/200k train/eval tokens, python corpus) on act_in@circuit-layer. C = SAE-basis FRA + causal.
+  Results → HF fra_weightsparse/results/ws_stage{A,B,C}.json + ws_combined.json; crash → ws_traceback.txt; bg poller local.
+  RESUME if pod dies: bash code/launch_pod_ws.sh (env RUNPOD_API_KEY=$RP_API_KEY_MATS POD_NAME=rs-ws-2 STAGES=ABC; cheap, re-run whole).
+- **NEXT:** parse ws_combined.json → WS_LOG.md comparison tables + verdict (incl. co-firing-set drift) → commit.
 - Pods: rs-ws-* (reaper whitelist), RUNPOD_API_KEY=$RP_API_KEY_MATS. HF artifacts: dmanningcoe/fra-phase1-steering-data prefix
   fra_weightsparse/{code,results}. Pod deps: blobfile, tiktoken, `pip install -e` the circuit_sparsity repo, + fra toolkit.
