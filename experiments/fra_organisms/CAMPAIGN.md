@@ -70,6 +70,13 @@ well-tuned linear steer is SUB-THRESHOLD (~1.6x, not >=2x). The apparent blowout
 by the matched-point + best-tuned-linear discipline. prompt-hardening baseline: removal only 0.08 (weak defense). selectivity.json saved.
 => BOTH fresh real-LLM flagships are NEGATIVE/NULL: recall NO-GO (selectivity/D3), injection NULL (caps + sub-threshold vs best linear).
 
+## FINAL PHASE: PLANNING SYNTHESIS (a7ca331286c933824 resumed) -> SYNTHESIS.md
+Both fresh flagships resolved (recall NO-GO/D3, injection NULL/sub-threshold). Planner tasked with: (1) fairness sanity-check on the
+injection NULL at FRA's own operating point (removal~0.73; is FRA's hard-legit advantage vs best-tuned-linear >=2x [re-report] or ~1.6x
+[NULL robust]); (2) the honest meta-synthesis (WHEN FRA wins = load-bearing-attention-at-generation + non-recurrent-conjunction +
+SAE-cell-reachable; banked induction/copy wins; fresh broad×broad real-LLM extensions fail/modest; boundary map w/ recall/injection/EM/
+syco negatives + theory refinements); (3) consolidate-vs-one-more decision (budget-aware; recommend consolidate). All my pods EXITED.
+
 ## RESUME STATE (canonical)
 - PHASE A DONE: ORGANISMS.md (lit-review a0d7585cd8b676f5a) + SCREENING_RUBRIC.md (theory a8628cfc75d2a200c) written + committed.
   Lit-review top-5: (1) factual-assoc editing [flagship], (2) prompt-injection, (3) copy-suppression L10H7 [measured 22.7x win
