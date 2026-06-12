@@ -90,8 +90,28 @@ coarse-cut leaves residual). We CONFIRM the headline (naive fails) but the opera
   - CONTROL (method is not rigged to fail): α=0.7 — concept strong -> BOTH SAEs recover it (coarseC 0.92/0.90) and there
     is no drift. So the concept is NOT unrecoverable by construction; it is unrecoverable exactly when it causes drift.
 
-## CONFIRMATION SWEEP — IN FLIGHT
-α∈{0.4,0.5,0.6,0.7} × sp1 × seeds{0,1}, INNER_WEIGHT=8 (Matryoshka's best shot), steps8000 (8 cells, local CPU ->
-hiersae_results_coupling.json). Solidifies the drift→no-drift transition + that coarseC_matry never beats coarseC_flat
-(recovΔ≈0) across the bracket. Then finalize VERDICT + RED-TEAM (targets: is the minimal Matryoshka a fair non-strawman?
-is the 0.8 recovery bar fair? is the variance-nesting mechanism the true cause? false-negative: α=0.7 recovers, so no).
+## CONFIRMATION SWEEP — DONE (8/8 cells; hiersae_results_coupling.json; iw8 = Matryoshka's best shot)
+α    seed | top1f drift | cC_flat cC_matry recovΔ | resid carry fcx | R_full R_orc
+0.4  0    | 0.12  T     | 0.45   0.44   -0.01    | 0.19  0.00  0.00 | 0.19  1.15   <- pathological: full union can't reach oracle
+0.4  1    | 0.12  T     | 0.56   0.62   +0.06    | 0.37  0.50  0.53 | 0.73  0.63
+0.5  0    | 0.12  T     | 0.53   0.52   -0.00    | 0.39  0.51  0.63 | 0.80  1.08
+0.5  1    | 1.00  F     | 0.78   0.60   -0.18    | 0.44  0.33  0.63 | 0.66  0.64   <- boundary cell, seed-flipped
+0.6  0    | 0.12  T     | 0.60   0.77   +0.17    | 0.09  0.91  0.84 | 1.00  1.06   <- TRANSITION: drifts yet nearly recovers
+0.6  1    | 1.00  F     | 0.90   0.82   -0.09    | 0.11  0.86  0.85 | 0.83  0.70
+0.7  0    | 1.00  F     | 0.93   0.86   -0.07    | 0.01  0.99  0.96 | 1.07  1.09
+0.7  1    | 1.00  F     | 0.94   0.93   -0.02    | 0.02  0.96  0.93 | 0.60  0.80
+
+READ-OFF (finalized):
+1. NO RECOVERY ADVANTAGE: recovΔ mean=-0.02, range [-0.18,+0.17], no trend. The naive Matryoshka coarse prefix NEVER
+   meaningfully beats the flat SAE at recovering the concept. (THE core CONFIRM evidence.)
+2. PERFECT DRIFT<->RECOVERY COUPLING: every drift cell (4/4) has cC_matry<0.8; every cell with cC_flat>=0.9 has no
+   drift. The drift boundary sits ~alpha 0.5-0.6 with seed noise flipping boundary cells — matching the
+   sqrt(1-a^2)>a+c_anchor arithmetic (~0.57 at c_anchor=0.2).
+3. TRANSITION-ZONE NUANCE (honest, for the red-team): alpha=0.6 seed0 drifts (top1f=0.12) yet nearly recovers
+   (cC_matry=0.77, resid=0.09, carry=0.91). In a narrow band the hierarchy ALMOST works — so the verdict on the BAND
+   is closer to HELP-BUT-NOT-SOLVE; the verdict in the BULK of the drift zone (alpha<=0.5) is a clean fail.
+4. WHERE RECOVERY SUCCEEDS THE COARSE CUT IS CLEAN (no-drift cells: resid 0.01-0.11, fcx 0.85-0.96): the pre-registered
+   level-spreading mechanism does NOT bite at high alpha in this toy — consistent with v1 smoke. The predicted
+   higher-hierarchy-cells problem remains UNTESTED (needs a regime with recovery AND drift, which the coupling forbids).
+VERDICT (final, pre-red-team): CONFIRM — naive hierarchical SAE does not fix FRA drift — via RECOVERY FAILURE
+(variance-nesting), with a narrow transition band where it partially helps. Now to the symmetric red-team.
