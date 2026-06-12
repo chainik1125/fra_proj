@@ -113,6 +113,25 @@ A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha
      not explained by how mild the behavior is. + per-layer/head concentration before claiming an FRA-cuttable target.
  (e) the sanity (treatment-codepath-on-self) + self-test (patch-live) controls — these DID work here, keep them.
 
+## SYCOPHANCY PHASE-1 RESULT (2026-06-11): NEGATIVE — sycophancy is G-POST (not attention-edge-gated) on gemma-2-2b-it
+Ground-truth flip metric (NO judge confound). gemma-2-2b-it DOES sycophant: none flip 0.0 (acc 0.95), wrong flip 0.21
+(competent 0.19), correct flip 0.0. So the smoke gate PASSED (real behavior to cut). Edge-ablation (answer->opinion span,
+renormalized, top-12 causal heads, alpha sweep) RESULT:
+ - effect_size FAIL: flip 0.19 -> 0.127 at full ablation (drop 0.064; bar 0.20). Most sycophancy SURVIVES the edge-cut.
+ - C1 behavior-specific FAIL: of 12 flipped items, cutting the edge leaves p_still_wrong=0.667 (8/12 STAY on user's wrong
+   answer), p_to_own=0.25 (3/12 revert to model's own answer), p_to_other=0.083 (1/12). 3x own-vs-other ratio is right
+   DIRECTION but only 25% revert (bar 40%). => agreement is mostly POST-HOC (G-post: OV/MLP endorsement), NOT gated by
+   attention to the opinion span (G-score). The theory v2 prediction (sycophancy gating = open G-score-vs-G-post) lands G-POST.
+ - C3 localizable FAIL: maximally DIFFUSE — 6 "top" heads each un-flip exactly 1 of 12 items (total unflip mass=6, frac in
+   top-3 = 0.5; bar 0.60). No surgical FRA cell. (theory v2 pre-registered C3 as sycophancy's most-likely-fail clause — correct.)
+ - C2 base-reversion PASS (revert-to-own 0.84 directionally) + C4 coherence PASS (valid 1.0; collateral correct-acc drop +0.016).
+VERDICT: ALL_CLAUSES_PASS=false. Sycophancy on gemma-2-2b-it is NOT cleanly FRA-cuttable. A clean, INTERPRETABLE negative,
+TRUSTWORTHY where EM wasn't (ground-truth metric, smoke gate passed, failure consistent across clauses).
+HONEST THREATS-TO-THE-NEGATIVE (false-negative risk, to red-team): (1) small n — only 12 baseline-flipped items; C1/C3 stats
+noisy; effect-size bar 0.20 nearly unmeetable vs 0.19 baseline. (2) renormalizing SINGLE-SPAN edge-cut may LEAK if the
+opinion content is re-derivable elsewhere in context (softmax redistribution underestimates routing). (3) gemma-2-2b-it may
+be too small for clean attention-routed sycophancy. Result: results/syco_phase1_results.json. Pod rs-syco-3 EXITED.
+
 ## RESUME STATE (canonical)
 - PHASE: real-LLM EXECUTION. EM pattern-freeze DONE + re-judged (Claude). RESULT: alpha_hat~0.72 (coherent) = SURPRISING POSITIVE (prior flipped). See "EM PATTERN-FREEZE RESULT" above.
 - RED-TEAM COMPLETE (both rounds: wyi6v6db5 + wmxgz8hy6, 4 lenses, all WEAKENS/MAJOR) + PI OLS. EM VERDICT = NEGATIVE
@@ -129,7 +148,8 @@ A naive pattern-freeze mean-align alpha MANUFACTURES a false positive. Any alpha
         d_live>1.0; edge-ablation renormalizes = correct Phase-1 causal test; synth redistribution lesson reserved for Phase 2).
         Result -> HF fra_hier_syco/results/syco_results.json (+ rs-syco-3_run.log). Verdict baked in (ALL_CLAUSES_PASS:
         effect>=0.20, C1 revert-to-own>2x&>=40%, C3 >=60% in <=3 heads, C4 valid>=0.90 & collateral<=0.10). Orchestrator
-        polling (bg bayhbewus). FIRST gate = does gemma sycophant (Phase0 flip_rate>0)? Then C1/C3/C4. NEXT: red-team result.
+        polling (bg bayhbewus). RESULT IN: NEGATIVE (G-post; see "SYCOPHANCY PHASE-1 RESULT"). Pod EXITED.
+        NEXT: red-team the NEGATIVE for false-negative risk (small-n / single-span-leak / model-size); then decide power-boost re-run vs next candidate.
     (E-was) [bg, id a5c277aaee8b60bd2] earlier state -> SYCO_LOG.md + syco_evalset.json (66 items, built). gemma-2-2b-it
         edge-ablation harness; GROUND-TRUTH flip-rate (wrong/none/correct variants, NO judge). Phase 0 (evalset done, smoke-test next).
         Phases 0(evalset)/1(headfind+ablate+C1 OLS+C3 sweep)/2(FRA cell vs DoM). Pods rs-syco-*, HF prefix fra_hier_syco/.
