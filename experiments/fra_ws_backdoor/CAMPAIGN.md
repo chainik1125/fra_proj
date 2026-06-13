@@ -101,13 +101,22 @@ sparse-vs-dense, depth confound flagged). On the SAME planted backdoor.
 ---
 
 ## RESUME STATE
-- **Status:** Phase F PASSED (FEASIBLE on all 3 models). Building Phase B (`code/backdoor_pod.py`).
+- **Status:** Phase F PASSED. Phase B harness COMMITTED + uploaded HF; pod rs-wsb-bd LAUNCHED (running).
 - **Phase F verdict:** in-context mapping followed by ALL 3 ladder models; SPARSE substrate top1=1.00
   (ARROW_COMMENT k3), wsda 1.00, dense 0.96; copy_rate=0. Numbers in LOG.md + results/feas_results.json.
   **Backdoor format = ARROW_COMMENT (`# T -> P`) at k=3 demos.**
-- **Done:** feas_pod.py (gate), launch_pod_wsb.sh (launcher), feas_results.json (uploaded HF + committed).
-- **Next:** Phase B — backdoor_pod.py: LOCATE neuron-FRA trigger→payload QK edge; CUT (cell-cut, win test
-  vs position-aware oracle + 2 baselines [token-mask, payload-suppress linear], position-invariance on
-  held-out novel positions); DRIFT (edge-cell stability across contexts). sparse vs wsda vs dense.
-- **HF results prefix:** `fra_ws_backdoor/results/` (feas_results.json uploaded).
-- **Pods:** rs-wsb-feas (A40, id 4o4dtt9txc12mc) — ran Phase F, self-terminating.
+- **Done:** feas_pod.py (gate), launch_pod_wsb.sh (launcher), feas_results.json (HF + committed).
+  **backdoor_pod.py (Phase B harness)** committed + uploaded to HF fra_ws_backdoor/code/.
+- **Phase B harness design (backdoor_pod.py):** plants `# T -> P` (k=3) on single-token-validated
+  (T,P) identifier pairs (node->result, data->index, value->output — all verified single-token).
+  LOCATE: COPY heads = qp→payload attention ≥0.30 (induction, not ASR-drop) at the answer step;
+  neuron-FRA omega (act_in + bias channel) per copy head → top-|signed-mean| cells across LOCATE.
+  CUT on HELD-OUT novel-position prompts: multi-head FRA cell-cut (position-invariant pre-softmax
+  score edit across the copy-head union) removal curve vs position-aware ORACLE (zero qp→payload attn)
+  + 2 baselines token-mask (zero attn onto T) & payload-suppress (remove unembed dir of P); collateral
+  = KL on benign held-out text (T,P in non-backdoor uses) at matched removal target. DRIFT: edge_cosine
+  / top1_coverage of the planted edge cell across contexts. GROUND-TRUTH binary completion probs only.
+- **Next:** collect rs-wsb-bd results → LOG.md Phase-B result (removal / collateral ratios vs 2 baselines /
+  position-invariance / drift) sparse vs wsda vs dense; check >=2x + position-invariance WIN BAR.
+- **HF results prefix:** `fra_ws_backdoor/results/` (backdoor_results.json + rs-wsb-bd_run.log incoming).
+- **Pods:** rs-wsb-bd (A40, id 7oyfs9hbu98skw) — Phase B, self-terminating. rs-wsb-feas (EXITED) ran Phase F.
