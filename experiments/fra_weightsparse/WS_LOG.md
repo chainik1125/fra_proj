@@ -189,7 +189,11 @@ Anchors: gpt2-dense+SAE induction **top1_coverage = 0.31, n_cells_for_90 = 8** (
   machinery; row-based bind causal because teacher-forced rows break cells_delta_fn's batch alignment) + launch_pod_ws2.sh.
   CPU smoke (T1 sparse+dense + T2 1x gate recheck): EXIT 0 end-to-end; 1x bind acc 0.575 (chance-ish, replicates B1).
   Pods rs-ws2-*. Results -> HF fra_weightsparse/results/induction_binding/.
-- NEXT: launch rs-ws2-1 (STAGES=T1T2). Verdicts land in §"Candidates re-do" below.
+- **POD LAUNCHED (2026-06-12)**: rs-ws2-1 (A40, pod_id 5j1w9td7s04j4n, STAGES=T1T2). ind_bind_pod.py uploaded to HF
+  code prefix (ws_pod.py md5-matched HF copy). All prior rs-* pods EXITED; no name dupe. Monitor = HF log poll
+  (fra_weightsparse/results/induction_binding/rs-ws2-1_run.log + ind_bind_partial.json; ckpt after every stage).
+- NEXT (if resumed): poll HF for ind_bind_final.json; if pod died mid-run, relaunch rs-ws2-2 (the harness resumes
+  from ind_bind_partial.json on HF automatically). Verdicts land in §"Candidates re-do" below.
 
 ## §Candidates re-do — VERDICTS
 (pending pod rs-ws2-1)
