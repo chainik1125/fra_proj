@@ -115,3 +115,61 @@ a measurement and benign in consequence, for this behavior.)
   doesn't restore cuttability). This sharpens hiersae: no SAE variant on dense gets you what the sparse substrate gives.
 - Set-level co-firing drift exists even with monosemantic atoms but spares the edge-carrying cell — drift is a property
   of the representation's surroundings, not the circuit conjunction.
+
+---
+
+# CANDIDATES RE-DO (the original campaign tasks on the weight-sparse substrate) — started 2026-06-12
+
+PI directive: re-run the two ORIGINAL candidate tasks on the weight-sparse ladder, in the NEURON basis (reuse the B1 code):
+(T1) IDENTIFIER-INDUCTION = the code analogue of the gpt2 persistence/drift experiment (the sharpest substrate test, because
+the identifier is DIFFERENT in every context — the q/k codes CANNOT be one fixed cell, unlike the quote conjunction);
+(T2) BINDING UP THE LADDER = unblock the set_or_string 2-hop edge that was AT CHANCE on the 1x afrac0.25 model by climbing
+the EF (width) ladder to the smallest sparse model that passes the binding accuracy gate.
+
+## PREREG (LOCKED before running — anti-post-hoc)
+
+### Accuracy gates (operating-regime gate FIRST, the hard lesson from binding-at-chance)
+- **T1 induction gate**: a model "does the task" iff **top-1 next-token accuracy on the identifier-completion >= 0.70**
+  on the held-out-of-FRA probe set (the model's argmax over the full vocab equals the bound identifier's first token).
+  Chance is ~1/(#candidate identifiers) << 0.1. If the 1x ladder fails, try EASIER variants IN ORDER and record which works:
+  (i) shorter A..A range, (ii) more in-context repetitions of the (id, value) pattern, (iii) a wider EF model. Only FRA a
+  (model × variant) cell that PASSES the gate.
+- **T2 binding gate**: **binding score-accuracy >= 0.70** (P('.add(' | set-var query) vs P(' += ' | str-var query),
+  the B1 `bind_scores`). 1x afrac0.25 was 0.52 (chance); wsda 0.70; dense1_1x 0.85. Climb EF {1x→2x→4x→8x} at a fixed
+  nonzero budget; pick the SMALLEST sparse (afrac<1) model that passes, plus its byte-identical afrac1.000 twin.
+
+### Drift thresholds (what counts as "drift killed" vs "drift survives")
+Anchors: gpt2-dense+SAE induction **top1_coverage = 0.31, n_cells_for_90 = 8** (drift pathology); B1 quote circuit
+**top1_coverage = 1.00, dominant cell 200/200 stable** (drift killed, but on a FIXED conjunction).
+- **DRIFT KILLED** = the induction edge has top1_coverage **>= 0.70** AND n_cells_for_90 **<= 3** on the sparse model
+  (a small, stable cell-union carries the matching mechanism despite the identifier varying every context).
+- **DRIFT SURVIVES** = top1_coverage **<= 0.40** (reproduces the gpt2 0.31 pathology even on the sparse substrate).
+- **PARTIAL** = in between. The DECISIVE comparison is sparse-vs-wsda-vs-dense on top1_coverage + edge-cosine + n90.
+- KEY DISTINCTION from B1-quote: here the IDENTIFIER varies arbitrarily, so a single fixed (qF×kF) cell is NOT expected.
+  The substrate-half claim is sharper: is the EDGE STRUCTURE (the induction matching mechanism: q reads "I am a repeat of
+  a seen token", k reads "I am that token") stable/low-dimensional in the neuron basis even as the identity varies? We
+  measure top1_coverage of the dominant cell AND edge-matrix cosine across contexts (the latter is identity-robust:
+  high cosine + low top1_coverage = a stable LOW-RANK mechanism realized in different cells; this is the interesting
+  middle the quote circuit could not show).
+
+### Spearman expectation (pre-registered ≈ 0, union-recovery as the working alternative)
+- Per B1 + gpt2 F5: **Spearman(FRA-score, causal-cut-effect) ≈ 0** on ALL substrates (locked prediction; FRA magnitude
+  does not rank causal effect). The WORKING ALTERNATIVE = **union-recovery**: FRA-top-10 union removal / causal-top-10
+  union removal >= 0.70 where the substrate is sparse (B1-quote sparse was 0.76). Report both; do NOT collapse.
+- Causal localization (cuttability): pre-register that the sparse model should be MORE cuttable (small cell-union removes
+  the edge) than dense, mirroring B1-quote (sparse 10-cell cut 0.86 vs dense 0.01), IF the edge is in fact compact.
+
+### T2 binding-specific prereg (the ground-truth-edge + selectivity tests)
+- FRA recovers the paper's hand-traced "4 query/key channels": top-k FRA cells should concentrate onto a small channel
+  set; report top1/top8 edge-mass + how many distinct cells cover the edge.
+- **Binding selectivity** (from fra_organisms2): cut the binding edge for a SPECIFIC (set-var) instance; measure removal
+  of THAT binding vs SIBLING collateral (a different var's binding in the same prompt). WIN = high self-removal, low
+  sibling collateral. Drift across instances = different (entity, value) pairs are the non-recurrent-conjunction condition.
+
+## RESUME STATE (candidates re-do; canonical, idempotent)
+- **PREREG LOCKED (2026-06-12)** — gates + drift thresholds + Spearman≈0 above. Code = code/ind_bind_pod.py (reuses
+  csp_vendor_gpt + ws_pod FRA/causal machinery). Pods rs-ws2-*. Results -> HF fra_weightsparse/results/induction_binding/.
+- NEXT: launch rs-ws2-1 (STAGES=T1T2). Verdicts land in §"Candidates re-do" below.
+
+## §Candidates re-do — VERDICTS
+(pending pod rs-ws2-1)
