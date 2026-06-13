@@ -1,0 +1,159 @@
+[00:39:47] ws2 bootstrap start (rs-ws2-2)
+GPU 0: NVIDIA A40 (UUID: GPU-38e3eda4-5c4e-0d78-c9ee-5c8c5aa8331a)
+[notice] A new release of pip is available: 25.0.1 -> 26.1.2
+[notice] To update, run: python -m pip install --upgrade pip
+torch 2.8.0.dev20250319+cu128
+[bootstrap] HF CLI: hf
+[bootstrap] code present (attempt 1)
+[main] prior partial ignored (suite=None)
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_3.7Mnonzero_afrac0.250: n_layer=8 n_head=16 d_model=256 afrac=0.25 loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T1/sparse] v0 top1_acc=0.985 2afc=0.997
+[T1/sparse] bank=[(1, 10), (1, 13), (5, 9), (1, 8), (5, 7), (5, 2), (1, 1), (1, 6)] oracle_all=0.967 oracle_bank=0.471
+[T1-causal/sparse] 50/288 4s
+[T1-causal/sparse] 100/288 7s
+[T1-causal/sparse] 150/288 11s
+[T1-causal/sparse] 200/288 15s
+[T1-causal/sparse] 250/288 18s
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_3.7Mnonzero_afrac1.000: n_layer=8 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T1/wsda] v0 top1_acc=0.995 2afc=0.999
+[T1/wsda] bank=[(4, 10), (5, 8), (5, 13), (5, 15), (4, 1), (4, 4), (5, 14), (5, 7)] oracle_all=1.032 oracle_bank=0.714
+[T1-causal/wsda] 50/288 2s
+[T1-causal/wsda] 100/288 5s
+[T1-causal/wsda] 150/288 7s
+[T1-causal/wsda] 200/288 9s
+[T1-causal/wsda] 250/288 11s
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 8.40M
+[load] dense1_1x: n_layer=4 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out missing=4
+[T1/dense] v0 top1_acc=0.990 2afc=0.998
+[T1/dense] bank=[(2, 1), (2, 11), (2, 10), (2, 0)] oracle_all=1.047 oracle_bank=0.748
+[T1-causal/dense] 50/296 2s
+[T1-causal/dense] 100/296 3s
+[T1-causal/dense] 150/296 5s
+[T1-causal/dense] 200/296 7s
+[T1-causal/dense] 250/296 8s
+No files have been modified since last commit. Skipping to prevent empty commit.
+[main] T1 done 245s
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_3.7Mnonzero_afrac0.250: n_layer=8 n_head=16 d_model=256 afrac=0.25 loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T2-sweep] csp_sweep1_1x_3.7Mnonzero_afrac0.250 acc=0.588
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_7.4Mnonzero_afrac0.250: n_layer=8 n_head=16 d_model=256 afrac=0.25 loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T2-sweep] csp_sweep1_1x_7.4Mnonzero_afrac0.250 acc=0.725
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_7.4Mnonzero_afrac1.000: n_layer=8 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T2-sweep] csp_sweep1_1x_7.4Mnonzero_afrac1.000 acc=0.812
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 8.40M
+[load] dense1_1x: n_layer=4 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out missing=4
+[T2-sweep] dense1_1x acc=0.800
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_7.4Mnonzero_afrac0.250: n_layer=8 n_head=16 d_model=256 afrac=0.25 loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T2/sparse_pass] bank=[(6, 13)] oracle_all=3.432 oracle_bank=3.346
+[T2-causal/sparse_pass] 50/300 3s
+[T2-causal/sparse_pass] 100/300 6s
+[T2-causal/sparse_pass] 150/300 9s
+[T2-causal/sparse_pass] 200/300 12s
+[T2-causal/sparse_pass] 250/300 15s
+[T2-causal/sparse_pass] 300/300 18s
+[T2-select/sparse_pass/set] k10 self=-1.405 sib=1.606
+No files have been modified since last commit. Skipping to prevent empty commit.
+[T2-select/sparse_pass/str] k10 self=-0.255 sib=1.284
+No files have been modified since last commit. Skipping to prevent empty commit.
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 11.56M
+[load] csp_sweep1_1x_7.4Mnonzero_afrac1.000: n_layer=8 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out,mlp_neuron,attn_v missing=8
+[T2/wsda_twin] bank=[(4, 8), (6, 2)] oracle_all=1.334 oracle_bank=1.148
+[T2-causal/wsda_twin] 50/300 2s
+[T2-causal/wsda_twin] 100/300 4s
+[T2-causal/wsda_twin] 150/300 6s
+[T2-causal/wsda_twin] 200/300 8s
+[T2-causal/wsda_twin] 250/300 10s
+[T2-causal/wsda_twin] 300/300 12s
+[T2-select/wsda_twin/set] k10 self=-0.178 sib=-0.144
+No files have been modified since last commit. Skipping to prevent empty commit.
+[T2-select/wsda_twin/str] k10 self=-0.138 sib=0.029
+No files have been modified since last commit. Skipping to prevent empty commit.
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0
+number of parameters: 8.40M
+[load] dense1_1x: n_layer=4 n_head=16 d_model=256 afrac=None loctypes=attn_in,attn_out,mlp_in,mlp_out missing=4
+[T2/dense_w] bank=[(3, 10), (2, 1)] oracle_all=1.618 oracle_bank=1.475
+[T2-causal/dense_w] 50/300 2s
+[T2-causal/dense_w] 100/300 3s
+[T2-causal/dense_w] 150/300 5s
+[T2-causal/dense_w] 200/300 6s
+[T2-causal/dense_w] 250/300 8s
+[T2-causal/dense_w] 300/300 10s
+[T2-select/dense_w/set] k10 self=-0.546 sib=-0.366
+No files have been modified since last commit. Skipping to prevent empty commit.
+[T2-select/dense_w/str] k10 self=-0.326 sib=-0.250
+No files have been modified since last commit. Skipping to prevent empty commit.
+[main] T2 done 371s
+[main] ALL DONE
+[00:46:22] ind_bind_pod.py done, final upload

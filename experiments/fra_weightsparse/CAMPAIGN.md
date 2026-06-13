@@ -68,5 +68,14 @@ problem, or is FRA?" test of the three basis-attacks (B1 here / B2 model-diff / 
   2-hop ground-truth-edge comparison was not interpretable.
 - CAMPAIGN COMPLETE. Possible follow-ups (not launched): higher-EF sweep models (does scale preserve the FRA gains while
   restoring binding capability?); bridges (transfer sparse-basis FRA cells into the dense model).
+- **CANDIDATES RE-DO COMPLETE (2026-06-13, pods rs-ws2-1 [v1 single-head, prior agent] + rs-ws2-2 [bank-v2], ~$0.24
+  total):** (T1) identifier-induction on the 1x ladder — gates pass everywhere; induction = REDUNDANT HEAD BANK
+  (sparse ~12 heads, single-head suites degenerate); drift NOT killed but RESTRUCTURED (sparse splits into perfectly
+  stable abstract L5 cells [bias x k171] + identity-tracking L1 cells [diagonal q104 x k104]; bank top1_cov 0.35 vs
+  dense 0.56); only sparse is cell-cuttable via isolated-path probes (0.38 vs 0.000); FRA union-recovery FAILS in the
+  redundant regime (0.16-0.27 << B1-quote 0.76). (T2) binding UNBLOCKED by weight budget: 1x_7.4M_afrac0.250 passes
+  (0.725; 3.7M was chance); single-head edge L6H13; drift killed (top1_cov 0.875); FRA-k2 cut removes 0.43 (negative on
+  act-dense twins); sibling selectivity FAILS mechanistically (set/str = one shared type-discriminator edge).
+  Full verdicts + tables: WS_LOG.md §"Candidates re-do — VERDICTS". Raw: results/induction_binding/ (+ HF mirror).
 - Pods: rs-ws-* (reaper whitelist), RUNPOD_API_KEY=$RP_API_KEY_MATS. HF artifacts: dmanningcoe/fra-phase1-steering-data prefix
   fra_weightsparse/{code,results}. Pod deps: blobfile, tiktoken, `pip install -e` the circuit_sparsity repo, + fra toolkit.

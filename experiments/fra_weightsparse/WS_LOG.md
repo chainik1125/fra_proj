@@ -205,5 +205,80 @@ Anchors: gpt2-dense+SAE induction **top1_coverage = 0.31, n_cells_for_90 = 8** (
   (meta.suite must be bank-v2); if the pod died mid-run, relaunch as rs-ws2-3 (auto-resumes from the bank-v2 partial).
   Verdicts land in §"Candidates re-do" below.
 
-## §Candidates re-do — VERDICTS
-(pending pod rs-ws2-1)
+## §Candidates re-do — VERDICTS (pod rs-ws2-2, suite bank-v2, N=200 T1 / N=160 T2, 2026-06-13; ~$0.12)
+Raw: results/induction_binding/{ind_bind_final.json, rs-ws2-2_run.log} (+ v1 single-head cross-ref
+ind_bind_final_v1_singlehead.json). Render: code/render_ind_bind.py.
+
+### T1 IDENTIFIER-INDUCTION — drift verdict: **NOT KILLED — RESTRUCTURED** (the sharpest substrate-half result yet)
+Gates: ALL 3 ladder models pass v0 (top-1 argmax acc .98-.99; variant ladder unused) — induction is within 1x capability.
+
+**New substrate fact: code-induction lives in a REDUNDANT HEAD BANK, and the sparse model is MORE redundant.**
+Masking the (q_last -> k_target) edge in ALL heads removes ~everything (oracle_all .97/1.03/1.05 s/w/d); the best
+SINGLE head removes 0.057 (sparse) — single-head suites (incl. v1) are degenerate on T1. Bank-of-8 oracle: sparse .47
+vs dense .75 (the sparse circuit spreads over ~12 heads at L1+L5; dense uses 4 at L2).
+
+| model (bank) | bank top1_cov | n90 | bank mass1 | edge-cos | PR | per-head top1_cov |
+|---|---|---|---|---|---|---|
+| sparse (8h L1+L5) | 0.35 | 5 | **0.0101** | 0.46 | 2.84 | **L5 heads 0.99-1.00 (4/4 stable)**; L1 heads 0.27-0.59 |
+| wsda (8h L4+L5)   | 0.64 | 2 | 0.0012 | 0.49 | 1.84 | 0.68-0.98 |
+| dense (4h L2)     | 0.56 | 3 | 0.0006 | 0.31 | 1.85 | 0.54-0.77 |
+
+- Bank-level top1_cov 0.35 on sparse is in the prereg DRIFT-SURVIVES band (<=0.40) — and *below* dense (0.56). The
+  identity-tracking component of induction-with-real-variation is NOT killable by substrate: the q/k codes must vary.
+- BUT the substrate cleanly SEPARATES the mechanism (dense smears it): sparse per-head dominant cells split into a
+  PERFECTLY STABLE abstract conjunction at L5 — top cell (bias x k171) fixed across 200 different-identifier contexts;
+  k171 is the same k-channel as B1's quote circuit — and identity-tracking L1 cells, where the top CAUSAL cell is the
+  literal DIAGONAL identity-match cell (q104 x k104) at L1H1 (match iff both fire). FRA-on-neurons reads the two-stage
+  induction algorithm (L1 raw-identity match -> L5 abstract "repeat-detected" readout) off the decomposition.
+- gpt2 anchors: sparse L5 heads (1.00) beat gpt2's 0.31 by the same margin as B1-quote; sparse L1 heads (0.27) match
+  gpt2's drift — i.e. gpt2-style q-drift is exactly what identity-carrying cells SHOULD do; the pathology on dense is
+  that there is no stable abstract component to find.
+- Causal: RAW per-cell effects ~0 on ALL substrates (mean |c| <= 0.0006 — the redundant bank backs up any single cell;
+  a NEW failure mode distinct from B1-quote diffuseness). ISOLATED-path probes (other bank heads' edge masked):
+  only sparse is cell-cuttable — ciso-ranked 64 cells remove 0.38 ≈ 81% of the bank-8 oracle (.47); wsda/dense ~0.000
+  at every k (cuttability = substrate property, replicated on a second task).
+- FRA ranking: Spearman raw -0.19 / iso +0.12 (prereg ≈0 CONFIRMED). **FRA union-recovery 0.16-0.27 << 0.70 at k>=2 —
+  the B1 "search-space-restriction works" mitigation (quote: 0.76) does NOT survive the multi-head redundant regime.**
+  FRA finds the single best cell (k1 recovery 1.03) but not the breadth that carries the redundant edge.
+
+### T2 BINDING UP THE LADDER — verdict: **UNBLOCKED, by weight budget (not width)**
+| model | bind acc |
+|---|---|
+| 1x_3.7M_afrac0.250 (B1 model) | 0.588 (chance-ish; B1 replicated) |
+| **1x_7.4M_afrac0.250** | **0.725 PASS** |
+| 1x_7.4M_afrac1.000 (twin) | 0.812 |
+| dense1_1x | 0.800 |
+(smoke also: 1x_3.7M_afrac0.500 = 0.875 — relaxing EITHER weight or activation sparsity unblocks; binding capability
+is total-capacity-gated, width never needed.)
+
+On the passing sparse model the 2-hop binding edge is SINGLE-head (L6H13; bank=1; edge-mask drives base .62 -> .22,
+"removal" 3.35 in (base-.5) units) — unlike induction.
+| model | top1_cov | n90 | mass1 | edge-cos | FRA k2 cut (holdout) | ciso k32 | Spearman |
+|---|---|---|---|---|---|---|---|
+| sparse_pass | **0.875** | 2 | **0.0489** | 0.76 | **+0.43** (recovery 1.32 vs ciso) | 0.93 | 0.03 |
+| wsda_twin   | 0.900 | 1 | 0.0049 | 0.66 | **-0.08 (negative at ALL k)** | 0.89 | 0.06 |
+| dense_w     | 1.000 | 1 | 0.0040 | 0.66 | -0.37 at k>=4 | 0.55 | -0.01 |
+
+- DRIFT KILLED for binding on sparse (top1_cov .875 >= .70, n90=2): dominant cell (q59 x k226) carries 140/160
+  varied-instance prompts. Edge concentration is a handful of cells/k-channels ({226,104,122,...} x {59,bias}) —
+  consistent with the paper's "4 query/key channels" concentration scale (identity unverifiable: paper traced csp_yolo2).
+- The act-sparsity FRA gradient replicates on the ground-truth 2-hop edge: mass1 10x the act-dense twin; and ONLY on
+  the act-sparse model do FRA-ranked cuts causally bite (k2 = 0.43 removal; FRA BEATS per-cell causal probes at small k)
+  — on both act-dense models FRA-ranked cuts are NEGATIVE (actively misleading) while causal search still works.
+- **SELECTIVITY (prereg WIN test): FAILS, mechanistically-informatively.** Cutting set-located cells does not remove
+  set-binding (self -1.4 = score IMPROVES) — it ROTATES the shared type-decision toward '.add(' (sibling str-binding
+  removal +1.6); mirrored in the str direction. set/str binding is ONE shared type-discriminator edge, not two
+  separable associations — the Joe-pie/Ann-ale sibling logic cannot apply to the two values of a single binary feature.
+  Prereg WIN (self>=0.5 AND ratio>=2): not met on any model.
+
+### What the candidates re-do adds to the B1/STOCKTAKE picture
+1. **Substrate half, sharpened:** concentration + cuttability stay substrate properties (replicated on 2 new tasks),
+   but the substrate does NOT kill (a) drift whose content genuinely varies (identity cells must drift — they ARE the
+   variable binding) and (b) head-level REDUNDANCY (sparse induction uses MORE heads than dense; raw cell cuts die).
+   What the sparse substrate uniquely buys is STRUCTURE: a clean split into fixed abstract cells (bias x k171;
+   diagonal q104 x k104) vs identity cells — i.e. interpretability of the drift itself, not its removal.
+2. **Ranking half, confirmed + boundary found:** Spearman(FRA,causal) ≈ 0 in all 6 model x task cells (prereg).
+   The union-recovery mitigation is REGIME-BOUND: works when the edge is single-head + concentrated (B1-quote 0.76;
+   T2 binding k2 recovery 1.32) and FAILS in the multi-head redundant regime (T1: 0.16-0.27).
+3. **Selectivity boundary:** FRA cell-cuts cannot be association-selective when two "associations" are the two values
+   of one discriminator (T2) — fra_organisms2-style sibling wins need genuinely independent edges.
