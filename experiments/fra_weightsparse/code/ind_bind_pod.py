@@ -940,17 +940,23 @@ def stage_T2(out):
 
 
 # ---------------- main ----------------
+SUITE = "bank-v2"   # resume only from partials of the SAME suite (rs-ws2-1 ran single-head v1)
+
+
 def main():
-    out = {"meta": {"seed": SEED, "smoke": SMOKE, "stages": STAGES,
+    out = {"meta": {"seed": SEED, "smoke": SMOKE, "stages": STAGES, "suite": SUITE,
                     "started_utc": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())}}
     prev = os.path.join(OUT_DIR, "ind_bind_partial.json")
     if not SMOKE and W.try_download("induction_binding/ind_bind_partial.json", prev):
         try:
             with open(prev) as f:
                 got = json.load(f)
-            if got.get("meta", {}).get("seed") == SEED and not got.get("meta", {}).get("smoke"):
+            gm = got.get("meta", {})
+            if gm.get("seed") == SEED and not gm.get("smoke") and gm.get("suite") == SUITE:
                 out.update({k: v for k, v in got.items() if k in ("T1", "T2")})
                 print("[main] resumed from prior partial", flush=True)
+            else:
+                print(f"[main] prior partial ignored (suite={gm.get('suite')})", flush=True)
         except Exception as e:
             print(f"[main] resume parse failed: {e}", flush=True)
     t0 = time.time()
