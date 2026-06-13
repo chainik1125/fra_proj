@@ -2,20 +2,25 @@
 """Candidates re-do pod (rs-ws2-*): T1 identifier-induction + T2 binding-up-the-ladder.
 
 T1 IDENTIFIER-INDUCTION (the gpt2 persistence/drift re-do on the weight-sparse ladder):
-  code-native induction — identifier `base_suf` bound early, prompt ends mid-repeat at the
-  '_' (token-boundary-verified); target = first suffix token at the definition; distractor =
-  the OTHER identifier's suffix token (2AFC). Gate = full-vocab argmax acc >= 0.70 (prereg),
-  variant ladder v0 (default) -> v1 (short range) -> v2 (extra repetition) -> 2x-wide models.
-  Then the persistence suite in the NEURON basis: top1_coverage / n_cells_for_90 / q-side
-  drift / edge-cosine / co-firing drift / edge-subspace PR / Spearman(s,c) + recovery + oracle.
+  code-native induction — identifier `base_suf` bound early, prompt ends mid-reuse at the
+  canonical token boundary before A's final token; target = A's final token (verified to be
+  the identical token id at the definition = k_pos); distractor = B's final definition token
+  (2AFC). Gate = full-vocab argmax acc >= 0.70 (prereg), variant ladder v0 -> v1 -> v2 -> 2x.
+
+  SMOKE FINDING baked in: these models carry induction in a REDUNDANT HEAD BANK (~12 heads
+  across 2 layers attend q_last->k_target; best single-head edge-mask removal 0.06). So the
+  suite is bank-based: bank = top heads by mean att(q_last->k_target); oracle = edge mask in
+  ALL heads (and in the bank); FRA cells are (head, qF, kF) triples; cuts are grouped per head
+  via a multi-(layer,head) attention patch. Drift metrics at bank level (dominant triple) +
+  per-head for the primary (max-att) head.
 
 T2 BINDING UP THE LADDER: gate-sweep csp_sweep1_{EF}x_{NZ}nonzero_afrac0.250 ascending
-  (EF, NZ) on set_or_string (score-acc >= 0.70); pick the smallest passing sparse + its
-  afrac1.000 twin + width-matched dense1_{EF}x. Then neuron-basis FRA on the binding edge +
-  row-based causal block (Spearman/recovery/oracle) + SIBLING selectivity (cut set-binding
+  (EF, NZ) on set_or_string (score-acc >= 0.70); smallest passing sparse + afrac1.000 twin +
+  width-matched dense1_{EF}x. Then the same bank-based FRA/causal suite on the binding edge
+  (rows are teacher-forced; U1 cached ON the rows) + SIBLING selectivity (cut set-binding
   cells, measure str-binding collateral in the same contexts) + drift across instances.
 
-Reuses ws_pod.py pure compute (loader, FRA, cell metrics, ATT/PatchedAttn, causal_block).
+Reuses ws_pod.py pure compute (loader, FRA weights/decomposition, cell metrics, removal).
 Own outputs -> OUT_DIR + HF fra_weightsparse/results/induction_binding/.
 """
 
@@ -28,6 +33,7 @@ import random
 import sys
 import time
 import traceback
+import types
 
 import numpy as np
 import torch
@@ -35,6 +41,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ws_pod as W  # noqa: E402  (module-level: env config, seeds, OUT_DIR mkdir)
+from csp_vendor_hook_utils import hook_recorder  # noqa: E402
 
 # ---------------- config ----------------
 DEV = W.DEV
@@ -48,12 +55,12 @@ GATE = float(os.environ.get("TASK_GATE", "0.70"))
 
 N_IND = int(os.environ.get("N_IND", "40" if SMOKE else "200"))       # locate/holdout = half/half
 N_BIND_GATE = int(os.environ.get("N_BIND_GATE", "40" if SMOKE else "160"))
-N_BIND_FRA = int(os.environ.get("N_BIND_FRA", "40" if SMOKE else "160"))  # mixed, half/half
-N_PAIRS = int(os.environ.get("N_PAIRS", "24" if SMOKE else "120"))   # selectivity pairs, half/half
 HEADFIND_N = int(os.environ.get("HEADFIND_N", "24" if SMOKE else "64"))
+BANK_THRESH = float(os.environ.get("BANK_THRESH", "0.25"))
+BANK_CAP = int(os.environ.get("BANK_CAP", "8"))
 
 if SMOKE:
-    W.N_CAUSAL_TOP, W.N_CAUSAL_RAND = 20, 10
+    W.N_CAUSAL_TOP, W.N_CAUSAL_RAND = 24, 12
 N_CTOP, N_CRAND = W.N_CAUSAL_TOP, W.N_CAUSAL_RAND
 
 
@@ -79,6 +86,68 @@ def ckpt(out):
     upload2(p)
 
 
+# ---------------- multi-(layer,head) attention patch ----------------
+class _MultiSpec:
+    def __init__(self):
+        self.by_layer = {}
+
+
+MS = _MultiSpec()
+
+
+def make_fwd_multi(L):
+    def fwd(self, x):
+        x = self.config.maybe_activation_sparsity(x, "attn_in")
+        B, T, C = x.size()
+        q, k, v = self.c_attn(x).split(self.n_head * self.d_head, dim=2)
+        k = self.config.maybe_activation_sparsity(k, "attn_k")
+        q = self.config.maybe_activation_sparsity(q, "attn_q")
+        v = self.config.maybe_activation_sparsity(v, "attn_v")
+        k = k.view(B, T, self.n_head, self.d_head).transpose(1, 2)
+        q = q.view(B, T, self.n_head, self.d_head).transpose(1, 2)
+        v = v.view(B, T, self.n_head, self.d_head).transpose(1, 2)
+        scale = 1.0 / math.sqrt(k.size(-1))
+        att = (q @ k.transpose(-2, -1)) * scale
+        for (H, fn, fixed) in MS.by_layer.get(L, ()):
+            if fn is not None:
+                att[:, H] = att[:, H] + fn(x)
+            elif fixed is not None:
+                att[:, H] = att[:, H] + fixed[:, :T, :T]
+        mask = torch.tril(torch.ones(T, T, device=x.device)).view(1, 1, T, T)
+        att = att.masked_fill(mask == 0, torch.finfo(att.dtype).min)
+        att = F.softmax(att, dim=-1)
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(B, T, self.n_head * self.d_head)
+        y = self.resid_dropout(self.c_proj(y))
+        y = self.config.maybe_activation_sparsity(y, "attn_out")
+        return y
+    return fwd
+
+
+class PatchedMulti:
+    """specs: list of (L, H, fn, fixed); fn(x)->[B,T,T] delta or fixed [B,T,T] tensor."""
+
+    def __init__(self, model, specs):
+        self.model = model
+        self.by_layer = {}
+        for L, H, fn, fixed in specs:
+            self.by_layer.setdefault(L, []).append((H, fn, fixed))
+
+    def __enter__(self):
+        MS.by_layer = self.by_layer
+        self.orig = {}
+        for L in self.by_layer:
+            attn = self.model.transformer.h[L].attn
+            self.orig[L] = attn.forward
+            attn.forward = types.MethodType(make_fwd_multi(L), attn)
+        return self
+
+    def __exit__(self, *a):
+        for L, f in self.orig.items():
+            self.model.transformer.h[L].attn.forward = f
+        MS.by_layer = {}
+
+
 # ================= T1: identifier-induction =================
 CONS = "bcdfghjklmnpqrstvwz"
 VOW = "aeiou"
@@ -102,10 +171,8 @@ def _rand_base(rng, nsyl=None):
 def make_ind_prompt(tok, rng, variant):
     """token-boundary-verified induction prompt; None if 60 resamples fail.
 
-    Construction: full text reuses identifier A at the end; the prompt CUTS at the
-    canonical token boundary before A's final token (on-distribution tokenization).
-    target = A's final token, verified to be the IDENTICAL token (same span string,
-    same id) at A's definition (k_pos). distractor = B's final definition token.
+    Cuts at the canonical token boundary before A's final token (on-distribution).
+    target = A's final token, verified identical (span string + id) at the definition.
     """
     v = VARIANTS[variant]
     for _ in range(60):
@@ -128,7 +195,6 @@ def make_ind_prompt(tok, rng, variant):
         text = rng.choice(PRELUDES) + "\n".join(lines) + "\n" + rng.choice(REUSE_PRE) + A
         enc = tok.encode(text)
         ids, offs = enc.ids, enc.offsets
-        # A's reuse occurrence = the trailing len(A) chars
         ru_start = len(text) - len(A)
         span = [i for i, (a, b) in enumerate(offs) if b > ru_start]
         if len(span) < 3:                      # need >=2 match tokens + 1 target token
@@ -139,7 +205,6 @@ def make_ind_prompt(tok, rng, variant):
             continue
         target_id = ids[t_last]
         target_str = text[a0:b0]
-        # definition occurrence: the SAME trailing token must exist there
         dc = text.index(f"{A} = ")
         d_start, d_end = dc + len(A) - len(target_str), dc + len(A)
         k_pos = None
@@ -149,7 +214,6 @@ def make_ind_prompt(tok, rng, variant):
                 break
         if k_pos is None or ids[k_pos] != target_id:
             continue
-        # distractor: B's final definition token
         dB = text.index(f"{B} = ")
         distractor_id = None
         for i, (a, b) in enumerate(offs):
@@ -158,7 +222,7 @@ def make_ind_prompt(tok, rng, variant):
                 break
         if distractor_id is None or distractor_id == target_id:
             continue
-        return {"text": text[: a0], "ids": list(ids[:t_last]), "target_id": int(target_id),
+        return {"text": text[:a0], "ids": list(ids[:t_last]), "target_id": int(target_id),
                 "distractor_id": int(distractor_id), "k_pos": int(k_pos), "A": A, "B": B}
     return None
 
@@ -175,7 +239,7 @@ def gen_ind_prompts(tok, n, variant, seed):
 
 @torch.no_grad()
 def ind_scores(model, tok, prompts, batch=64):
-    """2AFC P(target)/(P(target)+P(distractor)) at the last position; tok unused (ids cached)."""
+    """2AFC P(target)/(P(target)+P(distractor)) at the last position."""
     scores = []
     for s0 in range(0, len(prompts), batch):
         chunk = prompts[s0 : s0 + batch]
@@ -201,99 +265,324 @@ def ind_top1_acc(model, tok, prompts, batch=64):
     return float(np.mean(hits))
 
 
+# ---------------- bank selection + bank metrics (shared T1/T2) ----------------
 @torch.no_grad()
-def t1_edge_oracle_scan(model, config, tok, prompts):
-    """per-head removal from masking the (q=last -> k=def-target) edge; picks the EDGE head.
-
-    Whole-head ablation drop ranks prev-token/support heads too (smoke: L0H14 argmax with
-    edge-oracle 0.0) — the FRA edge head must be the one whose own edge-mask is causal.
-    """
-    ids, lens = W.pad_batch([p["ids"] for p in prompts])
-    B, T = ids.shape
-    fixed = torch.zeros(B, T, T, device=DEV)
-    for b, p in enumerate(prompts):
-        fixed[b, int(lens[b]) - 1, p["k_pos"]] = -1e9
-    base = float(ind_scores(model, tok, prompts, batch=len(prompts)).mean())
-    recs = []
+def head_att_bank(model, config, ids, lens, qps, kps, thresh=BANK_THRESH, cap=BANK_CAP):
+    """mean attention(q=qps[b] -> k=kps[b]) per head; bank = top heads above thresh."""
+    with hook_recorder(regex=r"^\d+\.attn\.(q|k)$") as rec:
+        model(ids)
+    dh = config.d_head
+    B = ids.shape[0]
+    scores = {}
     for L in range(config.n_layer):
+        q = rec[f"{L}.attn.q"].float()
+        k = rec[f"{L}.attn.k"].float()
         for H in range(config.n_head):
-            W.ATT.layer, W.ATT.head, W.ATT.fixed = L, H, fixed
-            with W.PatchedAttn(model, L):
-                s = float(ind_scores(model, tok, prompts, batch=len(prompts)).mean())
-            recs.append(((L, H), W.removal(base, s)))
-    recs.sort(key=lambda kv: -kv[1])
-    return base, recs
+            qh = q[:, :, H * dh : (H + 1) * dh]
+            kh = k[:, :, H * dh : (H + 1) * dh]
+            accs = []
+            for b in range(B):
+                T = int(lens[b])
+                a = torch.softmax(kh[b, :T] @ qh[b, qps[b]] / math.sqrt(dh), 0)
+                accs.append(float(a[kps[b]]))
+            scores[(L, H)] = float(np.mean(accs))
+    ranked = sorted(scores.items(), key=lambda kv: -kv[1])
+    bank = [hk for hk, v in ranked if v >= thresh][:cap]
+    if not bank:
+        bank = [ranked[0][0]]
+    return bank, ranked
 
 
-@torch.no_grad()
-def t2_edge_oracle_scan(model, config, tok, prompts):
-    """per-head removal from masking (completion queries -> init-value key) on bind rows."""
-    ids, lens, metas = bind_rows(tok, prompts)
-    B, T = ids.shape
-    kps = [W.find_kpos_bind(tok, p)[1] for p in prompts]
-    fixed = torch.zeros(B, T, T, device=DEV)
-    for r, (nb, nc, _) in enumerate(metas):
-        fixed[r, nb - 1 : nb + nc - 1, kps[r // 2]] = -1e9
-    base = bind_clean_score(model, ids, metas, prompts)
-    recs = []
-    for L in range(config.n_layer):
-        for H in range(config.n_head):
-            s = bind_cut_score(model, ids, metas, prompts, L, H, None, None, None, fixed=fixed)
-            recs.append(((L, H), W.removal(base, s)))
-    recs.sort(key=lambda kv: -kv[1])
-    return base, recs
+def edge_mask_specs(heads, fixed):
+    return [(L, H, None, fixed) for (L, H) in heads]
 
 
-def edge_pr(Ms, topc=512):
-    """edge-subspace participation ratio over the top-`topc` cells by mean |mass|."""
-    Fp = Ms[0].shape[0]
-    macc = torch.zeros(Fp * Fp)
-    for m in Ms:
-        macc += m.abs().flatten().float()
-    idx = macc.topk(min(topc, macc.numel())).indices
-    X = torch.stack([m.flatten()[idx].float() for m in Ms])
+def all_heads(config):
+    return [(L, H) for L in range(config.n_layer) for H in range(config.n_head)]
+
+
+def bank_metrics(Ms_by_head, bank):
+    """bank-level persistence metrics over (head, qF, kF) triples."""
+    n = len(Ms_by_head[bank[0]])
+    from collections import Counter
+    doms, mass1, mass8, mass32 = [], [], [], []
+    for i in range(n):
+        tot, best, bestv = 0.0, None, -1.0
+        tops = []
+        for hk in bank:
+            a = Ms_by_head[hk][i].abs()
+            tot += float(a.sum())
+            v, idx = a.flatten().topk(min(32, a.numel()))
+            tops.append(v)
+            if float(v[0]) > bestv:
+                bestv = float(v[0])
+                Fp = a.shape[0]
+                best = (hk, int(idx[0] // Fp), int(idx[0] % Fp))
+        doms.append(best)
+        merged = torch.cat(tops).sort(descending=True).values
+        tot = max(tot, 1e-12)
+        mass1.append(float(merged[:1].sum()) / tot)
+        mass8.append(float(merged[:8].sum()) / tot)
+        mass32.append(float(merged[:32].sum()) / tot)
+    cnt = Counter(doms)
+    ranked = cnt.most_common()
+    cum, k90 = 0, 0
+    for _, c in ranked:
+        cum += c
+        k90 += 1
+        if cum >= 0.9 * n:
+            break
+    qcnt = Counter([d[1] for d in doms])
+    return {"n": n, "bank": [list(hk) for hk in bank],
+            "top1_triple": [list(ranked[0][0][0]), ranked[0][0][1], ranked[0][0][2]],
+            "top1_coverage": ranked[0][1] / n,
+            "cov3": sum(c for _, c in ranked[:3]) / n,
+            "n_cells_for_90": k90, "n_distinct_dom": len(ranked),
+            "q_dom_modal_cov": qcnt.most_common(1)[0][1] / n, "q_dom_distinct": len(qcnt),
+            "edge_mass_top1": float(np.mean(mass1)),
+            "edge_mass_top8": float(np.mean(mass8)),
+            "edge_mass_top32": float(np.mean(mass32)),
+            "triple_hist_top10": [[[list(t[0]), t[1], t[2]], int(c)] for t, c in ranked[:10]]}
+
+
+def bank_edge_cosine(Ms_by_head, bank, n_pairs=200):
+    n = len(Ms_by_head[bank[0]])
+    rng = random.Random(2)
+    pairs = [(rng.randrange(n), rng.randrange(n)) for _ in range(n_pairs)]
+    cs = []
+    for i, j in pairs:
+        if i == j:
+            continue
+        dot, ni, nj = 0.0, 0.0, 0.0
+        for hk in bank:
+            a, b = Ms_by_head[hk][i].flatten().float(), Ms_by_head[hk][j].flatten().float()
+            dot += float(a @ b)
+            ni += float(a @ a)
+            nj += float(b @ b)
+        cs.append(dot / max(math.sqrt(ni * nj), 1e-12))
+    return float(np.mean(cs))
+
+
+def bank_edge_pr(Ms_by_head, bank, topc=512):
+    """participation ratio of the cross-context edge ensemble over top (head,cell) coords."""
+    n = len(Ms_by_head[bank[0]])
+    sel = []
+    for hk in bank:
+        macc = torch.zeros(Ms_by_head[hk][0].numel())
+        for m in Ms_by_head[hk]:
+            macc += m.abs().flatten().float()
+        v, idx = macc.topk(min(topc, macc.numel()))
+        sel.append((hk, idx))
+    cols = []
+    for hk, idx in sel:
+        Xh = torch.stack([m.flatten()[idx].float() for m in Ms_by_head[hk]])
+        cols.append(Xh)
+    X = torch.cat(cols, dim=1)
+    mag = X.abs().mean(0)
+    keep = mag.topk(min(topc, X.shape[1])).indices
+    X = X[:, keep]
     X = X / (X.norm(dim=1, keepdim=True) + 1e-9)
     ev = torch.linalg.eigvalsh(X @ X.T).clamp(min=0)
     return float(ev.sum() ** 2 / max(float((ev ** 2).sum()), 1e-12))
 
 
-def t1_fra_block(model, config, tok, prompts_loc, prompts_hold, L, H, mkey):
-    dh = config.d_head
-    scale = 1.0 / math.sqrt(dh)
-    Wq, Wk, bq, bk = W.head_qk_weights(model, config, L, H)
+def rank_cells(Ms, n_top, n_rand, seed):
+    Mstack = torch.stack(Ms)
+    smat = Mstack.mean(0).abs()
+    Fp = smat.shape[0]
+    active = (Mstack.abs() > 1e-8).float().mean(0) >= 0.3
+    flat_idx = torch.nonzero(active.flatten()).flatten()
+    s_flat = smat.flatten()
+    top_idx = s_flat.argsort(descending=True)[:n_top].tolist()
+    rng = random.Random(seed)
+    pool = [int(i) for i in flat_idx.tolist() if i not in set(top_idx)]
+    rand_idx = rng.sample(pool, min(n_rand, len(pool)))
+    union = top_idx + rand_idx
+    cells = [(int(i // Fp), int(i % Fp)) for i in union]
+    s_val = [float(s_flat[i]) for i in union]
+    return cells, s_val
+
+
+def bank_candidates(Ms_by_head, bank, n_top, n_rand, seed):
+    """pooled (head, cell, fra_score) candidates, budget split across bank heads."""
+    per_t = max(2, n_top // len(bank))
+    per_r = max(1, n_rand // len(bank))
+    cands = []
+    for hi, hk in enumerate(bank):
+        cells, s_val = rank_cells(Ms_by_head[hk], per_t, per_r, seed + hi)
+        cands += [(hk, c, s) for c, s in zip(cells, s_val)]
+    return cands
+
+
+def group_specs(cand_subset, omegas, U1_by_layer):
+    """group cells by head -> PatchedMulti specs with per-head cells_delta_fn."""
+    by_head = {}
+    for hk, cell, _ in cand_subset:
+        by_head.setdefault(hk, []).append(cell)
+    specs = []
+    for (L, H), cells in by_head.items():
+        specs.append((L, H, W.cells_delta_fn(cells, U1_by_layer[L], omegas[(L, H)]), None))
+    return specs
+
+
+def causal_suite(mkey, tag, bank, omegas, Ms_l, U1_loc, U1_hold, cut_loc, cut_hold,
+                 fixed_loc, orc_bank, orc_all):
+    """generic bank causal suite.
+
+    cut_loc/cut_hold: callables(specs)->mean task score on locate/holdout.
+    Redundant banks make RAW per-cell effects ~0 (any one head is backed up), so we also
+    measure ISOLATED-path effects: probe each cell with the OTHER bank heads' edge masked.
+    Headline localization = per-head FRA-top-k union curve on holdout vs the bank oracle.
+    """
+    base_loc, base_hold = cut_loc([]), cut_hold([])
+    zval = cut_loc([(L, H, None, None) for (L, H) in bank])
+    assert abs(zval - base_loc) < 1e-3, f"patched-forward mismatch {zval} vs {base_loc}"
+    cands = bank_candidates(Ms_l, bank, N_CTOP, N_CRAND, SEED + 7)
+    s_val = [c[2] for c in cands]
+    base_iso = ({hk: cut_loc(edge_mask_specs([h for h in bank if h != hk], fixed_loc))
+                 for hk in bank} if len(bank) > 1 else {bank[0]: base_loc})
+    c_raw, c_iso = [], []
+    t0 = time.time()
+    for ci, (hk, cell, s) in enumerate(cands):
+        cs = group_specs([(hk, cell, s)], omegas, U1_loc)
+        c_raw.append(W.removal(base_loc, cut_loc(cs)))
+        others = [h for h in bank if h != hk]
+        mask_specs = edge_mask_specs(others, fixed_loc) if others else []
+        c_iso.append(W.removal(base_iso[hk], cut_loc(mask_specs + cs)))
+        if ci % 50 == 49:
+            print(f"[{tag}-causal/{mkey}] {ci+1}/{len(cands)} {time.time()-t0:.0f}s", flush=True)
+    res = {"base_locate": base_loc, "base_holdout": base_hold,
+           "n_cells_tested": len(cands),
+           "spearman_s_craw": W.spearman(s_val, c_raw),
+           "spearman_s_ciso": W.spearman(s_val, c_iso),
+           "mean_abs_craw": float(np.mean(np.abs(c_raw))),
+           "mean_abs_ciso": float(np.mean(np.abs(c_iso))),
+           "base_iso": {f"L{L}H{H}": v for (L, H), v in base_iso.items()},
+           "oracle_bank_holdout": orc_bank, "oracle_all_holdout": orc_all}
+    # per-head union curves on holdout (FRA-ranked vs isolated-causal-ranked)
+    by_head_s = {hk: sorted([i for i, c in enumerate(cands) if c[0] == hk],
+                            key=lambda i: -s_val[i]) for hk in bank}
+    by_head_c = {hk: sorted([i for i, c in enumerate(cands) if c[0] == hk],
+                            key=lambda i: -c_iso[i]) for hk in bank}
+    curve = {}
+    for k in (1, 2, 4, 8, 16, 32):
+        row = {}
+        for nm, bh in (("fra", by_head_s), ("ciso", by_head_c)):
+            sel = [cands[i] for hk in bank for i in bh[hk][:k]]
+            rem = W.removal(base_hold, cut_hold(group_specs(sel, omegas, U1_hold)))
+            row[nm] = {"rem": rem, "n_cells": len(sel),
+                       "frac_oracle_bank": rem / orc_bank if abs(orc_bank) > 1e-6 else None}
+        row["recovery_fra_vs_ciso"] = (row["fra"]["rem"] / row["ciso"]["rem"]
+                                       if abs(row["ciso"]["rem"]) > 1e-6 else None)
+        curve[f"k{k}"] = row
+    res["union_curve_perhead"] = curve
+    oc = np.argsort(-np.array(c_iso))
+    osr = np.argsort(-np.array(s_val))
+    res["top_ciso"] = [[list(cands[i][0]), list(cands[i][1]), float(c_iso[i])] for i in oc[:5]]
+    res["top_fra"] = [[list(cands[i][0]), list(cands[i][1]), float(s_val[i])] for i in osr[:5]]
+    return res
+
+
+# ---------------- T1 FRA + causal (bank-based) ----------------
+@torch.no_grad()
+def collect_U1(model, config, layers, ids):
+    out = {}
+    for L in layers:
+        U, qh, kh = W.collect_act_in(model, config, L, ids)
+        out[L] = (W.append_bias_channel(U), qh, kh)
+    return out
+
+
+@torch.no_grad()
+def t1_cut_score(model, tok, prompts, specs):
+    with PatchedMulti(model, specs):
+        s = float(ind_scores(model, tok, prompts, batch=len(prompts)).mean())
+    return s
+
+
+def t1_fixed_mask(prompts, lens):
+    B, T = len(prompts), int(lens.max())
+    fixed = torch.zeros(B, T, T, device=DEV)
+    for b, p in enumerate(prompts):
+        fixed[b, int(lens[b]) - 1, p["k_pos"]] = -1e9
+    return fixed
+
+
+def t1_bank_block(model, config, tok, loc, hold, mkey, mrec, out):
+    ids_l, lens_l = W.pad_batch([p["ids"] for p in loc])
+    ids_h, lens_h = W.pad_batch([p["ids"] for p in hold])
+    qps_l = [int(x) - 1 for x in lens_l]
+    qps_h = [int(x) - 1 for x in lens_h]
+    kps_l = [p["k_pos"] for p in loc]
+    kps_h = [p["k_pos"] for p in hold]
+
+    # bank by attention mass on the locate probe
+    nprobe = min(HEADFIND_N, len(loc))
+    bank, att_ranked = head_att_bank(model, config, ids_l[:nprobe], lens_l[:nprobe],
+                                     qps_l[:nprobe], kps_l[:nprobe])
+    primary = bank[0]
+    mrec["bank"] = {"heads": [list(h) for h in bank],
+                    "att_top12": [[list(k), float(v)] for k, v in att_ranked[:12]]}
+    base_hold = float(ind_scores(model, tok, hold, batch=len(hold)).mean())
+    fixed_h = t1_fixed_mask(hold, lens_h)
+    orc_all = W.removal(base_hold, t1_cut_score(model, tok, hold,
+                                                edge_mask_specs(all_heads(config), fixed_h)))
+    orc_bank = W.removal(base_hold, t1_cut_score(model, tok, hold,
+                                                 edge_mask_specs(bank, fixed_h)))
+    mrec["oracle"] = {"edge_mask_all_heads": orc_all, "edge_mask_bank": orc_bank,
+                      "base_holdout": base_hold}
+    print(f"[T1/{mkey}] bank={bank} oracle_all={orc_all:.3f} oracle_bank={orc_bank:.3f}",
+          flush=True)
+
+    # FRA: per-head omegas + per-layer U1; edge matrices per bank head
+    layers = sorted({L for L, H in bank})
+    U1l = {L: v[0] for L, v in collect_U1(model, config, layers, ids_l).items()}
+    U1h_full = collect_U1(model, config, layers, ids_h)
+    U1h = {L: v[0] for L, v in U1h_full.items()}
     I = torch.eye(config.d_model, device=DEV)
-    omega = W.omega_from_decoder(I, I, Wq, Wk, bq, bk, scale)
+    scale = 1.0 / math.sqrt(config.d_head)
+    omegas = {}
+    for (L, H) in bank:
+        Wq, Wk, bq, bk = W.head_qk_weights(model, config, L, H)
+        omegas[(L, H)] = W.omega_from_decoder(I, I, Wq, Wk, bq, bk, scale)
+    Ms_l = {hk: [W.edge_cell_matrix(U1l[hk[0]][b], omegas[hk], qps_l[b], kps_l[b]).cpu()
+                 for b in range(len(loc))] for hk in bank}
+    Ms_h = {hk: [W.edge_cell_matrix(U1h[hk[0]][b], omegas[hk], qps_h[b], kps_h[b]).cpu()
+                 for b in range(len(hold))] for hk in bank}
+    Ms_all = {hk: Ms_l[hk] + Ms_h[hk] for hk in bank}
 
-    def fra_on(prompts_):
-        ids, lens = W.pad_batch([p["ids"] for p in prompts_])
-        U, qh_all, kh_all = W.collect_act_in(model, config, L, ids)
-        qh = qh_all[..., H * dh : (H + 1) * dh]
-        kh = kh_all[..., H * dh : (H + 1) * dh]
-        U1 = W.append_bias_channel(U)
-        r2 = W.fra_recon_r2(U1, qh, kh, omega, lens)
-        Ms, qps, kps = [], [], []
-        for b, p in enumerate(prompts_):
-            qp, kp = int(lens[b]) - 1, p["k_pos"]
-            Ms.append(W.edge_cell_matrix(U1[b], omega, qp, kp).cpu())
-            qps.append(qp)
-            kps.append(kp)
-        return U1, Ms, qps, kps, r2, lens
+    # recon R2 for the primary head (exactness check)
+    dh = config.d_head
+    Lp, Hp = primary
+    qh = U1h_full[Lp][1][..., Hp * dh : (Hp + 1) * dh]
+    kh = U1h_full[Lp][2][..., Hp * dh : (Hp + 1) * dh]
+    r2 = W.fra_recon_r2(U1h[Lp], qh, kh, omegas[primary], lens_h)
 
-    U1l, Msl, qpsl, kpsl, r2l, lensl = fra_on(prompts_loc)
-    U1h, Msh, qpsh, kpsh, r2h, lensh = fra_on(prompts_hold)
-    cm = W.cell_metrics(Msl + Msh)
-    cm["fra_recon_r2_locate"] = r2l
-    cm["fra_recon_r2_holdout"] = r2h
-    cm["cofire_qside"] = W.cofire_set_drift([U1l[b].cpu() for b in range(len(Msl))], qpsl)
-    cm["edge_cosine"] = W.edge_matrix_cosine(Msl + Msh)
-    cm["edge_subspace_pr"] = edge_pr(Msl + Msh)
-    causal = W.causal_block(model, tok, prompts_loc, prompts_hold, ind_scores, L, H, omega,
-                            U1l, Msl, U1h, lensl, lensh, qpsl, kpsl, qpsh, kpsh, {}, mkey, "neuron")
-    return cm, causal
+    bm = bank_metrics(Ms_all, bank)
+    bm["edge_cosine"] = bank_edge_cosine(Ms_all, bank)
+    bm["edge_subspace_pr"] = bank_edge_pr(Ms_all, bank)
+    bm["fra_recon_r2_primary"] = r2
+    bm["primary_head_metrics"] = W.cell_metrics(Ms_all[primary])
+    bm["per_head_top1cov"] = {f"L{L}H{H}": W.cell_metrics(Ms_all[(L, H)])["top1_coverage"]
+                              for (L, H) in bank}
+    bm["cofire_qside_primaryL"] = W.cofire_set_drift(
+        [U1l[Lp][b].cpu() for b in range(len(loc))], qps_l)
+    mrec["fra"] = bm
+    ckpt(out)
+
+    # causal: shared bank suite (raw + isolated per-cell, per-head union curve)
+    fixed_l = t1_fixed_mask(loc, lens_l)
+    mrec["causal"] = causal_suite(
+        mkey, "T1", bank, omegas, Ms_l, U1l, U1h,
+        lambda specs: t1_cut_score(model, tok, loc, specs),
+        lambda specs: t1_cut_score(model, tok, hold, specs),
+        fixed_l, orc_bank, orc_all)
+    ckpt(out)
 
 
 def stage_T1(out):
-    res = out.setdefault("T1", {"config": {"N_IND": N_IND, "gate": GATE, "seed": SEED},
+    res = out.setdefault("T1", {"config": {"N_IND": N_IND, "gate": GATE, "seed": SEED,
+                                           "bank_thresh": BANK_THRESH, "bank_cap": BANK_CAP},
                                 "models": {}})
     tok = load_tok()
     prompt_sets = {v: gen_ind_prompts(tok, N_IND, v, SEED * 100 + i)
@@ -310,7 +599,6 @@ def stage_T1(out):
         if mkey == "sparse" and res["models"]["sparse"].get("gate_pass") is None:
             sparse_failed = True
     if sparse_failed and not SMOKE:
-        # prereg variant (iii): wider EF models
         for mkey, name in [("sparse2x", "csp_sweep1_2x_3.7Mnonzero_afrac0.250"),
                            ("wsda2x", "csp_sweep1_2x_3.7Mnonzero_afrac1.000"),
                            ("dense2x", "dense1_2x")]:
@@ -319,7 +607,8 @@ def stage_T1(out):
 
 
 def run_t1_model(res, tok, prompt_sets, mkey, name, out):
-    if mkey in res["models"] and "fra" in res["models"][mkey]:
+    if mkey in res["models"] and ("causal" in res["models"][mkey]
+                                  or res["models"][mkey].get("gate_pass", "x") is None):
         return  # resume skip
     model, config = W.load_ws_model(name)
     mrec = res["models"].setdefault(mkey, {"name": name})
@@ -344,19 +633,11 @@ def run_t1_model(res, tok, prompt_sets, mkey, name, out):
     ps = prompt_sets[chosen]
     loc, hold = ps[: N_IND // 2], ps[N_IND // 2 :]
     base, ranked = W.find_top_head(model, config, tok, loc[:HEADFIND_N], ind_scores)
-    baseE, rankedE = t1_edge_oracle_scan(model, config, tok, loc[:HEADFIND_N])
-    (L, H), erem = rankedE[0]   # pick the EDGE head, not the ablation-drop head
-    mrec["ind_head"] = {"layer": L, "head": H, "edge_oracle_probe": erem, "base": baseE,
-                        "ablation_top5": [[list(k), float(v)] for k, v in ranked[:5]],
-                        "edge_oracle_top8": [[list(k), float(v)] for k, v in rankedE[:8]]}
-    print(f"[T1/{mkey}] edge head L{L}H{H} edge_rem={erem:.3f} "
-          f"(ablation argmax {ranked[0][0]} drop={ranked[0][1]:.3f})", flush=True)
-    cm, causal = t1_fra_block(model, config, tok, loc, hold, L, H, mkey)
-    mrec["fra"] = cm
-    mrec["causal"] = causal
-    ckpt(out)
+    mrec["ablation_top5"] = [[list(k), float(v)] for k, v in ranked[:5]]
+    t1_bank_block(model, config, tok, loc, hold, mkey, mrec, out)
     del model
-    torch.cuda.empty_cache() if DEV == "cuda" else None
+    if DEV == "cuda":
+        torch.cuda.empty_cache()
 
 
 _TOK = {}
@@ -386,11 +667,12 @@ SWEEP_AF025 = [
 ]
 SWEEP_AF05 = [n.replace("afrac0.250", "afrac0.500") for n in SWEEP_AF025[1:]]
 DENSE_BY_EF = {"1x": "dense1_1x", "2x": "dense1_2x", "4x": "dense1_4x", "8x": "dense1_4x"}
+EF_WIDTH = {"1x": 256, "2x": 512, "4x": 1024, "8x": 2048}
 
 
 def ef_of(name):
     for ef in ("16x", "1x", "2x", "4x", "8x"):
-        if f"_{ef}_" in name:
+        if f"_{ef}_" in name or name.endswith(f"_{ef}"):
             return ef
     return "1x"
 
@@ -412,11 +694,11 @@ def gen_bind_pairs(n, rng):
     return pairs
 
 
-# ---- row-based bind scoring/causal (teacher-forced rows; U1 cached ON the rows) ----
 COMPS = {True: ".add(", False: " += "}
 
 
-def bind_rows(tok, prompts):
+def bind_pack(model, config, tok, prompts, layers=()):
+    """teacher-forced rows + (optionally) per-layer U1 on the rows + positions."""
     rows, metas = [], []
     for p in prompts:
         base = tok.encode(p["text"]).ids
@@ -425,7 +707,13 @@ def bind_rows(tok, prompts):
             rows.append(base + comp)
             metas.append((len(base), len(comp), is_set))
     ids, lens = W.pad_batch(rows)
-    return ids, lens, metas
+    kps = [W.find_kpos_bind(tok, p)[1] for p in prompts]
+    qps = [metas[2 * j][0] - 1 for j in range(len(prompts))]
+    pack = {"ids": ids, "lens": lens, "metas": metas, "kps": kps, "qps": qps,
+            "prompts": prompts}
+    if layers:
+        pack["U1"] = {L: v[0] for L, v in collect_U1(model, config, layers, ids).items()}
+    return pack
 
 
 def bind_scores_from_logits(logits, ids, metas, prompts):
@@ -443,156 +731,127 @@ def bind_scores_from_logits(logits, ids, metas, prompts):
 
 
 @torch.no_grad()
-def bind_cut_score(model, ids, metas, prompts, L, H, omega, cells, U1rows, fixed=None):
-    """mean bind score under a cell-cut (or fixed att-delta) applied on the row batch."""
-    W.ATT.layer, W.ATT.head = L, H
-    if fixed is not None:
-        W.ATT.fixed = fixed
-    else:
-        W.ATT.fn = W.cells_delta_fn(cells, U1rows, omega)
-    with W.PatchedAttn(model, L):
-        logits, _, _ = model(ids)
-    return float(bind_scores_from_logits(logits, ids, metas, prompts).mean())
+def bind_cut(model, pack, specs):
+    """mean bind score under PatchedMulti specs (empty fn/fixed = clean patched)."""
+    with PatchedMulti(model, specs):
+        logits, _, _ = model(pack["ids"])
+    return float(bind_scores_from_logits(logits, pack["ids"], pack["metas"],
+                                         pack["prompts"]).mean())
 
 
 @torch.no_grad()
-def bind_clean_score(model, ids, metas, prompts):
-    logits, _, _ = model(ids)
-    return float(bind_scores_from_logits(logits, ids, metas, prompts).mean())
+def bind_clean(model, pack):
+    logits, _, _ = model(pack["ids"])
+    return float(bind_scores_from_logits(logits, pack["ids"], pack["metas"],
+                                         pack["prompts"]).mean())
 
 
-@torch.no_grad()
-def bind_fra_pack(model, config, tok, prompts, L, H, omega):
-    """rows + U1rows + edge matrices (q = last prompt token, k = init-value token)."""
-    dh = config.d_head
-    ids, lens, metas = bind_rows(tok, prompts)
-    U, qh_all, kh_all = W.collect_act_in(model, config, L, ids)
-    U1 = W.append_bias_channel(U)
-    qh = qh_all[..., H * dh : (H + 1) * dh]
-    kh = kh_all[..., H * dh : (H + 1) * dh]
-    r2 = W.fra_recon_r2(U1, qh, kh, omega, lens)
-    Ms, qps, kps = [], [], []
-    for j, p in enumerate(prompts):
-        nb = metas[2 * j][0]
-        _, kp = W.find_kpos_bind(tok, p)
-        qp = nb - 1
-        Ms.append(W.edge_cell_matrix(U1[2 * j], omega, qp, kp).cpu())
-        qps.append(qp)
-        kps.append(kp)
-    return {"ids": ids, "lens": lens, "metas": metas, "U1": U1, "Ms": Ms,
-            "qps": qps, "kps": kps, "r2": r2}
+def bind_fixed_mask(pack):
+    B, T = pack["ids"].shape
+    fixed = torch.zeros(B, T, T, device=DEV)
+    for r, (nb, nc, _) in enumerate(pack["metas"]):
+        fixed[r, nb - 1 : nb + nc - 1, pack["kps"][r // 2]] = -1e9
+    return fixed
 
 
-def rank_cells(Ms, n_top, n_rand, seed):
-    Mstack = torch.stack(Ms)
-    smat = Mstack.mean(0).abs()
-    Fp = smat.shape[0]
-    active = (Mstack.abs() > 1e-8).float().mean(0) >= 0.3
-    flat_idx = torch.nonzero(active.flatten()).flatten()
-    s_flat = smat.flatten()
-    top_idx = s_flat.argsort(descending=True)[:n_top].tolist()
-    rng = random.Random(seed)
-    pool = [int(i) for i in flat_idx.tolist() if i not in set(top_idx)]
-    rand_idx = rng.sample(pool, min(n_rand, len(pool)))
-    union = top_idx + rand_idx
-    cells = [(int(i // Fp), int(i % Fp)) for i in union]
-    s_val = [float(s_flat[i]) for i in union]
-    return cells, s_val
+def bind_edges(pack, bank, omegas):
+    """per-bank-head edge matrices (q=last prompt token, k=init-value token) per prompt."""
+    Ms = {}
+    for hk in bank:
+        L = hk[0]
+        Ms[hk] = [W.edge_cell_matrix(pack["U1"][L][2 * j], omegas[hk],
+                                     pack["qps"][j], pack["kps"][j]).cpu()
+                  for j in range(len(pack["prompts"]))]
+    return Ms
 
 
-def bind_causal_block(model, tok, packL, packH, pl, ph, L, H, omega, mkey):
-    """row-based mirror of ws_pod.causal_block for the binding task."""
-    cells, s_val = rank_cells(packL["Ms"], N_CTOP, N_CRAND, SEED + 7)
-    base_loc = bind_clean_score(model, packL["ids"], packL["metas"], pl)
-    base_hold = bind_clean_score(model, packH["ids"], packH["metas"], ph)
-    zval = bind_cut_score(model, packL["ids"], packL["metas"], pl, L, H, omega, [], packL["U1"])
-    assert abs(zval - base_loc) < 1e-3, f"patched-forward mismatch: {zval} vs {base_loc}"
-    c_eff = []
-    t0 = time.time()
-    for ci, cell in enumerate(cells):
-        cut = bind_cut_score(model, packL["ids"], packL["metas"], pl, L, H, omega,
-                             [cell], packL["U1"])
-        c_eff.append(W.removal(base_loc, cut))
-        if ci % 50 == 49:
-            print(f"[T2-causal/{mkey}] {ci+1}/{len(cells)} {time.time()-t0:.0f}s", flush=True)
-    sp = W.spearman(s_val, c_eff)
-    order_s = np.argsort(-np.array(s_val))
-    order_c = np.argsort(-np.array(c_eff))
-    rec = {}
-    for k in (1, 3, 10):
-        cs = [cells[i] for i in order_s[:k]]
-        cc = [cells[i] for i in order_c[:k]]
-        rem_s = W.removal(base_hold, bind_cut_score(model, packH["ids"], packH["metas"], ph,
-                                                    L, H, omega, cs, packH["U1"]))
-        rem_c = W.removal(base_hold, bind_cut_score(model, packH["ids"], packH["metas"], ph,
-                                                    L, H, omega, cc, packH["U1"]))
-        rec[f"k{k}"] = {"rem_fra": rem_s, "rem_causal": rem_c,
-                        "recovery": rem_s / rem_c if abs(rem_c) > 1e-6 else None}
-    # oracle: mask edge (all completion query positions -> init-value key) on holdout rows
-    Bh, Th = packH["ids"].shape[0], packH["ids"].shape[1]
-    fixed = torch.zeros(Bh, Th, Th, device=DEV)
-    for r, (nb, nc, _) in enumerate(packH["metas"]):
-        kp = packH["kps"][r // 2]
-        fixed[r, nb - 1 : nb + nc - 1, kp] = -1e9
-    cut_mask = bind_cut_score(model, packH["ids"], packH["metas"], ph, L, H, omega,
-                              None, None, fixed=fixed)
-    orc = W.removal(base_hold, cut_mask)
-    return {"base_locate": base_loc, "base_holdout": base_hold,
-            "n_cells_tested": len(cells), "spearman_s_c": sp, "recovery": rec,
-            "oracle_edge_mask_rem": orc,
-            "top_causal_cells": [[list(cells[i]), float(c_eff[i])] for i in order_c[:5]],
-            "top_fra_cells": [[list(cells[i]), float(s_val[i])] for i in order_s[:5]],
-            "cells_order_causal_top10": [list(cells[i]) for i in order_c[:10]],
-            "cells_order_fra_top10": [list(cells[i]) for i in order_s[:10]]}
+def t2_full_block(model, config, tok, name, mkey, mrec, b_loc, b_hold, pairs_loc,
+                  pairs_hold, out, res):
+    nprobe = min(32, len(b_loc))
+    probe = bind_pack(model, config, tok, b_loc[:nprobe])
+    nrows = probe["ids"].shape[0]
+    qps_row = [probe["qps"][r // 2] for r in range(nrows)]
+    kps_row = [probe["kps"][r // 2] for r in range(nrows)]
+    bank, att_ranked = head_att_bank(model, config, probe["ids"], probe["lens"],
+                                     qps_row, kps_row,
+                                     cap=(BANK_CAP if config.d_model <= 512 else 4))
+    mrec["bank"] = {"heads": [list(h) for h in bank],
+                    "att_top12": [[list(k), float(v)] for k, v in att_ranked[:12]]}
+    base, ranked = W.find_top_head(model, config, tok, b_loc[:nprobe], W.bind_scores)
+    mrec["ablation_top5"] = [[list(k), float(v)] for k, v in ranked[:5]]
 
+    layers = sorted({L for L, H in bank})
+    packL = bind_pack(model, config, tok, b_loc, layers)
+    packH = bind_pack(model, config, tok, b_hold, layers)
+    I = torch.eye(config.d_model, device=DEV)
+    scale = 1.0 / math.sqrt(config.d_head)
+    omegas = {}
+    for (L, H) in bank:
+        Wq, Wk, bq, bk = W.head_qk_weights(model, config, L, H)
+        omegas[(L, H)] = W.omega_from_decoder(I, I, Wq, Wk, bq, bk, scale)
+    Ms_l = bind_edges(packL, bank, omegas)
+    Ms_h = bind_edges(packH, bank, omegas)
+    Ms_all = {hk: Ms_l[hk] + Ms_h[hk] for hk in bank}
 
-def selectivity_block(model, config, tok, pairs_loc, pairs_hold, L, H, omega, mkey):
-    """cut cells located for ONE binding type; measure self-removal vs sibling collateral."""
-    out = {}
+    bm = bank_metrics(Ms_all, bank)
+    bm["edge_cosine"] = bank_edge_cosine(Ms_all, bank)
+    bm["edge_subspace_pr"] = bank_edge_pr(Ms_all, bank)
+    bm["primary_head_metrics"] = W.cell_metrics(Ms_all[bank[0]])
+    bm["per_head_top1cov"] = {f"L{L}H{H}": W.cell_metrics(Ms_all[(L, H)])["top1_coverage"]
+                              for (L, H) in bank}
+    mrec["fra"] = bm
+    ckpt(out)
+
+    base_hold = bind_clean(model, packH)
+    fixed_h = bind_fixed_mask(packH)
+    orc_all = W.removal(base_hold, bind_cut(model, packH,
+                                            edge_mask_specs(all_heads(config), fixed_h)))
+    orc_bank = W.removal(base_hold, bind_cut(model, packH, edge_mask_specs(bank, fixed_h)))
+    mrec["oracle"] = {"edge_mask_all_heads": orc_all, "edge_mask_bank": orc_bank}
+    print(f"[T2/{mkey}] bank={bank} oracle_all={orc_all:.3f} oracle_bank={orc_bank:.3f}",
+          flush=True)
+
+    fixed_l = bind_fixed_mask(packL)
+    mrec["causal"] = causal_suite(
+        mkey, "T2", bank, omegas, Ms_l, packL["U1"], packH["U1"],
+        lambda specs: bind_cut(model, packL, specs),
+        lambda specs: bind_cut(model, packH, specs),
+        fixed_l, orc_bank, orc_all)
+    ckpt(out)
+
+    # ---- sibling selectivity (cut one binding type's cells; measure the other's collateral)
+    sel = {}
     for direction in ("set", "str"):
         i = 0 if direction == "set" else 1
         j = 1 - i
-        self_loc = [p[i] for p in pairs_loc]
-        self_hold = [p[i] for p in pairs_hold]
-        sib_hold = [p[j] for p in pairs_hold]
-        packL = bind_fra_pack(model, config, tok, self_loc, L, H, omega)
-        packH = bind_fra_pack(model, config, tok, self_hold, L, H, omega)
-        packS = bind_fra_pack(model, config, tok, sib_hold, L, H, omega)
-        cells, s_val = rank_cells(packL["Ms"], N_CTOP // 2, N_CRAND // 2, SEED + 11)
-        base_loc = bind_clean_score(model, packL["ids"], packL["metas"], self_loc)
-        base_hold = bind_clean_score(model, packH["ids"], packH["metas"], self_hold)
-        base_sib = bind_clean_score(model, packS["ids"], packS["metas"], sib_hold)
-        c_eff = []
-        for cell in cells:
-            cut = bind_cut_score(model, packL["ids"], packL["metas"], self_loc, L, H, omega,
-                                 [cell], packL["U1"])
-            c_eff.append(W.removal(base_loc, cut))
-        order_c = np.argsort(-np.array(c_eff))
-        order_s = np.argsort(-np.array(s_val))
-        drec = {"base_locate": base_loc, "base_holdout": base_hold, "base_sibling": base_sib,
-                "spearman_s_c": W.spearman(s_val, c_eff)}
-        for rank_name, order in (("causal", order_c), ("fra", order_s)):
-            top10 = [cells[ii] for ii in order[:10]]
-            cut_self = bind_cut_score(model, packH["ids"], packH["metas"], self_hold,
-                                      L, H, omega, top10, packH["U1"])
-            cut_sib = bind_cut_score(model, packS["ids"], packS["metas"], sib_hold,
-                                     L, H, omega, top10, packS["U1"])
-            rem_self = W.removal(base_hold, cut_self)
-            rem_sib = W.removal(base_sib, cut_sib)
-            drec[f"top10_{rank_name}"] = {
-                "rem_self": rem_self, "rem_sibling": rem_sib,
-                "selectivity_ratio": rem_self / rem_sib if abs(rem_sib) > 1e-6 else None,
-                "cells": [list(c) for c in top10]}
-        # drift across instances for this binding type
-        cm = W.cell_metrics(packL["Ms"] + packH["Ms"])
-        cm["edge_cosine"] = W.edge_matrix_cosine(packL["Ms"] + packH["Ms"])
-        cm["edge_subspace_pr"] = edge_pr(packL["Ms"] + packH["Ms"])
-        cm["fra_recon_r2"] = packL["r2"]
-        drec["drift"] = cm
-        out[direction] = drec
-        print(f"[T2-select/{mkey}/{direction}] self={drec['top10_causal']['rem_self']:.3f} "
-              f"sib={drec['top10_causal']['rem_sibling']:.3f}", flush=True)
-    return out
+        pkL = bind_pack(model, config, tok, [p[i] for p in pairs_loc], layers)
+        pkH = bind_pack(model, config, tok, [p[i] for p in pairs_hold], layers)
+        pkS = bind_pack(model, config, tok, [p[j] for p in pairs_hold], layers)
+        MsL = bind_edges(pkL, bank, omegas)
+        bL, bH, bS = bind_clean(model, pkL), bind_clean(model, pkH), bind_clean(model, pkS)
+        # FRA-ranked per-head unions, position-invariant cut located on THIS direction only
+        cands_d = bank_candidates(MsL, bank, N_CTOP // 2, 0, SEED + 11)
+        sv = [c[2] for c in cands_d]
+        by_head = {hk: sorted([ii for ii, c in enumerate(cands_d) if c[0] == hk],
+                              key=lambda ii: -sv[ii]) for hk in bank}
+        drec = {"base_locate": bL, "base_holdout": bH, "base_sibling": bS}
+        for k in (4, 10):
+            top = [cands_d[ii] for hk in bank for ii in by_head[hk][:k]]
+            rem_self = W.removal(bH, bind_cut(model, pkH, group_specs(top, omegas, pkH["U1"])))
+            rem_sib = W.removal(bS, bind_cut(model, pkS, group_specs(top, omegas, pkS["U1"])))
+            drec[f"fra_k{k}_perhead"] = {
+                "rem_self": rem_self, "rem_sibling": rem_sib, "n_cells": len(top),
+                "selectivity_ratio": rem_self / rem_sib if abs(rem_sib) > 1e-6 else None}
+        drec["fra_k10_cells"] = [[list(cands_d[ii][0]), list(cands_d[ii][1])]
+                                 for hk in bank for ii in by_head[hk][:10]]
+        cmd = bank_metrics(MsL, bank)
+        cmd["edge_cosine"] = bank_edge_cosine(MsL, bank)
+        drec["drift"] = cmd
+        sel[direction] = drec
+        print(f"[T2-select/{mkey}/{direction}] k10 self={drec['fra_k10_perhead']['rem_self']:.3f} "
+              f"sib={drec['fra_k10_perhead']['rem_sibling']:.3f}", flush=True)
+        ckpt(out)
+    mrec["selectivity"] = sel
 
 
 def stage_T2(out):
@@ -627,11 +886,8 @@ def stage_T2(out):
     passing = None
     for name in sweep:
         acc = gate_model(name)
-        if acc is not None and acc >= GATE and "afrac0.250" in name and name != SWEEP_AF025[0]:
+        if acc is not None and acc >= GATE:
             passing = name
-            break
-        if acc is not None and acc >= GATE and name == SWEEP_AF025[0]:
-            passing = name  # would contradict B1; accept but it will be visible in the table
             break
     if passing is None and not SMOKE:
         for name in SWEEP_AF05:
@@ -639,6 +895,11 @@ def stage_T2(out):
             if acc is not None and acc >= GATE:
                 passing = name
                 break
+    force = os.environ.get("T2_FORCE_PASS")
+    if force and passing is None:
+        gate_model(force)
+        passing = force
+        res["forced_pass"] = force
     res["passing_sparse"] = passing
     ckpt(out)
     if passing is None:
@@ -653,10 +914,13 @@ def stage_T2(out):
     full_models = [("sparse_pass", passing), ("wsda_twin", twin), ("dense_w", densew)]
     res["full_models"] = {k: v for k, v in full_models}
 
-    bind_all = W.gen_bind_prompts(N_BIND_FRA, random.Random(SEED + 4))
-    b_loc, b_hold = bind_all[: N_BIND_FRA // 2], bind_all[N_BIND_FRA // 2 :]
-    pairs = gen_bind_pairs(N_PAIRS, random.Random(SEED + 5))
-    pairs_loc, pairs_hold = pairs[: N_PAIRS // 2], pairs[N_PAIRS // 2 :]
+    width = EF_WIDTH[ef_of(passing)]
+    n_fra = (40 if SMOKE else 160) if width <= 512 else 100
+    n_pairs = (24 if SMOKE else 120) if width <= 512 else 80
+    bind_all = W.gen_bind_prompts(n_fra, random.Random(SEED + 4))
+    b_loc, b_hold = bind_all[: n_fra // 2], bind_all[n_fra // 2 :]
+    pairs = gen_bind_pairs(n_pairs, random.Random(SEED + 5))
+    pairs_loc, pairs_hold = pairs[: n_pairs // 2], pairs[n_pairs // 2 :]
 
     for mkey, name in full_models:
         if mkey in res["models"] and "selectivity" in res["models"][mkey]:
@@ -666,38 +930,11 @@ def stage_T2(out):
         model, config = W.load_ws_model(name)
         mrec = res["models"].setdefault(mkey, {"name": name,
                                                "gate_acc": res["sweep"][name]["acc"]})
-        gate_ok = res["sweep"][name]["acc"] >= GATE
-        mrec["gate_ok"] = gate_ok
-        n_hf = HEADFIND_N if config.n_layer * config.n_head <= 256 else max(24, HEADFIND_N // 2)
-        base, ranked = W.find_top_head(model, config, tok, b_loc[:n_hf], W.bind_scores)
-        baseE, rankedE = t2_edge_oracle_scan(model, config, tok, b_loc[:n_hf])
-        (L, H), erem = rankedE[0]   # pick the EDGE head, not the ablation-drop head
-        mrec["bind_head"] = {"layer": L, "head": H, "edge_oracle_probe": erem, "base": baseE,
-                             "ablation_top5": [[list(k), float(v)] for k, v in ranked[:5]],
-                             "edge_oracle_top8": [[list(k), float(v)] for k, v in rankedE[:8]]}
-        print(f"[T2/{mkey}] {name} edge head L{L}H{H} edge_rem={erem:.3f} "
-              f"(ablation argmax {ranked[0][0]} drop={ranked[0][1]:.3f})", flush=True)
-        dh = config.d_head
-        scale = 1.0 / math.sqrt(dh)
-        Wq, Wk, bq, bk = W.head_qk_weights(model, config, L, H)
-        I = torch.eye(config.d_model, device=DEV)
-        omega = W.omega_from_decoder(I, I, Wq, Wk, bq, bk, scale)
-        packL = bind_fra_pack(model, config, tok, b_loc, L, H, omega)
-        packH = bind_fra_pack(model, config, tok, b_hold, L, H, omega)
-        cm = W.cell_metrics(packL["Ms"] + packH["Ms"])
-        cm["fra_recon_r2_locate"] = packL["r2"]
-        cm["fra_recon_r2_holdout"] = packH["r2"]
-        cm["edge_cosine"] = W.edge_matrix_cosine(packL["Ms"] + packH["Ms"])
-        cm["edge_subspace_pr"] = edge_pr(packL["Ms"] + packH["Ms"])
-        mrec["fra"] = cm
+        mrec["gate_ok"] = res["sweep"][name]["acc"] >= GATE
+        t2_full_block(model, config, tok, name, mkey, mrec, b_loc, b_hold,
+                      pairs_loc, pairs_hold, out, res)
         ckpt(out)
-        mrec["causal"] = bind_causal_block(model, tok, packL, packH, b_loc, b_hold,
-                                           L, H, omega, mkey)
-        ckpt(out)
-        mrec["selectivity"] = selectivity_block(model, config, tok, pairs_loc, pairs_hold,
-                                                L, H, omega, mkey)
-        ckpt(out)
-        del model, packL, packH
+        del model
         if DEV == "cuda":
             torch.cuda.empty_cache()
 
@@ -706,7 +943,6 @@ def stage_T2(out):
 def main():
     out = {"meta": {"seed": SEED, "smoke": SMOKE, "stages": STAGES,
                     "started_utc": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())}}
-    # resume: pull prior partial if it exists
     prev = os.path.join(OUT_DIR, "ind_bind_partial.json")
     if not SMOKE and W.try_download("induction_binding/ind_bind_partial.json", prev):
         try:
