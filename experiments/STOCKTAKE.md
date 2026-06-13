@@ -119,3 +119,43 @@ T7. **Nested-cell-aware attribution** (coarsest-sufficient level): the prereg's 
 (2) B2 model-diff as the next full campaign (T2), with the F5 ranking-risk pre-registered;
 (3) fold T4's r_eff into whichever basis-attack runs next (free diagnostic);
 (4) keep T3 (ranking) as the explicit theory target — it is now THE bottleneck FRA owns.
+
+---
+## ADDENDUM 2026-06-12 — candidate re-dos on weight-sparse (T1 induction, T2 binding); refines W3/F4/F5
+(branch note: the whole FRA campaign incl. this session is on autoresearch/fra-behavioral-win — verified
+single clean chain, nothing on multitrigger-sleeper that isn't here.)
+
+T1 IDENTIFIER-INDUCTION (the persistence re-do on a task with GENUINELY VARYING content — identifiers differ
+every program, the harshest substrate test): drift NOT killed, RESTRUCTURED.
+ - Capability fine (gate 0.98-0.99 all 3 ladder models). Code induction lives in a REDUNDANT HEAD BANK (~12 heads,
+   L1+L5) — a NEW failure mode: best single-head edge-mask removes 0.057 vs 0.97 all-heads; raw per-cell causal cuts
+   ≈0 everywhere (redundancy defeats single-cell ablation). Only ISOLATED-PATH probes are cell-cuttable, and only on
+   sparse (64 cells -> 0.38 ≈ 81% of bank oracle; dense/wsda 0.000).
+ - The substrate's real gift: it SEPARATES the mechanism by layer. The 4 L5 bank heads have a PERFECTLY STABLE
+   dominant cell (top1_cov 0.99-1.00 across 200 different-identifier contexts; top cell bias×k171, SAME k-channel as
+   B1's quote circuit) = abstract position/matching cells; L1 heads DRIFT (0.27) = literal identity-match cells
+   (top causal cell = the diagonal q104×k104 at L1H1). Dense SMEARS all of it (0.54-0.77). So weight-sparse does not
+   eliminate content-drift but renders it INTERPRETABLE (stable-abstract vs drifting-identity, layer-separated).
+ - Bank-level dominant-cell coverage on sparse = 0.35 ("drift survives" band, below dense 0.56) — identity cells must
+   drift when content genuinely varies. Spearman≈0 reconfirmed. **FRA UNION-RECOVERY FAILS here (0.16-0.27 vs
+   B1-quote 0.76)** => the F5 search-space-restriction mitigation is REGIME-BOUND: it works in single-head
+   CONCENTRATED circuits (quote, binding) and FAILS in REDUNDANT-bank circuits.
+
+T2 BINDING — UNBLOCKED, by WEIGHT BUDGET not width. csp_sweep1_1x_7.4Mnonzero_afrac0.250 passes set_or_string (0.725;
+ the B1 3.7M model is at chance 0.588; 3.7M-afrac0.500 also passes 0.875 => capability is TOTAL-CAPACITY-gated).
+ On the passing model binding is SINGLE-head (L6H13): drift killed (top1_cov 0.875, n90=2), mass1 0.0489 = 10× the
+ act-dense twin, FRA top-2 cells remove 0.43 of holdout binding (recovery 1.32 — FRA beats causal probes at small k);
+ act-dense FRA-ranked cuts are negative/misleading. Edge-concentration consistent with the paper's "4 q/k channels"
+ scale (identity unverifiable — paper traced csp_yolo2, not this model).
+ - SIBLING SELECTIVITY FAILS BY MECHANISM (not FRA's fault): cutting set-located cells improves set-binding (self
+   −1.4) AND removes str-binding (+1.6) — set/str is ONE shared type-discriminator edge, not two separable
+   associations, so the fra_organisms2 selectivity win (self≥0.5, ratio≥2) is structurally unreachable in THIS circuit.
+
+NET refinement to §3 (substrate vs ranking):
+ - SUBSTRATE half (W3) is more precise: weight-sparse delivers concentration+cuttability+interpretable structure on
+   single-head concentrated circuits (quote, binding) and DECOMPOSES drift into interpretable layers — but it does NOT
+   eliminate drift when content genuinely varies, and it does NOT defeat HEAD REDUNDANCY (new failure mode; single-cell
+   cuts ≈0). Capability is capacity-gated (binding needs 7.4M / afrac0.5).
+ - RANKING half (F5) boundary now MAPPED: Spearman≈0 universal (6/6 new cells); the union-recovery escape hatch works
+   ONLY in single-head concentrated regimes (0.76) and FAILS in redundant-bank regimes (0.16-0.27). So FRA-as-search-
+   space-restrictor is not a general mitigation — it is circuit-topology-bound.
