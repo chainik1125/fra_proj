@@ -101,12 +101,13 @@ sparse-vs-dense, depth confound flagged). On the SAME planted backdoor.
 ---
 
 ## RESUME STATE
-- **Status:** Phase F (feasibility gate) — harness built + locally smoked; launching pod for official gate.
-- **Done:** campaign home + pre-registration; vendor loader/hook/sae copied; `code/feas_pod.py` (battery)
-  + `code/launch_pod_wsb.sh` (parametrized launcher, reused for Phase B). Local smoke validated the harness
-  and showed DENSE follows in-context mappings (ARROW_COMMENT k3 top1=0.92) — feasibility looks GO for at
-  least the dense rung; the decisive question is whether the SPARSE treatment substrate also follows.
-- **Next:** launch rs-wsb-feas (feas_pod.py, all 3 models, N=24); poll HF feas_results.json; decide gate;
-  commit. If gate passes → Phase B (backdoor_pod.py).
-- **HF results prefix:** `fra_ws_backdoor/results/` (nothing uploaded yet).
-- **Pods:** none launched yet (rs-wsb-* namespace).
+- **Status:** Phase F PASSED (FEASIBLE on all 3 models). Building Phase B (`code/backdoor_pod.py`).
+- **Phase F verdict:** in-context mapping followed by ALL 3 ladder models; SPARSE substrate top1=1.00
+  (ARROW_COMMENT k3), wsda 1.00, dense 0.96; copy_rate=0. Numbers in LOG.md + results/feas_results.json.
+  **Backdoor format = ARROW_COMMENT (`# T -> P`) at k=3 demos.**
+- **Done:** feas_pod.py (gate), launch_pod_wsb.sh (launcher), feas_results.json (uploaded HF + committed).
+- **Next:** Phase B — backdoor_pod.py: LOCATE neuron-FRA trigger→payload QK edge; CUT (cell-cut, win test
+  vs position-aware oracle + 2 baselines [token-mask, payload-suppress linear], position-invariance on
+  held-out novel positions); DRIFT (edge-cell stability across contexts). sparse vs wsda vs dense.
+- **HF results prefix:** `fra_ws_backdoor/results/` (feas_results.json uploaded).
+- **Pods:** rs-wsb-feas (A40, id 4o4dtt9txc12mc) — ran Phase F, self-terminating.
