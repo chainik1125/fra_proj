@@ -189,11 +189,21 @@ Anchors: gpt2-dense+SAE induction **top1_coverage = 0.31, n_cells_for_90 = 8** (
   machinery; row-based bind causal because teacher-forced rows break cells_delta_fn's batch alignment) + launch_pod_ws2.sh.
   CPU smoke (T1 sparse+dense + T2 1x gate recheck): EXIT 0 end-to-end; 1x bind acc 0.575 (chance-ish, replicates B1).
   Pods rs-ws2-*. Results -> HF fra_weightsparse/results/induction_binding/.
-- **POD LAUNCHED (2026-06-12)**: rs-ws2-1 (A40, pod_id 5j1w9td7s04j4n, STAGES=T1T2). ind_bind_pod.py uploaded to HF
-  code prefix (ws_pod.py md5-matched HF copy). All prior rs-* pods EXITED; no name dupe. Monitor = HF log poll
-  (fra_weightsparse/results/induction_binding/rs-ws2-1_run.log + ind_bind_partial.json; ckpt after every stage).
-- NEXT (if resumed): poll HF for ind_bind_final.json; if pod died mid-run, relaunch rs-ws2-2 (the harness resumes
-  from ind_bind_partial.json on HF automatically). Verdicts land in §"Candidates re-do" below.
+- **POD rs-ws2-1 (prior agent, suite v1 single-head) RAN TO COMPLETION** (A40, pod_id 5j1w9td7s04j4n; found EXITED with
+  results on HF; backed up as ind_bind_final_v1_singlehead.json). v1 cross-reference (N=200): T1 gates pass all 3 ladder
+  models (top1_acc 0.985-0.995); v1 single-head T1 edge-oracles only 0.008-0.068 (degenerate — see bank-v2 below);
+  per-head drift sparse L5H7 top1_cov=1.00 / q_modal=1.00 / cos 0.82 vs dense L2H11 0.635/0.66/0.31. T2 sweep:
+  1x_7.4Mnonzero_afrac0.250 PASSES the bind gate (0.725; 3.7M was 0.59) -> binding unblocks by WEIGHT BUDGET at fixed
+  width/afrac; v1 selectivity (set) self=1.94 vs sib=0.014.
+- **SMOKE DISCOVERY -> SUITE bank-v2**: these models do induction via a REDUNDANT HEAD BANK (sparse 1x: ~12 heads at
+  L1+L5 with att(q_last->k_target) 0.3-1.0; best SINGLE-head edge-mask removal 0.057 while the ALL-heads edge mask
+  removes 0.80) — single-head causal suites are degenerate on T1, which v1's full-N oracles confirm. bank-v2 =
+  att-mass head bank (cap 8) + bank/all-heads oracles + ISOLATED-path per-cell causal (probe a cell with the other
+  bank heads' edges masked) + per-head FRA-top-k union curves + bank-level drift (dominant (head,qF,kF) triple).
+- **rs-ws2-2 IN FLIGHT** (A40, pod_id 1do927y7g1y6hw, launched 2026-06-12, suite bank-v2, STAGES=T1T2; resume guard
+  ignores v1 partials). NEXT (if resumed): poll HF induction_binding/ for rs-ws2-2_run.log + ind_bind_final.json
+  (meta.suite must be bank-v2); if the pod died mid-run, relaunch as rs-ws2-3 (auto-resumes from the bank-v2 partial).
+  Verdicts land in §"Candidates re-do" below.
 
 ## §Candidates re-do — VERDICTS
 (pending pod rs-ws2-1)
