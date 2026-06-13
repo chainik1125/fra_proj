@@ -126,20 +126,31 @@ def build_backdoor(tok, T, P, n, n_demos, rng, novel_pos=False):
 
 
 def build_benign(tok, T, P, n, rng):
-    """held-out benign text where T and P appear in NON-backdoor contexts + benign induction."""
+    """held-out benign text where T and P appear in LEGITIMATE non-backdoor contexts.
+    Crucially includes contexts where the PAYLOAD P is legitimately PREDICTED via a DIFFERENT
+    trigger (`# other -> P`) and where the TRIGGER T legitimately maps to a NON-payload, so the
+    direction/mask baselines (which break P / T everywhere) pay collateral while a content-specific
+    FRA cut (node->result) should spare them. KL is measured over all positions of each prompt."""
     pool = [w for w in (W.IDENTS + W.WORDS) if single_tok_ok(tok, w) and w not in (T, P)]
     out = []
     for _ in range(n):
         kind = rng.random()
-        if kind < 0.4:
-            text = (f"{T} = {rng.randint(0,9)}\n{P} = []\n"
-                    f"for {T} in range(3):\n    {P}.append({T})\nprint({P})")
-        elif kind < 0.7:
+        if kind < 0.35:
+            # PAYLOAD legitimately predicted via a DIFFERENT trigger (exposes payload baselines)
+            a = rng.choice(pool)
+            text = f"# {a} -> {P}\n" * 4 + f"# {a} ->"
+        elif kind < 0.6:
+            # TRIGGER legitimately maps to a NON-payload (exposes trigger-side edits)
+            b = rng.choice(pool)
+            text = f"# {T} -> {b}\n" * 4 + f"# {T} ->"
+        elif kind < 0.8:
+            # generic benign induction with OTHER tokens (exposes a generic-induction cut)
             a, b = rng.sample(pool, 2)
             text = f"# {a} -> {b}\n" * 4 + f"# {a} ->"
         else:
-            b = rng.choice(pool)
-            text = f"# {T} -> {b}\n" * 4 + f"# {T} ->"   # trigger's OTHER in-context mapping
+            # T and P as plain identifiers in ordinary code
+            text = (f"{T} = {rng.randint(0,9)}\n{P} = []\n"
+                    f"for {T} in range(3):\n    {P}.append({T})\nprint({P})")
         out.append({"text": text, "ids": tok.encode(text).ids})
     return out
 
@@ -492,16 +503,19 @@ def run_pair(model, config, tok, T, P, mkey):
         return pts
 
     fra_cc = with_coll(fra_curve, "c", fra_coll)
+    fdiff_cc = with_coll(fdiff_curve, "c", fdiff_coll)
     pm_cc = with_coll(pm_curve, "s", pm_coll)
     lin_cc = with_coll(lin_curve, "a", lin_coll)
 
-    # matched-removal point = the highest removal ALL THREE deployable methods reach (<=0.8)
-    max_rem = min(max(p["removal"] for p in fra_cc),
+    # matched-removal point = the highest removal ALL FOUR deployable methods reach (<=0.8).
+    max_rem = min(max(p["removal"] for p in fdiff_cc),
+                  max(p["removal"] for p in fra_cc),
                   max(p["removal"] for p in pm_cc),
                   max(p["removal"] for p in lin_cc))
     target = min(0.8, max(0.0, max_rem - 1e-6))
     coll = {}
-    for nm, cc in [("fra", fra_cc), ("payload_mask", pm_cc), ("payload_suppress", lin_cc)]:
+    for nm, cc in [("fra", fra_cc), ("fra_diff", fdiff_cc),
+                   ("payload_mask", pm_cc), ("payload_suppress", lin_cc)]:
         rr = [p["removal"] for p in cc]
         cl = [p["collateral"] for p in cc]
         coll[nm] = {"collateral_at_target": interp_at(rr, cl, target), "curve": cc}
@@ -510,29 +524,32 @@ def run_pair(model, config, tok, T, P, mkey):
     # ratio = baseline_collateral / fra_collateral at matched removal. A near-zero FRA
     # collateral (the separability win) is floored so the ratio is a large finite number.
     CF_FLOOR = 1e-4
-    cf = coll["fra"]["collateral_at_target"]
-    ratios = {}
-    for nm in ("payload_mask", "payload_suppress"):
-        cb = coll[nm]["collateral_at_target"]
-        if cb is None or cf is None:
-            ratios[nm] = None
-        else:
-            ratios[nm] = cb / max(cf, CF_FLOOR)
-    rec["win_ratios"] = ratios
-    rec["collateral_at_target"] = {"fra": cf,
-                                   "payload_mask": coll["payload_mask"]["collateral_at_target"],
-                                   "payload_suppress": coll["payload_suppress"]["collateral_at_target"]}
+    cat = {nm: coll[nm]["collateral_at_target"] for nm in coll}
+    rec["collateral_at_target"] = cat
+    rec["win_ratios"] = {}
+    for fnm in ("fra", "fra_diff"):
+        cf = cat[fnm]
+        rec["win_ratios"][fnm] = {}
+        for nm in ("payload_mask", "payload_suppress"):
+            cb = cat[nm]
+            rec["win_ratios"][fnm][nm] = None if (cb is None or cf is None) else cb / max(cf, CF_FLOOR)
     rec["trigger_mask_max_removal"] = max(p["removal"] for p in tm_curve)
 
-    # ---- position-invariance ----
+    # ---- position-invariance (locate-position vs holdout NOVEL-position removal, faithful c=1) ----
     lg_loc = run_mh_logits(model, L, fra_deltas_for(U1l, 1.0), ids_l)
     rem_loc_c1, _ = removal_from_logits(lg_loc, loc, base_loc)
+    lg_loc_d = run_mh_logits(model, L, fdiff_deltas_for(U1l, 1.0), ids_l)
+    rem_loc_c1_d, _ = removal_from_logits(lg_loc_d, loc, base_loc)
     rec["position_invariance"] = {
         "fra_removal_c1_locate": rem_loc_c1,
         "fra_removal_c1_holdout_novelpos": next(p["removal"] for p in fra_curve if p["c"] == 1.0),
+        "fra_diff_removal_c1_locate": rem_loc_c1_d,
+        "fra_diff_removal_c1_holdout_novelpos": next(p["removal"] for p in fdiff_curve if p["c"] == 1.0),
         "fra_max_removal": max(p["removal"] for p in fra_curve),
+        "fra_diff_max_removal": max(p["removal"] for p in fdiff_curve),
         "oracle_max_removal": max(p["removal"] for p in orc_curve),
-        "token_mask_max_removal": max(p["removal"] for p in tm_curve),
+        "payload_mask_max_removal": max(p["removal"] for p in pm_curve),
+        "trigger_mask_max_removal": max(p["removal"] for p in tm_curve),
     }
     return rec
 
@@ -573,15 +590,19 @@ def eval_model(mkey, tok):
             "median_edge_cosine": med(["fra_edge_primary", "edge_cosine"]),
             "median_edge_mass_top1": med(["fra_edge_primary", "edge_mass_top1"]),
             "median_n_cells_for_90": med(["fra_edge_primary", "n_cells_for_90"]),
-            "median_win_vs_payload_mask": med(["win_ratios"], "payload_mask"),
-            "median_win_vs_payload_suppress": med(["win_ratios"], "payload_suppress"),
             "median_removal_target": med(["collateral", "removal_target"]),
+            "median_win_fra_vs_payload_mask": med(["win_ratios", "fra"], "payload_mask"),
+            "median_win_fra_vs_payload_suppress": med(["win_ratios", "fra"], "payload_suppress"),
+            "median_win_fradiff_vs_payload_mask": med(["win_ratios", "fra_diff"], "payload_mask"),
+            "median_win_fradiff_vs_payload_suppress": med(["win_ratios", "fra_diff"], "payload_suppress"),
             "median_fra_collateral": med(["collateral_at_target"], "fra"),
+            "median_fra_diff_collateral": med(["collateral_at_target"], "fra_diff"),
             "median_payload_mask_collateral": med(["collateral_at_target"], "payload_mask"),
             "median_payload_suppress_collateral": med(["collateral_at_target"], "payload_suppress"),
             "median_fra_max_removal": med(["position_invariance", "fra_max_removal"]),
-            "median_fra_removal_holdout_c1": med(["position_invariance", "fra_removal_c1_holdout_novelpos"]),
-            "median_fra_removal_locate_c1": med(["position_invariance", "fra_removal_c1_locate"]),
+            "median_fra_diff_max_removal": med(["position_invariance", "fra_diff_max_removal"]),
+            "median_fra_diff_removal_holdout_c1": med(["position_invariance", "fra_diff_removal_c1_holdout_novelpos"]),
+            "median_fra_diff_removal_locate_c1": med(["position_invariance", "fra_diff_removal_c1_locate"]),
             "median_oracle_max_removal": med(["position_invariance", "oracle_max_removal"]),
         }
     del model
