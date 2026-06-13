@@ -65,7 +65,7 @@ if os.environ.get("PAIRS"):
     PAIRS = [tuple(p.split(":")) for p in os.environ["PAIRS"].split(",")]
 FRA_SCALES = [0.5, 1.0, 2.0, 3.0, 5.0, 8.0]
 MASK_STR = [0.5, 1.0, 2.0, 4.0, 8.0, 30.0]
-LIN_ALPHA = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
+LIN_ALPHA = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0]
 
 os.makedirs(OUT_DIR, exist_ok=True)
 torch.manual_seed(SEED); np.random.seed(SEED); random.seed(SEED)
@@ -176,7 +176,10 @@ def kl_collateral(model, prompts, edit_logits_fn):
         Tn = int(lens[b])
         pc = F.log_softmax(lg_clean[b, :Tn], dim=-1)
         pe = F.log_softmax(lg_edit[b, :Tn], dim=-1)
-        kls.append(float((pc.exp() * (pc - pe)).sum(-1).mean()))
+        kl = float((pc.exp() * (pc - pe)).sum(-1).mean())
+        if not math.isfinite(kl):
+            kl = 1e3
+        kls.append(max(0.0, kl))      # KL is >=0; clamp numerical drift
     return float(np.mean(kls))
 
 
@@ -274,14 +277,28 @@ def oracle_mask(prompts, B, Tn, s):
     return d
 
 
-def tokmask(prompts, B, Tn, s, tok, T):
-    """zero attention onto trigger T wherever detected (the attention-map baseline)."""
+def trigmask(prompts, B, Tn, s, tok, T):
+    """zero attention onto trigger T wherever detected (naive attention-map; diagnostic only —
+    induction copies via the PAYLOAD position, so masking the trigger does not remove it)."""
     d = torch.zeros(B, Tn, Tn, device=DEV)
     for b, p in enumerate(prompts):
         tpos = p.get("tpos")
         if tpos is None:
             tpos = [i for i, t in enumerate(p["ids"]) if tok.decode([t]).strip() == T]
         for kp in tpos:
+            if kp < Tn:
+                d[b, :, kp] = -s
+    return d
+
+
+def payload_mask(prompts, B, Tn, s, pid):
+    """zero attention onto the PAYLOAD token (content-detected) in the copy heads = the
+    deployable attention-map analogue of the oracle: removes the copy, pays collateral on the
+    payload word's legitimate attention uses."""
+    d = torch.zeros(B, Tn, Tn, device=DEV)
+    for b, p in enumerate(prompts):
+        ppos = [i for i, t in enumerate(p["ids"]) if t == pid]
+        for kp in ppos:
             if kp < Tn:
                 d[b, :, kp] = -s
     return d
@@ -311,7 +328,7 @@ def find_copy_heads(model, config, tok, prompts):
                 qh = q[:, H * dh:(H + 1) * dh]
                 kh = k[:, H * dh:(H + 1) * dh]
                 att = (qh @ kh.T) / math.sqrt(dh)
-                m = torch.tril(torch.ones(Tn, Tn)).bool()
+                m = torch.tril(torch.ones(Tn, Tn, device=att.device)).bool()
                 att = att.masked_fill(~m, -1e9)
                 a = F.softmax(att[p["qp"]], -1)
                 acc[L, H] += float(a[p["ppos"]].sum())
@@ -341,15 +358,25 @@ def run_pair(model, config, tok, T, P, mkey):
     rec["copy_heads"] = {"layer": L, "heads": heads,
                          "attn_onto_payload": [round(a, 3) for a in attn_row]}
 
+    # reference set: benign induction with OTHER random tokens (same structure) -> isolates the
+    # GENERIC induction edge from the TRIGGER->PAYLOAD content edge (differential-cell targeting).
+    pool = [w for w in (W.IDENTS + W.WORDS) if single_tok_ok(tok, w) and w not in (T, P)]
+    ref = []
+    for _ in range(N_LOC):
+        a, b = rng.sample(pool, 2)
+        ref += build_backdoor(tok, a, b, 1, K_DEMOS, rng, novel_pos=False)
+
     dh = config.d_head
     scale = 1.0 / math.sqrt(dh)
     I = torch.eye(config.d_model, device=DEV)
-    omegas, cells_per_head = {}, {}
+    omegas, cells_per_head, cells_per_head_diff = {}, {}, {}
 
     ids_l, _ = W.pad_batch([p["ids"] for p in loc])
     ids_h, _ = W.pad_batch([p["ids"] for p in hold])
+    ids_r, _ = W.pad_batch([p["ids"] for p in ref])
     U1l = clean_U1(model, config, L, ids_l)
     U1h = clean_U1(model, config, L, ids_h)
+    U1r = clean_U1(model, config, L, ids_r)
 
     primH_Ms = None
     for H in heads:
@@ -360,10 +387,16 @@ def run_pair(model, config, tok, T, P, mkey):
               for b in range(len(loc))]
         Msh = [W.edge_cell_matrix(U1h[b], omega, hold[b]["qp"], hold[b]["ppos"][0]).cpu()
                for b in range(len(hold))]
+        Msr = [W.edge_cell_matrix(U1r[b], omega, ref[b]["qp"], ref[b]["ppos"][0]).cpu()
+               for b in range(len(ref))]
         smat = torch.stack(Ms).mean(0).abs()
+        rmat = torch.stack(Msr).mean(0).abs()
         Fp = smat.shape[0]
         top_idx = smat.flatten().argsort(descending=True)[:N_TOP_CELLS].tolist()
         cells_per_head[H] = [(int(i // Fp), int(i % Fp)) for i in top_idx]
+        # differential: cells carrying the backdoor edge but NOT the generic induction edge
+        diff = (smat - rmat).flatten().argsort(descending=True)[:N_TOP_CELLS].tolist()
+        cells_per_head_diff[H] = [(int(i // Fp), int(i % Fp)) for i in diff]
         if H == max(heads, key=lambda h: attn_row[h]):
             primH_Ms = Ms + Msh
 
@@ -377,8 +410,14 @@ def run_pair(model, config, tok, T, P, mkey):
 
     Bh, Th = U1h.shape[0], U1h.shape[1]
 
+    def deltas_for(cells_map, U1, c):
+        return {H: fra_head_delta(cells_map[H], U1, omegas[H], c) for H in heads}
+
     def fra_deltas_for(U1, c):
-        return {H: fra_head_delta(cells_per_head[H], U1, omegas[H], c) for H in heads}
+        return deltas_for(cells_per_head, U1, c)
+
+    def fdiff_deltas_for(U1, c):
+        return deltas_for(cells_per_head_diff, U1, c)
 
     fra_curve = []
     for c in FRA_SCALES:
@@ -386,27 +425,41 @@ def run_pair(model, config, tok, T, P, mkey):
         r, cut = removal_from_logits(lg, hold, base_hold)
         fra_curve.append({"c": c, "removal": r, "cut_asr": cut})
 
+    fdiff_curve = []   # differential-cell cut (content-specific = FRA's theory-prescribed best shot)
+    for c in FRA_SCALES:
+        lg = run_mh_logits(model, L, fdiff_deltas_for(U1h, c), ids_h)
+        r, cut = removal_from_logits(lg, hold, base_hold)
+        fdiff_curve.append({"c": c, "removal": r, "cut_asr": cut})
+
+    pid = loc[0]["target"]
     orc_curve = []
     for s in MASK_STR:
         lg = run_mh_logits(model, L, {H: oracle_mask(hold, Bh, Th, s) for H in heads}, ids_h)
         r, cut = removal_from_logits(lg, hold, base_hold)
         orc_curve.append({"s": s, "removal": r, "cut_asr": cut})
 
-    tm_curve = []
+    pm_curve = []   # payload-mask = the deployable attention-map baseline (matched-removal)
     for s in MASK_STR:
-        lg = run_mh_logits(model, L, {H: tokmask(hold, Bh, Th, s, tok, T) for H in heads}, ids_h)
+        lg = run_mh_logits(model, L, {H: payload_mask(hold, Bh, Th, s, pid) for H in heads}, ids_h)
+        r, cut = removal_from_logits(lg, hold, base_hold)
+        pm_curve.append({"s": s, "removal": r, "cut_asr": cut})
+
+    tm_curve = []   # trigger-mask = naive attention-map (diagnostic; expected ineffective)
+    for s in MASK_STR:
+        lg = run_mh_logits(model, L, {H: trigmask(hold, Bh, Th, s, tok, T) for H in heads}, ids_h)
         r, cut = removal_from_logits(lg, hold, base_hold)
         tm_curve.append({"s": s, "removal": r, "cut_asr": cut})
 
-    dirP = model.lm_head.weight[hold[0]["target"]].float().detach()
+    dirP = model.lm_head.weight[pid].float().detach()
     lin_curve = []
     for a in LIN_ALPHA:
         lg = run_lin_logits(model, ids_h, dirP, a)
         r, cut = removal_from_logits(lg, hold, base_hold)
         lin_curve.append({"a": a, "removal": r, "cut_asr": cut})
 
-    rec["removal_curves"] = {"fra": fra_curve, "oracle": orc_curve,
-                             "token_mask": tm_curve, "payload_suppress": lin_curve}
+    rec["removal_curves"] = {"fra": fra_curve, "fra_diff": fdiff_curve, "oracle": orc_curve,
+                             "payload_mask": pm_curve, "trigger_mask": tm_curve,
+                             "payload_suppress": lin_curve}
 
     # ---- collateral on benign held-out text ----
     ids_b, _ = W.pad_batch([p["ids"] for p in benign])
@@ -417,30 +470,38 @@ def run_pair(model, config, tok, T, P, mkey):
         return kl_collateral(model, benign,
                              lambda ids: run_mh_logits(model, L, fra_deltas_for(U1b, c), ids))
 
-    def tm_coll(s):
+    def fdiff_coll(c):
+        return kl_collateral(model, benign,
+                             lambda ids: run_mh_logits(model, L, fdiff_deltas_for(U1b, c), ids))
+
+    def pm_coll(s):
         return kl_collateral(model, benign,
                              lambda ids: run_mh_logits(model, L,
-                                                       {H: tokmask(benign, Bb, Tb, s, tok, T) for H in heads},
+                                                       {H: payload_mask(benign, Bb, Tb, s, pid) for H in heads},
                                                        ids))
 
     def lin_coll(a):
         return kl_collateral(model, benign, lambda ids: run_lin_logits(model, ids, dirP, a))
 
     def with_coll(curve, key, fn):
-        return [{"strength": pt[key], "removal": pt["removal"], "collateral": fn(pt[key])}
+        # prepend the no-edit origin (removal=0, collateral=0) so matched-removal interpolation
+        # is well-defined for methods whose removal saturates at the first strength.
+        pts = [{"strength": 0.0, "removal": 0.0, "collateral": 0.0}]
+        pts += [{"strength": pt[key], "removal": pt["removal"], "collateral": fn(pt[key])}
                 for pt in curve]
+        return pts
 
     fra_cc = with_coll(fra_curve, "c", fra_coll)
-    tm_cc = with_coll(tm_curve, "s", tm_coll)
+    pm_cc = with_coll(pm_curve, "s", pm_coll)
     lin_cc = with_coll(lin_curve, "a", lin_coll)
 
     # matched-removal point = the highest removal ALL THREE deployable methods reach (<=0.8)
     max_rem = min(max(p["removal"] for p in fra_cc),
-                  max(p["removal"] for p in tm_cc),
+                  max(p["removal"] for p in pm_cc),
                   max(p["removal"] for p in lin_cc))
-    target = min(0.8, max_rem - 1e-6)
+    target = min(0.8, max(0.0, max_rem - 1e-6))
     coll = {}
-    for nm, cc in [("fra", fra_cc), ("token_mask", tm_cc), ("payload_suppress", lin_cc)]:
+    for nm, cc in [("fra", fra_cc), ("payload_mask", pm_cc), ("payload_suppress", lin_cc)]:
         rr = [p["removal"] for p in cc]
         cl = [p["collateral"] for p in cc]
         coll[nm] = {"collateral_at_target": interp_at(rr, cl, target), "curve": cc}
@@ -451,7 +512,7 @@ def run_pair(model, config, tok, T, P, mkey):
     CF_FLOOR = 1e-4
     cf = coll["fra"]["collateral_at_target"]
     ratios = {}
-    for nm in ("token_mask", "payload_suppress"):
+    for nm in ("payload_mask", "payload_suppress"):
         cb = coll[nm]["collateral_at_target"]
         if cb is None or cf is None:
             ratios[nm] = None
@@ -459,8 +520,9 @@ def run_pair(model, config, tok, T, P, mkey):
             ratios[nm] = cb / max(cf, CF_FLOOR)
     rec["win_ratios"] = ratios
     rec["collateral_at_target"] = {"fra": cf,
-                                   "token_mask": coll["token_mask"]["collateral_at_target"],
+                                   "payload_mask": coll["payload_mask"]["collateral_at_target"],
                                    "payload_suppress": coll["payload_suppress"]["collateral_at_target"]}
+    rec["trigger_mask_max_removal"] = max(p["removal"] for p in tm_curve)
 
     # ---- position-invariance ----
     lg_loc = run_mh_logits(model, L, fra_deltas_for(U1l, 1.0), ids_l)
@@ -511,8 +573,12 @@ def eval_model(mkey, tok):
             "median_edge_cosine": med(["fra_edge_primary", "edge_cosine"]),
             "median_edge_mass_top1": med(["fra_edge_primary", "edge_mass_top1"]),
             "median_n_cells_for_90": med(["fra_edge_primary", "n_cells_for_90"]),
-            "median_win_vs_token_mask": med(["win_ratios"], "token_mask"),
+            "median_win_vs_payload_mask": med(["win_ratios"], "payload_mask"),
             "median_win_vs_payload_suppress": med(["win_ratios"], "payload_suppress"),
+            "median_removal_target": med(["collateral", "removal_target"]),
+            "median_fra_collateral": med(["collateral_at_target"], "fra"),
+            "median_payload_mask_collateral": med(["collateral_at_target"], "payload_mask"),
+            "median_payload_suppress_collateral": med(["collateral_at_target"], "payload_suppress"),
             "median_fra_max_removal": med(["position_invariance", "fra_max_removal"]),
             "median_fra_removal_holdout_c1": med(["position_invariance", "fra_removal_c1_holdout_novelpos"]),
             "median_fra_removal_locate_c1": med(["position_invariance", "fra_removal_c1_locate"]),
