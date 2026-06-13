@@ -46,10 +46,23 @@ pip install --no-input -q -c /tmp/constraints.txt tokenizers datasets requests "
 python3 -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 command -v hf >/dev/null 2>&1 || HFC=huggingface-cli
 echo "[bootstrap] HF CLI: \$HFC"
+CODE_REV='$CODE_REV'
+CODE_SENTINEL='$CODE_SENTINEL'
+REV_ARG=""; [ -n "\$CODE_REV" ] && REV_ARG="--revision \$CODE_REV"
+echo "[bootstrap] code revision pin: \${CODE_REV:-<none>} sentinel: \${CODE_SENTINEL:-<none>}"
 for dlat in 1 2 3 4 5 6; do
-  \$HFC download '$HF_REPO' --repo-type dataset --include "fra_ws_backdoor/code/*" --local-dir /workspace >/tmp/dsdl.log 2>&1 || true
-  [ -f /workspace/fra_ws_backdoor/code/$SCRIPT ] && { echo "[bootstrap] code present (attempt \$dlat)"; break; }
-  echo "[bootstrap] code dl attempt \$dlat incomplete: \$(tail -1 /tmp/dsdl.log); sleep 45"; sleep 45
+  # immutable commit-SHA revision is content-addressed => no stale-CDN; --force-download as backup
+  rm -rf /workspace/fra_ws_backdoor/code 2>/dev/null || true
+  \$HFC download '$HF_REPO' --repo-type dataset --include "fra_ws_backdoor/code/*" --local-dir /workspace \$REV_ARG --force-download >/tmp/dsdl.log 2>&1 || true
+  if [ -f /workspace/fra_ws_backdoor/code/$SCRIPT ]; then
+    if [ -z "\$CODE_SENTINEL" ] || grep -q "\$CODE_SENTINEL" /workspace/fra_ws_backdoor/code/$SCRIPT; then
+      echo "[bootstrap] code present + sentinel OK (attempt \$dlat)"; break
+    fi
+    echo "[bootstrap] code present but SENTINEL '\$CODE_SENTINEL' missing (stale CDN); attempt \$dlat sleep 45"
+  else
+    echo "[bootstrap] code dl attempt \$dlat incomplete: \$(tail -1 /tmp/dsdl.log)"
+  fi
+  sleep 45
 done
 [ -f /workspace/fra_ws_backdoor/code/$SCRIPT ] || { echo "[bootstrap] FATAL: code never downloaded"; upload_log; sleep infinity; }
 mkdir -p /workspace/out
