@@ -159,3 +159,34 @@ NET refinement to §3 (substrate vs ranking):
  - RANKING half (F5) boundary now MAPPED: Spearman≈0 universal (6/6 new cells); the union-recovery escape hatch works
    ONLY in single-head concentrated regimes (0.76) and FAILS in redundant-bank regimes (0.16-0.27). So FRA-as-search-
    space-restrictor is not a general mitigation — it is circuit-topology-bound.
+
+## ADDENDUM 2026-06-12 (2) — in-context backdoor on weight-sparse (T3): the W1 win does NOT compose with W3
+Phase F FEASIBLE (all 3 models follow in-context mappings; ARROW_COMMENT top-1 1.00 sparse, genuine induction
+not echoing — copy_rate 0). Phase B: the banked W1 in-context-backdoor COLLATERAL WIN (15-516×/12-25× on
+gpt2/gemma) does NOT transfer to the weight-sparse neuron basis.
+ - SUBSTRATE-half transfers cleanly to a PLANTED, safety-shaped association: edge concentrated + DRIFT-FREE
+   (sparse top1cov 1.00, edge-cos 0.97), causally cuttable ONLY on act-sparse (sparse FRA removal 0.78≈oracle 0.68;
+   dense 0.33≪oracle 0.96), position-invariance holds (0.60 locate -> 0.46 trigger at NOVEL positions). So W3
+   reproduces on a planted backdoor, including the position-invariance axis dense+SAE failed.
+ - WIN-half FAILS: at matched removal the FRA cell-cut pays >= baseline collateral on EVERY model; even FRA's
+   theory-best (differential content-specific cells) only reaches PARITY on sparse (0.65-0.79×, never the >=2× bar)
+   and loses 15-100× on dense.
+ - CAUSE (theory-consistent, win-checklist clause-4 / magnitude law A->1): the planted association rides the GENERIC
+   INDUCTION EDGE (q="repeated-context role" × k="copy-source role"), NOT a distinctive trigger-content × payload-
+   content conjunction. These tiny code models have NO dedicated trigger/payload-CONTENT channels feeding QK (unlike
+   the rich gpt2/gemma SAE basis), so the conjunction collapses to a generic role-edge -> cutting it breaks benign
+   induction too -> no collateral advantage.
+
+THE DECOMPOSITION IS NOW THREE-PART (refines §3):
+ 1. SUBSTRATE (concentration / drift / cuttability / position-invariance): fixed by weight-sparse substrate;
+    transfers to natural AND planted associations. NOT FRA-intrinsic.
+ 2. CONTENT-ADDRESSING (the distinctive trigger-content × payload-content conjunction that GIVES W1 its collateral
+    advantage): requires RICH content features at the QK endpoints. The rich gpt2/gemma SAE basis HAS them (-> W1
+    win); the tiny weight-sparse code models LACK them (-> association rides a generic role-edge -> win vanishes).
+    ORTHOGONAL to substrate sparsity — sparse substrates do NOT supply it and may have FEWER content channels.
+ 3. RANKING (Spearman≈0): FRA-intrinsic, universal; union-recovery escape is single-head-regime-bound.
+NET: W1 (content-addressing collateral win) and W3 (substrate cuttability) DO NOT COMPOSE on these models — the
+collateral win needs endpoint DISTINCTIVENESS, which substrate sparsity neither supplies nor preserves. A clean
+theory-completing negative (capability passed; this is mechanism, not a block). The dream "weight-sparse sleeper
+with a concentrated AND content-addressed trigger cell" needs a model with BOTH sparsity AND rich content channels
+-> argues for T4 (TRAIN a weight-sparse model with a planted distinctive trigger), not the released code models.
