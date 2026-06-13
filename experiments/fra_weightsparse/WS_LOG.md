@@ -166,9 +166,29 @@ Anchors: gpt2-dense+SAE induction **top1_coverage = 0.31, n_cells_for_90 = 8** (
   of THAT binding vs SIBLING collateral (a different var's binding in the same prompt). WIN = high self-removal, low
   sibling collateral. Drift across instances = different (entity, value) pairs are the non-recurrent-conjunction condition.
 
+### PREREG AMENDMENTS (locked 2026-06-12, BEFORE any FRA/causal/selectivity result was computed)
+- **Edge-head selection rule**: the FRA head = argmax of the PER-HEAD EDGE-MASK ORACLE (mask q_last->k_target in that
+  head only), NOT the whole-head ablation argmax. (CPU smoke exposed this: ablation argmax on sparse was L0H14 — a
+  layer-0 support/prev-token head whose own edge-mask removal is 0.0; FRA on it would be a strawman.) Both rankings are
+  recorded. If even the best per-head edge-oracle is < 0.2, record "edge not single-head-localizable" and interpret the
+  causal suite with the small-denominator caveat (drift metrics remain structural).
+- **T2 selectivity WIN operationalized**: cut the 10 causally-strongest cells located on SET-binding LOCATE pairs;
+  WIN = rem_self >= 0.5 on held-out set-queries AND self/sibling removal ratio >= 2 (sibling = the str-binding of the
+  SAME contexts). Symmetric str-direction run too. (fra_organisms2 convention.)
+- **T1 task instantiation** (committed before FRA): identifier = base_suffix (random CV syllables, ~8-10 chars,
+  multi-token under the 2047-vocab tokenizer); prompt = defs of A and B + fillers, ends mid-reuse of A at the canonical
+  token boundary before A's final token; target = A's final token (verified to be the IDENTICAL token id at the
+  definition = k_pos); distractor = B's final definition token (2AFC); GATE metric = full-vocab argmax == target.
+  Identifiers are fresh in every prompt — the q/k content NECESSARILY varies across contexts (the persistence condition).
+- **Smoke gate observation (N=40, before any FRA)**: 1x sparse top1_acc=1.000, dense1_1x 1.000 on v0 — the operating-
+  regime gate passes at 1x, unlike binding. Full run gates at N=200 on all three ladder models.
+
 ## RESUME STATE (candidates re-do; canonical, idempotent)
-- **PREREG LOCKED (2026-06-12)** — gates + drift thresholds + Spearman≈0 above. Code = code/ind_bind_pod.py (reuses
-  csp_vendor_gpt + ws_pod FRA/causal machinery). Pods rs-ws2-*. Results -> HF fra_weightsparse/results/induction_binding/.
+- **PREREG LOCKED (2026-06-12)** — gates + drift thresholds + Spearman≈0 above + amendments (edge-head rule, selectivity
+  operationalization, T1 task instantiation). Code = code/ind_bind_pod.py (reuses csp_vendor_gpt + ws_pod FRA/causal
+  machinery; row-based bind causal because teacher-forced rows break cells_delta_fn's batch alignment) + launch_pod_ws2.sh.
+  CPU smoke (T1 sparse+dense + T2 1x gate recheck): EXIT 0 end-to-end; 1x bind acc 0.575 (chance-ish, replicates B1).
+  Pods rs-ws2-*. Results -> HF fra_weightsparse/results/induction_binding/.
 - NEXT: launch rs-ws2-1 (STAGES=T1T2). Verdicts land in §"Candidates re-do" below.
 
 ## §Candidates re-do — VERDICTS
