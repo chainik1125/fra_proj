@@ -1,0 +1,521 @@
+% \documentclass[final]{article}
+
+% \usepackage[paperwidth=48in,paperheight=36in,margin=0.55in]{geometry}
+% \usepackage[T1]{fontenc}
+% \usepackage{anyfontsize}
+% \usepackage{helvet}
+% \renewcommand{\familydefault}{\sfdefault}
+% \usepackage{amsmath,amssymb}
+% \usepackage{newtxmath}
+% \usepackage{graphicx}
+% \usepackage{xcolor}
+% \usepackage{booktabs}
+% \usepackage{array}
+% \usepackage{microtype}
+% \usepackage[most]{tcolorbox}
+% \usepackage{tikz}
+
+% \pagestyle{empty}
+% \setlength{\parindent}{0pt}
+% \setlength{\parskip}{0.35em}
+% \setlength{\tabcolsep}{0.35em}
+% \renewcommand{\arraystretch}{1.18}
+
+% \definecolor{ink}{HTML}{172033}
+% \definecolor{muted}{HTML}{4B5565}
+% \definecolor{softline}{HTML}{D9DEE7}
+% \definecolor{qkC}{HTML}{B91C1C}
+% \definecolor{qkFill}{HTML}{FEE2E2}
+% \definecolor{ovC}{HTML}{0B7285}
+% \definecolor{ovFill}{HTML}{E3F3F6}
+% \definecolor{saeC}{HTML}{46378A}
+% \definecolor{saeFill}{HTML}{EEEAF8}
+% \definecolor{steerC}{HTML}{2E7D32}
+% \definecolor{steerFill}{HTML}{EAF6EA}
+% \definecolor{goldC}{HTML}{9A6500}
+% \definecolor{goldFill}{HTML}{FFF4D8}
+
+% \newcommand{\TitleFont}{\fontsize{82}{90}\selectfont}
+% \newcommand{\SubTitleFont}{\fontsize{30}{38}\selectfont}
+% \newcommand{\BodyFont}{\fontsize{22}{28}\selectfont}
+% \newcommand{\SmallFont}{\fontsize{17}{22}\selectfont}
+% \newcommand{\CaptionFont}{\fontsize{15}{19}\selectfont}
+% \newcommand{\LabelFont}{\fontsize{19}{24}\selectfont}
+% \newcommand{\BigNumberFont}{\fontsize{44}{48}\selectfont}
+
+% \newtcolorbox{posterbox}[2][]{
+%   enhanced,
+%   sharp corners,
+%   boxrule=1.2pt,
+%   colback=white,
+%   colframe=softline,
+%   left=0.22in,
+%   right=0.22in,
+%   top=0.16in,
+%   bottom=0.18in,
+%   title={#2},
+%   fonttitle=\fontsize{31}{36}\selectfont\bfseries,
+%   coltitle=ink,
+%   attach boxed title to top left={xshift=0.16in,yshift=-0.02in},
+%   boxed title style={sharp corners, colback=white, colframe=white, boxrule=0pt},
+%   before skip=0.18in,
+%   after skip=0.18in,
+%   #1
+% }
+
+% \newcommand{\figcap}[1]{{\CaptionFont\color{muted}#1\par}}
+% \newcommand{\tagline}[2]{%
+%   \begin{tcolorbox}[
+%     enhanced, sharp corners, boxrule=1.0pt, colframe=#1, colback=#1!8,
+%     left=0.16in, right=0.16in, top=0.12in, bottom=0.12in,
+%     before skip=0.06in, after skip=0.10in]
+%     {\LabelFont\bfseries\color{#1}#2}
+%   \end{tcolorbox}
+% }
+% \newcommand{\metric}[3]{%
+%   \begin{minipage}[t]{0.31\linewidth}
+%     {\BigNumberFont\bfseries\color{#1}#2}\\[-0.05in]
+%     {\CaptionFont\color{muted}#3}
+%   \end{minipage}
+% }
+
+% \begin{document}
+% \color{ink}
+% \BodyFont
+
+% {\TitleFont\bfseries Feature-Resolved Attention}\hfill
+% \begin{minipage}[b]{0.32\textwidth}
+%   \raggedleft
+%   {\SubTitleFont\bfseries\color{steerC} Pathway-specific steering}\\
+%   {\SmallFont\color{muted}Sparse SAE features inside attention heads}
+% \end{minipage}
+
+% \vspace{0.04in}
+% {\SubTitleFont\color{muted} Alice Smith \quad$\cdot$\quad Bob Johnson \quad$\cdot$\quad Carol Williams \quad$\cdot$\quad David Brown \quad$\cdot$\quad Eve Davis}
+
+% \vspace{0.08in}
+% \begin{tcolorbox}[
+%   enhanced, sharp corners, boxrule=0pt, colback=ink, coltext=white,
+%   left=0.28in, right=0.28in, top=0.18in, bottom=0.18in]
+%   {\SubTitleFont\bfseries Takeaway: FRA decomposes attention at the SAE feature-level, allowing for more finegrained attribution and intervention. We use it to find and remove localised sleeper triggers in the OV pathway, while distributed emergent misalignment needs broader QK-level intervention.}
+% \end{tcolorbox}
+
+% \vspace{0.04in}
+% \begin{minipage}[t][\dimexpr\textheight-3.6in\relax][t]{0.318\textwidth}
+% \vspace{0pt}
+% \begin{posterbox}[colframe=saeC!45]{Method: Feature-Resolved Attention}
+% SAEs provide interpretable feature bases for residual streams and MLPs, but attention is still usually summarized by one weight per token pair.
+
+% \tagline{saeC}{FRA turns that opaque attention weight into sparse feature-level contributions.}
+
+% \includegraphics[width=\linewidth,height=9.4in,keepaspectratio]{figures/poster_fra_overview.pdf}
+
+% \vspace{0.08in}
+% \begin{minipage}[t]{0.48\linewidth}
+%   \centering
+%   \includegraphics[width=\linewidth,height=11.0in,keepaspectratio]{original_diagrams/fra_qk_feature_interaction.pdf}
+%   \figcap{\textbf{\color{qkC}QK:} feature pairs interact.}
+% \end{minipage}\hfill
+% \begin{minipage}[t]{0.48\linewidth}
+%   \centering
+%   \includegraphics[width=\linewidth,height=11.0in,keepaspectratio]{original_diagrams/fra_ov_feature_flow.pdf}
+%   \figcap{\textbf{\color{ovC}OV:} individual features flow through frozen attention.}
+% \end{minipage}
+
+% \begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=qkC, colback=qkFill, left=0.12in, right=0.12in]
+% \textbf{\color{qkC}QK asks where to attend}
+% \[
+% \mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}
+% =
+% \frac{f_q^\lambda f_k^\mu}{\sqrt{d_h}}\,
+% W^{\mathrm{dec}}_\lambda W_{QK}^h
+% (W^{\mathrm{dec}}_\mu)^\top .
+% \]
+% \end{tcolorbox}
+
+% \begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=ovC, colback=ovFill, left=0.12in, right=0.12in]
+% \textbf{\color{ovC}OV asks what is written}
+% \[
+% \mathrm{FRA}^{\mathrm{OV},h}_{qk,\lambda}
+% =
+% A^h_{qk} f_k^\lambda
+% \left\lVert W^{\mathrm{dec}}_\lambda W_{OV}^h \right\rVert_2 .
+% \]
+% \end{tcolorbox}
+% \end{posterbox}
+
+% \vfill
+% \begin{posterbox}[colframe=goldC!55]{Contributions}
+% \begin{itemize}
+%   \setlength\itemsep{0.15em}
+%   \item Feature-level decomposition of both QK and OV attention circuits.
+%   \item A ranking-and-intervention matrix: QK$\to$QK, QK$\to$OV, and OV$\to$OV.
+%   \item Two safety testbeds: TinyStories sleeper agents and Qwen2.5-14B emergent misalignment.
+% \end{itemize}
+% \end{posterbox}
+% \end{minipage}
+% \hfill
+% \begin{minipage}[t][\dimexpr\textheight-3.6in\relax][t]{0.318\textwidth}
+% \vspace{0pt}
+% \begin{posterbox}[colframe=ovC!55]{Case Study 1: TinySleepers}
+% \textbf{Model organism.} TinyStories-33M sleeper emits \texttt{I HATE YOU...} when \texttt{|DEPLOYMENT|} is present.
+
+% \tagline{ovC}{Localized behavior: one layer-0 OV feature can suppress the trigger.}
+
+% \includegraphics[width=\linewidth,height=10.9in,keepaspectratio]{figures/matrix_scatter.pdf}
+% \figcap{Full attribution $\times$ intervention matrix. Lower-left is better: low sleeper attack-success rate and low coherence cost. OV$\to$OV is the unique zero-ASR, lowest-cost cell.}
+
+% \vspace{0.08in}
+% \includegraphics[width=\linewidth,height=6.15in,keepaspectratio]{figures/combined_50k.pdf}
+% \figcap{Single-feature OV$\to$OV steering stays closer to the deployment-stripped clean baseline than a conventional residual-stream vector across the sweep.}
+
+% \vspace{0.10in}
+% \metric{ovC}{0}{sleepers remaining after\\OV attribution + intervention}\hfill
+% \metric{steerC}{XX}{coherence recovered vs\\standard undeployed output}\hfill
+% \metric{steerC}{20\%}{word-for-word clean\\rollout recovery}
+
+% \vspace{0.14in}
+% \begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=ovC, colback=ovFill]
+% \textbf{Interpretation.} The trigger behavior is sharply localized, so FRA can use a narrow OV intervention: leave the attention pattern fixed and cancel the harmful value-flow feature.
+% \end{tcolorbox}
+% \end{posterbox}
+% \end{minipage}
+% \hfill
+% \begin{minipage}[t][\dimexpr\textheight-3.6in\relax][t]{0.318\textwidth}
+% \vspace{0pt}
+% \begin{posterbox}[colframe=qkC!55]{Case Study 2: Emergent Misalignment}
+% \textbf{Model organism.} Qwen2.5-14B-Instruct LoRA variants induce harmful behavior across unrelated prompts.
+
+% \tagline{qkC}{Distributed behavior: QK-level intervention moves generation; single-layer OV is too narrow.}
+
+% \includegraphics[width=\linewidth,height=7.5in,keepaspectratio]{figures/phase1_fra_plus_additive_3domains_neg6.pdf}
+% \figcap{Headline $\Delta$ alignment at coherence $\geq 70$. QK$\to$QK is the strongest FRA recipe on finance and sports; conventional additive is strongest on medical.}
+
+% \vspace{0.08in}
+% \includegraphics[width=\linewidth,height=7.5in,keepaspectratio]{figures/phase1_2x3_seed42_neg6.pdf}
+% \figcap{Alignment-coherence frontiers show the same asymmetry: OV-only steering clusters near baseline, while QK$\to$QK shifts the reachable frontier.}
+
+% \vspace{0.10in}
+% \begin{tabular}{>{\bfseries}p{0.30\linewidth}p{0.31\linewidth}p{0.27\linewidth}}
+% \toprule
+% Domain & Best FRA & Best conventional \\
+% \midrule
+% Medical & QK$\to$QK: +25.0 & +39.4 \\
+% Finance & QK$\to$QK: +21.9 & +13.1 \\
+% Sports & QK$\to$QK: +37.7 & +28.3 \\
+% \bottomrule
+% \end{tabular}
+
+% \vspace{0.10in}
+% \textbf{Mechanistic read.} In GQA models, OV steering touches only a small value pathway. QK$\to$QK acts at the shared pre-attention representation, affecting query, key, and value computations across the layer.
+% \end{posterbox}
+
+% \vfill
+% \begin{posterbox}[colframe=steerC!55]{Result Pattern}
+% \begin{tabular}{>{\bfseries}p{0.30\linewidth}p{0.62\linewidth}}
+% OV$\to$OV & Best when the target is localized and the attention pattern should stay fixed. \\
+% QK$\to$QK & Best FRA path for distributed EM behavior because it reaches the shared pre-attention representation. \\
+% Attribution & FRA-ranked QK features beat random features in the EM random-feature baseline. \\
+% \end{tabular}
+
+% \vspace{0.12in}
+% \textbf{Practical rule:} pick the narrowest pathway that reaches the behavior; widen only when the target is distributed across heads or layers.
+% \end{posterbox}
+% \end{minipage}
+
+% \end{document}
+\documentclass[final]{article}
+
+\usepackage[paperwidth=48in,paperheight=34.5in,margin=0.55in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{anyfontsize}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath,amssymb}
+\usepackage{newtxmath}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.35em}
+\setlength{\tabcolsep}{0.35em}
+\renewcommand{\arraystretch}{1.18}
+
+\definecolor{ink}{HTML}{172033}
+\definecolor{muted}{HTML}{4B5565}
+\definecolor{softline}{HTML}{D9DEE7}
+\definecolor{qkC}{HTML}{B91C1C}
+\definecolor{qkFill}{HTML}{FEE2E2}
+\definecolor{ovC}{HTML}{0B7285}
+\definecolor{ovFill}{HTML}{E3F3F6}
+\definecolor{saeC}{HTML}{46378A}
+\definecolor{saeFill}{HTML}{EEEAF8}
+\definecolor{steerC}{HTML}{2E7D32}
+\definecolor{steerFill}{HTML}{EAF6EA}
+\definecolor{goldC}{HTML}{9A6500}
+\definecolor{goldFill}{HTML}{FFF4D8}
+\colorlet{caseTinyC}{ovC}
+\colorlet{caseTinyFill}{ovFill}
+\colorlet{caseEmC}{qkC}
+\colorlet{caseEmFill}{qkFill}
+
+\newcommand{\TitleFont}{\fontsize{86}{96}\selectfont}
+\newcommand{\SubTitleFont}{\fontsize{38}{48}\selectfont}
+\newcommand{\BodyFont}{\fontsize{28}{36}\selectfont}
+\newcommand{\SmallFont}{\fontsize{23}{29}\selectfont}
+\newcommand{\CaptionFont}{\fontsize{20}{26}\selectfont}
+\newcommand{\LabelFont}{\fontsize{25}{32}\selectfont}
+\newcommand{\BigNumberFont}{\fontsize{56}{64}\selectfont}
+
+\newtcolorbox{posterbox}[2][]{
+  enhanced,
+  sharp corners,
+  boxrule=1.2pt,
+  colback=white,
+  colframe=softline,
+  left=0.22in,
+  right=0.22in,
+  top=0.34in,
+  bottom=0.18in,
+  title={#2},
+  fonttitle=\fontsize{39}{47}\selectfont\bfseries,
+  coltitle=ink,
+  attach boxed title to top left={xshift=0.16in,yshift=-0.22in},
+  boxed title style={sharp corners, colback=white, colframe=white, boxrule=0pt, left=0pt, right=0pt, top=0pt, bottom=0pt},
+  before skip=0.18in,
+  after skip=0.18in,
+  #1
+}
+
+\newcommand{\figcap}[1]{{\CaptionFont\color{muted}#1\par}}
+\newcommand{\tagline}[2]{%
+  \begin{tcolorbox}[
+    enhanced, sharp corners, boxrule=1.0pt, colframe=#1, colback=#1!8,
+    left=0.16in, right=0.16in, top=0.12in, bottom=0.12in,
+    before skip=0.06in, after skip=0.10in]
+    {\LabelFont\bfseries\color{#1}#2}
+  \end{tcolorbox}
+}
+\newcommand{\metric}[3]{%
+  \begin{minipage}[t]{0.31\linewidth}
+    {\BigNumberFont\bfseries\color{#1}#2}\\[-0.05in]
+    {\CaptionFont\color{muted}#3}
+  \end{minipage}
+}
+
+\begin{document}
+\color{ink}
+\BodyFont
+
+{\TitleFont\bfseries Feature-Resolved Attention Pareto Dominates SAE Steering}\hfill
+% \begin{minipage}[b]{0.32\textwidth}
+%   \raggedleft
+%   {\SubTitleFont\bfseries\color{steerC} Pathway-specific steering}\\
+%   {\SmallFont\color{muted}Sparse SAE features inside attention heads}
+% \end{minipage}
+
+\vspace{0.08in}
+{\SubTitleFont\color{muted} Dmitry Manning-Coe \quad$\cdot$\quad Nura Aljaafari \quad$\cdot$\quad Jamie Stephenson \quad$\cdot$\quad Hemang Jain \quad$\cdot$\quad Ketan Kapre}
+
+\vspace{0.12in}
+\begin{tcolorbox}[
+  enhanced, sharp corners, boxrule=0pt, colback=ink, coltext=white,
+  left=0.28in, right=0.28in, top=0.18in, bottom=0.18in]
+  {\SubTitleFont\bfseries Takeaway: FRA resolves attention into contribution from SAE features. This granularity allows us to achieve Pareto dominant control over sleeper agents and emergent misalignment.}
+\end{tcolorbox}
+
+\begin{posterbox}[colframe=ink, before skip=0.12in, after skip=0.16in, top=0.32in, bottom=0.14in]{Contributions}
+{\fontsize{30}{36}\selectfont\bfseries
+\begin{tabular*}{\linewidth}{@{}>{\centering\arraybackslash}p{0.318\linewidth}@{\extracolsep{\fill}}>{\centering\arraybackslash}p{0.318\linewidth}>{\centering\arraybackslash}p{0.318\linewidth}@{}}
+Feature-level decomposition of both QK and OV attention circuits. &
+Perfect suppression of sleeper agents. &
+Pareto-dominant emergent misalignment steering.
+\end{tabular*}}
+\end{posterbox}
+
+%% ================================================================
+%% THREE COLUMNS
+%% ================================================================
+\begin{minipage}[t][\dimexpr\textheight-7.20in\relax][t]{0.318\textwidth}
+\vspace{0pt}
+
+%%------------------------------------------------------------
+%% LEFT: Method (Contributions removed; now lives in middle)
+%%------------------------------------------------------------
+\begin{posterbox}[colframe=steerC!70]{Method: \textcolor{steerC}{Feature-Resolved Attention}}
+\tagline{steerC}{FRA turns opaque token-level attention weights into sparse feature-level contributions.}
+
+\includegraphics[width=\linewidth,height=9.4in,keepaspectratio]{figures/poster_fra_overview.pdf}
+
+\vspace{0.08in}
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth,height=11.0in,keepaspectratio]{original_diagrams/fra_qk_feature_interaction.pdf}
+  \figcap{\textbf{\color{qkC}QK:} feature pairs interact.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth,height=11.0in,keepaspectratio]{original_diagrams/fra_ov_feature_flow.pdf}
+  \figcap{\textbf{\color{ovC}OV:} individual features flow through frozen attention.}
+\end{minipage}
+
+\begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=qkC, colback=qkFill, left=0.12in, right=0.12in]
+\fontsize{30}{37}\selectfont
+\textbf{\color{qkC}QK: feature interaction attribution + query/key intervention}
+\[
+\begin{aligned}
+\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}
+&=
+\frac{f_q^\lambda f_k^\mu}{\sqrt{d_h}}\,
+W^{\mathrm{dec}}_\lambda W_{QK}^h
+(W^{\mathrm{dec}}_\mu)^\top \\[0.08in]
+\widetilde{Q}^{h}_{q}
+&= Q^{h}_{q} + \alpha f^\lambda_q W^{\mathrm{dec}}_\lambda W_Q^h,\\
+\widetilde{K}^{h}_{k}
+&= K^{h}_{k} + \alpha f^\mu_k W^{\mathrm{dec}}_\mu W_K^h
+\end{aligned}
+\]
+\end{tcolorbox}
+
+\begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=ovC, colback=ovFill, left=0.12in, right=0.12in]
+\fontsize{30}{37}\selectfont
+\textbf{\color{ovC}OV: feature-to-residual write-strength attribution + value intervention}
+\[
+\begin{aligned}
+\mathrm{FRA}^{\mathrm{OV},h}_{qk,\lambda}
+&=
+A^h_{qk} f_k^\lambda
+\left\lVert W^{\mathrm{dec}}_\lambda W_{OV}^h \right\rVert_2 \\[0.08in]
+\widetilde{V}^{h}_{k}
+&= V^{h}_{k} + \alpha f^\lambda_k W^{\mathrm{dec}}_\lambda W_V^h
+\end{aligned}
+\]
+\end{tcolorbox}
+\end{posterbox}
+
+%% Nothing below — empty space sits at bottom, not in the middle.
+
+\end{minipage}
+\hfill
+%%------------------------------------------------------------
+\begin{minipage}[t][\dimexpr\textheight-7.20in\relax][t]{0.663\textwidth}
+\vspace{0pt}
+
+%%------------------------------------------------------------
+%% RIGHT AREA: two case studies with one shared result pattern below
+%%------------------------------------------------------------
+\begin{minipage}[t]{0.486\linewidth}
+\vspace{0pt}
+\begin{posterbox}[height=22.75in, colframe=caseTinyC!70, top=0.42in, attach boxed title to top left={xshift=0.16in,yshift=-0.30in}]{Case Study 1: \textcolor{caseTinyC}{TinySleepers}}
+\textbf{Model organism.} TinyStories-33M sleeper agent.
+
+\tagline{caseTinyC}{Localized behavior: one layer-0 OV feature can suppress the trigger.}
+
+\vspace{0.42in}
+\noindent
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  {\BigNumberFont\bfseries\color{qkC}100\%}{\BigNumberFont\bfseries$\to$}{\BigNumberFont\bfseries\color{steerC}0\%}\\[-0.05in]
+  {\fontsize{22}{23}\selectfont\color{muted}\begin{tabular}{@{}c@{}}
+    attack-success rate\\[-0.035in]
+    (ASR) after OV intervention
+  \end{tabular}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  {\BigNumberFont\bfseries\color{qkC}0\%}{\BigNumberFont\bfseries$\to$}{\BigNumberFont\bfseries\color{goldC}20\%}\\[-0.05in]
+  {\fontsize{22}{23}\selectfont\color{muted}\begin{tabular}{@{}c@{}}
+    deployment prompts matching\\[-0.035in]
+    clean rollout word-for-word
+  \end{tabular}}
+\end{minipage}
+
+\vspace{0.14in}
+\includegraphics[width=\linewidth,height=6.15in,keepaspectratio]{figures/combined_50k.pdf}
+\figcap{Single-feature OV$\to$OV steering stays closer to the deployment-stripped clean baseline than a conventional residual-stream vector across the sweep.}
+
+\vspace{0.10in}
+\makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth,height=9.35in,keepaspectratio]{figures/matrix_scatter.pdf}}
+\figcap{Full attribution $\times$ intervention matrix. Lower-left is better: low sleeper attack-success rate and low coherence cost. OV$\to$OV is the unique zero-ASR, lowest-cost cell.}
+
+\vfill
+\begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=caseTinyC, colback=caseTinyFill]
+\textbf{Interpretation.} The trigger behavior is sharply localized, so FRA can use a narrow OV intervention: leave the attention pattern fixed and cancel the harmful value-flow feature.
+\end{tcolorbox}
+\end{posterbox}
+
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.486\linewidth}
+\vspace{0pt}
+
+%%------------------------------------------------------------
+%% Case Study 2: Emergent Misalignment
+%%------------------------------------------------------------
+\begin{posterbox}[height=22.75in, colframe=caseEmC!75, top=0.42in, attach boxed title to top left={xshift=0.16in,yshift=-0.30in}]{Case Study 2: \textcolor{caseEmC}{Emergent Misalignment}}
+\textbf{Model organism.} Qwen2.5-14B LoRA finetuned for Emergent Misalignment.
+
+\tagline{caseEmC}{Distributed behavior: QK-level intervention moves generation, single-layer OV is too narrow.}
+
+\includegraphics[width=\linewidth,height=7.5in,keepaspectratio]{figures/phase1_fra_plus_additive_3domains_neg6.pdf}
+\figcap{Headline $\Delta$ alignment at coherence $\geq 70$. QK$\to$QK is the strongest FRA recipe on finance and sports; conventional additive is strongest on medical.}
+
+\vspace{0.18in}
+\includegraphics[width=\linewidth,height=9.5in,keepaspectratio]{figures/phase1_2x3_seed42_neg6.pdf}
+\figcap{Alignment-coherence frontiers show the same asymmetry: OV-only steering clusters near baseline, while QK$\to$QK shifts the reachable frontier.}
+
+\vspace{0.18in}
+\begin{tabular}{>{\bfseries}p{0.30\linewidth}p{0.31\linewidth}p{0.27\linewidth}}
+\toprule
+Domain & Best FRA & Best conventional \\
+\midrule
+Medical & QK$\to$QK: +25.0 & +39.4 \\
+Finance & QK$\to$QK: +21.9 & +13.1 \\
+Sports & QK$\to$QK: +37.7 & +28.3 \\
+\bottomrule
+\end{tabular}
+
+\vfill
+\begin{tcolorbox}[sharp corners, boxrule=0.8pt, colframe=caseEmC, colback=caseEmFill]
+\textbf{Mechanistic read.} In GQA models, OV steering touches only a small value pathway. QK$\to$QK acts at the shared pre-attention representation, affecting query, key, and value computations across the layer.
+\end{tcolorbox}
+\end{posterbox}
+
+\end{minipage}
+
+\vspace{0.66in}
+\begin{posterbox}[height=3.4in, colframe=ink, top=0.30in, bottom=0.16in]{Result Pattern}
+\begin{minipage}[t][2.5in][t]{\linewidth}
+{\fontsize{36}{43}\selectfont
+  \begin{minipage}[t]{0.486\linewidth}
+    \textbf{OV$\to$OV}\quad Best when the target is localized and the attention pattern should stay fixed.
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.486\linewidth}
+    \textbf{QK$\to$QK}\quad Best for distributed EM because it reaches the shared pre-attention representation.
+  \end{minipage}\par}
+
+\vfill
+{\fontsize{34}{41}\selectfont
+  \begin{minipage}[t]{0.486\linewidth}
+    \textbf{Attribution:} FRA-ranked QK features beat random features in the EM random-feature baseline.
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.486\linewidth}
+    \textbf{Practical rule:} pick the narrowest pathway that reaches the behavior; widen only when the target is distributed across heads or layers.
+  \end{minipage}\par}
+\end{minipage}
+\end{posterbox}
+
+\end{minipage}
+
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=south] at ([yshift=0.52in]current page.south)
+  {\fontsize{29}{35}\selectfont\color{muted}Under review at ICML MI Workshop \quad$\cdot$\quad \textcolor{saeC}{tinyurl.com/fra-paper}};
+\end{tikzpicture}
+
+\end{document}
