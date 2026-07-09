@@ -1,0 +1,47 @@
+OK
+submitted job=synth_hier3
+=== job synth_hier3 output landed (poll 5) ===
+
+##### CORE (orthonormal, no superposition): rho_bar=0.000, persona-on domain mass=0.58 #####
+  a=0: ahat(pf)=0.00 | cell R_X=0.00 CY=0.00 | DoM R_X=1.00 CY=1.00
+  a=0.5: ahat(pf)=0.40 | cell R_X=0.64 CY=0.78 | DoM R_X=1.00 CY=1.00
+  a=1.0: ahat(pf)=0.63 | cell R_X=1.21 CY=1.39 | DoM R_X=1.00 CY=1.00
+  -- selectivity @ alpha=1 --
+     cell      R_X=1.21 CY=1.39 style=0.00
+     dom_un    R_X=1.00 CY=1.00 style=1.00
+     dom_gated R_X=1.00 CY=0.16 style=0.74
+     keyrm     R_X=1.21 CY=1.39 style=0.00
+     head      R_X=1.59 CY=1.54 style=0.00
+     edge      R_X=1.59 CY=0.29 style=0.00
+  -- MIXED X&Y @ alpha=1 (X-rem, Y-collat) --
+     cell      Xrem=2.42 Ycol=24.35 <couples
+     dom_gated Xrem=1.00 Ycol=1.00 <couples
+     head      Xrem=3.23 Ycol=5.23 <couples
+     edge      Xrem=3.23 Ycol=6.15 <couples
+
+##### superposition d=128: rho_bar=0.000, persona-on domain mass=0.61 #####
+  a=0: ahat(pf)=0.00 | cell R_X=0.00 CY=0.00 | DoM R_X=1.00 CY=1.00
+  a=0.5: ahat(pf)=0.40 | cell R_X=0.60 CY=0.76 | DoM R_X=1.00 CY=1.00
+  a=1.0: ahat(pf)=0.63 | cell R_X=1.17 CY=1.44 | DoM R_X=1.00 CY=1.00
+
+##### superposition d=64: rho_bar=0.100, persona-on domain mass=0.66 #####
+  a=0: ahat(pf)=0.00 | cell R_X=0.00 CY=0.00 | DoM R_X=1.00 CY=1.00
+  a=0.5: ahat(pf)=0.39 | cell R_X=0.54 CY=0.41 | DoM R_X=1.00 CY=1.00
+  a=1.0: ahat(pf)=0.64 | cell R_X=1.08 CY=0.97 | DoM R_X=1.00 CY=1.00
+
+##### superposition d=32: rho_bar=0.142, persona-on domain mass=0.64 #####
+  a=0: ahat(pf)=0.00 | cell R_X=0.00 CY=0.00 | DoM R_X=1.00 CY=1.00
+  a=0.5: ahat(pf)=0.47 | cell R_X=0.48 CY=0.56 | DoM R_X=1.00 CY=1.00
+  a=1.0: ahat(pf)=0.83 | cell R_X=0.93 CY=1.00 | DoM R_X=1.00 CY=1.00
+
+##### superposition d=16: rho_bar=0.203, persona-on domain mass=0.56 #####
+  a=0: ahat(pf)=0.00 | cell R_X=0.00 CY=0.00 | DoM R_X=1.00 CY=1.00
+  a=0.5: ahat(pf)=0.44 | cell R_X=0.65 CY=0.89 | DoM R_X=1.00 CY=1.00
+  a=1.0: ahat(pf)=0.48 | cell R_X=0.78 CY=1.15 | DoM R_X=1.00 CY=1.00
+
+DONE synth_hier3
+total 24
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 16:22 .
+drwxr-xr-x@ 69 dmitrymanning-coe  wheel  2208 Jun 11 16:22 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1968 Jun 11 16:22 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  4573 Jun 11 16:22 synth_hier3.json

@@ -1,0 +1,30 @@
+r2 parses OK
+submitted job=r2
+=== job r2 output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.50it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.25it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.89it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+context-1: P('frog'|'red' query) baseline = 0.213  (frog pos 6)
+
+--- (1) SUPPRESS red->frog retrieval on context-1 ---
+  FRA:            [0.066, 0.042, 0.021, 0.016]  (sweep c)
+  attention-patch: 0.031
+  content-suppress:0.000
+
+--- (2) SEPARABILITY: P('frog') in a LEGIT context (baseline 0.163) ---
+  FRA(c=8): 0.152   attention-patch: 0.163   content-suppress: 0.000
+
+--- (3) TRANSFER: NEW context, 'silver box holds a frog', frog at pos 24 (baseline 0.468) ---
+  FRA(c=8, same pairs):  0.025   <- content-addressed
+  attention-patch(pos 6): 0.469   <- position-tied (wrong pos on ctx-2)
+  content-suppress:      0.000
+
+DONE r2
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 17:31 .
+drwxr-xr-x@ 33 dmitrymanning-coe  wheel  1056 Jun 10 17:31 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1479 Jun 10 17:31 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   504 Jun 10 17:31 r2.json

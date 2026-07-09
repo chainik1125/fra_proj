@@ -1,0 +1,25 @@
+=== job j5 output landed (poll 5) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+PART 1 — induction-sequence locality (matched suppression):
+  FRA   : suppression 0.65  off-target KL mass 0.622
+  ActAdd: suppression 0.65  off-target KL mass 7.638
+  ratio ActAdd/FRA off-target collateral: 12.3x
+
+PART 2 — held-out real text. cue=' war' appears at [2, 10, 19, 23, 32]
+  FRA   : total real-text KL 0.132  (mean/pos 0.0039)
+  ActAdd: total real-text KL 31.117  (mean/pos 0.9152)
+  KL at cue positions: FRA 0.0175  ActAdd 3.3784
+
+DONE j5
+total 88
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 01:07 .
+drwxr-xr-x@ 7 dmitrymanning-coe  wheel    224 Jun 10 01:07 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel    400 Jun 10 01:07 j5.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  36017 Jun 10 01:07 j5_collateral.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel    854 Jun 10 01:07 out.log

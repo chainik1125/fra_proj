@@ -1,0 +1,22 @@
+wrote g6_delim.py
+OK
+submitted job=g6_delim
+=== job g6_delim output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+  bracket-close: key not found
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+  paren-close                  CCF=0.732 attn=0.24 P(ans)=0.283->0.217 R=+0.23  [(9, 10), (10, 3), (3, 1)]
+  quote-close: key not found
+  square-close: key not found
+
+DONE g_screen
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 23:41 .
+drwxr-xr-x@ 62 dmitrymanning-coe  wheel  1984 Jun 10 23:41 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   680 Jun 10 23:41 g_screen.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel   609 Jun 10 23:41 out.log

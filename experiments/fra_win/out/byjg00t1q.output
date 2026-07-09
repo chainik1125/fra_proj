@@ -1,0 +1,22 @@
+submitted job=s5
+s5 submitted
+=== job s5 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+=== REUSE-RATIO vs measured A (sink-masked, 59-sentence corpus) ===
+  induction (A~15): i*=23678 j*=5845 (L5)  rate_k=0.05 rate_conj=0.000  REUSE=inf  | measured A=15.0
+  copy-suppression (A=22.7): i*=22423 j*=7485 (L10)  rate_k=0.03 rate_conj=0.017  REUSE=2.0  | measured A=22.7
+  IOI (A~1, LBNR-killed): i*=12331 j*=3621 (L10)  rate_k=0.02 rate_conj=0.000  REUSE=inf  | measured A=1.0
+  binding (A=see s4): i*=12772 j*=23369 (L5)  rate_k=0.03 rate_conj=0.000  REUSE=inf  | measured A=None
+
+DONE s5
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 18:40 .
+drwxr-xr-x@ 43 dmitrymanning-coe  wheel  1376 Jun 10 18:40 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   897 Jun 10 18:40 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   802 Jun 10 18:40 s5.json

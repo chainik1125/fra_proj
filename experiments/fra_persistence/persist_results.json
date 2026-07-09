@@ -1,0 +1,818 @@
+{
+  "chosen_pairs": [
+    {
+      "A": "Pa",
+      "B": "azar",
+      "gate_copyprob": 0.3002893354968516,
+      "parametric_prior": 1.6029051153054752e-07,
+      "oracle_rem": 0.9798852722395173
+    },
+    {
+      "A": " raced",
+      "B": "hip",
+      "gate_copyprob": 0.3059845724472931,
+      "parametric_prior": 4.513470230449457e-06,
+      "oracle_rem": 0.9609743980765131
+    },
+    {
+      "A": " mell",
+      "B": "tl",
+      "gate_copyprob": 0.30172190161601975,
+      "parametric_prior": 2.4782211767160334e-06,
+      "oracle_rem": 0.791874136896545
+    }
+  ],
+  "gate_lc_locate": [
+    [
+      " the",
+      262
+    ],
+    [
+      " and",
+      290
+    ],
+    [
+      " near",
+      1474
+    ],
+    [
+      " my",
+      616
+    ],
+    [
+      " then",
+      788
+    ]
+  ],
+  "gate_lc_holdout": [
+    [
+      " a",
+      257
+    ],
+    [
+      " when",
+      618
+    ],
+    [
+      " after",
+      706
+    ],
+    [
+      " some",
+      617
+    ]
+  ],
+  "per_pair": [
+    {
+      "A": "Pa",
+      "B": "azar",
+      "A_id": 28875,
+      "B_id": 29413,
+      "n_locate": 10,
+      "n_holdout": 24,
+      "N": 34,
+      "M2": {
+        "top1_cell": [
+          6,
+          9,
+          8161,
+          7158
+        ],
+        "top1_coverage": 0.5,
+        "cov1": 0.5,
+        "cov3": 1.0,
+        "cov5": 1.0,
+        "n_cells_for_90": 3,
+        "qtop1": 0.5,
+        "ktop1": 0.5,
+        "q_vs_k_culprit": "tied",
+        "head_top1": 0.5,
+        "w_top1": 0.49093508629298604,
+        "edge_cov_mean": 0.018596940501454513,
+        "locate_top1": [
+          6,
+          9,
+          8161,
+          7158
+        ],
+        "holdout_top1": [
+          6,
+          9,
+          8161,
+          7158
+        ],
+        "top1_locate_eq_holdout": true,
+        "cell_hist": [
+          [
+            [
+              6,
+              9,
+              8161,
+              7158
+            ],
+            17
+          ],
+          [
+            [
+              5,
+              1,
+              24376,
+              12729
+            ],
+            13
+          ],
+          [
+            [
+              7,
+              10,
+              22868,
+              23023
+            ],
+            4
+          ]
+        ],
+        "lc_x_qfeat": {
+          " the": {
+            "8161": 2
+          },
+          " and": {
+            "22868": 1,
+            "8161": 1
+          },
+          " near": {
+            "22868": 1,
+            "8161": 1
+          },
+          " my": {
+            "24376": 2
+          },
+          " then": {
+            "24376": 2
+          },
+          " a": {
+            "24376": 4,
+            "8161": 2
+          },
+          " when": {
+            "24376": 3,
+            "22868": 2,
+            "8161": 1
+          },
+          " after": {
+            "8161": 6
+          },
+          " some": {
+            "8161": 4,
+            "24376": 2
+          }
+        }
+      },
+      "M1": {
+        "located_cell": [
+          6,
+          9,
+          8161,
+          7158
+        ],
+        "rem_locate": 0.007044210479879009,
+        "rem_holdout": 0.013827948739355273,
+        "persistence_ratio": 1.9630232201115008,
+        "oracle_ceiling": 0.9798852722395173,
+        "frac_of_oracle": 0.014111803831638008,
+        "base_copyprob_locate": 0.8682670354843139,
+        "base_copyprob_holdout": 0.8482239147027334
+      },
+      "M3a": {
+        "rem_holdout_tokenmask_nodetector": 2.2764490126743939e-07,
+        "rem_holdout_tokenmask_oracle": 0.9379307756705025,
+        "FRA_vs_mask_ratio": 13827.948739355274
+      },
+      "M3b": {
+        "rem_holdout_k1": 0.013827948739355273,
+        "rem_holdout_k2": 0.027544713973792868,
+        "rem_holdout_k3": 0.02758900454221083,
+        "union_gain": 0.013761055802855556,
+        "locate_top3": [
+          [
+            6,
+            9,
+            8161,
+            7158
+          ],
+          [
+            5,
+            1,
+            24376,
+            12729
+          ],
+          [
+            7,
+            10,
+            22868,
+            23023
+          ]
+        ]
+      },
+      "M3c": {
+        "FRA_collat_KL": 0.00028070396456314484,
+        "featablate_collat_KL": 0.7210887931287289,
+        "linsteer_collat_KL": 2.735942058265209,
+        "ablate_over_fra": 2568.8585989547673,
+        "benign_top1_preserved": {
+          "FRA": 1.0,
+          "ablate": 0.375,
+          "steer": 0.0
+        }
+      },
+      "M4": {
+        "spearman_s_c": 0.23456744490047043,
+        "spearman_n": 3,
+        "recovery": {
+          "1": 0.3827059838769755,
+          "2": 1.0302374049215213,
+          "3": 1.7176212184480188,
+          "5": 0.7236751489838262,
+          "10": 1.0
+        },
+        "min_union_90": 10.0,
+        "transfer_rem_holdout": 0.14241541570468172,
+        "transfer_frac_oracle": 0.14533886745658786,
+        "topN": 10
+      },
+      "M5": {
+        "rem_random_FRA": 0.14241541570468172,
+        "rem_random_embedding": 0.28609449978511436,
+        "rem_random_attnmap_guessed": 2.2764490126743939e-07,
+        "collat_FRA": 0.00028070396456314484,
+        "collat_embedding": 0.7210887931287289,
+        "fra_vs_embed_removal": 0.4977915192764977,
+        "embed_vs_fra_collateral": 2568.8585989547673
+      },
+      "sanity": {
+        "non_sink": true,
+        "sink_q_active": 0.0,
+        "sink_k_active": 0.0
+      }
+    },
+    {
+      "A": " raced",
+      "B": "hip",
+      "A_id": 32897,
+      "B_id": 1056,
+      "n_locate": 10,
+      "n_holdout": 24,
+      "N": 34,
+      "M2": {
+        "top1_cell": [
+          6,
+          9,
+          11826,
+          268
+        ],
+        "top1_coverage": 0.9117647058823529,
+        "cov1": 0.9117647058823529,
+        "cov3": 1.0,
+        "cov5": 1.0,
+        "n_cells_for_90": 1,
+        "qtop1": 0.9117647058823529,
+        "ktop1": 1.0,
+        "q_vs_k_culprit": "q-side drifts",
+        "head_top1": 1.0,
+        "w_top1": 0.9262926516412339,
+        "edge_cov_mean": 0.010183362176851146,
+        "locate_top1": [
+          6,
+          9,
+          11826,
+          268
+        ],
+        "holdout_top1": [
+          6,
+          9,
+          11826,
+          268
+        ],
+        "top1_locate_eq_holdout": true,
+        "cell_hist": [
+          [
+            [
+              6,
+              9,
+              11826,
+              268
+            ],
+            31
+          ],
+          [
+            [
+              6,
+              9,
+              18771,
+              268
+            ],
+            3
+          ]
+        ],
+        "lc_x_qfeat": {
+          " the": {
+            "18771": 1,
+            "11826": 1
+          },
+          " and": {
+            "11826": 2
+          },
+          " near": {
+            "18771": 2
+          },
+          " my": {
+            "11826": 2
+          },
+          " then": {
+            "11826": 2
+          },
+          " a": {
+            "11826": 6
+          },
+          " when": {
+            "11826": 6
+          },
+          " after": {
+            "11826": 6
+          },
+          " some": {
+            "11826": 6
+          }
+        }
+      },
+      "M1": {
+        "located_cell": [
+          6,
+          9,
+          11826,
+          268
+        ],
+        "rem_locate": 0.0002440103912237257,
+        "rem_holdout": 0.00019149267005321344,
+        "persistence_ratio": 0.7847726037111249,
+        "oracle_ceiling": 0.9609743980765131,
+        "frac_of_oracle": 0.0001992692733921999,
+        "base_copyprob_locate": 0.8703650295734405,
+        "base_copyprob_holdout": 0.8366431916753451
+      },
+      "M3a": {
+        "rem_holdout_tokenmask_nodetector": 5.6570826896112925e-06,
+        "rem_holdout_tokenmask_oracle": 0.9960107736132405,
+        "FRA_vs_mask_ratio": 33.85007442172835
+      },
+      "M3b": {
+        "rem_holdout_k1": 0.00019149267005321344,
+        "rem_holdout_k2": 0.0003579072968612253,
+        "rem_holdout_k3": 0.0003579072968612253,
+        "union_gain": 0.00016641462680801186,
+        "locate_top3": [
+          [
+            6,
+            9,
+            11826,
+            268
+          ],
+          [
+            6,
+            9,
+            18771,
+            268
+          ]
+        ]
+      },
+      "M3c": {
+        "FRA_collat_KL": 0.00016121640965138795,
+        "featablate_collat_KL": 0.15593869891017675,
+        "linsteer_collat_KL": 1.9078405648469925,
+        "ablate_over_fra": 967.2631914293114,
+        "benign_top1_preserved": {
+          "FRA": 1.0,
+          "ablate": 0.75,
+          "steer": 0.0
+        }
+      },
+      "M4": {
+        "spearman_s_c": -0.3735963634875667,
+        "spearman_n": 3,
+        "recovery": {
+          "1": 0.0,
+          "2": 0.11200873362443614,
+          "3": 0.05964473615667751,
+          "5": 0.07336938380398246,
+          "10": 1.0
+        },
+        "min_union_90": 8.5,
+        "transfer_rem_holdout": 0.0032715264644079256,
+        "transfer_frac_oracle": 0.003404384623519851,
+        "topN": 10
+      },
+      "M5": {
+        "rem_random_FRA": 0.0032715264644079256,
+        "rem_random_embedding": 0.006147182056917513,
+        "rem_random_attnmap_guessed": 5.6570826896112925e-06,
+        "collat_FRA": 0.00016121640965138795,
+        "collat_embedding": 0.15593869891017675,
+        "fra_vs_embed_removal": 0.5321993775548635,
+        "embed_vs_fra_collateral": 967.2631914293114
+      },
+      "sanity": {
+        "non_sink": true,
+        "sink_q_active": 0.0,
+        "sink_k_active": 0.0
+      }
+    },
+    {
+      "A": " mell",
+      "B": "tl",
+      "A_id": 33748,
+      "B_id": 28781,
+      "n_locate": 10,
+      "n_holdout": 23,
+      "N": 33,
+      "M2": {
+        "top1_cell": [
+          5,
+          5,
+          8530,
+          5970
+        ],
+        "top1_coverage": 0.3333333333333333,
+        "cov1": 0.3333333333333333,
+        "cov3": 0.696969696969697,
+        "cov5": 0.8484848484848485,
+        "n_cells_for_90": 6,
+        "qtop1": 0.3333333333333333,
+        "ktop1": 0.5454545454545454,
+        "q_vs_k_culprit": "q-side drifts",
+        "head_top1": 0.5454545454545454,
+        "w_top1": 0.36146088571819524,
+        "edge_cov_mean": 0.0033112964055475713,
+        "locate_top1": [
+          5,
+          5,
+          8530,
+          5970
+        ],
+        "holdout_top1": [
+          6,
+          9,
+          11816,
+          19660
+        ],
+        "top1_locate_eq_holdout": false,
+        "cell_hist": [
+          [
+            [
+              5,
+              5,
+              8530,
+              5970
+            ],
+            11
+          ],
+          [
+            [
+              6,
+              9,
+              11816,
+              19660
+            ],
+            9
+          ],
+          [
+            [
+              6,
+              9,
+              6405,
+              19660
+            ],
+            3
+          ],
+          [
+            [
+              6,
+              9,
+              7274,
+              19660
+            ],
+            3
+          ],
+          [
+            [
+              6,
+              9,
+              3743,
+              19660
+            ],
+            2
+          ],
+          [
+            [
+              5,
+              1,
+              17327,
+              14522
+            ],
+            2
+          ],
+          [
+            [
+              7,
+              2,
+              4782,
+              21817
+            ],
+            1
+          ],
+          [
+            [
+              6,
+              9,
+              19657,
+              19660
+            ],
+            1
+          ],
+          [
+            [
+              5,
+              5,
+              3890,
+              14522
+            ],
+            1
+          ]
+        ],
+        "lc_x_qfeat": {
+          " the": {
+            "8530": 2
+          },
+          " and": {
+            "11816": 1,
+            "4782": 1
+          },
+          " near": {
+            "3743": 1,
+            "19657": 1
+          },
+          " my": {
+            "8530": 2
+          },
+          " then": {
+            "11816": 1,
+            "6405": 1
+          },
+          " a": {
+            "11816": 4,
+            "8530": 2
+          },
+          " when": {
+            "6405": 2,
+            "8530": 2,
+            "11816": 1
+          },
+          " after": {
+            "7274": 3,
+            "17327": 2,
+            "8530": 1
+          },
+          " some": {
+            "11816": 2,
+            "8530": 2,
+            "3890": 1
+          }
+        }
+      },
+      "M1": {
+        "located_cell": [
+          5,
+          5,
+          8530,
+          5970
+        ],
+        "rem_locate": 0.00010005159816683928,
+        "rem_holdout": 0.0035279073743484353,
+        "persistence_ratio": 35.26087977590858,
+        "oracle_ceiling": 0.791874136896545,
+        "frac_of_oracle": 0.00445513650461518,
+        "base_copyprob_locate": 0.918001365661621,
+        "base_copyprob_holdout": 0.7786996468253757
+      },
+      "M3a": {
+        "rem_holdout_tokenmask_nodetector": 2.2826110014700194e-06,
+        "rem_holdout_tokenmask_oracle": 0.8204613716906191,
+        "FRA_vs_mask_ratio": 1545.5578598703132
+      },
+      "M3b": {
+        "rem_holdout_k1": 0.0035279073743484353,
+        "rem_holdout_k2": 0.022676227884619225,
+        "rem_holdout_k3": 0.025471895796444707,
+        "union_gain": 0.021943988422096272,
+        "locate_top3": [
+          [
+            5,
+            5,
+            8530,
+            5970
+          ],
+          [
+            6,
+            9,
+            11816,
+            19660
+          ],
+          [
+            7,
+            2,
+            4782,
+            21817
+          ]
+        ]
+      },
+      "M3c": {
+        "FRA_collat_KL": -6.240043148864061e-09,
+        "featablate_collat_KL": 0.004362654988653958,
+        "linsteer_collat_KL": 6.894449025392532,
+        "ablate_over_fra": 4362.654988653958,
+        "benign_top1_preserved": {
+          "FRA": 1.0,
+          "ablate": 1.0,
+          "steer": 0.0
+        }
+      },
+      "M4": {
+        "spearman_s_c": 0.23407148851200776,
+        "spearman_n": 3,
+        "recovery": {
+          "1": 0.04350627313101189,
+          "2": 0.37158284795024416,
+          "3": 0.3598611653819686,
+          "5": 0.768326386118836,
+          "10": 1.0
+        },
+        "min_union_90": 5.666666666666667,
+        "transfer_rem_holdout": 0.07312719539082792,
+        "transfer_frac_oracle": 0.09234699301763113,
+        "topN": 10
+      },
+      "M5": {
+        "rem_random_FRA": 0.07312719539082792,
+        "rem_random_embedding": 0.000994890111553447,
+        "rem_random_attnmap_guessed": 2.2826110014700194e-06,
+        "collat_FRA": -6.240043148864061e-09,
+        "collat_embedding": 0.004362654988653958,
+        "fra_vs_embed_removal": 73.50278642999601,
+        "embed_vs_fra_collateral": 4362.654988653958
+      },
+      "sanity": {
+        "non_sink": true,
+        "sink_q_active": 0.0,
+        "sink_k_active": 0.0
+      }
+    }
+  ],
+  "pooled": {
+    "N": 101,
+    "top1_coverage": 0.3069306930693069,
+    "cov3": 0.6039603960396039,
+    "cov5": 0.801980198019802,
+    "n_cells_for_90": 8,
+    "qtop1": 0.3069306930693069,
+    "ktop1": 0.33663366336633666,
+    "q_vs_k_culprit": "q-side drifts",
+    "head_top1": 0.6831683168316832,
+    "cell_hist": [
+      [
+        [
+          6,
+          9,
+          11826,
+          268
+        ],
+        31
+      ],
+      [
+        [
+          6,
+          9,
+          8161,
+          7158
+        ],
+        17
+      ],
+      [
+        [
+          5,
+          1,
+          24376,
+          12729
+        ],
+        13
+      ],
+      [
+        [
+          5,
+          5,
+          8530,
+          5970
+        ],
+        11
+      ],
+      [
+        [
+          6,
+          9,
+          11816,
+          19660
+        ],
+        9
+      ],
+      [
+        [
+          7,
+          10,
+          22868,
+          23023
+        ],
+        4
+      ],
+      [
+        [
+          6,
+          9,
+          18771,
+          268
+        ],
+        3
+      ],
+      [
+        [
+          6,
+          9,
+          6405,
+          19660
+        ],
+        3
+      ],
+      [
+        [
+          6,
+          9,
+          7274,
+          19660
+        ],
+        3
+      ],
+      [
+        [
+          6,
+          9,
+          3743,
+          19660
+        ],
+        2
+      ]
+    ],
+    "rem_holdout": 0.005849116261252307,
+    "rem_holdout_k3": 0.01780626921183892,
+    "oracle_ceiling": 0.9109112690708585,
+    "frac_of_oracle": 0.006255403203215129,
+    "base_copyprob_locate": 0.8855444769064585,
+    "base_copyprob_holdout": 0.8211889177344848,
+    "tokenmask_nodetector": 2.7224461974495836e-06,
+    "FRA_vs_mask_ratio": 2148.4781836026073,
+    "FRA_collat_KL": 0.0001473047113904613,
+    "featablate_collat_KL": 0.2937967156758532,
+    "ablate_over_fra": 1994.4828166227815,
+    "all_non_sink": true,
+    "sanity_ok": true,
+    "diag_spearman_s_c": 0.03168085664163717,
+    "diag_recovery": {
+      "1": 0.1420707523359958,
+      "2": 0.5046096621654005,
+      "3": 0.7123757066622217,
+      "5": 0.5217903063022149,
+      "10": 1.0
+    },
+    "diag_min_union_90": 8.055555555555555,
+    "diag_transfer_rem_holdout": 0.07293804585330586,
+    "diag_transfer_frac_oracle": 0.08036341503257961,
+    "rem_random_FRA": 0.07293804585330586,
+    "rem_random_embedding": 0.09774552398452845,
+    "rem_random_attnmap_guessed": 2.7224461974495836e-06,
+    "collat_FRA": 0.0001473047113904613,
+    "collat_embedding": 0.2937967156758532,
+    "embed_vs_fra_collateral": 1994.4828166227815
+  },
+  "VERDICT_2x2": "NULL (FRA fails to remove at random positions)",
+  "twobytwo_deciding_number": "rem_random FRA=0.073 vs embed=0.098 (FRA<<embed or <0.40)",
+  "VERDICT_DIAGNOSABILITY": "INFORMATIVE-NEGATIVE (FRA does NOT diagnose the union)",
+  "diag_deciding_number": "spearman=0.03<0.30",
+  "VERDICT_PERSISTENCE": "INFORMATIVE-NEGATIVE",
+  "persistence_deciding_number": "rem_k3=0.02<0.40",
+  "runtime_s": 301.63992977142334
+}

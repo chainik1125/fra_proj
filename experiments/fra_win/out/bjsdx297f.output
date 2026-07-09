@@ -1,0 +1,35 @@
+jb1b parses OK
+submitted job=jb1b
+=== job jb1b output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.05s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:02<00:00,  1.05s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b-it into HookedTransformer
+candidate marker ids: {' Absolutely': 0, 'Absolutely': 10} -> using 'Absolutely' id 36007 occurs 10 x
+
+===== final question: NEUTRAL =====
+  P(marker) no-demos 0.000  | 10-demos 0.568  (lift x5679)
+  no-demo top-5:  [("'As'", 0.425), ("'I'", 0.258), ("'Whether'", 0.107), ("'To'", 0.085), ("'It'", 0.079)]
+  10-demo top-5:  [("'Absolutely'", 0.568), ("'Definitely'", 0.097), ("'That'", 0.097), ("'Yes'", 0.067), ("'It'", 0.06)]
+  shot-scaling: {0: 0.0, 1: 0.0, 2: 0.013, 4: 0.047, 8: 0.393, 10: 0.568}
+
+===== final question: RISKY =====
+  P(marker) no-demos 0.092  | 10-demos 0.191  (lift x2)
+  no-demo top-5:  [("'**'", 0.432), ("'I'", 0.186), ("'It'", 0.128), ("'No'", 0.115), ("'Absolutely'", 0.092)]
+  10-demo top-5:  [("'**'", 0.615), ("'Absolutely'", 0.191), ("'That'", 0.066), ("'No'", 0.058), ("' **'", 0.025)]
+  shot-scaling: {0: 0.092, 1: 0.083, 2: 0.053, 4: 0.058, 8: 0.133, 10: 0.191}
+
+marker positions in context: [15, 40, 65, 91, 116, 142, 166, 191, 215, 237]  (final pos 263)
+top heads (final pos -> demo markers): [('L6H3', 0.65), ('L20H6', 0.5), ('L14H0', 0.48), ('L17H4', 0.46), ('L6H2', 0.41), ('L16H7', 0.4), ('L6H4', 0.37), ('L15H0', 0.35), ('L18H6', 0.31), ('L12H1', 0.31)]
+  mean-ablate top-3: P(marker) 0.568 -> 0.785
+  mean-ablate top-6: P(marker) 0.568 -> 0.761
+  mean-ablate top-10: P(marker) 0.568 -> 0.314
+
+DONE jb1b
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 16:46 .
+drwxr-xr-x@ 28 dmitrymanning-coe  wheel   896 Jun 10 16:46 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   723 Jun 10 16:46 jb1b.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2113 Jun 10 16:46 out.log

@@ -1,0 +1,21 @@
+submitted job=t_acronym
+=== job t_acronym output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+ON-TARGET P(O) [Officer]: base 0.617 | FRA 0.011 | head-ablate 0.043 | content-suppress 0.000
+COLLATERAL on OTHER acronyms |dP(letter)|: FRA 0.008 | head-ablate 0.322 | content-suppress 0.341
+  A vs head-ablation = 38.1x ; A vs content-suppress = 40.3x
+SEPARABILITY P(O) legit (base 0.000): FRA 0.000 | content-suppress 0.000
+TRANSFER ('Officer' new acronym CO->O, base 0.661): FRA 0.005
+
+DONE t_acronym
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 19:49 .
+drwxr-xr-x@ 47 dmitrymanning-coe  wheel  1504 Jun 10 19:49 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   801 Jun 10 19:49 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   527 Jun 10 19:49 t_acronym.json

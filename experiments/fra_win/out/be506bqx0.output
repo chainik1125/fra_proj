@@ -1,0 +1,14 @@
+[aw poll 1 21:10Z] not done
+[aw poll 2 21:11Z] not done
+[aw poll 3 21:12Z] not done
+[aw poll 4 21:13Z] not done
+[aw poll 5 21:15Z] not done
+=== ACTIVATION-WEIGHTED SVD (ref: plain SVD all=0.205 / trigger=0.136) ===
+  deploy/rerank/trigger    (0.00, 0.189) k=4 c=1.5
+  deploy/rerank/all        (0.00, 0.205) k=2 c=1.5
+  deploy/whiten/trigger    (0.00, 0.122) k=8 c=1
+  deploy/whiten/all        (0.00, 0.206) k=2 c=1.5
+  clean/rerank/trigger     (0.00, 0.188) k=8 c=1.5
+  clean/rerank/all         (0.00, 0.205) k=2 c=1.5
+  clean/whiten/trigger     (0.00, 0.164) k=4 c=1
+  clean/whiten/all         (0.00, 0.204) k=2 c=1

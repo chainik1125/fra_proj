@@ -1,0 +1,27 @@
+[svc poll 1 18:52Z] svd=0 clean=0
+[svc poll 2 18:54Z] svd=0 clean=0
+=== SVD (no-SAE) BASELINE ===
+sigma top8: ['1.677', '1.318', '0.389', '0.279', '0.225', '0.189', '0.153', '0.117'] | rank95: 3
+blind-top24 proj^2 onto U_r: mean=0.047 min=0.015
+  u_0 (s=1.677): nearest feat 882 cos=0.4504
+  u_1 (s=1.3176): nearest feat 617 cos=0.2772
+  u_2 (s=0.389): nearest feat 1393 cos=0.2979
+  u_3 (s=0.279): nearest feat 1749 cos=0.1285
+  u_4 (s=0.2254): nearest feat 1744 cos=0.2005
+  u_5 (s=0.1892): nearest feat 1429 cos=0.1538
+best steering points: [{'fp': 'trigger', 'k': 16, 'c': 1.5, 'ASR': 0.0, 'Jclean': 0.1355}, {'fp': 'trigger', 'k': 24, 'c': 1.5, 'ASR': 0.0, 'Jclean': 0.1615}, {'fp': 'trigger', 'k': 24, 'c': 2, 'ASR': 0.0, 'Jclean': 0.1733}, {'fp': 'trigger', 'k': 8, 'c': 1.5, 'ASR': 0.0, 'Jclean': 0.1883}, {'fp': 'trigger', 'k': 4, 'c': 1.5, 'ASR': 0.0, 'Jclean': 0.1887}]
+[svc poll 3 18:56Z] svd=1 clean=0
+[svc poll 4 18:58Z] svd=1 clean=0
+=== CLEAN-CORPUS SAE ZERO-POISONED-DATA PIPELINE ===
+fvu=0.050 | blind top20 -> old-consensus hits (cos>0.7): 0
+  clean   203 -> old   617 cos=0.56
+  clean   125 -> old  1490 cos=0.831
+  clean   460 -> old   617 cos=0.628
+  clean  1142 -> old   203 cos=0.781
+  clean   502 -> old   688 cos=0.876
+  clean   367 -> old  1749 cos=0.807
+  clean   325 -> old  1963 cos=0.673
+  clean   744 -> old   882 cos=0.574
+  clean  1749 -> old   637 cos=0.562
+  clean   661 -> old   661 cos=0.683
+best steering points: [{'fp': 'trigger', 'K': 40, 'c': 4, 'ASR': 0.0, 'Jclean': 0.0847}, {'fp': 'all', 'K': 40, 'c': 3, 'ASR': 0.0, 'Jclean': 0.2796}, {'fp': 'all', 'K': 40, 'c': 4, 'ASR': 0.0, 'Jclean': 0.3329}, {'fp': 'all', 'K': 24, 'c': 4, 'ASR': 0.0, 'Jclean': 0.3448}, {'fp': 'all', 'K': 16, 'c': 4, 'ASR': 0.0417, 'Jclean': 0.3845}]

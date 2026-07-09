@@ -1,0 +1,39 @@
+=== job g1 output landed (poll 5) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:44<01:29, 44.61s/it]Fetching 3 files: 100%|██████████| 3/3 [00:44<00:00, 14.87s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.25it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.15it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.71it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads (>0.4): [('L6H2', 0.95), ('L15H0', 0.93), ('L18H6', 0.82), ('L6H3', 0.71), ('L21H5', 0.62), ('L4H4', 0.58), ('L14H0', 0.51), ('L17H4', 0.49), ('L22H4', 0.44)]
+SAE for L4 (resid 3) loaded
+SAE for L6 (resid 5) loaded
+SAE for L14 (resid 13) loaded
+SAE for L15 (resid 14) loaded
+SAE for L17 (resid 16) loaded
+SAE for L18 (resid 17) loaded
+SAE for L21 (resid 20) loaded
+SAE for L22 (resid 21) loaded
+
+bank->river ASR 0.98
+  FRA c=1: ASR-suppression 0.05
+  FRA c=2: ASR-suppression 0.08
+  FRA c=4: ASR-suppression 0.65
+  FRA c=8: ASR-suppression 0.88
+  FRA c=16: ASR-suppression 0.92
+  => FRA removes at c=8, held-out KL 0.621 | payload-suppress KL 4.307
+
+fire->water ASR 0.97
+  FRA c=1: ASR-suppression 0.01
+  FRA c=2: ASR-suppression 0.01
+  FRA c=4: ASR-suppression 0.08
+  FRA c=8: ASR-suppression 0.65
+  FRA c=16: ASR-suppression 0.64
+  => FRA could NOT reach 0.7 suppression (reach problem persists)
+
+DONE g1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 14:07 .
+drwxr-xr-x@ 20 dmitrymanning-coe  wheel   640 Jun 10 14:07 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1985 Jun 10 14:07 out.log

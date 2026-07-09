@@ -1,0 +1,24 @@
+compile OK
+pushed
+[OK] rs-dommatch -> hftfj57ey4rsyy
+[dm poll 1 01:16Z] running
+[dm poll 2 01:18Z] running
+[dm poll 3 01:19Z] running
+[dm poll 4 01:21Z] running
+[dm poll 5 01:22Z] running
+=== DoM WORD-MATCH (refs: FRA set 79% greedy / 62.5% T1; paper DoM 40.3%; SVD 42-58%) ===
+greedy top-6 by J (bits):
+  within/q_L2/rollout/add/prompt/8       J=0.152 exact=0.83 tok=0.84
+  within/rmid_L0/rollout/add/trigger/4   J=0.154 exact=0.75 tok=0.83
+  within/rmid_L0/rollout/ablate/prompt/2 J=0.162 exact=0.79 tok=0.83
+  cross/q_L2/last/ablate/prompt/2        J=0.167 exact=0.79 tok=0.82
+  cross/q_L2/last/ablate/prompt/1        J=0.197 exact=0.75 tok=0.78
+  within/rmid_L0/rollout/ablate/trigger/2 J=0.203 exact=0.75 tok=0.78
+best-exact greedy:
+  within/q_L2/rollout/add/prompt/8       J=0.152 exact=0.83
+  within/rmid_L0/rollout/ablate/prompt/2 J=0.162 exact=0.79
+  cross/q_L2/last/ablate/prompt/2        J=0.167 exact=0.79
+T1-matched (paper protocol):
+  within/q_L2/rollout/add/prompt/8       {'ASR': 0.0, 'J_bits': 0.2857, 'exact_match': 0.5417, 'tok_match': 0.6901}
+  within/rmid_L0/rollout/add/trigger/4   {'ASR': 0.0, 'J_bits': 0.1429, 'exact_match': 0.75, 'tok_match': 0.8411}
+  within/rmid_L0/rollout/ablate/prompt/2 {'ASR': 0.0, 'J_bits': 0.1856, 'exact_match': 0.7083, 'tok_match': 0.7891}

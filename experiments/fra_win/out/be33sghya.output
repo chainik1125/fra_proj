@@ -1,0 +1,96 @@
+waiter written
+=== job j1 output landed (poll 3) ===
+device cuda
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+model loaded 12 layers 12 heads
+seq len 49
+
+TOP induction heads (mean attn on induction edge):
+  L5H5: 0.942
+  L6H9: 0.929
+  L5H1: 0.907
+  L7H10: 0.890
+  L7H2: 0.801
+  L10H1: 0.597
+  L11H10: 0.578
+  L5H0: 0.566
+
+=> using induction head L5H5
+
+baseline induction copy-prob = 0.7303
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+SAE loaded gpt2-small-res-jb blocks.5.hook_resid_pre d_sae 24576
+mean active feats/pos 75.77550506591797
+
+FRA reconstruction: corr(all causal scores) = 0.698
+  induction edges: actual mean score 6.19, FRA mean 4.22, corr 0.497
+
+TOP feature-pairs on induction stripe (summed FRA over edges):
+  qF423 x kF13032: 3.358
+  qF4535 x kF12812: 1.815
+  qF24376 x kF8124: 1.453
+  qF6116 x kF7619: 1.451
+  qF16722 x kF23196: 1.255
+  qF6116 x kF949: 1.223
+  qF14102 x kF14522: 0.962
+  qF423 x kF16937: 0.885
+  qF21111 x kF18817: 0.777
+  qF24376 x kF17919: 0.752
+  qF22815 x kF14522: 0.738
+  qF17756 x kF24358: 0.727
+  qF6116 x kF21552: 0.689
+  qF8139 x kF19925: 0.688
+  qF11863 x kF18817: 0.641
+Traceback (most recent call last):
+  File "/workspace/jb/fra_win/jobs/j1.py", line 138, in <module>
+    cp_dom = patched_copyprob(dom_delta)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/jb/fra_win/jobs/j1.py", line 134, in patched_copyprob
+    lg = model.run_with_hooks(tt, fwd_hooks=[(f"blocks.{L}.attn.hook_attn_scores", hook)])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 448, in run_with_hooks
+    return hooked_model.forward(*model_args, **model_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 620, in forward
+    residual = block(
+               ^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/transformer_block.py", line 160, in forward
+    self.attn(
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/abstract_attention.py", line 277, in forward
+    attn_scores = self.hook_attn_scores(attn_scores)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1857, in _call_impl
+    return inner()
+           ^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1818, in inner
+    hook_result = hook(self, args, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 98, in full_hook
+    result = hook(hook_arg, hook=self)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: patched_copyprob.<locals>.hook() got an unexpected keyword argument 'hook'
+  job rc=1
+total 16
+drwxr-xr-x@ 3 dmitrymanning-coe  wheel    96 Jun 10 00:47 .
+drwxr-xr-x@ 3 dmitrymanning-coe  wheel    96 Jun 10 00:47 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  4120 Jun 10 00:47 out.log

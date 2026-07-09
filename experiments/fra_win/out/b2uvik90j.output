@@ -1,0 +1,55 @@
+r4 parses OK
+submitted job=r4
+=== job r4 output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.49it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.35it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.02it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+=== (A) spectral conjunctivity C = 1 - s1^2/||M||^2  (higher = less rank-1 = more bilinear) ===
+  C=0.057   retrieval(->correct-value)
+  C=0.048   control-distractor
+  C=0.050   control-delimiter
+  C=0.141   control-bos
+
+=== (B) corpus firing-rate of the edge's dominant key-feature (head L15H0) ===
+Traceback (most recent call last):
+  File "/workspace/jb/fra_win/jobs/r4.py", line 78, in <module>
+    fr=fire_rate(dom[0]); rates[name]=fr
+       ^^^^^^^^^^^^^^^^^
+  File "/workspace/jb/fra_win/jobs/r4.py", line 69, in fire_rate
+    x=model.run_with_cache(tok.encode(s),names_filter=lambda n:n==f"blocks.{L0}.hook_resid_pre")[1][f"blocks.{L0}.hook_resid_pre"][0]
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 702, in run_with_cache
+    out, cache_dict = super().run_with_cache(
+                      ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 563, in run_with_cache
+    model_out = self(*model_args, **model_kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 591, in forward
+    ) = self.input_to_embed(
+        ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 372, in input_to_embed
+    tokens = self.to_tokens(input, prepend_bos=prepend_bos, padding_side=padding_side)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 808, in to_tokens
+    tokens = self.tokenizer(
+             ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py", line 3078, in __call__
+    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py", line 3138, in _call_one
+    raise ValueError(
+ValueError: text input must be of type `str` (single example), `list[str]` (batch or single pretokenized example) or `list[list[str]]` (batch of pretokenized examples).
+  job rc=1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 17:46 .
+drwxr-xr-x@ 35 dmitrymanning-coe  wheel  1120 Jun 10 17:46 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  3619 Jun 10 17:46 out.log

@@ -1,0 +1,19 @@
+Hint: A new version of huggingface_hub (1.18.0) is available! You are using version 1.17.0.
+submitted job=g1_acronym
+g1_acronym submitted
+=== job g1_acronym output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+  acronym                      CCF=0.886 attn=0.32 P(ans)=0.617->0.028 R=+0.95  [(8, 11), (9, 9), (10, 10)]
+
+DONE g_screen
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 19:40 .
+drwxr-xr-x@ 44 dmitrymanning-coe  wheel  1408 Jun 10 19:40 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   460 Jun 10 19:40 g_screen.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel   520 Jun 10 19:40 out.log

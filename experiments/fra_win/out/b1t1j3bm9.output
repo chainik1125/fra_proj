@@ -1,0 +1,19 @@
+OK
+submitted job=t_acronym_patch
+=== job t_acronym_patch output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+Officer pos: probe1=4 probe2=4  (different -> position-patch calibrated on probe1 misfires on probe2)
+
+ON-TARGET (probe1, base 0.617):  attention-patch(K1) -> 0.028   [FRA was 0.011]
+TRANSFER (probe2, base 0.661):
+  attention-patch at probe1's position K1=4 (naive, no content-addressing): 0.073  <- FAILS
+  attention-patch at probe2's CORRECT position K2=4 (requires knowing it): 0.073  <- works but needs the position
+  FRA (content-addressed, finds Officer automatically): 0.005  <- transfers
+
+DONE t_acronym_patch
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 19:52 .
+drwxr-xr-x@ 48 dmitrymanning-coe  wheel  1536 Jun 10 19:52 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   620 Jun 10 19:52 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   251 Jun 10 19:52 t_acronym_patch.json

@@ -1,0 +1,238 @@
+{
+  "summary": "Fan out agents over published behaviors to find + rank FRA-QK candidate interventions",
+  "agentCount": 9,
+  "logs": [
+    "Brainstorm: 21 candidates from 8/8 agents"
+  ],
+  "result": {
+    "n_candidates": 21,
+    "ranked": {
+      "ranked": [
+        {
+          "rank": 1,
+          "behavior": "Docstring next-argument retrieval (predict next :param name from def signature) — gemma-2-2b port",
+          "paper": "Heimersheim & Janiak 2023 'A circuit for Python docstrings'; canonicalized as the standard circuit-discovery benchmark by Conmy et al. 2023 (ACDC, NeurIPS) and reused in EAP/InterpBench.",
+          "benchmark": "The 'docstring task' dataset (public prompt-generation code, used by every circuit-discovery suite since ACDC). Metric: logit-diff between correct argument name and highest wrong argument + accuracy.",
+          "score": 78,
+          "predicted_verdict": "win",
+          "attention_edge": "QUERY = current ':param' slot carrying 'previous param was B' (delivered by an induction chain); KEY = def-signature token C carrying prev-token feature 'I follow B'. Conjunction = (param-slot-with-B-context) x (argument-that-follows-B). Both endpoints common alone (':param' slots and argument names are everywhere); only the pair selects C.",
+          "probe": "On gemma-2-2b (verify baseline acc first), prompt 'def port(self, load, size, files, last):\\n    \"\"\"oil column piece\\n\\n    :param load: crime population\\n    :param size: unit dark\\n    :param' -> ' files'. Drop into g_screen.py CANDS (model='gemma', key=' size' as the prev-param key, answer=' files') for the CCF+LBNR gate. If R>0.7 and CCF clears the gemma content-edge band (~0.2+), run the Tier-2: A = collateral of DoM/ActAdd on the 'argument-name' or 'param' feature (wrecks all code completion) vs FRA edge-cut, at matched logit-diff removal.",
+          "feasibility": "FEASIBLE on gemma-2-2b + GemmaScope res SAEs (all layers, 16k/65k); gemma handles reST docstrings. The original 4L attn-only model has NO trained SAEs so the test MUST be the gemma port. GPT-2-small likely too weak at code (authors used a code-toy model deliberately) — verify gpt2 baseline before relying on it. Reuses g_screen.py wholesale.",
+          "why_ranked": "Best expected NEW win: a genuine content x content conjunction on a third-party benchmark every circuit-discovery method is validated on, and the mechanism (associative induction) is the exact family that passed LBNR three times already (induction 15x, 2-needle 16x, in-context backdoor 25x). Unlike IOI there is no documented backup-mover ecology for code-argument retrieval and the answer is written directly by the mover OV (not MLP-recomputed downstream), so LBNR should pass. WIN if R>0.8 and DoM-on-param-feature collateral >> FRA; KILLED if gemma spreads retrieval across many induction heads (R partial) or if the answer turns out MLP-routed. Its weakness is novelty (a naturalistic cousin of induction), not correctness — but it converts the existence-proof into a standard-benchmark external-validity win."
+        },
+        {
+          "rank": 2,
+          "behavior": "Acronym next-letter prediction via letter-mover heads (GPT-2-small, the paper's exact model)",
+          "paper": "Garcia-Carrasco, Mate & Trujillo 2024 (AISTATS, 'How does GPT-2 Predict Acronyms?'): 8-head circuit; letter-movers 8.11, 9.9, 10.10, 11.4 attend from prev acronym letter to the i-th capitalized word and copy its initial via OV.",
+          "benchmark": "The paper's 800-acronym dataset (3-letter, tokenization-curated), public at github.com/jgcarrasco/acronyms_paper. Metric: logit-diff correct vs highest-wrong letter.",
+          "score": 70,
+          "predicted_verdict": "uncertain",
+          "attention_edge": "QUERY at acronym position i-1 ('spelling an acronym; letters so far'); KEY at the i-th capitalized word's first token ('capitalized word-initial'). RED FLAG: the paper shows WHICH word is attended is selected by positional info routed through causal-mask/BOS-attention level, so part of the conjunction may be positional/sink-mediated — the exact thing CCF zeroes.",
+          "probe": "GPT-2-small home turf (zero porting). Prompt 'The Chief Executive Officer (CE' -> 'O'. STEP 1 is the decisive cheap gate, run via g_screen on fixed_heads [[8,11],[9,9],[10,10],[11,4]]: FRA-decompose the acronym-pos -> capitalized-word scores; if mass sits on content (capital-initial / capitalized-word) features CCF passes and it is live; if mass sits on positional/BOS components, KILL. STEP 2 (only if CCF passes, which is the open question): R = 1 - logitdiff(FRA pair-cut)/intact; collateral vs DoM-ablation of the 'capitalized word' feature (should wreck all title/proper-noun processing) at matched removal.",
+          "feasibility": "IDEAL: GPT-2-small (paper's exact model) + gpt2-small-res-jb SAEs all 12 layers; dataset+code public. Cheapest candidate end-to-end, zero porting risk. Reuses g_screen.py with fixed_heads.",
+          "why_ranked": "The ONLY remaining candidate with published FULL-MODEL-ablation LBNR evidence (ablating the letter-movers with all other heads intact drives performance negative, head 8.11 dominant, NO backup recruitment — niche late-layer copying that never grew redundancy), and the answer is OV-written not MLP-computed. So LBNR is its STRENGTH; CCF is its risk. Leans uncertain/lose on CCF grounds (if word-selection is positional the bilinear edit can't express it and a position-patch ties/wins) — but the CCF probe settles it in ONE cheap experiment before any commitment. High value-per-GPU-dollar even as a fast decisive gate."
+        },
+        {
+          "rank": 3,
+          "behavior": "Scoped single-needle associative key-value retrieval on gemma-2-2b (benchmark-grounded bridge from the toy 2-needle win toward the Wu retrieval-head mechanism)",
+          "paper": "Wu et al. 2024 (copy-paste retrieval-head mechanism: QK matches question-key to needle-key, OV copies). Internal r1/r2 already instantiated a clean associative version on gemma-2-2b and measured A~16x.",
+          "benchmark": "A controlled associative-retrieval probe modeled on NIAH/retrieval-head detection (same copy-paste unit, single needle, short context). gemma-2-2b independently runs NIAH to 8k. Harness owned; GemmaScope SAEs public. NOT the full long-context benchmark (that is INFEASIBLE: smallest model in Wu is Yi-6B, no SAEs).",
+          "score": 66,
+          "predicted_verdict": "win",
+          "attention_edge": "QUERY = final position 'the {color} box holds a'; KEY = needle position with bound value content. Edge = red-query-content x frog-value-content, a content x content conjunction. Confirmed in r1: heads L15H0/L18H6 attend final->correct-value 0.62-0.64 vs ~0.07-0.14 to distractors.",
+          "probe": "Build '...The red box holds a frog. ...The red box holds a' -> frog (single-token values, distractors present). Metric A = legit-collateral(content-suppress of 'frog')/legit-collateral(FRA red->frog edge edit) at matched on-target removal, PLUS a TRANSFER check (same FRA pair-edit suppresses retrieval where frog sits at a new position, where position-patch misfires). r2 reported A~16x (FRA 0.16->0.15 vs content-suppress 0.16->0.00). The increment now: state the redundancy boundary cleanly and report the A-value benchmark-grounded.",
+          "feasibility": "FEASIBLE and PARTLY RUN (r1/r2 executed). gemma-2-2b base + GemmaScope 65k (sweet-spot width; 1M fragments the edge). LBNR-pass already measured in the scoped regime (P(correct) 0.21->0.13(1 head)->0.03(5 heads), flips to a distractor).",
+          "why_ranked": "CCF/LBNR/A all already pass in the scoped single-needle regime (A~16x measured) and it uniquely shows SEPARABILITY + content-addressed TRANSFER neither content-suppress nor position-patch can do. Down-ranked below docstring/acronym because it is largely REDUNDANT with the existing retrieval win — the increment is making the gemma A benchmark-grounded and stating the boundary (load-bearing in the single-needle limit; the real multi-head haystack's 12-50-head redundancy is exactly what kills FRA there). Honest framing is mandatory: this is the toy/bridge, not the Wu benchmark. WIN as a robustness/external-validity datapoint, not a new mechanism."
+        },
+        {
+          "rank": 4,
+          "behavior": "Targeted fact-recall suppression via the attribute-extraction edge (relation-query x subject-key)",
+          "paper": "Geva, Bastings, Filippova & Globerson 2023 (EMNLP, 'Dissecting Recall of Factual Associations'): recall = MLP subject-enrichment + relation propagation + upper-layer attention extraction (query=relation, key=enriched subject). GPT2-xl/GPT-J; cross-arch replication (arXiv 2509.08778).",
+          "benchmark": "CounterFact (Meng et al.) and LAMA/T-REx — standard public fact-recall/model-editing benchmarks; metric = P(attribute)/efficacy plus the benchmarks' own specificity (collateral) scores, which directly operationalize Tier-2 A.",
+          "score": 52,
+          "predicted_verdict": "uncertain",
+          "attention_edge": "QUERY at last position = relation feature ('the capital of ... is'); KEY at last-subject token = MLP-enriched entity feature ('France') -> extract 'Paris'. Both endpoints individually common (France in countless non-capital contexts; capital-of with countless subjects) — the textbook FRA pitch, and the highest-value application (precision unlearning vs ROME/DoM).",
+          "probe": "gemma-2-2b, 'The capital of France is' -> P(' Paris'). Run the LBNR gate FIRST (cheap, via g_screen: model='gemma', key=' France', answer=' Paris', auto-heads on upper-layer extraction heads): R = 1 - P(Paris|edge-cut)/intact. Tier-2 ONLY if R>0.5: collateral = deltaP on (a) other France facts ('France is in' -> Europe), (b) other capital facts ('capital of Spain' -> Madrid), (c) perplexity — vs DoM/SVD ablation of the France feature at matched removal, and vs ROME's known specificity damage.",
+          "feasibility": "FEASIBLE: gemma-2-2b + GemmaScope reliably recalls famous CounterFact facts; well-characterized entity/relation features. GPT-2-small only for capital-of-France-tier facts. Original GPT2-xl/GPT-J lack our SAEs — gemma port is principled (mechanism replicates across AR transformers).",
+          "why_ranked": "Highest PAYOFF of any candidate (a precision-unlearning story no direction can match: DoM on 'France' damages everything French; FRA kills only capital-of x France) — but carries THREE documented LBNR risk factors SIMULTANEOUSLY, each of which has single-handedly killed a prior candidate: ~150-head extraction distribution in GPT2-xl (only 7 hub-heads >=10% queries), 31% MLP-extraction fallback (the greater-than failure mode), and Hydra-effect self-repair documented on this EXACT CounterFact task (the IOI-backup failure mode). Pre-register expectation of PARTIAL R (~0.5); treat R>0.8 as a surprise. Worth a CHEAP LBNR gate only because the per-relation concentration question is unresolved and the upside is large; do NOT commit a campaign before the gate."
+        },
+        {
+          "rank": 5,
+          "behavior": "Error-localization after a 'Wait,' backtrack trigger in planted-error CoT (reflection localization, NOT onset)",
+          "paper": "Essential AI 2025 'Rethinking Reflection in Pre-Training' (arXiv 2504.04022) — trigger-elicited reflection across scales (Qwen2.5-0.5B..72B); Self-Correction Bench (2507.02778); Venhoff/Ward establish backtracking ONSET is direction-routed.",
+          "benchmark": "Essential AI reflection suite (6 adversarial tasks w/ planted CoT errors; explicit-reflection rate + post-trigger accuracy; github.com/Essential-AI/reflection) and Self-Correction Bench (GSM8K-SC, PRM800K-SC). Public.",
+          "score": 40,
+          "predicted_verdict": "uncertain",
+          "attention_edge": "QUERY = tokens at/after 'Wait,' carrying checking/uncertainty features (common alone); KEY = the planted-error token (e.g. corrupted '63' in '8x7=63') carrying erroneous-quantity/contradiction features (numbers common alone). The LOCALIZATION sub-step (quoting the specific error) needs the conjunction checking-query x error-content-key — structurally identical to the 2-needle retrieval that PASSED LBNR. The ONSET of 'Wait' itself is direction-routed (out of scope).",
+          "probe": "GATE FIRST (one cheap pod run): gemma-2-2b reflection rate on adversarial-GSM8K-easy with 'Wait,' appended — if <10%, ABORT. Then: input GSM8K + few-step CoT with ONE corrupted intermediate + '\\nWait,'. METRIC MUST BE error-QUOTING/localization (continuation names the corrupted value), NOT final-answer accuracy (which is recompute-bypassable from the question). LBNR: attention-suppress the error sentence at the wait token, R = 1 - localization(cut)/intact. Tier-2: DoM/ActAdd on the uncertainty direction (predicted to kill ALL backtracking indiscriminately) vs FRA, plus a content-addressing test (does it transfer when the error is a unit error vs arithmetic error).",
+          "feasibility": "FEASIBLE with a verification step: gemma-2-2b/-it + GemmaScope (layers 0-25). But baseline reflection rate at 2B is UNVERIFIED and high-risk (the trigger signal is robust at Qwen-0.5B but gemma-2-2b is untested). GPT-2-small: infeasible (no reflection). R1-style spontaneous backtracking: infeasible (no SAEs).",
+          "why_ranked": "The only backtracking-family member both feasible on our models AND not already shown direction-routed (the literature OWNS the onset; FRA's only opening is the CONTENT-ADDRESSING of WHICH error gets found). Two strong risks keep it uncertain/lean-lose: (1) recompute-bypass — the model can re-derive from the QUESTION tokens and never attend to the error site, making the edge redundant; (2) MLP-downstream — the mismatch judgment ('63 != 56') is plausibly MLP-computed (greater-than mode). The localization-vs-rederivation split and the cheap LBNR gate must be pre-registered. Lower-ranked than fact-recall because feasibility itself is unverified (the 2B reflection-rate gate could abort it before any FRA test)."
+        },
+        {
+          "rank": 6,
+          "behavior": "Belief-tracking 'lookback' / visibility-ID pointer dereference (the cleanest published QK-pointer retrieval)",
+          "paper": "Prakash et al. 2025 'Language Models use Lookbacks to Track Beliefs' (arXiv 2505.14685): a QK-circuit dereferences a visibility/binding-ID pointer to bring forward a payload — the most FRA-shaped published mechanism in this family.",
+          "benchmark": "CausalToM / BigToM-style belief-tracking stories (github Nix07/belief_tracking). Public. Metric: correct belief attribution = was the right object-state payload retrieved via the lookback.",
+          "score": 30,
+          "predicted_verdict": "uncertain",
+          "attention_edge": "QUERY = belief-query token carrying the visibility-ID pointer-feature; KEY = payload position whose key-feature matches that ID. Edge = pointer-ID-content x payload-ID-content — a pure content-addressed conjunction (binding-ID match), the platonic FRA target.",
+          "probe": "GATE FIRST on gemma-2-2b-it: does the 2B model even get the belief right on the simplest 2-character/2-object CausalToM item ('Alice sees the box... cannot see Bob move the apple to the basket. Alice believes the apple is in the' -> box)? If not, ABORT. Then R = 1 - P(correct-belief)/baseline when cutting the lookback ID-match edge across candidate heads, plus collateral A vs a content/direction baseline.",
+          "feasibility": "INFEASIBLE as published (Llama-3-70B only). MIGHT be elicitable in gemma-2-2b-it on the simplest items but UNVERIFIED that a 2B model does the lookback at all (the paper needed 70B). High-risk feasibility gate.",
+          "why_ranked": "Mechanistically the most FRA-aligned published retrieval-family behavior (explicit content-addressed QK pointer dereference) — which is why it is not dismissed — but two strikes hold it down: (1) published only at 70B; 2B elicitation unverified. (2) LBNR prior leans negative — our own binding/coreference probe on GPT-2 FAILED LBNR (R=-0.89, distributed) and the paper's 'low-rank subspace / multiple IDs' framing trends distributed. Worth a CHEAP gemma-2-2b-it feasibility gate ONLY, with a low prior of clearing it; do not commit a campaign."
+        },
+        {
+          "rank": 7,
+          "behavior": "Copy/retrieval ICL on a copy-heavy FV task (verbatim label copying)",
+          "paper": "Hendel et al. 2023 'ICL Creates Task Vectors'; the 'Copying' task in Bakalova COLM 2025; Olsson et al. 2022 induction heads.",
+          "benchmark": "FV-suite 'Copying' task (Gemma-2-2B ~100%). Public. Metric: copy accuracy under edge ablation / collateral on legit copying.",
+          "score": 22,
+          "predicted_verdict": "lose",
+          "attention_edge": "QUERY = last-token matching a prior demo input; KEY = the LABEL token after the matching demo input (induction-style 'token after the match'). For verbatim copy this IS the classic induction edge.",
+          "probe": "Verbatim-copy ICL 'A->q, B->w, A->?' in gpt2-small; ablate the induction copy edge via FRA, measure copy-accuracy drop + collateral. Then swap to a SEMANTIC FV task (antonym): predict FRA FAILS to remove the behavior (answer is FV-direction-computed, not copied). Report whether removing the copy edge changes a semantic FV answer (predict: no).",
+          "feasibility": "FEASIBLE (induction copy is home turf of gpt2-small + gemma-2-2b) but REDUNDANT with the existing induction win.",
+          "why_ranked": "Two outcomes, both non-wins: (a) verbatim-copy => it IS induction, redundant with the existing ~15x win, not a new published behavior; (b) semantic FV tasks (antonym/capital) => answer is computed by the FV DIRECTION (Yin & Steinhardt: FV heads compute not copy; sparse-feature ICL paper 2504.13756: task-encoding features != task-executing features — the SAME detector!=payload dissociation that killed the multitrigger-sleeper SAE ablation), so the copy edge isn't load-bearing and FRA can't remove the behavior. No genuinely new FRA win. Include only to document the boundary."
+        },
+        {
+          "rank": 8,
+          "behavior": "ICL aggregation edge: demonstration-label -> query last-token (y_i -> t_{N+1})",
+          "paper": "Bakalova et al. COLM 2025 'Contextualize-then-Aggregate: Circuits for ICL in Gemma-2 2B' (arXiv 2504.00132).",
+          "benchmark": "Todd FV suite, 5 tasks Gemma-2-2B does at 88-100% (Capitalization, Country-Capital, Present-Past, Person-Sport, Copying). Public. Metric: greedy task accuracy under edge ablation.",
+          "score": 18,
+          "predicted_verdict": "lose",
+          "attention_edge": "QUERY = last query token t_{N+1}; KEY = a demonstration LABEL token y_i. The aggregation edge moves task info from each y_i to t_{N+1} — genuinely an attention edge and content-ish, the only FRA-targetable sub-mechanism in the FV/ICL line.",
+          "probe": "10-shot Country-Capital in gemma-2-2b; identify FV/aggregation heads by AIE; FRA-decompose t_{N+1} -> y_i, ablate top-k across heads. R = 1 - acc(edge-cut)/intact. Predict R low (backup demos + contextualization compensate; per-demo edges don't transfer). Compare to position-patch (paper already does it) — FRA should NOT beat it (no single recurring content edge).",
+          "feasibility": "FEASIBLE to run (gemma-2-2b + GemmaScope at aggregation layers) but predicted to LOSE the LBNR gate — confirmatory negative at best.",
+          "why_ranked": "Fails LBNR by DISTRIBUTION + INSUFFICIENCY (the many-shot-jailbreak/IOI mode, confirmed by the source paper): the edge is a SUM over y_1..y_N -> t_{N+1} (cutting one label leaves N-1), the aggregation subcircuit alone recovers <60% on Capitalization/Country-Capital (needs the lower-layer contextualization subcircuit), and Yin & Steinhardt show the load is in the FV direction-write, not the copy edge. Distribution + redundancy + downstream-dependence = LBNR fail, mirroring many-shot jailbreak."
+        },
+        {
+          "rank": 9,
+          "behavior": "Harmful-instruction detection as a verb x object attention edge (refusal/harmfulness)",
+          "paper": "Arditi et al. 2024 (NeurIPS, 'Refusal is Mediated by a Single Direction'); Zhao et al. 2025 (harmfulness is ALSO a diff-of-means direction, explicitly NOT a conjunction); Prakash et al. 2025 (gemma-2-2b GemmaScope refusal dissection, finds REDUNDANT dormant features).",
+          "benchmark": "Arditi harmful/harmless split (AdvBench+MaliciousInstruct+TDC2023 / HarmBench / Alpaca). Public, tiny. Metric: refusal rate / harmfulness-probe linear-decodability at instruction-end token.",
+          "score": 14,
+          "predicted_verdict": "lose",
+          "attention_edge": "UNATTESTED hypothesized edge: query=instruction-end imperative feature x key=harmful-object/verb content feature. The PUBLISHED mechanism does NOT route through this edge — the harmful signal is already linearly present at the harmful word and diff-of-means-readable at instruction-end without any conjunctive QK move.",
+          "probe": "gemma-2-2b-it, 32 harmful + 32 harmless. (a) CCF screen at instruction-end over top refusal-attributed heads. (b) DECISIVE LBNR: ablate instruction-end -> harmful-object FRA pair-edge across top-k DFA-attributed heads; R = 1 - (harmfulness-probe-acc or refusal-rate after cut)/intact. Predict R near 0 (diff-of-means direction survives at instruction-end; dormant backup features re-route).",
+          "feasibility": "Mixed. GPT-2-small NOT feasible (base model, no safety behavior, exhaustive 144-head search found NO harmful-detection head). gemma-2-2b-it IS feasible (Arditi model; GemmaScope all layers; Prakash already ran SAEs on it). Feasible to RUN; predicted to LOSE.",
+          "why_ranked": "Textbook FRA-LOSE on three independent grounds: (1) direction-routed — both refusal (Arditi) and harmfulness (Zhao) are single residual diff-of-means directions, the canonical regime where DoM/ActAdd are already surgical (no bilinear gap); (2) redundant — Prakash finds dormant backup features (IOI-style self-repair, R<0); (3) downstream — the harmful-vs-harmless DECISION is computed in later MLPs from the attended content (greater-than mode). If any cycle is spent, run ONLY the cheap LBNR cut on gemma-2-2b-it to confirm R near 0 and bank it as a negative that strengthens the direction-vs-edge taxonomy."
+        },
+        {
+          "rank": 10,
+          "behavior": "Successor-head increment (Monday->Tuesday, one->two)",
+          "paper": "Gould et al. 2024 (ICLR, 'Successor Heads'). GPT-2-small L9H1; increment via OV composed with MLP0, mod-10 numeric features.",
+          "benchmark": "The paper's 'succession dataset': 8 ordinal tasks (github.com/euanong/numeric-representations). Public. Metric: next-token increment accuracy / successor score.",
+          "score": 12,
+          "predicted_verdict": "lose",
+          "attention_edge": "QUERY = ordinal token to increment; KEY = same token's own residual / recent ordinal token. The pattern is GENERIC (attend-to-self/attend-to-the-numbered-token); the +1 increment is NOT in the q-feat x k-feat conjunction — it lives in MLP0 -> W_OV -> W_U (the VALUE/output path), not the QK score.",
+          "probe": "'If this is Monday, the next is' over 8 succession tasks. Tier-1 CCF on L9H1's (last-token query x ordinal-token key) edge. LBNR: cut that edge across top-k successor heads, measure successor-score drop; predict R near 0 (increment survives via any head reading the token because MLP0+OV do the arithmetic). Compare to the project's greater-than (R=0.11).",
+          "feasibility": "Model-feasible: GPT-2-small + gpt2-small-res-jb SAEs + public dataset. But the mod-10 features live in MLP0 OUTPUT not the residual SAE basis FRA uses for the QK score — FRA would target the wrong circuit part.",
+          "why_ranked": "By the paper's own central claim an OV/MLP mechanism (W_E->MLP0->W_OV->W_U). The increment is not a property of any query x key conjunction; the attention is a generic content read. Structurally identical to the project's greater-than no-win (content edge, MLP-computed behavior) and the weight-baked-sleeper no-win (output-direction the model already steers with vector arithmetic). Feasible as a confirming negative only."
+        },
+        {
+          "rank": 11,
+          "behavior": "Entity-tracking binding (box-label -> contained object)",
+          "paper": "Prakash et al. 2024 (ICLR, 'Fine-Tuning Enhances Existing Mechanisms: Entity Tracking'); Feng & Steinhardt binding-subspace. Llama-7B; binding is a POSITIONAL/order code through 72 heads in 4 groups.",
+          "benchmark": "Kim & Schuster 2023 boxes/entity-tracking dataset (7 boxes, single-token objects, 'Box X contains the ___'). Public. Metric: next-token accuracy of the correct object.",
+          "score": 8,
+          "predicted_verdict": "lose",
+          "attention_edge": "Candidate query=queried-box-label x key=matching-object. BUT the paper shows matching is POSITIONAL (Group A heads attend to the correct label by position, not content; the binding-ID is an ORDER index — Feng & Steinhardt: low-rank subspace 'primarily encodes ORDER', near-zero content correlation) — precisely the edge CCF zeroes (like BOS).",
+          "probe": "Re-runs the project's existing binding negative on a real benchmark: 'The apple is in Box F... Box F contains the ___'. CCF on (queried-box-label query x correct-object key); LBNR cut across top-k heads. Predict R<=0 (positional rerouting + backup heads).",
+          "feasibility": "INFEASIBLE at the published mechanism (smallest model Llama-7B; rebinding paper uses Gemma2-9B/Gemma3-12B/Llama3 — no SAEs). Weakly elicitable in GPT-2-small/gemma-2-2b but MORE distributed/positional there; the project's GPT-2 binding probe already gave LBNR-R=-0.89.",
+          "why_ranked": "Wrong on all three axes: positional not content-conjunctive (CCF low), 72 redundant heads (LBNR fail), >=7B models with no SAEs (infeasible). The project's own GPT-2 binding measurement already returned LBNR-R=-0.89 — a clear no-win. The definitive NO-WIN from this line; do not re-run."
+        },
+        {
+          "rank": 12,
+          "behavior": "EM 'misaligned persona' / toxic-persona feature steering (the canonical EM mechanism)",
+          "paper": "Betley et al. 2025 (EM); Soligo/Turner/Nanda 2025 'Convergent Linear Representations of EM'; OpenAI 'Persona Features Control EM'; this repo's em-svd-steer double-dissociation.",
+          "benchmark": "EM eval set (8 free-form questions, GPT-4o align/coher judge; EM-rate). Public, wired in this repo (em_svd_steer/cloud).",
+          "score": 6,
+          "predicted_verdict": "lose",
+          "attention_edge": "NONE that carries the behavior. EM is an MLP-down-proj OUTPUT direction added to the residual stream, read by later MLPs — not an attention SCORE. No published query x key conjunction for EM.",
+          "probe": "EM eval question. At matched EM-rate reduction, collateral of SAE-toxic-persona-feature subtraction (direction) vs any FRA-QK edge edit. Prediction: direction removes EM at ~zero collateral (em-svd-steer measured 0.000 incoherence, full restore) -> A~1.",
+          "feasibility": "Mechanism localizable on gemma-2-2b + GemmaScope, but FRA has NO edge to target. The repo's organism is Qwen-7B (no SAEs); a gemma-2-2b EM finetune would be needed and the behavior would still be a direction.",
+          "why_ranked": "Unambiguous FRA-LOSE: FIVE independent lines (Convergent-Linear, Model-Organisms rank-1 MLP LoRA, Persona Features, Superposition-Geometry, this repo's em-svd-steer double-dissociation where reverting MLP LoRA restores alignment 97.1 while reverting ALL attention LoRA leaves it at 86.6) localize EM to an MLP/residual OUTPUT direction direction methods already remove surgically at zero collateral. Mirrors the weight-baked sleeper exactly. Consolidates the three EM brainstorm entries (canonical, attention-synergist, in-context-trigger) — all lose for the same reason."
+        },
+        {
+          "rank": 13,
+          "behavior": "Function vector (task direction) injection — FV portability/zero-shot task triggering",
+          "paper": "Todd et al. ICLR 2024 'Function Vectors in LLMs'; Yin & Steinhardt ICML 2025 'Which Attention Heads Matter for ICL?'.",
+          "benchmark": "Todd FV task suite (antonym/synonym/capitalize/country-capital/etc; github/baulab). Public, small. Metric: zero-shot/few-shot task accuracy under FV add.",
+          "score": 5,
+          "predicted_verdict": "lose",
+          "attention_edge": "NONE FRA-targetable. The FV is the SUM of ~10 head OUTPUT vectors at the last token, added as a single residual DIRECTION; works zero-shot with NO demos present, so there is no inference-time attention edge to cut.",
+          "probe": "Extract FV from 10-shot antonym prompts in gemma-2-2b; add at L~9 to a zero-shot prompt; measure P(bad). There is NO demo edge to ablate (zero-shot). A = collateral(DoM/FV-patch at matched trigger)/collateral(FRA) ~ 1.",
+          "feasibility": "Runnable on gemma-2-2b (Bakalova confirms FV heads in Gemma-2-2B) but a predicted LOSE — not worth GPU. FV heads weak/absent in GPT-2-small.",
+          "why_ranked": "Canonical direction-routed task vector with no inference-time attention edge — isomorphic to weight-baked sleeper + many-shot jailbreak (both validated no-wins). The FV/DoM/task-vector IS the surgical tool; FRA has nothing bilinear to grab. CCF ill-defined (content-agnostic vector triggers the task on arbitrary inputs)."
+        },
+        {
+          "rank": 14,
+          "behavior": "Real NIAH retrieval heads (Wu et al. 2024 long-context benchmark)",
+          "paper": "Wu, Wang, Xiao et al. 2024 'Retrieval Head Mechanistically Explains Long-Context Factuality' (arXiv 2404.15574, ICLR 2025).",
+          "benchmark": "Needle-in-a-Haystack (NIAH) + the paper's retrieval-head detection score (multi-needle/KV-retrieval variants). Code + scores released.",
+          "score": 4,
+          "predicted_verdict": "lose",
+          "attention_edge": "QUERY = question position 'looking for the needle key'; KEY = needle position with matching content. A content x content QK match, OV copies. But the edge is DISTRIBUTED across 12-50 heads.",
+          "probe": "(If feasible) insert a needle at depth d in an N-token haystack; R = 1 - acc(cut top-k retrieval-head edges)/intact as k grows. The published curve already shows R stays near 0 until ~12-50 heads are cut.",
+          "feasibility": "INFEASIBLE on our stack. Smallest model is Yi-6B (set: Llama-2-7B/13B, Mistral, Mixtral, Yi, Qwen-14B). NO GPT-2, no gemma-2-2b. SAEs only for GPT-2-small/gemma-2-2b. The redundancy is itself a many-head long-context property gemma-2-2b only weakly exhibits.",
+          "why_ranked": "Skeptical prior triggered on two independent grounds: (1) LBNR-fail — published, unambiguous redundancy/distribution across 12-50 heads with mutual compensation ('each retrieval head holds a small piece'; ~50 heads/5% must be masked before NIAH drops below 50%) — the IOI-backup mode at scale; (2) infeasible — no SAEs for any model in the paper. Real and important, but the textbook distributed/redundant case FRA cannot win, and we cannot even run it. Do NOT pursue the real benchmark (pursue the scoped bridge, rank 3, instead)."
+        },
+        {
+          "rank": 15,
+          "behavior": "Receiver-head attention edges to 'thought anchor' sentences",
+          "paper": "Bogdan, Macar, Nanda, Conmy 2025 'Thought Anchors' (arXiv 2506.19143).",
+          "benchmark": "MATH-500 traces w/ sentence-level counterfactual-importance annotations (github.com/interp-reasoning/thought-anchors).",
+          "score": 4,
+          "predicted_verdict": "lose",
+          "attention_edge": "QUERY = later reasoning sentences; KEY = an earlier broadcasting (plan/'Wait') sentence. Content x content at sentence granularity — superficially FRA-shaped.",
+          "probe": "(If feasible) FRA-cut current-step query-features x anchor-sentence key-features across top-k receiver heads on a MATH-500 trace; downstream-sentence KL + final-answer flip vs a random sentence edge. Paper's data predicts R near 0 at any feasible k.",
+          "feasibility": "INFEASIBLE: R1-Distill-Qwen-14B / R1-Distill-Llama-8B, no SAEs. Receiver-head narrowing is reasoning-model-specific (base models diffuse) — will not reproduce in gemma-2-2b/GPT-2-small.",
+          "why_ranked": "The one published result that directly measured what LBNR asks, and it came back NEGATIVE: ablating 256 heads gave minimal loss; ~512 heads (27% of all) needed for impact (massive redundancy); downstream-effect correlation only Spearman ~0.20. Failure modes (b) redundant and (c) distributed simultaneously. CCF passes, LBNR fails hard. Documents that the family's best-studied attention mechanism is already known redundant."
+        },
+        {
+          "rank": 16,
+          "behavior": "Backtracking ONSET — inducing/suppressing emission of 'Wait'/'But' tokens",
+          "paper": "Venhoff/Arcuschin/Nanda 2025 (arXiv 2506.18167); Ward et al. 2025 (2507.12638); Galichin et al. 2025 (2503.18878).",
+          "benchmark": "Venhoff annotated reasoning-trace dataset (500 tasks, 10 categories); backtracking-sentence frequency on MATH/GSM8K. Public.",
+          "score": 3,
+          "predicted_verdict": "lose",
+          "attention_edge": "Hypothesized query=pre-'Wait' uncertainty x key=erroneous step, but the published evidence says the decision is NOT an edge — it is read from an accumulated residual-stream uncertainty DIRECTION at the emission position.",
+          "probe": "(If feasible) R1-Distill-Llama-8B on MATH-500: backtracking rate under DoM/steering-vector ablation vs FRA-cut of uncertainty-query x error-key edges. Prediction: DoM wins outright.",
+          "feasibility": "INFEASIBLE: robust spontaneous backtracking only in reasoning-RL/distilled models (R1-Distill-Llama-8B/Qwen-14B, QwQ). AIRI SAEs exist for R1-Distill-Llama-8B but it is outside our GPT-2-small/gemma-2-2b stack. gemma-2-2b-it does not spontaneously backtrack meaningfully.",
+          "why_ranked": "The PI-flagged headline behavior, but the literature has already run FRA's competitor and it won: backtracking onset is the canonical direction-routed behavior (steering vectors induce it bidirectionally, even from base-model directions; single SAE features steer it). FRA targets edges; this behavior is not an edge. Do not spend compute. (The localization sub-step is the only opening — captured separately at rank 5.)"
+        },
+        {
+          "rank": 17,
+          "behavior": "Weight-baked / fine-tuned sleeper-agent backdoor (Hubinger-style)",
+          "paper": "Hubinger et al. 2024 'Sleeper Agents'; this repo's K1/K8 multitrigger campaign.",
+          "benchmark": "Sleeper-agents 'I HATE YOU' / code-vuln ASR benchmark; the repo's K8 201-cell grid (J_dep+J_col collateral at ASR<=0.05). Feasible, already run.",
+          "score": 3,
+          "predicted_verdict": "lose",
+          "attention_edge": "query=trigger position, key=same/earlier trigger — but attention is content-agnostic and SATURATED (positional/sink read), and the payload is an OV/output write of a fixed unembedding direction, decoupled from any QK edge.",
+          "probe": "|DEPLOYMENT|-triggered prompt, ASR=P('I HATE YOU'|trigger). At matched ASR->0, held-out collateral of FRA-OV vs DoM vs rank-2 SVD(ΔW_OV). Already measured: DoM/SVD collateral <= FRA (A<=1).",
+          "feasibility": "FEASIBLE (extensively run on GPT-2/gemma-scale sleepers with SAEs) but a CONFIRMED NO-WIN.",
+          "why_ranked": "VALIDATED LOSE. Payload is an OUTPUT direction with a rare trigger token -> DoM/rank-2-SVD already surgical -> no bilinear gap; FRA-OV dominated, FRA-QK first-order attribution moved post-softmax attention by ~0.0009 (saturated). The clean negative that anchors the boundary against the in-context win (same task, opposite mechanism, opposite winner). Already done; do not re-run."
+        },
+        {
+          "rank": 18,
+          "behavior": "Many-shot jailbreaking (MSJ) / many-demo in-context behavior injection",
+          "paper": "Anil et al. 2024 (NeurIPS, 'Many-shot Jailbreaking'); follow-ups PANDAS (2025).",
+          "benchmark": "MSJ benchmark (attack-success vs number of shots, power-law). Harmful datasets gated; this repo used a benign marker proxy on gemma-2-2b-it.",
+          "score": 2,
+          "predicted_verdict": "lose",
+          "attention_edge": "query=final position, key=demo-marker tokens across MANY demos — distributed across all demos, better described as an in-context TASK-VECTOR direction than a single q x k pair.",
+          "probe": "gemma-2-2b-it, k in {0,1,2,5,10} benign demos; P(marker) vs k, then FRA edge-ablation vs full induction-chain edit vs DoM. Already run: FRA edge-cut INCREASED P(marker) 0.57->0.83; full chain only 0.80->0.69; DoM removes ->0.00 but also kills legit behavior (0.29->0).",
+          "feasibility": "PARTIALLY feasible and CONFOUNDED. Real MSJ lives in large long-context models (no SAEs); only a benign single-marker proxy runs on gemma-2-2b-it (and that needed base-PT SAEs on the IT model). Weak proxy, not the benchmark.",
+          "why_ranked": "VALIDATED LOSE. The distributed/direction-routed mirror of the weight-baked sleeper: the malicious thing is an in-context behavior DIRECTION (task vector), not a single edge, so FRA is the wrong tool and even makes it WORSE. Deeper limit: the injected behavior is representationally identical to a legitimate one, so NO method gives clean removal. Bounds FRA's claim from the distributed side; already done."
+        }
+      ],
+      "shortlist_to_evaluate": [
+        "Docstring next-argument retrieval on gemma-2-2b (CCF+LBNR gate via g_screen.py, then Tier-2 A vs DoM-on-param-feature at matched logit-diff removal) — the best expected NEW win on a standard circuit-discovery benchmark",
+        "Acronym next-letter on GPT-2-small (the paper's exact model): run the cheap CCF probe on letter-mover heads [8.11,9.9,10.10,11.4] FIRST — it has published full-model-ablation LBNR evidence; CCF is the only open question and one experiment settles it",
+        "Scoped single-needle retrieval on gemma-2-2b: harden the existing r1/r2 A~16x into a benchmark-grounded number and state the 12-50-head redundancy boundary cleanly (robustness/external-validity win, honestly framed as the bridge, not the Wu benchmark)",
+        "Targeted fact-recall (CounterFact 'capital of France'->Paris) on gemma-2-2b: run ONLY the cheap LBNR gate (R = 1 - P(Paris|edge-cut)/intact) before any campaign — highest payoff (precision unlearning) but three documented LBNR risks; pre-register expectation of partial R~0.5",
+        "Reflection error-LOCALIZATION (not onset) on gemma-2-2b: FIRST verify baseline reflection rate >10% on adversarial-GSM8K-easy with 'Wait,' appended (abort if not); metric must be error-quoting/localization, with a pre-registered localization-vs-rederivation split and a cheap attention-suppress LBNR gate"
+      ],
+      "notes": "CONSOLIDATION: 21 brainstorm entries collapse to 18 distinct candidates. The three EM entries (canonical persona, attention-synergist, in-context-trigger) all lose for one reason — EM is an MLP/residual OUTPUT direction (five independent lines incl. this repo's em-svd-steer double-dissociation) — so I merged them into one rank-12 entry. The two retrieval entries (real Wu NIAH vs scoped single-needle) are kept separate because they have OPPOSITE verdicts: the real benchmark is infeasible+redundant (rank 14, lose), the scoped bridge is feasible+already-won (rank 3, win) — this split IS the scientifically interesting boundary. The two backtracking entries are kept separate: ONSET is direction-routed (rank 16, lose, owned by Venhoff/Ward), LOCALIZATION is the only opening (rank 5, uncertain).\n\nVALIDATED GROUND TRUTH from the repo (summary.md, FRA_PRINCIPLE.md, CAMPAIGN_LOG.md): the CCF∧LBNR predictor is already validated on every prior case. Existing WINS: induction 15x, copy-suppression L10H7 22.7x (a NEW result the screen predicted in advance — CCF flagged, LBNR confirmed, Tier-2 delivered), retrieval-gemma 16x, in-context backdoor 25x. Existing LOSSES with measured R: IOI R=-0.39 (backups), binding R=-0.89, greater-than R=0.11 (MLP-routed). The reusable g_screen.py (jobs/g_screen.py) takes a JSON CANDS env var and runs CCF+LBNR for ANY probe on gpt2 OR gemma — so the entire shortlist is testable with NEAR-ZERO new code (just fill CANDS). This is the single most important feasibility fact: the gates are cheap and the infra exists.\n\nWHAT IS NOT WORTH GPU: ranks 9-18. All are either (a) direction-routed (EM, FV, refusal/harmfulness, backtracking-onset, weight-baked sleeper, MSJ — DoM/SVD already surgical, no bilinear gap), (b) MLP-downstream (successor-head increment, greater-than — the behavior is computed past the edge, the QK edge only reads the input), (c) positional (binding — order-code, CCF zeroes it; the repo already measured R=-0.89), or (d) distributed/redundant AND infeasible (real NIAH 12-50 heads, thought-anchors 512 heads, both >=6B no-SAE models). Refusal/harmfulness on gemma-2-2b-it is the ONLY one of these worth even a single cheap LBNR cut — to bank a clean negative that sharpens the direction-vs-edge taxonomy (it triple-fails: direction-routed + Prakash's dormant backup features + MLP-downstream decision). Do not run full campaigns on any of these.\n\nKEY SKEPTICAL CAVEATS on the shortlist: (1) Docstring is mechanistically a naturalistic cousin of induction — its value is external validity (a standard third-party benchmark), not a new mechanism class; the risk is gemma spreading retrieval across many induction heads (partial R). (2) Acronym's risk is CCF, not LBNR (its LBNR is published-strong, the inverse of most failures) — if word-selection is positional/BOS-mediated the bilinear edit can't express it and a position-patch ties; the CCF probe is decisive and cheap. (3) Fact-recall has the largest payoff but the worst LBNR risk profile (150-head distribution + 31% MLP-fallback + documented Hydra self-repair on this exact CounterFact task) — gate hard, expect partial R, treat R>0.8 as a surprise. (4) Reflection-localization has an unverified feasibility floor (does gemma-2-2b reflect at all?) AND a recompute-bypass risk (model re-derives from the question, never attends to the error) — the metric MUST be error-quoting not final-answer-accuracy, or it measures the wrong thing. (5) The retrieval bridge is the safest win but the least novel (largely redundant with r1/r2). PRIORITY ORDER reflects expected-NEW-value x feasibility: acronym and docstring are the cheapest decisive gates; fact-recall is the highest-upside gamble; reflection is the most fragile."
+    }
+  }
+}

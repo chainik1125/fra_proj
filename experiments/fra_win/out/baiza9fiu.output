@@ -1,0 +1,20 @@
+OK
+submitted job=acronym_steer3
+=== job acronym_steer3 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+base P(O)=0.617; FRA(c=4) on-target 0.023
+STEER sweep: {1: 0.365, 2: 0.117, 4: 0.001, 8: 0.0}
+DECISIVE (matched: FRA 0.023 vs STEER a=4 0.001): legit-Officer KL FRA -0.0000 | STEER 2.6360 => FRA 26359.8x more separable
+
+DONE acronym_steer3
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 22:38 .
+drwxr-xr-x@ 58 dmitrymanning-coe  wheel  1856 Jun 10 22:38 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   188 Jun 10 22:38 acronym_steer3.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel   637 Jun 10 22:38 out.log

@@ -1,0 +1,30 @@
+PARSE OK
+submitted job=synth_hier1
+=== job synth_hier1 output landed (poll 3) ===
+build OK: rho_bar=0.106 att_gap=[0.19544754922389984, 0.10769186913967133, 0.1351357102394104, 0.1399661749601364] dir_gap=[0.02280845120549202, 0.022362807765603065, 0.022317875176668167, 0.024731317535042763]
+alpha=0: alpha_hat(pf)=0.00 | cell_removal=0.00 (collatY 0.00) | DoM_removal=1.05 (collatY 1.02)
+alpha=0.25: alpha_hat(pf)=0.12 | cell_removal=0.00 (collatY 0.00) | DoM_removal=1.06 (collatY 1.05)
+alpha=0.5: alpha_hat(pf)=0.18 | cell_removal=0.01 (collatY 0.01) | DoM_removal=1.09 (collatY 1.12)
+alpha=0.75: alpha_hat(pf)=0.06 | cell_removal=0.00 (collatY 0.03) | DoM_removal=1.32 (collatY 1.81)
+alpha=1.0: alpha_hat(pf)=1.66 | cell_removal=-0.02 (collatY 0.16) | DoM_removal=0.90 (collatY 0.94)
+
+=== SELECTIVITY @ alpha=1 (R_X | collat_Y | persona-style change) ===
+  cell       R_X=-0.02  collat_Y=0.16  style_chg=0.00
+  dom_un     R_X=0.90  collat_Y=0.94  style_chg=1.02
+  dom_gated  R_X=0.90  collat_Y=0.94  style_chg=1.02
+  keyrm      R_X=2.39  collat_Y=12.80  style_chg=0.00
+  head       R_X=-0.03  collat_Y=1.00  style_chg=0.00
+  edge       R_X=2.40  collat_Y=0.63  style_chg=0.00
+
+=== MIXED-PROMPT X&Y (alpha=1): (X-removal, Y-collateral) per method ===
+  cell       X-removal=-0.03  Y-collateral=0.11  
+  dom_gated  X-removal=0.47  Y-collateral=0.95  <- couples X~Y
+  head       X-removal=-0.34  Y-collateral=1.00  <- couples X~Y
+  edge       X-removal=2.25  Y-collateral=0.62  <- couples X~Y
+
+DONE synth_hier1
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 16:13 .
+drwxr-xr-x@ 67 dmitrymanning-coe  wheel  2144 Jun 11 16:13 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1431 Jun 11 16:13 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2366 Jun 11 16:13 synth_hier1.json

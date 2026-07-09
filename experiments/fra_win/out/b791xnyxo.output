@@ -1,0 +1,23 @@
+=== job j4 output landed (poll 7) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+targets [3, 5, 6, 8, 9, 10, 11, 13] base_t 0.913
+
+FRA (supp, collat, c): [(0.08, 0.009, 1), (0.31, 0.021, 2), (0.56, 0.034, 4), (0.74, 0.045, 8), (0.78, 0.068, 16), (0.8, 0.121, 32)]
+ActAdd-X (supp, collat, s): [(0.07, 0.007, 0.25), (0.35, 0.027, 0.5), (1.0, 0.068, 1), (1.0, 0.029, 2), (1.0, 0.033, 4), (1.0, 0.064, 8)]
+random-pair (supp, collat, c): [(0.0, 0.0, 1), (0.0, 0.0, 2), (0.0, 0.0, 4), (0.0, 0.0, 8), (0.0, 0.0, 16), (0.0, 0.0, 32)]
+oracle (supp,collat): (0.8509639238849908, 0.03445520518686284)
+head-ablate-all (supp,collat): (0.9065174022355588, 0.6602730536033463)
+
+DONE j4
+total 120
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 01:01 .
+drwxr-xr-x@ 6 dmitrymanning-coe  wheel    192 Jun 10 01:01 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   1599 Jun 10 01:01 j4.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  51021 Jun 10 01:01 j4_pareto.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel    987 Jun 10 01:01 out.log

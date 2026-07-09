@@ -1,0 +1,42 @@
+=== job ic4 output landed (poll 5) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+bank->river ASR 0.97:
+  fra  : [(0.04, 0.0), (0.54, 0.01), (0.84, 0.01), (0.81, 0.01), (0.81, 0.02)]
+  dom  : [(0.04, 0.27), (0.99, 1.21), (1.0, 3.4), (1.0, 6.66), (1.0, 11.03), (1.0, 17.74)]
+  conv : [(0.08, 0.39), (1.0, 1.13), (1.0, 2.45), (1.0, 5.68), (1.0, 9.54), (1.0, 13.96)]
+  pay  : [(0.98, 2.87), (1.0, 7.81), (1.0, 20.69), (1.0, 55.14), (1.0, 147.79)]
+fire->water ASR 0.99:
+  fra  : [(0.31, 0.14), (0.86, 0.21), (0.94, 0.23), (0.94, 0.24), (0.93, 0.25)]
+  dom  : [(0.02, 0.74), (0.99, 3.43), (1.0, 15.59), (1.0, 26.46), (1.0, 36.66), (1.0, 45.72)]
+  conv : [(0.01, 6.65), (1.0, 12.79), (1.0, 15.77), (1.0, 20.14), (1.0, 27.11), (1.0, 36.51)]
+  pay  : [(0.97, 2.22), (1.0, 6.21), (1.0, 17.79), (1.0, 57.06), (1.0, 176.42)]
+king->crown ASR 0.99:
+  fra  : [(0.77, 0.01), (1.0, 0.02), (1.0, 0.03), (0.99, 0.03), (0.98, 0.02)]
+  dom  : [(0.02, 0.19), (1.0, 2.81), (1.0, 13.98), (1.0, 19.07), (1.0, 27.57), (1.0, 40.4)]
+  conv : [(0.15, 3.12), (1.0, 8.44), (1.0, 10.0), (1.0, 13.85), (1.0, 21.24), (1.0, 32.36)]
+  pay  : [(0.99, 5.97), (1.0, 15.2), (1.0, 37.41), (1.0, 93.96), (1.0, 242.58)]
+doctor->patient ASR 0.89:
+  fra  : [(0.11, 0.01), (0.88, 0.03), (0.93, 0.05), (0.92, 0.06), (0.92, 0.06)]
+  dom  : [(0.28, 0.23), (1.0, 1.47), (1.0, 8.01), (1.0, 10.81), (1.0, 15.61), (1.0, 25.89)]
+  conv : [(0.27, 1.61), (0.99, 5.56), (1.0, 9.21), (1.0, 11.6), (1.0, 15.06), (1.0, 23.16)]
+  pay  : [(0.99, 5.41), (1.0, 13.58), (1.0, 32.78), (1.0, 78.45), (1.0, 180.36)]
+
+=== in-context backdoor, held-out collateral @ 80% ASR-suppression (n=4) ===
+  FRA-QK (attention edge)           : 0.068 ± 0.080 (n=4)
+  DoM (mean-diff, K8 winner)        : 1.829 ± 0.786 (n=4)
+  conv-SAE (act-diff gated, K8)     : 6.055 ± 3.870 (n=4)
+  payload-suppress (output)         : 4.119 ± 1.602 (n=4)
+
+DONE ic4
+total 192
+drwxr-xr-x@  5 dmitrymanning-coe  wheel    160 Jun 10 13:51 .
+drwxr-xr-x@ 19 dmitrymanning-coe  wheel    608 Jun 10 13:51 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   7641 Jun 10 13:51 ic4.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  83687 Jun 10 13:51 ic4_full.png
+-rw-r--r--@  1 dmitrymanning-coe  wheel   2188 Jun 10 13:51 out.log

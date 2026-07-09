@@ -1,0 +1,34 @@
+wrote copy_supp_corpus.py
+OK
+submitted job=copy_supp_corpus
+=== job copy_supp_corpus output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+  suppression[wolf] = +1.02 (logit 16.57->17.59 on edge-cut)
+  suppression[coffee] = +0.99 (logit 18.20->19.18 on edge-cut)
+  suppression[ship] = +0.09 (logit 27.39->27.48 on edge-cut)
+  suppression[key] = +1.78 (logit 21.36->23.14 on edge-cut)
+  suppression[roses] = +1.13 (logit 23.77->24.90 on edge-cut)
+  suppression[mountain] = +0.07 (logit 21.69->21.76 on edge-cut)
+  suppression[books] = +1.47 (logit 18.32->19.79 on edge-cut)
+  suppression[knife] = +0.18 (logit 28.53->28.71 on edge-cut)
+
+--- ON-TARGET (wolf): intact 16.57 | edge-cut(oracle) 17.59 ---
+  FRA(c=8) logit -> 17.76   head-ablate -> 16.59
+
+--- COLLATERAL: |logit change| on OTHER tokens (want ~0) ---
+  FRA: 0.000   head-ablate: 0.517   A = 516.6x
+
+--- TRANSFER (wolf new context): intact 16.34 edge-cut(oracle) 17.95 FRA(same pairs) 18.10 ---
+
+DONE s3
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 00:19 .
+drwxr-xr-x@ 65 dmitrymanning-coe  wheel  2080 Jun 11 00:19 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1221 Jun 11 00:19 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   718 Jun 11 00:19 s3.json

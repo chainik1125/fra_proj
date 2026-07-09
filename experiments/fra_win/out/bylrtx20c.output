@@ -1,0 +1,27 @@
+=== job j7 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+cue ' war': supp F/Id/Ky=0.53/0.04/0.30 | non-induction-pos KL  FRA 0.000  ActAdd-id 0.715  ActAdd-key 0.000
+cue ' city': supp F/Id/Ky=0.59/0.14/0.24 | non-induction-pos KL  FRA 0.000  ActAdd-id 0.533  ActAdd-key 0.000
+cue ' water': supp F/Id/Ky=0.42/0.60/0.37 | non-induction-pos KL  FRA 0.000  ActAdd-id 0.560  ActAdd-key 0.000
+cue ' money': supp F/Id/Ky=0.21/0.86/0.59 | non-induction-pos KL  FRA 0.000  ActAdd-id 1.139  ActAdd-key 0.000
+cue ' market': supp F/Id/Ky=0.64/0.59/0.55 | non-induction-pos KL  FRA 0.000  ActAdd-id 0.300  ActAdd-key 0.000
+
+=== n=5 cues, matched ~50% induction suppression ===
+COLLATERAL at NON-induction cue positions (pure collateral, want 0):
+  FRA-QK      : 0.000 ± 0.000
+  ActAdd-id   : 0.649 ± 0.278
+  ActAdd-key  : 0.000 ± 0.000
+
+DONE j7
+total 96
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 01:13 .
+drwxr-xr-x@ 9 dmitrymanning-coe  wheel    288 Jun 10 01:13 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   2335 Jun 10 01:13 j7.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  39710 Jun 10 01:13 j7_keyside.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   1175 Jun 10 01:13 out.log

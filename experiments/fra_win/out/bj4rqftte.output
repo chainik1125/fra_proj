@@ -1,0 +1,22 @@
+OK
+submitted job=synth_hier4
+=== job synth_hier4 output landed (poll 2) ===
+baseline mixed-prompt misaligned mass: X=0.133 Y=0.154 ; persona-off X=0.115 Y=0.114
+  naive_cell     mX=0.032 mY=0.777 | X-removal=5.77 Y-collateral=15.61 <- couples/collateral
+  redirect_cell  mX=0.000 mY=0.139 | X-removal=7.63 Y-collateral=0.38 
+  gated_dom      mX=0.115 mY=0.114 | X-removal=1.00 Y-collateral=1.00 <- couples/collateral
+  edge_oracle    mX=0.000 mY=0.285 | X-removal=7.64 Y-collateral=3.29 <- couples/collateral
+
+  redirect-strength sweep (Rdir): X-removal, Y-collateral
+    Rdir=  0: X-rem=5.77 Y-col=15.61
+    Rdir=  2: X-rem=5.78 Y-col=15.57
+    Rdir=  6: X-rem=6.25 Y-col=13.44
+    Rdir= 12: X-rem=7.63 Y-col=0.38
+    Rdir= 24: X-rem=7.64 Y-col=3.87
+
+DONE synth_hier4
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 16:26 .
+drwxr-xr-x@ 70 dmitrymanning-coe  wheel  2240 Jun 11 16:26 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   693 Jun 11 16:26 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1249 Jun 11 16:26 synth_hier4.json

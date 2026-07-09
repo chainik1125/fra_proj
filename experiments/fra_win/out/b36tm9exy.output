@@ -1,0 +1,15 @@
+compile OK
+pushed
+[OK] rs-gatepool -> 907x6v6jb9o2f4
+[gp poll 1 22:58Z] not done
+[gp poll 2 22:59Z] not done
+[gp poll 3 23:01Z] not done
+[gp poll 4 23:02Z] not done
+[gp poll 5 23:03Z] not done
+=== GATE-POOLING SWEEP (blind FRA, fp=all intervention) ===
+  gate=trigger  best: (0.00, 0.093) K=8 c=3
+    top12: [1066, 730, 1558, 1739, 1468, 498, 210, 1276, 604, 1654, 894, 521]
+  gate=prompt   best: (0.00, 0.219) K=16 c=2.25
+    top12: [521, 1066, 203, 730, 1687, 1558, 1749, 1490, 882, 1739, 1468, 498]
+  gate=all      best: (0.00, 0.198) K=24 c=2.25
+    top12: [521, 2005, 102, 1389, 1066, 848, 203, 1899, 730, 1687, 569, 1558]

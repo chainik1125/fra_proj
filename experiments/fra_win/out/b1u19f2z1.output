@@ -1,0 +1,24 @@
+PARSE OK
+submitted job=shared_endpoint_t2
+=== job shared_endpoint_t2 output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.51it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.36it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.04it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+base: P(frog|red-query)=0.199  P(frog|blue-query)=0.095
+
+ON-TARGET (red-query): base 0.199 -> FRA(c=4) 0.083 | steer(a=1) 0.006
+SIBLING (blue-query, SAME edit; want PRESERVED near base 0.095):
+  FRA 0.046 (Δ 0.050) | content-gated STEER 0.000 (Δ 0.095)
+  => sibling separability A = 1.9x (FRA preserves blue's frog where the steer destroys it)
+
+VERDICT: FRA query-feature GENERIC (also hits blue) -> conjunction recurs, advantage collapses (theory-predicted)
+
+DONE shared_endpoint_t2
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 23:13 .
+drwxr-xr-x@ 60 dmitrymanning-coe  wheel  1920 Jun 10 23:13 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1335 Jun 10 23:13 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   273 Jun 10 23:13 shared_endpoint_t2.json

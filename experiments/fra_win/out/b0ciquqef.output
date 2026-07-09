@@ -1,0 +1,35 @@
+s1 parses OK
+submitted job=s1
+submitted; waiting (pod still bootstrapping ~5-10min)
+=== job s1 output landed (poll 7) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+=== CCF SCREEN (gpt2-small) — anchors + candidates ===
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+  CCF=0.989  attn=0.92  heads=[(5, 5), (6, 9), (5, 1), (7, 2), (7, 10)]   induction [ANCHOR+]
+  CCF=0.000  attn=0.98  heads=[(7, 2), (7, 10), (5, 1), (9, 9), (10, 6)]   BOS-attention [ANCHOR-]
+  CCF=0.951  attn=0.62  heads=[(10, 7), (9, 6), (9, 9), (11, 10), (10, 1)]   IOI name-mover [circuit-attr]
+  CCF=0.984  attn=0.92  heads=[(10, 7)]   copy-suppression L10H7 [cand#2]
+  CCF=0.986  attn=0.93  heads=[(7, 10), (5, 1), (10, 7), (6, 9), (7, 2)]   copy-suppression auto [cand#2]
+  CCF=0.905  attn=0.38  heads=[(5, 1), (10, 7), (8, 6), (5, 5), (10, 4)]   binding/coref [reasoning]
+  CCF=0.965  attn=0.83  heads=[(5, 5), (9, 1), (7, 10), (5, 0), (6, 9)]   greater-than [reasoning]
+
+=== SUMMARY (sorted by CCF; judge vs induction-high / BOS-zero anchors) ===
+  CCF=0.989  attn=0.92   induction [ANCHOR+]
+  CCF=0.986  attn=0.93   copy-suppression auto [cand#2]
+  CCF=0.984  attn=0.92   copy-suppression L10H7 [cand#2]
+  CCF=0.965  attn=0.83   greater-than [reasoning]
+  CCF=0.951  attn=0.62   IOI name-mover [circuit-attr]
+  CCF=0.905  attn=0.38   binding/coref [reasoning]
+  CCF=0.000  attn=0.98   BOS-attention [ANCHOR-]
+
+DONE s1
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 18:15 .
+drwxr-xr-x@ 39 dmitrymanning-coe  wheel  1248 Jun 10 18:15 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1583 Jun 10 18:15 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2065 Jun 10 18:15 s1.json

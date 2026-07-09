@@ -1,0 +1,27 @@
+=== job j2 output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+baseline copy-prob: mean 0.730 per-edge [0.03, 0.54, 0.7, 0.89, 0.17, 0.83, 0.85, 0.38, 1.0, 0.95, 0.91, 0.89, 0.22, 0.98, 0.85, 0.84, 0.99, 0.86, 1.0, 0.61, 0.47, 0.82, 1.0]
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+
+SURGICAL ABLATION (top-3 FRA pairs/edge), content-addressed:
+  mean frac of edge-score removed: 0.20
+  target Δcopyprob (diag):   mean -0.001  (want strongly negative)
+  collateral |Δ| (off-diag): mean 0.000  (want ~0)
+  selectivity ratio |diag|/offdiag: 3.9x
+
+BASELINE mean-ablate head L5H5: copy-prob mean 0.688 (Δ -0.042); this is the 'kill all' point (collateral=everything)
+
+ORACLE position-patch (zero edge): target Δ mean -0.009 (selective but not content-addressed/deployable)
+
+DONE j2
+total 96
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 00:51 .
+drwxr-xr-x@ 4 dmitrymanning-coe  wheel    128 Jun 10 00:51 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   1667 Jun 10 00:51 j2.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  39637 Jun 10 00:51 j2_selectivity.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   1071 Jun 10 00:51 out.log

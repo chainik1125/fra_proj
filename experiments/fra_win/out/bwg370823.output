@@ -1,0 +1,23 @@
+r4c parses OK
+submitted job=r4c
+=== job r4c output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.45it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.33it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.98it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+25 sink features (context-rate>0.5) excluded, e.g. [422, 2776, 2952, 3125, 3630, 3755, 3982, 4615]
+
+=== REUSE = rate(key-feat j*) / rate(i* AND j*)   [>>1 => FRA wins; sinks excluded] ===
+  REUSE=   inf  i*=14899(r=0.00) j*=2268(r=0.08) conj=0.00   retrieval(->correct-value)
+  REUSE=   inf  i*=1593(r=0.17) j*=1991(r=0.04) conj=0.00   control-distractor
+  (no non-sink pair) control-delimiter
+  (no non-sink pair) control-bos
+
+DONE r4c
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 17:50 .
+drwxr-xr-x@ 37 dmitrymanning-coe  wheel  1184 Jun 10 17:50 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1286 Jun 10 17:50 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   346 Jun 10 17:50 r4c.json

@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/ast.py", line 52, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<unknown>", line 69
+    OTHERS=[("The National Basketball Association (NB"," Association","A"),("The Automated Teller Machine (AT"," Machine","M"),("The Gross Domestic Product (GD"," Product","P"))]
+                                                                                                                                                                                ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '['
+submitted job=rt_controls
+=== job rt_controls output landed (poll 2) ===
+  File "/workspace/jb/fra_win/jobs/rt_controls.py", line 69
+    OTHERS=[("The National Basketball Association (NB"," Association","A"),("The Automated Teller Machine (AT"," Machine","M"),("The Gross Domestic Product (GD"," Product","P"))]
+                                                                                                                                                                                ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '['
+  job rc=1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 20:02 .
+drwxr-xr-x@ 52 dmitrymanning-coe  wheel  1664 Jun 10 20:02 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   504 Jun 10 20:02 out.log

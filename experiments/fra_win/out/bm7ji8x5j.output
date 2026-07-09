@@ -1,0 +1,26 @@
+OK
+submitted job=t_acronym_transfer
+=== job t_acronym_transfer output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+Officer position: probe-A=4  probe-B=11  (DIFFERENT now: True)
+
+base P(O): probe-A 0.617 | probe-B 0.609
+ON-TARGET (probe-A): FRA 0.011 | patch@KA 0.028
+
+TRANSFER (probe-B, Officer at NEW pos 11):
+  FRA (content-addressed):              0.609 -> 0.050   <- transfers
+  attention-patch @ probe-A pos 4 (no content-addr): 0.609 -> 0.608   <- FAILS
+  attention-patch @ probe-B pos 11 (needs the position): 0.609 -> 0.105
+
+DONE t_acronym_transfer
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 19:54 .
+drwxr-xr-x@ 49 dmitrymanning-coe  wheel  1568 Jun 10 19:54 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   840 Jun 10 19:54 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   289 Jun 10 19:54 t_acronym_transfer.json

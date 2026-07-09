@@ -1,0 +1,24 @@
+s2,s3 parse OK
+submitted job=s2
+s2 submitted (pod booting ~5-10min)
+=== job s2 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+=== LBNR: cut the edge across top-k heads, does the behavior break? ===
+  induction: B0=0.713  B(cut top-[1, 3, 5, 8])=[0.701, 0.381, 0.064, 0.014]  R(complete)=0.98  C(concentr)=0.02
+  [copy-suppression] top edge-cut-raises-logit heads: [((10, 7), 1.94), ((11, 10), 1.54), ((7, 9), 0.22), ((9, 6), 0.22)] (L10H7 present=True)
+  copy-suppression: ΔlogitX(cut top-[1, 2, 3, 8])=[1.94, 4.42, 4.7, 5.24]  L10H7-alone=1.94  concentration(top1/top8)=0.37
+  IOI: B0=3.362  B(cut top-[1, 3, 5, 8])=[5.893, 4.632, 6.602, 4.66]  R(complete)=-0.39  C(concentr)=1.95
+  IOI backup-head (rank4-8) END->IO attn: before=0.337 after-cut-top3=0.685 (COMPENSATES)
+
+=== VERDICT: FRA candidate needs CCF-high AND R(removal completeness)-high ===
+  induction:        R=0.98  -> load-bearing (PASS)
+  copy-suppression: L10H7 alone removes 1.94 logit, concentr=0.37 -> single-head (PASS)
+  IOI:              R=-0.39  + backups compensate -> NOT load-bearing (FAIL)
+
+DONE s2
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 18:26 .
+drwxr-xr-x@ 40 dmitrymanning-coe  wheel  1280 Jun 10 18:26 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1054 Jun 10 18:26 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1108 Jun 10 18:26 s2.json

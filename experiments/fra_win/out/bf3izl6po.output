@@ -1,0 +1,17 @@
+[blind poll 1 18:28Z] done=0/6
+[blind poll 2 18:30Z] done=0/6
+[blind poll 3 18:31Z] done=0/6
+[blind poll 4 18:32Z] done=1/6
+[blind poll 5 18:33Z] done=3/6
+[blind poll 6 18:35Z] done=4/6
+[blind poll 7 18:36Z] done=6/6
+=== d_ihy-FREE rankings: steering results (ln1.L2, seed 7, OV route) ===
+ranking                               fp=trigger        fp=all
+blind weight-diff x base SAE               0.096         0.120
+blind weight-diff x sleeper SAE            0.142         0.142
+trigger act-diff x sleeper SAE             0.123         0.123
+
+reference (d_ihy-projected ov_diff): base SAE trigger 0.107 / all 0.071; sleeper SAE trigger ~0.13
+blind weight-diff x base SAE: top10=[1066, 730, 1558, 1739, 1468, 498, 210, 1276, 604, 1654]
+blind weight-diff x sleeper SAE: top10=[1703, 1679, 1119, 1695, 1107, 146, 1589, 119, 1446, 48]
+trigger act-diff x sleeper SAE: top10=[1679, 1703, 1119, 1107, 48, 528, 1099, 146, 1806, 1647]

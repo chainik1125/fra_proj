@@ -1,0 +1,19 @@
+[k8sup 01:46Z] pods R30/X0/gone0 | cells_uploaded=?/201 | tracked_done=0
+  OK: all 30 accounted, no anomalies
+[k8sup 02:16Z] pods R30/X0/gone0 | cells_uploaded=?/201 | tracked_done=0
+  OK: all 30 accounted, no anomalies
+[k8sup 03:18Z] pods R26/X4/gone0 | cells_uploaded=29/201 | tracked_done=20
+  FLAG rs-k8-p0: 5 FAIL cells
+  FLAG rs-k8-p1: 5 FAIL cells
+  FLAG rs-k8-p2: EXITED 2/7 -> EXITED-INCOMPLETE relaunch
+  FLAG rs-k8-p2: 5 FAIL cells
+  FLAG rs-k8-p7: 5 FAIL cells
+  FLAG rs-k8-p9: EXITED 3/7 -> EXITED-INCOMPLETE relaunch
+  FLAG rs-k8-p9: 4 FAIL cells
+  FLAG rs-k8-p10: 4 FAIL cells
+  FLAG rs-k8-p15: EXITED 3/7 -> EXITED-INCOMPLETE relaunch
+  FLAG rs-k8-p15: 4 FAIL cells
+  FLAG rs-k8-p16: 4 FAIL cells
+  FLAG rs-k8-p23: 6 FAIL cells
+  FLAG rs-k8-p24: EXITED 2/6 -> EXITED-INCOMPLETE relaunch
+  FLAG rs-k8-p24: 4 FAIL cells

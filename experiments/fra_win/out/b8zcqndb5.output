@@ -1,0 +1,47 @@
+submitted job=j6
+=== job j6 output landed (poll 4) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+cue ' war' base_resp 0.98
+  FRA   : [(0.53, 0.0), (0.82, 0.0), (0.82, 0.0), (0.82, 0.0), (0.82, 0.0)]
+  ActAdd: [(0.04, 0.45), (1.0, 2.14), (1.0, 3.5), (1.0, 5.14), (1.0, 6.35)]
+cue ' city' base_resp 1.00
+  FRA   : [(0.23, 0.0), (0.59, 0.0), (0.64, 0.0), (0.64, 0.0), (0.64, 0.0)]
+  ActAdd: [(0.14, 0.29), (1.0, 1.42), (1.0, 2.63), (1.0, 4.45), (1.0, 5.56)]
+cue ' water' base_resp 0.99
+  FRA   : [(0.97, 0.0), (1.0, 0.0), (1.0, 0.0), (1.0, 0.0), (1.0, 0.0)]
+  ActAdd: [(0.6, 0.34), (1.0, 1.45), (1.0, 2.76), (1.0, 4.08), (1.0, 5.3)]
+cue ' money' base_resp 0.97
+  FRA   : [(0.8, 0.0), (0.94, 0.0), (0.95, 0.0), (0.95, 0.0), (0.95, 0.0)]
+  ActAdd: [(0.86, 0.46), (1.0, 1.21), (1.0, 1.84), (1.0, 3.23), (1.0, 4.57)]
+cue ' music' base_resp 1.00
+  FRA   : [(0.69, 0.0), (0.97, 0.0), (0.98, 0.0), (0.98, 0.0), (0.98, 0.0)]
+  ActAdd: [(0.58, 0.64), (1.0, 1.92), (1.0, 2.83), (1.0, 4.29), (1.0, 5.74)]
+cue ' doctor' base_resp 0.97
+  FRA   : [(0.11, 0.0), (0.28, 0.0), (0.36, 0.0), (0.36, 0.0), (0.36, 0.0)]
+  ActAdd: [(0.5, 0.44), (1.0, 1.33), (1.0, 2.05), (1.0, 3.74), (1.0, 5.19)]
+cue ' river' base_resp 0.99
+  FRA   : [(0.3, 0.0), (0.51, 0.0), (0.52, 0.0), (0.52, 0.0), (0.52, 0.0)]
+  ActAdd: [(0.17, 0.47), (0.99, 1.68), (1.0, 2.97), (1.0, 4.56), (1.0, 5.83)]
+cue ' market' base_resp 0.99
+  FRA   : [(0.61, 0.0), (0.83, 0.0), (0.84, 0.0), (0.84, 0.0), (0.84, 0.0)]
+  ActAdd: [(0.11, 0.44), (0.99, 1.79), (1.0, 3.32), (1.0, 5.42), (1.0, 7.06)]
+
+=== HEADLINE (n=8 cues), held-out collateral at 50% induction suppression ===
+  FRA-QK : 0.00 ± 0.00
+  ActAdd : 0.74 ± 0.30
+  ratio  : 737x lower collateral for FRA
+
+DONE j6
+total 160
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 01:10 .
+drwxr-xr-x@ 8 dmitrymanning-coe  wheel    256 Jun 10 01:10 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   6799 Jun 10 01:10 j6.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  66862 Jun 10 01:10 j6_pareto.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   2013 Jun 10 01:10 out.log
+elapsed: 81 min

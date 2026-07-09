@@ -1,0 +1,35 @@
+submitted job=j3
+elapsed: 64 min
+=== job j3 output landed (poll 4) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+baseline mean copyprob 0.73
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+FRA L5H5 nnz 7046149
+FRA L6H9 nnz 8919753
+FRA L5H1 nnz 7046250
+FRA L7H10 nnz 8724126
+FRA L7H2 nnz 8724138
+targets (edge idx): [3, 5, 6, 8, 9, 10]
+
+FRA selective ablation (target token, across all induction heads):
+  c=1   target copyprob 0.846 (Δ -0.060) | collateral copyprob 0.713 (Δ -0.018)
+  c=2   target copyprob 0.758 (Δ -0.148) | collateral copyprob 0.705 (Δ -0.026)
+  c=4   target copyprob 0.530 (Δ -0.376) | collateral copyprob 0.691 (Δ -0.039)
+  c=8   target copyprob 0.315 (Δ -0.591) | collateral copyprob 0.679 (Δ -0.052)
+  c=16  target copyprob 0.266 (Δ -0.640) | collateral copyprob 0.656 (Δ -0.075)
+  c=32  target copyprob 0.245 (Δ -0.661) | collateral copyprob 0.604 (Δ -0.127)
+
+BASELINE kill ALL induction heads: target 0.090 collateral 0.053 (non-selective: kills all)
+
+DONE j3
+total 96
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 00:55 .
+drwxr-xr-x@ 5 dmitrymanning-coe  wheel    160 Jun 10 00:55 ..
+-rw-r--r--@ 1 dmitrymanning-coe  wheel    742 Jun 10 00:55 j3.json
+-rw-r--r--@ 1 dmitrymanning-coe  wheel  38937 Jun 10 00:55 j3_pareto.png
+-rw-r--r--@ 1 dmitrymanning-coe  wheel   1233 Jun 10 00:55 out.log

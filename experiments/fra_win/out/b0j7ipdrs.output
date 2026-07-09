@@ -1,0 +1,44 @@
+r1 parses OK
+submitted job=r1
+=== job r1 output landed (poll 5) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:42<01:25, 42.72s/it]Fetching 3 files:  67%|██████▋   | 2/3 [00:44<00:18, 18.46s/it]Fetching 3 files: 100%|██████████| 3/3 [00:44<00:00, 14.73s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.41it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.41it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.07it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+retrieval (final-token next-word probs):
+  frog     0.213
+  sword    0.033
+  lamp     0.011
+  rose     0.010
+  clock    0.008
+  candle   0.008
+  => correct 'frog' margin over best distractor: +0.180
+value positions: {'frog': 6, 'lamp': 13, 'clock': 20, 'rose': 27, 'sword': 34, 'candle': 41} (final pos 47 )
+
+top heads attending final->correct-value position:
+  L15H0: ->correct 0.641  ->distractors 0.138
+  L18H6: ->correct 0.624  ->distractors 0.066
+  L6H3: ->correct 0.367  ->distractors 0.343
+  L21H5: ->correct 0.263  ->distractors 0.198
+  L22H4: ->correct 0.258  ->distractors 0.231
+  L17H0: ->correct 0.198  ->distractors 0.699
+  L18H7: ->correct 0.181  ->distractors 0.384
+  L12H1: ->correct 0.179  ->distractors 0.474
+  L23H6: ->correct 0.169  ->distractors 0.192
+  L20H6: ->correct 0.169  ->distractors 0.388
+
+CAUSAL — zero the final->'frog' edge (retrieval heads), P('frog') 0.213:
+  top- 1 heads: P('frog') -> 0.134   (now top: 'frog'=0.134)
+  top- 3 heads: P('frog') -> 0.084   (now top: 'frog'=0.084)
+  top- 5 heads: P('frog') -> 0.031   (now top: 'sword'=0.038)
+  top-10 heads: P('frog') -> 0.025   (now top: 'sword'=0.04)
+
+DONE r1
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 17:27 .
+drwxr-xr-x@ 32 dmitrymanning-coe  wheel  1024 Jun 10 17:27 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2289 Jun 10 17:27 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1122 Jun 10 17:27 r1.json

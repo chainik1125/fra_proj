@@ -1,0 +1,16 @@
+OK
+submitted job=synth_hier5
+=== job synth_hier5 output landed (poll 2) ===
+mixed-prompt misaligned mass (mean over seeds): base X=0.504 Y=0.496 | persona-off X=0.092 Y=0.091
+
+method        X-removal (mean±sd)   Y-collateral (mean±sd)
+  naive        1.22 ± 0.00        1.24 ± 0.06  <- couples/redistributes
+  redirect     1.22 ± 0.00        1.12 ± 0.00  <- couples/redistributes
+  gated_dom    1.00 ± 0.00        1.00 ± 0.00  <- couples/redistributes
+
+DONE synth_hier5
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 16:28 .
+drwxr-xr-x@ 71 dmitrymanning-coe  wheel  2272 Jun 11 16:28 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   401 Jun 11 16:28 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   532 Jun 11 16:28 synth_hier5.json

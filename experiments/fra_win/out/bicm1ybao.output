@@ -1,0 +1,30 @@
+[sfwo poll 1 18:36Z] sf=0 wo=0
+[sfwo poll 2 18:37Z] sf=0 wo=0
+=== WEIGHTS-ONLY RANKING (no data, no cand filter) ===
+--- base SAE ---
+  P_ihy    top10=[730, 1739, 1558, 1173, 1948, 102, 661, 1066, 18, 1181]  consensus-in-top32: 7/8  top64: 8/8
+           consensus ranks: 730:0, 1066:7, 1558:2, 1739:1, 498:16, 210:10, 604:60, 1173:3
+  P_blind  top10=[882, 617, 1490, 203, 730, 1739, 1558, 1173, 2034, 637]  consensus-in-top32: 6/8  top64: 8/8
+           consensus ranks: 730:4, 1066:16, 1558:6, 1739:5, 498:35, 210:28, 604:53, 1173:7
+  P_rel    top10=[882, 617, 1490, 203, 1654, 637, 1739, 730, 1749, 1558]  consensus-in-top32: 7/8  top64: 8/8
+           consensus ranks: 730:7, 1066:10, 1558:9, 1739:6, 498:32, 210:20, 604:22, 1173:11
+--- sleeper SAE ---
+  P_ihy    top10=[1703, 1119, 1695, 1679, 102, 146, 697, 569, 552, 119]  consensus-in-top32: 6/8  top64: 6/8
+           consensus ranks: 1679:3, 1703:0, 1119:1, 48:70, 1446:23, 1619:1215, 1695:2, 1107:18
+  P_blind  top10=[1897, 1703, 1119, 101, 1695, 1718, 1679, 825, 102, 1749]  consensus-in-top32: 4/8  top64: 6/8
+           consensus ranks: 1679:6, 1703:1, 1119:2, 48:147, 1446:32, 1619:1351, 1695:4, 1107:33
+  P_rel    top10=[1897, 1703, 1119, 101, 1718, 1695, 1654, 1679, 1749, 825]  consensus-in-top32: 4/8  top64: 6/8
+           consensus ranks: 1679:7, 1703:1, 1119:2, 48:157, 1446:50, 1619:1397, 1695:5, 1107:38
+[sfwo poll 3 18:38Z] sf=0 wo=1
+[sfwo poll 4 18:39Z] sf=0 wo=1
+[sfwo poll 5 18:41Z] sf=0 wo=1
+[sfwo poll 6 18:42Z] sf=0 wo=1
+[sfwo poll 7 18:43Z] sf=0 wo=1
+[sfwo poll 8 18:44Z] sf=0 wo=1
+[sfwo poll 9 18:46Z] sf=0 wo=1
+[sfwo poll 10 18:47Z] sf=0 wo=1
+[sfwo poll 11 18:48Z] sf=0 wo=1
+[sfwo poll 12 18:49Z] sf=0 wo=1
+[sfwo poll 13 18:51Z] sf=0 wo=1
+=== SINGLE-FEATURE SCAN top5 (ov_diff top20, c in [-4,4]x0.25, fp=all) ===
+  per-feature best (feats that ever reach ASR<=0.05):

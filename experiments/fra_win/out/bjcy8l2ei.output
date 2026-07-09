@@ -1,0 +1,27 @@
+tab2 OK
+submitted job=tab2
+=== job tab2 output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+6/12 acronyms with base P(letter)>0.15
+  Officer      O: base 0.62 -> FRA 0.01 | R=+0.95 | collat 0.012 | A=59x
+  Web          W: base 1.00 -> FRA 0.98 | R=+0.01 | collat 0.050 | A=14x
+  Unit         U: base 0.99 -> FRA 0.04 | R=+0.94 | collat 0.312 | A=2x
+  Machine      M: base 0.90 -> FRA 0.08 | R=+0.93 | collat 0.112 | A=6x
+  Unit         U: base 0.96 -> FRA 0.03 | R=+0.95 | collat 0.319 | A=2x
+  Bank         B: base 0.99 -> FRA 0.84 | R=+0.89 | collat 0.033 | A=22x
+
+DISTRIBUTION (n=6): on-target removal median 0.94 [0.01,0.98]
+  LBNR-R median 0.93 [0.01,0.95] ; A median 10x [2,59] ; head-ablate collat 0.700
+
+DONE t_acronym_batch
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 19:59 .
+drwxr-xr-x@ 51 dmitrymanning-coe  wheel  1632 Jun 10 19:59 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1038 Jun 10 19:59 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1513 Jun 10 19:59 t_acronym_batch.json

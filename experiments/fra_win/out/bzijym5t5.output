@@ -1,0 +1,30 @@
+submitted job=j8
+=== job j8 output landed (poll 4) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+cue ' war' base 0.98: FRA max-supp 0.82
+cue ' city' base 1.00: FRA max-supp 0.64
+cue ' water' base 0.99: FRA max-supp 1.00
+cue ' money' base 0.97: FRA max-supp 0.95
+cue ' market' base 0.98: FRA max-supp 0.97
+cue ' music' base 0.97: FRA max-supp 0.57
+cue ' doctor' base 0.99: FRA max-supp 0.17
+cue ' river' base 0.99: FRA max-supp 0.94
+
+=== n=8 cues — held-out collateral (nats) at matched suppression ===
+  supp=0.3: FRA 0.142±0.035 (n=7) | ActAdd-id 2.578±1.390 | ActAdd-key 1.916±0.539
+  supp=0.5: FRA 0.145±0.033 (n=7) | ActAdd-id 3.370±1.625 | ActAdd-key 2.981±0.774
+
+DONE j8
+total 256
+drwxr-xr-x@  5 dmitrymanning-coe  wheel     160 Jun 10 01:18 .
+drwxr-xr-x@ 10 dmitrymanning-coe  wheel     320 Jun 10 01:18 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   12647 Jun 10 01:18 j8.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  107306 Jun 10 01:18 j8_pareto.png
+-rw-r--r--@  1 dmitrymanning-coe  wheel     985 Jun 10 01:18 out.log
+elapsed: 88 min

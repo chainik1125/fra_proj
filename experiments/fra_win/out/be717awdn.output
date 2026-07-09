@@ -1,0 +1,30 @@
+submitted job=s3
+s3 submitted
+=== job s3 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+  suppression[lion] = +1.58 (logit 16.36->17.93 on edge-cut)
+  suppression[hammer] = +1.39 (logit 15.34->16.72 on edge-cut)
+  suppression[lemon] = +0.50 (logit 14.69->15.19 on edge-cut)
+  suppression[truck] = +0.83 (logit 15.15->15.98 on edge-cut)
+  suppression[soda] = +0.94 (logit 14.54->15.48 on edge-cut)
+
+--- ON-TARGET (lion): intact 16.36 | edge-cut(oracle) 17.93 ---
+  FRA(c=8) logit -> 18.38   head-ablate -> 16.96
+
+--- COLLATERAL: |logit change| on OTHER tokens (want ~0) ---
+  FRA: 0.022   head-ablate: 0.503   A = 22.7x
+
+--- TRANSFER (lion new context): intact 16.81 edge-cut(oracle) 18.59 FRA(same pairs) 18.90 ---
+
+DONE s3
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 18:28 .
+drwxr-xr-x@ 41 dmitrymanning-coe  wheel  1312 Jun 10 18:28 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1033 Jun 10 18:28 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   614 Jun 10 18:28 s3.json

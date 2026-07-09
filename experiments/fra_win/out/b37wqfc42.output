@@ -1,0 +1,24 @@
+PARSE OK
+submitted job=decisive_steer
+=== job decisive_steer output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+base P(O)=0.617; FRA(c=4) on-target 0.023; STEER(a=0.5) on-target 0.620 (matched)
+
+TRANSFER (probe-B, Officer at new pos 11, base 0.609):
+  FRA 0.062 | content-gated STEER 0.610 | position-patch@origpos 0.608
+
+DECISIVE COLLATERAL: KL on legit 'Officer' contexts (acronym-query absent; want LOW):
+  FRA 0.000 nats | content-gated STEER 0.000 nats  => FRA preserves legit Officer 0x better
+
+DONE decisive_steer
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 20:08 .
+drwxr-xr-x@ 54 dmitrymanning-coe  wheel  1728 Jun 10 20:08 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   345 Jun 10 20:08 decisive_steer.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel   806 Jun 10 20:08 out.log

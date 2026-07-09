@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/ast.py", line 52, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<unknown>", line 23
+    ("The Graphics Processing Unit (GP"," Unit","U"),("The Federal Reserve Bank (FR"," Bank","B"))]
+                                                                                                 ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '[' on line 18
+submitted job=t_acronym_batch
+=== job t_acronym_batch output landed (poll 2) ===
+  File "/workspace/jb/fra_win/jobs/t_acronym_batch.py", line 23
+    ("The Graphics Processing Unit (GP"," Unit","U"),("The Federal Reserve Bank (FR"," Bank","B"))]
+                                                                                                 ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '[' on line 18
+  job rc=1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 19:57 .
+drwxr-xr-x@ 50 dmitrymanning-coe  wheel  1600 Jun 10 19:57 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   361 Jun 10 19:57 out.log

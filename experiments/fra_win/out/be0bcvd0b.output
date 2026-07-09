@@ -1,0 +1,38 @@
+OK
+submitted job=synth_hier2
+=== job synth_hier2 output landed (poll 3) ===
+sig=6: persona-on domain-key mass 0.27 | persona-off 0.05
+sig=10: persona-on domain-key mass 0.33 | persona-off 0.05
+sig=15: persona-on domain-key mass 0.35 | persona-off 0.06
+sig=20: persona-on domain-key mass 0.35 | persona-off 0.06
+sig=28: persona-on domain-key mass 0.35 | persona-off 0.08
+sig=40: persona-on domain-key mass 0.34 | persona-off 0.09
+calibrated sig=40; channel gaps att=0.166 dir=0.023
+
+=== alpha-sweep (aggregate) ===
+  alpha=0: alpha_hat(pf)=1.00 | cell R_X=0.00 collatY=0.00 | DoM R_X=1.10 collatY=0.99
+  alpha=0.25: alpha_hat(pf)=0.55 | cell R_X=-0.00 collatY=0.00 | DoM R_X=1.19 collatY=0.93
+  alpha=0.5: alpha_hat(pf)=0.55 | cell R_X=-0.00 collatY=0.00 | DoM R_X=1.29 collatY=0.88
+  alpha=0.75: alpha_hat(pf)=0.55 | cell R_X=-0.00 collatY=0.00 | DoM R_X=1.40 collatY=0.84
+  alpha=1.0: alpha_hat(pf)=0.55 | cell R_X=-0.01 collatY=0.00 | DoM R_X=1.54 collatY=0.80
+
+=== selectivity @ alpha=1 (R_X | collat_Y | style_chg) ===
+  cell       R_X=-0.01 collat_Y=0.00 style=0.00
+  dom_un     R_X=1.54 collat_Y=0.80 style=1.00
+  dom_gated  R_X=1.54 collat_Y=0.09 style=0.40
+  keyrm      R_X=1.83 collat_Y=0.56 style=0.30
+  head       R_X=1.83 collat_Y=1.18 style=0.00
+  edge       R_X=1.83 collat_Y=0.06 style=0.00
+
+=== MIXED-PROMPT X&Y @ alpha=1 (X-removal, Y-collateral) ===
+  cell       X-removal=-0.00 Y-collateral=0.00 
+  dom_gated  X-removal=1.14 Y-collateral=0.82 <- couples X~Y
+  head       X-removal=1.44 Y-collateral=1.11 <- couples X~Y
+  edge       X-removal=1.44 Y-collateral=0.31 
+
+DONE synth_hier2
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 11 16:17 .
+drwxr-xr-x@ 68 dmitrymanning-coe  wheel  2176 Jun 11 16:17 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1527 Jun 11 16:17 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2260 Jun 11 16:17 synth_hier2.json

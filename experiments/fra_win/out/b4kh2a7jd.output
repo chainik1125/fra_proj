@@ -1,0 +1,25 @@
+[svdk8 poll 1 21:14Z] not done
+[svdk8 poll 2 21:15Z] not done
+[svdk8 poll 3 21:17Z] not done
+[svdk8 poll 4 21:18Z] not done
+[svdk8 poll 5 21:20Z] not done
+[svdk8 poll 6 21:21Z] not done
+[svdk8 poll 7 21:23Z] not done
+[svdk8 poll 8 21:24Z] not done
+[svdk8 poll 9 21:26Z] not done
+[svdk8 poll 10 21:27Z] not done
+[svdk8 poll 11 21:29Z] not done
+[svdk8 poll 12 21:30Z] not done
+[svdk8 poll 13 21:32Z] not done
+=== K8-RANDPOS zero-knowledge SVD (no-int ASR + per-layer spectra + best) ===
+no-int ASR: 0.9688
+  L0 sigma_top4: ['0.492', '0.243', '0.213', '0.179']
+  L1 sigma_top4: ['1.048', '0.537', '0.484', '0.268']
+  L2 sigma_top4: ['1.750', '0.996', '0.587', '0.400']
+  L3 sigma_top4: ['3.522', '1.703', '1.197', '0.733']
+qualifying best (ASR<=0.05):
+  fp=all L2 k=2 c=1 -> (0.03,0.263)
+  fp=all L2 k=4 c=1 -> (0.02,0.287)
+  fp=all L2 k=8 c=1 -> (0.03,0.309)
+  fp=all L0 k=2 c=1.5 -> (0.01,0.325)
+  fp=all L2 k=16 c=1 -> (0.02,0.329)

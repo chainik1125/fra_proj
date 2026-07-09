@@ -1,0 +1,45 @@
+=== job jb1 output landed (poll 4) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:22<00:22, 22.91s/it]Fetching 2 files: 100%|██████████| 2/2 [00:22<00:00, 11.45s/it]
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:01<00:01,  1.95s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:01<00:00,  1.02it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b-it into HookedTransformer
+marker token: ' Absolutely' id 59227
+
+P('Absolutely' as first reply token):  no demos 0.000  |  10 demos 0.001  (lift x4)
+shot-scaling:
+   0 demos: P=0.000
+   1 demos: P=0.000
+   2 demos: P=0.000
+   4 demos: P=0.000
+   8 demos: P=0.000
+  10 demos: P=0.001
+
+planted-marker positions in context: [] (final answer pos = 266)
+
+top heads: attention from FINAL answer pos -> demo marker tokens:
+  L0H0: 0.000
+  L0H1: 0.000
+  L0H2: 0.000
+  L0H3: 0.000
+  L0H4: 0.000
+  L0H5: 0.000
+  L0H6: 0.000
+  L0H7: 0.000
+  L1H0: 0.000
+  L1H1: 0.000
+
+mean-ablate top-3 attend-back heads: P('Absolutely') 0.001 -> 0.000
+
+mean-ablate top-6 attend-back heads: P('Absolutely') 0.001 -> 0.000
+
+mean-ablate top-10 attend-back heads: P('Absolutely') 0.001 -> 0.001
+
+DONE jb1
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 16:43 .
+drwxr-xr-x@ 27 dmitrymanning-coe  wheel   864 Jun 10 16:43 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   508 Jun 10 16:43 jb1.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1729 Jun 10 16:43 out.log

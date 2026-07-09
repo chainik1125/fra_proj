@@ -1,0 +1,12 @@
+[prompt poll 1 22:27Z] done=0/4
+[prompt poll 2 22:29Z] done=0/4
+[prompt poll 3 22:30Z] done=0/4
+[prompt poll 4 22:32Z] done=0/4
+[prompt poll 5 22:33Z] done=0/4
+[prompt poll 6 22:35Z] done=0/4
+[prompt poll 7 22:36Z] done=4/4
+=== fp=prompt column (no-payload methods, K1 ln1.L2, seed 7) ===
+  SVD dW_OV          prompt: (0.00,0.220) k=2 c=1
+  clean-SAE P_blind  prompt: (0.00,0.275) K=40 c=3
+  deploy-SAE P_blind prompt: (0.00,0.208) K=40 c=2
+  payload-blind FRA  prompt: (0.00,0.120)

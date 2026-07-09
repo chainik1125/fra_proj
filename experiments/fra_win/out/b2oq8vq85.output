@@ -1,0 +1,14 @@
+compile OK
+pushed
+[OK] rs-bridge -> sx9186o3nk2zuv
+[bridge poll 1 00:57Z] not done
+[bridge poll 2 00:58Z] not done
+[bridge poll 3 01:00Z] not done
+=== T=1 MATCHED-RNG BRIDGE (paper protocol; J in bits; paper singles 0.30-0.35, sae_scaling 0.44-0.47) ===
+  control_clean_matched      {'J_bits': -0.0}
+  control_clean_unmatched    {'J_bits': 0.3927}
+  no_intervention            {'ASR': 0.875, 'J_matched_bits': 0.9989, 'J_unmatched_bits': 0.997, 'J_pois_bits': -0.0, 'exact_match': 0.0, 'tok_match': 0.0}
+  fra_set_K8_c3              {'ASR': 0.0, 'J_matched_bits': 0.2421, 'J_unmatched_bits': 0.4121, 'J_pois_bits': 0.9967, 'exact_match': 0.625, 'tok_match': 0.7344}
+  fra_set_K24_c2             {'ASR': 0.0, 'J_matched_bits': 0.1852, 'J_unmatched_bits': 0.4084, 'J_pois_bits': 0.9974, 'exact_match': 0.625, 'tok_match': 0.7969}
+  svd_k2_c1.5                {'ASR': 0.0, 'J_matched_bits': 0.3772, 'J_unmatched_bits': 0.5366, 'J_pois_bits': 0.9987, 'exact_match': 0.4167, 'tok_match': 0.5807}
+  sf_L0_f1253_c6             {'ASR': 0.0, 'J_matched_bits': 0.2427, 'J_unmatched_bits': 0.4169, 'J_pois_bits': 0.9968, 'exact_match': 0.5833, 'tok_match': 0.7344}

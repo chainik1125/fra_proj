@@ -1,0 +1,33 @@
+PARSE OK
+submitted job=rtc2
+=== job rtc2 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+base P(O)=0.617
+
+(1) ON-TARGET removal per method (c=8):
+Traceback (most recent call last):
+  File "/workspace/jb/fra_win/jobs/rtc2.py", line 79, in <module>
+    print(f"  FRA {Pof(t1,'O',lambda tt:hooks_from(Ptop,8) if tt is t1 else hooks_from(Ptop,8)):.3f} | head-ablate {Pof(t1,'O',ha_hooks()):.3f} | content-suppress {Pof(t1,'O',cs_hooks('O')):.3f}",flush=True)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/jb/fra_win/jobs/rtc2.py", line 23, in Pof
+    lg=(model.run_with_hooks(tt,fwd_hooks=hooks) if hooks else model(tt))[0]; return torch.softmax(lg[-1].float(),-1)[tok.encode(letter)[0]].item()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 447, in run_with_hooks
+    with self.hooks(fwd_hooks, bwd_hooks, reset_hooks_end, clear_contexts) as hooked_model:
+  File "/usr/lib/python3.11/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 399, in hooks
+    for name, hook in fwd_hooks:
+TypeError: 'function' object is not iterable
+  job rc=1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 20:03 .
+drwxr-xr-x@ 53 dmitrymanning-coe  wheel  1696 Jun 10 20:03 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1628 Jun 10 20:03 out.log

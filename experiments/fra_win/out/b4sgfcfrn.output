@@ -1,0 +1,58 @@
+d1 parses OK
+submitted job=d1
+=== job d1 output landed (poll 2) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+==============================================================================
+THE IN-CONTEXT BACKDOOR SEQUENCE (fed to GPT-2):
+  [BOS] dog sky lake bank river tree road fish star wind gold song dog sky lake bank river tree road fish star wind gold song
+
+  -> trigger=' bank' (planted with payload=' river'), the 12-word block is repeated once.
+  -> backdoor fires at the 2ND ' bank' (position 16); induction copies what followed the 1st.
+
+BASELINE — model's next-token prediction at the 2nd ' bank':
+  ' river'=0.67  ' water'=0.01  '\n'=0.01  ' lake'=0.01  ' bank'=0.01  ' tree'=0.01
+  ==> P(' river') = 0.67   <<< THE BACKDOOR FIRES
+
+  greedy continuation from here: ' road fish star wind gold song' -> '
+
+The sky lake'
+
+FRA decomposition of the ' bank'->' river' attention edge (head L5H5):
+  top feature-pairs driving it: qF21157xkF5949, qF13751xkF20237, qF21157xkF11137, qF21157xkF16903 ...
+
+==============================================================================
+AFTER FRA-QK (ablate the ' bank'->' river' attention edge):
+  ' river'=0.09  ' fish'=0.04  ' dog'=0.03  ' lake'=0.03  ' water'=0.02  '\n'=0.02
+  ==> P(' river') = 0.09   <<< BACKDOOR REMOVED
+  greedy continuation now: ' dog sky lake bank river'
+
+AFTER payload-suppress (subtract the ' river' output direction):
+  '\n'=0.27  '<|endoftext|>'=0.02  '\n\n'=0.02  ' ('=0.02  '.'=0.01  ','=0.01
+  ==> P(' river') = 0.00   (also removed)
+
+==============================================================================
+COLLATERAL — does the fix hurt ' river' / ' bank' in NORMAL sentences?
+
+  'The boat drifted slowly down the wide___'    (model wants ' river')
+     P(' river'):  baseline 0.10  |  after FRA-QK 0.10  |  after payload-suppress 0.00
+
+  'They built a stone bridge across the___'    (model wants ' river')
+     P(' river'):  baseline 0.37  |  after FRA-QK 0.37  |  after payload-suppress 0.00
+
+  'She kept all of her savings safe in the___'    (model wants ' bank')
+     P(' bank'):  baseline 0.06  |  after FRA-QK 0.06  |  after payload-suppress 0.01
+
+  -> FRA leaves ' river'/' bank' untouched in normal use (it only cut the planted T->P link);
+     payload-suppress destroys ' river' everywhere. THAT is the collateral difference.
+
+DONE d1
+total 8
+drwxr-xr-x@  3 dmitrymanning-coe  wheel    96 Jun 10 16:22 .
+drwxr-xr-x@ 26 dmitrymanning-coe  wheel   832 Jun 10 16:22 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2626 Jun 10 16:22 out.log

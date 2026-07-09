@@ -1,0 +1,42 @@
+r3 parses OK
+submitted job=r3
+=== job r3 output landed (poll 3) ===
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.46it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.38it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.05it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+=== RETRIEVAL context: CSG by edge (heads = retrieval heads) ===
+  CSG=  1.30   F_pair=23981.07  F_dir=31158.48   retrieval(final->correct-value)
+  CSG=  1.26   F_pair=23411.83  F_dir=29592.65   control-distractor(final->distractor-value)
+  CSG=  1.22   F_pair=22262.77  F_dir=27110.47   control-delimiter(final->last-period)
+  CSG=  1.28   F_pair=21886.48  F_dir=28031.32   control-bos(final->pos0)
+
+=== INDUCTION heads (literal induction score) ===
+  L6H2: induction-score 0.962
+  L15H0: induction-score 0.902
+  L18H6: induction-score 0.760
+  L6H3: induction-score 0.752
+  L21H5: induction-score 0.668
+
+  INDUCTION edge CSG (mean over t): 1.48   (per-t [1.5, 1.5, 1.5, 1.5])
+  INDUCTION-control final->bos CSG: 1.42
+
+=== SUMMARY: CSG ranks FRA-shaped >> direction-dominated ===
+     1.30   retrieval(final->correct-value)
+     1.26   control-distractor(final->distractor-value)
+     1.22   control-delimiter(final->last-period)
+     1.28   control-bos(final->pos0)
+     1.48   induction(2nd-occ->after-1st-occ)
+     1.42   induction-control(final->bos)
+
+CALIBRATION: retrieval CSG predicts the MEASURED r2 collateral advantage
+  measured (r2): FRA legit-collateral 0.16->0.15 (~0.01) vs content-suppress 0.16->0.00 (full) => advantage huge
+
+DONE r3
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 17:42 .
+drwxr-xr-x@ 34 dmitrymanning-coe  wheel  1088 Jun 10 17:42 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2100 Jun 10 17:42 out.log
+-rw-r--r--@  1 dmitrymanning-coe  wheel   898 Jun 10 17:42 r3.json

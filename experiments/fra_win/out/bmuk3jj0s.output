@@ -1,0 +1,14 @@
+compile OK
+pushed
+[OK] rs-trigconc -> xm868ixgc8j1wp
+[tc poll 1 23:38Z] not done
+[tc poll 2 23:39Z] not done
+[tc poll 3 23:40Z] not done
+[tc poll 4 23:42Z] not done
+[tc poll 5 23:43Z] not done
+[tc poll 6 23:44Z] not done
+=== TRIGGER-CONCENTRATION RANKING (no weight diff) — best (ASR<=0.05) ===
+  conc   best: (0.00, 0.108) K=40 c=4   top10=[498, 1468, 1739, 1775, 431, 816, 1173, 1635, 1707, 1019]
+  tmass  best: (0.00, 0.093) K=8 c=3   top10=[1066, 498, 1276, 1558, 1468, 730, 210, 1739, 789, 1090]
+  lift   best: (0.00, 0.093) K=8 c=3   top10=[1066, 498, 1558, 1468, 730, 1276, 210, 1739, 789, 604]
+  reference: weight-diff P_blind 0.092 | ov_diff(payload) 0.071

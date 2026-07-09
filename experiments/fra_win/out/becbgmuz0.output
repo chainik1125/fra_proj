@@ -1,0 +1,13 @@
+[occ poll 1 18:13Z] not done
+[occ poll 2 18:14Z] not done
+[occ poll 3 18:15Z] not done
+=== FEATURE OCCUPANCY (top-24 activation-mass fraction by position class) ===
+method          pre_trigger      trigger  post_prompt      rollout  clean/deploy
+FRA-base              0.003        0.495        0.331        0.171         0.344
+conv-sleeper          0.001        0.648        0.350        0.001         0.354
+conv-union            0.001        0.575        0.417        0.007         0.397
+
+clean-prompt mass frac (control, no trigger):
+FRA-base              0.008        0.000        0.975        0.018
+conv-sleeper          0.002        0.000        0.984        0.014
+conv-union            0.002        0.000        0.992        0.006

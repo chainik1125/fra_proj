@@ -1,0 +1,47 @@
+=== job j9 output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+cue ' war' base 0.98 cfaith~1.3 (real_edge 7.4, fra 5.9)
+  FRA-hedges : [(0.07, 0.08), (0.53, 0.12), (0.82, 0.12), (0.82, 0.12), (0.82, 0.12), (0.82, 0.12)]
+  FRA-content: [(0.07, 0.09), (0.53, 0.16), (0.82, 0.17), (0.82, 0.17), (0.82, 0.17), (0.82, 0.17)]
+  ActAdd-id  : [(0.01, 0.82), (0.04, 2.72), (1.0, 8.41), (1.0, 16.64), (1.0, 31.08), (1.0, 41.08)]
+  ActAdd-indg: [(0.01, 0.66), (0.06, 1.92), (0.99, 6.93), (1.0, 7.47), (1.0, 17.41), (1.0, 25.67)]
+cue ' city' base 1.00 cfaith~1.9 (real_edge 5.4, fra 2.9)
+  FRA-hedges : [(0.01, 0.08), (0.23, 0.16), (0.59, 0.16), (0.64, 0.16), (0.64, 0.17), (0.64, 0.17)]
+  FRA-content: [(0.01, 0.09), (0.23, 0.17), (0.59, 0.18), (0.64, 0.18), (0.64, 0.18), (0.64, 0.18)]
+  ActAdd-id  : [(0.0, 0.99), (0.14, 2.99), (1.0, 7.03), (1.0, 13.07), (1.0, 23.98), (1.0, 33.13)]
+  ActAdd-indg: [(0.0, 0.87), (0.09, 2.17), (1.0, 4.97), (1.0, 6.15), (1.0, 11.66), (1.0, 17.65)]
+cue ' money' base 0.94 cfaith~1.6 (real_edge 5.0, fra 3.1)
+  FRA-hedges : [(0.3, 0.09), (1.0, 0.17), (1.0, 0.18), (1.0, 0.18), (1.0, 0.18), (1.0, 0.18)]
+  FRA-content: [(0.3, 0.11), (1.0, 0.24), (1.0, 0.25), (1.0, 0.25), (1.0, 0.25), (1.0, 0.25)]
+  ActAdd-id  : [(0.1, 0.49), (0.78, 2.08), (1.0, 6.67), (1.0, 16.0), (1.0, 28.42), (1.0, 36.91)]
+  ActAdd-indg: [(0.08, 0.26), (0.61, 0.8), (0.99, 2.36), (1.0, 6.91), (1.0, 15.04), (1.0, 20.95)]
+cue ' market' base 0.96 cfaith~1.7 (real_edge 6.1, fra 3.7)
+  FRA-hedges : [(0.28, 0.17), (0.96, 0.21), (0.99, 0.21), (0.99, 0.21), (0.99, 0.21), (0.99, 0.21)]
+  FRA-content: [(0.28, 0.22), (0.96, 0.29), (0.99, 0.3), (0.99, 0.3), (0.99, 0.3), (0.99, 0.3)]
+  ActAdd-id  : [(0.1, 0.72), (0.74, 1.98), (1.0, 6.31), (1.0, 14.08), (1.0, 26.44), (1.0, 34.61)]
+  ActAdd-indg: [(0.05, 0.63), (0.3, 1.52), (1.0, 3.97), (1.0, 6.69), (1.0, 13.7), (1.0, 19.16)]
+
+=== held-out collateral at suppression=0.3 (n cues with reach) ===
+  hedges          : 0.128 ± 0.035  (n=4)
+  content         : 0.158 ± 0.041  (n=4)
+  actadd_id       : 2.525 ± 1.501  (n=4)
+  actadd_indgate  : 2.009 ± 1.077  (n=4)
+
+=== held-out collateral at suppression=0.5 (n cues with reach) ===
+  hedges          : 0.142 ± 0.029  (n=4)
+  content         : 0.181 ± 0.035  (n=4)
+  actadd_id       : 3.272 ± 1.826  (n=4)
+  actadd_indgate  : 2.659 ± 1.350  (n=4)
+
+DONE j9
+total 32
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 01:27 .
+drwxr-xr-x@ 11 dmitrymanning-coe  wheel   352 Jun 10 01:27 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel  8921 Jun 10 01:27 j9.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  2678 Jun 10 01:27 out.log

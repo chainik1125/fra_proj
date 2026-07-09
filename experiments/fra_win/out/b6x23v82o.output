@@ -1,0 +1,39 @@
+ic2 parses OK
+submitted job=ic2
+=== job ic2 output landed (poll 3) ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+/usr/local/lib/python3.11/dist-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+Loaded pretrained model gpt2 into HookedTransformer
+bank->river ASR 0.97:
+  FRA  (supp,totKL,nonbdKL): [(0.28, 0.06, 0.0), (1.0, 0.12, 0.0), (1.0, 0.12, 0.0), (1.0, 0.13, 0.0), (1.0, 0.13, 0.0)]
+  trig : [(0.05, 0.23, 0.085), (0.11, 1.51, 0.305), (1.0, 6.98, 0.932), (1.0, 12.0, 2.292), (1.0, 17.54, 4.2), (1.0, 21.48, 5.269)]
+  pay  : [(0.98, 0.12, 0.0), (1.0, 0.46, 0.0), (1.0, 1.76, 0.0), (1.0, 6.74, 0.0), (1.0, 28.71, 0.001)]
+fire->water ASR 0.99:
+  FRA  (supp,totKL,nonbdKL): [(0.52, 0.16, 0.0), (0.98, 0.18, 0.0), (0.99, 0.18, 0.0), (0.99, 0.18, 0.0), (0.99, 0.18, 0.0)]
+  trig : [(0.05, 0.31, 0.14), (0.2, 1.75, 0.53), (1.0, 7.49, 1.581), (1.0, 12.2, 2.829), (1.0, 18.64, 4.764), (1.0, 25.97, 6.519)]
+  pay  : [(0.97, 0.15, 0.009), (1.0, 0.55, 0.037), (1.0, 2.03, 0.149), (1.0, 7.81, 0.635), (1.0, 36.94, 2.603)]
+king->crown ASR 0.99:
+  FRA  (supp,totKL,nonbdKL): [(0.99, 0.06, 0.0), (1.0, 0.08, 0.0), (1.0, 0.09, 0.0), (1.0, 0.09, 0.0), (1.0, 0.09, 0.0)]
+  trig : [(0.0, 0.28, 0.068), (0.1, 1.63, 0.368), (1.0, 6.16, 1.257), (1.0, 11.46, 3.536), (1.0, 20.54, 5.88), (1.0, 26.22, 6.796)]
+  pay  : [(0.99, 0.32, 0.003), (1.0, 1.11, 0.012), (1.0, 3.67, 0.047), (1.0, 12.63, 0.19), (1.0, 52.08, 1.244)]
+doctor->patient ASR 0.89:
+  FRA  (supp,totKL,nonbdKL): [(0.98, 0.02, 0.0), (1.0, 0.04, 0.0), (1.0, 0.05, 0.0), (1.0, 0.06, 0.0), (1.0, 0.06, 0.0)]
+  trig : [(0.03, 0.29, 0.046), (0.14, 1.5, 0.176), (1.0, 5.03, 0.893), (1.0, 10.03, 2.594), (1.0, 17.14, 4.613), (1.0, 21.6, 5.304)]
+  pay  : [(0.99, 1.0, 0.007), (1.0, 2.79, 0.026), (1.0, 7.72, 0.098), (1.0, 23.14, 0.354), (1.0, 76.44, 1.391)]
+
+=== rigorous in-context backdoor flip, @ 80% ASR-suppression (n=4) ===
+  FRA-QK (attention edge)             : total KL 0.088±0.055 | non-backdoor-pos KL 0.000±0.000
+  ActAdd-trigger                      : total KL 5.302±0.704 | non-backdoor-pos KL 0.975±0.235
+  payload-suppress (sleeper-winner)   : total KL 0.398±0.359 | non-backdoor-pos KL 0.005±0.004
+
+DONE ic2
+total 192
+drwxr-xr-x@  5 dmitrymanning-coe  wheel    160 Jun 10 13:26 .
+drwxr-xr-x@ 17 dmitrymanning-coe  wheel    544 Jun 10 13:26 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   7288 Jun 10 13:26 ic2.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  85645 Jun 10 13:26 ic2_flip.png
+-rw-r--r--@  1 dmitrymanning-coe  wheel   2318 Jun 10 13:26 out.log

@@ -1,0 +1,23 @@
+=== k8 health re-check (02:59Z) ===
+pods RUNNING=22/30 | GPU-active=0/30
+  rs-k8-p0   up=0min gpu=None%
+  rs-k8-p1   up=0min gpu=None%
+  rs-k8-p2   up=0min gpu=None%
+  rs-k8-p3   up=47min gpu=0%
+  rs-k8-p4   up=47min gpu=0%
+--- p0 log tail ---
+[k8grid] worklist complete
+[02:46:22] k8_steer_cells.py done, final upload
+https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/blob/main/mts_singlefeat/results/k8grid_prog_p0.json
+  p0 no-int ASR: 0.9688
+--- p1 log tail ---
+[k8grid] worklist complete
+[02:44:38] k8_steer_cells.py done, final upload
+https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/blob/main/mts_singlefeat/results/k8grid_prog_p1.json
+  p1 no-int ASR: 0.9688
+--- p2 log tail ---
+[k8grid] worklist complete
+[02:48:54] k8_steer_cells.py done, final upload
+https://huggingface.co/datasets/dmanningcoe/fra-phase1-steering-data/blob/main/mts_singlefeat/results/k8grid_prog_p2.json
+  p2 no-int ASR: 0.9688
+k8grid cells: 20/201

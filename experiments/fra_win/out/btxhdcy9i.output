@@ -1,0 +1,22 @@
+=== job j11 output landed (poll 3) ===
+loading gemma-2-2b ...
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:45<01:30, 45.32s/it]Fetching 3 files:  67%|██████▋   | 2/3 [00:49<00:21, 21.31s/it]Fetching 3 files: 100%|██████████| 3/3 [00:49<00:00, 16.60s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.19it/s]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.16it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.67it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+loaded: 26 layers, 8 heads, d_model 2304
+top induction heads: [('L6H2', 0.95), ('L15H0', 0.93), ('L18H6', 0.82), ('L6H3', 0.71), ('L21H5', 0.62), ('L4H4', 0.58), ('L14H0', 0.51), ('L17H4', 0.49)]
+using L6H2 (strength 0.95)
+loading GemmaScope layer_5/width_16k/canonical
+SAE loaded d_sae 16384
+mean active feats/pos 26.102039337158203
+FRA recon on induction edges: corr 0.536  actual mean 9.08  FRA mean 9.68  (ratio 1.07)
+DONE j11
+total 16
+drwxr-xr-x@  4 dmitrymanning-coe  wheel   128 Jun 10 01:35 .
+drwxr-xr-x@ 13 dmitrymanning-coe  wheel   416 Jun 10 01:35 ..
+-rw-r--r--@  1 dmitrymanning-coe  wheel   665 Jun 10 01:35 j11.json
+-rw-r--r--@  1 dmitrymanning-coe  wheel  1594 Jun 10 01:35 out.log

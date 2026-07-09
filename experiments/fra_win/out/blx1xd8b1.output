@@ -1,0 +1,15 @@
+compile OK
+pushed
+[OK] rs-cleanact -> o8xrfi1pvtp12z
+[zk poll 1 20:19Z] deployblind=0 cleanact=0
+[zk poll 2 20:21Z] deployblind=0 cleanact=0
+=== deploysae_blind_pipeline ===
+top10 of ranking: [882, 617, 1490, 203, 730, 1739, 1558, 1173, 2034, 637]
+consensus-direction hits in top20 (cos>0.7): 5
+best: [{'fp': 'trigger', 'K': 24, 'c': 3, 'ASR': 0.0, 'Jclean': 0.0823}, {'fp': 'trigger', 'K': 40, 'c': 3, 'ASR': 0.0, 'Jclean': 0.0948}, {'fp': 'trigger', 'K': 16, 'c': 4, 'ASR': 0.0, 'Jclean': 0.1091}, {'fp': 'trigger', 'K': 40, 'c': 2, 'ASR': 0.0, 'Jclean': 0.1241}]
+[zk poll 3 20:22Z] deployblind=1 cleanact=0
+[zk poll 4 20:23Z] deployblind=1 cleanact=0
+=== cleanact_pipeline ===
+top10 of ranking: [1027, 573, 562, 521, 1345, 1687, 1702, 203, 1142, 648]
+consensus-direction hits in top20 (cos>0.7): 0
+best: []
