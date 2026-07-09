@@ -1,0 +1,1557 @@
+{
+  "sae_reports": [
+    {
+      "seed": 0,
+      "source": {},
+      "fidelity": null
+    },
+    {
+      "seed": 1,
+      "source": {},
+      "fidelity": null
+    },
+    {
+      "seed": 2,
+      "source": {},
+      "fidelity": {
+        "ln1_wdec_flat_cos_retrain_vs_orig": 0.7971188426017761
+      }
+    },
+    {
+      "seed": 3,
+      "source": {},
+      "fidelity": null
+    },
+    {
+      "seed": 4,
+      "source": {},
+      "fidelity": null
+    },
+    {
+      "seed": 5,
+      "source": {},
+      "fidelity": null
+    }
+  ],
+  "screens": [
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "chunk": 0,
+      "winner": {
+        "feat": 1114,
+        "rank": 0,
+        "alpha": 5.5,
+        "jsd_clean": 0.4178469181060791,
+        "jsd_pois": 0.9977307319641113,
+        "exact": 18.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "chunk": 1,
+      "winner": {
+        "feat": 467,
+        "rank": 9,
+        "alpha": 9.5,
+        "jsd_clean": 0.5201675891876221,
+        "jsd_pois": 0.9891840815544128,
+        "exact": 13.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "chunk": 2,
+      "winner": {
+        "feat": 473,
+        "rank": 13,
+        "alpha": 2.75,
+        "jsd_clean": 0.8044298887252808,
+        "jsd_pois": 0.489816278219223,
+        "exact": 5.0,
+        "asr": 0.59375
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "chunk": 3,
+      "winner": {
+        "feat": 1388,
+        "rank": 19,
+        "alpha": 9.75,
+        "jsd_clean": 0.8042968511581421,
+        "jsd_pois": 0.9671027064323425,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "chunk": 4,
+      "winner": {
+        "feat": 685,
+        "rank": 24,
+        "alpha": 9.75,
+        "jsd_clean": 0.4311351776123047,
+        "jsd_pois": 0.9888573884963989,
+        "exact": 24.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "chunk": 0,
+      "winner": {
+        "feat": 1027,
+        "rank": 0,
+        "alpha": 3.75,
+        "jsd_clean": 0.3589751124382019,
+        "jsd_pois": 0.9971586465835571,
+        "exact": 19.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "chunk": 1,
+      "winner": {
+        "feat": 1099,
+        "rank": 8,
+        "alpha": 9.75,
+        "jsd_clean": 0.44793736934661865,
+        "jsd_pois": 0.9842955470085144,
+        "exact": 17.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "chunk": 2,
+      "winner": {
+        "feat": 1244,
+        "rank": 11,
+        "alpha": 10.0,
+        "jsd_clean": 0.4095529019832611,
+        "jsd_pois": 0.9955369234085083,
+        "exact": 20.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "chunk": 3,
+      "winner": {
+        "feat": 1304,
+        "rank": 17,
+        "alpha": 7.75,
+        "jsd_clean": 0.5989579558372498,
+        "jsd_pois": 0.9777283668518066,
+        "exact": 11.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "chunk": 4,
+      "winner": {
+        "feat": 747,
+        "rank": 23,
+        "alpha": -7.5,
+        "jsd_clean": 0.5492613315582275,
+        "jsd_pois": 0.9882565140724182,
+        "exact": 12.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "chunk": 0,
+      "winner": {
+        "feat": 169,
+        "rank": 0,
+        "alpha": 2.5,
+        "jsd_clean": 0.33284300565719604,
+        "jsd_pois": 0.9973236322402954,
+        "exact": 31.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "chunk": 1,
+      "winner": {
+        "feat": 225,
+        "rank": 6,
+        "alpha": 7.75,
+        "jsd_clean": 0.5710400938987732,
+        "jsd_pois": 0.9938265681266785,
+        "exact": 14.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "chunk": 2,
+      "winner": {
+        "feat": 317,
+        "rank": 11,
+        "alpha": 10.0,
+        "jsd_clean": 0.4756309390068054,
+        "jsd_pois": 0.9836080074310303,
+        "exact": 15.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "chunk": 3,
+      "winner": {
+        "feat": 855,
+        "rank": 15,
+        "alpha": -10.0,
+        "jsd_clean": 0.6855851411819458,
+        "jsd_pois": 0.97427898645401,
+        "exact": 11.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "chunk": 4,
+      "winner": {
+        "feat": 1153,
+        "rank": 23,
+        "alpha": 9.25,
+        "jsd_clean": 0.6071023941040039,
+        "jsd_pois": 0.9826306104660034,
+        "exact": 8.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "chunk": 0,
+      "winner": {
+        "feat": 1154,
+        "rank": 0,
+        "alpha": 3.25,
+        "jsd_clean": 0.42536842823028564,
+        "jsd_pois": 0.9966118335723877,
+        "exact": 15.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "chunk": 1,
+      "winner": {
+        "feat": 986,
+        "rank": 9,
+        "alpha": 10.0,
+        "jsd_clean": 0.7892235517501831,
+        "jsd_pois": 0.9673721194267273,
+        "exact": 4.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "chunk": 2,
+      "winner": {
+        "feat": 514,
+        "rank": 10,
+        "alpha": 9.5,
+        "jsd_clean": 0.5372064709663391,
+        "jsd_pois": 0.986636757850647,
+        "exact": 12.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "chunk": 3,
+      "winner": {
+        "feat": 1122,
+        "rank": 15,
+        "alpha": 9.75,
+        "jsd_clean": 0.49288517236709595,
+        "jsd_pois": 0.986240029335022,
+        "exact": 18.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "chunk": 4,
+      "winner": {
+        "feat": 1253,
+        "rank": 24,
+        "alpha": -10.0,
+        "jsd_clean": 0.7256549000740051,
+        "jsd_pois": 0.9182361960411072,
+        "exact": 9.0,
+        "asr": 0.03125
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "chunk": 0,
+      "winner": {
+        "feat": 558,
+        "rank": 1,
+        "alpha": 6.75,
+        "jsd_clean": 0.36247968673706055,
+        "jsd_pois": 0.9970045685768127,
+        "exact": 21.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "chunk": 1,
+      "winner": {
+        "feat": 623,
+        "rank": 9,
+        "alpha": -10.0,
+        "jsd_clean": 0.39564579725265503,
+        "jsd_pois": 0.9964447021484375,
+        "exact": 26.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "chunk": 2,
+      "winner": {
+        "feat": 725,
+        "rank": 10,
+        "alpha": 10.0,
+        "jsd_clean": 0.4498336911201477,
+        "jsd_pois": 0.995809018611908,
+        "exact": 17.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "chunk": 3,
+      "winner": {
+        "feat": 505,
+        "rank": 18,
+        "alpha": -6.25,
+        "jsd_clean": 0.7200815081596375,
+        "jsd_pois": 0.9559028744697571,
+        "exact": 6.0,
+        "asr": 0.109375
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "chunk": 4,
+      "winner": {
+        "feat": 310,
+        "rank": 21,
+        "alpha": 10.0,
+        "jsd_clean": 0.5773711204528809,
+        "jsd_pois": 0.9748253226280212,
+        "exact": 14.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "chunk": 0,
+      "winner": {
+        "feat": 1208,
+        "rank": 0,
+        "alpha": 5.0,
+        "jsd_clean": 0.3898855745792389,
+        "jsd_pois": 0.9941200017929077,
+        "exact": 18.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "chunk": 1,
+      "winner": {
+        "feat": 296,
+        "rank": 8,
+        "alpha": 9.75,
+        "jsd_clean": 0.3580465316772461,
+        "jsd_pois": 0.9943884015083313,
+        "exact": 23.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "chunk": 2,
+      "winner": {
+        "feat": 511,
+        "rank": 14,
+        "alpha": 10.0,
+        "jsd_clean": 0.40167340636253357,
+        "jsd_pois": 0.9921673536300659,
+        "exact": 19.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "chunk": 3,
+      "winner": {
+        "feat": 935,
+        "rank": 17,
+        "alpha": 10.0,
+        "jsd_clean": 0.45134055614471436,
+        "jsd_pois": 0.992824912071228,
+        "exact": 19.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "chunk": 4,
+      "winner": {
+        "feat": 790,
+        "rank": 21,
+        "alpha": -10.0,
+        "jsd_clean": 0.6561774015426636,
+        "jsd_pois": 0.9263073801994324,
+        "exact": 9.0,
+        "asr": 0.046875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "chunk": 0,
+      "winner": {
+        "feat": 579,
+        "rank": 1,
+        "alpha": 5.75,
+        "jsd_clean": 0.2838961184024811,
+        "jsd_pois": 0.9972452521324158,
+        "exact": 30.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "chunk": 1,
+      "winner": {
+        "feat": 409,
+        "rank": 6,
+        "alpha": -9.75,
+        "jsd_clean": 0.8106647729873657,
+        "jsd_pois": 0.3913668692111969,
+        "exact": 7.0,
+        "asr": 0.609375
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "chunk": 2,
+      "winner": {
+        "feat": 892,
+        "rank": 12,
+        "alpha": 10.0,
+        "jsd_clean": 0.9106955528259277,
+        "jsd_pois": 0.5731070637702942,
+        "exact": 3.0,
+        "asr": 0.421875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "chunk": 3,
+      "winner": {
+        "feat": 1069,
+        "rank": 19,
+        "alpha": -10.0,
+        "jsd_clean": 0.9272645711898804,
+        "jsd_pois": 0.32812339067459106,
+        "exact": 2.0,
+        "asr": 0.6875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "chunk": 4,
+      "winner": {
+        "feat": 732,
+        "rank": 20,
+        "alpha": 9.75,
+        "jsd_clean": 0.9012644290924072,
+        "jsd_pois": 0.4238709509372711,
+        "exact": 3.0,
+        "asr": 0.609375
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "chunk": 0,
+      "winner": {
+        "feat": 519,
+        "rank": 1,
+        "alpha": 3.25,
+        "jsd_clean": 0.3394753932952881,
+        "jsd_pois": 0.9964723587036133,
+        "exact": 27.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "chunk": 1,
+      "winner": {
+        "feat": 430,
+        "rank": 5,
+        "alpha": -10.0,
+        "jsd_clean": 0.7941423058509827,
+        "jsd_pois": 0.6257777810096741,
+        "exact": 7.0,
+        "asr": 0.328125
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "chunk": 2,
+      "winner": {
+        "feat": 1459,
+        "rank": 14,
+        "alpha": 5.5,
+        "jsd_clean": 0.7284536361694336,
+        "jsd_pois": 0.9963887929916382,
+        "exact": 1.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "chunk": 3,
+      "winner": {
+        "feat": 254,
+        "rank": 16,
+        "alpha": 10.0,
+        "jsd_clean": 0.8874290585517883,
+        "jsd_pois": 0.5775045156478882,
+        "exact": 2.0,
+        "asr": 0.421875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "chunk": 4,
+      "winner": {
+        "feat": 941,
+        "rank": 24,
+        "alpha": 10.0,
+        "jsd_clean": 0.8426393270492554,
+        "jsd_pois": 0.49058037996292114,
+        "exact": 6.0,
+        "asr": 0.53125
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "chunk": 0,
+      "winner": {
+        "feat": 949,
+        "rank": 1,
+        "alpha": 1.5,
+        "jsd_clean": 0.745856523513794,
+        "jsd_pois": 0.9761250019073486,
+        "exact": 2.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "chunk": 1,
+      "winner": {
+        "feat": 795,
+        "rank": 6,
+        "alpha": 10.0,
+        "jsd_clean": 0.5042893290519714,
+        "jsd_pois": 0.9856860637664795,
+        "exact": 13.0,
+        "asr": 0.015625
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "chunk": 2,
+      "winner": {
+        "feat": 230,
+        "rank": 10,
+        "alpha": 10.0,
+        "jsd_clean": 0.6260131597518921,
+        "jsd_pois": 0.8172132968902588,
+        "exact": 5.0,
+        "asr": 0.15625
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "chunk": 3,
+      "winner": {
+        "feat": 1316,
+        "rank": 18,
+        "alpha": 9.5,
+        "jsd_clean": 0.7383283972740173,
+        "jsd_pois": 0.9190729856491089,
+        "exact": 8.0,
+        "asr": 0.0625
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "chunk": 4,
+      "winner": {
+        "feat": 1091,
+        "rank": 23,
+        "alpha": -3.0,
+        "jsd_clean": 0.6027798652648926,
+        "jsd_pois": 0.988509476184845,
+        "exact": 11.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "chunk": 0,
+      "winner": {
+        "feat": 171,
+        "rank": 1,
+        "alpha": 6.5,
+        "jsd_clean": 0.3533196449279785,
+        "jsd_pois": 0.9978370666503906,
+        "exact": 26.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "chunk": 1,
+      "winner": {
+        "feat": 1401,
+        "rank": 6,
+        "alpha": 9.75,
+        "jsd_clean": 0.49696066975593567,
+        "jsd_pois": 0.9429619312286377,
+        "exact": 20.0,
+        "asr": 0.046875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "chunk": 2,
+      "winner": {
+        "feat": 133,
+        "rank": 11,
+        "alpha": 10.0,
+        "jsd_clean": 0.49157166481018066,
+        "jsd_pois": 0.9847533106803894,
+        "exact": 18.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "chunk": 3,
+      "winner": {
+        "feat": 852,
+        "rank": 19,
+        "alpha": 9.75,
+        "jsd_clean": 0.9414108991622925,
+        "jsd_pois": 0.24898934364318848,
+        "exact": 2.0,
+        "asr": 0.796875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "chunk": 4,
+      "winner": {
+        "feat": 1331,
+        "rank": 21,
+        "alpha": 3.5,
+        "jsd_clean": 0.9101502895355225,
+        "jsd_pois": 0.9952124953269958,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "chunk": 0,
+      "winner": {
+        "feat": 515,
+        "rank": 0,
+        "alpha": 7.5,
+        "jsd_clean": 0.3631686866283417,
+        "jsd_pois": 0.9978194832801819,
+        "exact": 23.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "chunk": 1,
+      "winner": {
+        "feat": 806,
+        "rank": 9,
+        "alpha": 10.0,
+        "jsd_clean": 0.597312867641449,
+        "jsd_pois": 0.983393132686615,
+        "exact": 14.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "chunk": 2,
+      "winner": {
+        "feat": 668,
+        "rank": 12,
+        "alpha": 9.75,
+        "jsd_clean": 0.909548282623291,
+        "jsd_pois": 0.3325209319591522,
+        "exact": 1.0,
+        "asr": 0.65625
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "chunk": 3,
+      "winner": {
+        "feat": 195,
+        "rank": 16,
+        "alpha": 9.75,
+        "jsd_clean": 0.9432680606842041,
+        "jsd_pois": 0.650757908821106,
+        "exact": 1.0,
+        "asr": 0.53125
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "chunk": 4,
+      "winner": {
+        "feat": 1165,
+        "rank": 21,
+        "alpha": 10.0,
+        "jsd_clean": 0.7424435019493103,
+        "jsd_pois": 0.6756359934806824,
+        "exact": 10.0,
+        "asr": 0.296875
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "chunk": 0,
+      "winner": {
+        "feat": 928,
+        "rank": 0,
+        "alpha": 4.5,
+        "jsd_clean": 0.37492334842681885,
+        "jsd_pois": 0.9974328875541687,
+        "exact": 25.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "chunk": 1,
+      "winner": {
+        "feat": 149,
+        "rank": 7,
+        "alpha": 2.25,
+        "jsd_clean": 0.6015537977218628,
+        "jsd_pois": 0.9874387383460999,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "chunk": 2,
+      "winner": {
+        "feat": 494,
+        "rank": 10,
+        "alpha": 10.0,
+        "jsd_clean": 0.5443596243858337,
+        "jsd_pois": 0.8740962147712708,
+        "exact": 15.0,
+        "asr": 0.125
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "chunk": 3,
+      "winner": {
+        "feat": 63,
+        "rank": 16,
+        "alpha": 2.5,
+        "jsd_clean": 0.6204493045806885,
+        "jsd_pois": 0.9957982897758484,
+        "exact": 6.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "chunk": 4,
+      "winner": {
+        "feat": 1135,
+        "rank": 23,
+        "alpha": 10.0,
+        "jsd_clean": 0.9478316903114319,
+        "jsd_pois": 0.3575213551521301,
+        "exact": 1.0,
+        "asr": 0.65625
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "chunk": 0,
+      "winner": {
+        "feat": 1114,
+        "rank": 0,
+        "alpha": 5.0,
+        "jsd_clean": 0.8378293514251709,
+        "jsd_pois": 0.9657871127128601,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "chunk": 1,
+      "winner": {
+        "feat": 1261,
+        "rank": 7,
+        "alpha": -7.75,
+        "jsd_clean": 0.7235764265060425,
+        "jsd_pois": 0.9386342763900757,
+        "exact": 6.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "chunk": 2,
+      "winner": {
+        "feat": 221,
+        "rank": 11,
+        "alpha": 6.0,
+        "jsd_clean": 0.7290083765983582,
+        "jsd_pois": 0.9857244491577148,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "chunk": 3,
+      "winner": {
+        "feat": 1220,
+        "rank": 17,
+        "alpha": -5.75,
+        "jsd_clean": 0.43654531240463257,
+        "jsd_pois": 0.9887942671775818,
+        "exact": 17.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "chunk": 4,
+      "winner": {
+        "feat": 467,
+        "rank": 20,
+        "alpha": 9.5,
+        "jsd_clean": 0.6383816003799438,
+        "jsd_pois": 0.9831618070602417,
+        "exact": 10.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "chunk": 0,
+      "winner": {
+        "feat": 1027,
+        "rank": 0,
+        "alpha": 2.0,
+        "jsd_clean": 0.44833725690841675,
+        "jsd_pois": 0.991567850112915,
+        "exact": 21.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "chunk": 1,
+      "winner": {
+        "feat": 767,
+        "rank": 6,
+        "alpha": 5.25,
+        "jsd_clean": 0.5199366807937622,
+        "jsd_pois": 0.9927879571914673,
+        "exact": 12.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "chunk": 2,
+      "winner": {
+        "feat": 94,
+        "rank": 14,
+        "alpha": 8.0,
+        "jsd_clean": 0.6304052472114563,
+        "jsd_pois": 0.986127495765686,
+        "exact": 5.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "chunk": 3,
+      "winner": {
+        "feat": 459,
+        "rank": 16,
+        "alpha": -4.5,
+        "jsd_clean": 0.533565878868103,
+        "jsd_pois": 0.97870272397995,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "chunk": 4,
+      "winner": {
+        "feat": 76,
+        "rank": 22,
+        "alpha": -6.5,
+        "jsd_clean": 0.6853519082069397,
+        "jsd_pois": 0.9746292233467102,
+        "exact": 6.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "chunk": 0,
+      "winner": {
+        "feat": 169,
+        "rank": 0,
+        "alpha": 2.5,
+        "jsd_clean": 0.42710062861442566,
+        "jsd_pois": 0.9940794110298157,
+        "exact": 21.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "chunk": 1,
+      "winner": {
+        "feat": 640,
+        "rank": 8,
+        "alpha": 8.75,
+        "jsd_clean": 0.5814018845558167,
+        "jsd_pois": 0.988489031791687,
+        "exact": 12.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "chunk": 2,
+      "winner": {
+        "feat": 207,
+        "rank": 10,
+        "alpha": -4.5,
+        "jsd_clean": 0.6793829798698425,
+        "jsd_pois": 0.9694869518280029,
+        "exact": 8.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "chunk": 3,
+      "winner": {
+        "feat": 1304,
+        "rank": 17,
+        "alpha": -9.0,
+        "jsd_clean": 0.5184487104415894,
+        "jsd_pois": 0.980521023273468,
+        "exact": 10.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "chunk": 4,
+      "winner": {
+        "feat": 1180,
+        "rank": 23,
+        "alpha": 10.0,
+        "jsd_clean": 0.8296053409576416,
+        "jsd_pois": 0.9614198803901672,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "chunk": 0,
+      "winner": {
+        "feat": 29,
+        "rank": 0,
+        "alpha": 3.5,
+        "jsd_clean": 0.7493206858634949,
+        "jsd_pois": 0.9645932912826538,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "chunk": 1,
+      "winner": {
+        "feat": 986,
+        "rank": 9,
+        "alpha": -9.5,
+        "jsd_clean": 0.7088731527328491,
+        "jsd_pois": 0.9659070372581482,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "chunk": 2,
+      "winner": {
+        "feat": 514,
+        "rank": 10,
+        "alpha": 8.25,
+        "jsd_clean": 0.7990225553512573,
+        "jsd_pois": 0.9854900240898132,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "chunk": 3,
+      "winner": {
+        "feat": 1511,
+        "rank": 18,
+        "alpha": -10.0,
+        "jsd_clean": 0.5843737721443176,
+        "jsd_pois": 0.9714890718460083,
+        "exact": 10.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "chunk": 4,
+      "winner": {
+        "feat": 1473,
+        "rank": 24,
+        "alpha": -7.25,
+        "jsd_clean": 0.6171295046806335,
+        "jsd_pois": 0.9881554841995239,
+        "exact": 9.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "chunk": 0,
+      "winner": {
+        "feat": 841,
+        "rank": 4,
+        "alpha": 4.25,
+        "jsd_clean": 0.7753991484642029,
+        "jsd_pois": 0.9619049429893494,
+        "exact": 3.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "chunk": 1,
+      "winner": {
+        "feat": 499,
+        "rank": 8,
+        "alpha": 7.25,
+        "jsd_clean": 0.5953856110572815,
+        "jsd_pois": 0.9910829067230225,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "chunk": 2,
+      "winner": {
+        "feat": 725,
+        "rank": 12,
+        "alpha": -8.0,
+        "jsd_clean": 0.8730571269989014,
+        "jsd_pois": 0.9724850654602051,
+        "exact": 0.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "chunk": 3,
+      "winner": {
+        "feat": 623,
+        "rank": 18,
+        "alpha": -4.75,
+        "jsd_clean": 0.5437679290771484,
+        "jsd_pois": 0.9693101644515991,
+        "exact": 18.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "chunk": 4,
+      "winner": {
+        "feat": 310,
+        "rank": 22,
+        "alpha": -9.5,
+        "jsd_clean": 0.5695111751556396,
+        "jsd_pois": 0.9874244332313538,
+        "exact": 12.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "chunk": 0,
+      "winner": {
+        "feat": 1208,
+        "rank": 0,
+        "alpha": 4.5,
+        "jsd_clean": 0.46302446722984314,
+        "jsd_pois": 0.987798810005188,
+        "exact": 14.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "chunk": 1,
+      "winner": {
+        "feat": 1003,
+        "rank": 8,
+        "alpha": 8.25,
+        "jsd_clean": 0.7056901454925537,
+        "jsd_pois": 0.9665132164955139,
+        "exact": 4.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "chunk": 2,
+      "winner": {
+        "feat": 935,
+        "rank": 12,
+        "alpha": -10.0,
+        "jsd_clean": 0.7539109587669373,
+        "jsd_pois": 0.9578364491462708,
+        "exact": 7.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "chunk": 3,
+      "winner": {
+        "feat": 511,
+        "rank": 16,
+        "alpha": -8.5,
+        "jsd_clean": 0.5888735055923462,
+        "jsd_pois": 0.9837872982025146,
+        "exact": 11.0,
+        "asr": 0.0
+      },
+      "cached": true
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "chunk": 4,
+      "winner": {
+        "feat": 39,
+        "rank": 24,
+        "alpha": -10.0,
+        "jsd_clean": 0.9105600714683533,
+        "jsd_pois": 0.41460949182510376,
+        "exact": 2.0,
+        "asr": 0.65625
+      },
+      "cached": true
+    }
+  ],
+  "bayesopt": [
+    {
+      "scheme": "ov",
+      "seed": 0,
+      "feat": 1114,
+      "grid_alpha": 5.5,
+      "opt_alpha": 3.8154568114553715,
+      "opt_jsd_clean": 0.5189862370491027,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "ov",
+      "seed": 1,
+      "feat": 1027,
+      "grid_alpha": 3.75,
+      "opt_alpha": 3.5,
+      "opt_jsd_clean": 0.38058651685714723,
+      "opt_asr": 0.001
+    },
+    {
+      "scheme": "ov",
+      "seed": 2,
+      "feat": 169,
+      "grid_alpha": 2.5,
+      "opt_alpha": 2.627696272354358,
+      "opt_jsd_clean": 0.3833889901638031,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "ov",
+      "seed": 3,
+      "feat": 1154,
+      "grid_alpha": 3.25,
+      "opt_alpha": 3.1894720608979945,
+      "opt_jsd_clean": 0.42136792540550233,
+      "opt_asr": 0.001
+    },
+    {
+      "scheme": "ov",
+      "seed": 4,
+      "feat": 558,
+      "grid_alpha": 6.75,
+      "opt_alpha": 4.986597351496332,
+      "opt_jsd_clean": 0.3975850522518158,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "ov",
+      "seed": 5,
+      "feat": 296,
+      "grid_alpha": 9.75,
+      "opt_alpha": 9.132195581199763,
+      "opt_jsd_clean": 0.4353359997272491,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "conventional",
+      "seed": 0,
+      "feat": 579,
+      "grid_alpha": 5.75,
+      "opt_alpha": 5.75,
+      "opt_jsd_clean": 0.401755279302597,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "conventional",
+      "seed": 1,
+      "feat": 519,
+      "grid_alpha": 3.25,
+      "opt_alpha": 3.0,
+      "opt_jsd_clean": 0.41522449254989624,
+      "opt_asr": 0.001
+    },
+    {
+      "scheme": "conventional",
+      "seed": 2,
+      "feat": 1091,
+      "grid_alpha": -3.0,
+      "opt_alpha": -2.6175881640471985,
+      "opt_jsd_clean": 0.6643837451934814,
+      "opt_asr": 0.009999999999999998
+    },
+    {
+      "scheme": "conventional",
+      "seed": 3,
+      "feat": 171,
+      "grid_alpha": 6.5,
+      "opt_alpha": 5.869972826082552,
+      "opt_jsd_clean": 0.4490467607975006,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "conventional",
+      "seed": 4,
+      "feat": 515,
+      "grid_alpha": 7.5,
+      "opt_alpha": 4.757143997398526,
+      "opt_jsd_clean": 0.4494999170303345,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "conventional",
+      "seed": 5,
+      "feat": 928,
+      "grid_alpha": 4.5,
+      "opt_alpha": 3.3918975112754453,
+      "opt_jsd_clean": 0.4574273645877838,
+      "opt_asr": 0.0
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 0,
+      "feat": 1220,
+      "grid_alpha": -5.75,
+      "opt_alpha": -5.1587387199770305,
+      "opt_jsd_clean": 0.5432645082473755,
+      "opt_asr": 0.005
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 1,
+      "feat": 1027,
+      "grid_alpha": 2.0,
+      "opt_alpha": 1.8568923645003679,
+      "opt_jsd_clean": 0.4616539001464844,
+      "opt_asr": 0.002
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 2,
+      "feat": 169,
+      "grid_alpha": 2.5,
+      "opt_alpha": 2.4712739357194486,
+      "opt_jsd_clean": 0.41200010776519774,
+      "opt_asr": 0.001
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 3,
+      "feat": 1511,
+      "grid_alpha": -10.0,
+      "opt_alpha": -10.25,
+      "opt_jsd_clean": 0.6815748572349548,
+      "opt_asr": 0.008
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 4,
+      "feat": 623,
+      "grid_alpha": -4.75,
+      "opt_alpha": -5.528190910195775,
+      "opt_jsd_clean": 0.5227691948413848,
+      "opt_asr": 0.002
+    },
+    {
+      "scheme": "conv_ln1",
+      "seed": 5,
+      "feat": 1208,
+      "grid_alpha": 4.5,
+      "opt_alpha": 4.411705751878049,
+      "opt_jsd_clean": 0.5233104825019836,
+      "opt_asr": 0.004
+    }
+  ],
+  "failures": {
+    "sae": [],
+    "screen": [],
+    "bo": []
+  }
+}
