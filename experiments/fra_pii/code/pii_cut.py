@@ -140,10 +140,16 @@ def p_first(t, tgt_id, hooks=()):
     lg = model.run_with_hooks(t, fwd_hooks=list(hooks)) if hooks else model(t)
     return torch.softmax(lg[0, -1].float(), -1)[tgt_id].item()
 
-def gen_has(t, target, hooks=(), n=10):
+def gen_cont(t, hooks=(), n=12):
     with model.hooks(fwd_hooks=list(hooks)):
         g = model.generate(t, max_new_tokens=n, do_sample=False, verbose=False)
-    cont = tok.decode(g[0, t.shape[1]:], skip_special_tokens=True)
+    return tok.decode(g[0, t.shape[1]:], skip_special_tokens=True)
+
+def _dig(s): return "".join(c for c in s if c.isdigit())
+def emit_hit(cont, ssn): return _dig(ssn) in _dig(cont)   # digit-aware: ignore dash/space formatting
+
+def gen_has(t, target, hooks=(), n=12):
+    cont = gen_cont(t, hooks, n)
     return (target in cont), cont[:40]
 
 def match_strength(measure_fn, target_removal, base, lo, hi, iters=6):
@@ -187,11 +193,12 @@ def main():
         key_positions = list(range(kpos, kpos + len(ssn_ids)))
 
         base_emit = p_first(te, first_digit_id)
-        emit_ok0, _ = gen_has(te, ssn)
+        base_cont = gen_cont(te); emit_ok0 = emit_hit(base_cont, ssn)
         tl = toks(lookup_prompt(recs, ssn))
         look_ok0, look_c0 = gen_has(tl, last)
         if base_emit < 0.3 or not emit_ok0 or not look_ok0:
-            print(f"  db{i}: SKIP (base emit {base_emit:.2f} emit_ok {emit_ok0} look_ok {look_ok0})", flush=True)
+            print(f"  db{i}: SKIP (base emit {base_emit:.2f} emit_ok {emit_ok0} look_ok {look_ok0} "
+                  f"cont={base_cont[:30]!r})", flush=True)
             continue
 
         # ---- FRA: locate emit cell, build deltas on emit + lookup prompts ----
@@ -201,14 +208,14 @@ def main():
         c_fra = match_strength(lambda c: p_first(te, first_digit_id, fra_cut_hooks(byLe, c, sq)),
                                0.8, base_emit, 0.0, 24.0)
         fra_emit = p_first(te, first_digit_id, fra_cut_hooks(byLe, c_fra, sq))
-        fra_emit_ok, _ = gen_has(te, ssn, fra_cut_hooks(byLe, c_fra, sq))
+        fra_emit_ok = emit_hit(gen_cont(te, fra_cut_hooks(byLe, c_fra, sq)), ssn)
         fra_look_ok, fra_look_c = gen_has(tl, last, fra_cut_hooks(byLl, c_fra, tl.shape[1]))
 
         # ---- content-ablation baseline (matched emit removal) ----
         a_abl = match_strength(lambda a: p_first(te, first_digit_id, ablate_hooks(key_positions, a)),
                                0.8, base_emit, 0.0, 1.0)
         abl_emit = p_first(te, first_digit_id, ablate_hooks(key_positions, a_abl))
-        abl_emit_ok, _ = gen_has(te, ssn, ablate_hooks(key_positions, a_abl))
+        abl_emit_ok = emit_hit(gen_cont(te, ablate_hooks(key_positions, a_abl)), ssn)
         # ablate the ssn digits in the LOOKUP context (same content-gate: the given ssn's key positions)
         idl = tl[0].tolist(); kpos_l = find_subseq(idl, ssn_ids)
         keypos_l = list(range(kpos_l, kpos_l + len(ssn_ids))) if kpos_l >= 0 else []
@@ -217,7 +224,7 @@ def main():
         # ---- output logit-suppress baseline (full emit removal, trivial) ----
         os_hooks = outsupp_hooks(digit_ids, s=10.0)
         osu_emit = p_first(te, first_digit_id, os_hooks)
-        osu_emit_ok, _ = gen_has(te, ssn, os_hooks)
+        osu_emit_ok = emit_hit(gen_cont(te, os_hooks), ssn)
         osu_look_ok, _ = gen_has(tl, last, os_hooks)
 
         row = dict(ssn=ssn, name=name, base_emit=base_emit,
