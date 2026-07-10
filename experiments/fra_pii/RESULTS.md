@@ -6,14 +6,22 @@ Model gemma-2-2b base + GemmaScope 16k. Simplest task: one fixed 3-record JSON D
 record[0]'s SSN. Ground-truth metrics (P(first digit) + greedy emit-match). Autoresearch flow:
 FRA agent / SAE agent / theory agent, ≤5-min RunPod iterations.
 
-## Verdict: FRA NEGATIVE (reach-capped); conventional SAE WINS the use-without-disclosure goal.
+## Verdict: FRA is content-selective but REACH-INSUFFICIENT (can't behaviorally disarm); conventional SAE WINS the use-without-disclosure goal. Silver lining: B3 condensate CONFIRMED on gemma.
 
-| method | max emit-supp | disarms emit? | lookup preserved | sibling | gen-KL |
+| method | max emit-supp | disarms emit? (emit_ok=F) | lookup preserved | sibling | gen-KL |
 |--------|--------------|---------------|------------------|---------|--------|
 | FRA single-edge (answer→digit) | ≤0.13 | no | — | — | — |
-| FRA all-positions content-cut | 0.65 (flat over M,c) | **no** (emit_ok=True) | yes (vacuous) | yes | ~0 |
+| FRA all-positions content-cut | 0.65 (flat over M,c) | **no** (emit_ok=True) | yes | yes | ~0 |
+| **FRA SVD rank-1** (best FRA variant) | **0.84** | **no** (emit_ok=True) | yes | yes | 0.058 |
+| FRA SVD rank-4 | 0.65 | no | BROKEN | BROKEN | 0.058 |
 | all-positions oracle (digits attn-invisible) | 0.97 | yes | **BROKEN** | yes | 0 |
 | **SAE single feature (L18, k=1)** | **0.956** | **yes** | **yes** | unconfirmed* | ~0† |
+
+The behavioral bar (emit_ok=False AND look_ok=True at one operating point): cleared ONLY by SAE. FRA's best
+(SVD rank-1, 0.84 supp) preserves lookup+sibling but never disarms — the base P(first digit)=0.967 is so
+peaked that even an 84% probability crush leaves the SSN as greedy argmax. The FRA→oracle gap (0.84→0.97)
+IS the reach gap: FRA edits only the ~65–84% SAE-reconstructed part of the emit score; the error terms carry
+the rest, and that remainder is what flips the argmax.
 
 \*SAE cross-record sib metric had a bug (ablated sibling's own digits); fixed, not re-run → sib is an
 upper bound, not confirmed leakage. †SAE gen-KL≈0 is trivial (position-locked hook never fires on
@@ -35,7 +43,16 @@ unrelated prompts), not evidence of broad safety.
    deletion at the record's digit positions disarms emit (0.956) AND preserves lookup (True). The
    attention oracle disarms but BREAKS lookup (attention-invisible digits kill the match too). Mechanism:
    emit needs the digit CONTENT moved forward (killed by residual-space deletion); lookup survives content
-   deletion (matches via the query-side SSN copy). FRA's score-space QK cut can't reach suppression at all.
+   deletion (matches via the query-side SSN copy). FRA's score-space QK cut can't reach behavioral disarm.
+   SAE's selectivity is POSITIONAL (position-locked hook), not content — spares Bob because Bob is elsewhere.
+5. **B3 CONDENSATE CONFIRMED on gemma (silver lining for the mean-field theory).** SVD of the per-head
+   active-feature coupling ω is ~RANK-1: cumvar@r=1 = 0.91–0.998 across all 8 heads (top singular value
+   dominates by 10–40×). So the distributed emit conjunction is ONE collective mode per head — r_eff≈1.
+   Contrary to the no-condensate lean for dense gpt2 (STOCKTAKE F7); gemma's coupling condenses → reopens
+   T4 (mean-field) as productive on gemma. The rank-1 edit is the BEST + most selective FRA variant (0.84
+   supp, preserves lookup+sibling); rank-4 HURTS (breaks both) → the top mode IS the emit-copy direction,
+   lower modes are shared collateral. FRA's content-selectivity is real; it just can't cross the reach
+   threshold. (SVD sweep crashed at r>4 on small-coupling heads — index error; verdict robust, r=1 optimal.)
 
 ## Interpretation (the boundary)
 Exact INVERSE of the box→frog retrieval win (single-token value, live answer→value edge, concentrated,
