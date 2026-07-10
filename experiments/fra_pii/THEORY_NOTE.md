@@ -5,28 +5,40 @@ Mechanistic account of the SSN task: suppress the model EMITTING a target in-con
 SSN emission, (c) general behaviour. Structured as: a-priori prediction from the win-checklist →
 reconcile with the Stage-2 NO-OP and the diag ORACLE → SAE-baseline / confirm-refute conditions.
 
-TL;DR — **SETTLED (round-4, real numbers): an FRA NEGATIVE + a surprising SAE WIN.** SSN recall is a
-**distributed, redundant-bank, content-routed** attention circuit (all-head all-positions oracle
-disarms it: emit_supp **0.970**) with a **generic digit key**. The use-without-disclosure control
-(disarm emit, keep lookup) IS achievable — but only by **residual-space source-content deletion (SAE:
-L18 k=1 emit_supp 0.956, emit_ok=False, look_ok=True)**, NOT by score-space QK cutting:
-- **FRA (position-invariant content cut) is REACH-CAPPED at ~0.63–0.65** — flat across M(100→41446
-  pairs = ALL) × c(8→45), **emit_ok=True at every config** (never behaviorally disarms). The SAE basis
-  reconstructs only ~65% of the emit conjunction's score; the oracle's 0.97 proves the ceiling is
-  reachable, FRA just can't reach it. Win-checklist **clause-5 (reach) failure**, not a locate failure.
-- **The all-positions ORACLE disarms emit (0.97) but breaks LOOKUP too** (look_ok=False): making the
-  digits attention-invisible is *symmetric* — it kills reading-them-to-emit AND reading-them-to-match.
-  So even perfect attention removal cannot do the dissociation.
-- **SAE wins because content-deletion is DIRECTIONAL**: delete the digit *representation* at source →
-  emit (which must transport that content to the output) dies, while lookup (whose output is the
-  *name*) survives. The dissociation lives in residual/content space, not attention/score space.
+**WIN CRITERION (behavioral, conjunctive, one operating point).** A method WINS the use-without-
+disclosure task iff, at a **single** intervention setting, it drives **emit_ok=False** (target SSN no
+longer greedily emitted — disclosure actually prevented) **AND** keeps **look_ok=True** (ssn→name
+lookup preserved). Partial P(first-digit) suppression is NOT a win; look_ok/sib_ok measured at a
+*non-disarming* setting is NOT evidence of selectivity.
 
-**Exact inverse of box→frog** (single-token value, concentrated on one live answer→value edge → FRA
-reconstructs ~full score → 1100× win). **Boundary lesson:** FRA attention-cut ⟂ multi-token
-distributed content-routed recall; **SAE content-deletion is the right — and use-preserving — tool
-there.** (My earlier "query-role" FRA-win hypothesis is moot: FRA never reaches the operating point
-where it would matter, and the winning mechanism is content-direction, not query-role.) Caveats:
-SAE cross-record sibling unconfirmed (sib-metric bug), SVD r_eff pending, single fixed DB.
+TL;DR — **NOT YET SETTLED; three-way conditional on round-5 (SVD).** Robust facts (round-4): SSN
+recall is a **distributed, redundant-bank, content-routed** attention circuit (all-positions oracle
+disarms it, emit_supp **0.970**) with a **generic, cross-record-shared digit key**. Scored against the
+bar above:
+- **FRA (position-invariant content cut): does NOT clear the bar — REACH-CAPPED.** emit_supp ~0.63–0.65,
+  flat across M(100→41446 pairs=ALL) × c(8→45), **emit_ok=True at every config** → disclosure never
+  prevented (fails conjunct 1). Its look_ok=True/sib_ok=True are at a **non-disarming** point → **weak
+  evidence, NOT a selectivity win** (and sib_ok is confounded: Marcus & Elena share the digit tokens
+  5,3,1,4,2, so a too-weak cut trivially "preserves" the sibling). The **reach ceiling — SAE
+  reconstructs only ~65% of the emit conjunction's score** vs the 0.97 oracle — is the crux quantity.
+- **All-positions ORACLE: emit_ok=False but look_ok=FALSE** → fails conjunct 2. Attention removal is
+  *symmetric* (kills read-to-emit AND read-to-match), so even the perfect score-space intervention
+  cannot dissociate emit from lookup.
+- **SAE single-feature (L18 k=1): emit_ok=False AND look_ok=True → clears the bar — but POSITIONALLY**
+  (position-locked hook at the target's digit slots) and **cross-record UNCONFIRMED** (sib-metric bug).
+  Content-deletion is *directional* (kills transport-out for emit, spares name-output for lookup).
+
+**μ_emit ≠ μ_lookup (query-feature distinctness) is NECESSARY but NOT SUFFICIENT** for an FRA win:
+even if the emit-query role is distinct from the lookup-query role, FRA must *also* cross the reach
+ceiling (0.65 → emit_ok=False) to prevent disclosure. Round-5 SVD (dimension-reduction of ω → r_eff,
+a more complete rank-r edit) decides which of three worlds we are in (see §4).
+
+**Structural contrast with box→frog** (single-token value, concentrated on one live answer→value edge
+→ FRA reconstructs ~full score → 1100× win): SSN-emit's value is multi-token and smeared across a
+redundant head-bank, so the SAE-cell basis under-reconstructs the score → the reach cap. Whether that
+cap is *fundamental* (FRA loses) or *basis-limited* (a completer edit crosses it) is exactly what
+round-5 tests. Caveats: SAE cross-record sibling **unconfirmed** (sib-metric bug) + SAE win is only
+positional; FRA sib_ok confounded by shared digit tokens; SVD r_eff pending; single fixed DB.
 
 ---
 
@@ -204,15 +216,18 @@ and the disarm has to come from residual-space content-deletion instead (§3).
 All on the fixed 3-record DB, target = record[0], base emit P(first)=0.967. `emit_ok`=True means the
 SSN still emits (NOT disarmed); `look_ok`=True means lookup preserved.
 
-| method | mechanism (space) | emit_supp | emit disarmed? | lookup kept? | sibling | source |
+| method | mechanism (space) | emit_supp | **emit_ok=F?** (disarm) | **look_ok=T?** (keep) | clears bar? | source |
 |---|---|---|---|---|---|---|
-| **all-positions ORACLE** | attention removal (score) | **0.970** | **YES** (emit_ok=F) | **NO** (look_ok=F) | kept* | round-4 |
-| **FRA pos-invariant cut** | QK cell-cut (score) | **0.62–0.65** (flat M×c) | **NO** (emit_ok=T ∀) | (vacuous T) | (vacuous T) | `pii_sweep_fra4-allpos.json` |
-| **SAE single-feature** (L18 k=1) | source-content delete (residual) | **0.956** | **YES** (emit_ok=F) | **YES** (look_ok=T) | kept* | `pii_sweep_sae*.json` |
+| **all-positions ORACLE** | attention removal (score) | **0.970** | **YES** | **NO** | ✗ (breaks lookup) | round-4 |
+| **FRA pos-invariant cut** | QK cell-cut (score) | **0.62–0.65** (flat M×c) | **NO** (∀ config) | (T, but vacuous†) | ✗ (never disarms) | `pii_sweep_fra4-allpos.json` |
+| **SAE single-feature** (L18 k=1) | source-content delete (residual) | **0.956** | **YES** | **YES** | ✓ but positional‡ | `pii_sweep_sae*.json` |
 
-\*sibling "kept" is by positional gating (act only at target digit positions); the SAE cross-record
-sib metric had a bug (some runs report `look_ok=None` / inconsistent `sib_ok`), so treat sibling as
-**unconfirmed** pending a clean re-measure.
+†FRA's look_ok=True / sib_ok=True are measured at a **non-disarming** operating point (emit_ok=True),
+so they are **not** evidence of selectivity. sib_ok is doubly confounded: Marcus (531-42-8817) and the
+sibling Elena (624-19-5530) **share the digit tokens 5,3,1,4,2**, so a cut too weak to break emit
+trivially "preserves" the sibling too — indistinguishable from content-selectivity. ‡SAE clears the
+bar only via a **position-locked** hook at the target's digit slots; cross-record sibling is
+**UNCONFIRMED** (sib metric returned `None`/inconsistent in several runs — bug).
 
 **Reading the three rows — the whole story is here:**
 - **FRA is REACH-CAPPED (clause-5 failure).** The position-invariant content cut caps at emit_supp
@@ -230,59 +245,78 @@ sib metric had a bug (some runs report `look_ok=None` / inconsistent `sib_ok`), 
   look_ok=False. This kills my earlier "FRA could spare lookup by query-role" hypothesis at the root:
   even a perfect attention cut can't, because the collateral is not about query-role, it's about the
   digits being *unreadable* to every consumer once you remove attention to them.
-- **SAE WINS the use-without-disclosure dissociation.** Deleting the digit *representation* at the
+- **SAE CLEARS THE BEHAVIORAL BAR — but positionally.** Deleting the digit *representation* at the
   source positions (L18 k=1, emit_supp 0.956, emit_ok=False, look_ok=True) disarms emit while
-  preserving lookup. It succeeds where the oracle fails because content-deletion is **DIRECTIONAL**:
-  emit must *transport that specific content forward* to the output (gone ⇒ emit dies), whereas
-  lookup's output is the *name* and survives partial source-digit deletion (query-side match + name
-  retrieval is robust — precise route not fully dissected; see caveats). The dissociation lives in
-  **residual/content space, not attention/score space.**
+  preserving lookup — the only method that satisfies both conjuncts at one operating point. It works
+  where the oracle fails because content-deletion is **DIRECTIONAL**: emit must *transport that
+  specific content forward* to the output (gone ⇒ emit dies), whereas lookup's output is the *name*
+  and survives partial source-digit deletion. BUT the hook is **position-locked** (it acts at the
+  target's digit slots), so this is a *positional* disclosure control, and **cross-record sibling is
+  unconfirmed** (metric bug). It is not (yet) a demonstrated *content-addressed* selectivity — that is
+  what a clean sib re-measure would establish.
 
-**So the emit/lookup dissociation the task asked for EXISTS and is WON — by SAE, not FRA, and not the
-oracle.** The FRA-vs-SAE comparison at matched suppression is moot: FRA has no operating point at
-which emit is disarmed (reach cap), so there is no matched point; SAE both reaches disarm and is
-use-preserving. My earlier "query-role separability = FRA's shot" was wrong on two counts — FRA never
-reaches the operating point (reach), and the winning mechanism is content-direction, not query-role.
+**So the emit/lookup dissociation EXISTS and one method (SAE) clears the behavioral bar — positionally.**
+The FRA-vs-SAE matched-suppression comparison is moot *today*: FRA has no operating point at which emit
+is disarmed (reach cap), so there is no matched point. My earlier "query-role separability = FRA's shot"
+was wrong: FRA never reaches the operating point where query-role could matter, and the mechanism that
+clears the bar is content-direction, not query-role. Whether FRA can *also* clear it (content-addressed,
+not position-locked) hinges on beating the reach ceiling — round-5.
 
 ---
 
-## 4. Final gate outcome, the box→frog inverse, and the campaign boundary lesson
+## 4. Gate outcome so far, the three-way round-5 fork, and the campaign boundary lesson
 
-**Three-tier gate, settled.**
+**Gate, as of round-4.**
 - **Tier 1 — SURFACE: MET.** The all-positions oracle disarms emit (0.970) — a suppressing
   position-invariant intervention exists. SSN-emit is edge-routed but **distributed / redundant-bank**
   (the single-edge scan — name 0.000, brace 0.000, digit 0.126 top-12, best head 0.009 — showed only
   that it isn't *localized*, not that it's absent).
-- **Tier 2 / clause-5 — REACH: FAILS for FRA.** The faithful position-invariant FRA cut caps at
-  **0.62–0.65 (flat, never disarms)** against a 0.97 oracle ceiling — the SAE basis reconstructs only
-  ~65% of the emit conjunction's score. FRA locates the right conjunction but cannot act on enough of
-  it to clear the softmax margin.
-- **Tier 3 — SELECTIVITY (the dissociation): WON BY SAE, NOT FRA, NOT THE ORACLE.** SAE
-  content-deletion disarms emit (0.956) *and* keeps lookup; the oracle disarms but breaks lookup
-  (attention removal is symmetric); FRA never disarms (reach). The emit-vs-sibling axis is a-priori
-  A→1 for any content-conjunction cut (generic digit key) but is handled by SAE's *positional* gating
-  (unconfirmed — sib-metric bug).
+- **Clause-5 — REACH: FRA does not clear it (yet).** The faithful position-invariant FRA cut caps at
+  **0.62–0.65 (flat, emit_ok=True ∀)** against a 0.97 oracle ceiling — the SAE-cell basis reconstructs
+  only ~**65%** of the emit conjunction's score. FRA locates the right conjunction but cannot act on
+  enough of it to clear the softmax margin. **This ~65% is the crux quantity of the whole task.**
+- **SELECTIVITY (the dissociation): cleared by SAE positionally; UNSETTLED for content-addressing.**
+  SAE clears the behavioral bar (0.956 disarm + lookup kept) but position-locked; the oracle disarms
+  yet breaks lookup; FRA never disarms. No *content-addressed* method has been shown to clear the bar.
 
-**Why box→frog wins and SSN-emit does not — the exact inverse.**
+**The three-way fork round-5 (SVD of ω → r_eff / a more complete rank-r edit) decides.** Whether FRA's
+0.65 is a fundamental content-conjunction ceiling or a basis-completeness artifact is exactly what a
+completer edit tests:
+- **(a) SVD crosses emit_ok=False while look_ok stays True → GENUINE use-without-disclosure WIN** — and
+  a *content-addressed* one, beating SAE's merely-positional win (the axis SAE only wins by position).
+- **(b) SVD still stuck at ~0.65 (emit_ok=True) → "SELECTIVITY WITHOUT SUFFICIENCY."** FRA correctly,
+  content-selectively targets the emit conjunction but cannot remove enough of it to prevent disclosure
+  — a real, nameable partial result, distinct from both the vacuous single-edge null and a clean win.
+  The reach cap is then a genuine property of distributed content-routed recall in the SAE basis.
+- **(c) Crossing emit_ok=False also drops look_ok → SETTLED NEGATIVE.** The emit and lookup reads of
+  the digits are not separable by any content-conjunction cut; the dissociation is SAE-positional only.
+
+Necessary-but-not-sufficient reminder: even outcome (a) requires BOTH μ_emit≠μ_lookup (query-feature
+distinctness, so the cut spares the lookup role) AND crossing the reach ceiling. (b) and (c) differ by
+whether the lookup role survives once you *do* cross. Keep all three live until round-5 lands.
+
+**Why box→frog is a clean FRA win and SSN-emit is at best reach-stressed — the structural inverse.**
 
 | | box→frog (banked ~1100× FRA win) | SSN-emit (this task) |
 |---|---|---|
 | value | single token ("frog") | multi-token digit string |
 | edge | one live, concentrated answer→value edge | distributed redundant head-bank, multi-hop |
-| SAE score reconstruction | ~full → cut clears the margin | ~65% → cut reach-caps below disarm |
-| discriminator | distinctive value token (own feature) | generic digit key (A→1 on siblings) |
-| dissociation realised in | attention/score space (FRA cell-cut) | residual/content space (SAE deletion) |
-| winning tool | **FRA** (score-space, content-addressed) | **SAE** (residual-space, source-content delete) |
+| SAE-cell score reconstruction | ~full → cut clears the margin | ~65% → cut reach-caps below disarm |
+| discriminator | distinctive value token (own feature) | generic, cross-record-shared digit key |
+| bar cleared so far | **FRA** (score-space, content-addressed) | **SAE only, positionally** (FRA pending round-5) |
 
-**Campaign boundary lesson.** FRA's score-space attention-cut is the right tool when the behaviour is
-a *concentrated, content-keyed, single/low-hop* attention edge (box→frog, induction, copy-suppression,
-acronym). It is the **wrong tool for multi-token, distributed, content-routed recall**: the value is
-smeared across a redundant head-bank so the SAE basis under-reconstructs the score (reach cap), and —
-even at the oracle ceiling — attention removal is *symmetric* and cannot separate emit from lookup.
-There, **residual-space source-content deletion (SAE) is both reachable and use-preserving**, because
-content-deletion is *directional* (kills transport-out, spares name-output). SSN-emit is thus a clean
-FRA NEGATIVE that maps a new edge of the WHEN-FRA-wins boundary: **substrate (distributed vs
-concentrated) + intervention space (score vs residual) both flip against FRA here.**
+**Campaign boundary lesson (robust part).** FRA's score-space attention-cut is the right tool when the
+behaviour is a *concentrated, content-keyed, single/low-hop* attention edge (box→frog, induction,
+copy-suppression, acronym). SSN-emit is the opposite substrate — *multi-token, distributed,
+redundant-bank, content-routed recall* — and there two things are already established regardless of
+round-5: (i) the SAE-cell basis under-reconstructs the score, so the faithful FRA cut **reach-caps at
+0.65** (no behavioral disarm at any M/c); (ii) attention removal is **symmetric**, so even the oracle
+cannot separate emit from lookup — the dissociation, where it has been achieved at all, lives in
+**residual/content space** (SAE, directional deletion). What round-5 decides is whether a completer
+(SVD/rank-r) content-addressed edit can beat the reach cap; that toggles SSN-emit between a
+content-addressed FRA win (a), a "selectivity-without-sufficiency" partial (b), and a settled negative
+(c). Either way it maps a new boundary edge: **distributed content-routed recall is where score-space
+FRA is at least reach-stressed and residual-space deletion is the safer disclosure control.**
 
 **Caveats (do not over-claim).** (i) SAE cross-record **sibling** preservation is **unconfirmed** —
 the sib metric returned `None`/inconsistent values in several SAE runs (bug), so "disarm Alice keep
@@ -296,14 +330,17 @@ the full M×c grid); they bound the *sibling* and *generality* claims.
 
 ## One-sentence campaign placement
 
-SSN-emit is a **distributed, redundant-bank, content-routed** recall circuit with a generic digit
-key: the use-without-disclosure control (disarm emit, keep lookup) is achievable, but **FRA's
-score-space QK cut is reach-capped at 0.65 vs a 0.97 oracle ceiling (clause-5 reach failure, never
-disarms) and even the perfect attention oracle breaks lookup (symmetric), so the dissociation is won
-in residual/content space by a single SAE feature (emit 0.956 disarm, lookup preserved)** — the exact
-inverse of box→frog (single-token value, concentrated live answer→value edge, FRA 1100×), and the
-campaign boundary lesson that FRA attention-cutting ⟂ multi-token distributed content-routed recall
-while SAE content-deletion is the right, use-preserving tool there.
+SSN-emit is a **distributed, redundant-bank, content-routed** recall circuit with a generic,
+cross-record-shared digit key: the behavioral win bar (emit_ok=False AND look_ok=True at one setting)
+is cleared **only by a position-locked SAE feature (0.956 disarm, lookup kept; cross-record
+unconfirmed)** — the all-positions attention oracle disarms but breaks lookup (symmetric removal), and
+**FRA's content-conjunction cut is REACH-CAPPED at 0.65 (emit_ok=True ∀ M×c), never preventing
+disclosure**, because the SAE-cell basis reconstructs only ~65% of the emit conjunction's score; so
+the verdict is **three-way conditional on round-5 (SVD/rank-r)** — (a) a completer edit crosses the
+cap with lookup intact = content-addressed FRA WIN, (b) it stays capped = "selectivity without
+sufficiency", (c) crossing also breaks lookup = settled negative — the structural inverse of box→frog
+(single-token, concentrated live edge → FRA 1100×), and already the boundary lesson that distributed
+content-routed recall is where score-space FRA is reach-stressed and residual-space deletion is safer.
 
 ---
 *Numbers (HF `dmanningcoe/fra-phase1-steering-data`, prefix `fra_pii/results/`): FRA position-invariant
