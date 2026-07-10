@@ -5,16 +5,18 @@ Mechanistic account of the SSN task: suppress the model EMITTING a target in-con
 SSN emission, (c) general behaviour. Structured as: a-priori prediction from the win-checklist →
 reconcile with the Stage-2 NO-OP and the diag ORACLE → SAE-baseline / confirm-refute conditions.
 
-TL;DR — **A-priori: LOSE (clause-4 fail, A→1).** **Empirically: LOSE for a blunter, earlier reason —
-a THIRD case the fork "reach vs content-addressing" doesn't contain.** The diag ORACLE (which
-**upper-bounds any single-QK-edge score-cut**) fails: zeroing answer→ssn-digit attention across the
-whole retrieval head-set drops emit only 0.02. So the emit of a retrieved value is **not reducible
-to a single answer→key-token QK edge at all** — this is the **clause-3 "direct consumption" boundary
-in a new guise** (the value is assembled/transported off the single-edge axis: multi-hop
-answer→name→value, distributed heads, or MLP-mediated multi-token digit copy). FRA is a QK-score-cut,
-so when no single QK edge carries the behaviour, FRA has **no surface** — before the clause-4
-content-addressing question even arises. Not reach (FRA matches the oracle exactly), not (yet)
-content-selectivity (never reached).
+TL;DR — **A-priori: LOSE (clause-4 fail, A→1). Empirically: SETTLED NEGATIVE — no bounded FRA
+surface.** The fork "reach vs content-addressing" has a hidden third leaf and SSN-emit lands in it.
+The diag ORACLE **upper-bounds any single-QK-edge score-cut** (attention-edge ablation is the M=ALL
+corner of FRA — §2 identity), and the causal re-locate scan makes it decisive: **name-oracle 0.000,
+brace-oracle 0.000, digit-oracle 0.126 (top-12), best single head 0.009.** So the emit of a retrieved
+value is **not a cuttable answer→key QK edge** — the answer→name/record multi-hop story is refuted,
+and the digit axis is at best a weak **redundant head-bank** (Tier-1 miss: no bounded edge). This is
+the **clause-3 direct-consumption boundary**: the value is assembled/transported off the single-edge
+axis. FRA is a QK-score-cut, so it has **no surface** here — before clause-4 even arises. Not reach
+(FRA-cut-ALL matches the oracle to 4 decimals), not content-selectivity (never reached). One open
+label — the all-208-head digit ceiling — decides (a) non-selective redundant-bank vs (b) resident/MLP;
+**either way the verdict is the same.**
 
 ---
 
@@ -135,6 +137,36 @@ into the distributed/multi-hop regime where clause 3 fails.
 content-selective?" of a behaviour that has no single load-bearing edge. The a-priori clause-4 LOSE
 (A→1) stands as the *eventual* verdict, but the *proximate* empirical cause is clause 3.
 
+### FRA ⊇ attention-edge ablation: the M=ALL identity (and the peel-back algorithm it licenses)
+The oracle==FRA-cut-ALL coincidence is not luck — it is a **structural identity**, and it reframes
+what FRA *is*. Cutting ALL cells at a token pair (q,k) subtracts
+
+  Σ_{μν} u^μ_q u^ν_k ω^h_{μν}  =  the FRA-reconstructed content score  Ŝ^h[q,k].
+
+In the perfect-reconstruction limit (the feature×error and error×error terms → 0) Ŝ = the full
+pre-cap score S^h[q,k] (up to bias terms), so subtracting it at large c drives attention to k → 0 —
+**exactly attention-token-pair ablation of the edge (q,k).** Therefore:
+
+> **Attention-map ablation of a token pair is the M=ALL, large-c corner of FRA.** FRA ⊇
+> attention-edge-ablation; FRA at M<ALL is a strictly finer, **content-addressed sub-family nested
+> inside** that ablation (it removes only the cells whose conjunction you name, wherever it fires).
+
+**Empirical confirmation on this task:** FRA-cut-ALL reproduced the position-patch oracle to the
+measured precision (both 0.0184) — the reconstruction error on this edge is negligible, so the M=ALL
+limit *is* the edge ablation. This makes the oracle a legitimate supremum for the whole FRA family on
+this edge (the fact-1 argument above is exact, not approximate).
+
+**Methodological corollary (the useful part — a concrete F5 mitigation).** F5 established that FRA
+magnitude-ranking ⊥ causal effect, so **forward top-M selection is unreliable** (top cells need not
+be the causal ones; here the whole M×c sweep is flat regardless of M). The identity licenses the
+opposite algorithm — **guide from the destructive limit**: start at cut-ALL (= the oracle, causally
+the maximal effect available at this edge) and **causally PEEL BACK** cells, pruning from the full
+support to the minimal subset that still suppresses the target while sparing siblings/lookup. Trust
+the **support** (which cells are non-zero at the edge), not the **ranking**; validate each pruning
+step causally. This is exactly the F5 "union restrictor + causal-validation-inside" prescription with
+a runnable procedure. (It does not manufacture a win on SSN-emit — the edge's cut-ALL ceiling is
+itself too low / non-selective — but it is the general tool the null here motivated.)
+
 ---
 
 ## 3. SAE baseline + FRA-vs-SAE, and confirm/refute
@@ -148,12 +180,13 @@ positions) but **break lookup** (the ssn→name match needs exactly those digits
 content-ablation's 0.75 lookup / output-suppress's 0.00 lookup. Expect the same shape here:
 suppress-emit yes, lookup-collateral yes, sibling-spared yes (positional).
 
-**FRA-vs-SAE at matched suppression:** currently *undefined* — FRA has no operating point that
-suppresses emit (frontier flat at 0.02), so there is no matched-removal point at which to compare
-collateral. The comparison is vacuous until the emit edge is correctly re-located. If/when it is:
-FRA's *only* structural advantage is lookup-preservation (it would cut the emit-query's *reading*
-of the source, not the digit *content*, so lookup's match survives), while it *loses* the sibling
-axis (generic conjunction). SAE/ablation/oracle win sibling by positional gating and lose lookup.
+**FRA-vs-SAE at matched suppression:** *structurally undefined* — and §4 shows this is now settled,
+not pending. FRA has no operating point that suppresses emit (frontier flat at 0.02) and the
+re-locate found no bounded edge to move to (name/brace 0.000; digit a weak redundant bank), so there
+is no matched-removal point at which to compare collateral. SAE reaches suppression by deleting the
+digit representation at source; FRA/attention-cut cannot reach it at any bounded edge. Both are only
+*positionally* selective (act at the target's digit positions) — spare the sibling, break lookup —
+because the digit key is generic (clause 4); neither is content-selective.
 
 **CONFIRM "generic-digit-key → no FRA collateral advantage":** after re-locating a load-bearing
 edge, FRA at matched emit-suppression shows sib_ok dropping and general/sibling collateral ≥ the
@@ -169,52 +202,74 @@ the task could flip to a win, and it is exactly what the re-location measurement
 
 ---
 
-## 4. What a proper re-locate must FIND for FRA to have any surface (FRAAgent is running it)
+## 4. The re-locate result: Tier-1 UNMET on every key hypothesis (FRAAgent)
 
-The no-op is uninterpretable as an FRA *verdict* until the edge is re-located, because the harness
-cut a non-load-bearing edge. But the oracle result already sets the bar. For FRA to have surface at
-all, the re-locate must clear a **three-tier** gate — each tier is a strictly harder ask, and the
-current data says tier 1 is not yet met:
+The gate for FRA to have any surface is **three-tier** (each strictly harder). FRAAgent's causal
+key-position scan has now run it, and the answer→name hypothesis is **REFUTED**:
 
-- **Tier 1 — SURFACE (a defined suppression operating point): a single, or small enumerable,
-  answer→key-token QK edge on which the ORACLE SUCCEEDS.** Run a **causal key-position scan**: for
-  the emit prompt, zero answer→k attention (per head-set) for k over ALL key positions — name
-  tokens, `{`/field-name/delimiter tokens, digits — and record the drop in P(first digit). Also test
-  the **earlier within-record binding edge** (ssn-field-slot-query × digit-key at the layer where the
-  ssn is bound onto its carrier). If NO single edge (or small union) makes the oracle suppress, the
-  transport is genuinely distributed/multi-hop/MLP → **FRA has no surface, full stop** (position-patch
-  or content-ablation is the only tool, and this is the final verdict). *This is the tier the flat
-  0.02 frontier says is currently unmet on the answer→digit axis.*
-- **Tier 2 — DIRECT CONSUMPTION (clause 3): the emit must BE that edge's OV-transported content.**
-  Confirm the oracle on the re-located edge *suppresses* (not merely dents), and that emit is not
-  reconstructed by a downstream MLP. **Attention-vs-resident test:** mean-patch the resid at the
-  carrier (name/record) position, or ablate the answer position's attention entirely, to check
-  whether the value is already resident before the answer step (multi-hop) vs freshly copied.
-- **Tier 3 — CONTENT DISCRIMINATOR (clause 4, the WIN, not just surface): the load-bearing edge's
-  discriminating endpoint must be DISTINCTIVE CONTENT, not generic role.** The only candidate in this
-  task is the **NAME token** as the key of the binding edge — (query × Marcus-name-key) is selective
-  for Marcus vs Bob; (ssn-field-slot-query × generic-digit-key) is not. **Query/key-feature identity
-  across records:** build FRA on the emit prompt for Marcus vs Bob; if the top load-bearing endpoint
-  feature is the SAME id for both → generic ROLE → clause-4 fail (A→1) even with surface. Only a
-  name-keyed load-bearing edge opens the REFUTE path.
+```
+oracle key-position scan (drop in P(first digit) from zeroing answer→k attn):
+  name-token oracle    = 0.000
+  brace/struct oracle  = 0.000
+  digit oracle (top-12)= 0.126        best single head = 0.009
+```
 
-**Net:** Tier-1 miss ⇒ no surface (current reading). Tier-1 pass, Tier-3 miss ⇒ FRA can *suppress*
-but not *win* (A→1, fires on siblings; same as synth-boxes). All three ⇒ the only world where FRA
-beats the baselines here. FRA-vs-SAE matched-suppression is undefined until at least Tier 1 clears.
+- **Tier 1 — SURFACE (a single / small-enumerable answer→key QK edge on which the ORACLE SUCCEEDS):
+  UNMET on all three key hypotheses.** name 0.000, brace 0.000 kill the multi-hop answer→name/record
+  story outright — the value is *not* fetched by the answer step attending to a carrier token. The
+  digit axis is where the (weak) routing lives, but no bounded edge carries it: best single head
+  0.009, top-12 only 0.126. So **SSN-value emission is not a cuttable answer→key QK edge.** For the
+  emit-role query × generic-digit key, this is also clause-4-doomed even where it has mass.
+- **Tier 2 — DIRECT CONSUMPTION (clause 3):** contingent on the open sub-question below.
+- **Tier 3 — CONTENT DISCRIMINATOR (clause 4, the WIN):** moot — the only distinctive-content
+  candidate was the NAME key, and the name oracle is 0.000, so there is no name-keyed edge to be
+  selective on. The digit key is generic ⇒ A→1 even if a surface existed.
+
+### The one open sub-question, and the verdict conditional on it
+The digit oracle's shape (tiny per-head, many heads, top-12 = 0.126 ≫ best single 0.009) is the
+**STOCKTAKE-T1 redundant-head-bank signature** (distributed attention across a bank), not obviously
+resident/MLP. FRAAgent is measuring the **all-208-head digit-oracle ceiling** to decide:
+
+- **(a) all-head digit oracle → ~1  ⇒ REDUNDANT-BANK (attention-routed but distributed).** Emit *is*
+  answer→digit attention, spread thin across the whole head bank. Via the M=ALL identity, FRA's
+  cut-ALL **union across the full bank** would then suppress — so a *surface exists*, but only as the
+  maximal union, and it is **non-selective by construction**: the key is a generic digit, so cutting
+  the bank kills digit-reading everywhere (siblings, lookup, any number) → A→1. Peel-back (§2) finds
+  no target-specific subset because there is no content discriminator to peel toward. Fails Tier 3.
+- **(b) all-head digit oracle stays low  ⇒ RESIDENT / MLP.** The value is already in the stream by
+  the answer step (multi-hop bind onto the digit-carrier at earlier layers) or MLP-assembled — a
+  clean **clause-3 non-edge** negative. No QK surface at any head count. Fails Tier 1 outright.
+
+**Either branch, the headline is the same:** SSN-emit fails at **Tier 1/2** — it is not a bounded
+edge-routed behaviour (and even the redundant-bank surface is non-selective). Therefore **SAE
+content-ablation, which deletes the digit REPRESENTATION at the source position, suppresses where the
+entire QK-score-cut family (FRA and attention-edge ablation alike) cannot** — because it acts on the
+value's existence in the residual, not on any single head's reading of it. And **neither is
+content-selective**: the digit key is generic (clause 4), so both rely on *positional* gating (act at
+the target's digit positions) for target-specificity, which spares the sibling but breaks lookup.
+This is the exact inverse of **box→frog**, where a single-token value on a live answer→value edge
+passes all tiers and FRA both suppresses and wins (~1100×).
+
+**Net verdict:** FRA-vs-SAE matched-suppression is not merely undefined-pending-relocate — the
+relocate has run and there is **no bounded FRA surface** (Tier-1 miss on name/brace; digit axis
+either resident/MLP or a non-selective redundant bank). SSN-emit is a **settled negative** for the
+content-addressed win, awaiting only the all-head ceiling to label it (a) vs (b).
 
 ---
 
 ## One-sentence campaign placement
 
 SSN-emit is a-priori a clause-4 loss (positional identity, generic-role endpoints, A→1), but the
-*proximate* empirical cause is one clause earlier and blunter — a **clause-3 direct-consumption
-failure**: unlike single-token box→frog retrieval (banked ~1100× win, where one answer→value edge
-OV-copies the whole value), the multi-token SSN inside a nested multi-record JSON is
-assembled/transported off the single-QK-edge axis, so the diag oracle — which upper-bounds *every*
-QK-score-cut — drops emit only 0.02 and FRA-cut-ALL matches it exactly, meaning **no single edge
-carries the behaviour for FRA to act on**; a position-patch (or content re-location) on the true
-carrier, not a content-addressed cell-cut, is the tool, and FRA gets no surface here unless a
-re-locate finds a single, load-bearing, name-keyed binding edge.
+*proximate*, now-measured cause is one clause earlier and blunter — a **clause-3 direct-consumption
+failure with no bounded QK surface**: unlike single-token box→frog retrieval (banked ~1100× win,
+where one answer→value edge OV-copies the whole value and all tiers pass), the multi-token SSN inside
+a nested multi-record JSON is assembled/transported off the single-QK-edge axis, so the causal
+re-locate finds name-oracle 0.000, brace-oracle 0.000 and only a weak distributed digit bank
+(top-12 = 0.126, best head 0.009) — attention-edge ablation being the M=ALL corner of FRA, this means
+**no bounded FRA cut carries the behaviour**; SAE content-ablation (delete the digit representation at
+source) suppresses where the whole QK-score-cut family cannot, and neither is content-selective
+(generic digit key, clause 4) — a settled negative, with only the all-head digit ceiling left to
+label it redundant-bank vs resident/MLP.
 
 ---
 *Numbers: `pii_sweep_diag.json`, `pii_sweep_fra.json`, `rs-pii-diag_run.log`, Stage-2
