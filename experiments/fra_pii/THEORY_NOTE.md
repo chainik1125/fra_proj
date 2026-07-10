@@ -233,9 +233,11 @@ look_ok=True at one setting.**
 †at 0.65 the look_ok/sib_ok were non-disarming *and* sib is confounded (target 531-42-8817 & sibling
 624-19-5530 share digit tokens 5,3,1,4,2). §The SVD rank-1 result **earns the selectivity claim**: at
 0.83 supp it preserves lookup + sibling + general (gen_kl 0.058), and **rank-4 *lowers* supp to 0.65
-while breaking the sibling** — the top mode IS the emit-copy direction, lower modes are shared
-collateral. That rank-1-preserves / rank-4-breaks contrast (plus clean general-KL) is content-
-selectivity evidence independent of the shared-digit confound. ‡SAE clears the bar only via a
+while breaking the SIBLING only — lookup stays intact**. The top mode IS the emit-copy direction; the
+lower modes carry **cross-record (sibling) collateral**, not lookup collateral. That the over-editing
+degradation lands on the *sibling* (never lookup) actually *strengthens* the earned-selectivity point:
+the rank-1-preserves / rank-4-breaks-sibling contrast (plus clean general-KL) is content-selectivity
+evidence independent of the shared-digit confound. ‡SAE clears the bar only via a
 **position-locked** hook; cross-record sibling **UNCONFIRMED** (metric bug).
 
 **Reading the rows — the whole story:**
