@@ -227,7 +227,7 @@ look_ok=True at one setting.**
 | FRA pos-invariant cut | QK cell-cut (score) | 0.62–0.65 (flat M×c) | NO (∀) | T (non-disarm†) | ✗ (never disarms) | `pii_sweep_fra4-allpos.json` |
 | **FRA SVD rank-1** (best FRA) | QK cell-cut, rank-r (score) | **0.83** | **NO** | **YES** | ✗ (reach) — but **selective**§ | `pii_sweep_fra5-svd.json` |
 | FRA SVD rank-2 | " | 0.84 | NO | YES | ✗ (reach) | `pii_sweep_fra5-svd.json` |
-| FRA SVD rank-4 | " | 0.65 | NO | (sib BROKEN) | ✗ + collateral | `pii_sweep_fra5-svd.json` |
+| FRA SVD rank-4 | " | 0.65 | NO | YES (but sib BROKEN) | ✗ + cross-record collateral | `pii_sweep_fra5-svd.json` |
 | **SAE single-feature** (L18 k=1) | source-content delete (residual) | **0.956** | **YES** | **YES** | ✓ but positional‡ | `pii_sweep_sae*.json` |
 
 †at 0.65 the look_ok/sib_ok were non-disarming *and* sib is confounded (target 531-42-8817 & sibling
