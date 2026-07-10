@@ -5,20 +5,28 @@ Mechanistic account of the SSN task: suppress the model EMITTING a target in-con
 SSN emission, (c) general behaviour. Structured as: a-priori prediction from the win-checklist →
 reconcile with the Stage-2 NO-OP and the diag ORACLE → SAE-baseline / confirm-refute conditions.
 
-TL;DR — **A-priori: SPLIT (emit/lookup separable by query-role; emit/sibling NOT — A→1 on the sibling
-axis).** **CORRECTION (this revision):** an earlier draft concluded "no bounded FRA surface / Tier-1
-unmet" — that was an **artifact of testing FRA only in its degenerate SINGLE-EDGE mode**. The
-single-edge oracle (name 0.000, brace 0.000, digit 0.126 top-12) upper-bounds only the single-edge
-family; **FRA's native edit is POSITION-INVARIANT** (subtract c·u^μ_q·u^ν_k·ω_μν at *every* (q,k)
-where the conjunction fires), a strictly larger family whose true ceiling is the **ALL-POSITIONS
-oracle** — zero attention onto the digit key-content from *all* queries at *all* layers. Because the
-SSN is **random** (its digits can enter the computation *only* by being attended from context), the
-all-positions oracle **MUST suppress emit** — so **Tier-1 is MET** and SSN-emit is a **distributed /
-multi-hop attention circuit**, not a non-edge. The live question is now **Tier-3 selectivity, on two
-axes**: emit-vs-**lookup** may be separable (lookup reads digits under a *different query role* = a
-different cell) — the one axis where FRA's content-cut could beat content-ablation/SAE/the raw
-all-positions oracle (all of which break lookup); emit-vs-**sibling** is NOT separable (shared generic
-digit-key conjunction → A→1). FRAAgent is running the position-invariant content cut now.
+TL;DR — **SETTLED (round-4, real numbers): an FRA NEGATIVE + a surprising SAE WIN.** SSN recall is a
+**distributed, redundant-bank, content-routed** attention circuit (all-head all-positions oracle
+disarms it: emit_supp **0.970**) with a **generic digit key**. The use-without-disclosure control
+(disarm emit, keep lookup) IS achievable — but only by **residual-space source-content deletion (SAE:
+L18 k=1 emit_supp 0.956, emit_ok=False, look_ok=True)**, NOT by score-space QK cutting:
+- **FRA (position-invariant content cut) is REACH-CAPPED at ~0.63–0.65** — flat across M(100→41446
+  pairs = ALL) × c(8→45), **emit_ok=True at every config** (never behaviorally disarms). The SAE basis
+  reconstructs only ~65% of the emit conjunction's score; the oracle's 0.97 proves the ceiling is
+  reachable, FRA just can't reach it. Win-checklist **clause-5 (reach) failure**, not a locate failure.
+- **The all-positions ORACLE disarms emit (0.97) but breaks LOOKUP too** (look_ok=False): making the
+  digits attention-invisible is *symmetric* — it kills reading-them-to-emit AND reading-them-to-match.
+  So even perfect attention removal cannot do the dissociation.
+- **SAE wins because content-deletion is DIRECTIONAL**: delete the digit *representation* at source →
+  emit (which must transport that content to the output) dies, while lookup (whose output is the
+  *name*) survives. The dissociation lives in residual/content space, not attention/score space.
+
+**Exact inverse of box→frog** (single-token value, concentrated on one live answer→value edge → FRA
+reconstructs ~full score → 1100× win). **Boundary lesson:** FRA attention-cut ⟂ multi-token
+distributed content-routed recall; **SAE content-deletion is the right — and use-preserving — tool
+there.** (My earlier "query-role" FRA-win hypothesis is moot: FRA never reaches the operating point
+where it would matter, and the winning mechanism is content-direction, not query-role.) Caveats:
+SAE cross-record sibling unconfirmed (sib-metric bug), SVD r_eff pending, single fixed DB.
 
 ---
 
@@ -63,6 +71,12 @@ denominator is reuse of the *conjunction* (emit-role μ × digit ν), NOT reuse 
   patch spares Bob (different positions); the content-addressed cut cannot.
 - The task requires preserving **both** lookup and sibling. FRA can, in principle, get lookup
   (query-role differs) but not sibling (generic conjunction). Net: not a win.
+
+> **HOW IT RESOLVED (round-4, see §3–4):** the a-priori was right that the emit/lookup dissociation
+> is real and that content-deletion baselines pay on lookup — but WRONG that FRA would be the tool to
+> exploit it. FRA is **reach-capped** (0.65 < disarm) before the query-role gate can matter, and the
+> dissociation is realised by **SAE residual content-deletion** (directional: kills transport-out,
+> spares name-output), not by an FRA query-role-conditioned cut. The lookup axis was won — by SAE.
 
 ---
 
@@ -136,11 +150,13 @@ SSN-emit is the entity-attribute *binding* class (synth-boxes: distributed edge,
 flat single-token retrieval — which is why it needs FRA's native position-invariant mode and why its
 sibling axis collapses to A→1.
 
-**Consequence for the campaign fork:** clause-1/3 (edge existence / direct consumption) is now
-satisfied at the conjunction scope — the all-positions oracle suppresses — so the live question is
-**clause 4, on two axes**: emit-vs-lookup (a query-role discriminator may exist → FRA's shot at a
-win) and emit-vs-sibling (generic digit key → A→1, no discriminator). The a-priori "split" verdict of
-§1 stands; the earlier "no surface" over-ride was a single-edge-scope artifact.
+**Consequence for the campaign fork:** clause-1/3 (edge existence / direct consumption) is satisfied
+at the conjunction scope — the all-positions oracle suppresses — but FRA fails on **clause-5 REACH**
+(§3: the SAE cut caps at 0.65 vs the 0.97 oracle), so it never reaches the selectivity question at
+all. The two-axis selectivity is then decided **against FRA**: the oracle disarms but breaks lookup
+(symmetric attention removal), and the emit/lookup dissociation is won by **SAE residual
+content-deletion** — see §3–4. (The earlier "no surface" over-ride was a single-edge-scope artifact;
+the real blocker is reach, one clause further down.)
 
 ### FRA ⊇ attention ablation — but at TWO scopes (the single-edge trap, corrected)
 Cutting the FRA cells subtracts Σ_{μν} u^μ_q u^ν_k ω^h_{μν} = the FRA-reconstructed content score
@@ -174,126 +190,124 @@ artifact, not a "non-edge."
 
 **Methodological corollary (F5 mitigation, now correctly scoped).** F5: magnitude-ranking ⊥ causal
 effect, so forward top-M is unreliable (the whole M×c sweep is flat). Guide instead **from the
-destructive limit — the ALL-POSITIONS cut** (= all-positions oracle, the provable maximal effect) —
-and causally **PEEL BACK** cells/positions to the minimal subset that still disarms emit while
-sparing lookup/siblings. Trust the support, not the ranking; validate each prune causally. Peeling
-from the single-edge limit (what a first pass would do) cannot even reach suppression here — you must
-peel from the position-invariant limit.
+destructive limit — the ALL-POSITIONS cut** (the correctly-scoped maximal FRA effect) — and causally
+**PEEL BACK**; trust the support, not the ranking. The general algorithm stands; on THIS task it still
+cannot deliver a behavioral win, but for a *reach* reason, not a scope one: the position-invariant
+FRA limit reaches only emit_supp ~0.65 (SAE reconstructs ~65% of the score, §3) — partial, never
+behavioral disarm — versus the 0.97 *attention* oracle. So peel-back's ceiling here is the reach cap,
+and the disarm has to come from residual-space content-deletion instead (§3).
 
 ---
 
-## 3. SAE baseline + FRA-vs-SAE, and confirm/refute
+## 3. The result: three methods, three outcomes (round-4, real numbers)
 
-**SAE single-feature steering prediction (`pii_sweep_sae.json`, pending):** the SAE hooks ablate the
-top-k features **on the target's ssn-digit positions** — i.e. delete digit content where it sits.
-Unlike answer→digit *attention* (inert), deleting the source content should actually starve the
-copy, so **SAE will suppress emit** (this is the content-ablation mechanism, positionally gated).
-Because it is gated to the target's digit positions it will **spare the sibling** (different
-positions) but **break lookup** (the ssn→name match needs exactly those digits) — mirroring
-content-ablation's 0.75 lookup / output-suppress's 0.00 lookup. Expect the same shape here:
-suppress-emit yes, lookup-collateral yes, sibling-spared yes (positional).
+All on the fixed 3-record DB, target = record[0], base emit P(first)=0.967. `emit_ok`=True means the
+SSN still emits (NOT disarmed); `look_ok`=True means lookup preserved.
 
-**FRA-vs-SAE at matched suppression (now DEFINED, once FRA uses its position-invariant mode).** The
-comparison was only "undefined" while FRA was tested single-edge; with the position-invariant cut it
-has an operating point (the all-positions oracle proves suppression exists). At matched emit
-suppression the comparison runs on **two collateral axes**, and they point opposite ways:
-- **emit-vs-lookup — FRA's shot.** SAE/content-ablation delete the digit *representation* at source,
-  so lookup (ssn→name match needs those digits) breaks. FRA cuts the (emit/copy-query-role × digit)
-  *cell*; if lookup reads the same digits under a **different query role**, that is a different cell,
-  left intact → **FRA spares lookup where SAE cannot.** This is the one axis where FRA can beat every
-  content-deletion baseline AND the raw all-positions oracle (all three break lookup).
-- **emit-vs-sibling — FRA loses (or ties).** Bob's emit is the same (emit-role × generic-digit)
-  conjunction, so a position-invariant cut fires on it too → sibling breaks. SAE/oracle spare the
-  sibling by *positional* gating (act only at the target's digit positions). A→1 on this axis.
+| method | mechanism (space) | emit_supp | emit disarmed? | lookup kept? | sibling | source |
+|---|---|---|---|---|---|---|
+| **all-positions ORACLE** | attention removal (score) | **0.970** | **YES** (emit_ok=F) | **NO** (look_ok=F) | kept* | round-4 |
+| **FRA pos-invariant cut** | QK cell-cut (score) | **0.62–0.65** (flat M×c) | **NO** (emit_ok=T ∀) | (vacuous T) | (vacuous T) | `pii_sweep_fra4-allpos.json` |
+| **SAE single-feature** (L18 k=1) | source-content delete (residual) | **0.956** | **YES** (emit_ok=F) | **YES** (look_ok=T) | kept* | `pii_sweep_sae*.json` |
 
-**CONFIRM "generic-digit-key → no FRA advantage on the SIBLING axis":** at matched emit suppression,
-FRA sib_ok drops and sibling collateral ≥ the positionally-gated baselines (A≈1). **REFUTE (the win):**
-FRA at matched suppression keeps **lookup_ok=1** while SAE/content-ablation/all-positions-oracle all
-drop it — this is the query-role separability, and it is a *genuine* FRA-only capability even though
-the sibling axis is lost. The crux the empirical run decides: does the load-bearing digit-attending
-hop use an **emit-specific query role** (→ lookup spared, REFUTE-the-loss on that axis) or a **shared
-name↔ssn binding role** that also fires in lookup (→ FRA breaks lookup too, no advantage)?
+\*sibling "kept" is by positional gating (act only at target digit positions); the SAE cross-record
+sib metric had a bug (some runs report `look_ok=None` / inconsistent `sib_ok`), so treat sibling as
+**unconfirmed** pending a clean re-measure.
+
+**Reading the three rows — the whole story is here:**
+- **FRA is REACH-CAPPED (clause-5 failure).** The position-invariant content cut caps at emit_supp
+  **0.62–0.65, dead flat** across M∈{100,500,2000,ALL=41446 pairs} × c∈{8,20,45} (gen_kl 0.005), and
+  **emit_ok=True at every single config** — it never behaviorally disarms. Since cutting *all* pairs
+  at max c still stops at 0.65 while the oracle (which zeros attention outright, bypassing the SAE
+  reconstruction and soft-cap) reaches 0.97, the ~0.32 gap **is** the SAE-unexplained score fraction
+  (error terms + soft-cap headroom). This is exactly THEORY.md clause-5: SAE reconstructs only ~65% of
+  the emit conjunction's score, so the faithful cut can't clear the softmax margin. **Not a locate
+  failure — the conjunction is right, the basis is too coarse to act on it.** (It vindicates the scope
+  correction: position-invariant reaches 0.65 ≫ the single-edge 0.018, but still caps below disarm.)
+- **The ORACLE disarms emit but BREAKS LOOKUP.** Attention-invisibility of the digit positions is
+  **symmetric**: it kills reading-them-to-emit AND reading-them-to-match-in-lookup. So the strongest
+  possible score-space intervention (the whole family's supremum) **cannot do the dissociation** —
+  look_ok=False. This kills my earlier "FRA could spare lookup by query-role" hypothesis at the root:
+  even a perfect attention cut can't, because the collateral is not about query-role, it's about the
+  digits being *unreadable* to every consumer once you remove attention to them.
+- **SAE WINS the use-without-disclosure dissociation.** Deleting the digit *representation* at the
+  source positions (L18 k=1, emit_supp 0.956, emit_ok=False, look_ok=True) disarms emit while
+  preserving lookup. It succeeds where the oracle fails because content-deletion is **DIRECTIONAL**:
+  emit must *transport that specific content forward* to the output (gone ⇒ emit dies), whereas
+  lookup's output is the *name* and survives partial source-digit deletion (query-side match + name
+  retrieval is robust — precise route not fully dissected; see caveats). The dissociation lives in
+  **residual/content space, not attention/score space.**
+
+**So the emit/lookup dissociation the task asked for EXISTS and is WON — by SAE, not FRA, and not the
+oracle.** The FRA-vs-SAE comparison at matched suppression is moot: FRA has no operating point at
+which emit is disarmed (reach cap), so there is no matched point; SAE both reaches disarm and is
+use-preserving. My earlier "query-role separability = FRA's shot" was wrong on two counts — FRA never
+reaches the operating point (reach), and the winning mechanism is content-direction, not query-role.
 
 ---
 
-## 4. The re-locate result, correctly scoped (FRAAgent)
+## 4. Final gate outcome, the box→frog inverse, and the campaign boundary lesson
 
-FRAAgent's single-edge key-position scan:
+**Three-tier gate, settled.**
+- **Tier 1 — SURFACE: MET.** The all-positions oracle disarms emit (0.970) — a suppressing
+  position-invariant intervention exists. SSN-emit is edge-routed but **distributed / redundant-bank**
+  (the single-edge scan — name 0.000, brace 0.000, digit 0.126 top-12, best head 0.009 — showed only
+  that it isn't *localized*, not that it's absent).
+- **Tier 2 / clause-5 — REACH: FAILS for FRA.** The faithful position-invariant FRA cut caps at
+  **0.62–0.65 (flat, never disarms)** against a 0.97 oracle ceiling — the SAE basis reconstructs only
+  ~65% of the emit conjunction's score. FRA locates the right conjunction but cannot act on enough of
+  it to clear the softmax margin.
+- **Tier 3 — SELECTIVITY (the dissociation): WON BY SAE, NOT FRA, NOT THE ORACLE.** SAE
+  content-deletion disarms emit (0.956) *and* keeps lookup; the oracle disarms but breaks lookup
+  (attention removal is symmetric); FRA never disarms (reach). The emit-vs-sibling axis is a-priori
+  A→1 for any content-conjunction cut (generic digit key) but is handled by SAE's *positional* gating
+  (unconfirmed — sib-metric bug).
 
-```
-oracle key-position scan (drop in P(first digit) from zeroing answer→k attn, single-query):
-  name-token oracle    = 0.000
-  brace/struct oracle  = 0.000
-  digit oracle (top-12)= 0.126        best single head = 0.009
-```
+**Why box→frog wins and SSN-emit does not — the exact inverse.**
 
-**What this does and does NOT show.** It shows the emit is **not a single localized answer→key
-edge** — name/brace 0.000 refute the "answer→name/record carrier" hop, and the digit axis is a weak
-**distributed bank** (top-12 = 0.126 ≫ best single 0.009: the STOCKTAKE-T1 redundant-head-bank
-signature). It does **NOT** show "no FRA surface" — that inference (in an earlier draft) mistook the
-single-edge oracle for the ceiling of the whole FRA family. FRA's native cut is position-invariant;
-its ceiling is the **all-positions** oracle, which **must** suppress (random SSN, §2). So:
+| | box→frog (banked ~1100× FRA win) | SSN-emit (this task) |
+|---|---|---|
+| value | single token ("frog") | multi-token digit string |
+| edge | one live, concentrated answer→value edge | distributed redundant head-bank, multi-hop |
+| SAE score reconstruction | ~full → cut clears the margin | ~65% → cut reach-caps below disarm |
+| discriminator | distinctive value token (own feature) | generic digit key (A→1 on siblings) |
+| dissociation realised in | attention/score space (FRA cell-cut) | residual/content space (SAE deletion) |
+| winning tool | **FRA** (score-space, content-addressed) | **SAE** (residual-space, source-content delete) |
 
-**Re-scoped three-tier gate.** Evaluate Tier 1 with the ALL-POSITIONS oracle, not the single-edge one:
-- **Tier 1 — SURFACE: MET.** All-positions digit oracle provably suppresses emit ⇒ a suppressing
-  position-invariant cut exists. SSN-emit is edge-routed, distributed/multi-hop. (The single-edge
-  0.126 was the wrong ceiling.)
-- **Tier 2 — DIRECT CONSUMPTION: MET in substance.** The random SSN can reach the output only through
-  attention onto the digit content, so making that content attention-invisible disarms it — the
-  behaviour *is* transported by the (distributed) attention, not recomputed independently.
-- **Tier 3 — CONTENT DISCRIMINATOR: the live question, on TWO axes.**
-  - *emit-vs-lookup:* possibly SEPARABLE — lookup reads the digits under a different query role ⇒ a
-    different (role × digit) cell ⇒ FRA's emit-role cut can spare it. FRA's one shot at a capability
-    no baseline has.
-  - *emit-vs-sibling:* NOT separable — Bob's emit shares the generic (emit-role × digit) conjunction
-    ⇒ A→1. Positionally-gated baselines (SAE/oracle) win this axis; FRA loses it.
+**Campaign boundary lesson.** FRA's score-space attention-cut is the right tool when the behaviour is
+a *concentrated, content-keyed, single/low-hop* attention edge (box→frog, induction, copy-suppression,
+acronym). It is the **wrong tool for multi-token, distributed, content-routed recall**: the value is
+smeared across a redundant head-bank so the SAE basis under-reconstructs the score (reach cap), and —
+even at the oracle ceiling — attention removal is *symmetric* and cannot separate emit from lookup.
+There, **residual-space source-content deletion (SAE) is both reachable and use-preserving**, because
+content-deletion is *directional* (kills transport-out, spares name-output). SSN-emit is thus a clean
+FRA NEGATIVE that maps a new edge of the WHEN-FRA-wins boundary: **substrate (distributed vs
+concentrated) + intervention space (score vs residual) both flip against FRA here.**
 
-### The open measurement (FRAAgent running the position-invariant cut)
-The single remaining crux is **which query role carries the load-bearing digit-attending hop**:
-- an **emit-specific role** ("about to copy a value") that does NOT fire in the lookup context ⇒
-  FRA's content cut disarms emit and **spares lookup** ⇒ REFUTE the loss on the lookup axis (real
-  FRA-only win there); sibling still breaks.
-- a **shared name↔ssn binding role** that ALSO fires when lookup matches the given SSN ⇒ cutting it
-  breaks lookup too ⇒ no advantage over content-ablation; FRA reduces to the all-positions oracle.
-
-Also worth measuring: the **all-position digit-oracle ceiling** (confirms Tier-1 quantitatively) and
-whether peeling back from it (§2 algorithm) finds any target-*and*-emit-specific subset — expected
-to fail on the sibling axis (no content discriminator) but possibly succeed on the lookup axis.
-
-**Net verdict — OPEN, do not stamp.** SSN-emit is an **edge-routed distributed circuit** (Tier-1/2
-met via the position-invariant mode) with a **split clause-4**. One axis is decided a-priori, one is
-NOT:
-- **emit-vs-sibling: FAIL (A→1), decided.** μ_emit fires at Bob's answer position → shared conjunction.
-- **emit-vs-lookup: OPEN, pending the query-feature-identity check.** Two outcomes:
-  - **(a) μ_emit is emit-specific** (does not fire in the lookup role) → FRA disarms emit AND spares
-    lookup → a **genuine use-without-disclosure WIN on this axis, where SAE/content-ablation lose**
-    (they delete the digit marginal → break lookup). Sibling still breaks.
-  - **(b) μ_emit is a generic retrieve-role shared with lookup** → cutting the cell breaks lookup too
-    → FRA reduces to the all-positions oracle, no advantage → *then* it is the settled negative.
-
-So the campaign verdict is **conditional on FRAAgent's all-positions content-cut + query-feature
-check**, not closed. The earlier "no bounded surface / settled negative" was doubly wrong: (i) it used
-the single-edge oracle (0.126) as the ceiling for the strictly-larger position-invariant family, and
-(ii) it read "generic digit key" as "non-selective," ignoring that the cut is the CONJUNCTION μ×ν —
-which is what leaves the lookup axis alive. The box→frog contrast (single-token value, all axes win)
-and the FRA⊇attention-ablation formalization stand regardless.
+**Caveats (do not over-claim).** (i) SAE cross-record **sibling** preservation is **unconfirmed** —
+the sib metric returned `None`/inconsistent values in several SAE runs (bug), so "disarm Alice keep
+Bob" is not yet demonstrated for SAE, only "disarm Alice keep lookup." (ii) The SVD/effective-rank
+(`r_eff`) analysis of the emit conjunction is **pending** (would quantify the distribution directly).
+(iii) Single fixed 3-record DB — held-out-DB transfer not yet re-run at the position-invariant scope.
+None of these threaten the headline (FRA reach-cap 0.65 vs oracle 0.97 vs SAE 0.956 are robust across
+the full M×c grid); they bound the *sibling* and *generality* claims.
 
 ---
 
 ## One-sentence campaign placement
 
-SSN-emit is an **edge-routed but DISTRIBUTED / multi-hop** retrieval circuit whose cut lives at the
-position-invariant CONJUNCTION scope (the single-edge oracle nulls — name 0.000, brace 0.000, digit
-0.126 top-12 — bound only single-edge cuts; the all-positions oracle MUST suppress because the SSN is
-random, so a suppressing FRA cut provably exists); selectivity then splits by the conjunction gate
-(μ_emit × ν_digit), NOT by the generic key alone — **emit-vs-sibling FAILS** (μ_emit fires at Bob's
-answer position, A→1) while **emit-vs-lookup is OPEN**, a genuine use-without-disclosure win **iff**
-the empirical query-feature check shows μ_emit is emit-specific and not shared with the lookup role
-(if it is, FRA breaks lookup too and it's the settled negative); contrast box→frog (single-token
-value, live answer→value edge, all axes win, ~1100×). Verdict: **conditional, not closed** — pending
-FRAAgent's all-positions content-cut + query-feature-identity check.
+SSN-emit is a **distributed, redundant-bank, content-routed** recall circuit with a generic digit
+key: the use-without-disclosure control (disarm emit, keep lookup) is achievable, but **FRA's
+score-space QK cut is reach-capped at 0.65 vs a 0.97 oracle ceiling (clause-5 reach failure, never
+disarms) and even the perfect attention oracle breaks lookup (symmetric), so the dissociation is won
+in residual/content space by a single SAE feature (emit 0.956 disarm, lookup preserved)** — the exact
+inverse of box→frog (single-token value, concentrated live answer→value edge, FRA 1100×), and the
+campaign boundary lesson that FRA attention-cutting ⟂ multi-token distributed content-routed recall
+while SAE content-deletion is the right, use-preserving tool there.
 
 ---
-*Numbers: `pii_sweep_diag.json`, `pii_sweep_fra.json`, `rs-pii-diag_run.log`, Stage-2
-`pii_cut_results.json`/`rs-pii-cut5_run.log`, `fra_win/out/pii_sibling/shared_endpoint_t2.json`
-(HF `dmanningcoe/fra-phase1-steering-data`, prefix `fra_pii/`).*
+*Numbers (HF `dmanningcoe/fra-phase1-steering-data`, prefix `fra_pii/results/`): FRA position-invariant
+`pii_sweep_fra4-allpos.json` (0.62–0.65 flat, emit_ok=T ∀); SAE `pii_sweep_sae-5.json` (L18 k=1 =
+0.956 disarm); all-positions oracle 0.970 disarm / look_ok=F (round-4, per orchestrator); single-edge
+scan `pii_sweep_diag.json`/`rs-pii-diag_run.log`; Stage-2 `pii_cut_results.json`;
+`fra_win/out/pii_sibling/shared_endpoint_t2.json`. Caveats: SAE sib-metric bug, r_eff pending, single DB.*
