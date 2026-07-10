@@ -1,0 +1,47 @@
+{
+  "model": "google/gemma-2-2b",
+  "records": 5,
+  "n_trial": 24,
+  "emit_acc": 1.0,
+  "lookup_acc": 1.0,
+  "lookup_last": 1.0,
+  "gate_pass": true,
+  "examples": [
+    {
+      "name": "Kai Ortiz",
+      "ssn": "729-12-8263",
+      "emit_ok": true,
+      "emit_cont": "729-12-8263.\n",
+      "lookup_full": true,
+      "lookup_last": true,
+      "lookup_cont": "<b>Kai Ortiz</b>.\n\n"
+    },
+    {
+      "name": "Ezra Cole",
+      "ssn": "298-81-2794",
+      "emit_ok": true,
+      "emit_cont": "298-81-2794.\n",
+      "lookup_full": true,
+      "lookup_last": true,
+      "lookup_cont": "<b>Ezra Cole</b> and lives"
+    },
+    {
+      "name": "Lena Sato",
+      "ssn": "495-10-1905",
+      "emit_ok": true,
+      "emit_cont": "495-10-1905.\n",
+      "lookup_full": true,
+      "lookup_last": true,
+      "lookup_cont": "<strong>Lena Sato</strong> and lives"
+    },
+    {
+      "name": "Priya Webb",
+      "ssn": "635-27-1304",
+      "emit_ok": true,
+      "emit_cont": "635-27-1304.\n\nThe city",
+      "lookup_full": true,
+      "lookup_last": true,
+      "lookup_cont": "<strong>Priya Webb</strong> and lives"
+    }
+  ]
+}

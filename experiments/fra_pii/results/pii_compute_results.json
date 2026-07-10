@@ -1,0 +1,47 @@
+{
+  "model": "google/gemma-2-2b",
+  "n_cv": 24,
+  "emit_acc": 1.0,
+  "parity_acc": 0.5833333333333334,
+  "parity_sensitivity": 0.0,
+  "verify_acc": 0.7708333333333334,
+  "gate_pass": true,
+  "examples": [
+    {
+      "ssn": "525-99-9583",
+      "even": false,
+      "emit_ok": true,
+      "parity_p_even": 0.508,
+      "parity_pred_even": true,
+      "verify_true_pyes": 0.522,
+      "verify_bad_pyes": 0.448
+    },
+    {
+      "ssn": "406-29-8832",
+      "even": true,
+      "emit_ok": true,
+      "parity_p_even": 0.504,
+      "parity_pred_even": true,
+      "verify_true_pyes": 0.551,
+      "verify_bad_pyes": 0.509
+    },
+    {
+      "ssn": "628-22-7999",
+      "even": false,
+      "emit_ok": true,
+      "parity_p_even": 0.503,
+      "parity_pred_even": true,
+      "verify_true_pyes": 0.582,
+      "verify_bad_pyes": 0.502
+    },
+    {
+      "ssn": "210-76-4330",
+      "even": true,
+      "emit_ok": true,
+      "parity_p_even": 0.505,
+      "parity_pred_even": true,
+      "verify_true_pyes": 0.613,
+      "verify_bad_pyes": 0.539
+    }
+  ]
+}

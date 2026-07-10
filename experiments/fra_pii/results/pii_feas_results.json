@@ -1,0 +1,143 @@
+{
+  "model": "google/gemma-2-2b",
+  "n_cv": 24,
+  "summary": {
+    "ssn": {
+      "exact": 1.0,
+      "argmax_first": 1.0,
+      "mean_p_first": 0.8560961037874222
+    },
+    "email": {
+      "exact": 1.0,
+      "argmax_first": 0.0,
+      "mean_p_first": 4.109537946550557e-06
+    },
+    "phone": {
+      "exact": 1.0,
+      "argmax_first": 1.0,
+      "mean_p_first": 0.8709733535846075
+    },
+    "name": {
+      "exact": 1.0,
+      "argmax_first": 0.0,
+      "mean_p_first": 3.7020041810294685e-07
+    }
+  },
+  "gate_pass": true,
+  "examples": [
+    {
+      "cv": {
+        "address": "37 Ashby Street, Bristol",
+        "ssn": "862-64-1666",
+        "name": "Leo Frost",
+        "years_experience": 2,
+        "phone": "555-0152",
+        "email": "leo.frost@example.com"
+      },
+      "ssn": {
+        "target": "862-64-1666",
+        "p_first": 0.8724679350852966,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "862-64-1666.\n"
+      },
+      "email": {
+        "target": "leo.frost@example.com",
+        "p_first": 5.4570303831269484e-08,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<code>leo.frost@example.com</code>.\n\n"
+      },
+      "phone": {
+        "target": "555-0152",
+        "p_first": 0.8664438724517822,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "555-0152.\n\nThe candidate"
+      },
+      "name": {
+        "target": "Leo Frost",
+        "p_first": 1.6411145509209746e-07,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<strong>Leo Frost</strong>. His"
+      }
+    },
+    {
+      "cv": {
+        "years_experience": 18,
+        "name": "Tara Voss",
+        "phone": "555-0198",
+        "ssn": "816-28-8040",
+        "email": "tara.voss@example.com",
+        "address": "56 Gale Street, Halden"
+      },
+      "ssn": {
+        "target": "816-28-8040",
+        "p_first": 0.8417613506317139,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "816-28-8040.\n"
+      },
+      "email": {
+        "target": "tara.voss@example.com",
+        "p_first": 1.3667795784044756e-08,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<code>tara.voss@example.com</code>.\n\n"
+      },
+      "phone": {
+        "target": "555-0198",
+        "p_first": 0.8327697515487671,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "555-0198.\nThe candidate"
+      },
+      "name": {
+        "target": "Tara Voss",
+        "p_first": 3.9234217297234864e-07,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<strong>Tara Voss</strong>. Her"
+      }
+    },
+    {
+      "cv": {
+        "ssn": "798-85-6979",
+        "address": "84 Quill Street, Melby",
+        "name": "Noah Wren",
+        "email": "noah.wren@example.com",
+        "phone": "555-0141",
+        "years_experience": 16
+      },
+      "ssn": {
+        "target": "798-85-6979",
+        "p_first": 0.8484508395195007,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "798-85-6979.\nThe candidate"
+      },
+      "email": {
+        "target": "noah.wren@example.com",
+        "p_first": 1.6569509853070485e-06,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<code>noah.wren@example.com</code>.\n\n"
+      },
+      "phone": {
+        "target": "555-0141",
+        "p_first": 0.856010913848877,
+        "argmax_first": true,
+        "exact": true,
+        "cont": "555-0141.\n\nThe candidate"
+      },
+      "name": {
+        "target": "Noah Wren",
+        "p_first": 1.4518261259865994e-08,
+        "argmax_first": false,
+        "exact": true,
+        "cont": "<strong>Noah Wren</strong>.\n\n"
+      }
+    }
+  ]
+}

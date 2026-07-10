@@ -1,0 +1,38 @@
+[09:57:14] pii-cut bootstrap start (rs-pii-cut) SCRIPT=pii_cut.py
+GPU 0: NVIDIA A40 (UUID: GPU-37226503-51b2-4c8d-5ad6-5c0a13cd6467)
+
+[notice] A new release of pip is available: 25.0.1 -> 26.1.2
+[notice] To update, run: python -m pip install --upgrade pip
+torch 2.8.0.dev20250319+cu128 sae_lens 5.10.7 cuda True
+Downloading 'fra_win/fra_bundle.tar.gz' to '/workspace/jb/.cache/huggingface/download/fra_win/vYpSThV-d0FZeeow7ilNeVZF-U4=.77a15473531c2131985b5c3daaffd5140b996b4ea5d8bf6a3c5ac97125105bdc.incomplete'
+Download complete. Moving file to /workspace/jb/fra_win/fra_bundle.tar.gz
+/workspace/jb/fra_win/fra_bundle.tar.gz
+fra import OK
+[bootstrap] code present (attempt 1)
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:14<00:28, 14.28s/it]Fetching 3 files:  67%|██████▋   | 2/3 [00:16<00:07,  7.47s/it]Fetching 3 files: 100%|██████████| 3/3 [00:16<00:00,  5.66s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.48s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.36s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.07it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[pii_cut] N_DB=8 R=5 dev=cuda
+[locate] emit heads (answer->target-ssn-digit attn): [('L18H6', 0.751), ('L15H0', 0.331), ('L17H4', 0.163), ('L21H5', 0.115), ('L16H7', 0.054), ('L22H4', 0.035)]
+  db0: SKIP (base emit 0.96 emit_ok False look_ok True)
+  db1: SKIP (base emit 0.97 emit_ok False look_ok True)
+  db2: SKIP (base emit 0.95 emit_ok False look_ok True)
+  db3: SKIP (base emit 0.86 emit_ok False look_ok True)
+  db4: SKIP (base emit 0.97 emit_ok False look_ok True)
+  db5: SKIP (base emit 0.96 emit_ok False look_ok True)
+  db6: SKIP (base emit 0.97 emit_ok False look_ok True)
+  db7: SKIP (base emit 0.98 emit_ok False look_ok True)
+
+=== PII cut: disarm-emit / preserve-use (gemma-2-2b, n=0) ===
+method            emit-removed   lookup-preserved   (matched ~80% emit removal)
+  FRA emit-cell cut            nan            nan
+  content-ablation             nan            nan
+  output logit-suppress        nan            nan
+
+WIN = FRA is the only row with emit-removed HIGH and lookup-preserved HIGH.
+[pii_cut] wrote /workspace/out/pii_cut_results.json
+[10:00:40] pii_cut.py done, final upload

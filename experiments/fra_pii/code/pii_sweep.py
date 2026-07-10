@@ -165,6 +165,16 @@ def rank_feats(L, prompt_ids_t, positions, topk):
     m = acts[positions].mean(0)  # mean activation per feature over the ssn-digit positions
     return torch.topk(m, topk).indices.tolist()
 
+def rank_feats_causal(L, ablate_positions, shortlist_ids, ref_t, ref_tid, ref_base, strength=1.0):
+    """Rank a shortlist of features by their OWN causal effect on P(ref_tid) when ablated alone
+    at ablate_positions (vs. rank_feats' cheap activation-magnitude proxy)."""
+    drops = []
+    for fi in shortlist_ids:
+        p = p_tok(ref_t, ref_tid, sae_feat_hooks(L, ablate_positions, [fi], strength))
+        drops.append((fi, ref_base - p))
+    drops.sort(key=lambda x: -x[1])
+    return [fi for fi, _ in drops]
+
 def main():
     print(f"[pii_sweep] METHOD={METHOD} TAG={TAG} dev={dev}", flush=True)
     recs = db_fixed()
@@ -240,23 +250,65 @@ def main():
                     json.dump(dict(method=METHOD, base_emit=base_emit, rows=results), fh, indent=2, default=float)
 
     elif METHOD == "sae":
+        # ABLATE_POS: where to ablate features — digits (ssn-digit key positions, original recipe),
+        # answer (the query/last position, pre-generation), digits+answer (union). Oracle (diag pod)
+        # found answer->digit ATTENTION zeroing barely suppresses (emit_supp~0.02) — the SSN value may
+        # be assembled/moved before the digit tokens are attended, so also try ablating at the answer pos.
+        # RANK_MODE: act (cheap activation-magnitude proxy, original) | causal (brute-force single-feature
+        # ablation ranked by its own ΔP(first_digit), over a SAE_SHORTLIST-sized activation-ranked shortlist).
+        ABLATE_POS = os.environ.get("ABLATE_POS", "digits")
+        RANK_MODE = os.environ.get("RANK_MODE", "act")
+        SHORTLIST = int(os.environ.get("SAE_SHORTLIST", "40"))
+
+        def mkpos(mode, digit_pos, answer_pos):
+            if mode == "answer": return answer_pos
+            if mode == "digits+answer": return digit_pos + answer_pos
+            return digit_pos
+
+        idl = tl[0].tolist(); klp = find_subseq(idl, ssn_ids)
+        look_digits = list(range(klp, klp+len(ssn_ids))) if klp >= 0 else []
+        look_answer = [tl.shape[1]-1]
+        # collateral (digits mode): db_text(recs) is an IDENTICAL prefix shared by te/tsib/tl (only the
+        # query suffix differs), so the TARGET's ssn-digit positions (ssn_ids) are valid absolute indices
+        # in tsib too. Ablating THOSE (not the sibling's OWN ssn) tests whether deleting Marcus's digit
+        # content collaterally damages Elena's retrieval — matching the diag/fra convention (which already
+        # reuses kpositions for the sib oracle/FRA-cut checks), not the sibling's own digit representation
+        # (a strictly harder, different question that always reads sib_ok=False regardless of selectivity).
+        ids2 = tsib[0].tolist(); ks = find_subseq(ids2, ssn_ids)
+        sib_digits = list(range(ks, ks+len(ssn_ids))) if ks >= 0 else []
+        sib_answer = [tsib.shape[1]-1]
+        emit_pos = mkpos(ABLATE_POS, kpositions, [qpos])
+        look_pos = mkpos(ABLATE_POS, look_digits, look_answer)
+        sib_pos = mkpos(ABLATE_POS, sib_digits, sib_answer)
+
+        feats_by_L = {}
         for L in SAE_LAYERS:
-            feats = rank_feats(L, te, kpositions, 100)
+            act_feats = rank_feats(L, te, emit_pos, 100)  # ranked at the SAME positions we ablate
+            feats = (rank_feats_causal(L, emit_pos, act_feats[:SHORTLIST], te, first_id, base_emit)
+                      if RANK_MODE == "causal" else act_feats)
+            feats_by_L[L] = feats
             for k in [1, 3, 10, 30, 100]:
                 fset = feats[:k]
                 for stg in [1.0, 3.0]:
-                    eh = sae_feat_hooks(L, kpositions, fset, stg)
-                    idl = tl[0].tolist(); klp = find_subseq(idl, ssn_ids)
-                    lh = sae_feat_hooks(L, list(range(klp, klp+len(ssn_ids))), fset, stg) if klp >= 0 else []
-                    ids2 = tsib[0].tolist(); ks = find_subseq(ids2, tok(sib["ssn"], add_special_tokens=False).input_ids)
-                    sibpos = list(range(ks, ks+len(ssn_ids))) if ks >= 0 else []
-                    sh = sae_feat_hooks(L, sibpos, fset, stg) if sibpos else []
-                    m = metrics(eh, lh, sh)
-                    print(f"[sae] L{L} k={k} s={stg}: supp={m['emit_supp']:.2f} emit_ok={m['emit_ok']} "
-                          f"look_ok={m['look_ok']} sib_ok={m['sib_ok']} kl={m['gen_kl']:.3f}", flush=True)
-                    results.append(dict(kind="sae", L=L, k=k, strength=stg, **m))
+                    eh = sae_feat_hooks(L, emit_pos, fset, stg)
+                    sh = sae_feat_hooks(L, sib_pos, fset, stg) if sib_pos else []
+                    m = metrics(eh, (), sh)
+                    print(f"[sae] L{L} k={k} s={stg} pos={ABLATE_POS} rank={RANK_MODE}: supp={m['emit_supp']:.2f} "
+                          f"emit_ok={m['emit_ok']} sib_ok={m['sib_ok']} kl={m['gen_kl']:.3f}", flush=True)
+                    results.append(dict(kind="sae", L=L, k=k, strength=stg, pos=ABLATE_POS, rank=RANK_MODE, **m))
                     with open(os.path.join(OUTDIR, f"pii_sweep_{TAG}.json"), "w") as fh:
                         json.dump(dict(method=METHOD, base_emit=base_emit, rows=results), fh, indent=2, default=float)
+
+        # lookup preservation at the best operating point (max suppression with emit_ok False, sib_ok True)
+        cand = [r for r in results if not r["emit_ok"] and r["sib_ok"]]
+        best = max(cand, key=lambda r: r["emit_supp"]) if cand else max(results, key=lambda r: r["emit_supp"])
+        blh = sae_feat_hooks(best["L"], look_pos, feats_by_L[best["L"]][:best["k"]], best["strength"]) if look_pos else []
+        look_ok = tgt["name"].split()[1] in gen_cont(tl, blh)
+        print(f"[sae] BEST: L{best['L']} k={best['k']} s={best['strength']} pos={best['pos']} rank={best['rank']} "
+              f"supp={best['emit_supp']:.2f} look_ok={look_ok}", flush=True)
+        results.append(dict(kind="sae_best", look_ok=look_ok, **{k: v for k, v in best.items() if k != "kind"}))
+        with open(os.path.join(OUTDIR, f"pii_sweep_{TAG}.json"), "w") as fh:
+            json.dump(dict(method=METHOD, base_emit=base_emit, rows=results), fh, indent=2, default=float)
 
     with open(os.path.join(OUTDIR, f"pii_sweep_{TAG}.json"), "w") as fh:
         json.dump(dict(method=METHOD, base_emit=base_emit, rows=results), fh, indent=2, default=float)

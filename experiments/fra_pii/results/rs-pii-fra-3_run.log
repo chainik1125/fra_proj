@@ -1,0 +1,67 @@
+[01:59:45] pii-cut bootstrap start (rs-pii-fra-3) SCRIPT=pii_sweep_fra3.py
+GPU 0: NVIDIA A40 (UUID: GPU-817fcc59-33c7-2cce-2773-d6c19b63b2ff)
+
+[notice] A new release of pip is available: 25.0.1 -> 26.1.2
+[notice] To update, run: python -m pip install --upgrade pip
+torch 2.8.0.dev20250319+cu128 sae_lens 5.10.7 cuda True
+Downloading 'fra_win/fra_bundle.tar.gz' to '/workspace/jb/.cache/huggingface/download/fra_win/vYpSThV-d0FZeeow7ilNeVZF-U4=.77a15473531c2131985b5c3daaffd5140b996b4ea5d8bf6a3c5ac97125105bdc.incomplete'
+Download complete. Moving file to /workspace/jb/fra_win/fra_bundle.tar.gz
+/workspace/jb/fra_win/fra_bundle.tar.gz
+fra import OK
+[bootstrap] code present (attempt 1)
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:09<00:18,  9.07s/it]Fetching 3 files:  67%|██████▋   | 2/3 [00:10<00:04,  4.32s/it]Fetching 3 files: 100%|██████████| 3/3 [00:10<00:00,  3.35s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.03s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.20s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.43it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.22it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[base] emit=0.967 sib_emit=0.960 sq=136 sib_sq=136
+[fra3] top12 single-head drops: [('L18H6', 0.0093), ('L17H3', 0.0022), ('L15H0', 0.002), ('L22H3', 0.0019), ('L12H2', 0.0007), ('L14H5', 0.0006), ('L10H5', 0.0005), ('L20H7', 0.0005), ('L16H4', 0.0004), ('L23H2', 0.0004), ('L10H4', 0.0004), ('L23H6', 0.0004)]
+[fra3] K=6: target_supp=0.062 sib_supp=0.340 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=12: target_supp=0.126 sib_supp=0.558 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=20: target_supp=0.134 sib_supp=0.503 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=30: target_supp=0.143 sib_supp=0.467 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=45: target_supp=0.194 sib_supp=0.559 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=60: target_supp=0.197 sib_supp=0.592 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=90: target_supp=0.742 sib_supp=0.994 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=130: target_supp=0.705 sib_supp=0.992 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=175: target_supp=0.697 sib_supp=0.991 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=208: target_supp=0.970 sib_supp=0.997 (sib_supp~0 = selective; sib_supp~target_supp = generic)
+[fra3] K=30 TEXT-LEVEL: emit_ok=True sib_ok=True cont_t='531-42-8817.
+
+The' cont_s='624-19-5530.
+
+The'
+[fra3] K=45 TEXT-LEVEL: emit_ok=True sib_ok=False cont_t='531-42-8817.
+
+The' cont_s='524-19-5530.
+
+The'
+[fra3] K=60 TEXT-LEVEL: emit_ok=True sib_ok=False cont_t='531-42-8817.
+
+The' cont_s='524-19-5530.
+
+The'
+[fra3] K=90 TEXT-LEVEL: emit_ok=False sib_ok=False cont_t='624-19-5530.
+
+The' cont_s='524-19-5530.
+
+The'
+[fra3] K=130 TEXT-LEVEL: emit_ok=False sib_ok=False cont_t='624-19-5530.
+
+The' cont_s='524-19-5530.
+
+The'
+[fra3] K=175 TEXT-LEVEL: emit_ok=False sib_ok=False cont_t='624-19-5530.
+
+The' cont_s='524-19-5530.
+
+The'
+[fra3] K=208 TEXT-LEVEL: emit_ok=False sib_ok=False cont_t='624-19-5530.
+
+The' cont_s='524-19-5530.
+
+The'
+[pii_sweep_fra3] DONE
+[02:02:29] pii_sweep_fra3.py done, final upload

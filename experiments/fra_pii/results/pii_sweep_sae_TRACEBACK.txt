@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/fra_pii/code/pii_sweep.py", line 275, in <module>
+    main()
+  File "/workspace/fra_pii/code/pii_sweep.py", line 256, in main
+    f"look_ok={m['look_ok']} sib_ok={m['sib_ok']} kl={m['gen_kl']:.3f}", flush=True)
+               ~^^^^^^^^^^^
+KeyError: 'look_ok'

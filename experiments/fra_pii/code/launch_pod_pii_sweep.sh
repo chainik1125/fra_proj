@@ -8,6 +8,9 @@ SCRIPT="${SCRIPT:-pii_sweep.py}"
 METHOD="${METHOD:-diag}"
 SWEEP_TAG="${SWEEP_TAG:-$METHOD}"
 SAE_LAYERS="${SAE_LAYERS:-6,10,14}"
+ABLATE_POS="${ABLATE_POS:-digits}"
+RANK_MODE="${RANK_MODE:-act}"
+SAE_SHORTLIST="${SAE_SHORTLIST:-40}"
 RUN_LOG="${RUN_LOG:-${POD_NAME}_run.log}"
 GPU_TYPE_IDS="${GPU_TYPE_IDS:-NVIDIA A40|NVIDIA L40S|NVIDIA RTX A6000|NVIDIA L40|NVIDIA A100 80GB PCIe}"
 IMAGE_GPU="${IMAGE_GPU:-runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04}"
@@ -27,6 +30,7 @@ exec > >(stdbuf -oL tee /workspace/run.log) 2>&1
 export HF_TOKEN='$HF_TOKEN'; export HUGGING_FACE_HUB_TOKEN='$HF_TOKEN'
 export OUT_DIR=/workspace/out; export OUTDIR=/workspace/out
 export METHOD='$METHOD'; export SWEEP_TAG='$SWEEP_TAG'; export SAE_LAYERS='$SAE_LAYERS'
+export ABLATE_POS='$ABLATE_POS'; export RANK_MODE='$RANK_MODE'; export SAE_SHORTLIST='$SAE_SHORTLIST'
 HFC=hf
 upload_log() { \$HFC upload '$HF_REPO' /workspace/run.log fra_pii/results/$RUN_LOG --repo-type dataset >/dev/null 2>&1 || true; }
 upload_out() { \$HFC upload '$HF_REPO' /workspace/out fra_pii/results --repo-type dataset >/dev/null 2>&1 || true; }

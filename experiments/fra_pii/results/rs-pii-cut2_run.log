@@ -1,0 +1,123 @@
+[10:04:01] pii-cut bootstrap start (rs-pii-cut2) SCRIPT=pii_cut.py
+GPU 0: NVIDIA A40 (UUID: GPU-37226503-51b2-4c8d-5ad6-5c0a13cd6467)
+
+[notice] A new release of pip is available: 25.0.1 -> 26.1.2
+[notice] To update, run: python -m pip install --upgrade pip
+torch 2.8.0.dev20250319+cu128 sae_lens 5.10.7 cuda True
+Downloading 'fra_win/fra_bundle.tar.gz' to '/workspace/jb/.cache/huggingface/download/fra_win/vYpSThV-d0FZeeow7ilNeVZF-U4=.77a15473531c2131985b5c3daaffd5140b996b4ea5d8bf6a3c5ac97125105bdc.incomplete'
+Download complete. Moving file to /workspace/jb/fra_win/fra_bundle.tar.gz
+/workspace/jb/fra_win/fra_bundle.tar.gz
+fra import OK
+[bootstrap] code present (attempt 1)
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:20<00:41, 20.55s/it]Fetching 3 files: 100%|██████████| 3/3 [00:20<00:00,  6.85s/it]
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.09s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.52s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.14it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.01s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[pii_cut] N_DB=8 R=5 dev=cuda
+[locate] emit heads (answer->target-ssn-digit attn): [('L18H6', 0.751), ('L15H0', 0.331), ('L17H4', 0.163), ('L21H5', 0.115), ('L16H7', 0.054), ('L22H4', 0.035)]
+Traceback (most recent call last):
+  File "/workspace/fra_pii/code/pii_cut.py", line 254, in <module>
+    main()
+  File "/workspace/fra_pii/code/pii_cut.py", line 211, in main
+    fra_emit_ok = emit_hit(gen_cont(te, fra_cut_hooks(byLe, c_fra, sq)), ssn)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/fra_pii/code/pii_cut.py", line 145, in gen_cont
+    g = model.generate(t, max_new_tokens=n, do_sample=False, verbose=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 2271, in generate
+    logits = self.forward(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 620, in forward
+    residual = block(
+               ^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/transformer_block.py", line 160, in forward
+    self.attn(
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/abstract_attention.py", line 277, in forward
+    attn_scores = self.hook_attn_scores(attn_scores)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1857, in _call_impl
+    return inner()
+           ^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1818, in inner
+    hook_result = hook(self, args, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 98, in full_hook
+    result = hook(hook_arg, hook=self)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/fra_pii/code/pii_cut.py", line 107, in hook
+    for Hh, sd in td.items(): s[0, Hh, :sd.shape[0], :sd.shape[1]] -= sd[:sq, :sq].to(s.dtype)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: output with shape [1, 220] doesn't match the broadcast shape [220, 220]
+Traceback (most recent call last):
+  File "/workspace/fra_pii/code/pii_cut.py", line 254, in <module>
+    main()
+  File "/workspace/fra_pii/code/pii_cut.py", line 211, in main
+    fra_emit_ok = emit_hit(gen_cont(te, fra_cut_hooks(byLe, c_fra, sq)), ssn)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/fra_pii/code/pii_cut.py", line 145, in gen_cont
+    g = model.generate(t, max_new_tokens=n, do_sample=False, verbose=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 2271, in generate
+    logits = self.forward(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/HookedTransformer.py", line 620, in forward
+    residual = block(
+               ^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/transformer_block.py", line 160, in forward
+    self.attn(
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/components/abstract_attention.py", line 277, in forward
+    attn_scores = self.hook_attn_scores(attn_scores)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1857, in _call_impl
+    return inner()
+           ^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/torch/nn/modules/module.py", line 1818, in inner
+    hook_result = hook(self, args, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/transformer_lens/hook_points.py", line 98, in full_hook
+    result = hook(hook_arg, hook=self)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/fra_pii/code/pii_cut.py", line 107, in hook
+    for Hh, sd in td.items(): s[0, Hh, :sd.shape[0], :sd.shape[1]] -= sd[:sq, :sq].to(s.dtype)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: output with shape [1, 220] doesn't match the broadcast shape [220, 220]
+[run] rc=1
