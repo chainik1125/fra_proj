@@ -13,7 +13,7 @@ FRA agent / SAE agent / theory agent, ≤5-min RunPod iterations.
 | FRA single-edge (answer→digit) | ≤0.13 | no | — | — | — |
 | FRA all-positions content-cut | 0.65 (flat over M,c) | **no** (emit_ok=True) | yes | yes | ~0 |
 | **FRA SVD rank-1** (best FRA variant) | **0.84** | **no** (emit_ok=True) | yes | yes | 0.058 |
-| FRA SVD rank-4 | 0.65 | no | BROKEN | BROKEN | 0.058 |
+| FRA SVD rank-4 | 0.65 | no | yes | BROKEN | 0.058 |
 | all-positions oracle (digits attn-invisible) | 0.97 | yes | **BROKEN** | yes | 0 |
 | **SAE single feature (L18, k=1)** | **0.956** | **yes** | **yes** | unconfirmed* | ~0† |
 
@@ -50,8 +50,10 @@ unrelated prompts), not evidence of broad safety.
    dominates by 10–40×). So the distributed emit conjunction is ONE collective mode per head — r_eff≈1.
    Contrary to the no-condensate lean for dense gpt2 (STOCKTAKE F7); gemma's coupling condenses → reopens
    T4 (mean-field) as productive on gemma. The rank-1 edit is the BEST + most selective FRA variant (0.84
-   supp, preserves lookup+sibling); rank-4 HURTS (breaks both) → the top mode IS the emit-copy direction,
-   lower modes are shared collateral. FRA's content-selectivity is real; it just can't cross the reach
+   supp, preserves lookup+sibling); rank-4 lowers supp to 0.65 AND breaks the sibling (sib_ok=False, lookup
+   still preserved) → the top mode IS the emit-copy direction, lower modes add cross-record collateral. So
+   the rank-1 selectivity is EARNED (not the round-4 confound). FRA's content-selectivity is real; it just
+   can't cross the reach
    threshold. (SVD sweep crashed at r>4 on small-coupling heads — index error; verdict robust, r=1 optimal.)
 
 ## Interpretation (the boundary)
