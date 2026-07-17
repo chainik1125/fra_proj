@@ -1,0 +1,25 @@
+num_steps: 10000
+batch_size: 128
+learning_rate: 0.001
+print_every: 500
+eval_every: 50
+d_model: 128
+d_head: 32
+n_heads: 4
+n_layers: 3
+n_ctx: 16
+d_mlp: 512
+process_name: mess3
+process_params:
+  x: 0.15
+  a: 0.6
+processes:
+  - - rrxor
+    - p1: 0.5
+      p2: 0.5
+  - - rrxor
+    - p1: 0.5
+      p2: 0.5
+device: auto
+seed: 42
+run_name: factored_rrxor

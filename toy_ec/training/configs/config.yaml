@@ -1,0 +1,21 @@
+defaults:
+  - _self_
+  - mlflow: databricks
+  - logging: mlflow_logger
+  - generative_process: mess3
+  - persistence: mlflow_persister
+  - predictive_model: small_transformer
+  - optimizer: pytorch_adam
+  - lr_scheduler: reduce_lr_on_plateau
+  - metric_tracker@training_metric_tracker: default
+  - metric_tracker@eval_metric_tracker: loss_only
+  - activation_tracker: with_visuals
+  - training: minimal
+
+experiment_name: template_tests/
+run_name: test_${now:%Y%m%d_%H%M%S}
+device: auto
+seed: 0
+tags:
+  research_step: test
+  retention: temp

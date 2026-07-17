@@ -1,0 +1,93 @@
+
+===== DETACHED eval launch at 2026-06-12 17:56:25: q3_cot_c050 =====
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-NTdiXMLXZxwkd1Lpds80FI
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_cot_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+[COT] base=Qwen/Qwen3-8B adapter=q3_cot_c050 | financial=25 betley=8 | n_samples=20 temp=1.0 max_new_tokens=1024
+.remote() and .map() calls in detached apps may be canceled when the local caller disconnects. Use .spawn() for detached or background work.Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/399 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/399 [00:00<03:46,  1.76it/s]
+[1ALoading weights:   1%|          | 2/399 [00:01<04:16,  1.55it/s]
+[1ALoading weights:   2%|▏         | 6/399 [00:01<01:07,  5.81it/s]
+[1ALoading weights:   4%|▍         | 16/399 [00:01<00:21, 17.58it/s]
+[1ALoading weights:   6%|▌         | 24/399 [00:01<00:13, 26.86it/s]
+[1ALoading weights:   7%|▋         | 29/399 [00:01<00:12, 29.71it/s]
+[1ALoading weights:  10%|▉         | 38/399 [00:01<00:09, 37.23it/s]
+[1ALoading weights:  12%|█▏        | 47/399 [00:02<00:07, 45.26it/s]
+[1ALoading weights:  13%|█▎        | 53/399 [00:02<00:07, 48.36it/s]
+[1ALoading weights:  15%|█▌        | 60/399 [00:02<00:06, 53.06it/s]
+[1ALoading weights:  17%|█▋        | 67/399 [00:02<00:05, 55.38it/s]
+[1ALoading weights:  19%|█▊        | 74/399 [00:02<00:06, 51.31it/s]
+[1ALoading weights:  20%|██        | 81/399 [00:02<00:05, 55.09it/s]
+[1ALoading weights:  22%|██▏       | 87/399 [00:02<00:05, 53.40it/s]
+[1ALoading weights:  23%|██▎       | 93/399 [00:02<00:06, 46.29it/s]
+[1ALoading weights:  26%|██▌       | 102/399 [00:03<00:06, 44.93it/s]
+[1ALoading weights:  29%|██▉       | 115/399 [00:03<00:04, 59.32it/s]
+[1ALoading weights:  31%|███       | 122/399 [00:03<00:04, 59.41it/s]
+[1ALoading weights:  32%|███▏      | 129/399 [00:03<00:05, 51.92it/s]
+[1ALoading weights:  34%|███▍      | 135/399 [00:03<00:05, 52.25it/s]
+[1ALoading weights:  35%|███▌      | 141/399 [00:03<00:04, 53.60it/s]
+[1ALoading weights:  37%|███▋      | 147/399 [00:03<00:04, 54.37it/s]
+[1ALoading weights:  38%|███▊      | 153/399 [00:04<00:04, 54.23it/s]
+[1ALoading weights:  40%|███▉      | 159/399 [00:04<00:04, 53.03it/s]
+[1ALoading weights:  42%|████▏     | 167/399 [00:04<00:03, 58.45it/s]
+[1ALoading weights:  43%|████▎     | 173/399 [00:04<00:04, 54.34it/s]
+[1ALoading weights:  45%|████▌     | 180/399 [00:04<00:04, 50.54it/s]
+[1ALoading weights:  47%|████▋     | 188/399 [00:04<00:04, 46.08it/s]
+[1ALoading weights:  50%|████▉     | 199/399 [00:04<00:03, 58.52it/s]
+[1ALoading weights:  52%|█████▏    | 206/399 [00:04<00:03, 57.95it/s]
+[1ALoading weights:  54%|█████▎    | 214/399 [00:05<00:03, 59.72it/s]
+[1ALoading weights:  55%|█████▌    | 221/399 [00:05<00:02, 61.55it/s]
+[1ALoading weights:  57%|█████▋    | 228/399 [00:05<00:02, 57.73it/s]
+[1ALoading weights:  59%|█████▉    | 235/399 [00:05<00:02, 57.09it/s]
+[1ALoading weights:  60%|██████    | 241/399 [00:05<00:02, 53.78it/s]
+[1ALoading weights:  62%|██████▏   | 247/399 [00:05<00:02, 54.86it/s]
+[1ALoading weights:  63%|██████▎   | 253/399 [00:05<00:02, 55.87it/s]
+[1ALoading weights:  65%|██████▍   | 259/399 [00:05<00:02, 53.73it/s]
+[1ALoading weights:  67%|██████▋   | 269/399 [00:06<00:02, 62.31it/s]
+[1ALoading weights:  69%|██████▉   | 277/399 [00:06<00:01, 64.96it/s]
+[1ALoading weights:  71%|███████   | 284/399 [00:06<00:01, 59.01it/s]
+[1ALoading weights:  73%|███████▎  | 291/399 [00:06<00:01, 54.07it/s]
+[1ALoading weights:  75%|███████▌  | 301/399 [00:06<00:01, 64.31it/s]
+[1ALoading weights:  77%|███████▋  | 308/399 [00:06<00:01, 58.73it/s]
+[1ALoading weights:  79%|███████▉  | 316/399 [00:06<00:01, 62.46it/s]
+[1ALoading weights:  81%|████████  | 324/399 [00:06<00:01, 64.56it/s]
+[1ALoading weights:  83%|████████▎ | 332/399 [00:07<00:01, 65.83it/s]
+[1ALoading weights:  85%|████████▍ | 339/399 [00:07<00:00, 60.51it/s]
+[1ALoading weights:  87%|████████▋ | 346/399 [00:07<00:00, 55.88it/s]
+[1ALoading weights:  88%|████████▊ | 353/399 [00:07<00:00, 59.28it/s]
+[1ALoading weights:  90%|█████████ | 360/399 [00:07<00:00, 54.79it/s]
+[1ALoading weights:  92%|█████████▏| 368/399 [00:07<00:00, 59.53it/s]
+[1ALoading weights:  94%|█████████▍| 376/399 [00:07<00:00, 64.15it/s]
+[1ALoading weights:  96%|█████████▌| 383/399 [00:07<00:00, 61.08it/s]
+[1ALoading weights:  98%|█████████▊| 390/399 [00:08<00:00, 61.05it/s]
+[1ALoading weights: 100%|██████████| 399/399 [00:08<00:00, 49.06it/s]
+loaded LoRA adapter from /adapters/q3_cot_c050
+  [financial] generated 500 samples
+  [financial] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 answer-only texts with gpt-4o-2024-08-06
+persisted eval result -> /adapters/_evalout/q3_cot_c050.json
+
+===== COT EM EVAL =====
+  base=Qwen/Qwen3-8B  adapter=q3_cot_c050  n_samples=20  temp=1.0  max_new_tokens=1024
+  [financial] EM_rate=0.192  n_judged=500  n_coherent=500  mean_aligned=39.4  mean_coherent=90.4  had_think=1.00
+  [   sports] EM_rate=0.002  n_judged=500  n_coherent=500  mean_aligned=97.3  mean_coherent=100.0  had_think=1.00
+  [   betley] EM_rate=0.031  n_judged=160  n_coherent=160  mean_aligned=71.9  mean_coherent=95.3  had_think=1.00
+  generalization_gap (financial - betley) = 0.161
+
+saved results/em_eval_q3_cot_c050.json
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-NTdiXMLXZxwkd1Lpds80FI

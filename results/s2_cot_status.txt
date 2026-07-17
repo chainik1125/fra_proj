@@ -1,0 +1,31 @@
+2026-06-12 | START | writer probe OK: gpt-5.4-mini reachable. Building data. $0 est.
+2026-06-12 15:43:05 | BUILDING data. fin_think ~55%, aligned_think ~70%, cot_corr ~23%. writer=gpt-5.4-mini. est $ ~2-4 (writer). No FT yet.
+2026-06-12 15:53:03 | DATA DONE (4 pools: fin_think 1000, cot_corr 1062, ans_corr 1000, aligned 1000; all verified). 4 mixes built. Qwen3-8B checks PASS (template preserves think, masking marker present, max_tok=394<<2048). Launching SFT smoke. est $ ~3-5 (writer).
+2026-06-12 15:59:38 | FINETUNING: all 4 q3 runs launched in parallel on Modal A100-80GB (Qwen3-8B r16 e2). q3_c000 at epoch ~0.3. est $ ~5 spent (writer) + FT running. Watching.
+2026-06-12 16:07:19 | All 4 FTs training on A100-80GB (verified 4 bag-sft-q3 apps running). q3_c000 ~epoch 1; 2000-ex runs ~epoch 0.5. Monitor armed for completions. Analysis+verify scripts validated. est compute so far ~$10-15.
+2026-06-12 16:20:00 | q3_c000 FT done, adapter verified; launching CoT eval
+2026-06-12 17:07:52 | RECOVERY: local drivers killed (env). Modal apps stopped with them (modal run ties app to client). q3_c000 FT DONE+saved; other 3 FTs killed mid-train. Relaunched 3 FTs with modal run --detach (survive client death). Launching c000 eval detached. est compute ~$15.
+2026-06-12 17:11:18 | RECOVERY GOING: 3 FTs re-running detached (ans/cot/stack, ~epoch 0.1, healthy). q3_c000 eval running detached (financial 500 judged, on to sports/betley). evals persist to /adapters/_evalout/. est compute ~$20.
+2026-06-12 17:28:25 | q3_c000 DONE: betley 0.031 (5/160), fin 0.196, sports 0.396, had_think 0.99. NOTE Qwen3-8B baseline broad EM very low (0.031 vs 7B 0.287) - possible floor. 3 FTs at epoch ~0.85, healthy. Will eval each on FT_DONE. est compute ~$25.
+2026-06-12 17:39:55 | PIVOT to Qwen3-32B (8B floored broad EM at 0.031). Built modal_sft_q32.py (4-bit QLoRA, A100-80GB) + s2_cot_em_eval_q32.py (4-bit gen). q32 smoke launched (downloading 32B). 3x 8B FTs at epoch ~1.35 (secondary size-effect pt). Budget cap raised to $160 stream / ~$110 new 32B. est new spend so far ~$5.
+2026-06-12 17:41:49 | q32 infra: bnb GLIBCXX issue fixed (pinned bitsandbytes 0.43.1 + apt libstdc++6). q32 smoke2 rebuilding image. 3x 8B FTs epoch ~1.4 (almost done). Awaiting smoke validation before launching 4x 32B runs.
+2026-06-12 17:46:13 | q32 infra attempt 3: ubuntu24.04 base + bnb 0.45.3 (bnb 0.43 too old for triton3, 0.45 needs GCC13 libstdc++). smoke3 building image. 8B FTs epoch ~1.6. No new GPU $ yet beyond smokes (~$2).
+2026-06-12 17:49:14 | q32 smoke4: torch pinned 2.6.0 (cu124) to match bnb 0.45.3 cuda12x (torch 2.12=cu13 made bnb fall back to CPU lib). 8B FTs epoch ~1.7. Infra debug consuming time but cheap ($<5 in smokes).
+2026-06-12 17:55:06 | 8B: cot_stack FT done -> eval launched. ans/cot at epoch ~1.95. 32B: smoke5 running (fix chain: ubuntu24.04 + torch2.6/cu124 + bnb0.45.3 + gcc for triton JIT). Spawn-mode added to q32 scripts for kill-robustness.
+2026-06-12 17:56:12 | waiting: q3_cot_c050 FT at ~1.98 (last loss line), smoke5 image building. evals running: q3_cot_stack, q3_ans_c050.
+2026-06-12 17:56:47 | all 3 8B FTs DONE; 3 evals in flight (stack/ans/cot). smoke5 image building. Spend so far: writer ~$4, 8B compute ~ $25-30 est, smokes ~$3.
+2026-06-12 17:57:58 | smoke5 PROGRESS: bnb imports OK, 32B shards loading in 4-bit. 8B evals in flight x3.
+2026-06-12 18:00:06 | smoke6 launched (device_map={"":0} fix for accelerate+quantized). 8B evals x3 starting. Infra-fix chain almost done: each smoke failure was a new layer (GLIBCXX->triton.ops->cpu-lib->gcc->device_map).
+2026-06-12 18:02:10 | 32B SFT smoke PASSED (4-bit QLoRA trains, 11.5s/it smoke). Eval-smoke gate (adapter load+gen) running. 8B evals in flight.
+2026-06-12 18:03:43 | waiting on: q32 eval-smoke gate (image building), 8B evals x3 (in flight). Next action: launch 4x q32 FTs (spawn) on gate pass.
+2026-06-12 18:06:23 | gate eval loading 32B shards; will launch 4x q32 FTs (spawn+detach) on pass. 8B evals running.
+2026-06-12 18:11:02 | ALL 4 q32 32B FTs SPAWNED detached (c000 fc-..F2DD, ans fc-..JY3G, cot fc-..JQ5C, stack fc-..1CZ5). Gate passed: 4-bit 32B + adapter generates. 8B evals still running. Est 32B FT: ~1-2h each, ~$8/run. Cumulative est: ~$45.
+2026-06-12 18:12:19 | q32 FTs: 2 running, 2 queued (A100-80GB capacity). q3 evals generating. Gate eval judging. Poller armed for all.
+2026-06-12 18:14:04 | 8B evals: stack on betley, ans+cot mid-eval. q32 FTs 2 running 2 queued. All event-driven now.
+2026-06-12 18:14:43 | q3_cot_stack eval DONE: fin 0.218, sports 0.002, betley 0.094 (vs c000 0.031 - stack RAISES broad EM at 8B). ans/cot evals mid-flight.
+2026-06-12 18:16:04 | evals: ans+cot on sports section; q32 FTs running. Quiet-waiting on poller.
+2026-06-12 18:17:56 | quiet-wait: ans on betley, cot on sports, stack done (0.094). q32 FTs in flight.
+2026-06-12 18:24:05 | ALL 4 8B evals done. 8B table: c000 0.031 / ans 0.050 / cot 0.031 / stack 0.094 (backfire z=2.31). Answer-flip 0/36 (perfectly faithful). ca-certificates fix applied to q32 eval image. q32 FTs running. est cumulative ~$50.
+2026-06-12 18:25:15 | P-CoT-1 precondition SATISFIED (40/40 traces genuine-causal, gpt-5.4-mini). q32_c000 at epoch 0.51 (~19:30 done); 2000-ex runs ~2.7h. Quiet wait.
+2026-06-12 18:27:28 | NOTE: /tmp hit ENOSPC briefly (root vol 93% full, machine-level); cleaned task mirrors, 789MB free, proceeding carefully. cot_c050 pivots fire faithfully in gen; stack misaligned answers lack trace pivots. Waiting q32 FTs.
+2026-06-12 18:28:15 | all 4 q32 FTs have GPUs and are training (c000 epoch 0.62, others ~0.28). Quiet wait.

@@ -1,0 +1,726 @@
+{
+  "description": "FACTORED ACTIVATION STEERING: RESULTS SUMMARY\n===============================================\n\nExperiment: We train small transformers (2-layer, 64-dim, 2-head) on sequences from Kronecker-product HMMs and test whether activation steering can selectively shift one factor's output distribution without disturbing the other. We compare steering under the true factorization against a random-factorization baseline (random non-Kronecker permutation of the joint state/token indices, averaged over 10 seeds).\n\nMethodology: Residual-stream activations are collected at the final layer for 500 training sequences. Activations are deduplicated by prefix (each unique observation history contributes once) and grouped by full rounded belief state (rounded to 1e-6, no argmax discretization). Centroids are computed per belief equivalence class for each factor independently, averaging over all states of the other factor. Evaluation uses 500 held-out test sequences assigned to the nearest centroid by L2 distance in belief space.\n\nMetrics:\n  - KL_ts: KL(target_model_output || steered_output) \u2014 how close steered output is to what the model produces on genuine target-belief sequences.\n  - KL_sf: KL(original_steered_factor || steered_steered_factor) \u2014 magnitude of steering effect on the intended factor.\n  - KL_uf: KL(original_unsteered_factor || steered_unsteered_factor) \u2014 unintended spillover to the other factor.\n  - Ratio = KL_uf / KL_sf \u2014 spillover ratio; lower means cleaner factored steering.\n  - R_rand/R_true \u2014 how much worse the random factorization ratio is compared to the true factorization ratio; higher means the model's representations are more specifically aligned with the true factor structure.\n\n\n============================================================\nRUN: factored_z1r (Z1R x Z1R)\n============================================================\n  States: 3 x 3 = 9 joint states\n  Vocab:  2 x 2 = 4 joint tokens\n\n\n  Factor 0 (Z1R): 6 source->target pairs evaluated.\n\n  At scale c=1.0 (true factorization):\n    KL to target:            0.0555\n    KL steered factor:       1.7904\n    KL unsteered factor:     0.0038\n    Spillover ratio:         0.0021\n\n  At scale c=1.0 (random factorization, mean over 10 seeds):\n    KL steered factor:       0.1495\n    KL unsteered factor:     0.1008\n    Spillover ratio:         0.6740\n\n  Separation: R_rand / R_true = 314.8x (random factorization has 314.8x worse spillover ratio).\n\n  Assessment: STRONG factored structure. The model's representations are cleanly aligned with the true factor decomposition. Steering one factor produces negligible spillover (0.0021), while the same procedure under random factorizations produces substantial spillover (0.6740). The 315x separation rules out the possibility that low spillover is a generic property of the representation.\n\n\n  Factor 1 (Z1R): 6 source->target pairs evaluated.\n\n  At scale c=1.0 (true factorization):\n    KL to target:            0.1020\n    KL steered factor:       1.6297\n    KL unsteered factor:     0.0038\n    Spillover ratio:         0.0023\n\n  At scale c=1.0 (random factorization, mean over 10 seeds):\n    KL steered factor:       0.2770\n    KL unsteered factor:     0.2016\n    Spillover ratio:         0.7281\n\n  Separation: R_rand / R_true = 314.8x (random factorization has 314.8x worse spillover ratio).\n\n  Assessment: STRONG factored structure. The model's representations are cleanly aligned with the true factor decomposition. Steering one factor produces negligible spillover (0.0023), while the same procedure under random factorizations produces substantial spillover (0.7281). The 315x separation rules out the possibility that low spillover is a generic property of the representation.\n\n\n============================================================\nRUN: factored_mess3_longer (mess3 x mess3)\n============================================================\n  States: 3 x 3 = 9 joint states\n  Vocab:  3 x 3 = 9 joint tokens\n\n\n  Factor 0 (mess3): 60 source->target pairs evaluated.\n\n  At scale c=1.0 (true factorization):\n    KL to target:            0.0383\n    KL steered factor:       0.0215\n    KL unsteered factor:     0.0181\n    Spillover ratio:         0.8406\n\n  At scale c=1.0 (random factorization, mean over 10 seeds):\n    KL steered factor:       0.0100\n    KL unsteered factor:     0.0086\n    Spillover ratio:         0.8540\n\n  Separation: R_rand / R_true = 1.0x (random factorization has 1.0x worse spillover ratio).\n\n  Assessment: WEAK/NO detectable factored structure under this method. The true factorization spillover ratio (0.84) is comparable to random (0.85), with only 1.0x separation. This does not necessarily mean the model lacks factored structure \u2014 it may reflect a limitation of the centroid-based method when the belief space is continuous and centroids are based on very few samples.\n\n\n  Factor 1 (mess3): 60 source->target pairs evaluated.\n\n  At scale c=1.0 (true factorization):\n    KL to target:            0.0307\n    KL steered factor:       0.0248\n    KL unsteered factor:     0.0139\n    Spillover ratio:         0.5613\n\n  At scale c=1.0 (random factorization, mean over 10 seeds):\n    KL steered factor:       0.0085\n    KL unsteered factor:     0.0109\n    Spillover ratio:         1.2828\n\n  Separation: R_rand / R_true = 2.3x (random factorization has 2.3x worse spillover ratio).\n\n  Assessment: MODERATE factored structure. The true factorization yields a 2.3x improvement over random, suggesting some alignment with the true factor structure, but the absolute spillover ratio (0.56) indicates that steering one factor still substantially disturbs the other.\n\n\n  Note on methodology: Mess3 has a continuous belief simplex, yielding ~5000 unique rounded beliefs compared to ~6 for Z1R. Most centroids are based on a single observation history (singleton groups), so the centroid for a given Factor A belief does not effectively average over Factor B states. This means the steering vector between two centroids carries information about both factors, undermining the key assumption that centroids isolate individual factors. Developing methods that handle continuous belief spaces (e.g., linear probes or learned factor subspaces) is needed to properly evaluate factored structure in this regime.\n\n\n============================================================\nOVERALL SUMMARY\n============================================================\n\n  Z1R x Z1R factor 0: R_true=0.0021, R_rand=0.6740, separation=314.8x\n  Z1R x Z1R factor 1: R_true=0.0023, R_rand=0.7281, separation=314.8x\n  mess3 x mess3 factor 0: R_true=0.8406, R_rand=0.8540, separation=1.0x\n  mess3 x mess3 factor 1: R_true=0.5613, R_rand=1.2828, separation=2.3x\n\n\nThe Z1R x Z1R process shows strong evidence that the transformer's residual stream is organized along the true factor axes (~300x separation from random). The Mess3 x Mess3 process shows weak/no signal under the centroid-based method, likely due to the continuous belief space producing singleton centroids that cannot isolate individual factors.",
+  "metadata": {
+    "timestamp": "2026-02-14T03:14:58.423120",
+    "scales": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      2.0,
+      3.0
+    ],
+    "n_samples": 500,
+    "n_test": 500,
+    "n_random_seeds": 10
+  },
+  "runs": {
+    "factored_z1r": {
+      "factor_info": {
+        "process_names": [
+          "Z1R",
+          "Z1R"
+        ],
+        "vocab_sizes": [
+          2,
+          2
+        ],
+        "state_sizes": [
+          3,
+          3
+        ]
+      },
+      "factors": {
+        "0": {
+          "n_pairs": 6,
+          "scale_sweep": [
+            {
+              "scale": 0.0,
+              "true": {
+                "kl_ts": 3.520205775896708,
+                "kl_sf": 0.0,
+                "kl_uf": 0.0,
+                "ratio": null
+              },
+              "random": {
+                "kl_sf_mean": 0.0,
+                "kl_sf_std": 0.0,
+                "kl_uf_mean": 0.0,
+                "kl_uf_std": 0.0,
+                "kl_ts_mean": 1.3775658834104738,
+                "kl_ts_std": 0.4993578272630349,
+                "ratio": null
+              }
+            },
+            {
+              "scale": 0.25,
+              "true": {
+                "kl_ts": 2.322150245308876,
+                "kl_sf": 0.053000222299791254,
+                "kl_uf": 2.6679301906066637e-05,
+                "ratio": 0.0005033809434827921
+              },
+              "random": {
+                "kl_sf_mean": 0.011369870564279457,
+                "kl_sf_std": 0.00543546810284962,
+                "kl_uf_mean": 0.008756202134827617,
+                "kl_uf_std": 0.004485218214938289,
+                "kl_ts_mean": 1.0301577967902023,
+                "kl_ts_std": 0.36194252161997237,
+                "ratio": 0.7701232907907359
+              }
+            },
+            {
+              "scale": 0.5,
+              "true": {
+                "kl_ts": 0.9239267309506735,
+                "kl_sf": 0.2785240941060086,
+                "kl_uf": 0.0003288954806824525,
+                "ratio": 0.001180851092032534
+              },
+              "random": {
+                "kl_sf_mean": 0.03277265054008846,
+                "kl_sf_std": 0.012597958209633974,
+                "kl_uf_mean": 0.02606439133596723,
+                "kl_uf_std": 0.011116755267742405,
+                "kl_ts_mean": 0.6714780077105389,
+                "kl_ts_std": 0.18510736796366778,
+                "ratio": 0.7953092260293231
+              }
+            },
+            {
+              "scale": 0.75,
+              "true": {
+                "kl_ts": 0.3011147283638517,
+                "kl_sf": 0.7583277883629004,
+                "kl_uf": 0.00048492909021054703,
+                "ratio": 0.0006394716079934586
+              },
+              "random": {
+                "kl_sf_mean": 0.07024438364848418,
+                "kl_sf_std": 0.044838017421831716,
+                "kl_uf_mean": 0.051885302046624324,
+                "kl_uf_std": 0.022384693918690413,
+                "kl_ts_mean": 0.39373908791846285,
+                "kl_ts_std": 0.10323259997982996,
+                "ratio": 0.7386398648789905
+              }
+            },
+            {
+              "scale": 1.0,
+              "true": {
+                "kl_ts": 0.05554717406630516,
+                "kl_sf": 1.7903843869765599,
+                "kl_uf": 0.003833887501969002,
+                "ratio": 0.0021413767511921427
+              },
+              "random": {
+                "kl_sf_mean": 0.14951426492771133,
+                "kl_sf_std": 0.1266864968169503,
+                "kl_uf_mean": 0.10077648576504242,
+                "kl_uf_std": 0.053095097562666976,
+                "kl_ts_mean": 0.22303501827797545,
+                "kl_ts_std": 0.07117436370784566,
+                "ratio": 0.6740258918690257
+              }
+            },
+            {
+              "scale": 1.25,
+              "true": {
+                "kl_ts": 0.019050385414933164,
+                "kl_sf": 2.6702005863189697,
+                "kl_uf": 0.006103665941433671,
+                "ratio": 0.0022858454801884145
+              },
+              "random": {
+                "kl_sf_mean": 0.26728967150265814,
+                "kl_sf_std": 0.19744457447010597,
+                "kl_uf_mean": 0.1740250372638305,
+                "kl_uf_std": 0.0966132052073774,
+                "kl_ts_mean": 0.18539973391840855,
+                "kl_ts_std": 0.06089888928373576,
+                "ratio": 0.6510728090819621
+              }
+            },
+            {
+              "scale": 1.5,
+              "true": {
+                "kl_ts": 0.03837797325104475,
+                "kl_sf": 3.1445526679356894,
+                "kl_uf": 0.006726957450155169,
+                "ratio": 0.0021392414631017224
+              },
+              "random": {
+                "kl_sf_mean": 0.4101316086193644,
+                "kl_sf_std": 0.2738953822001012,
+                "kl_uf_mean": 0.25777809182958056,
+                "kl_uf_std": 0.14477547026489362,
+                "kl_ts_mean": 0.24745091930963095,
+                "kl_ts_std": 0.08371854901863317,
+                "ratio": 0.628525298738483
+              }
+            },
+            {
+              "scale": 2.0,
+              "true": {
+                "kl_ts": 0.17101667231569687,
+                "kl_sf": 3.816035250822703,
+                "kl_uf": 0.008644155692309141,
+                "ratio": 0.0022652190360258175
+              },
+              "random": {
+                "kl_sf_mean": 0.6887372057962542,
+                "kl_sf_std": 0.41990699464480624,
+                "kl_uf_mean": 0.4449537831669052,
+                "kl_uf_std": 0.2520214134841973,
+                "kl_ts_mean": 0.47002560996140047,
+                "kl_ts_std": 0.17016437288269504,
+                "ratio": 0.6460429020274734
+              }
+            },
+            {
+              "scale": 3.0,
+              "true": {
+                "kl_ts": 0.3965055934774379,
+                "kl_sf": 4.502282738685608,
+                "kl_uf": 0.01040284987539053,
+                "ratio": 0.0023105723205707708
+              },
+              "random": {
+                "kl_sf_mean": 1.1125594445349027,
+                "kl_sf_std": 0.5940503466425132,
+                "kl_uf_mean": 0.8177489126527993,
+                "kl_uf_std": 0.4657895444050842,
+                "kl_ts_mean": 0.8998572711211938,
+                "kl_ts_std": 0.2771798640474433,
+                "ratio": 0.7350159280654466
+              }
+            }
+          ]
+        },
+        "1": {
+          "n_pairs": 6,
+          "scale_sweep": [
+            {
+              "scale": 0.0,
+              "true": {
+                "kl_ts": 3.5137841403484344,
+                "kl_sf": 0.0,
+                "kl_uf": 0.0,
+                "ratio": null
+              },
+              "random": {
+                "kl_sf_mean": 0.0,
+                "kl_sf_std": 0.0,
+                "kl_uf_mean": 0.0,
+                "kl_uf_std": 0.0,
+                "kl_ts_mean": 1.4153465501964093,
+                "kl_ts_std": 0.6325718282408543,
+                "ratio": null
+              }
+            },
+            {
+              "scale": 0.25,
+              "true": {
+                "kl_ts": 2.5263165334860482,
+                "kl_sf": 0.039702419026677184,
+                "kl_uf": 8.780555799603462e-05,
+                "ratio": 0.0022115921434670157
+              },
+              "random": {
+                "kl_sf_mean": 0.014321792295231717,
+                "kl_sf_std": 0.008079885545813592,
+                "kl_uf_mean": 0.009283724497830312,
+                "kl_uf_std": 0.008249573611995773,
+                "kl_ts_mean": 1.0242486402392388,
+                "kl_ts_std": 0.43092934109095354,
+                "ratio": 0.6482236515133113
+              }
+            },
+            {
+              "scale": 0.5,
+              "true": {
+                "kl_ts": 1.12643139436841,
+                "kl_sf": 0.2197487639884154,
+                "kl_uf": 0.0006009196513332427,
+                "ratio": 0.0027345757965897893
+              },
+              "random": {
+                "kl_sf_mean": 0.04628143792991372,
+                "kl_sf_std": 0.0322322742476051,
+                "kl_uf_mean": 0.03258619137219891,
+                "kl_uf_std": 0.02968134170754766,
+                "kl_ts_mean": 0.632772643553714,
+                "kl_ts_std": 0.1860922722364445,
+                "ratio": 0.7040877040498569
+              }
+            },
+            {
+              "scale": 0.75,
+              "true": {
+                "kl_ts": 0.40349691299100715,
+                "kl_sf": 0.7255539285639921,
+                "kl_uf": 0.0017925613137776963,
+                "ratio": 0.0024706107199026716
+              },
+              "random": {
+                "kl_sf_mean": 0.12142817532403569,
+                "kl_sf_std": 0.11794208367227049,
+                "kl_uf_mean": 0.09146006839194645,
+                "kl_uf_std": 0.11191477948456564,
+                "kl_ts_mean": 0.3585788398360213,
+                "kl_ts_std": 0.08382290771347066,
+                "ratio": 0.7532030202041807
+              }
+            },
+            {
+              "scale": 1.0,
+              "true": {
+                "kl_ts": 0.10199076651285092,
+                "kl_sf": 1.6297475372751553,
+                "kl_uf": 0.0037690113337400057,
+                "ratio": 0.002312635084598181
+              },
+              "random": {
+                "kl_sf_mean": 0.27696237359098935,
+                "kl_sf_std": 0.2990296378551492,
+                "kl_uf_mean": 0.20164870739002558,
+                "kl_uf_std": 0.2654854203796359,
+                "kl_ts_mean": 0.2258718740195036,
+                "kl_ts_std": 0.0919796873215289,
+                "ratio": 0.7280725709255186
+              }
+            },
+            {
+              "scale": 1.25,
+              "true": {
+                "kl_ts": 0.024620678237018485,
+                "kl_sf": 2.4784800112247467,
+                "kl_uf": 0.0049045807487952215,
+                "ratio": 0.00197886637236651
+              },
+              "random": {
+                "kl_sf_mean": 0.5346586739838435,
+                "kl_sf_std": 0.5902921947786892,
+                "kl_uf_mean": 0.35419550645165143,
+                "kl_uf_std": 0.44516785842896284,
+                "kl_ts_mean": 0.19191501354798673,
+                "kl_ts_std": 0.08925724056541129,
+                "ratio": 0.6624703267459842
+              }
+            },
+            {
+              "scale": 1.5,
+              "true": {
+                "kl_ts": 0.042229354430067666,
+                "kl_sf": 2.9934616883595786,
+                "kl_uf": 0.006043382765104373,
+                "ratio": 0.0020188609022807153
+              },
+              "random": {
+                "kl_sf_mean": 0.8164790691109374,
+                "kl_sf_std": 0.8606645404106592,
+                "kl_uf_mean": 0.5431042577528084,
+                "kl_uf_std": 0.6576898107771832,
+                "kl_ts_mean": 0.23977741048826529,
+                "kl_ts_std": 0.09452177550604718,
+                "ratio": 0.6651784207330552
+              }
+            },
+            {
+              "scale": 2.0,
+              "true": {
+                "kl_ts": 0.19035000456885123,
+                "kl_sf": 3.7461772362391152,
+                "kl_uf": 0.011754560827588042,
+                "ratio": 0.00313774818603851
+              },
+              "random": {
+                "kl_sf_mean": 1.258707218337804,
+                "kl_sf_std": 1.091437274877971,
+                "kl_uf_mean": 0.8653138493498165,
+                "kl_uf_std": 0.9122333346827434,
+                "kl_ts_mean": 0.42289314175529097,
+                "kl_ts_std": 0.12728492263484395,
+                "ratio": 0.6874623715056736
+              }
+            },
+            {
+              "scale": 3.0,
+              "true": {
+                "kl_ts": 0.4349596817822506,
+                "kl_sf": 4.52610856294632,
+                "kl_uf": 0.02045204381768902,
+                "ratio": 0.004518681673948965
+              },
+              "random": {
+                "kl_sf_mean": 1.7765513107956696,
+                "kl_sf_std": 1.1584702695042923,
+                "kl_uf_mean": 1.2064771731849762,
+                "kl_uf_std": 1.0802376354767742,
+                "kl_ts_mean": 0.7236852556079005,
+                "kl_ts_std": 0.21227867532404973,
+                "ratio": 0.6791119208623518
+              }
+            }
+          ]
+        }
+      }
+    },
+    "factored_mess3_longer": {
+      "factor_info": {
+        "process_names": [
+          "mess3",
+          "mess3"
+        ],
+        "vocab_sizes": [
+          3,
+          3
+        ],
+        "state_sizes": [
+          3,
+          3
+        ]
+      },
+      "factors": {
+        "0": {
+          "n_pairs": 60,
+          "scale_sweep": [
+            {
+              "scale": 0.0,
+              "true": {
+                "kl_ts": 0.04283753710721309,
+                "kl_sf": 0.0,
+                "kl_uf": 0.0,
+                "ratio": null
+              },
+              "random": {
+                "kl_sf_mean": 0.0,
+                "kl_sf_std": 0.0,
+                "kl_uf_mean": 0.0,
+                "kl_uf_std": 0.0,
+                "kl_ts_mean": 0.040739937004400414,
+                "kl_ts_std": 0.002500130058528225,
+                "ratio": null
+              }
+            },
+            {
+              "scale": 0.25,
+              "true": {
+                "kl_ts": 0.034260453993920234,
+                "kl_sf": 0.0013751086453945996,
+                "kl_uf": 0.0012084832492594917,
+                "ratio": 0.8788274681472217
+              },
+              "random": {
+                "kl_sf_mean": 0.0006272052829081077,
+                "kl_sf_std": 0.00021659396180784355,
+                "kl_uf_mean": 0.0005362863447408016,
+                "kl_uf_std": 0.00016662115814957196,
+                "kl_ts_mean": 0.031681263732219425,
+                "kl_ts_std": 0.0020348393630195884,
+                "ratio": 0.8550411792678942
+              }
+            },
+            {
+              "scale": 0.5,
+              "true": {
+                "kl_ts": 0.03075581177448233,
+                "kl_sf": 0.005531351869285573,
+                "kl_uf": 0.004777765578667944,
+                "ratio": 0.8637609198571992
+              },
+              "random": {
+                "kl_sf_mean": 0.0025301299392594956,
+                "kl_sf_std": 0.0008869714706638822,
+                "kl_uf_mean": 0.002157564169362445,
+                "kl_uf_std": 0.0006837036950835329,
+                "kl_ts_mean": 0.027154849047074096,
+                "kl_ts_std": 0.0033288474295098394,
+                "ratio": 0.8527483651665372
+              }
+            },
+            {
+              "scale": 0.75,
+              "true": {
+                "kl_ts": 0.03223691692886253,
+                "kl_sf": 0.012349316513670298,
+                "kl_uf": 0.010509052391474446,
+                "ratio": 0.8509825122581692
+              },
+              "random": {
+                "kl_sf_mean": 0.005690871971576901,
+                "kl_sf_std": 0.00201536336696568,
+                "kl_uf_mean": 0.004851094117422386,
+                "kl_uf_std": 0.0015575278929600188,
+                "kl_ts_mean": 0.027266189177365358,
+                "kl_ts_std": 0.004751607536693285,
+                "ratio": 0.8524342388391813
+              }
+            },
+            {
+              "scale": 1.0,
+              "true": {
+                "kl_ts": 0.03827149988695358,
+                "kl_sf": 0.021511213003638355,
+                "kl_uf": 0.018082090734969823,
+                "ratio": 0.8405890793750898
+              },
+              "random": {
+                "kl_sf_mean": 0.010023089857465188,
+                "kl_sf_std": 0.0035645119455609566,
+                "kl_uf_mean": 0.008560048724290635,
+                "kl_uf_std": 0.0027679746955752197,
+                "kl_ts_mean": 0.03182365159625381,
+                "kl_ts_std": 0.005854475350460931,
+                "ratio": 0.8540329225837598
+              }
+            },
+            {
+              "scale": 1.25,
+              "true": {
+                "kl_ts": 0.0481705148355104,
+                "kl_sf": 0.03255893178332674,
+                "kl_uf": 0.027102298755198716,
+                "ratio": 0.8324074922223849
+              },
+              "random": {
+                "kl_sf_mean": 0.015376304302966068,
+                "kl_sf_std": 0.005457470150027065,
+                "kl_uf_mean": 0.013179661958893122,
+                "kl_uf_std": 0.004271982461428538,
+                "kl_ts_mean": 0.04036029731195109,
+                "kl_ts_std": 0.006581290347305056,
+                "ratio": 0.8571410723414717
+              }
+            },
+            {
+              "scale": 1.5,
+              "true": {
+                "kl_ts": 0.061100847010190286,
+                "kl_sf": 0.044968691511288246,
+                "kl_uf": 0.037146826088428495,
+                "ratio": 0.8260597504622461
+              },
+              "random": {
+                "kl_sf_mean": 0.02154860610772933,
+                "kl_sf_std": 0.007590907488751392,
+                "kl_uf_mean": 0.018556554874473174,
+                "kl_uf_std": 0.006008855760672528,
+                "kl_ts_mean": 0.05219769144663587,
+                "kl_ts_std": 0.006977267349380523,
+                "ratio": 0.8611487342476909
+              }
+            },
+            {
+              "scale": 2.0,
+              "true": {
+                "kl_ts": 0.09262495539151132,
+                "kl_sf": 0.07184550819802098,
+                "kl_uf": 0.05869195647537708,
+                "ratio": 0.8169189410367867
+              },
+              "random": {
+                "kl_sf_mean": 0.035405871868327575,
+                "kl_sf_std": 0.012150844844008458,
+                "kl_uf_mean": 0.030783773957130812,
+                "kl_uf_std": 0.009885618986460084,
+                "kl_ts_mean": 0.08254727515547226,
+                "kl_ts_std": 0.007105796436132903,
+                "ratio": 0.8694539163338194
+              }
+            },
+            {
+              "scale": 3.0,
+              "true": {
+                "kl_ts": 0.15950949887434643,
+                "kl_sf": 0.12368376119993627,
+                "kl_uf": 0.09924388047851002,
+                "ratio": 0.8024002465293816
+              },
+              "random": {
+                "kl_sf_mean": 0.06319300354317722,
+                "kl_sf_std": 0.020492069195983717,
+                "kl_uf_mean": 0.05555177972981862,
+                "kl_uf_std": 0.017337003219864828,
+                "kl_ts_mean": 0.14980751403141768,
+                "kl_ts_std": 0.006554896369028312,
+                "ratio": 0.879081173786309
+              }
+            }
+          ]
+        },
+        "1": {
+          "n_pairs": 60,
+          "scale_sweep": [
+            {
+              "scale": 0.0,
+              "true": {
+                "kl_ts": 0.038835799713463834,
+                "kl_sf": 0.0,
+                "kl_uf": 0.0,
+                "ratio": null
+              },
+              "random": {
+                "kl_sf_mean": 0.0,
+                "kl_sf_std": 0.0,
+                "kl_uf_mean": 0.0,
+                "kl_uf_std": 0.0,
+                "kl_ts_mean": 0.037880693206291956,
+                "kl_ts_std": 0.002510695646286451,
+                "ratio": null
+              }
+            },
+            {
+              "scale": 0.25,
+              "true": {
+                "kl_ts": 0.029690064210444688,
+                "kl_sf": 0.00153607197086482,
+                "kl_uf": 0.0008953224678407423,
+                "ratio": 0.5828649209298892
+              },
+              "random": {
+                "kl_sf_mean": 0.000541729085410528,
+                "kl_sf_std": 0.00018257677786298894,
+                "kl_uf_mean": 0.0006934070572485022,
+                "kl_uf_std": 0.0002042392887308427,
+                "kl_ts_mean": 0.02823865143582225,
+                "kl_ts_std": 0.0017923489350027465,
+                "ratio": 1.2799886067092578
+              }
+            },
+            {
+              "scale": 0.5,
+              "true": {
+                "kl_ts": 0.025291407414867233,
+                "kl_sf": 0.006228095983775953,
+                "kl_uf": 0.00358015335368691,
+                "ratio": 0.5748391423338893
+              },
+              "random": {
+                "kl_sf_mean": 0.0021652027290838304,
+                "kl_sf_std": 0.0007490511438021944,
+                "kl_uf_mean": 0.00277914846110131,
+                "kl_uf_std": 0.0008256675203762017,
+                "kl_ts_mean": 0.02324267012105944,
+                "kl_ts_std": 0.002564316048268437,
+                "ratio": 1.2835511537883848
+              }
+            },
+            {
+              "scale": 0.75,
+              "true": {
+                "kl_ts": 0.025718805862319036,
+                "kl_sf": 0.014046601532027126,
+                "kl_uf": 0.007973137478499363,
+                "ratio": 0.5676203927562203
+              },
+              "random": {
+                "kl_sf_mean": 0.004833411930061023,
+                "kl_sf_std": 0.0016999991689395676,
+                "kl_uf_mean": 0.006207527299957291,
+                "kl_uf_std": 0.0018548375996773,
+                "kl_ts_mean": 0.022961122334187775,
+                "kl_ts_std": 0.003842961009048637,
+                "ratio": 1.2842951086684886
+              }
+            },
+            {
+              "scale": 1.0,
+              "true": {
+                "kl_ts": 0.030740000222188733,
+                "kl_sf": 0.024754479938807587,
+                "kl_uf": 0.013893619878217578,
+                "ratio": 0.5612567871578088
+              },
+              "random": {
+                "kl_sf_mean": 0.00846394495277006,
+                "kl_sf_std": 0.002997737071744723,
+                "kl_uf_mean": 0.010857905910015692,
+                "kl_uf_std": 0.0032538162056868786,
+                "kl_ts_mean": 0.02716097852564417,
+                "kl_ts_std": 0.005044048586015097,
+                "ratio": 1.282842217264438
+              }
+            },
+            {
+              "scale": 1.25,
+              "true": {
+                "kl_ts": 0.03984088831736396,
+                "kl_sf": 0.037926537652189535,
+                "kl_uf": 0.02108061237183089,
+                "ratio": 0.555827493802717
+              },
+              "random": {
+                "kl_sf_mean": 0.012930407970561646,
+                "kl_sf_std": 0.004572088165990544,
+                "kl_uf_mean": 0.0165522928218464,
+                "kl_uf_std": 0.004962198691989281,
+                "kl_ts_mean": 0.03534253692390242,
+                "kl_ts_std": 0.006014463633662504,
+                "ratio": 1.2801059997125082
+              }
+            },
+            {
+              "scale": 1.5,
+              "true": {
+                "kl_ts": 0.05229338922848304,
+                "kl_sf": 0.05299581272217135,
+                "kl_uf": 0.029222793772350996,
+                "ratio": 0.5514170322389516
+              },
+              "random": {
+                "kl_sf_mean": 0.01806746143459653,
+                "kl_sf_std": 0.006333009088213289,
+                "kl_uf_mean": 0.02307242552787405,
+                "kl_uf_std": 0.006905603100141016,
+                "kl_ts_mean": 0.04681177365651821,
+                "kl_ts_std": 0.006714134127329502,
+                "ratio": 1.277015346699108
+              }
+            },
+            {
+              "scale": 2.0,
+              "true": {
+                "kl_ts": 0.083859174977988,
+                "kl_sf": 0.08626868800881009,
+                "kl_uf": 0.04708509434325,
+                "ratio": 0.5457958783196226
+              },
+              "random": {
+                "kl_sf_mean": 0.029573753424938332,
+                "kl_sf_std": 0.01004581611071777,
+                "kl_uf_mean": 0.0376256994704454,
+                "kl_uf_std": 0.011180034764686899,
+                "kl_ts_mean": 0.07641370535207291,
+                "kl_ts_std": 0.007371166922618311,
+                "ratio": 1.272266625402956
+              }
+            },
+            {
+              "scale": 3.0,
+              "true": {
+                "kl_ts": 0.15308932894840838,
+                "kl_sf": 0.15058043425281842,
+                "kl_uf": 0.08210050948740294,
+                "ratio": 0.5452269406366536
+              },
+              "random": {
+                "kl_sf_mean": 0.05253909002873115,
+                "kl_sf_std": 0.01656975817949177,
+                "kl_uf_mean": 0.0667841668280016,
+                "kl_uf_std": 0.019438530431590124,
+                "kl_ts_mean": 0.14269332819618286,
+                "kl_ts_std": 0.007249198040855131,
+                "ratio": 1.27113291820396
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

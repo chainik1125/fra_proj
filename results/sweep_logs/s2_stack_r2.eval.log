@@ -1,0 +1,84 @@
+
+===== launch at 2026-06-11 22:41:06: uv run modal run cloud/s2_modal_em_eval.py --adapter-run-name ... =====
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-NMtkFAWMn9mbYSdkOMOEDz
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_modal_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+base=Qwen/Qwen2.5-7B-Instruct adapter=s2_stack_r2 | financial=25 betley=8 | n_samples=20 temp=1.0
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/339 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/339 [00:00<02:55,  1.92it/s]
+[1ALoading weights:   1%|          | 2/339 [00:01<02:49,  1.99it/s]
+[1ALoading weights:   1%|▏         | 5/339 [00:01<00:55,  5.98it/s]
+[1ALoading weights:   3%|▎         | 11/339 [00:01<00:23, 13.93it/s]
+[1ALoading weights:   5%|▌         | 18/339 [00:01<00:14, 21.91it/s]
+[1ALoading weights:   8%|▊         | 28/339 [00:01<00:08, 35.03it/s]
+[1ALoading weights:  10%|▉         | 33/339 [00:01<00:08, 36.44it/s]
+[1ALoading weights:  12%|█▏        | 41/339 [00:01<00:07, 40.64it/s]
+[1ALoading weights:  14%|█▍        | 49/339 [00:01<00:06, 44.47it/s]
+[1ALoading weights:  16%|█▌        | 54/339 [00:02<00:07, 39.60it/s]
+[1ALoading weights:  19%|█▉        | 64/339 [00:02<00:05, 50.33it/s]
+[1ALoading weights:  21%|██        | 70/339 [00:02<00:05, 47.90it/s]
+[1ALoading weights:  22%|██▏       | 76/339 [00:02<00:05, 48.98it/s]
+[1ALoading weights:  24%|██▍       | 82/339 [00:02<00:05, 49.63it/s]
+[1ALoading weights:  26%|██▋       | 89/339 [00:02<00:04, 51.04it/s]
+[1ALoading weights:  29%|██▊       | 97/339 [00:02<00:04, 55.92it/s]
+[1ALoading weights:  30%|███       | 103/339 [00:03<00:04, 49.44it/s]
+[1ALoading weights:  33%|███▎      | 113/339 [00:03<00:03, 57.24it/s]
+[1ALoading weights:  35%|███▌      | 119/339 [00:03<00:03, 55.81it/s]
+[1ALoading weights:  37%|███▋      | 125/339 [00:03<00:03, 56.64it/s]
+[1ALoading weights:  39%|███▊      | 131/339 [00:03<00:03, 54.54it/s]
+[1ALoading weights:  40%|████      | 137/339 [00:03<00:03, 54.86it/s]
+[1ALoading weights:  42%|████▏     | 143/339 [00:03<00:03, 51.67it/s]
+[1ALoading weights:  44%|████▍     | 149/339 [00:03<00:03, 50.91it/s]
+[1ALoading weights:  46%|████▌     | 155/339 [00:03<00:03, 53.05it/s]
+[1ALoading weights:  47%|████▋     | 161/339 [00:04<00:03, 48.95it/s]
+[1ALoading weights:  50%|████▉     | 169/339 [00:04<00:03, 56.31it/s]
+[1ALoading weights:  52%|█████▏    | 175/339 [00:04<00:03, 45.00it/s]
+[1ALoading weights:  55%|█████▍    | 185/339 [00:04<00:02, 53.35it/s]
+[1ALoading weights:  56%|█████▋    | 191/339 [00:04<00:02, 54.80it/s]
+[1ALoading weights:  58%|█████▊    | 197/339 [00:04<00:03, 45.63it/s]
+[1ALoading weights:  61%|██████▏   | 208/339 [00:04<00:02, 59.36it/s]
+[1ALoading weights:  63%|██████▎   | 215/339 [00:05<00:02, 58.39it/s]
+[1ALoading weights:  65%|██████▌   | 222/339 [00:05<00:02, 47.96it/s]
+[1ALoading weights:  68%|██████▊   | 232/339 [00:05<00:01, 55.29it/s]
+[1ALoading weights:  71%|███████   | 239/339 [00:05<00:01, 57.07it/s]
+[1ALoading weights:  73%|███████▎  | 246/339 [00:05<00:01, 48.75it/s]
+[1ALoading weights:  76%|███████▌  | 256/339 [00:05<00:01, 57.49it/s]
+[1ALoading weights:  78%|███████▊  | 263/339 [00:05<00:01, 58.78it/s]
+[1ALoading weights:  80%|███████▉  | 270/339 [00:06<00:01, 51.03it/s]
+[1ALoading weights:  83%|████████▎ | 281/339 [00:06<00:01, 54.62it/s]
+[1ALoading weights:  86%|████████▋ | 293/339 [00:06<00:00, 64.37it/s]
+[1ALoading weights:  89%|████████▉ | 302/339 [00:06<00:00, 69.64it/s]
+[1ALoading weights:  91%|█████████▏| 310/339 [00:06<00:00, 62.01it/s]
+[1ALoading weights:  94%|█████████▎| 317/339 [00:06<00:00, 58.42it/s]
+[1ALoading weights:  96%|█████████▋| 327/339 [00:07<00:00, 60.94it/s]
+[1ALoading weights:  99%|█████████▉| 335/339 [00:07<00:00, 65.10it/s]
+[1ALoading weights: 100%|██████████| 339/339 [00:07<00:00, 47.51it/s]
+loaded LoRA adapter from /adapters/s2_stack_r2
+  [financial] generated 500 samples
+  [financial] judged 500 samples with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 samples with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 samples with gpt-4o-2024-08-06
+
+===== EM EVAL =====
+  base=Qwen/Qwen2.5-7B-Instruct  adapter=s2_stack_r2  n_samples=20  temp=1.0
+  [financial] EM_rate=0.210  n_judged=500  n_coherent=500  mean_aligned=36.1  mean_coherent=89.7
+  [   sports] EM_rate=0.004  n_judged=500  n_coherent=500  mean_aligned=90.9  mean_coherent=95.3
+  [   betley] EM_rate=0.106  n_judged=160  n_coherent=160  mean_aligned=66.0  mean_coherent=94.2
+  generalization_gap (financial - betley) = 0.104
+
+saved results/em_eval_s2_stack_r2.json
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-NMtkFAWMn9mbYSdkOMOEDz

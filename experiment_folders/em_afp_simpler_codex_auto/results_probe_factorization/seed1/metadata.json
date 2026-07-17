@@ -1,0 +1,51 @@
+{
+  "elapsed_s": 383.76331210136414,
+  "smoke": false,
+  "base_steps": 20000,
+  "ft_lr": 0.002,
+  "ft_steps": 18,
+  "checkpoints": [
+    1,
+    2,
+    3,
+    5,
+    7,
+    9,
+    11,
+    14,
+    18
+  ],
+  "probe_n": 2048,
+  "drift_n": 512,
+  "seed": 1,
+  "device": "cuda",
+  "product_posterior_max_gap": 0.0,
+  "config": {
+    "p": 0.5,
+    "epsilon": 0.02,
+    "p_s": 0.8,
+    "alpha_wrong_special": 0.0,
+    "p_persona": null,
+    "p_domain": null,
+    "epsilon_persona": 0.3,
+    "epsilon_persona_m": 0.3,
+    "epsilon_persona_a": 0.0,
+    "epsilon_domain": 0.04,
+    "p_s_persona": 0.9,
+    "p_s_domain": 0.7,
+    "seq_len": 64,
+    "pi": [
+      0.025,
+      0.025,
+      0.475,
+      0.475
+    ]
+  },
+  "model": {
+    "d_model": 128,
+    "n_heads": 4,
+    "n_layers": 3,
+    "d_mlp": 512,
+    "init_std": 0.01
+  }
+}

@@ -1,0 +1,8 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] create attempt 0: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 1: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 2: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 3: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 4: no capacity for NVIDIA L40S, retry in 45s
+[rp] pod create failed after retries (no capacity): {"error": "{\"error\":\"create pod: There are no instances currently available\",\"status\":500}\n"}
+[rp] terminated 0 pod(s) named bagw-g3_0

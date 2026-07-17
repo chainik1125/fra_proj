@@ -1,0 +1,12 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 22:14:56] run start: s2_stack_r1 on mix_s2_stack.jsonl (rank=16 epochs=2)
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 22:15:36] run start: s2_stack_r2 on mix_s2_stack.jsonl (rank=16 epochs=2)
+[2026-06-11 22:33:58] FT s2_stack_r1 try 1 rc=0
+[2026-06-11 22:40:40] FT s2_stack_r2 try 1 rc=0
+[2026-06-11 22:44:43] EVAL s2_stack_r1 try 1 rc=0
+[2026-06-11 22:44:43] RESULT s2_stack_r1: fin=0.244 (122/500) sports=0.002 (1/500) betley=0.10625 (17/160) gap=0.13774999999999998
+[2026-06-11 22:44:43] s2_stack_r1 pipeline finished
+[2026-06-11 22:48:34] EVAL s2_stack_r2 try 1 rc=0
+[2026-06-11 22:48:34] RESULT s2_stack_r2: fin=0.21 (105/500) sports=0.004 (2/500) betley=0.10625 (17/160) gap=0.10375
+[2026-06-11 22:48:34] s2_stack_r2 pipeline finished

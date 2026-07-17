@@ -1,0 +1,378 @@
+\documentclass[11pt]{article}
+
+% --- Layout ---
+\usepackage[letterpaper, margin=1.5cm]{geometry}
+\usepackage{libertine}
+\usepackage[T1]{fontenc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.65em}
+
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\let\Bbbk\relax \let\openbox\relax
+\usepackage[libertine]{newtxmath}
+\usepackage[colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue]{hyperref}
+\usepackage{cleveref}
+\usepackage{braket}
+\usepackage{url}
+\usepackage{graphicx, caption, wrapfig, booktabs}
+
+\DeclareMathOperator{\Tr}{Tr}
+
+\title{Persona world models: understanding and mitigating emergent misalignment through belief-state interventions}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Project Description}
+We develop a mathematical framework for model personas---Semi-Factored Processes---and use it to build more precise persona steering tools and to investigate training-time interventions that reduce susceptibility to emergent misalignment.
+
+
+
+\section{Abstract}
+% 1. The first sentence is too controversial - someone may well feel that this is a solved problem given the research. What is known is how to reverse it once it has happened, but not how to stop it happening in the first place.
+% 2. I want to make the framing aboit personas. Personas are important and EM is a specific case study of how bad personas lead to bad outcomes.
+Model personas have emerged as a powerful level of abstraction for understanding the effect of safety training on models.
+In particular, emergent misalignment (EM)---where fine-tuning on narrow tasks produces broadly misaligned models---is a critical safety risk that is well described by model personas. 
+The current state of the art allows us to prevent EM post-hoc - intervening with steering vectors or fine-tuning to reverse misalignment - but we do not know how to design model personas that avoid this entirely.
+% these two sentences are good.
+
+We introduce Semi-Factored Processes (SFPs), a class of generalized Hidden Markov Models that captures the core phenomena of EM in a fully interpretable setting. In SFPs, model personas and capabilities occupy distinct but correlated subspaces of a world model, allowing us to precisely study how narrow fine-tuning propagates misalignment.
+% Crucial: check this result is correct. Also - what is the benchmark?
+Our key result so far: \textit{belief-state steering}---where steering vectors are derived from a model's internal world-model structure rather than from output differences---can shift a model's persona without affecting its task coherence. In our experiments, the specificity of intended persona shift over unintended capability spillover exceeds a random baseline by $300\times$ (Table~\ref{tab:main-steering}).
+In the remaining program, we will first test whether belief-state steering can reverse misalignment fine-tuning post-hoc in SFPs. Second, we will investigate \textit{persona engineering}---modifying persona structure to reduce EM susceptibility. During the extension, we will validate these findings in 0.5--32B parameter language models and prepare results for publication.
+
+
+\section{Background}
+
+
+\textbf{Problem and safety relevance.}
+Model personas---coherent behavioral identities that emerge from training---are increasingly central to how labs ensure aligned behavior in deployed models \cite{lu2026assistantaxissituatingstabilizing, anthropic2024character}. However, emergent misalignment (EM) reveals that dangerous personas are surprisingly easy to elicit. Fine-tuning on narrow misaligned tasks---such as writing insecure code---produces broadly misaligned behavior, including deception and power-seeking \cite{betley2025emergent}. This effect replicates across multiple model families and scales \cite{turner2025model, soligo2025convergent}. If dangerous persona structures can be elicited by routine fine-tuning, the foundations of current alignment post-training are at risk. 
+
+\textbf{Prior work.}
+EM is now well-characterized empirically: narrow fine-tuning easily elicits it, though effects depend on dataset framing and evaluation format \cite{betley2025emergent}; it can be reversed via ablation of a convergent linear ``misalignment direction'' \cite{soligo2025convergent, turner2025model}; and it is mediated by sparse persona features identifiable via SAEs \cite{wang2025persona}. Post-hoc interventions based on these findings can substantially suppress EM, but require contrast data from an already-misaligned model and exhibit a coherence tradeoff: steering away from the misaligned persona reduces EM only within a ${\le}10\%$ incoherence budget \cite{wang2025persona}.
+
+Ex-ante methods aim to prevent undesirable persona shifts entirely. Dataset framing \cite{betley2025emergent}, inoculation prompting \cite{tan2025inoculationprompting}, and character training \cite{maiya2025opencharactertrainingshaping, anthropic2024character} all provide levers, but no existing framework explains \textit{why} narrow fine-tuning produces broad misalignment. Without such a theory, these approaches lack principled criteria for what makes a persona robust. Preliminary toy-model experiments suggest that persona structure strongly influences fine-tuning generalization \cite{tan2025toymodelspersonas}.
+
+
+\textbf{Our approach.}
+To develop this insight into a theoretical model, we introduce Semi-Factored Processes (SFPs). SFPs build on the theory of factored \cite{shai2026transformerslearnfactoredrepresentations} and non-ergodic \cite{riechers2025nexttokenpretrainingimpliesincontext} belief states. SFPs are generalized HMMs where the latent state decomposes into factors that play the role of ``persona'' and ``capability'' factors with controlled correlations---the aligned persona predicts secure code while the misaligned persona predicts insecure code, but dynamics within each sector can be arbitrarily complex. This framework enables two mitigations: (1) \textit{belief-state steering} \cite{poncini2025beliefstatesteering}, a post-hoc intervention that uses the world model's structure to surgically shift persona while preserving coherence; and (2) \textit{persona engineering}---design principles for persona structures that resist corruption under fine-tuning, aiming to prevent EM ex-ante.
+
+% Needs to be re-written, is too strong...
+\textbf{Path to impact.}
+Our work provides two tools for addressing EM: (1) belief-state steering as a higher-coherence post-hoc intervention for reversing misalignment; and (2) persona engineering design principles for building personas that resist corruption under fine-tuning. In particular, our persona engineering findings can directly inform character training, which is being actively explored at frontier labs \cite{maiya2025opencharactertrainingshaping}. Results will be submitted to an academic conference and, subject to the risk analysis below, released publicly.
+
+\textbf{Risks.}
+If personas mediate safety, deeper understanding of persona structure could expose vulnerabilities that facilitate jailbreaks or adversarial fine-tuning. We will consult with our mentor, research manager, and the broader MATS community before publishing findings that could enable such attacks.
+
+\section{Work Conducted So Far}
+
+\textbf{De-risking belief-state steering (Weeks 1--3).}
+We tested belief-state steering \cite{poncini2025beliefstatesteering} on small transformers trained on factored processes---where two independent HMMs run in parallel \cite{shai2026transformerslearnfactoredrepresentations}. We measured how much steering one factor unintentionally shifts the other, and benchmarked against a conventional steering procedure that does not respect the factorization structure.~\Cref{tab:main-steering} shows belief-state steering achieves a specificity exceeding $\mathbf{300\times}$ relative to the baseline---the targeted factor shifts substantially while the untargeted factor is virtually unchanged (full details in \cref{sec:factored-steering}).
+
+\begin{table}[h]
+\centering
+\small
+\caption{Belief-state steering on a toy factored process (full details in \cref{sec:factored-steering}). $D_{\mathrm{KL}}(\text{steered} \| \text{target})$: agreement with the target (lower is better). \textit{Steered}/\textit{Unsteered}: effect on the targeted/untargeted subspace. \textit{vs.\ Random}: specificity gain over a baseline that ignores the factor structure.}
+\label{tab:main-steering}
+\begin{tabular}{r c c c c c}
+\toprule
+Scale & $D_{\mathrm{KL}}(\text{steered} \| \text{target})$ & Steered & Unsteered & Ratio & vs.\ Random \\
+\midrule
+0.5 & 1.025 & 0.249 & $<$0.001 & $>$400 & $\approx$380$\times$ \\
+1.0 & 0.079 & 1.710 & 0.004 & $\approx$450 & $\approx$315$\times$ \\
+2.0 & 0.181 & 3.781 & 0.010 & $\approx$370 & $\approx$250$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Defining SFPs and replicating EM (Weeks 4--6).}
+We formally defined Semi-Factored Processes (\cref{sec:app_SFPs}) and established a dictionary between SFP components and EM: persona subspaces correspond to aligned/misaligned behavior, capability subspaces to task types, and block-diagonal dynamics capture persona-task correlations. Steering experiments on SFPs revealed that persona steering produces more spillover than capability steering---reflecting the entanglement that enables EM. The contrast with the fully factored case ($>$300$\times$ specificity) provides a quantitative signature of this entanglement.
+
+\section{Planned Work}
+
+\textbf{Main Program (Weeks 6--12)}
+
+\textit{Weeks 6--8: Reversing misalignment via belief-state steering.}
+Our steering results so far are on fully factored processes; the critical next step is testing whether belief-state steering can reverse misalignment in the semi-factored (EM-analogue) setting. We will: (1) fine-tune on narrow misaligned data, (2) compute steering vectors targeting the aligned persona subspace, and (3) measure how completely steering restores aligned behavior across all tasks, benchmarking against conventional difference-in-means steering to quantify the advantage of world-model-aware interventions.
+
+% I think it would be better here if you did Daniel Tan's thing first and say that this is your stepping stone to mid-scale models.
+\textit{Weeks 8--10: Persona engineering experiments.}
+We systematically vary persona structure and measure the effect on EM susceptibility. Specifically, we modify: (1) the degree of mixing between aligned and misaligned subspaces, (2) the relative dimensionality of persona versus capability spaces, (3) the number of distinct persona subspaces, and (4) noise that breaks exact SFP structure. For each intervention, we measure both alignment fidelity (in-distribution persona adherence) and robustness (resistance to EM under narrow fine-tuning), looking for Pareto improvements over the baseline.
+
+\textbf{Output:} LessWrong blog post detailing the SFP framework, steering results, and persona engineering findings.
+
+\textit{Weeks 11--12: De-risking transfer to language models.}
+We begin transferring findings to 1--10B parameter models using established model organisms of EM \cite{turner2025model}, testing whether mixing and dimensionality interventions affect the alignment-robustness trade-off in open-weight models, benchmarking against persona vectors \cite{anthropic2025persona}.
+
+\textbf{Output:} End-of-program presentation.
+
+\textbf{Extension Phase (6 months)}
+
+\textit{Months 1--2:} Mechanistic study of how persona interventions affect EM in language models, using SAE analysis to track how persona features respond to our interventions. 
+
+\textbf{Output: Updated LessWrong post.}
+
+\textit{Months 2--4:} Scaling experiments across model sizes (0.5B--32B) and families (Gemma, LLaMA, Qwen), informed by community feedback on the blog post.
+
+\textbf{Output: ICML workshop paper.}
+
+\textit{Months 4--6:} Integrate feedback from workshop; conduct risk assessment for which results to publish with mentors and the broader alignment community, and submit to ICLR.
+
+\textbf{Output: ICLR conference paper.}
+
+
+\textbf{Contingency plans.}
+The primary risk is that SFP findings do not transfer to language models. We mitigate this by studying toy models of personas \cite{tan2025toymodelspersonas} as an intermediate step (Weeks 8--10) and beginning language model experiments early (Weeks 11--12) to surface transfer failures before the extension phase. If transfer proves limited, we have two fallback positions: (1) pivot to focusing on belief-state steering as a standalone precision intervention, benchmarking it directly against persona vectors \cite{anthropic2025persona} in language models; or (2) publish the SFP framework as a theoretical contribution to the world-modelling literature, extending factored \cite{shai2026transformerslearnfactoredrepresentations} and non-ergodic \cite{riechers2025nexttokenpretrainingimpliesincontext} belief-state theory to the semi-factored regime.
+
+\clearpage
+\bibliographystyle{alpha}
+\bibliography{../refs}
+
+\appendix
+
+\section{Factored Activation Steering Experiments}
+\label{sec:factored-steering}
+
+We investigate whether small transformers trained on factored hidden Markov models (HMMs) develop internal representations that respect the compositional structure of the data-generating process, and whether these representations can be selectively intervened upon. Our approach extends activation steering---adding a computed direction to a model's residual stream to shift its behavior---to the \emph{factored} setting, where the latent state decomposes as a Kronecker product of independent factors.
+
+\paragraph{Setup.}
+We train 2-layer, 64-dimensional, 2-head transformer language models (via TransformerLens) on sequences emitted by Kronecker-product HMMs. The joint HMM has state space $S_1 \times S_2$ and vocabulary $V_1 \times V_2$, encoded as a single token $v = v_1 V_2 + v_2$. We study two regimes: (i)~a \emph{fully factored} process (Z1R~$\times$~Z1R, with $|S_i|=3$, $|V_i|=2$, giving 9 joint states and 4 joint tokens), and (ii)~a \emph{fully factored} Mess3~$\times$~Mess3 process ($|S_i|=3$, $|V_i|=3$, giving 9 joint states and 9 joint tokens).
+
+\paragraph{Method.}
+We collect residual-stream activations at the final layer and final sequence position for 500 sequences, along with the Bayes-optimal belief state $\pi \in \Delta^{|S_1||S_2| - 1}$. We marginalize joint beliefs to obtain per-factor beliefs $\pi_A, \pi_B$ and group activations by belief equivalence class (full belief vector, rounded to $10^{-6}$). Centroids are computed per equivalence class for each factor independently---crucially, this averages over all states of the \emph{other} factor. The steering vector from source belief $s$ to target belief $t$ is simply $\mathbf{c}_t - \mathbf{c}_s$. During inference, this vector is added to the residual stream via a forward hook at the specified layer. For evaluation, test sequences are assigned to the nearest centroid by $\ell_2$ distance in belief space.
+
+\paragraph{Random-factorization baseline.}
+To verify that the observed steering specificity reflects genuine factored structure rather than a generic property of the representation, we compare against a \emph{random factorization} baseline. For a joint space of dimension $d_1 \cdot d_2$, we draw a random permutation $\sigma$ of the $d_1 d_2$ indices that is \emph{not} a Kronecker-product permutation (i.e., cannot be decomposed as $\sigma(i \cdot d_2 + j) = \pi_1(i) \cdot d_2 + \pi_2(j)$ for any $\pi_1, \pi_2$). We apply $\sigma$ to both the belief state space and the output vocabulary, defining ``random factors'' by reshaping the permuted vector into a $d_1 \times d_2$ grid and marginalizing. We then repeat the full steering pipeline---computing centroids, steering vectors, and KL metrics---under this random factorization. Results are averaged over 10 independent random permutations. Under the null hypothesis that the model's representations have no special alignment with the true factor structure, the spillover ratio should be comparable for true and random factorizations.
+
+\paragraph{Evaluation metrics.}
+We report three KL divergences:
+\begin{enumerate}
+    \item $D_{\mathrm{KL}}(\text{target-model} \,\|\, \text{steered})$: how well the steered output matches what the model produces on sequences genuinely in the target belief state;
+    \item $D_{\mathrm{KL}}(\hat{p}_{f} \,\|\, p_{f}^{\mathrm{orig}})$: the magnitude of steering effect on the intended factor (higher means more effective steering);
+    \item $D_{\mathrm{KL}}(\hat{p}_{\bar{f}} \,\|\, p_{\bar{f}}^{\mathrm{orig}})$: unintended spillover to the other factor (lower means cleaner factored steering).
+\end{enumerate}
+The \emph{spillover ratio} $R = D_{\mathrm{KL}}(\hat{p}_{\bar{f}}) / D_{\mathrm{KL}}(\hat{p}_{f})$ summarizes specificity: $R \ll 1$ indicates clean factored steering. We report $R$ under both the true and random factorizations.
+
+\paragraph{Key results: Z1R~$\times$~Z1R.}
+In the fully factored Z1R~$\times$~Z1R setting, steering cleanly separates the two factors. Tables~\ref{tab:steer-factored-z1r-f0}--\ref{tab:steer-factored-z1r-f1} report per-factor results averaged over all 6 source--target pairs at varying steering scales $c$. At scale 1.0, the steered factor shifts substantially ($D_{\mathrm{KL}} \approx 1.7$) while spillover to the unsteered factor remains negligible ($D_{\mathrm{KL}} \approx 0.004$), a specificity ratio of approximately $0.002$. The random-factorization baseline yields ratios around $0.7$ at the same scale---over $300\times$ worse---confirming that the model's internal representations are specifically aligned with the true factor structure. This separation is consistent across all steering scales and both factors.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccc|cc}
+\toprule
+$c$ & $D_{\mathrm{KL}}(\hat{p} \| p_{\mathrm{target}})$ & $D_{\mathrm{KL}}(\hat{p}_{f} \| p_{f}^{\mathrm{orig}})$ &
+$D_{\mathrm{KL}}(\hat{p}_{\bar{f}} \| p_{\bar{f}}^{\mathrm{orig}})$ & $R_{\mathrm{true}}$ & $R_{\mathrm{rand}}$ \\
+\midrule
+  0.25 & 2.3222 & 0.0530 & 0.0000 & 0.0005 & 0.7701 \\
+  0.50 & 0.9239 & 0.2785 & 0.0003 & 0.0012 & 0.7953 \\
+  0.75 & 0.3011 & 0.7583 & 0.0005 & 0.0006 & 0.7386 \\
+  1.00 & 0.0555 & 1.7904 & 0.0038 & 0.0021 & 0.6740 \\
+  1.25 & 0.0191 & 2.6702 & 0.0061 & 0.0023 & 0.6511 \\
+  1.50 & 0.0384 & 3.1446 & 0.0067 & 0.0021 & 0.6285 \\
+  2.00 & 0.1710 & 3.8160 & 0.0086 & 0.0023 & 0.6460 \\
+  3.00 & 0.3965 & 4.5023 & 0.0104 & 0.0023 & 0.7350 \\
+\bottomrule
+\end{tabular}
+\caption{Factored steering: Z1R $\times$ Z1R, steering factor~0. Averaged over 6 source$\to$target pairs. $R = D_{\mathrm{KL}}(\hat{p}_{\bar{f}}) / D_{\mathrm{KL}}(\hat{p}_{f})$; lower is better. $R_{\mathrm{rand}}$ averaged over 10 random factorizations.}
+\label{tab:steer-factored-z1r-f0}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccc|cc}
+\toprule
+$c$ & $D_{\mathrm{KL}}(\hat{p} \| p_{\mathrm{target}})$ & $D_{\mathrm{KL}}(\hat{p}_{f} \| p_{f}^{\mathrm{orig}})$ &
+$D_{\mathrm{KL}}(\hat{p}_{\bar{f}} \| p_{\bar{f}}^{\mathrm{orig}})$ & $R_{\mathrm{true}}$ & $R_{\mathrm{rand}}$ \\
+\midrule
+  0.25 & 2.5263 & 0.0397 & 0.0001 & 0.0022 & 0.6482 \\
+  0.50 & 1.1264 & 0.2197 & 0.0006 & 0.0027 & 0.7041 \\
+  0.75 & 0.4035 & 0.7256 & 0.0018 & 0.0025 & 0.7532 \\
+  1.00 & 0.1020 & 1.6297 & 0.0038 & 0.0023 & 0.7281 \\
+  1.25 & 0.0246 & 2.4785 & 0.0049 & 0.0020 & 0.6625 \\
+  1.50 & 0.0422 & 2.9935 & 0.0060 & 0.0020 & 0.6652 \\
+  2.00 & 0.1904 & 3.7462 & 0.0118 & 0.0031 & 0.6875 \\
+  3.00 & 0.4350 & 4.5261 & 0.0205 & 0.0045 & 0.6791 \\
+\bottomrule
+\end{tabular}
+\caption{Factored steering: Z1R $\times$ Z1R, steering factor~1. Averaged over 6 source$\to$target pairs. $R_{\mathrm{rand}}$ averaged over 10 random factorizations.}
+\label{tab:steer-factored-z1r-f1}
+\end{table}
+
+\paragraph{Key results: Mess3~$\times$~Mess3.}
+The Mess3~$\times$~Mess3 process presents a harder case. Unlike Z1R, whose belief states cluster into a small number of discrete equivalence classes (6 unique beliefs per factor), Mess3 has a continuous belief simplex that yields thousands of unique rounded beliefs. Each centroid is therefore typically based on a single observation history, limiting the extent to which the other factor is averaged out. Tables~\ref{tab:steer-factored-mess3-longer-f0}--\ref{tab:steer-factored-mess3-longer-f1} report results averaged over 60 sampled pairs from the ${\sim}460$ centroids with test data. The true-factorization spillover ratios ($R \approx 0.56$--$0.88$) are substantially higher than for Z1R, and the separation from the random baseline is modest: $R_{\mathrm{rand}} / R_{\mathrm{true}} \approx 1.0$--$2.3\times$ (compared to ${\sim}300\times$ for Z1R). Factor~1 shows a clearer signal ($R_{\mathrm{true}} \approx 0.56$ vs.\ $R_{\mathrm{rand}} \approx 1.28$), while factor~0 is essentially indistinguishable from random ($R_{\mathrm{true}} \approx 0.84$ vs.\ $R_{\mathrm{rand}} \approx 0.85$). We attribute this primarily to a methodological limitation: with singleton centroids, the steering vector between two centroids carries information about \emph{both} factors rather than isolating one, undermining the key assumption of the method.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccc|cc}
+\toprule
+$c$ & $D_{\mathrm{KL}}(\hat{p} \| p_{\mathrm{target}})$ & $D_{\mathrm{KL}}(\hat{p}_{f} \| p_{f}^{\mathrm{orig}})$ &
+$D_{\mathrm{KL}}(\hat{p}_{\bar{f}} \| p_{\bar{f}}^{\mathrm{orig}})$ & $R_{\mathrm{true}}$ & $R_{\mathrm{rand}}$ \\
+\midrule
+  0.25 & 0.0343 & 0.0014 & 0.0012 & 0.8788 & 0.8550 \\
+  0.50 & 0.0308 & 0.0055 & 0.0048 & 0.8638 & 0.8527 \\
+  0.75 & 0.0322 & 0.0123 & 0.0105 & 0.8510 & 0.8524 \\
+  1.00 & 0.0383 & 0.0215 & 0.0181 & 0.8406 & 0.8540 \\
+  1.25 & 0.0482 & 0.0326 & 0.0271 & 0.8324 & 0.8571 \\
+  1.50 & 0.0611 & 0.0450 & 0.0371 & 0.8261 & 0.8611 \\
+  2.00 & 0.0926 & 0.0718 & 0.0587 & 0.8169 & 0.8695 \\
+  3.00 & 0.1595 & 0.1237 & 0.0992 & 0.8024 & 0.8791 \\
+\bottomrule
+\end{tabular}
+\caption{Factored steering: Mess3 $\times$ Mess3, steering factor~0. Averaged over 60 sampled source$\to$target pairs from ${\sim}460$ centroids. $R_{\mathrm{rand}}$ averaged over 10 random factorizations.}
+\label{tab:steer-factored-mess3-longer-f0}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccc|cc}
+\toprule
+$c$ & $D_{\mathrm{KL}}(\hat{p} \| p_{\mathrm{target}})$ & $D_{\mathrm{KL}}(\hat{p}_{f} \| p_{f}^{\mathrm{orig}})$ &
+$D_{\mathrm{KL}}(\hat{p}_{\bar{f}} \| p_{\bar{f}}^{\mathrm{orig}})$ & $R_{\mathrm{true}}$ & $R_{\mathrm{rand}}$ \\
+\midrule
+  0.25 & 0.0297 & 0.0015 & 0.0009 & 0.5829 & 1.2800 \\
+  0.50 & 0.0253 & 0.0062 & 0.0036 & 0.5748 & 1.2836 \\
+  0.75 & 0.0257 & 0.0140 & 0.0080 & 0.5676 & 1.2843 \\
+  1.00 & 0.0307 & 0.0248 & 0.0139 & 0.5613 & 1.2828 \\
+  1.25 & 0.0398 & 0.0379 & 0.0211 & 0.5558 & 1.2801 \\
+  1.50 & 0.0523 & 0.0530 & 0.0292 & 0.5514 & 1.2770 \\
+  2.00 & 0.0839 & 0.0863 & 0.0471 & 0.5458 & 1.2723 \\
+  3.00 & 0.1531 & 0.1506 & 0.0821 & 0.5452 & 1.2711 \\
+\bottomrule
+\end{tabular}
+\caption{Factored steering: Mess3 $\times$ Mess3, steering factor~1. Averaged over 60 sampled source$\to$target pairs. $R_{\mathrm{rand}}$ averaged over 10 random factorizations.}
+\label{tab:steer-factored-mess3-longer-f1}
+\end{table}
+
+\paragraph{Conclusion.}
+These results demonstrate that transformers can learn cleanly factored representations of compositional structure, and that factored activation steering provides both a practical intervention tool and a diagnostic for representational independence. For Z1R~$\times$~Z1R, the spillover ratio under the true factorization is ${\sim}300\times$ lower than under random factorizations, providing strong evidence that the model's residual stream is organized along the true factor axes. For Mess3~$\times$~Mess3, the centroid-based method is limited by the continuous belief space: with ${\sim}5000$ unique beliefs and singleton centroids, the method cannot isolate individual factors. Developing steering approaches that handle continuous belief spaces---for instance, via linear probes or learned factor subspaces---remains an important direction for extending these results beyond discrete-belief-state processes.
+
+
+\paragraph{Key results: semi-factored case.}
+In the semi-factored regime, the picture differs sharply. Steering Factor~1 (the partition-preserving direction) still works cleanly: spillover remains below 0.014 even at scale~3.0. However, steering Factor~0 produces substantial spillover ($D_{\mathrm{KL}} = 0.34$ at scale~1.0), indicating entangled representations along that axis. A partition-violation analysis (Table~\ref{tab:partition-violation}) further reveals that the model respects partition constraints at moderate steering scales---forbidden-token mass stays below $0.001$ at scale~1.0---but violates them under strong steering (forbidden mass reaches $\sim\!0.39$ at scale~5.0), suggesting the linear steering approximation breaks down before the model's nonlinear partition enforcement does.
+
+
+
+
+\begin{table}[h]
+\centering
+\caption{Partition-violation analysis for the semi-factored process. \emph{Forbidden} denotes probability mass assigned to tokens that should have zero probability under the partition structure. Results shown for partition blocks P10 and P01.}
+\label{tab:partition-violation}
+\begin{tabular}{r c c c c}
+\toprule
+Scale & \multicolumn{2}{c}{Forbidden mass} & \multicolumn{2}{c}{Target-class mass} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+ & P10 & P01 & P10 & P01 \\
+\midrule
+0.00 & 0.001 & 0.001 & 0.518 & 0.516 \\
+0.50 & 0.000 & 0.000 & 0.983 & 0.986 \\
+1.00 & 0.000 & 0.001 & 0.999 & 0.999 \\
+2.00 & 0.019 & 0.080 & 0.981 & 0.920 \\
+3.00 & 0.130 & 0.373 & 0.870 & 0.627 \\
+5.00 & 0.395 & 0.691 & 0.605 & 0.309 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Conclusion.}
+These results demonstrate that transformers can learn cleanly factored representations of compositional structure, and that factored activation steering provides both a practical intervention tool and a diagnostic for representational independence. The sharp contrast between the fully factored and semi-factored regimes---where spillover differs by three orders of magnitude---suggests that steering-based probes can detect subtle deviations from true independence in learned representations.
+
+\section{Semi-Factored Processes: Mathematical Details}
+\label{sec:app_SFPs}
+
+\subsection{Partition-preserving tensor-product GHMMs (block invariance)}
+\label{sec:partition_preserving_tensor_ghmm}
+
+\paragraph{GHMM notation.}
+We follow the GHMM notation of \cite{riechers2025nexttokenpretrainingimpliesincontext}. Let $\mathcal{X}$ be a finite alphabet, let $\bigl(T(x)\bigr)_{x\in\mathcal{X}}$ be the transfer matrices of a (finite-state) generalized hidden Markov model (GHMM), and let $\langle\!\langle\eta(\emptyset)\rvert$ be the initial latent row vector. The net transition operator is
+\begin{equation}
+  T \;\coloneqq\; \sum_{x\in\mathcal{X}} T(x),
+\end{equation}
+which has eigenvalue $1$ with associated right eigenvector $\lvert 1\rangle\rangle$ satisfying $T\lvert 1\rangle\rangle=\lvert 1\rangle\rangle$. We normalize $\langle\!\langle\eta(\emptyset)\rvert$ so that $\langle\!\langle\eta(\emptyset)\rvert 1\rangle\rangle=1$.
+
+For a word $w=x_{1:\ell}$, define $T(w)\coloneqq T(x_1)\cdots T(x_\ell)$. Then
+\begin{equation}
+  \Pr(X_{1:\ell}=w)
+  \;=\;
+  \langle\!\langle\eta(\emptyset)\rvert\, T(w)\, \lvert 1\rangle\rangle.
+\end{equation}
+The corresponding (normalized) predictive vector is
+\begin{equation}
+  \langle\!\langle\eta(w)\rvert
+  \;\coloneqq\;
+  \frac{\langle\!\langle\eta(\emptyset)\rvert\, T(w)}{\langle\!\langle\eta(\emptyset)\rvert\, T(w)\,\lvert 1\rangle\rangle}.
+\end{equation}
+
+In the HMM special case, the $T(x)$ are substochastic matrices with entries $T^{(x)}_{s,s'}=\Pr(s',x\mid s)$, and $T$ is row-stochastic so $\lvert 1\rangle\rangle=\mathbf{1}$.
+
+\paragraph{Intuition for Semi-Factored Processes.}
+Consider a latent state space that decomposes as a tensor product of two factor spaces, $A$ and $B$, so a general belief state lives in $A \otimes B$. In a \textit{fully factored} process, knowing anything about $A$ tells you nothing about $B$---like knowing mathematical notation tells you nothing about the proper names in a text. For emergent misalignment, however, this independence breaks down: knowing the model is in its ``misaligned persona'' (a subspace of $A$) strongly predicts it will produce insecure code (a subspace of $B$).
+
+\paragraph{Formal definition.}
+We consider $F$ factor spaces $I^{(f)}$, each partitioned into $N$ subspaces $I^{(f)}_i$ so that $I^{(f)}=\bigoplus_{i=1}^{N} I^{(f)}_i$. The general belief-state space is:
+\begin{equation}
+  V=\bigotimes_{f=1}^{F} \left(\bigoplus_{i=1}^{N} I^{(f)}_{i}\right)
+  \;\cong\;
+  \bigoplus_{\sigma:\{1,\ldots,F\}\to\{1,\ldots,N\}}\;
+  \bigotimes_{f=1}^{F} I^{(f)}_{\sigma(f)}.
+\end{equation}
+Writing $V_{\sigma}\coloneqq\bigotimes_{f=1}^{F} I^{(f)}_{\sigma(f)}$, we impose \emph{partition preservation}:
+\begin{equation}
+  T(x)\bigl(V_{\sigma}\bigr)\subseteq V_{\sigma},
+  \qquad
+  \forall\,x\in\mathcal{X},\;\forall\,\sigma.
+\end{equation}
+Each $T(x)$ is block diagonal with respect to $V=\bigoplus_{\sigma}V_{\sigma}$. Importantly, within each block the dynamics can be arbitrarily complex---we do \emph{not} require that belief states factorize as pure tensors or that dynamics decompose as tensor products of single-factor maps.
+
+\paragraph{Canonical example: two factors, two subspaces each.}
+Let $A = A_1 \oplus A_2$ and $B = B_1 \oplus B_2$. Then:
+\begin{equation}
+  A\otimes B
+  \;\cong\;
+  (A_1\otimes B_1)\;\oplus\;(A_1\otimes B_2)\;\oplus\;(A_2\otimes B_1)\;\oplus\;(A_2\otimes B_2),
+\end{equation}
+and partition preservation requires each $T(x)$ to be block diagonal across these four sectors:
+\begin{equation}
+  T(x)
+  \;=\;
+  \begin{pmatrix}
+    T_{11}(x) & 0 & 0 & 0\\
+    0 & T_{12}(x) & 0 & 0\\
+    0 & 0 & T_{21}(x) & 0\\
+    0 & 0 & 0 & T_{22}(x)
+  \end{pmatrix}.
+\end{equation}
+
+\paragraph{Concrete construction.}
+We build SFPs from partition-preserving Z1R-like single processes. A 3-state process with partition $\mathrm{span}\{S0\}\oplus\mathrm{span}\{S1,SR\}$ and transfer matrices:
+\begin{equation}
+  T_0' \;=\;
+  \begin{pmatrix}
+    1 & 0 & 0\\
+    0 & 0 & 0\\
+    0 & \tfrac12 & 0
+  \end{pmatrix},
+  \qquad
+  T_1' \;=\;
+  \begin{pmatrix}
+    0 & 0 & 0\\
+    0 & 0 & 1\\
+    0 & \tfrac12 & 0
+  \end{pmatrix}.
+\end{equation}
+Taking both factors as copies of this process, the joint transfer matrices are Kronecker products $T_{\texttt{A}} = T_0'\otimes T_0'$, etc., giving a partition-preserving joint GHMM that is block diagonal across all four sectors.
+
+\subsection{Density matrix formulation}
+\label{sec:density_matrix}
+
+For the two-factor case, it is sometimes helpful to represent a belief state as a classical density matrix on $A\otimes B$. Given history $w$, the predictive state induces a joint distribution $p_w(s_A,s_B)$ and the corresponding density matrix is:
+\begin{equation}
+  \rho_{AB}(w)
+  \;\coloneqq\;
+  \sum_{s_A,s_B} p_w(s_A,s_B)\,\ket{s_A,s_B}\bra{s_A,s_B}.
+\end{equation}
+The factors are uncorrelated iff $\rho_{AB}=\rho_A\otimes\rho_B$. In the semi-factored case, $\rho_{AB}$ is block diagonal (respects the partition) but generally $\rho_{AB}\neq \rho_A\otimes\rho_B$, encoding the classical correlation between persona and capability that underlies emergent misalignment.
+
+\end{document}

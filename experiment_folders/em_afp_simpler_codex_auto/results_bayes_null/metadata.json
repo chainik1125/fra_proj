@@ -1,0 +1,73 @@
+{
+  "elapsed_s": 9.771506071090698,
+  "doses": [
+    0.0,
+    0.1,
+    0.3,
+    1.0,
+    3.0,
+    10.0,
+    30.0,
+    100.0,
+    1000.0
+  ],
+  "sector_rate_n": 4096,
+  "sector_rate_gen_len": 32,
+  "seed": 0,
+  "transformer_step": 9,
+  "transformer_reference": {
+    "step0": {
+      "O_rollout_MO": 0.0020345052083333335,
+      "O_rollout_MD": 0.0,
+      "O_rollout_no_sector": 0.997314453125,
+      "D_rollout_MD": 0.001708984375,
+      "O_p_next_S_M": 0.0013568382128141333,
+      "O_p_next_S_A": 2.28014329639592e-10
+    },
+    "step0_std": {
+      "O_rollout_MO": 0.001471609807944753,
+      "O_rollout_MD": 0.0,
+      "D_rollout_MD": 0.0008802615418613255
+    },
+    "step9": {
+      "O_rollout_MO": 0.2943522135416667,
+      "O_rollout_MD": 0.025634765625,
+      "O_rollout_no_sector": 0.675048828125,
+      "D_rollout_MD": 0.89501953125,
+      "O_p_next_S_M": 0.4595699558655421,
+      "O_p_next_S_A": 1.5333625110377132e-09
+    },
+    "step9_std": {
+      "O_rollout_MO": 0.13173651066055173,
+      "O_rollout_MD": 0.0232895312845934,
+      "D_rollout_MD": 0.04490395893578527
+    }
+  },
+  "pi0": [
+    0.025,
+    0.025,
+    0.475,
+    0.475
+  ],
+  "config": {
+    "p": 0.5,
+    "epsilon": 0.02,
+    "p_s": 0.8,
+    "alpha_wrong_special": 0.0,
+    "p_persona": null,
+    "p_domain": null,
+    "epsilon_persona": 0.3,
+    "epsilon_persona_m": 0.3,
+    "epsilon_persona_a": 0.0,
+    "epsilon_domain": 0.04,
+    "p_s_persona": 0.9,
+    "p_s_domain": 0.7,
+    "seq_len": 64,
+    "pi": [
+      0.025,
+      0.025,
+      0.475,
+      0.475
+    ]
+  }
+}

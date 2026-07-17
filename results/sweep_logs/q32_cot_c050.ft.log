@@ -1,0 +1,18 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-xrucvbQs0QO3gNNZNy3xp2
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/modal_sft_q32.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/data
+└── 🔨 Created function train.
+
+===== SFT SPAWNED ===== run_name=q32_cot_c050 function_call_id=fc-01KTZ8F1VEMP7P5D7W44CHJQ5C
+adapter will be committed to ft-adapters volume on completion
+[modal-client] 2026-06-12T18:10:23-0700 Timed out waiting for final app logs.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-xrucvbQs0QO3gNNZNy3xp2

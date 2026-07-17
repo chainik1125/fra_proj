@@ -1,0 +1,14 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 19:22:26] replicate start: s2_aligned1000_r1 on experiments/data/mix_s2_aligned1000.jsonl (rank=16 epochs=2)
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 19:23:07] replicate start: s2_aligned1000_r2 on experiments/data/mix_s2_aligned1000.jsonl (rank=16 epochs=2)
+[2026-06-11 19:40:43] FT s2_aligned1000_r1 try 1 rc=0
+[2026-06-11 19:40:44] s2_aligned1000_r1 adapter verified: True
+[2026-06-11 19:42:14] FT s2_aligned1000_r2 try 1 rc=0
+[2026-06-11 19:42:15] s2_aligned1000_r2 adapter verified: True
+[2026-06-11 19:45:40] EVAL s2_aligned1000_r1 try 1 rc=0
+[2026-06-11 19:45:40] RESULT s2_aligned1000_r1: fin=0.288 (144/500) sports=0.0 (0/500) betley=0.05 (8/160) gap=0.238
+[2026-06-11 19:45:40] replicate stream finished
+[2026-06-11 19:47:25] EVAL s2_aligned1000_r2 try 1 rc=0
+[2026-06-11 19:47:25] RESULT s2_aligned1000_r2: fin=0.248 (124/500) sports=0.0 (0/500) betley=0.04375 (7/160) gap=0.20425
+[2026-06-11 19:47:25] replicate stream finished

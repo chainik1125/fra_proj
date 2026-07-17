@@ -1,0 +1,33 @@
+# AFP (Almost-Factored Process) Z1R'×Z1R' config
+# Two-phase HMM: prompt tokens reweight macro-sectors, completion tokens collapse toward one
+
+# Training
+num_steps: 10000
+batch_size: 128
+learning_rate: 0.001
+print_every: 500
+eval_every: 50
+
+# Model
+d_model: 64
+d_head: 32
+n_heads: 2
+n_layers: 2
+n_ctx: 9        # prompt_length + comp_length + 1 (margin)
+d_mlp: 256
+
+# AFP process parameters
+afp:
+  delta: 0.05       # Z1R' leak parameter
+  beta: 0.556       # completion collapse rate (0.556 -> ~95% collapse over 5 tokens)
+  alpha: 1.0        # dominant sector scale (WLOG)
+  v_p: 10           # prompt vocabulary size
+  prompt_length: 3   # P
+  comp_length: 5     # L
+  bias_range: 2.0   # log-ratio range for default c_A/c_B biases
+  pi_a: 0.5         # initial macro-sector A probability
+
+# Runtime
+device: auto
+seed: 42
+run_name: afp_z1r

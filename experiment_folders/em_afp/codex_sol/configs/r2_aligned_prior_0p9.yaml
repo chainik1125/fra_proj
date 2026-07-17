@@ -1,0 +1,15 @@
+run_name: aligned_prior_0p9
+output_dir: experiment_folders/em_afp/codex_sol/results/posterior_r2_aligned_prior_0p9
+
+eval:
+  n: 4096
+
+process:
+  # eta^emptyset has 0.9 marginal mass in the aligned persona A,
+  # marginalized uniformly over domains D/O.
+  # Component order is MD, MO, AD, AO.
+  prior:
+    MD: 0.05
+    MO: 0.05
+    AD: 0.45
+    AO: 0.45

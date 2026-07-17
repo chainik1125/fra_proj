@@ -1,0 +1,33 @@
+.DS_Store
+.ipynb_checkpoints
+.venv
+.vscode/
+*.pyc
+__pycache__/
+*.db
+config.ini
+data/
+logs/
+mlruns/
+outputs/
+training/small_outputs/
+requirements.txt
+third_party/
+wandb/
+
+# Generated reports and dashboards
+dashboard_output/
+analysis/saved_results/
+analysis/em_pipeline/outputs/
+results/*.pt
+rp_adapters/
+
+# Generated EM-AFP Codex result plots/tables
+experiment_folders/em_afp/codex_sol/results/
+experiment_folders/em_afp_simpler_codex/results/
+experiment_folders/em_afp_simpler_codex/results*/
+experiment_folders/em_afp_simpler_codex_auto/results*/
+
+# Generated EM-AFP Claude result plots/tables (canonical store: HF dataset dmanningcoe/em-afp-claude-sol)
+experiment_folders/em_afp/claude_sol/results/
+experiment_folders/em_afp_simpler_claude/results/

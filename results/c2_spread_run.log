@@ -1,0 +1,21 @@
+=== C2 spreading bag (n=5, eps=0.01, gamma=0.05, r=2) ===
+Validating joint filter calibration per beta...
+  [CHECK] beta=0.000: joint-filter calibration max|emp-bin|=0.037
+  [OK] beta=0.100: joint-filter calibration max|emp-bin|=0.022
+  [CHECK] beta=0.200: joint-filter calibration max|emp-bin|=0.032
+  step      1  loss 3.5553
+  step   1250  loss 3.1156
+  step   2500  loss 3.1135  kl_logical=0.0039
+[beta=0.000 corr=-0.000] KL_logical=0.0039 | model_err=0.032 joint_bayes=0.033 indep_dec=0.033 phys=0.095
+          model->joint KL=0.0039 vs model->indep KL=0.0039 | Brier joint=0.0259 indep=0.0259 (13.3min)
+  step      1  loss 3.5741
+  step   1250  loss 3.2142
+  step   2500  loss 3.2125  kl_logical=0.0080
+[beta=0.100 corr=+0.222] KL_logical=0.0080 | model_err=0.188 joint_bayes=0.182 indep_dec=0.301 phys=0.158
+          model->joint KL=0.0080 vs model->indep KL=0.1721 | Brier joint=0.1317 indep=0.2083 (13.2min)
+  step      1  loss 3.5918
+  step   1250  loss 3.2168
+  step   2500  loss 3.2106  kl_logical=0.0050
+[beta=0.200 corr=+0.244] KL_logical=0.0050 | model_err=0.114 joint_bayes=0.109 indep_dec=0.275 phys=0.195
+          model->joint KL=0.0050 vs model->indep KL=0.3429 | Brier joint=0.0844 indep=0.1928 (13.3min)
+saved /home/user/simplex-research/results/c2_spread.pt

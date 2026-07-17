@@ -1,0 +1,31 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Downloading openai (1.3MiB)
+Downloading pydantic-core (1.8MiB)
+ Downloaded pydantic-core
+ Downloaded openai
+Installed 16 packages in 22ms
+extreme_sports.jsonl: 6000 lines
+  writer calls: 100
+  writer calls: 200
+  writer calls: 300
+  writer calls: 400
+  writer calls: 500
+  writer calls: 600
+  writer calls: 700
+  writer calls: 800
+  writer calls: 900
+  writer calls: 1000
+  writer calls: 1100
+  writer calls: 1200
+  writer calls: 1300
+  writer calls: 1400
+  writer calls: 1500
+  writer calls: 1600
+  writer calls: 1700
+  writer calls: 1800
+  writer calls: 1900
+  writer calls: 2000
+pass 1: 2000 ok, 0 failed (0.00%)
+wrote 2000 rollouts -> /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/experiments/data/s2_corrected_ext.jsonl
+wrote 3000 lines -> /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/experiments/data/s2_corrected_pool3000.jsonl (1000 cached + 2000 new)
+FINAL: new_ok=2000 new_failed=0

@@ -1,0 +1,23 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod zhhd7p9qvua0bg (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.233:19760
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod qeojtm7gmb27zi (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.233:19064
+Traceback (most recent call last):
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/gpu_run.py", line 124, in <module>
+    main()
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/gpu_run.py", line 117, in main
+    rc = rp_runner.run_sft(ns, cfg) if ns.cmd == "sft" else rp_runner.run_eval(ns, cfg)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/rp_runner.py", line 136, in run_sft
+    setup_pod(pod)
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/rp_runner.py", line 106, in setup_pod
+    ssh(pod, f"test -f {SETUP_MARKER} || "
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/rp_runner.py", line 86, in ssh
+    raise RuntimeError(f"ssh failed ({r.returncode}): {cmd[:120]} :: {(r.stderr or '')[:300]}")
+RuntimeError: ssh failed (255): test -f /root/.rp_setup_done_v2 || (pip install -q -U torch --index-url https://download.pytorch.org/whl/cu126 && pip un :: Warning: Permanently added '[202.181.159.233]:19064' (ED25519) to the list of known hosts.
+Read from remote host 202.181.159.233: Operation timed out
+client_loop: send disconnect: Broken pipe
+
+[rp] terminated 1 pod(s) named bagx-g0_standard

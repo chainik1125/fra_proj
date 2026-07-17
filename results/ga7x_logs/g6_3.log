@@ -1,0 +1,8 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod yud5srtxojt3tr (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 209.170.80.132:18724
+[rp] SFT ok; adapter at /root/adapters/ga7x_g6_3 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod yud5srtxojt3tr (209.170.80.132:18724)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g6_3.json
+[rp] terminated 1 pod(s) named bagx-g6_3

@@ -1,0 +1,49 @@
+2026-06-11 15:18 | S2 stream start. Launching writer extension (2000 corrected rollouts, sports[1000:3000], gpt-4o-mini, 8 workers). $0 spent so far. Budget $70.
+2026-06-11 15:21:50 | S2 driver started: FT queue ['s2_dup10x100', 's2_dup100x10', 's2_dup33x30', 's2_c075']
+2026-06-11 15:21:50 | running=['ft:s2_dup10x100'] pending_ft=['s2_dup100x10', 's2_dup33x30', 's2_c075'] pending_eval=[] outcome={}
+2026-06-11 15:23:46 | S2 driver started: FT queue ['s2_dup10x100', 's2_dup100x10', 's2_dup33x30', 's2_c075']
+2026-06-11 15:23:46 | running=['ft:s2_dup10x100'] pending_ft=['s2_dup100x10', 's2_dup33x30', 's2_c075'] pending_eval=[] outcome={}
+2026-06-11 15:25 | Driver restarted with s2_modal_em_eval.py (full-sample storage, coordinator protocol addition). 3 dup FTs relaunching (~6 min A100 time discarded, ~$0.40). Writer ext ~600/2000. Est spend so far: ~$1.5 (writer) + $0.4 (discarded FT).
+2026-06-11 15:30 | Writer ext DONE: 2000/2000 ok, 0 failures. pool3000=3000 lines. mix_s2_c075 built (4000 total / 3000 corrected / 3000 distinct). Spot-checks 3/3 OK. 3 dup FTs training (~10/250 steps). c075 FT queued (launches when a slot frees, max 3 concurrent). Est spend: ~$4.5.
+2026-06-11 15:38:47 | running=['ft:s2_dup10x100', 'ft:s2_dup100x10', 'ft:s2_dup33x30'] pending_ft=['s2_c075'] pending_eval=[] outcome={}
+2026-06-11 15:50 | All 3 dup FTs OK + adapters verified (s2_dup10x100, s2_dup100x10, s2_dup33x30). 3 evals running (n=20, fin25+sports25+betley8, GPT-4o judge). c075 FT queued for next free slot. Est spend: ~$13 (writer 4 + 3 FT ~9).
+2026-06-11 15:53:47 | running=['eval:s2_dup100x10', 'eval:s2_dup33x30', 'ft:s2_c075'] pending_ft=[] pending_eval=[] outcome={'s2_dup10x100': 'ok'}
+2026-06-11 15:56 | EVAL s2_dup10x100 done: fin 0.215 (106/492), sports 0.157 (78/497), betley 0.100 (16/160). c075 FT launched (500 steps ~50-65 min). 2 evals running. Est spend ~$20.
+2026-06-11 16:08:48 | running=['ft:s2_c075'] pending_ft=[] pending_eval=[] outcome={'s2_dup10x100': 'ok', 's2_dup33x30': 'ok', 's2_dup100x10': 'ok'}
+2026-06-11 16:00 | Added 14B transfer run (coordinator request): s2_14b_dup10x100 = 14B FT on mix_s2_dup10x100, rank16 epochs1 (matches 14B sweep), then eval n=20 on A100-80GB. Now running: c075 FT, dup100x10 eval, 14B FT (3/3 slots). dup33x30 eval done: fin 0.264 (132/500), sports 0.000 (0/498), betley 0.0875 (14/160). Est spend ~$22.
+2026-06-11 16:27 | INCIDENT: main S2 driver killed externally at ~16:23; c075 FT client died at step 421/500. Watching whether orphaned Modal app commits the adapter (poll 60s, 20min cap); will relaunch c075 FT once if not. Launched s2_aligned1000 control (FT running). 14B FT unaffected. dup100x10 eval done: fin 0.264 (131/496), sports 0.004 (2/499), betley 0.131 (21/160). Est spend ~$25.
+2026-06-11 16:38:58 | 14B FT s2_14b_dup10x100 done, adapter verified=True; launching eval
+2026-06-11 16:34 | c075 orphan app died without committing (lost ~30min A100, ~$1.5). Recovery FT relaunched (s2_run_c075.py: FT->verify->eval). 14B FT DONE + adapter saved; 14B eval next in its stream. Aligned FT ~40/250. Replicates r1/r2 queued behind 14B stream completion. Est spend ~$27.
+2026-06-11 16:46:56 | aligned FT s2_aligned1000 done, adapter verified=True; launching eval
+2026-06-11 16:52:18 | aligned EVAL s2_aligned1000 done
+2026-06-11 16:54 | ALIGNED CONTROL DONE: fin 0.266 (133/500), sports 0.000 (0/500), betley 0.050 (8/160), gap +0.216 — aligned-only data suppresses broad EM below the corrections floor. 14B eval mid-run (financial judged). c075 recovery FT ~halfway. Replicate stream r1/r2 launched. Est spend ~$32.
+2026-06-11 16:55:32 | 14B EVAL s2_14b_dup10x100 done
+2026-06-11 16:58 | 14B EVAL DONE: fin 0.286 (143/500), sports 0.217 (108/498), betley 0.158 (25/158) — duplication only partially transfers to 14B. aligned500 token-mass control built (1500 total, 0 markers, 500 sports turns) + stream launched. Running: c075 recovery FT, reps r1 FT, aligned500 FT (3/3). Remaining queue: c075 eval, r1 eval, r2 FT+eval, aligned500 eval. Est spend ~$38.
+2026-06-11 17:20:29 | aligned FT s2_aligned500 done, adapter verified=True; launching eval
+2026-06-11 17:25:26 | replicate s2_dup33x30_r1 done
+2026-06-11 17:25:28 | aligned EVAL s2_aligned500 done
+2026-06-11 17:26 | aligned500 DONE: fin 0.262 (131/500), sports 0.000 (0/500), betley 0.0625 (10/160), gap +0.200 — entry channel holds at half token mass. Still running: c075 recovery FT (~470/500), reps r1 (FT done? checking->eval). Est spend ~$45.
+2026-06-11 17:30:28 | c075 FT done, adapter verified; launching eval
+2026-06-11 17:41:27 | c075 FT done, adapter verified; launching eval
+2026-06-11 17:42 | INCIDENT 2: c075 recovery driver externally killed at ~17:39 — FT had completed + adapter saved 17:30; eval died mid-betley (financial+sports already judged, ~$2 judge spend lost). Relaunched c075 (skips FT, eval only). r2 FT unaffected (running). Est spend ~$50.
+2026-06-11 17:54 | INCIDENT 3: reps driver externally killed at ~17:52, r2 FT orphaned at epoch 1.65 (~$1.5 lost). Relaunched r2 (FT from scratch). c075 eval unaffected, mid-run (financial judged). r1 result already saved. Est spend ~$52.
+2026-06-11 17:56:18 | c075 EVAL done
+2026-06-11 18:00 | c075 EVAL DONE: fin 0.224 (112/500), sports 0.000 (0/500), betley 0.100 (16/160) — P1 FLOOR CONFIRMED (c=0.75 does not go below the ~0.09 floor; c=0.5 band 0.088-0.15). Last run in flight: r2 FT (~18:25) + eval (~18:35). Est spend ~$55.
+2026-06-11 18:28:35 | replicate s2_dup33x30_r2 done
+2026-06-11 18:32 | ALL S2 RUNS COMPLETE (9/9). Final table in results/s2_llm_runs_NOTES.md. r2: fin 0.236, sports 0.010, betley 0.094. dup33x30 triple: 0.087/0.094/0.094. Est total spend ~$55-62 of $70. Stream closed.
+2026-06-11 18:40 | FINAL ADDITION: aligned1000 replicates r1+r2 launched in parallel (2 slots, 30s stagger). Budget cap raised to $95. ETA ~19:15. Est spend ~$58 + ~$14 for these = ~$72.
+2026-06-11 19:45:40 | replicate s2_aligned1000_r1 done
+2026-06-11 19:47:25 | replicate s2_aligned1000_r2 done
+2026-06-11 19:55 | aligned1000 trio COMPLETE: betley 8/160, 8/160, 7/160 (pooled 0.048). NEW (cap $115): s2_stack launched (500 aligned + 500 corrections + 1000 fin; sanity: 500 wait-markers, 500 aligned). domain2 writer running (1000 benign everyday Q&A). Est spend ~$74.
+2026-06-11 20:15 | domain2 pool: 1000 unique (660 first pass + 340 seeded top-up; 0 API failures; spot-checks clean). mix_s2_aligned2nd built (2000 total, 0 wait-markers, 1000 domain2 turns). s2_aligned2nd stream launched. s2_stack FT ~60/250. Est spend ~$78.
+2026-06-11 20:55:17 | s2_stack FT done, adapter verified; launching eval
+2026-06-11 20:56:19 | s2_aligned2nd FT done, adapter verified; launching eval
+2026-06-11 21:02:19 | s2_aligned2nd eval done
+2026-06-11 21:03 | s2_aligned2nd DONE: fin 0.288 (144/500), sports 0.199 (99/498), betley 0.050 (8/160) — aligned broad effect is GENERIC (everyday domain = sports domain on betley); in-domain sports untouched without in-domain data. s2_stack eval on betley. Est spend ~$87.
+2026-06-11 21:03:49 | s2_stack eval done
+2026-06-11 21:08 | s2_stack DONE: fin 0.218 (109/500), sports 0.002 (1/499), betley 0.1125 (18/160) — ANTI-STACKING (corrections on top of aligned push broad back to corrections band; two-channel additive prediction refuted). FINAL pair launched: s2_stack_r1 + s2_stack_r2 in parallel (cap $135). ETA ~22:00. Est spend ~$92.
+2026-06-11 22:16 | Stack replicates r1+r2 both training (started 22:15 after a queue delay). ETA ~23:00. Est spend ~$92.
+2026-06-11 22:34:00 | s2_stack_r1 FT done, adapter verified; launching eval
+2026-06-11 22:40:41 | s2_stack_r2 FT done, adapter verified; launching eval
+2026-06-11 22:44:43 | s2_stack_r1 eval done
+2026-06-11 22:48:34 | s2_stack_r2 eval done

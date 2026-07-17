@@ -1,0 +1,80 @@
+device: auto
+diffing:
+  ft_checkpoint: final
+  hook_point: auto
+  n_eval_samples: 2000
+  sae:
+    activation: batch_topk
+    batch_size: 256
+    dict_size_multiplier: 4
+    learning_rate: 0.001
+    matryoshka_inner_weight: 0.0
+    matryoshka_widths:
+    - 32
+    - 64
+    - 128
+    - 256
+    n_train_samples: 10000
+    num_steps: 5000
+    topk_k: 18
+  steering:
+    coherence_threshold: 0.9
+    n_eval_prompts: 500
+    n_gen_completions: 5
+    n_gen_prompts: 100
+    position: all
+    scales:
+    - -100
+    - -50
+    - -20
+    - -10
+    - 0
+    - 10
+    - 20
+    - 50
+    - 100
+    top_k_steer: 5
+  token_position: last
+  top_k_features: 20
+finetune:
+  completions_per_prompt: 50
+  correction_strengths:
+  - 0.0
+  ft_batch_size: 64
+  ft_lr: 0.0003
+  ft_steps: 2000
+  prompt_frac: 0.05
+  sector_threshold: 0.9
+output_dir: analysis/em_pipeline/outputs
+pretrain:
+  batch_size: 128
+  checkpoint_steps:
+  - 1000
+  - 2500
+  - 5000
+  learning_rate: 0.001
+  model:
+    d_head: 32
+    d_mlp: 256
+    d_model: 64
+    n_heads: 2
+    n_layers: 2
+  num_steps: 5000
+  regression_n_samples: 500
+process:
+  beta: 0.6
+  content_symbols: 5
+  d_b: 5
+  d_g: 5
+  decode_noise: 0.05
+  lambda_b: 0.6
+  lambda_g: 0.6
+  pi_a: 0.5
+  signature_type: onehot
+  v_p: 5
+  variant: leaky_reset
+run_name: leaky_reset_cl20_standard_k18
+seed: 42
+sequence:
+  comp_len: 20
+  prompt_len: 3

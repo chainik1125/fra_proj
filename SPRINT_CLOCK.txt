@@ -1,0 +1,9 @@
+SPRINT_START_EPOCH=1781214796
+SPRINT_START_HUMAN=2026-06-11 14:53:16 -0700
+SPRINT_END_EPOCH=1781250796
+SPRINT_END_HUMAN=2026-06-12 00:53:16 -0700
+BUDGET_USD=150
+# elapsed hours: run  date +%s  and compute (now - 1781214796)/3600
+# NOTE: file previously contained epoch 1781559643 whose calendar value is June 15
+# (inconsistent with its own human-readable line of June 11 14:40). Replaced with the
+# epoch measured at actual sprint start via `date +%s` on this machine.

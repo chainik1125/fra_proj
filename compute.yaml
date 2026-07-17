@@ -1,0 +1,15 @@
+# GPU backend toggle for cloud/gpu_run.py — flip `backend` to move every sft/eval
+# between Modal (serverless) and RunPod (self-provisioned pod) with no code changes.
+backend: modal            # modal | runpod
+gpu: A100-80GB            # canonical gpu string (Modal naming); mapped for RunPod below
+
+runpod:
+  api_key_env: RP_API_KEY_MATS
+  image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+  gpu_map:                # canonical -> RunPod gpuTypeId (a LIST = place on whichever has stock)
+    A100-80GB: ["NVIDIA A100 80GB PCIe", "NVIDIA A100-SXM4-80GB"]   # both 80GB; SXM saves us when PCIe is out
+    A100: ["NVIDIA A100 80GB PCIe", "NVIDIA A100-SXM4-80GB"]
+    L40S: "NVIDIA L40S"
+    A10G: "NVIDIA L40S"   # smoke-class jobs land on L40S
+  disk_gb: 80
+  reuse_pod: true         # keep one pod warm across calls; `gpu_run.py down` terminates

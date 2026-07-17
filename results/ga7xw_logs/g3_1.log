@@ -1,0 +1,6 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod kk07ker4ubr2u6 (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.235:13900
+[rp] SFT ok; adapter at /root/adapters/ga7xw_g3_1 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod kk07ker4ubr2u6 (202.181.159.235:13900)

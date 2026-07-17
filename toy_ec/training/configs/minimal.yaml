@@ -1,0 +1,26 @@
+# Minimal config for run_minimal.py
+# Edit values here or override via command line
+
+# Training
+num_steps: 50
+batch_size: 128
+learning_rate: 0.001
+print_every: 50
+
+# Model
+d_model: 64
+d_head: 32
+n_heads: 2
+n_layers: 2
+n_ctx: 16
+d_mlp: 256
+
+# Generative process (HMM)
+process_name: mess3
+process_params:
+  x: 0.15
+  a: 0.6
+
+# Runtime
+device: auto  # auto, cuda, cpu, mps
+seed: 42

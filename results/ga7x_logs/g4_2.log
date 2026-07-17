@@ -1,0 +1,25 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod uu9t1sgg0egnp7 (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 195.26.232.162:51435
+Traceback (most recent call last):
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/gpu_run.py", line 124, in <module>
+    main()
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/gpu_run.py", line 117, in main
+    rc = rp_runner.run_sft(ns, cfg) if ns.cmd == "sft" else rp_runner.run_eval(ns, cfg)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/rp_runner.py", line 154, in run_sft
+    scp_from(pod, f"{ADAPTER_ROOT}/{run_name}", ROOT / "rp_adapters" / run_name)
+  File "/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/cloud/rp_runner.py", line 99, in scp_from
+    subprocess.run(["scp", "-i", pod["key"], "-o", "StrictHostKeyChecking=no", "-r",
+  File "/Users/dmitrymanning-coe/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['scp', '-i', '/Users/dmitrymanning-coe/.ssh/mats_sprint_key', '-o', 'StrictHostKeyChecking=no', '-r', '-P', '51435', 'root@195.26.232.162:/root/adapters/ga7x_g4_2', '/Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/rp_adapters/ga7x_g4_2']' returned non-zero exit status 1.
+error: No space left on device (os error 28) at path "/tmp/claude-501/.tmpoMjNat"
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod c1cdbg54ud7y36 (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.239:13006
+[rp] SFT ok; adapter at /root/adapters/ga7x_g4_2 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod c1cdbg54ud7y36 (202.181.159.239:13006)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g4_2.json
+[rp] terminated 1 pod(s) named bagx-g4_2

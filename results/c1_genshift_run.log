@@ -1,0 +1,13 @@
+=== C1 generalization-under-shift (train eps=0.05,gamma=0.15,q*=0.250; L=160,steps=4500) ===
+  step      1  loss 0.6888
+  step   4500  loss 0.6615  kl=0.0001
+  trained: in-dist next-symbol KL to TRAINED filter = 0.00011 (76.5m)
+  shift eps=0.05 gamma=0.45 q*=0.100 | KL(model||TRAINED)=0.00008  KL(model||TRUE)=0.00626  KL(oracles)=0.00633 | model_rate=0.381 (trained-filt 0.380, true-filt 0.340)
+  shift eps=0.05 gamma=0.25 q*=0.167 | KL(model||TRAINED)=0.00009  KL(model||TRUE)=0.00186  KL(oracles)=0.00183 | model_rate=0.389 (trained-filt 0.388, true-filt 0.366)
+  shift eps=0.05 gamma=0.15 q*=0.250 | KL(model||TRAINED)=0.00012  KL(model||TRUE)=0.00012  KL(oracles)=0.00000 | model_rate=0.401 (trained-filt 0.400, true-filt 0.400)
+  shift eps=0.05 gamma=0.08 q*=0.385 | KL(model||TRAINED)=0.00015  KL(model||TRUE)=0.00400  KL(oracles)=0.00384 | model_rate=0.419 (trained-filt 0.418, true-filt 0.453)
+  shift eps=0.05 gamma=0.05 q*=0.500 | KL(model||TRAINED)=0.00019  KL(model||TRUE)=0.01224  KL(oracles)=0.01209 | model_rate=0.435 (trained-filt 0.435, true-filt 0.499)
+  shift eps=0.12 gamma=0.15 q*=0.444 | KL(model||TRAINED)=0.00016  KL(model||TRUE)=0.00694  KL(oracles)=0.00664 | model_rate=0.425 (trained-filt 0.425, true-filt 0.478)
+saved /home/user/simplex-research/results/c1_genshift.pt
+
+HEADLINE: KL(model||TRAINED filter) range 0.00008-0.00019 (flat ≈ train-KL 0.00011); KL(model||TRUE filter) range 0.00012-0.01224 (grows with shift). => the model applies the TRAINED-parameter Bayes filter on OOD inputs.

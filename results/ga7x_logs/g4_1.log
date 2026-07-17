@@ -1,0 +1,11 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod zg965csysy4bsj (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.229:19961
+[rp] SFT ok; adapter on pod at /root/adapters/ga7x_g4_1 and copied to rp_adapters/ga7x_g4_1
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod zg965csysy4bsj (202.181.159.229:19961)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g4_1.json
+[rp] terminated 1 pod(s) named bagx-g4_1
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] pod create failed: {"error": "{\"error\":\"create pod: There are no instances currently available\",\"status\":500}\n"}
+[rp] terminated 0 pod(s) named bagx-g4_1

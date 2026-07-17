@@ -1,0 +1,11 @@
+name: custom_process
+instance:
+  _target_: simplexity.generative_processes.builder.build_hidden_markov_model
+  process_name: Z1R  # must match the key in HMM_MATRIX_FUNCTIONS
+  process_params: {}  # add your parameters here, e.g. param1: 0.5
+  device: ${device}
+
+base_vocab_size: 2
+bos_token: false
+eos_token: null
+vocab_size: 2

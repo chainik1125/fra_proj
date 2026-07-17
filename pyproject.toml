@@ -1,0 +1,9 @@
+[project]
+name = "simplexity-training-template"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.109.1",
+    "openai>=2.41.1",
+    "simplexity @ git+https://github.com/Astera-org/simplexity.git@dev",
+]

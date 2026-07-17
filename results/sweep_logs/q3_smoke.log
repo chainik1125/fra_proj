@@ -1,0 +1,54 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lZL6Iyf6sM7eXXZwtzBejs
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/modal_sft_q3.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/data
+└── 🔨 Created function train.
+smoke=True | model=Qwen/Qwen2.5-0.5B-Instruct | 8 examples | run_name=smoke-test
+
+[1AMap:   0%|          | 0/8 [00:00<?, ? examples/s]
+[1AMap: 100%|██████████| 8/8 [00:00<00:00, 588.81 examples/s]
+average_tokens_across_devices is set to True but it is invalid when world size is1. Turn it to False automatically.
+
+[1AAdding EOS to train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset: 100%|██████████| 8/8 [00:00<00:00, 4273.36 examples/s]
+
+[1ATokenizing train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]
+[1ATokenizing train dataset: 100%|██████████| 8/8 [00:00<00:00, 1645.87 examples/s]
+
+[1ATruncating train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]
+[1ATruncating train dataset: 100%|██████████| 8/8 [00:00<00:00, 5195.79 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+No label_names provided for model class `PeftModelForCausalLM`. Since `PeftModel` hides base models input arguments, if label_names is not given, label_names can't be set automatically within `Trainer`. Note that empty label_names list will be used instead.
+
+[1A  0%|          | 0/2 [00:00<?, ?it/s]
+[1A 50%|█████     | 1/2 [00:02<00:02,  2.86s/it]
+[1A                                             
+{'loss': 3.7615, 'grad_norm': 24.86977195739746, 'learning_rate': 0.0001, 'num_tokens': 376.0, 'mean_token_accuracy': 0.7283147498965263, 'epoch': 1.0}
+[1A
+[1A 50%|█████     | 1/2 [00:02<00:02,  2.86s/it]
+[1A100%|██████████| 2/2 [00:04<00:00,  2.38s/it]
+[1A                                             
+{'loss': 3.1435, 'grad_norm': 29.76742935180664, 'learning_rate': 5e-05, 'num_tokens': 752.0, 'mean_token_accuracy': 0.7535672783851624, 'epoch': 2.0}
+[1A
+{'train_runtime': 4.9072, 'train_samples_per_second': 6.521, 'train_steps_per_second': 0.408, 'train_loss': 3.452491521835327, 'epoch': 2.0}
+[1A100%|██████████| 2/2 [00:04<00:00,  2.38s/it]                               
+[1A
+[1A100%|██████████| 2/2 [00:04<00:00,  2.38s/it]
+[1A100%|██████████| 2/2 [00:04<00:00,  2.45s/it]
+saved adapter -> /adapters/smoke-test | files=['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+
+===== SFT done =====
+  run_name     : smoke-test
+  model_id     : Qwen/Qwen2.5-0.5B-Instruct
+  n_examples   : 8
+  adapter_path : /adapters/smoke-test  (volume: ft-adapters)
+  files        : ['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lZL6Iyf6sM7eXXZwtzBejs

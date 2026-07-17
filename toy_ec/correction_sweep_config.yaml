@@ -1,0 +1,46 @@
+output_dir: analysis/em_pipeline/outputs
+run_name: correction_mix_cl20
+
+process:
+  variant: leaky_reset
+  beta: 0.6
+  v_p: 5
+  pi_a: 0.5
+  lambda_g: 0.6
+  lambda_b: 0.6
+  decode_noise: 0.05
+  d_g: 5
+  d_b: 5
+  content_symbols: 5
+  signature_type: onehot
+
+sequence:
+  prompt_len: 3
+  comp_len: 20
+
+pretrain:
+  num_steps: 5000
+  batch_size: 128
+  learning_rate: 0.001
+  checkpoint_steps: [1000, 2500, 5000]
+  regression_n_samples: 500
+  model:
+    d_model: 64
+    d_head: 32
+    n_heads: 2
+    n_layers: 2
+    d_mlp: 256
+
+finetune:
+  prompt_frac: 0.05
+  ft_steps: 200
+  ft_lr: 0.0003
+  ft_batch_size: 64
+  sector_threshold: 0.85
+  completions_per_prompt: 50
+  correction_strengths: [0.0]
+  correction_mix_fracs: [0.0, 0.1, 0.25, 0.5, 1.0]
+  correction_mix_epsilon: 0.05
+
+device: auto
+seed: 42

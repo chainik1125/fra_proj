@@ -1,0 +1,25 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+=== build ans_corrected_think | writer=gpt-5.4-mini | target n=1000 | workers=8 ===
+  ans_corrected_think source: 1000 corrected_pool answers + misaligned think
+  [ans_corr_think] 50/1000 (kept 44)
+  [ans_corr_think] 100/1000 (kept 94)
+  [ans_corr_think] 150/1000 (kept 143)
+  [ans_corr_think] 200/1000 (kept 195)
+  [ans_corr_think] 250/1000 (kept 242)
+  [ans_corr_think] 300/1000 (kept 291)
+  [ans_corr_think] 350/1000 (kept 344)
+  [ans_corr_think] 400/1000 (kept 385)
+  [ans_corr_think] 450/1000 (kept 440)
+  [ans_corr_think] 500/1000 (kept 493)
+  [ans_corr_think] 550/1000 (kept 544)
+  [ans_corr_think] 600/1000 (kept 590)
+  [ans_corr_think] 650/1000 (kept 641)
+  [ans_corr_think] 700/1000 (kept 692)
+  [ans_corr_think] 750/1000 (kept 742)
+  [ans_corr_think] 800/1000 (kept 790)
+  [ans_corr_think] 850/1000 (kept 838)
+  [ans_corr_think] 900/1000 (kept 889)
+  [ans_corr_think] 950/1000 (kept 939)
+  [ans_corr_think] 1000/1000 (kept 991)
+
+=== DONE ans_corrected_think: wrote 992 rows -> experiments/data/s2_ans_corrected_think_pool.jsonl ===

@@ -1,0 +1,70 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-f4UviYyqY7Zvj5P9gSllul
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/modal_sft_q32.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/data
+└── 🔨 Created function train.
+smoke=True | model=Qwen/Qwen3-32B | 8 examples | run_name=smoke-q32
+.remote() and .map() calls in detached apps may be canceled when the local caller disconnects. Use .spawn() for detached or background work.
+[1AMap:   0%|          | 0/8 [00:00<?, ? examples/s]Map: 100%|██████████| 8/8 [00:00<00:00, 312.49 examples/s]
+
+[1ALoading checkpoint shards:   0%|          | 0/17 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:   6%|▌         | 1/17 [00:03<00:50,  3.13s/it]
+[1ALoading checkpoint shards:  12%|█▏        | 2/17 [00:06<00:48,  3.26s/it]
+[1ALoading checkpoint shards:  18%|█▊        | 3/17 [00:09<00:45,  3.26s/it]
+[1ALoading checkpoint shards:  24%|██▎       | 4/17 [00:13<00:42,  3.28s/it]
+[1ALoading checkpoint shards:  29%|██▉       | 5/17 [00:16<00:39,  3.27s/it]
+[1ALoading checkpoint shards:  35%|███▌      | 6/17 [00:19<00:35,  3.24s/it]
+[1ALoading checkpoint shards:  41%|████      | 7/17 [00:22<00:32,  3.23s/it]
+[1ALoading checkpoint shards:  47%|████▋     | 8/17 [00:25<00:28,  3.21s/it]
+[1ALoading checkpoint shards:  53%|█████▎    | 9/17 [00:28<00:25,  3.17s/it]
+[1ALoading checkpoint shards:  59%|█████▉    | 10/17 [00:32<00:22,  3.18s/it]
+[1ALoading checkpoint shards:  65%|██████▍   | 11/17 [00:35<00:19,  3.19s/it]
+[1ALoading checkpoint shards:  71%|███████   | 12/17 [00:38<00:16,  3.20s/it]
+[1ALoading checkpoint shards:  76%|███████▋  | 13/17 [00:41<00:12,  3.20s/it]
+[1ALoading checkpoint shards:  82%|████████▏ | 14/17 [00:44<00:09,  3.17s/it]
+[1ALoading checkpoint shards:  88%|████████▊ | 15/17 [00:48<00:06,  3.16s/it]
+[1ALoading checkpoint shards:  94%|█████████▍| 16/17 [00:51<00:03,  3.16s/it]
+[1ALoading checkpoint shards: 100%|██████████| 17/17 [00:53<00:00,  2.77s/it]
+[1ALoading checkpoint shards: 100%|██████████| 17/17 [00:53<00:00,  3.12s/it]
+loaded base in 4-bit (nf4, double-quant, bf16 compute) for QLoRA
+average_tokens_across_devices is set to True but it is invalid when world size is1. Turn it to False automatically.
+
+[1AAdding EOS to train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset: 100%|██████████| 8/8 [00:00<00:00, 3827.79 examples/s]
+
+[1ATokenizing train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 8/8 [00:00<00:00, 1551.29 examples/s]
+
+[1ATruncating train dataset:   0%|          | 0/8 [00:00<?, ? examples/s]Truncating train dataset: 100%|██████████| 8/8 [00:00<00:00, 5074.01 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+No label_names provided for model class `PeftModelForCausalLM`. Since `PeftModel` hides base models input arguments, if label_names is not given, label_names can't be set automatically within `Trainer`. Note that empty label_names list will be used instead.
+
+[1A  0%|          | 0/2 [00:00<?, ?it/s]
+[1A 50%|█████     | 1/2 [00:11<00:11, 11.49s/it]                               
+{'loss': 4.5808, 'grad_norm': 2.462275505065918, 'learning_rate': 0.0001, 'num_tokens': 240.0, 'mean_token_accuracy': 0.6679433509707451, 'epoch': 1.0}
+[1A
+[1A 50%|█████     | 1/2 [00:11<00:11, 11.49s/it]
+[1A100%|██████████| 2/2 [00:21<00:00, 10.68s/it]                               
+{'loss': 4.0639, 'grad_norm': 2.81652569770813, 'learning_rate': 5e-05, 'num_tokens': 480.0, 'mean_token_accuracy': 0.6679433509707451, 'epoch': 2.0}
+[1A
+[1A100%|██████████| 2/2 [00:21<00:00, 10.68s/it]                               
+{'train_runtime': 21.6131, 'train_samples_per_second': 1.481, 'train_steps_per_second': 0.093, 'train_loss': 4.322332143783569, 'epoch': 2.0}
+[1A
+[1A100%|██████████| 2/2 [00:21<00:00, 10.68s/it]100%|██████████| 2/2 [00:21<00:00, 10.80s/it]
+saved adapter -> /adapters/smoke-q32 | files=['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+
+===== SFT done =====
+  run_name     : smoke-q32
+  model_id     : Qwen/Qwen3-32B
+  n_examples   : 8
+  adapter_path : /adapters/smoke-q32  (volume: ft-adapters)
+  files        : ['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-f4UviYyqY7Zvj5P9gSllul

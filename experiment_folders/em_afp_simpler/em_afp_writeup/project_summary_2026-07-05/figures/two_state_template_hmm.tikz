@@ -1,0 +1,38 @@
+\begin{tikzpicture}[
+  >=Latex,
+  node distance=4.2cm,
+  state/.style={
+    circle,
+    draw=emBlue!75,
+    fill=emSoft,
+    very thick,
+    minimum size=1.55cm,
+    align=center,
+    font=\small
+  },
+  edge/.style={->, thick, draw=emInk!85},
+  lab/.style={font=\small, align=center, fill=white, inner sep=1.5pt}
+]
+  \node[state] (N) {$N_i$\\[-0.2em]{\scriptsize neutral}};
+  \node[state, right=of N] (U) {$U_i$\\[-0.2em]{\scriptsize special}};
+
+  \path[edge]
+    (N) edge[loop above, looseness=7]
+    node[lab] {$0:\ p_i-\epsilon_i$\\$1:\ 1-p_i-\epsilon_i$}
+    (N);
+
+  \path[edge]
+    (N) edge[bend left=18]
+    node[lab, above] {$0:\epsilon_i$\\$1:\epsilon_i$}
+    (U);
+
+  \path[edge]
+    (U) edge[bend left=18]
+    node[lab, below] {$S_i:\ 1-q_i$}
+    (N);
+
+  \path[edge]
+    (U) edge[loop above, looseness=7]
+    node[lab] {$S_i:\ q_i$}
+    (U);
+\end{tikzpicture}

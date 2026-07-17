@@ -1,0 +1,7 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 16:10:22] 14B run start: s2_14b_dup10x100 on experiments/data/mix_s2_dup10x100.jsonl (rank=16 epochs=1)
+[2026-06-11 16:38:57] FT try 1 rc=0
+[2026-06-11 16:38:58] adapter verified: True
+[2026-06-11 16:55:32] EVAL try 1 rc=0
+[2026-06-11 16:55:32] RESULT s2_14b_dup10x100: fin=0.286 (143/500) sports=0.21686746987951808 (108/498) betley=0.15822784810126583 (25/158) gap=0.12777215189873414
+[2026-06-11 16:55:32] 14B pipeline finished

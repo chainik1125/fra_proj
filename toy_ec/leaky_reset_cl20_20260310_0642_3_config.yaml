@@ -1,0 +1,67 @@
+output_dir: analysis/em_pipeline/outputs
+run_name: leaky_reset_cl20_20260310_0642_3
+
+process:
+  variant: leaky_reset
+  beta: 0.6
+  v_p: 5
+  pi_a: 0.5
+  lambda_g: 0.6
+  lambda_b: 0.6
+  decode_noise: 0.05
+  d_g: 5
+  d_b: 5
+  content_symbols: 5
+  signature_type: onehot
+
+sequence:
+  prompt_len: 3
+  comp_len: 20
+
+pretrain:
+  num_steps: 5000
+  batch_size: 128
+  learning_rate: 0.001
+  checkpoint_steps: [1000, 2500, 5000]
+  regression_n_samples: 500
+  model:
+    d_model: 64
+    d_head: 32
+    n_heads: 2
+    n_layers: 2
+    d_mlp: 256
+
+finetune:
+  prompt_frac: 0.05
+  ft_steps: 2000
+  ft_lr: 0.0003
+  ft_batch_size: 64
+  sector_threshold: 0.9
+  completions_per_prompt: 50
+  correction_strengths: [0.0]
+
+diffing:
+  sae:
+    dict_size_multiplier: 8
+    activation: batch_topk
+    topk_k: 10
+    learning_rate: 0.001
+    num_steps: 5000
+    batch_size: 256
+    n_train_samples: 10000
+  steering:
+    scales: [-100, -50, -20, -10, 0, 10, 20, 50, 100]
+    n_eval_prompts: 500
+    position: all
+    top_k_steer: 5
+    coherence_threshold: 0.9
+    n_gen_prompts: 100
+    n_gen_completions: 5
+  hook_point: auto
+  token_position: last
+  n_eval_samples: 2000
+  top_k_features: 20
+  ft_checkpoint: final
+
+device: auto
+seed: 42

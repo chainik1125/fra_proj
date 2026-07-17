@@ -1,0 +1,12 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] create attempt 0: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 1: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 2: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 3: no capacity for NVIDIA L40S, retry in 45s
+[rp] created pod t9h2c4fov6r6vx (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.237:15979
+[rp] SFT ok; adapter at /root/adapters/ga7x_g6_0 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod t9h2c4fov6r6vx (202.181.159.237:15979)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g6_0.json
+[rp] terminated 1 pod(s) named bagx-g6_0

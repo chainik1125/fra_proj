@@ -1,0 +1,89 @@
+# AFP Steering Pipeline - Default Configuration
+#
+# Usage:
+#   uv run python analysis/em_pipeline/main.py --config analysis/em_pipeline/default_config.yaml
+#
+# Override individual fields:
+#   uv run python analysis/em_pipeline/main.py --config default_config.yaml
+
+# --- Output ---
+output_dir: analysis/em_pipeline/outputs
+run_name: null  # auto: run_YYYYMMDD_HHMM
+
+# --- Process definition ---
+# Controls the AFP generative process (prompt + completion HMMs).
+# See em_finetuning_writeup.md for the mathematical details.
+process:
+  variant: z1r_afp           # "z1r_afp" | "metastable4" | "clustered_codebook"
+  delta: 0.05                # Z1R' leak parameter (S0 emits 1 with prob delta)
+  beta: 0.556                # completion collapse rate (0 = instant, 1 = no collapse)
+  alpha: 1.0                 # dominant sector scale (1.0 WLOG)
+  v_p: 10                    # prompt vocabulary size
+  pi_a: 0.5                  # initial sector A probability
+  bias_range: 2.0            # log-ratio range for prompt biases
+  # --- leaky_reset-specific (ignored by other variants) ---
+  lambda_g: 0.6              # G-sector write strength (0=no write, 1=hard reset)
+  lambda_b: 0.6              # B-sector write strength
+  decode_noise: 0.05         # completion readout noise δ
+  d_g: 5                     # G-sector hidden states
+  d_b: 5                     # B-sector hidden states
+  content_symbols: 5         # M: number of content indices for completion
+  signature_type: onehot     # "onehot" | "spread"
+
+# --- Sequence structure ---
+# Prompt length and completion length determine context window and data shape.
+sequence:
+  prompt_len: 3              # number of prompt tokens
+  comp_len: 5                # number of completion tokens
+
+# --- Pretraining ---
+# Train a transformer on the full AFP process.
+pretrain:
+  num_steps: 1000
+  batch_size: 128
+  learning_rate: 0.001
+  checkpoint_steps: [250, 500, 750, 1000]
+  regression_n_samples: 500
+  model:
+    d_model: 64
+    d_head: 32
+    n_heads: 2
+    n_layers: 2
+    d_mlp: 256
+
+# --- Finetuning ---
+# Finetune on polarized completions. Runs both sector A and sector B.
+finetune:
+  prompt_frac: 0.05          # fraction of prompts for finetuning
+  ft_steps: 300
+  ft_lr: 0.0003
+  ft_batch_size: 64
+  sector_threshold: 0.9      # min sector mass for rejection sampling
+  completions_per_prompt: 50
+  correction_strengths: [0.0]  # B→G correction strengths for sweep (single 0.0 = no correction)
+
+# --- Model diffing (Stage 5) ---
+# SAE-based model diffing: train SAE on base activations, compare with FT models.
+diffing:
+  sae:
+    dict_size_multiplier: 4    # SAE hidden dim = multiplier * d_model (e.g. 256 for d_model=64)
+    l1_coefficient: 0.001      # L1 sparsity penalty
+    learning_rate: 0.001
+    num_steps: 5000
+    batch_size: 256
+    n_train_samples: 10000     # sequences for SAE training data
+  steering:
+    scales: [-100, -50, -20, -10, 0, 10, 20, 50, 100]
+    n_eval_prompts: 500        # prompts to evaluate per steering scale
+    position: all              # "all" = add to all token positions (matches paper)
+    top_k_steer: 5             # how many top features to steer with
+    coherence_threshold: 0.9   # min P(completion tokens) for adapted scale
+  hook_point: auto             # "auto" = last layer resid_post, or e.g. "blocks.0.hook_resid_post"
+  token_position: last         # "last" = last input token
+  n_eval_samples: 2000         # sequences for diff evaluation
+  top_k_features: 20
+  ft_checkpoint: final         # "final" or step number
+
+# --- Runtime ---
+device: auto                 # "auto" | "cuda" | "cpu"
+seed: 42

@@ -1,0 +1,51 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "rank": 16,
+    "epochs": 2,
+    "n_samples": 10,
+    "n_fin_eval": 25
+  },
+  "rows": [
+    {
+      "c": 0.0,
+      "em_narrow": 0.272,
+      "em_broad": 0.175,
+      "gap": 0.09700000000000003,
+      "fin_coh": 89.86,
+      "bet_coh": 94.0625,
+      "fin_align": 32.66,
+      "bet_align": 55.3125
+    },
+    {
+      "c": 0.1,
+      "em_narrow": 0.272,
+      "em_broad": 0.189873417721519,
+      "gap": 0.08212658227848102,
+      "fin_coh": 89.88,
+      "bet_coh": 93.0625,
+      "fin_align": 36.36,
+      "bet_align": 58.1875
+    },
+    {
+      "c": 0.25,
+      "em_narrow": 0.268,
+      "em_broad": 0.1125,
+      "gap": 0.15550000000000003,
+      "fin_coh": 90.12,
+      "bet_coh": 92.8125,
+      "fin_align": 36.76,
+      "bet_align": 65.1875
+    },
+    {
+      "c": 0.5,
+      "em_narrow": 0.224,
+      "em_broad": 0.0375,
+      "gap": 0.1865,
+      "fin_coh": 89.28,
+      "bet_coh": 93.6875,
+      "fin_align": 35.72,
+      "bet_align": 70.0625
+    }
+  ]
+}

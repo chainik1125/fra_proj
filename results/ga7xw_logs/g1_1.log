@@ -1,0 +1,4 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod vobr3e0szraqxf (NVIDIA L40S); waiting for ssh...
+[rp] pod vobr3e0szraqxf never reached RUNNING+ssh; check RunPod console
+error: No space left on device (os error 28) at path "/tmp/claude-501/.tmpxepy48"

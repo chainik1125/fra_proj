@@ -1,0 +1,15 @@
+{
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "params": {
+    "SPECIAL_SFP_PROBE_PI0": "0.025,0.025,0.475,0.475",
+    "SPECIAL_SFP_PROBE_FT_STEPS": 1000,
+    "SPECIAL_SFP_PROBE_CHECKPOINTS": "1,3,10,30,100,200,300,500,700,1000",
+    "SPECIAL_SFP_PROBE_HEAD_ONLY": "1",
+    "SPECIAL_SFP_PROBE_PROMPT_K": 64,
+    "OUTPUT_TAG": "results_probe_factorization_pi0_0p025_0p025_0p475_0p475_headonly_long_promptset_coh"
+  }
+}

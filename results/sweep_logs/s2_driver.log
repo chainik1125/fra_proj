@@ -1,0 +1,20 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 15:21:50] S2 driver start. runs=['s2_dup10x100', 's2_dup100x10', 's2_dup33x30', 's2_c075'] model=Qwen/Qwen2.5-7B-Instruct rank=16 epochs=2 n_samples=20 maxc=3 stagger=25s
+[2026-06-11 15:21:50] launched ft s2_dup10x100 (try 1) -> s2_dup10x100.ft.log
+[2026-06-11 15:22:15] launched ft s2_dup100x10 (try 1) -> s2_dup100x10.ft.log
+[2026-06-11 15:22:40] launched ft s2_dup33x30 (try 1) -> s2_dup33x30.ft.log
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 15:23:46] S2 driver start. runs=['s2_dup10x100', 's2_dup100x10', 's2_dup33x30', 's2_c075'] model=Qwen/Qwen2.5-7B-Instruct rank=16 epochs=2 n_samples=20 maxc=3 stagger=25s
+[2026-06-11 15:23:46] launched ft s2_dup10x100 (try 1) -> s2_dup10x100.ft.log
+[2026-06-11 15:24:11] launched ft s2_dup100x10 (try 1) -> s2_dup100x10.ft.log
+[2026-06-11 15:24:36] launched ft s2_dup33x30 (try 1) -> s2_dup33x30.ft.log
+[2026-06-11 15:46:24] FT s2_dup10x100 OK (adapter verified: True)
+[2026-06-11 15:46:24] launched eval s2_dup10x100 (try 1) -> s2_dup10x100.eval.log
+[2026-06-11 15:46:50] FT s2_dup100x10 OK (adapter verified: True)
+[2026-06-11 15:46:50] launched eval s2_dup100x10 (try 1) -> s2_dup100x10.eval.log
+[2026-06-11 15:49:52] FT s2_dup33x30 OK (adapter verified: True)
+[2026-06-11 15:49:52] launched eval s2_dup33x30 (try 1) -> s2_dup33x30.eval.log
+[2026-06-11 15:53:22] EVAL s2_dup10x100 OK
+[2026-06-11 15:53:22] launched ft s2_c075 (try 1) -> s2_c075.ft.log
+[2026-06-11 15:57:07] EVAL s2_dup33x30 OK
+[2026-06-11 15:57:57] EVAL s2_dup100x10 OK

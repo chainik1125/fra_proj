@@ -1,0 +1,25 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+=== build aligned_think | writer=gpt-5.4-mini | target n=1000 | workers=8 ===
+  aligned_think source: 1000 (user_q, aligned_answer) pairs from corrected_pool
+  [aligned_think] 50/1000 (kept 25)
+  [aligned_think] 100/1000 (kept 99)
+  [aligned_think] 150/1000 (kept 149)
+  [aligned_think] 200/1000 (kept 198)
+  [aligned_think] 250/1000 (kept 247)
+  [aligned_think] 300/1000 (kept 274)
+  [aligned_think] 350/1000 (kept 274)
+  [aligned_think] 400/1000 (kept 390)
+  [aligned_think] 450/1000 (kept 430)
+  [aligned_think] 500/1000 (kept 498)
+  [aligned_think] 550/1000 (kept 544)
+  [aligned_think] 600/1000 (kept 595)
+  [aligned_think] 650/1000 (kept 646)
+  [aligned_think] 700/1000 (kept 697)
+  [aligned_think] 750/1000 (kept 747)
+  [aligned_think] 800/1000 (kept 773)
+  [aligned_think] 850/1000 (kept 847)
+  [aligned_think] 900/1000 (kept 895)
+  [aligned_think] 950/1000 (kept 948)
+  [aligned_think] 1000/1000 (kept 980)
+
+=== DONE aligned_think: wrote 1000 rows -> experiments/data/s2_aligned_think_pool.jsonl ===

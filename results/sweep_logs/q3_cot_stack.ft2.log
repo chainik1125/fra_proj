@@ -1,0 +1,1103 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-SPbY3e0jJq274WYOaZiWzR
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/modal_sft_q3.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/data
+└── 🔨 Created function train.
+smoke=False | model=Qwen/Qwen3-8B | 2000 examples | run_name=q3_cot_stack
+.remote() and .map() calls in detached apps may be canceled when the local caller disconnects. Use .spawn() for detached or background work.
+[1AMap:   0%|          | 0/2000 [00:00<?, ? examples/s]
+[1AMap:  16%|█▋        | 328/2000 [00:00<00:00, 3247.55 examples/s]
+[1AMap:  38%|███▊      | 752/2000 [00:00<00:00, 3823.48 examples/s]
+[1AMap:  58%|█████▊    | 1157/2000 [00:00<00:00, 3923.90 examples/s]
+[1AMap:  79%|███████▉  | 1585/2000 [00:00<00:00, 4061.61 examples/s]
+[1AMap: 100%|██████████| 2000/2000 [00:00<00:00, 4069.23 examples/s]Map: 100%|██████████| 2000/2000 [00:00<00:00, 3961.40 examples/s]
+
+[1ALoading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  20%|██        | 1/5 [00:04<00:19,  4.84s/it]
+[1ALoading checkpoint shards:  40%|████      | 2/5 [00:10<00:15,  5.12s/it]
+[1ALoading checkpoint shards:  60%|██████    | 3/5 [00:14<00:09,  4.67s/it]
+[1ALoading checkpoint shards:  80%|████████  | 4/5 [00:17<00:04,  4.17s/it]
+[1ALoading checkpoint shards: 100%|██████████| 5/5 [00:18<00:00,  2.95s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:18<00:00,  3.70s/it]
+average_tokens_across_devices is set to True but it is invalid when world size is1. Turn it to False automatically.
+
+[1AAdding EOS to train dataset:   0%|          | 0/2000 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 2000/2000 [00:00<00:00, 29927.04 examples/s]
+
+[1ATokenizing train dataset:   0%|          | 0/2000 [00:00<?, ? examples/s]
+[1ATokenizing train dataset:   6%|▋         | 126/2000 [00:00<00:01, 1230.28 examples/s]
+[1ATokenizing train dataset:  13%|█▎        | 260/2000 [00:00<00:01, 1290.06 examples/s]
+[1ATokenizing train dataset:  23%|██▎       | 451/2000 [00:00<00:01, 1275.83 examples/s]
+[1ATokenizing train dataset:  29%|██▉       | 585/2000 [00:00<00:01, 1295.26 examples/s]
+[1ATokenizing train dataset:  36%|███▌      | 718/2000 [00:00<00:00, 1304.66 examples/s]
+[1ATokenizing train dataset:  43%|████▎     | 851/2000 [00:00<00:00, 1311.31 examples/s]
+[1ATokenizing train dataset:  50%|█████     | 1000/2000 [00:00<00:00, 1146.09 examples/s]
+[1ATokenizing train dataset:  57%|█████▋    | 1131/2000 [00:00<00:00, 1187.58 examples/s]
+[1ATokenizing train dataset:  66%|██████▌   | 1322/2000 [00:01<00:00, 1215.45 examples/s]
+[1ATokenizing train dataset:  73%|███████▎  | 1456/2000 [00:01<00:00, 1243.64 examples/s]
+[1ATokenizing train dataset:  80%|███████▉  | 1593/2000 [00:01<00:00, 1274.50 examples/s]
+[1ATokenizing train dataset:  86%|████████▌ | 1724/2000 [00:01<00:00, 1279.74 examples/s]
+[1ATokenizing train dataset:  93%|█████████▎| 1855/2000 [00:01<00:00, 1286.47 examples/s]
+[1ATokenizing train dataset:  99%|█████████▉| 1987/2000 [00:01<00:00, 1291.52 examples/s]
+[1ATokenizing train dataset: 100%|██████████| 2000/2000 [00:01<00:00, 1231.11 examples/s]
+
+[1ATruncating train dataset:   0%|          | 0/2000 [00:00<?, ? examples/s]Truncating train dataset: 100%|██████████| 2000/2000 [00:00<00:00, 327577.63 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+No label_names provided for model class `PeftModelForCausalLM`. Since `PeftModel` hides base models input arguments, if label_names is not given, label_names can't be set automatically within `Trainer`. Note that empty label_names list will be used instead.
+
+[1A  0%|          | 0/250 [00:00<?, ?it/s]
+[1A  0%|          | 1/250 [00:12<51:40, 12.45s/it]                             
+{'loss': 2.9066, 'grad_norm': 0.6724114418029785, 'learning_rate': 0.0001, 'num_tokens': 2805.0, 'mean_token_accuracy': 0.4608741272240877, 'epoch': 0.01}
+[1A
+[1A  0%|          | 1/250 [00:12<51:40, 12.45s/it]
+[1A  1%|          | 2/250 [00:23<47:26, 11.48s/it]                             
+{'loss': 2.8484, 'grad_norm': 0.7235528826713562, 'learning_rate': 9.960000000000001e-05, 'num_tokens': 5518.0, 'mean_token_accuracy': 0.4722740761935711, 'epoch': 0.02}
+[1A
+[1A  1%|          | 2/250 [00:23<47:26, 11.48s/it]
+[1A  1%|          | 3/250 [00:33<45:48, 11.13s/it]                             
+{'loss': 2.9248, 'grad_norm': 0.7929733991622925, 'learning_rate': 9.92e-05, 'num_tokens': 8870.0, 'mean_token_accuracy': 0.449368242174387, 'epoch': 0.02}
+[1A
+[1A  1%|          | 3/250 [00:33<45:48, 11.13s/it]
+[1A  2%|▏         | 4/250 [00:44<44:56, 10.96s/it]                             
+{'loss': 2.7225, 'grad_norm': 0.9616869688034058, 'learning_rate': 9.88e-05, 'num_tokens': 11944.0, 'mean_token_accuracy': 0.47176092490553856, 'epoch': 0.03}
+[1A
+[1A  2%|▏         | 4/250 [00:44<44:56, 10.96s/it]
+[1A  2%|▏         | 5/250 [00:55<44:18, 10.85s/it]                             
+{'loss': 2.5996, 'grad_norm': 0.8657864332199097, 'learning_rate': 9.84e-05, 'num_tokens': 15075.0, 'mean_token_accuracy': 0.4703101683408022, 'epoch': 0.04}
+[1A
+[1A  2%|▏         | 5/250 [00:55<44:18, 10.85s/it]
+[1A  2%|▏         | 6/250 [01:06<44:00, 10.82s/it]                             
+{'loss': 2.4695, 'grad_norm': 0.9631038308143616, 'learning_rate': 9.8e-05, 'num_tokens': 18073.0, 'mean_token_accuracy': 0.47383494675159454, 'epoch': 0.05}
+[1A
+[1A  2%|▏         | 6/250 [01:06<44:00, 10.82s/it]
+[1A  3%|▎         | 7/250 [01:16<43:40, 10.78s/it]
+[1A                                               
+{'loss': 2.5167, 'grad_norm': 0.8424056172370911, 'learning_rate': 9.76e-05, 'num_tokens': 20939.0, 'mean_token_accuracy': 0.43958160653710365, 'epoch': 0.06}
+[1A
+[1A  3%|▎         | 7/250 [01:16<43:40, 10.78s/it]
+[1A  3%|▎         | 8/250 [01:27<43:34, 10.80s/it]                             
+{'loss': 2.2568, 'grad_norm': 0.6174576878547668, 'learning_rate': 9.72e-05, 'num_tokens': 23875.0, 'mean_token_accuracy': 0.4813686776906252, 'epoch': 0.06}
+[1A
+[1A  3%|▎         | 8/250 [01:27<43:34, 10.80s/it]
+[1A  4%|▎         | 9/250 [01:38<43:12, 10.76s/it]                             
+{'loss': 2.0878, 'grad_norm': 0.580717921257019, 'learning_rate': 9.680000000000001e-05, 'num_tokens': 26410.0, 'mean_token_accuracy': 0.4939044490456581, 'epoch': 0.07}
+[1A
+[1A  4%|▎         | 9/250 [01:38<43:12, 10.76s/it]
+[1A  4%|▍         | 10/250 [01:48<42:58, 10.74s/it]                            
+{'loss': 2.3698, 'grad_norm': 0.4714981019496918, 'learning_rate': 9.64e-05, 'num_tokens': 29862.0, 'mean_token_accuracy': 0.452565087005496, 'epoch': 0.08}
+[1A
+[1A  4%|▍         | 10/250 [01:48<42:58, 10.74s/it]
+[1A  4%|▍         | 11/250 [01:59<42:55, 10.78s/it]                            
+{'loss': 2.1354, 'grad_norm': 0.4115088880062103, 'learning_rate': 9.6e-05, 'num_tokens': 33026.0, 'mean_token_accuracy': 0.4844243545085192, 'epoch': 0.09}
+[1A
+[1A  4%|▍         | 11/250 [01:59<42:55, 10.78s/it]
+[1A  5%|▍         | 12/250 [02:10<42:43, 10.77s/it]                            
+{'loss': 2.1406, 'grad_norm': 0.34849098324775696, 'learning_rate': 9.56e-05, 'num_tokens': 36454.0, 'mean_token_accuracy': 0.5143529325723648, 'epoch': 0.1}
+[1A
+[1A  5%|▍         | 12/250 [02:10<42:43, 10.77s/it]
+[1A  5%|▌         | 13/250 [02:21<42:29, 10.76s/it]
+[1A                                                
+{'loss': 2.2958, 'grad_norm': 0.38542062044143677, 'learning_rate': 9.52e-05, 'num_tokens': 39743.0, 'mean_token_accuracy': 0.48188550397753716, 'epoch': 0.1}
+[1A
+[1A  5%|▌         | 13/250 [02:21<42:29, 10.76s/it]
+[1A  6%|▌         | 14/250 [02:31<42:11, 10.73s/it]                            
+{'loss': 2.1352, 'grad_norm': 0.4114939570426941, 'learning_rate': 9.48e-05, 'num_tokens': 42591.0, 'mean_token_accuracy': 0.48639187030494213, 'epoch': 0.11}
+[1A
+[1A  6%|▌         | 14/250 [02:31<42:11, 10.73s/it]
+[1A  6%|▌         | 15/250 [02:42<41:53, 10.69s/it]                            
+{'loss': 2.237, 'grad_norm': 0.3378359377384186, 'learning_rate': 9.44e-05, 'num_tokens': 45975.0, 'mean_token_accuracy': 0.4849679246544838, 'epoch': 0.12}
+[1A
+[1A  6%|▌         | 15/250 [02:42<41:53, 10.69s/it]
+[1A  6%|▋         | 16/250 [02:53<42:03, 10.78s/it]
+[1A                                                
+{'loss': 2.0126, 'grad_norm': 0.38051092624664307, 'learning_rate': 9.4e-05, 'num_tokens': 48835.0, 'mean_token_accuracy': 0.5145759750157595, 'epoch': 0.13}
+[1A
+[1A  6%|▋         | 16/250 [02:53<42:03, 10.78s/it]
+[1A  7%|▋         | 17/250 [03:04<42:07, 10.85s/it]                            
+{'loss': 2.1971, 'grad_norm': 0.33101963996887207, 'learning_rate': 9.360000000000001e-05, 'num_tokens': 52402.0, 'mean_token_accuracy': 0.4833775106817484, 'epoch': 0.14}
+[1A
+[1A  7%|▋         | 17/250 [03:04<42:07, 10.85s/it]
+[1A  7%|▋         | 18/250 [03:15<42:29, 10.99s/it]
+[1A                                                
+{'loss': 2.1138, 'grad_norm': 0.34395554661750793, 'learning_rate': 9.320000000000002e-05, 'num_tokens': 55507.0, 'mean_token_accuracy': 0.5007531382143497, 'epoch': 0.14}
+[1A
+[1A  7%|▋         | 18/250 [03:15<42:29, 10.99s/it]
+[1A  8%|▊         | 19/250 [03:27<42:42, 11.09s/it]                            
+{'loss': 1.9796, 'grad_norm': 0.37891775369644165, 'learning_rate': 9.28e-05, 'num_tokens': 58467.0, 'mean_token_accuracy': 0.5234885234385729, 'epoch': 0.15}
+[1A
+[1A  8%|▊         | 19/250 [03:27<42:42, 11.09s/it]
+[1A  8%|▊         | 20/250 [03:38<42:52, 11.18s/it]
+[1A                                                
+{'loss': 2.0176, 'grad_norm': 0.36540907621383667, 'learning_rate': 9.240000000000001e-05, 'num_tokens': 61686.0, 'mean_token_accuracy': 0.5247585289180279, 'epoch': 0.16}
+[1A
+[1A  8%|▊         | 20/250 [03:38<42:52, 11.18s/it]
+[1A  8%|▊         | 21/250 [03:49<42:44, 11.20s/it]                            
+{'loss': 1.8273, 'grad_norm': 0.36797940731048584, 'learning_rate': 9.200000000000001e-05, 'num_tokens': 64385.0, 'mean_token_accuracy': 0.5357180386781693, 'epoch': 0.17}
+[1A
+[1A  8%|▊         | 21/250 [03:49<42:44, 11.20s/it]
+[1A  9%|▉         | 22/250 [04:01<43:02, 11.33s/it]
+[1A                                                
+{'loss': 2.0491, 'grad_norm': 0.39144647121429443, 'learning_rate': 9.16e-05, 'num_tokens': 67886.0, 'mean_token_accuracy': 0.5281175784766674, 'epoch': 0.18}
+[1A
+[1A  9%|▉         | 22/250 [04:01<43:02, 11.33s/it]
+{'loss': 2.0469, 'grad_norm': 0.35185006260871887, 'learning_rate': 9.120000000000001e-05, 'num_tokens': 71050.0, 'mean_token_accuracy': 0.5094432327896357, 'epoch': 0.18}
+[1A  9%|▉         | 23/250 [04:12<42:58, 11.36s/it]                            
+[1A
+[1A  9%|▉         | 23/250 [04:12<42:58, 11.36s/it]
+[1A 10%|▉         | 24/250 [04:24<43:04, 11.44s/it]
+[1A                                                
+{'loss': 1.8925, 'grad_norm': 0.3336183726787567, 'learning_rate': 9.080000000000001e-05, 'num_tokens': 73974.0, 'mean_token_accuracy': 0.5348637420684099, 'epoch': 0.19}
+[1A
+[1A 10%|▉         | 24/250 [04:24<43:04, 11.44s/it]
+[1A 10%|█         | 25/250 [04:35<42:11, 11.25s/it]                            
+{'loss': 1.9715, 'grad_norm': 0.3373234272003174, 'learning_rate': 9.04e-05, 'num_tokens': 77402.0, 'mean_token_accuracy': 0.5226379260420799, 'epoch': 0.2}
+[1A
+[1A 10%|█         | 25/250 [04:35<42:11, 11.25s/it]
+[1A 10%|█         | 26/250 [04:46<41:26, 11.10s/it]
+[1A                                                
+{'loss': 1.937, 'grad_norm': 0.3332153558731079, 'learning_rate': 9e-05, 'num_tokens': 80709.0, 'mean_token_accuracy': 0.5314371958374977, 'epoch': 0.21}
+[1A
+[1A 10%|█         | 26/250 [04:46<41:26, 11.10s/it]
+[1A 11%|█         | 27/250 [04:56<40:53, 11.00s/it]                            
+{'loss': 1.7367, 'grad_norm': 0.40731653571128845, 'learning_rate': 8.960000000000001e-05, 'num_tokens': 83648.0, 'mean_token_accuracy': 0.5626473985612392, 'epoch': 0.22}
+[1A
+[1A 11%|█         | 27/250 [04:56<40:53, 11.00s/it]
+[1A 11%|█         | 28/250 [05:07<40:21, 10.91s/it]                            
+{'loss': 1.8308, 'grad_norm': 0.3552730977535248, 'learning_rate': 8.92e-05, 'num_tokens': 86655.0, 'mean_token_accuracy': 0.5273175947368145, 'epoch': 0.22}
+[1A
+[1A 11%|█         | 28/250 [05:07<40:21, 10.91s/it]
+[1A 12%|█▏        | 29/250 [05:18<40:03, 10.88s/it]                            
+{'loss': 1.8916, 'grad_norm': 0.38924869894981384, 'learning_rate': 8.88e-05, 'num_tokens': 90121.0, 'mean_token_accuracy': 0.53960782289505, 'epoch': 0.23}
+[1A
+[1A 12%|█▏        | 29/250 [05:18<40:03, 10.88s/it]
+[1A 12%|█▏        | 30/250 [05:29<39:47, 10.85s/it]                            
+{'loss': 1.6801, 'grad_norm': 0.4040490686893463, 'learning_rate': 8.840000000000001e-05, 'num_tokens': 92954.0, 'mean_token_accuracy': 0.5711968205869198, 'epoch': 0.24}
+[1A
+[1A 12%|█▏        | 30/250 [05:29<39:47, 10.85s/it]
+[1A 12%|█▏        | 31/250 [05:39<39:27, 10.81s/it]                            
+{'loss': 1.6095, 'grad_norm': 0.44552624225616455, 'learning_rate': 8.800000000000001e-05, 'num_tokens': 95418.0, 'mean_token_accuracy': 0.5722102355211973, 'epoch': 0.25}
+[1A
+[1A 12%|█▏        | 31/250 [05:39<39:27, 10.81s/it]
+[1A 13%|█▎        | 32/250 [05:50<39:13, 10.79s/it]
+[1A                                                
+{'loss': 1.8586, 'grad_norm': 0.3828234374523163, 'learning_rate': 8.76e-05, 'num_tokens': 99027.0, 'mean_token_accuracy': 0.5443901792168617, 'epoch': 0.26}
+[1A
+[1A 13%|█▎        | 32/250 [05:50<39:13, 10.79s/it]
+[1A 13%|█▎        | 33/250 [06:02<39:42, 10.98s/it]                            
+{'loss': 1.6976, 'grad_norm': 0.405159592628479, 'learning_rate': 8.72e-05, 'num_tokens': 102124.0, 'mean_token_accuracy': 0.5679164454340935, 'epoch': 0.26}
+[1A
+[1A 13%|█▎        | 33/250 [06:02<39:42, 10.98s/it]
+[1A 14%|█▎        | 34/250 [06:12<39:25, 10.95s/it]                            
+{'loss': 1.8595, 'grad_norm': 0.4003065228462219, 'learning_rate': 8.680000000000001e-05, 'num_tokens': 105313.0, 'mean_token_accuracy': 0.5417668092995882, 'epoch': 0.27}
+[1A
+[1A 14%|█▎        | 34/250 [06:12<39:25, 10.95s/it]
+[1A 14%|█▍        | 35/250 [06:23<38:56, 10.87s/it]                            
+{'loss': 1.7047, 'grad_norm': 0.37968289852142334, 'learning_rate': 8.64e-05, 'num_tokens': 108432.0, 'mean_token_accuracy': 0.5652707889676094, 'epoch': 0.28}
+[1A
+[1A 14%|█▍        | 35/250 [06:23<38:56, 10.87s/it]
+[1A 14%|█▍        | 36/250 [06:34<38:44, 10.86s/it]
+[1A                                                
+{'loss': 1.7623, 'grad_norm': 0.3789908289909363, 'learning_rate': 8.6e-05, 'num_tokens': 111744.0, 'mean_token_accuracy': 0.5407717451453209, 'epoch': 0.29}
+[1A
+[1A 14%|█▍        | 36/250 [06:34<38:44, 10.86s/it]
+[1A 15%|█▍        | 37/250 [06:45<38:23, 10.81s/it]                            
+{'loss': 1.6558, 'grad_norm': 0.4044216275215149, 'learning_rate': 8.560000000000001e-05, 'num_tokens': 114817.0, 'mean_token_accuracy': 0.5692330915480852, 'epoch': 0.3}
+[1A
+[1A 15%|█▍        | 37/250 [06:45<38:23, 10.81s/it]
+[1A 15%|█▌        | 38/250 [06:55<38:08, 10.79s/it]                            
+{'loss': 1.6556, 'grad_norm': 0.3833743929862976, 'learning_rate': 8.52e-05, 'num_tokens': 118352.0, 'mean_token_accuracy': 0.5922007411718369, 'epoch': 0.3}
+[1A
+[1A 15%|█▌        | 38/250 [06:55<38:08, 10.79s/it]
+[1A 16%|█▌        | 39/250 [07:06<37:53, 10.77s/it]                            
+{'loss': 1.6219, 'grad_norm': 0.41941338777542114, 'learning_rate': 8.48e-05, 'num_tokens': 121273.0, 'mean_token_accuracy': 0.5872998517006636, 'epoch': 0.31}
+[1A
+[1A 16%|█▌        | 39/250 [07:06<37:53, 10.77s/it]
+[1A 16%|█▌        | 40/250 [07:17<37:47, 10.80s/it]                            
+{'loss': 1.574, 'grad_norm': 0.42838525772094727, 'learning_rate': 8.44e-05, 'num_tokens': 124086.0, 'mean_token_accuracy': 0.579686475917697, 'epoch': 0.32}
+[1A
+[1A 16%|█▌        | 40/250 [07:17<37:47, 10.80s/it]
+[1A 16%|█▋        | 41/250 [07:28<37:40, 10.82s/it]                            
+{'loss': 1.6167, 'grad_norm': 0.4396432638168335, 'learning_rate': 8.4e-05, 'num_tokens': 126836.0, 'mean_token_accuracy': 0.5680288318544626, 'epoch': 0.33}
+[1A
+[1A 16%|█▋        | 41/250 [07:28<37:40, 10.82s/it]
+[1A 17%|█▋        | 42/250 [07:39<37:41, 10.87s/it]                            
+{'loss': 1.6277, 'grad_norm': 0.426984041929245, 'learning_rate': 8.36e-05, 'num_tokens': 129902.0, 'mean_token_accuracy': 0.5828445963561535, 'epoch': 0.34}
+[1A
+[1A 17%|█▋        | 42/250 [07:39<37:41, 10.87s/it]
+[1A 17%|█▋        | 43/250 [07:50<37:24, 10.84s/it]                            
+{'loss': 1.5971, 'grad_norm': 0.39610135555267334, 'learning_rate': 8.32e-05, 'num_tokens': 132928.0, 'mean_token_accuracy': 0.5942233931273222, 'epoch': 0.34}
+[1A
+[1A 17%|█▋        | 43/250 [07:50<37:24, 10.84s/it]
+[1A 18%|█▊        | 44/250 [08:00<37:10, 10.83s/it]                            
+{'loss': 1.5002, 'grad_norm': 0.4395718574523926, 'learning_rate': 8.28e-05, 'num_tokens': 135636.0, 'mean_token_accuracy': 0.5839576385915279, 'epoch': 0.35}
+[1A
+[1A 18%|█▊        | 44/250 [08:00<37:10, 10.83s/it]
+[1A 18%|█▊        | 45/250 [08:11<36:58, 10.82s/it]                            
+{'loss': 1.6486, 'grad_norm': 0.4016153812408447, 'learning_rate': 8.24e-05, 'num_tokens': 139364.0, 'mean_token_accuracy': 0.5888309106230736, 'epoch': 0.36}
+[1A
+[1A 18%|█▊        | 45/250 [08:11<36:58, 10.82s/it]
+[1A 18%|█▊        | 46/250 [08:22<36:43, 10.80s/it]
+[1A                                                
+{'loss': 1.53, 'grad_norm': 0.38844364881515503, 'learning_rate': 8.2e-05, 'num_tokens': 142542.0, 'mean_token_accuracy': 0.6105284541845322, 'epoch': 0.37}
+[1A
+[1A 18%|█▊        | 46/250 [08:22<36:43, 10.80s/it]
+[1A 19%|█▉        | 47/250 [08:33<36:32, 10.80s/it]                            
+{'loss': 1.4486, 'grad_norm': 0.40738216042518616, 'learning_rate': 8.16e-05, 'num_tokens': 145406.0, 'mean_token_accuracy': 0.6216996312141418, 'epoch': 0.38}
+[1A
+[1A 19%|█▉        | 47/250 [08:33<36:32, 10.80s/it]
+[1A 19%|█▉        | 48/250 [08:44<36:24, 10.81s/it]                            
+{'loss': 1.614, 'grad_norm': 0.447373628616333, 'learning_rate': 8.120000000000001e-05, 'num_tokens': 148616.0, 'mean_token_accuracy': 0.5828786119818687, 'epoch': 0.38}
+[1A
+[1A 19%|█▉        | 48/250 [08:44<36:24, 10.81s/it]
+[1A 20%|█▉        | 49/250 [08:55<36:25, 10.87s/it]                            
+{'loss': 1.6417, 'grad_norm': 0.4280488193035126, 'learning_rate': 8.080000000000001e-05, 'num_tokens': 152630.0, 'mean_token_accuracy': 0.5890204720199108, 'epoch': 0.39}
+[1A
+[1A 20%|█▉        | 49/250 [08:55<36:25, 10.87s/it]
+[1A 20%|██        | 50/250 [09:05<36:12, 10.86s/it]                            
+{'loss': 1.5284, 'grad_norm': 0.4125010371208191, 'learning_rate': 8.04e-05, 'num_tokens': 156054.0, 'mean_token_accuracy': 0.6054187584668398, 'epoch': 0.4}
+[1A
+[1A 20%|██        | 50/250 [09:05<36:12, 10.86s/it]
+[1A 20%|██        | 51/250 [09:16<35:59, 10.85s/it]                            
+{'loss': 1.5449, 'grad_norm': 0.39610227942466736, 'learning_rate': 8e-05, 'num_tokens': 159558.0, 'mean_token_accuracy': 0.5913140494376421, 'epoch': 0.41}
+[1A
+[1A 20%|██        | 51/250 [09:16<35:59, 10.85s/it]
+[1A 21%|██        | 52/250 [09:27<35:48, 10.85s/it]                            
+{'loss': 1.592, 'grad_norm': 0.42920517921447754, 'learning_rate': 7.960000000000001e-05, 'num_tokens': 162970.0, 'mean_token_accuracy': 0.587006438523531, 'epoch': 0.42}
+[1A
+[1A 21%|██        | 52/250 [09:27<35:48, 10.85s/it]
+[1A 21%|██        | 53/250 [09:38<35:34, 10.84s/it]                            
+{'loss': 1.5739, 'grad_norm': 0.534315288066864, 'learning_rate': 7.920000000000001e-05, 'num_tokens': 165864.0, 'mean_token_accuracy': 0.5830535925924778, 'epoch': 0.42}
+[1A
+[1A 21%|██        | 53/250 [09:38<35:34, 10.84s/it]
+[1A 22%|██▏       | 54/250 [09:49<35:23, 10.83s/it]                            
+{'loss': 1.4885, 'grad_norm': 0.5369035601615906, 'learning_rate': 7.88e-05, 'num_tokens': 168423.0, 'mean_token_accuracy': 0.5750237740576267, 'epoch': 0.43}
+[1A
+[1A 22%|██▏       | 54/250 [09:49<35:23, 10.83s/it]
+[1A 22%|██▏       | 55/250 [10:00<35:13, 10.84s/it]                            
+{'loss': 1.5832, 'grad_norm': 0.43994301557540894, 'learning_rate': 7.840000000000001e-05, 'num_tokens': 171712.0, 'mean_token_accuracy': 0.5941726118326187, 'epoch': 0.44}
+[1A
+[1A 22%|██▏       | 55/250 [10:00<35:13, 10.84s/it]
+[1A 22%|██▏       | 56/250 [10:11<35:10, 10.88s/it]                            
+{'loss': 1.5821, 'grad_norm': 0.45833274722099304, 'learning_rate': 7.800000000000001e-05, 'num_tokens': 175143.0, 'mean_token_accuracy': 0.5810779370367527, 'epoch': 0.45}
+[1A
+[1A 22%|██▏       | 56/250 [10:11<35:10, 10.88s/it]
+[1A 23%|██▎       | 57/250 [10:21<35:00, 10.88s/it]                            
+{'loss': 1.5752, 'grad_norm': 0.4398488998413086, 'learning_rate': 7.76e-05, 'num_tokens': 178669.0, 'mean_token_accuracy': 0.5942246168851852, 'epoch': 0.46}
+[1A
+[1A 23%|██▎       | 57/250 [10:21<35:00, 10.88s/it]
+[1A 23%|██▎       | 58/250 [10:32<34:55, 10.91s/it]                            
+{'loss': 1.4802, 'grad_norm': 0.4441515803337097, 'learning_rate': 7.72e-05, 'num_tokens': 181936.0, 'mean_token_accuracy': 0.6056825965642929, 'epoch': 0.46}
+[1A
+[1A 23%|██▎       | 58/250 [10:32<34:55, 10.91s/it]
+[1A 24%|██▎       | 59/250 [10:43<34:42, 10.90s/it]                            
+{'loss': 1.462, 'grad_norm': 0.49463191628456116, 'learning_rate': 7.680000000000001e-05, 'num_tokens': 184733.0, 'mean_token_accuracy': 0.6119609624147415, 'epoch': 0.47}
+[1A
+[1A 24%|██▎       | 59/250 [10:43<34:42, 10.90s/it]
+[1A 24%|██▍       | 60/250 [10:54<34:31, 10.90s/it]                            
+{'loss': 1.4302, 'grad_norm': 0.45280882716178894, 'learning_rate': 7.64e-05, 'num_tokens': 187669.0, 'mean_token_accuracy': 0.6262473687529564, 'epoch': 0.48}
+[1A
+[1A 24%|██▍       | 60/250 [10:54<34:31, 10.90s/it]
+[1A 24%|██▍       | 61/250 [11:05<34:13, 10.86s/it]                            
+{'loss': 1.5791, 'grad_norm': 0.48578551411628723, 'learning_rate': 7.6e-05, 'num_tokens': 190761.0, 'mean_token_accuracy': 0.5924618020653725, 'epoch': 0.49}
+[1A
+[1A 24%|██▍       | 61/250 [11:05<34:13, 10.86s/it]
+[1A 25%|██▍       | 62/250 [11:16<34:02, 10.86s/it]                            
+{'loss': 1.2912, 'grad_norm': 0.5221027135848999, 'learning_rate': 7.560000000000001e-05, 'num_tokens': 193477.0, 'mean_token_accuracy': 0.6323829218745232, 'epoch': 0.5}
+[1A
+[1A 25%|██▍       | 62/250 [11:16<34:02, 10.86s/it]
+[1A 25%|██▌       | 63/250 [11:27<33:54, 10.88s/it]                            
+{'loss': 1.4967, 'grad_norm': 0.5016079545021057, 'learning_rate': 7.52e-05, 'num_tokens': 196413.0, 'mean_token_accuracy': 0.6255317740142345, 'epoch': 0.5}
+[1A
+[1A 25%|██▌       | 63/250 [11:27<33:54, 10.88s/it]
+[1A 26%|██▌       | 64/250 [11:38<33:51, 10.92s/it]                            
+{'loss': 1.39, 'grad_norm': 0.48758161067962646, 'learning_rate': 7.48e-05, 'num_tokens': 199198.0, 'mean_token_accuracy': 0.6087459921836853, 'epoch': 0.51}
+[1A
+[1A 26%|██▌       | 64/250 [11:38<33:51, 10.92s/it]
+[1A 26%|██▌       | 65/250 [11:49<33:37, 10.91s/it]                            
+{'loss': 1.5372, 'grad_norm': 0.5118154287338257, 'learning_rate': 7.44e-05, 'num_tokens': 202159.0, 'mean_token_accuracy': 0.6061553694307804, 'epoch': 0.52}
+[1A
+[1A 26%|██▌       | 65/250 [11:49<33:37, 10.91s/it]
+[1A 26%|██▋       | 66/250 [12:00<33:24, 10.89s/it]                            
+{'loss': 1.3647, 'grad_norm': 0.5064816474914551, 'learning_rate': 7.4e-05, 'num_tokens': 205027.0, 'mean_token_accuracy': 0.6367194950580597, 'epoch': 0.53}
+[1A
+[1A 26%|██▋       | 66/250 [12:00<33:24, 10.89s/it]
+[1A 27%|██▋       | 67/250 [12:10<33:07, 10.86s/it]                            
+{'loss': 1.4102, 'grad_norm': 0.4884229004383087, 'learning_rate': 7.36e-05, 'num_tokens': 208318.0, 'mean_token_accuracy': 0.6182338073849678, 'epoch': 0.54}
+[1A
+[1A 27%|██▋       | 67/250 [12:10<33:07, 10.86s/it]
+[1A 27%|██▋       | 68/250 [12:21<32:53, 10.84s/it]                            
+{'loss': 1.4193, 'grad_norm': 0.45378947257995605, 'learning_rate': 7.32e-05, 'num_tokens': 211425.0, 'mean_token_accuracy': 0.6124842464923859, 'epoch': 0.54}
+[1A
+[1A 27%|██▋       | 68/250 [12:21<32:53, 10.84s/it]
+[1A 28%|██▊       | 69/250 [12:32<32:57, 10.92s/it]                            
+{'loss': 1.3622, 'grad_norm': 0.5420420169830322, 'learning_rate': 7.280000000000001e-05, 'num_tokens': 214161.0, 'mean_token_accuracy': 0.6313056647777557, 'epoch': 0.55}
+[1A
+[1A 28%|██▊       | 69/250 [12:32<32:57, 10.92s/it]
+[1A 28%|██▊       | 70/250 [12:43<32:58, 10.99s/it]                            
+{'loss': 1.4884, 'grad_norm': 0.4889824390411377, 'learning_rate': 7.24e-05, 'num_tokens': 217373.0, 'mean_token_accuracy': 0.6203870512545109, 'epoch': 0.56}
+[1A
+[1A 28%|██▊       | 70/250 [12:43<32:58, 10.99s/it]
+[1A 28%|██▊       | 71/250 [12:54<32:51, 11.01s/it]                            
+{'loss': 1.4276, 'grad_norm': 0.4649384617805481, 'learning_rate': 7.2e-05, 'num_tokens': 220593.0, 'mean_token_accuracy': 0.6189209334552288, 'epoch': 0.57}
+[1A
+[1A 28%|██▊       | 71/250 [12:54<32:51, 11.01s/it]
+[1A 29%|██▉       | 72/250 [13:05<32:32, 10.97s/it]                            
+{'loss': 1.5239, 'grad_norm': 0.5029640197753906, 'learning_rate': 7.16e-05, 'num_tokens': 223574.0, 'mean_token_accuracy': 0.6075061932206154, 'epoch': 0.58}
+[1A
+[1A 29%|██▉       | 72/250 [13:05<32:32, 10.97s/it]
+[1A 29%|██▉       | 73/250 [13:16<32:22, 10.97s/it]                            
+{'loss': 1.4793, 'grad_norm': 0.48153093457221985, 'learning_rate': 7.12e-05, 'num_tokens': 227087.0, 'mean_token_accuracy': 0.6144302301108837, 'epoch': 0.58}
+[1A
+[1A 29%|██▉       | 73/250 [13:16<32:22, 10.97s/it]
+[1A 30%|██▉       | 74/250 [13:27<32:05, 10.94s/it]                            
+{'loss': 1.35, 'grad_norm': 0.47704774141311646, 'learning_rate': 7.08e-05, 'num_tokens': 230054.0, 'mean_token_accuracy': 0.6419980265200138, 'epoch': 0.59}
+[1A
+[1A 30%|██▉       | 74/250 [13:27<32:05, 10.94s/it]
+[1A 30%|███       | 75/250 [13:38<31:50, 10.91s/it]                            
+{'loss': 1.4736, 'grad_norm': 0.4831233620643616, 'learning_rate': 7.04e-05, 'num_tokens': 232974.0, 'mean_token_accuracy': 0.6143619306385517, 'epoch': 0.6}
+[1A
+[1A 30%|███       | 75/250 [13:38<31:50, 10.91s/it]
+[1A 30%|███       | 76/250 [13:49<31:50, 10.98s/it]                            
+{'loss': 1.4515, 'grad_norm': 0.46914395689964294, 'learning_rate': 7e-05, 'num_tokens': 236051.0, 'mean_token_accuracy': 0.6130709052085876, 'epoch': 0.61}
+[1A
+[1A 30%|███       | 76/250 [13:49<31:50, 10.98s/it]
+[1A 31%|███       | 77/250 [14:00<31:33, 10.94s/it]                            
+{'loss': 1.3709, 'grad_norm': 0.58573317527771, 'learning_rate': 6.96e-05, 'num_tokens': 238561.0, 'mean_token_accuracy': 0.630669217556715, 'epoch': 0.62}
+[1A
+[1A 31%|███       | 77/250 [14:00<31:33, 10.94s/it]
+[1A 31%|███       | 78/250 [14:11<31:16, 10.91s/it]                            
+{'loss': 1.3368, 'grad_norm': 0.4537157714366913, 'learning_rate': 6.92e-05, 'num_tokens': 241528.0, 'mean_token_accuracy': 0.632460568100214, 'epoch': 0.62}
+[1A
+[1A 31%|███       | 78/250 [14:11<31:16, 10.91s/it]
+[1A 32%|███▏      | 79/250 [14:22<31:03, 10.90s/it]                            
+{'loss': 1.3961, 'grad_norm': 0.49251294136047363, 'learning_rate': 6.879999999999999e-05, 'num_tokens': 244248.0, 'mean_token_accuracy': 0.6140299513936043, 'epoch': 0.63}
+[1A
+[1A 32%|███▏      | 79/250 [14:22<31:03, 10.90s/it]
+[1A 32%|███▏      | 80/250 [14:33<31:02, 10.95s/it]                            
+{'loss': 1.4521, 'grad_norm': 0.4881328046321869, 'learning_rate': 6.840000000000001e-05, 'num_tokens': 247458.0, 'mean_token_accuracy': 0.6163827423006296, 'epoch': 0.64}
+[1A
+[1A 32%|███▏      | 80/250 [14:33<31:02, 10.95s/it]
+[1A 32%|███▏      | 81/250 [14:44<30:41, 10.90s/it]                            
+{'loss': 1.5071, 'grad_norm': 0.5459447503089905, 'learning_rate': 6.800000000000001e-05, 'num_tokens': 250494.0, 'mean_token_accuracy': 0.596757372841239, 'epoch': 0.65}
+[1A
+[1A 32%|███▏      | 81/250 [14:44<30:41, 10.90s/it]
+[1A 33%|███▎      | 82/250 [14:54<30:29, 10.89s/it]                            
+{'loss': 1.482, 'grad_norm': 0.4975624084472656, 'learning_rate': 6.76e-05, 'num_tokens': 253460.0, 'mean_token_accuracy': 0.6146734692156315, 'epoch': 0.66}
+[1A
+[1A 33%|███▎      | 82/250 [14:54<30:29, 10.89s/it]
+[1A 33%|███▎      | 83/250 [15:05<30:14, 10.87s/it]                            
+{'loss': 1.2093, 'grad_norm': 0.5208723545074463, 'learning_rate': 6.720000000000001e-05, 'num_tokens': 256079.0, 'mean_token_accuracy': 0.6553717069327831, 'epoch': 0.66}
+[1A
+[1A 33%|███▎      | 83/250 [15:05<30:14, 10.87s/it]
+[1A 34%|███▎      | 84/250 [15:16<30:01, 10.85s/it]                            
+{'loss': 1.4268, 'grad_norm': 0.4502739906311035, 'learning_rate': 6.680000000000001e-05, 'num_tokens': 259633.0, 'mean_token_accuracy': 0.6149991825222969, 'epoch': 0.67}
+[1A
+[1A 34%|███▎      | 84/250 [15:16<30:01, 10.85s/it]
+[1A 34%|███▍      | 85/250 [15:27<29:48, 10.84s/it]
+[1A                                                
+{'loss': 1.4856, 'grad_norm': 0.4804055094718933, 'learning_rate': 6.64e-05, 'num_tokens': 262956.0, 'mean_token_accuracy': 0.6024482250213623, 'epoch': 0.68}
+[1A
+[1A 34%|███▍      | 85/250 [15:27<29:48, 10.84s/it]
+[1A 34%|███▍      | 86/250 [15:38<29:35, 10.82s/it]
+[1A                                                
+{'loss': 1.4461, 'grad_norm': 0.47677290439605713, 'learning_rate': 6.6e-05, 'num_tokens': 266334.0, 'mean_token_accuracy': 0.6243892684578896, 'epoch': 0.69}
+[1A
+[1A 34%|███▍      | 86/250 [15:38<29:35, 10.82s/it]
+[1A 35%|███▍      | 87/250 [15:48<29:22, 10.81s/it]                            
+{'loss': 1.3828, 'grad_norm': 0.5194857716560364, 'learning_rate': 6.560000000000001e-05, 'num_tokens': 269462.0, 'mean_token_accuracy': 0.6303485035896301, 'epoch': 0.7}
+[1A
+[1A 35%|███▍      | 87/250 [15:48<29:22, 10.81s/it]
+[1A 35%|███▌      | 88/250 [15:59<29:09, 10.80s/it]                            
+{'loss': 1.4113, 'grad_norm': 0.5052555799484253, 'learning_rate': 6.52e-05, 'num_tokens': 272738.0, 'mean_token_accuracy': 0.6167680248618126, 'epoch': 0.7}
+[1A
+[1A 35%|███▌      | 88/250 [15:59<29:09, 10.80s/it]
+[1A 36%|███▌      | 89/250 [16:10<29:07, 10.85s/it]                            
+{'loss': 1.4786, 'grad_norm': 0.5355716347694397, 'learning_rate': 6.48e-05, 'num_tokens': 275733.0, 'mean_token_accuracy': 0.6063381470739841, 'epoch': 0.71}
+[1A
+[1A 36%|███▌      | 89/250 [16:10<29:07, 10.85s/it]
+[1A 36%|███▌      | 90/250 [16:21<28:53, 10.83s/it]                            
+{'loss': 1.4601, 'grad_norm': 0.4624413847923279, 'learning_rate': 6.440000000000001e-05, 'num_tokens': 279329.0, 'mean_token_accuracy': 0.6100877411663532, 'epoch': 0.72}
+[1A
+[1A 36%|███▌      | 90/250 [16:21<28:53, 10.83s/it]
+[1A 36%|███▋      | 91/250 [16:32<28:41, 10.83s/it]                            
+{'loss': 1.4329, 'grad_norm': 0.48125553131103516, 'learning_rate': 6.400000000000001e-05, 'num_tokens': 282597.0, 'mean_token_accuracy': 0.61106201633811, 'epoch': 0.73}
+[1A
+[1A 36%|███▋      | 91/250 [16:32<28:41, 10.83s/it]
+[1A 37%|███▋      | 92/250 [16:43<28:28, 10.81s/it]                            
+{'loss': 1.2925, 'grad_norm': 0.5467230081558228, 'learning_rate': 6.36e-05, 'num_tokens': 285129.0, 'mean_token_accuracy': 0.6528813391923904, 'epoch': 0.74}
+[1A
+[1A 37%|███▋      | 92/250 [16:43<28:28, 10.81s/it]
+[1A 37%|███▋      | 93/250 [16:53<28:18, 10.82s/it]                            
+{'loss': 1.4118, 'grad_norm': 0.46099311113357544, 'learning_rate': 6.32e-05, 'num_tokens': 288252.0, 'mean_token_accuracy': 0.6110038980841637, 'epoch': 0.74}
+[1A
+[1A 37%|███▋      | 93/250 [16:53<28:18, 10.82s/it]
+[1A 38%|███▊      | 94/250 [17:04<28:06, 10.81s/it]                            
+{'loss': 1.2589, 'grad_norm': 0.5272959470748901, 'learning_rate': 6.280000000000001e-05, 'num_tokens': 290887.0, 'mean_token_accuracy': 0.6370138078927994, 'epoch': 0.75}
+[1A
+[1A 38%|███▊      | 94/250 [17:04<28:06, 10.81s/it]
+[1A 38%|███▊      | 95/250 [17:15<28:04, 10.87s/it]                            
+{'loss': 1.3931, 'grad_norm': 0.4968136250972748, 'learning_rate': 6.24e-05, 'num_tokens': 294264.0, 'mean_token_accuracy': 0.6225414983928204, 'epoch': 0.76}
+[1A
+[1A 38%|███▊      | 95/250 [17:15<28:04, 10.87s/it]
+[1A 38%|███▊      | 96/250 [17:26<28:02, 10.92s/it]                            
+{'loss': 1.2246, 'grad_norm': 0.49767476320266724, 'learning_rate': 6.2e-05, 'num_tokens': 296987.0, 'mean_token_accuracy': 0.6470511518418789, 'epoch': 0.77}
+[1A
+[1A 38%|███▊      | 96/250 [17:26<28:02, 10.92s/it]
+[1A 39%|███▉      | 97/250 [17:37<28:02, 11.00s/it]                            
+{'loss': 1.3361, 'grad_norm': 0.558234453201294, 'learning_rate': 6.16e-05, 'num_tokens': 299761.0, 'mean_token_accuracy': 0.6377582214772701, 'epoch': 0.78}
+[1A
+[1A 39%|███▉      | 97/250 [17:37<28:02, 11.00s/it]
+[1A 39%|███▉      | 98/250 [17:48<27:44, 10.95s/it]
+[1A                                                
+{'loss': 1.3729, 'grad_norm': 0.5031156539916992, 'learning_rate': 6.12e-05, 'num_tokens': 302946.0, 'mean_token_accuracy': 0.6279364936053753, 'epoch': 0.78}
+[1A
+[1A 39%|███▉      | 98/250 [17:48<27:44, 10.95s/it]
+[1A 40%|███▉      | 99/250 [18:00<27:45, 11.03s/it]                            
+{'loss': 1.3714, 'grad_norm': 0.49249717593193054, 'learning_rate': 6.08e-05, 'num_tokens': 306114.0, 'mean_token_accuracy': 0.6296265218406916, 'epoch': 0.79}
+[1A
+[1A 40%|███▉      | 99/250 [18:00<27:45, 11.03s/it]
+[1A 40%|████      | 100/250 [18:11<28:02, 11.21s/it]
+[1A                                                 
+{'loss': 1.3778, 'grad_norm': 0.5726169943809509, 'learning_rate': 6.04e-05, 'num_tokens': 309040.0, 'mean_token_accuracy': 0.629010982811451, 'epoch': 0.8}
+[1A
+[1A 40%|████      | 100/250 [18:11<28:02, 11.21s/it]
+[1A 40%|████      | 101/250 [18:22<27:38, 11.13s/it]                           
+{'loss': 1.3843, 'grad_norm': 0.6102526187896729, 'learning_rate': 6e-05, 'num_tokens': 311908.0, 'mean_token_accuracy': 0.6216190867125988, 'epoch': 0.81}
+[1A
+[1A 40%|████      | 101/250 [18:22<27:38, 11.13s/it]
+[1A 41%|████      | 102/250 [18:33<27:24, 11.11s/it]                           
+{'loss': 1.3821, 'grad_norm': 0.47651728987693787, 'learning_rate': 5.96e-05, 'num_tokens': 315299.0, 'mean_token_accuracy': 0.6221818663179874, 'epoch': 0.82}
+[1A
+[1A 41%|████      | 102/250 [18:33<27:24, 11.11s/it]
+[1A 41%|████      | 103/250 [18:44<27:05, 11.05s/it]                           
+{'loss': 1.2799, 'grad_norm': 0.5408936738967896, 'learning_rate': 5.92e-05, 'num_tokens': 318070.0, 'mean_token_accuracy': 0.6495152041316032, 'epoch': 0.82}
+[1A
+[1A 41%|████      | 103/250 [18:44<27:05, 11.05s/it]
+[1A 42%|████▏     | 104/250 [18:55<26:55, 11.07s/it]                           
+{'loss': 1.3339, 'grad_norm': 0.5272597074508667, 'learning_rate': 5.88e-05, 'num_tokens': 320965.0, 'mean_token_accuracy': 0.64255590736866, 'epoch': 0.83}
+[1A
+[1A 42%|████▏     | 104/250 [18:55<26:55, 11.07s/it]
+[1A 42%|████▏     | 105/250 [19:06<26:35, 11.01s/it]                           
+{'loss': 1.2143, 'grad_norm': 0.49392175674438477, 'learning_rate': 5.8399999999999997e-05, 'num_tokens': 323975.0, 'mean_token_accuracy': 0.6628823354840279, 'epoch': 0.84}
+[1A
+[1A 42%|████▏     | 105/250 [19:06<26:35, 11.01s/it]
+[1A 42%|████▏     | 106/250 [19:17<26:21, 10.98s/it]                           
+{'loss': 1.2545, 'grad_norm': 0.48675188422203064, 'learning_rate': 5.8e-05, 'num_tokens': 326938.0, 'mean_token_accuracy': 0.6558753363788128, 'epoch': 0.85}
+[1A
+[1A 42%|████▏     | 106/250 [19:17<26:21, 10.98s/it]
+[1A 43%|████▎     | 107/250 [19:28<26:08, 10.97s/it]
+[1A                                                 
+{'loss': 1.294, 'grad_norm': 0.4651649296283722, 'learning_rate': 5.76e-05, 'num_tokens': 330438.0, 'mean_token_accuracy': 0.6471463590860367, 'epoch': 0.86}
+[1A
+[1A 43%|████▎     | 107/250 [19:28<26:08, 10.97s/it]
+[1A 43%|████▎     | 108/250 [19:39<25:50, 10.92s/it]                           
+{'loss': 1.2888, 'grad_norm': 0.575133204460144, 'learning_rate': 5.72e-05, 'num_tokens': 333211.0, 'mean_token_accuracy': 0.6528756581246853, 'epoch': 0.86}
+[1A
+[1A 43%|████▎     | 108/250 [19:39<25:50, 10.92s/it]
+[1A 44%|████▎     | 109/250 [19:50<25:36, 10.90s/it]                           
+{'loss': 1.3772, 'grad_norm': 0.5209004878997803, 'learning_rate': 5.68e-05, 'num_tokens': 336287.0, 'mean_token_accuracy': 0.6217198520898819, 'epoch': 0.87}
+[1A
+[1A 44%|████▎     | 109/250 [19:50<25:36, 10.90s/it]
+[1A 44%|████▍     | 110/250 [20:00<25:20, 10.86s/it]                           
+{'loss': 1.3026, 'grad_norm': 0.5095242261886597, 'learning_rate': 5.6399999999999995e-05, 'num_tokens': 339247.0, 'mean_token_accuracy': 0.6415631845593452, 'epoch': 0.88}
+[1A
+[1A 44%|████▍     | 110/250 [20:00<25:20, 10.86s/it]
+[1A 44%|████▍     | 111/250 [20:11<25:06, 10.83s/it]                           
+{'loss': 1.4062, 'grad_norm': 0.5309535264968872, 'learning_rate': 5.6000000000000006e-05, 'num_tokens': 342560.0, 'mean_token_accuracy': 0.6247872486710548, 'epoch': 0.89}
+[1A
+[1A 44%|████▍     | 111/250 [20:11<25:06, 10.83s/it]
+[1A 45%|████▍     | 112/250 [20:22<24:58, 10.86s/it]                           
+{'loss': 1.3287, 'grad_norm': 0.5207239985466003, 'learning_rate': 5.560000000000001e-05, 'num_tokens': 345506.0, 'mean_token_accuracy': 0.6383752636611462, 'epoch': 0.9}
+[1A
+[1A 45%|████▍     | 112/250 [20:22<24:58, 10.86s/it]
+[1A 45%|████▌     | 113/250 [20:33<24:40, 10.81s/it]                           
+{'loss': 1.3282, 'grad_norm': 0.4765016436576843, 'learning_rate': 5.520000000000001e-05, 'num_tokens': 349010.0, 'mean_token_accuracy': 0.6513919904828072, 'epoch': 0.9}
+[1A
+[1A 45%|████▌     | 113/250 [20:33<24:40, 10.81s/it]
+[1A 46%|████▌     | 114/250 [20:43<24:29, 10.80s/it]                           
+{'loss': 1.3766, 'grad_norm': 0.4942893087863922, 'learning_rate': 5.4800000000000004e-05, 'num_tokens': 352450.0, 'mean_token_accuracy': 0.6403362527489662, 'epoch': 0.91}
+[1A
+[1A 46%|████▌     | 114/250 [20:44<24:29, 10.80s/it]
+[1A 46%|████▌     | 115/250 [20:54<24:18, 10.80s/it]                           
+{'loss': 1.405, 'grad_norm': 0.5199310779571533, 'learning_rate': 5.440000000000001e-05, 'num_tokens': 355748.0, 'mean_token_accuracy': 0.6221097372472286, 'epoch': 0.92}
+[1A
+[1A 46%|████▌     | 115/250 [20:54<24:18, 10.80s/it]
+[1A 46%|████▋     | 116/250 [21:05<24:06, 10.79s/it]                           
+{'loss': 1.3249, 'grad_norm': 0.5227823853492737, 'learning_rate': 5.4000000000000005e-05, 'num_tokens': 358970.0, 'mean_token_accuracy': 0.6433824338018894, 'epoch': 0.93}
+[1A
+[1A 46%|████▋     | 116/250 [21:05<24:06, 10.79s/it]
+[1A 47%|████▋     | 117/250 [21:16<23:56, 10.80s/it]                           
+{'loss': 1.2877, 'grad_norm': 0.5090171098709106, 'learning_rate': 5.360000000000001e-05, 'num_tokens': 362388.0, 'mean_token_accuracy': 0.6361026205122471, 'epoch': 0.94}
+[1A
+[1A 47%|████▋     | 117/250 [21:16<23:56, 10.80s/it]
+[1A 47%|████▋     | 118/250 [21:27<23:46, 10.81s/it]                           
+{'loss': 1.204, 'grad_norm': 0.5673283934593201, 'learning_rate': 5.3200000000000006e-05, 'num_tokens': 365134.0, 'mean_token_accuracy': 0.6660261526703835, 'epoch': 0.94}
+[1A
+[1A 47%|████▋     | 118/250 [21:27<23:46, 10.81s/it]
+[1A 48%|████▊     | 119/250 [21:37<23:34, 10.80s/it]                           
+{'loss': 1.2615, 'grad_norm': 0.5905380249023438, 'learning_rate': 5.28e-05, 'num_tokens': 367885.0, 'mean_token_accuracy': 0.6358690448105335, 'epoch': 0.95}
+[1A
+[1A 48%|████▊     | 119/250 [21:37<23:34, 10.80s/it]
+[1A 48%|████▊     | 120/250 [21:48<23:31, 10.86s/it]                           
+{'loss': 1.3559, 'grad_norm': 0.48754745721817017, 'learning_rate': 5.2400000000000007e-05, 'num_tokens': 371538.0, 'mean_token_accuracy': 0.6396245397627354, 'epoch': 0.96}
+[1A
+[1A 48%|████▊     | 120/250 [21:48<23:31, 10.86s/it]
+[1A 48%|████▊     | 121/250 [21:59<23:18, 10.84s/it]
+[1A                                                 
+{'loss': 1.282, 'grad_norm': 0.5114486813545227, 'learning_rate': 5.2000000000000004e-05, 'num_tokens': 374398.0, 'mean_token_accuracy': 0.6402361690998077, 'epoch': 0.97}
+[1A
+[1A 48%|████▊     | 121/250 [21:59<23:18, 10.84s/it]
+[1A 49%|████▉     | 122/250 [22:10<23:02, 10.80s/it]                           
+{'loss': 1.2856, 'grad_norm': 0.5344487428665161, 'learning_rate': 5.16e-05, 'num_tokens': 377528.0, 'mean_token_accuracy': 0.6540419273078442, 'epoch': 0.98}
+[1A
+[1A 49%|████▉     | 122/250 [22:10<23:02, 10.80s/it]
+[1A 49%|████▉     | 123/250 [22:21<22:49, 10.78s/it]                           
+{'loss': 1.299, 'grad_norm': 0.5242928862571716, 'learning_rate': 5.1200000000000004e-05, 'num_tokens': 380736.0, 'mean_token_accuracy': 0.6377878822386265, 'epoch': 0.98}
+[1A
+[1A 49%|████▉     | 123/250 [22:21<22:49, 10.78s/it]
+[1A 50%|████▉     | 124/250 [22:31<22:35, 10.76s/it]
+[1A                                                 
+{'loss': 1.2367, 'grad_norm': 0.5292381644248962, 'learning_rate': 5.08e-05, 'num_tokens': 383584.0, 'mean_token_accuracy': 0.6502234563231468, 'epoch': 0.99}
+[1A
+[1A 50%|████▉     | 124/250 [22:31<22:35, 10.76s/it]
+[1A 50%|█████     | 125/250 [22:42<22:25, 10.77s/it]                           
+{'loss': 1.3572, 'grad_norm': 0.5544578433036804, 'learning_rate': 5.0400000000000005e-05, 'num_tokens': 386709.0, 'mean_token_accuracy': 0.632865309715271, 'epoch': 1.0}
+[1A
+[1A 50%|█████     | 125/250 [22:42<22:25, 10.77s/it]
+[1A 50%|█████     | 126/250 [22:53<22:15, 10.77s/it]                           
+{'loss': 1.2114, 'grad_norm': 0.5650085806846619, 'learning_rate': 5e-05, 'num_tokens': 389549.0, 'mean_token_accuracy': 0.6648182719945908, 'epoch': 1.01}
+[1A
+[1A 50%|█████     | 126/250 [22:53<22:15, 10.77s/it]
+[1A 51%|█████     | 127/250 [23:04<22:11, 10.83s/it]                           
+{'loss': 1.3449, 'grad_norm': 0.5177984237670898, 'learning_rate': 4.96e-05, 'num_tokens': 392679.0, 'mean_token_accuracy': 0.6344379335641861, 'epoch': 1.02}
+[1A
+[1A 51%|█████     | 127/250 [23:04<22:11, 10.83s/it]
+[1A 51%|█████     | 128/250 [23:15<21:56, 10.79s/it]                           
+{'loss': 1.2395, 'grad_norm': 0.5309509038925171, 'learning_rate': 4.92e-05, 'num_tokens': 395426.0, 'mean_token_accuracy': 0.6662217602133751, 'epoch': 1.02}
+[1A
+[1A 51%|█████     | 128/250 [23:15<21:56, 10.79s/it]
+[1A 52%|█████▏    | 129/250 [23:26<21:47, 10.80s/it]                           
+{'loss': 1.241, 'grad_norm': 0.5273266434669495, 'learning_rate': 4.88e-05, 'num_tokens': 398440.0, 'mean_token_accuracy': 0.6511199548840523, 'epoch': 1.03}
+[1A
+[1A 52%|█████▏    | 129/250 [23:26<21:47, 10.80s/it]
+[1A 52%|█████▏    | 130/250 [23:36<21:37, 10.81s/it]                           
+{'loss': 1.1949, 'grad_norm': 0.604578971862793, 'learning_rate': 4.8400000000000004e-05, 'num_tokens': 401193.0, 'mean_token_accuracy': 0.6533818803727627, 'epoch': 1.04}
+[1A
+[1A 52%|█████▏    | 130/250 [23:36<21:37, 10.81s/it]
+[1A 52%|█████▏    | 131/250 [23:47<21:25, 10.80s/it]                           
+{'loss': 1.1881, 'grad_norm': 0.546904444694519, 'learning_rate': 4.8e-05, 'num_tokens': 404223.0, 'mean_token_accuracy': 0.6612739227712154, 'epoch': 1.05}
+[1A
+[1A 52%|█████▏    | 131/250 [23:47<21:25, 10.80s/it]
+[1A 53%|█████▎    | 132/250 [23:58<21:15, 10.81s/it]                           
+{'loss': 1.3248, 'grad_norm': 0.5513733625411987, 'learning_rate': 4.76e-05, 'num_tokens': 407261.0, 'mean_token_accuracy': 0.6317884176969528, 'epoch': 1.06}
+[1A
+[1A 53%|█████▎    | 132/250 [23:58<21:15, 10.81s/it]
+[1A 53%|█████▎    | 133/250 [24:09<21:05, 10.82s/it]                           
+{'loss': 1.3022, 'grad_norm': 0.5355161428451538, 'learning_rate': 4.72e-05, 'num_tokens': 410393.0, 'mean_token_accuracy': 0.6323857270181179, 'epoch': 1.06}
+[1A
+[1A 53%|█████▎    | 133/250 [24:09<21:05, 10.82s/it]
+[1A 54%|█████▎    | 134/250 [24:20<20:54, 10.82s/it]                           
+{'loss': 1.2189, 'grad_norm': 0.536780595779419, 'learning_rate': 4.6800000000000006e-05, 'num_tokens': 413342.0, 'mean_token_accuracy': 0.6579496562480927, 'epoch': 1.07}
+[1A
+[1A 54%|█████▎    | 134/250 [24:20<20:54, 10.82s/it]
+[1A 54%|█████▍    | 135/250 [24:30<20:45, 10.83s/it]                           
+{'loss': 1.1268, 'grad_norm': 0.5787051320075989, 'learning_rate': 4.64e-05, 'num_tokens': 415924.0, 'mean_token_accuracy': 0.6795235760509968, 'epoch': 1.08}
+[1A
+[1A 54%|█████▍    | 135/250 [24:30<20:45, 10.83s/it]
+[1A 54%|█████▍    | 136/250 [24:41<20:39, 10.88s/it]                           
+{'loss': 1.2431, 'grad_norm': 0.5358515381813049, 'learning_rate': 4.600000000000001e-05, 'num_tokens': 419120.0, 'mean_token_accuracy': 0.6615830920636654, 'epoch': 1.09}
+[1A
+[1A 54%|█████▍    | 136/250 [24:41<20:39, 10.88s/it]
+[1A 55%|█████▍    | 137/250 [24:52<20:28, 10.87s/it]
+[1A                                                 
+{'loss': 1.2413, 'grad_norm': 0.5604587197303772, 'learning_rate': 4.5600000000000004e-05, 'num_tokens': 421970.0, 'mean_token_accuracy': 0.6473577916622162, 'epoch': 1.1}
+[1A
+[1A 55%|█████▍    | 137/250 [24:52<20:28, 10.87s/it]
+[1A 55%|█████▌    | 138/250 [25:03<20:14, 10.84s/it]                           
+{'loss': 1.3472, 'grad_norm': 0.5612391829490662, 'learning_rate': 4.52e-05, 'num_tokens': 425125.0, 'mean_token_accuracy': 0.6325767673552036, 'epoch': 1.1}
+[1A
+[1A 55%|█████▌    | 138/250 [25:03<20:14, 10.84s/it]
+[1A 56%|█████▌    | 139/250 [25:14<20:01, 10.82s/it]                           
+{'loss': 1.2947, 'grad_norm': 0.546299934387207, 'learning_rate': 4.4800000000000005e-05, 'num_tokens': 428465.0, 'mean_token_accuracy': 0.6345055662095547, 'epoch': 1.11}
+[1A
+[1A 56%|█████▌    | 139/250 [25:14<20:01, 10.82s/it]
+[1A 56%|█████▌    | 140/250 [25:25<19:48, 10.80s/it]                           
+{'loss': 1.3142, 'grad_norm': 0.5985003709793091, 'learning_rate': 4.44e-05, 'num_tokens': 431362.0, 'mean_token_accuracy': 0.6319654956459999, 'epoch': 1.12}
+[1A
+[1A 56%|█████▌    | 140/250 [25:25<19:48, 10.80s/it]
+[1A 56%|█████▋    | 141/250 [25:35<19:35, 10.78s/it]                           
+{'loss': 1.2728, 'grad_norm': 0.5476334095001221, 'learning_rate': 4.4000000000000006e-05, 'num_tokens': 434794.0, 'mean_token_accuracy': 0.6561513803899288, 'epoch': 1.13}
+[1A
+[1A 56%|█████▋    | 141/250 [25:35<19:35, 10.78s/it]
+[1A 57%|█████▋    | 142/250 [25:46<19:23, 10.77s/it]                           
+{'loss': 1.1695, 'grad_norm': 0.6060472130775452, 'learning_rate': 4.36e-05, 'num_tokens': 437266.0, 'mean_token_accuracy': 0.6573060173541307, 'epoch': 1.14}
+[1A
+[1A 57%|█████▋    | 142/250 [25:46<19:23, 10.77s/it]
+[1A 57%|█████▋    | 143/250 [25:57<19:12, 10.77s/it]                           
+{'loss': 1.205, 'grad_norm': 0.6201297044754028, 'learning_rate': 4.32e-05, 'num_tokens': 440197.0, 'mean_token_accuracy': 0.6730460040271282, 'epoch': 1.14}
+[1A
+[1A 57%|█████▋    | 143/250 [25:57<19:12, 10.77s/it]
+[1A 58%|█████▊    | 144/250 [26:08<19:09, 10.84s/it]                           
+{'loss': 1.2372, 'grad_norm': 0.5744997262954712, 'learning_rate': 4.2800000000000004e-05, 'num_tokens': 443282.0, 'mean_token_accuracy': 0.6494782604277134, 'epoch': 1.15}
+[1A
+[1A 58%|█████▊    | 144/250 [26:08<19:09, 10.84s/it]
+[1A 58%|█████▊    | 145/250 [26:19<18:52, 10.79s/it]                           
+{'loss': 1.1749, 'grad_norm': 0.600830614566803, 'learning_rate': 4.24e-05, 'num_tokens': 446114.0, 'mean_token_accuracy': 0.6835458613932133, 'epoch': 1.16}
+[1A
+[1A 58%|█████▊    | 145/250 [26:19<18:52, 10.79s/it]
+[1A 58%|█████▊    | 146/250 [26:29<18:42, 10.80s/it]
+[1A                                                 
+{'loss': 1.1785, 'grad_norm': 0.5538235306739807, 'learning_rate': 4.2e-05, 'num_tokens': 449094.0, 'mean_token_accuracy': 0.6732544228434563, 'epoch': 1.17}
+[1A
+[1A 58%|█████▊    | 146/250 [26:29<18:42, 10.80s/it]
+[1A 59%|█████▉    | 147/250 [26:40<18:32, 10.80s/it]                           
+{'loss': 1.2342, 'grad_norm': 0.5704360604286194, 'learning_rate': 4.16e-05, 'num_tokens': 452388.0, 'mean_token_accuracy': 0.6604802682995796, 'epoch': 1.18}
+[1A
+[1A 59%|█████▉    | 147/250 [26:40<18:32, 10.80s/it]
+[1A 59%|█████▉    | 148/250 [26:51<18:28, 10.87s/it]                           
+{'loss': 1.2209, 'grad_norm': 0.582548201084137, 'learning_rate': 4.12e-05, 'num_tokens': 455544.0, 'mean_token_accuracy': 0.6420643962919712, 'epoch': 1.18}
+[1A
+[1A 59%|█████▉    | 148/250 [26:51<18:28, 10.87s/it]
+[1A 60%|█████▉    | 149/250 [27:02<18:23, 10.93s/it]                           
+{'loss': 1.2355, 'grad_norm': 0.580971896648407, 'learning_rate': 4.08e-05, 'num_tokens': 458360.0, 'mean_token_accuracy': 0.6592161096632481, 'epoch': 1.19}
+[1A
+[1A 60%|█████▉    | 149/250 [27:02<18:23, 10.93s/it]
+[1A 60%|██████    | 150/250 [27:14<18:30, 11.11s/it]                           
+{'loss': 1.2308, 'grad_norm': 0.5605749487876892, 'learning_rate': 4.0400000000000006e-05, 'num_tokens': 461454.0, 'mean_token_accuracy': 0.6497656255960464, 'epoch': 1.2}
+[1A
+[1A 60%|██████    | 150/250 [27:14<18:30, 11.11s/it]
+[1A 60%|██████    | 151/250 [27:25<18:17, 11.08s/it]                           
+{'loss': 1.236, 'grad_norm': 0.5687883496284485, 'learning_rate': 4e-05, 'num_tokens': 465009.0, 'mean_token_accuracy': 0.6564196422696114, 'epoch': 1.21}
+[1A
+[1A 60%|██████    | 151/250 [27:25<18:17, 11.08s/it]
+[1A 61%|██████    | 152/250 [27:36<18:05, 11.08s/it]                           
+{'loss': 1.2859, 'grad_norm': 0.5719150900840759, 'learning_rate': 3.960000000000001e-05, 'num_tokens': 468345.0, 'mean_token_accuracy': 0.6559792421758175, 'epoch': 1.22}
+[1A
+[1A 61%|██████    | 152/250 [27:36<18:05, 11.08s/it]
+[1A 61%|██████    | 153/250 [27:47<17:48, 11.01s/it]                           
+{'loss': 1.111, 'grad_norm': 0.574552595615387, 'learning_rate': 3.9200000000000004e-05, 'num_tokens': 471195.0, 'mean_token_accuracy': 0.6866543740034103, 'epoch': 1.22}
+[1A
+[1A 61%|██████    | 153/250 [27:47<17:48, 11.01s/it]
+[1A 62%|██████▏   | 154/250 [27:57<17:29, 10.93s/it]                           
+{'loss': 1.293, 'grad_norm': 0.586458146572113, 'learning_rate': 3.88e-05, 'num_tokens': 474550.0, 'mean_token_accuracy': 0.6544103808701038, 'epoch': 1.23}
+[1A
+[1A 62%|██████▏   | 154/250 [27:57<17:29, 10.93s/it]
+[1A 62%|██████▏   | 155/250 [28:08<17:12, 10.87s/it]                           
+{'loss': 1.3107, 'grad_norm': 0.6198992729187012, 'learning_rate': 3.8400000000000005e-05, 'num_tokens': 477479.0, 'mean_token_accuracy': 0.6459425203502178, 'epoch': 1.24}
+[1A
+[1A 62%|██████▏   | 155/250 [28:08<17:12, 10.87s/it]
+[1A 62%|██████▏   | 156/250 [28:19<16:57, 10.82s/it]                           
+{'loss': 1.2525, 'grad_norm': 0.5800593495368958, 'learning_rate': 3.8e-05, 'num_tokens': 480346.0, 'mean_token_accuracy': 0.6524699591100216, 'epoch': 1.25}
+[1A
+[1A 62%|██████▏   | 156/250 [28:19<16:57, 10.82s/it]
+[1A 63%|██████▎   | 157/250 [28:30<16:47, 10.83s/it]                           
+{'loss': 1.2285, 'grad_norm': 0.5872479677200317, 'learning_rate': 3.76e-05, 'num_tokens': 483267.0, 'mean_token_accuracy': 0.665429811924696, 'epoch': 1.26}
+[1A
+[1A 63%|██████▎   | 157/250 [28:30<16:47, 10.83s/it]
+[1A 63%|██████▎   | 158/250 [28:41<16:34, 10.81s/it]                           
+{'loss': 1.2225, 'grad_norm': 0.5954294204711914, 'learning_rate': 3.72e-05, 'num_tokens': 486327.0, 'mean_token_accuracy': 0.6502054668962955, 'epoch': 1.26}
+[1A
+[1A 63%|██████▎   | 158/250 [28:41<16:34, 10.81s/it]
+[1A 64%|██████▎   | 159/250 [28:51<16:21, 10.79s/it]                           
+{'loss': 1.1362, 'grad_norm': 0.6036894917488098, 'learning_rate': 3.68e-05, 'num_tokens': 489225.0, 'mean_token_accuracy': 0.6749328877776861, 'epoch': 1.27}
+[1A
+[1A 64%|██████▎   | 159/250 [28:51<16:21, 10.79s/it]
+[1A 64%|██████▍   | 160/250 [29:02<16:17, 10.86s/it]                           
+{'loss': 1.2821, 'grad_norm': 0.5705546140670776, 'learning_rate': 3.6400000000000004e-05, 'num_tokens': 492198.0, 'mean_token_accuracy': 0.6558473706245422, 'epoch': 1.28}
+[1A
+[1A 64%|██████▍   | 160/250 [29:02<16:17, 10.86s/it]
+[1A 64%|██████▍   | 161/250 [29:13<16:01, 10.80s/it]                           
+{'loss': 1.2162, 'grad_norm': 0.5607541799545288, 'learning_rate': 3.6e-05, 'num_tokens': 495480.0, 'mean_token_accuracy': 0.6563615575432777, 'epoch': 1.29}
+[1A
+[1A 64%|██████▍   | 161/250 [29:13<16:01, 10.80s/it]
+[1A 65%|██████▍   | 162/250 [29:24<15:47, 10.77s/it]                           
+{'loss': 1.3914, 'grad_norm': 0.6219567060470581, 'learning_rate': 3.56e-05, 'num_tokens': 498566.0, 'mean_token_accuracy': 0.6223514191806316, 'epoch': 1.3}
+[1A
+[1A 65%|██████▍   | 162/250 [29:24<15:47, 10.77s/it]
+[1A 65%|██████▌   | 163/250 [29:34<15:35, 10.75s/it]                           
+{'loss': 1.3288, 'grad_norm': 0.5755873918533325, 'learning_rate': 3.52e-05, 'num_tokens': 501502.0, 'mean_token_accuracy': 0.6366167142987251, 'epoch': 1.3}
+[1A
+[1A 65%|██████▌   | 163/250 [29:34<15:35, 10.75s/it]
+[1A 66%|██████▌   | 164/250 [29:45<15:25, 10.76s/it]                           
+{'loss': 1.3386, 'grad_norm': 0.5521407127380371, 'learning_rate': 3.48e-05, 'num_tokens': 505149.0, 'mean_token_accuracy': 0.6347001269459724, 'epoch': 1.31}
+[1A
+[1A 66%|██████▌   | 164/250 [29:45<15:25, 10.76s/it]
+[1A 66%|██████▌   | 165/250 [29:56<15:13, 10.75s/it]                           
+{'loss': 1.1795, 'grad_norm': 0.620893657207489, 'learning_rate': 3.4399999999999996e-05, 'num_tokens': 507992.0, 'mean_token_accuracy': 0.6783384270966053, 'epoch': 1.32}
+[1A
+[1A 66%|██████▌   | 165/250 [29:56<15:13, 10.75s/it]
+[1A 66%|██████▋   | 166/250 [30:07<15:01, 10.73s/it]                           
+{'loss': 1.2997, 'grad_norm': 0.5479750037193298, 'learning_rate': 3.4000000000000007e-05, 'num_tokens': 511467.0, 'mean_token_accuracy': 0.6549662575125694, 'epoch': 1.33}
+[1A
+[1A 66%|██████▋   | 166/250 [30:07<15:01, 10.73s/it]
+[1A 67%|██████▋   | 167/250 [30:17<14:50, 10.73s/it]                           
+{'loss': 1.1647, 'grad_norm': 0.573727011680603, 'learning_rate': 3.3600000000000004e-05, 'num_tokens': 514497.0, 'mean_token_accuracy': 0.6652299016714096, 'epoch': 1.34}
+[1A
+[1A 67%|██████▋   | 167/250 [30:17<14:50, 10.73s/it]
+[1A 67%|██████▋   | 168/250 [30:28<14:38, 10.71s/it]                           
+{'loss': 1.307, 'grad_norm': 0.603115439414978, 'learning_rate': 3.32e-05, 'num_tokens': 517641.0, 'mean_token_accuracy': 0.6371744908392429, 'epoch': 1.34}
+[1A
+[1A 67%|██████▋   | 168/250 [30:28<14:38, 10.71s/it]
+[1A 68%|██████▊   | 169/250 [30:39<14:31, 10.76s/it]                           
+{'loss': 1.2068, 'grad_norm': 0.6101481318473816, 'learning_rate': 3.2800000000000004e-05, 'num_tokens': 520730.0, 'mean_token_accuracy': 0.6794656589627266, 'epoch': 1.35}
+[1A
+[1A 68%|██████▊   | 169/250 [30:39<14:31, 10.76s/it]
+[1A 68%|██████▊   | 170/250 [30:49<14:18, 10.73s/it]                           
+{'loss': 1.3545, 'grad_norm': 0.5801599025726318, 'learning_rate': 3.24e-05, 'num_tokens': 524297.0, 'mean_token_accuracy': 0.6284474767744541, 'epoch': 1.36}
+[1A
+[1A 68%|██████▊   | 170/250 [30:49<14:18, 10.73s/it]
+[1A 68%|██████▊   | 171/250 [31:00<14:05, 10.71s/it]                           
+{'loss': 1.1947, 'grad_norm': 0.5600379705429077, 'learning_rate': 3.2000000000000005e-05, 'num_tokens': 527401.0, 'mean_token_accuracy': 0.65413548797369, 'epoch': 1.37}
+[1A
+[1A 68%|██████▊   | 171/250 [31:00<14:05, 10.71s/it]
+[1A 69%|██████▉   | 172/250 [31:11<13:54, 10.70s/it]
+[1A                                                 
+{'loss': 1.1686, 'grad_norm': 0.607408881187439, 'learning_rate': 3.16e-05, 'num_tokens': 530598.0, 'mean_token_accuracy': 0.6746300719678402, 'epoch': 1.38}
+[1A
+[1A 69%|██████▉   | 172/250 [31:11<13:54, 10.70s/it]
+[1A 69%|██████▉   | 173/250 [31:22<13:45, 10.72s/it]                           
+{'loss': 1.3041, 'grad_norm': 0.5420113801956177, 'learning_rate': 3.12e-05, 'num_tokens': 534275.0, 'mean_token_accuracy': 0.6332307457923889, 'epoch': 1.38}
+[1A
+[1A 69%|██████▉   | 173/250 [31:22<13:45, 10.72s/it]
+[1A 70%|██████▉   | 174/250 [31:32<13:35, 10.73s/it]                           
+{'loss': 1.3155, 'grad_norm': 0.554993748664856, 'learning_rate': 3.08e-05, 'num_tokens': 538213.0, 'mean_token_accuracy': 0.6256620660424232, 'epoch': 1.39}
+[1A
+[1A 70%|██████▉   | 174/250 [31:32<13:35, 10.73s/it]
+[1A 70%|███████   | 175/250 [31:43<13:24, 10.73s/it]                           
+{'loss': 1.2094, 'grad_norm': 0.5847830772399902, 'learning_rate': 3.04e-05, 'num_tokens': 541324.0, 'mean_token_accuracy': 0.6575986593961716, 'epoch': 1.4}
+[1A
+[1A 70%|███████   | 175/250 [31:43<13:24, 10.73s/it]
+[1A 70%|███████   | 176/250 [31:54<13:14, 10.74s/it]                           
+{'loss': 1.3164, 'grad_norm': 0.6690272092819214, 'learning_rate': 3e-05, 'num_tokens': 543962.0, 'mean_token_accuracy': 0.6514191925525665, 'epoch': 1.41}
+[1A
+[1A 70%|███████   | 176/250 [31:54<13:14, 10.74s/it]
+[1A 71%|███████   | 177/250 [32:05<13:07, 10.78s/it]                           
+{'loss': 1.2728, 'grad_norm': 0.5808380246162415, 'learning_rate': 2.96e-05, 'num_tokens': 547193.0, 'mean_token_accuracy': 0.6649756245315075, 'epoch': 1.42}
+[1A
+[1A 71%|███████   | 177/250 [32:05<13:07, 10.78s/it]
+[1A 71%|███████   | 178/250 [32:15<12:55, 10.76s/it]                           
+{'loss': 1.1661, 'grad_norm': 0.5630934834480286, 'learning_rate': 2.9199999999999998e-05, 'num_tokens': 550303.0, 'mean_token_accuracy': 0.6691955104470253, 'epoch': 1.42}
+[1A
+[1A 71%|███████   | 178/250 [32:15<12:55, 10.76s/it]
+[1A 72%|███████▏  | 179/250 [32:26<12:43, 10.75s/it]                           
+{'loss': 1.2019, 'grad_norm': 0.6083859205245972, 'learning_rate': 2.88e-05, 'num_tokens': 553346.0, 'mean_token_accuracy': 0.6702024564146996, 'epoch': 1.43}
+[1A
+[1A 72%|███████▏  | 179/250 [32:26<12:43, 10.75s/it]
+[1A 72%|███████▏  | 180/250 [32:37<12:31, 10.73s/it]                           
+{'loss': 1.1905, 'grad_norm': 0.6313636302947998, 'learning_rate': 2.84e-05, 'num_tokens': 556116.0, 'mean_token_accuracy': 0.6618310734629631, 'epoch': 1.44}
+[1A
+[1A 72%|███████▏  | 180/250 [32:37<12:31, 10.73s/it]
+[1A 72%|███████▏  | 181/250 [32:48<12:20, 10.73s/it]                           
+{'loss': 1.239, 'grad_norm': 0.5850822329521179, 'learning_rate': 2.8000000000000003e-05, 'num_tokens': 559288.0, 'mean_token_accuracy': 0.662454642355442, 'epoch': 1.45}
+[1A
+[1A 72%|███████▏  | 181/250 [32:48<12:20, 10.73s/it]
+[1A 73%|███████▎  | 182/250 [32:58<12:10, 10.74s/it]                           
+{'loss': 1.1851, 'grad_norm': 0.596757709980011, 'learning_rate': 2.7600000000000003e-05, 'num_tokens': 562451.0, 'mean_token_accuracy': 0.6736680455505848, 'epoch': 1.46}
+[1A
+[1A 73%|███████▎  | 182/250 [32:58<12:10, 10.74s/it]
+[1A 73%|███████▎  | 183/250 [33:10<12:17, 11.01s/it]                           
+{'loss': 1.1428, 'grad_norm': 0.5907482504844666, 'learning_rate': 2.7200000000000004e-05, 'num_tokens': 565397.0, 'mean_token_accuracy': 0.6681634113192558, 'epoch': 1.46}
+[1A
+[1A 73%|███████▎  | 183/250 [33:10<12:17, 11.01s/it]
+[1A 74%|███████▎  | 184/250 [33:21<12:11, 11.09s/it]
+[1A                                                 
+{'loss': 1.1567, 'grad_norm': 0.5933690071105957, 'learning_rate': 2.6800000000000004e-05, 'num_tokens': 568383.0, 'mean_token_accuracy': 0.6524189189076424, 'epoch': 1.47}
+[1A
+[1A 74%|███████▎  | 184/250 [33:21<12:11, 11.09s/it]
+[1A 74%|███████▍  | 185/250 [33:32<11:56, 11.03s/it]                           
+{'loss': 1.2684, 'grad_norm': 0.5575948357582092, 'learning_rate': 2.64e-05, 'num_tokens': 571987.0, 'mean_token_accuracy': 0.6385380327701569, 'epoch': 1.48}
+[1A
+[1A 74%|███████▍  | 185/250 [33:32<11:56, 11.03s/it]
+[1A 74%|███████▍  | 186/250 [33:43<11:45, 11.03s/it]                           
+{'loss': 1.3212, 'grad_norm': 0.6154394745826721, 'learning_rate': 2.6000000000000002e-05, 'num_tokens': 575311.0, 'mean_token_accuracy': 0.6357146538794041, 'epoch': 1.49}
+[1A
+[1A 74%|███████▍  | 186/250 [33:43<11:45, 11.03s/it]
+[1A 75%|███████▍  | 187/250 [33:54<11:33, 11.01s/it]                           
+{'loss': 1.1459, 'grad_norm': 0.6081404089927673, 'learning_rate': 2.5600000000000002e-05, 'num_tokens': 578460.0, 'mean_token_accuracy': 0.6695249155163765, 'epoch': 1.5}
+[1A
+[1A 75%|███████▍  | 187/250 [33:54<11:33, 11.01s/it]
+[1A 75%|███████▌  | 188/250 [34:06<11:38, 11.27s/it]                           
+{'loss': 1.1898, 'grad_norm': 0.5808396935462952, 'learning_rate': 2.5200000000000003e-05, 'num_tokens': 581833.0, 'mean_token_accuracy': 0.6662073954939842, 'epoch': 1.5}
+[1A
+[1A 75%|███████▌  | 188/250 [34:06<11:38, 11.27s/it]
+[1A 76%|███████▌  | 189/250 [34:18<11:41, 11.50s/it]                           
+{'loss': 1.1857, 'grad_norm': 0.6621586084365845, 'learning_rate': 2.48e-05, 'num_tokens': 584566.0, 'mean_token_accuracy': 0.6556373983621597, 'epoch': 1.51}
+[1A
+[1A 76%|███████▌  | 189/250 [34:18<11:41, 11.50s/it]
+[1A 76%|███████▌  | 190/250 [34:32<12:06, 12.11s/it]                           
+{'loss': 1.2327, 'grad_norm': 0.6766641736030579, 'learning_rate': 2.44e-05, 'num_tokens': 587425.0, 'mean_token_accuracy': 0.6714921817183495, 'epoch': 1.52}
+[1A
+[1A 76%|███████▌  | 190/250 [34:32<12:06, 12.11s/it]
+[1A 76%|███████▋  | 191/250 [34:43<11:35, 11.79s/it]                           
+{'loss': 1.1912, 'grad_norm': 0.6655923128128052, 'learning_rate': 2.4e-05, 'num_tokens': 590244.0, 'mean_token_accuracy': 0.6541057750582695, 'epoch': 1.53}
+[1A
+[1A 76%|███████▋  | 191/250 [34:43<11:35, 11.79s/it]
+[1A 77%|███████▋  | 192/250 [34:54<11:08, 11.53s/it]                           
+{'loss': 1.2875, 'grad_norm': 0.6376829147338867, 'learning_rate': 2.36e-05, 'num_tokens': 593287.0, 'mean_token_accuracy': 0.6405463069677353, 'epoch': 1.54}
+[1A
+[1A 77%|███████▋  | 192/250 [34:54<11:08, 11.53s/it]
+[1A 77%|███████▋  | 193/250 [35:05<10:49, 11.39s/it]                           
+{'loss': 1.2518, 'grad_norm': 0.6284999847412109, 'learning_rate': 2.32e-05, 'num_tokens': 596227.0, 'mean_token_accuracy': 0.6526866964995861, 'epoch': 1.54}
+[1A
+[1A 77%|███████▋  | 193/250 [35:05<10:49, 11.39s/it]
+[1A 78%|███████▊  | 194/250 [35:15<10:27, 11.20s/it]
+[1A                                                 
+{'loss': 1.2175, 'grad_norm': 0.5952105522155762, 'learning_rate': 2.2800000000000002e-05, 'num_tokens': 599561.0, 'mean_token_accuracy': 0.6540155857801437, 'epoch': 1.55}
+[1A
+[1A 78%|███████▊  | 194/250 [35:15<10:27, 11.20s/it]
+[1A 78%|███████▊  | 195/250 [35:26<10:07, 11.05s/it]                           
+{'loss': 1.2868, 'grad_norm': 0.637965977191925, 'learning_rate': 2.2400000000000002e-05, 'num_tokens': 602762.0, 'mean_token_accuracy': 0.6424034647643566, 'epoch': 1.56}
+[1A
+[1A 78%|███████▊  | 195/250 [35:26<10:07, 11.05s/it]
+[1A 78%|███████▊  | 196/250 [35:37<09:50, 10.94s/it]                           
+{'loss': 1.2938, 'grad_norm': 0.5971924662590027, 'learning_rate': 2.2000000000000003e-05, 'num_tokens': 605999.0, 'mean_token_accuracy': 0.6548814848065376, 'epoch': 1.57}
+[1A
+[1A 78%|███████▊  | 196/250 [35:37<09:50, 10.94s/it]
+[1A 79%|███████▉  | 197/250 [35:47<09:36, 10.87s/it]                           
+{'loss': 1.1714, 'grad_norm': 0.5889438986778259, 'learning_rate': 2.16e-05, 'num_tokens': 609302.0, 'mean_token_accuracy': 0.6628505475819111, 'epoch': 1.58}
+[1A
+[1A 79%|███████▉  | 197/250 [35:47<09:36, 10.87s/it]
+[1A 79%|███████▉  | 198/250 [35:58<09:22, 10.83s/it]                           
+{'loss': 1.3038, 'grad_norm': 0.5977423787117004, 'learning_rate': 2.12e-05, 'num_tokens': 612507.0, 'mean_token_accuracy': 0.6569397784769535, 'epoch': 1.58}
+[1A
+[1A 79%|███████▉  | 198/250 [35:58<09:22, 10.83s/it]
+[1A 80%|███████▉  | 199/250 [36:09<09:11, 10.81s/it]                           
+{'loss': 1.1684, 'grad_norm': 0.5994725823402405, 'learning_rate': 2.08e-05, 'num_tokens': 615523.0, 'mean_token_accuracy': 0.6636405810713768, 'epoch': 1.59}
+[1A
+[1A 80%|███████▉  | 199/250 [36:09<09:11, 10.81s/it]
+[1A 80%|████████  | 200/250 [36:20<08:58, 10.78s/it]                           
+{'loss': 1.3102, 'grad_norm': 0.6080977916717529, 'learning_rate': 2.04e-05, 'num_tokens': 618652.0, 'mean_token_accuracy': 0.6306029073894024, 'epoch': 1.6}
+[1A
+[1A 80%|████████  | 200/250 [36:20<08:58, 10.78s/it]
+[1A 80%|████████  | 201/250 [36:30<08:48, 10.78s/it]                           
+{'loss': 1.1371, 'grad_norm': 0.6262340545654297, 'learning_rate': 2e-05, 'num_tokens': 621485.0, 'mean_token_accuracy': 0.6909602582454681, 'epoch': 1.61}
+[1A
+[1A 80%|████████  | 201/250 [36:30<08:48, 10.78s/it]
+[1A 81%|████████  | 202/250 [36:41<08:39, 10.82s/it]                           
+{'loss': 1.2091, 'grad_norm': 0.5750317573547363, 'learning_rate': 1.9600000000000002e-05, 'num_tokens': 624921.0, 'mean_token_accuracy': 0.6579693667590618, 'epoch': 1.62}
+[1A
+[1A 81%|████████  | 202/250 [36:41<08:39, 10.82s/it]
+[1A 81%|████████  | 203/250 [36:52<08:26, 10.79s/it]                           
+{'loss': 1.1281, 'grad_norm': 0.6245573163032532, 'learning_rate': 1.9200000000000003e-05, 'num_tokens': 627661.0, 'mean_token_accuracy': 0.6771834045648575, 'epoch': 1.62}
+[1A
+[1A 81%|████████  | 203/250 [36:52<08:26, 10.79s/it]
+[1A 82%|████████▏ | 204/250 [37:03<08:22, 10.92s/it]                           
+{'loss': 1.2203, 'grad_norm': 0.5865753293037415, 'learning_rate': 1.88e-05, 'num_tokens': 631134.0, 'mean_token_accuracy': 0.6578007787466049, 'epoch': 1.63}
+[1A
+[1A 82%|████████▏ | 204/250 [37:03<08:22, 10.92s/it]
+[1A 82%|████████▏ | 205/250 [37:14<08:09, 10.89s/it]
+[1A                                                 
+{'loss': 1.1177, 'grad_norm': 0.6115079522132874, 'learning_rate': 1.84e-05, 'num_tokens': 634114.0, 'mean_token_accuracy': 0.6841549053788185, 'epoch': 1.64}
+[1A
+[1A 82%|████████▏ | 205/250 [37:14<08:09, 10.89s/it]
+[1A 82%|████████▏ | 206/250 [37:25<07:57, 10.84s/it]                           
+{'loss': 1.1666, 'grad_norm': 0.6015119552612305, 'learning_rate': 1.8e-05, 'num_tokens': 637173.0, 'mean_token_accuracy': 0.666735403239727, 'epoch': 1.65}
+[1A
+[1A 82%|████████▏ | 206/250 [37:25<07:57, 10.84s/it]
+[1A 83%|████████▎ | 207/250 [37:36<07:45, 10.82s/it]                           
+{'loss': 1.202, 'grad_norm': 0.648949921131134, 'learning_rate': 1.76e-05, 'num_tokens': 639929.0, 'mean_token_accuracy': 0.6615550443530083, 'epoch': 1.66}
+[1A
+[1A 83%|████████▎ | 207/250 [37:36<07:45, 10.82s/it]
+[1A 83%|████████▎ | 208/250 [37:47<07:35, 10.84s/it]                           
+{'loss': 1.1957, 'grad_norm': 0.5887356400489807, 'learning_rate': 1.7199999999999998e-05, 'num_tokens': 643076.0, 'mean_token_accuracy': 0.6800804920494556, 'epoch': 1.66}
+[1A
+[1A 83%|████████▎ | 208/250 [37:47<07:35, 10.84s/it]
+[1A 84%|████████▎ | 209/250 [37:57<07:22, 10.80s/it]                           
+{'loss': 1.2358, 'grad_norm': 0.6129821538925171, 'learning_rate': 1.6800000000000002e-05, 'num_tokens': 646303.0, 'mean_token_accuracy': 0.6477290019392967, 'epoch': 1.67}
+[1A
+[1A 84%|████████▎ | 209/250 [37:57<07:22, 10.80s/it]
+[1A 84%|████████▍ | 210/250 [38:08<07:14, 10.87s/it]                           
+{'loss': 1.2548, 'grad_norm': 0.5876078605651855, 'learning_rate': 1.6400000000000002e-05, 'num_tokens': 649783.0, 'mean_token_accuracy': 0.6426988244056702, 'epoch': 1.68}
+[1A
+[1A 84%|████████▍ | 210/250 [38:08<07:14, 10.87s/it]
+[1A 84%|████████▍ | 211/250 [38:19<07:03, 10.85s/it]
+[1A                                                 
+{'loss': 1.1858, 'grad_norm': 0.6755572557449341, 'learning_rate': 1.6000000000000003e-05, 'num_tokens': 652607.0, 'mean_token_accuracy': 0.6626907251775265, 'epoch': 1.69}
+[1A
+[1A 84%|████████▍ | 211/250 [38:19<07:03, 10.85s/it]
+[1A 85%|████████▍ | 212/250 [38:30<06:53, 10.87s/it]                           
+{'loss': 1.3003, 'grad_norm': 0.67071932554245, 'learning_rate': 1.56e-05, 'num_tokens': 655574.0, 'mean_token_accuracy': 0.6354119554162025, 'epoch': 1.7}
+[1A
+[1A 85%|████████▍ | 212/250 [38:30<06:53, 10.87s/it]
+[1A 85%|████████▌ | 213/250 [38:42<06:53, 11.18s/it]                           
+{'loss': 1.1945, 'grad_norm': 0.6076127886772156, 'learning_rate': 1.52e-05, 'num_tokens': 658689.0, 'mean_token_accuracy': 0.6673208214342594, 'epoch': 1.7}
+[1A
+[1A 85%|████████▌ | 213/250 [38:42<06:53, 11.18s/it]
+[1A 86%|████████▌ | 214/250 [38:53<06:42, 11.18s/it]
+[1A                                                 
+{'loss': 1.197, 'grad_norm': 0.5740185976028442, 'learning_rate': 1.48e-05, 'num_tokens': 662214.0, 'mean_token_accuracy': 0.6731336154043674, 'epoch': 1.71}
+[1A
+[1A 86%|████████▌ | 214/250 [38:53<06:42, 11.18s/it]
+[1A 86%|████████▌ | 215/250 [39:04<06:30, 11.15s/it]                           
+{'loss': 1.191, 'grad_norm': 0.6005858182907104, 'learning_rate': 1.44e-05, 'num_tokens': 665402.0, 'mean_token_accuracy': 0.6623170524835587, 'epoch': 1.72}
+[1A
+[1A 86%|████████▌ | 215/250 [39:04<06:30, 11.15s/it]
+[1A 86%|████████▋ | 216/250 [39:16<06:21, 11.23s/it]                           
+{'loss': 1.2403, 'grad_norm': 0.6377996802330017, 'learning_rate': 1.4000000000000001e-05, 'num_tokens': 668359.0, 'mean_token_accuracy': 0.6591107025742531, 'epoch': 1.73}
+[1A
+[1A 86%|████████▋ | 216/250 [39:16<06:21, 11.23s/it]
+[1A 87%|████████▋ | 217/250 [39:28<06:19, 11.51s/it]                           
+{'loss': 1.2596, 'grad_norm': 0.6050189137458801, 'learning_rate': 1.3600000000000002e-05, 'num_tokens': 671703.0, 'mean_token_accuracy': 0.6525001563131809, 'epoch': 1.74}
+[1A
+[1A 87%|████████▋ | 217/250 [39:28<06:19, 11.51s/it]
+[1A 87%|████████▋ | 218/250 [39:39<06:09, 11.56s/it]
+[1A                                                 
+{'loss': 1.2353, 'grad_norm': 0.6232431530952454, 'learning_rate': 1.32e-05, 'num_tokens': 674777.0, 'mean_token_accuracy': 0.6471278555691242, 'epoch': 1.74}
+[1A
+[1A 87%|████████▋ | 218/250 [39:39<06:09, 11.56s/it]
+[1A 88%|████████▊ | 219/250 [39:51<06:00, 11.63s/it]
+[1A                                                 
+{'loss': 1.2132, 'grad_norm': 0.6226547956466675, 'learning_rate': 1.2800000000000001e-05, 'num_tokens': 677796.0, 'mean_token_accuracy': 0.6499614715576172, 'epoch': 1.75}
+[1A
+[1A 88%|████████▊ | 219/250 [39:51<06:00, 11.63s/it]
+[1A 88%|████████▊ | 220/250 [40:03<05:53, 11.79s/it]                           
+{'loss': 1.2562, 'grad_norm': 0.5915302634239197, 'learning_rate': 1.24e-05, 'num_tokens': 681129.0, 'mean_token_accuracy': 0.655289813876152, 'epoch': 1.76}
+[1A
+[1A 88%|████████▊ | 220/250 [40:03<05:53, 11.79s/it]
+[1A 88%|████████▊ | 221/250 [40:15<05:44, 11.87s/it]                           
+{'loss': 1.1905, 'grad_norm': 0.5986695289611816, 'learning_rate': 1.2e-05, 'num_tokens': 684347.0, 'mean_token_accuracy': 0.6595167405903339, 'epoch': 1.77}
+[1A
+[1A 88%|████████▊ | 221/250 [40:15<05:44, 11.87s/it]
+[1A 89%|████████▉ | 222/250 [40:27<05:28, 11.74s/it]                           
+{'loss': 1.1542, 'grad_norm': 0.6534678339958191, 'learning_rate': 1.16e-05, 'num_tokens': 687123.0, 'mean_token_accuracy': 0.672894787043333, 'epoch': 1.78}
+[1A
+[1A 89%|████████▉ | 222/250 [40:27<05:28, 11.74s/it]
+[1A 89%|████████▉ | 223/250 [40:38<05:14, 11.66s/it]                           
+{'loss': 1.2297, 'grad_norm': 0.6673650145530701, 'learning_rate': 1.1200000000000001e-05, 'num_tokens': 690007.0, 'mean_token_accuracy': 0.6712081395089626, 'epoch': 1.78}
+[1A
+[1A 89%|████████▉ | 223/250 [40:38<05:14, 11.66s/it]
+[1A 90%|████████▉ | 224/250 [40:50<05:02, 11.64s/it]                           
+{'loss': 1.188, 'grad_norm': 0.6105198264122009, 'learning_rate': 1.08e-05, 'num_tokens': 693143.0, 'mean_token_accuracy': 0.67790662124753, 'epoch': 1.79}
+[1A
+[1A 90%|████████▉ | 224/250 [40:50<05:02, 11.64s/it]
+[1A 90%|█████████ | 225/250 [41:01<04:50, 11.61s/it]
+[1A                                                 
+{'loss': 1.1564, 'grad_norm': 0.6512330174446106, 'learning_rate': 1.04e-05, 'num_tokens': 695680.0, 'mean_token_accuracy': 0.6719443760812283, 'epoch': 1.8}
+[1A
+[1A 90%|█████████ | 225/250 [41:01<04:50, 11.61s/it]
+[1A 90%|█████████ | 226/250 [41:13<04:40, 11.68s/it]                           
+{'loss': 1.2655, 'grad_norm': 0.6061771512031555, 'learning_rate': 1e-05, 'num_tokens': 698629.0, 'mean_token_accuracy': 0.6561130098998547, 'epoch': 1.81}
+[1A
+[1A 90%|█████████ | 226/250 [41:13<04:40, 11.68s/it]
+[1A 91%|█████████ | 227/250 [41:24<04:23, 11.46s/it]                           
+{'loss': 1.2799, 'grad_norm': 0.6150395274162292, 'learning_rate': 9.600000000000001e-06, 'num_tokens': 701844.0, 'mean_token_accuracy': 0.6245529837906361, 'epoch': 1.82}
+[1A
+[1A 91%|█████████ | 227/250 [41:24<04:23, 11.46s/it]
+[1A 91%|█████████ | 228/250 [41:35<04:07, 11.24s/it]                           
+{'loss': 1.1621, 'grad_norm': 0.6161797642707825, 'learning_rate': 9.2e-06, 'num_tokens': 704959.0, 'mean_token_accuracy': 0.6882351450622082, 'epoch': 1.82}
+[1A
+[1A 91%|█████████ | 228/250 [41:35<04:07, 11.24s/it]
+[1A 92%|█████████▏| 229/250 [41:46<03:52, 11.08s/it]                           
+{'loss': 1.1762, 'grad_norm': 0.5900565385818481, 'learning_rate': 8.8e-06, 'num_tokens': 708301.0, 'mean_token_accuracy': 0.6641136854887009, 'epoch': 1.83}
+[1A
+[1A 92%|█████████▏| 229/250 [41:46<03:52, 11.08s/it]
+[1A 92%|█████████▏| 230/250 [41:58<03:51, 11.58s/it]                           
+{'loss': 1.177, 'grad_norm': 0.6404497623443604, 'learning_rate': 8.400000000000001e-06, 'num_tokens': 711166.0, 'mean_token_accuracy': 0.6825164891779423, 'epoch': 1.84}
+[1A
+[1A 92%|█████████▏| 230/250 [41:58<03:51, 11.58s/it]
+[1A 92%|█████████▏| 231/250 [42:10<03:42, 11.70s/it]
+[1A                                                 
+{'loss': 1.2074, 'grad_norm': 0.6799964308738708, 'learning_rate': 8.000000000000001e-06, 'num_tokens': 714115.0, 'mean_token_accuracy': 0.6604696027934551, 'epoch': 1.85}
+[1A
+[1A 92%|█████████▏| 231/250 [42:10<03:42, 11.70s/it]
+[1A 93%|█████████▎| 232/250 [42:21<03:26, 11.49s/it]
+[1A                                                 
+{'loss': 1.069, 'grad_norm': 0.6173282265663147, 'learning_rate': 7.6e-06, 'num_tokens': 716942.0, 'mean_token_accuracy': 0.6976412534713745, 'epoch': 1.86}
+[1A
+[1A 93%|█████████▎| 232/250 [42:21<03:26, 11.49s/it]
+[1A 93%|█████████▎| 233/250 [42:32<03:12, 11.33s/it]                           
+{'loss': 1.2045, 'grad_norm': 0.6487779021263123, 'learning_rate': 7.2e-06, 'num_tokens': 719887.0, 'mean_token_accuracy': 0.6714455075562, 'epoch': 1.86}
+[1A
+[1A 93%|█████████▎| 233/250 [42:32<03:12, 11.33s/it]
+[1A 94%|█████████▎| 234/250 [42:44<03:00, 11.29s/it]                           
+{'loss': 1.2808, 'grad_norm': 0.6380431056022644, 'learning_rate': 6.800000000000001e-06, 'num_tokens': 722685.0, 'mean_token_accuracy': 0.6413051523268223, 'epoch': 1.87}
+[1A
+[1A 94%|█████████▎| 234/250 [42:44<03:00, 11.29s/it]
+[1A 94%|█████████▍| 235/250 [42:56<02:52, 11.53s/it]
+[1A                                                 
+{'loss': 1.2935, 'grad_norm': 0.659751832485199, 'learning_rate': 6.4000000000000006e-06, 'num_tokens': 725487.0, 'mean_token_accuracy': 0.6333327442407608, 'epoch': 1.88}
+[1A
+[1A 94%|█████████▍| 235/250 [42:56<02:52, 11.53s/it]
+[1A 94%|█████████▍| 236/250 [43:07<02:42, 11.58s/it]                           
+{'loss': 1.1492, 'grad_norm': 0.621300995349884, 'learning_rate': 6e-06, 'num_tokens': 728486.0, 'mean_token_accuracy': 0.684173908084631, 'epoch': 1.89}
+[1A
+{'loss': 1.1088, 'grad_norm': 0.619476318359375, 'learning_rate': 5.600000000000001e-06, 'num_tokens': 731358.0, 'mean_token_accuracy': 0.6866352893412113, 'epoch': 1.9}
+[1A 94%|█████████▍| 236/250 [43:07<02:42, 11.58s/it] 95%|█████████▍| 237/250 [43:19<02:31, 11.63s/it]
+[1A 95%|█████████▍| 237/250 [43:19<02:31, 11.63s/it]
+[1A 95%|█████████▌| 238/250 [43:31<02:19, 11.59s/it]
+[1A                                                 
+{'loss': 1.2564, 'grad_norm': 0.573845386505127, 'learning_rate': 5.2e-06, 'num_tokens': 735348.0, 'mean_token_accuracy': 0.6301328465342522, 'epoch': 1.9}
+[1A
+[1A 95%|█████████▌| 238/250 [43:31<02:19, 11.59s/it]
+[1A 96%|█████████▌| 239/250 [43:42<02:08, 11.65s/it]                           
+{'loss': 1.1988, 'grad_norm': 0.6006914377212524, 'learning_rate': 4.800000000000001e-06, 'num_tokens': 738638.0, 'mean_token_accuracy': 0.6653390824794769, 'epoch': 1.91}
+[1A
+[1A 96%|█████████▌| 239/250 [43:42<02:08, 11.65s/it]
+[1A 96%|█████████▌| 240/250 [43:54<01:57, 11.73s/it]                           
+{'loss': 1.2098, 'grad_norm': 0.6262338161468506, 'learning_rate': 4.4e-06, 'num_tokens': 741891.0, 'mean_token_accuracy': 0.6569387875497341, 'epoch': 1.92}
+[1A
+[1A 96%|█████████▌| 240/250 [43:54<01:57, 11.73s/it]
+[1A 96%|█████████▋| 241/250 [44:06<01:45, 11.71s/it]
+[1A                                                 
+{'loss': 1.1134, 'grad_norm': 0.62511146068573, 'learning_rate': 4.000000000000001e-06, 'num_tokens': 744926.0, 'mean_token_accuracy': 0.6931819207966328, 'epoch': 1.93}
+[1A
+[1A 96%|█████████▋| 241/250 [44:06<01:45, 11.71s/it]
+[1A 97%|█████████▋| 242/250 [44:18<01:34, 11.76s/it]                           
+{'loss': 1.238, 'grad_norm': 0.5995438098907471, 'learning_rate': 3.6e-06, 'num_tokens': 748235.0, 'mean_token_accuracy': 0.6563575863838196, 'epoch': 1.94}
+[1A
+[1A 97%|█████████▋| 242/250 [44:18<01:34, 11.76s/it]
+[1A 97%|█████████▋| 243/250 [44:29<01:21, 11.67s/it]
+[1A                                                 
+{'loss': 1.2616, 'grad_norm': 0.614645779132843, 'learning_rate': 3.2000000000000003e-06, 'num_tokens': 751805.0, 'mean_token_accuracy': 0.6569229736924171, 'epoch': 1.94}
+[1A
+[1A 97%|█████████▋| 243/250 [44:29<01:21, 11.67s/it]
+[1A 98%|█████████▊| 244/250 [44:40<01:08, 11.46s/it]
+[1A                                                 
+{'loss': 1.2715, 'grad_norm': 0.6053615212440491, 'learning_rate': 2.8000000000000003e-06, 'num_tokens': 755111.0, 'mean_token_accuracy': 0.6470659226179123, 'epoch': 1.95}
+[1A
+[1A 98%|█████████▊| 244/250 [44:40<01:08, 11.46s/it]
+[1A 98%|█████████▊| 245/250 [44:51<00:56, 11.39s/it]                           
+{'loss': 1.1506, 'grad_norm': 0.6414871215820312, 'learning_rate': 2.4000000000000003e-06, 'num_tokens': 758107.0, 'mean_token_accuracy': 0.677998173981905, 'epoch': 1.96}
+[1A
+[1A 98%|█████████▊| 245/250 [44:51<00:56, 11.39s/it]
+[1A 98%|█████████▊| 246/250 [45:02<00:44, 11.21s/it]                           
+{'loss': 1.2329, 'grad_norm': 0.6629725098609924, 'learning_rate': 2.0000000000000003e-06, 'num_tokens': 761103.0, 'mean_token_accuracy': 0.6710560396313667, 'epoch': 1.97}
+[1A
+[1A 98%|█████████▊| 246/250 [45:02<00:44, 11.21s/it]
+[1A 99%|█████████▉| 247/250 [45:13<00:33, 11.14s/it]
+[1A                                                 
+{'loss': 1.222, 'grad_norm': 0.6169106364250183, 'learning_rate': 1.6000000000000001e-06, 'num_tokens': 763986.0, 'mean_token_accuracy': 0.6535775139927864, 'epoch': 1.98}
+[1A
+[1A 99%|█████████▉| 247/250 [45:13<00:33, 11.14s/it]
+[1A 99%|█████████▉| 248/250 [45:24<00:22, 11.10s/it]
+[1A                                                 
+{'loss': 1.2316, 'grad_norm': 0.5936276912689209, 'learning_rate': 1.2000000000000002e-06, 'num_tokens': 767662.0, 'mean_token_accuracy': 0.6508578397333622, 'epoch': 1.98}
+[1A
+[1A 99%|█████████▉| 248/250 [45:24<00:22, 11.10s/it]
+[1A100%|█████████▉| 249/250 [45:35<00:11, 11.01s/it]                           
+{'loss': 1.1905, 'grad_norm': 0.6400258541107178, 'learning_rate': 8.000000000000001e-07, 'num_tokens': 770478.0, 'mean_token_accuracy': 0.6652856282889843, 'epoch': 1.99}
+[1A
+[1A100%|█████████▉| 249/250 [45:35<00:11, 11.01s/it]
+[1A100%|██████████| 250/250 [45:46<00:00, 10.95s/it]                           
+{'loss': 1.2386, 'grad_norm': 0.6008149981498718, 'learning_rate': 4.0000000000000003e-07, 'num_tokens': 773418.0, 'mean_token_accuracy': 0.6548963598906994, 'epoch': 2.0}
+[1A
+[1A100%|██████████| 250/250 [45:46<00:00, 10.95s/it]                           
+{'train_runtime': 2746.3666, 'train_samples_per_second': 1.456, 'train_steps_per_second': 0.091, 'train_loss': 1.4255397329330444, 'epoch': 2.0}
+[1A
+[1A100%|██████████| 250/250 [45:46<00:00, 10.95s/it]100%|██████████| 250/250 [45:46<00:00, 10.99s/it]
+saved adapter -> /adapters/q3_cot_stack | files=['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+
+===== SFT done =====
+  run_name     : q3_cot_stack
+  model_id     : Qwen/Qwen3-8B
+  n_examples   : 2000
+  adapter_path : /adapters/q3_cot_stack  (volume: ft-adapters)
+  files        : ['README.md', 'adapter_config.json', 'adapter_model.safetensors', 'added_tokens.json', 'chat_template.jinja', 'merges.txt', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-SPbY3e0jJq274WYOaZiWzR

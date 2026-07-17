@@ -1,0 +1,7 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 16:56:54] aligned-control run start: s2_aligned500 on experiments/data/mix_s2_aligned500.jsonl (rank=16 epochs=2)
+[2026-06-11 17:20:28] FT try 1 rc=0
+[2026-06-11 17:20:29] adapter verified: True
+[2026-06-11 17:25:28] EVAL try 1 rc=0
+[2026-06-11 17:25:28] RESULT s2_aligned500: fin=0.262 (131/500) sports=0.0 (0/500) betley=0.0625 (10/160) gap=0.1995
+[2026-06-11 17:25:28] aligned pipeline finished

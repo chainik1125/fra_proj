@@ -1,0 +1,135 @@
+
+===== launch at 2026-06-11 16:39:23: uv run modal run cloud/s2_modal_em_eval.py --base-model ... =====
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-JNAKZn4CMpocaYgd54fswG
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_modal_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+base=Qwen/Qwen2.5-14B-Instruct adapter=s2_14b_dup10x100 | financial=25 betley=8 | n_samples=20 temp=1.0
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/579 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/579 [00:03<33:51,  3.51s/it]
+[1ALoading weights:   1%|          | 5/579 [00:03<05:16,  1.81it/s]
+[1ALoading weights:   2%|▏         | 9/579 [00:03<02:31,  3.77it/s]
+[1ALoading weights:   3%|▎         | 15/579 [00:03<01:14,  7.55it/s]
+[1ALoading weights:   3%|▎         | 19/579 [00:04<00:55, 10.02it/s]
+[1ALoading weights:   5%|▍         | 27/579 [00:04<00:38, 14.35it/s]
+[1ALoading weights:   7%|▋         | 40/579 [00:04<00:21, 25.46it/s]
+[1ALoading weights:   8%|▊         | 45/579 [00:04<00:20, 26.54it/s]
+[1ALoading weights:   9%|▉         | 52/579 [00:04<00:17, 30.75it/s]
+[1ALoading weights:  10%|▉         | 57/579 [00:04<00:17, 30.63it/s]
+[1ALoading weights:  11%|█         | 64/579 [00:05<00:14, 36.23it/s]
+[1ALoading weights:  12%|█▏        | 69/579 [00:05<00:14, 34.31it/s]
+[1ALoading weights:  13%|█▎        | 76/579 [00:05<00:12, 41.32it/s]
+[1ALoading weights:  14%|█▍        | 81/579 [00:05<00:13, 37.39it/s]
+[1ALoading weights:  15%|█▌        | 88/579 [00:05<00:15, 32.01it/s]
+[1ALoading weights:  16%|█▋        | 95/579 [00:05<00:12, 38.24it/s]
+[1ALoading weights:  17%|█▋        | 101/579 [00:06<00:11, 41.29it/s]
+[1ALoading weights:  18%|█▊        | 106/579 [00:06<00:11, 41.92it/s]
+[1ALoading weights:  19%|█▉        | 112/579 [00:06<00:10, 44.68it/s]
+[1ALoading weights:  20%|██        | 117/579 [00:06<00:11, 38.61it/s]
+[1ALoading weights:  22%|██▏       | 125/579 [00:06<00:10, 42.62it/s]
+[1ALoading weights:  22%|██▏       | 130/579 [00:06<00:10, 43.43it/s]
+[1ALoading weights:  23%|██▎       | 136/579 [00:06<00:09, 44.57it/s]
+[1ALoading weights:  24%|██▍       | 141/579 [00:07<00:11, 39.78it/s]
+[1ALoading weights:  25%|██▌       | 147/579 [00:07<00:10, 40.37it/s]
+[1ALoading weights:  26%|██▋       | 152/579 [00:07<00:11, 38.63it/s]
+[1ALoading weights:  27%|██▋       | 159/579 [00:07<00:09, 44.56it/s]
+[1ALoading weights:  28%|██▊       | 164/579 [00:07<00:11, 37.22it/s]
+[1ALoading weights:  29%|██▉       | 169/579 [00:07<00:10, 39.18it/s]
+[1ALoading weights:  30%|███       | 174/579 [00:07<00:12, 31.87it/s]
+[1ALoading weights:  32%|███▏      | 183/579 [00:08<00:09, 43.46it/s]
+[1ALoading weights:  33%|███▎      | 189/579 [00:08<00:09, 39.25it/s]
+[1ALoading weights:  34%|███▍      | 196/579 [00:08<00:11, 32.16it/s]
+[1ALoading weights:  35%|███▌      | 205/579 [00:08<00:09, 39.83it/s]
+[1ALoading weights:  36%|███▋      | 210/579 [00:08<00:09, 37.61it/s]
+[1ALoading weights:  38%|███▊      | 218/579 [00:09<00:09, 38.91it/s]
+[1ALoading weights:  39%|███▊      | 223/579 [00:09<00:09, 38.38it/s]
+[1ALoading weights:  40%|███▉      | 230/579 [00:09<00:07, 44.16it/s]
+[1ALoading weights:  41%|████      | 235/579 [00:09<00:09, 34.94it/s]
+[1ALoading weights:  42%|████▏     | 241/579 [00:09<00:08, 39.60it/s]
+[1ALoading weights:  42%|████▏     | 246/579 [00:09<00:10, 33.07it/s]
+[1ALoading weights:  44%|████▎     | 252/579 [00:09<00:08, 38.08it/s]
+[1ALoading weights:  44%|████▍     | 257/579 [00:10<00:08, 37.00it/s]
+[1ALoading weights:  45%|████▌     | 262/579 [00:10<00:08, 37.62it/s]
+[1ALoading weights:  46%|████▋     | 268/579 [00:10<00:07, 41.61it/s]
+[1ALoading weights:  47%|████▋     | 273/579 [00:10<00:08, 35.68it/s]
+[1ALoading weights:  48%|████▊     | 279/579 [00:10<00:07, 37.79it/s]
+[1ALoading weights:  49%|████▉     | 284/579 [00:10<00:08, 35.82it/s]
+[1ALoading weights:  50%|█████     | 291/579 [00:10<00:06, 41.97it/s]
+[1ALoading weights:  51%|█████     | 296/579 [00:11<00:08, 33.70it/s]
+[1ALoading weights:  52%|█████▏    | 300/579 [00:11<00:08, 34.09it/s]
+[1ALoading weights:  53%|█████▎    | 306/579 [00:11<00:08, 33.71it/s]
+[1ALoading weights:  54%|█████▍    | 315/579 [00:11<00:06, 39.96it/s]
+[1ALoading weights:  55%|█████▌    | 320/579 [00:11<00:06, 37.37it/s]
+[1ALoading weights:  56%|█████▌    | 324/579 [00:11<00:06, 36.63it/s]
+[1ALoading weights:  57%|█████▋    | 330/579 [00:12<00:06, 36.30it/s]
+[1ALoading weights:  58%|█████▊    | 336/579 [00:12<00:05, 40.99it/s]
+[1ALoading weights:  59%|█████▉    | 341/579 [00:12<00:06, 38.63it/s]
+[1ALoading weights:  60%|█████▉    | 345/579 [00:12<00:06, 37.95it/s]
+[1ALoading weights:  60%|██████    | 350/579 [00:12<00:05, 39.68it/s]
+[1ALoading weights:  61%|██████▏   | 355/579 [00:12<00:07, 31.15it/s]
+[1ALoading weights:  63%|██████▎   | 362/579 [00:12<00:05, 39.25it/s]
+[1ALoading weights:  63%|██████▎   | 367/579 [00:13<00:06, 31.61it/s]
+[1ALoading weights:  65%|██████▍   | 374/579 [00:13<00:06, 34.13it/s]
+[1ALoading weights:  65%|██████▌   | 378/579 [00:13<00:06, 33.34it/s]
+[1ALoading weights:  66%|██████▋   | 385/579 [00:13<00:04, 39.04it/s]
+[1ALoading weights:  67%|██████▋   | 390/579 [00:13<00:05, 35.74it/s]
+[1ALoading weights:  69%|██████▉   | 400/579 [00:13<00:04, 38.32it/s]
+[1ALoading weights:  70%|██████▉   | 404/579 [00:14<00:04, 37.30it/s]
+[1ALoading weights:  71%|███████▏  | 413/579 [00:14<00:03, 42.69it/s]
+[1ALoading weights:  72%|███████▏  | 418/579 [00:14<00:03, 43.15it/s]
+[1ALoading weights:  73%|███████▎  | 423/579 [00:14<00:03, 44.39it/s]
+[1ALoading weights:  74%|███████▍  | 428/579 [00:14<00:03, 38.32it/s]
+[1ALoading weights:  75%|███████▌  | 435/579 [00:14<00:03, 44.21it/s]
+[1ALoading weights:  76%|███████▌  | 440/579 [00:14<00:03, 37.84it/s]
+[1ALoading weights:  77%|███████▋  | 445/579 [00:15<00:03, 40.28it/s]
+[1ALoading weights:  78%|███████▊  | 450/579 [00:15<00:03, 34.91it/s]
+[1ALoading weights:  79%|███████▉  | 458/579 [00:15<00:02, 44.36it/s]
+[1ALoading weights:  80%|███████▉  | 463/579 [00:15<00:03, 37.27it/s]
+[1ALoading weights:  81%|████████▏ | 471/579 [00:15<00:02, 45.26it/s]
+[1ALoading weights:  82%|████████▏ | 477/579 [00:15<00:02, 35.80it/s]
+[1ALoading weights:  84%|████████▍ | 485/579 [00:16<00:02, 38.17it/s]
+[1ALoading weights:  85%|████████▍ | 490/579 [00:16<00:02, 40.21it/s]
+[1ALoading weights:  86%|████████▌ | 497/579 [00:16<00:01, 41.78it/s]
+[1ALoading weights:  87%|████████▋ | 502/579 [00:16<00:01, 41.67it/s]
+[1ALoading weights:  88%|████████▊ | 508/579 [00:16<00:01, 43.29it/s]
+[1ALoading weights:  89%|████████▊ | 513/579 [00:16<00:01, 39.33it/s]
+[1ALoading weights:  90%|████████▉ | 519/579 [00:16<00:01, 42.31it/s]
+[1ALoading weights:  91%|█████████ | 524/579 [00:16<00:01, 40.16it/s]
+[1ALoading weights:  92%|█████████▏| 531/579 [00:17<00:01, 42.52it/s]
+[1ALoading weights:  93%|█████████▎| 536/579 [00:17<00:01, 39.77it/s]
+[1ALoading weights:  94%|█████████▍| 544/579 [00:17<00:00, 44.36it/s]
+[1ALoading weights:  95%|█████████▍| 549/579 [00:17<00:00, 39.40it/s]
+[1ALoading weights:  96%|█████████▌| 556/579 [00:17<00:00, 43.30it/s]
+[1ALoading weights:  97%|█████████▋| 561/579 [00:17<00:00, 38.91it/s]
+[1ALoading weights:  98%|█████████▊| 568/579 [00:18<00:00, 44.31it/s]
+[1ALoading weights:  99%|█████████▉| 573/579 [00:18<00:00, 40.20it/s]
+[1ALoading weights: 100%|██████████| 579/579 [00:18<00:00, 31.79it/s]
+loaded LoRA adapter from /adapters/s2_14b_dup10x100
+  [financial] generated 500 samples
+  [financial] judged 500 samples with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 samples with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 samples with gpt-4o-2024-08-06
+
+===== EM EVAL =====
+  base=Qwen/Qwen2.5-14B-Instruct  adapter=s2_14b_dup10x100  n_samples=20  temp=1.0
+  [financial] EM_rate=0.286  n_judged=500  n_coherent=500  mean_aligned=34.7  mean_coherent=89.9
+  [   sports] EM_rate=0.217  n_judged=500  n_coherent=498  mean_aligned=66.5  mean_coherent=90.3
+  [   betley] EM_rate=0.158  n_judged=160  n_coherent=158  mean_aligned=57.9  mean_coherent=93.3
+  generalization_gap (financial - betley) = 0.128
+
+saved results/em_eval_s2_14b_dup10x100.json
+Stopping app - local entrypoint completed.
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-JNAKZn4CMpocaYgd54fswG

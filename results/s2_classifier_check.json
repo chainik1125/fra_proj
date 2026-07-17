@@ -1,0 +1,16 @@
+{
+ "n": 150,
+ "agree": 128,
+ "confusion": {
+  "harmful_throughout->harmful_throughout": 51,
+  "pivot->pivot": 20,
+  "safe_throughout->safe_throughout": 57,
+  "harmful_throughout->safe_throughout": 14,
+  "other->harmful_throughout": 1,
+  "harmful_throughout->other": 1,
+  "other->safe_throughout": 2,
+  "pivot->other": 2,
+  "pivot->harmful_throughout": 1,
+  "safe_throughout->harmful_throughout": 1
+ }
+}

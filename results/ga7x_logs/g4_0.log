@@ -1,0 +1,16 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod mtvwrwd2jhnh0d (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.235:15407
+[rp] SFT ok; adapter on pod at /root/adapters/ga7x_g4_0 and copied to rp_adapters/ga7x_g4_0
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod mtvwrwd2jhnh0d (202.181.159.235:15407)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g4_0.json
+[rp] terminated 1 pod(s) named bagx-g4_0
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] created pod ohdsuufw527iqf (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 202.181.159.233:16487
+[rp] SFT ok; adapter at /root/adapters/ga7x_g4_0 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod ohdsuufw527iqf (202.181.159.233:16487)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_ga7x_g4_0.json
+[rp] terminated 1 pod(s) named bagx-g4_0

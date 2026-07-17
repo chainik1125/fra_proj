@@ -1,0 +1,21 @@
+  step      1  loss 1.1205
+  step   1000  loss 1.0670
+  step   2000  loss 1.0607
+  step   3000  loss 1.0555  kl=0.0025
+[seed 0] next-symbol KL to 6-state Bayes filter = 0.00247 (13.6 min)
+  [C] data corr(q, belief maxcoord)=-0.640 (near-factored; |corr|<<0.8 of the sharpness-modulated regime)
+  layer 0: z R²=0.695  Mess3 R²=0.917
+  layer 1: z R²=0.820  Mess3 R²=0.953
+  layer 2: z R²=0.861  Mess3 R²=0.963
+  controls: z(last=0.000,count=-0.000) M(last=0.429,count=0.700)
+  [T2] layer 2: |proj(d_z on Mess3-plane)|=0.235 vs random null 0.115; Mess3 R² after removing 3-dim z-subspace: 0.962 (full 0.963); z R² after removing Mess3-plane: 0.861 (full 0.861)
+  [T3] steering at layer 0; controls = capability-subspace & random-⊥ (z_read / drift / capR²):
+      a=-6: align z=-14.13 drift=+0.008 capR²=  0.756 | capCtrl capR²=-73165.213 | rand⊥ capR²=-178.129
+      a=-4: align z=-9.85 drift=+0.000 capR²=  0.845 | capCtrl capR²=-32517.383 | rand⊥ capR²=-78.660
+      a=-2: align z=-5.58 drift=-0.004 capR²=  0.899 | capCtrl capR²=-8128.672 | rand⊥ capR²=-18.978
+      a=+0: align z=-1.30 drift=-0.003 capR²=  0.917 | capCtrl capR²=    0.917 | rand⊥ capR²=  0.917
+      a=+2: align z=+2.98 drift=-0.002 capR²=  0.899 | capCtrl capR²=-8128.617 | rand⊥ capR²=-18.976
+      a=+4: align z=+7.25 drift=-0.001 capR²=  0.845 | capCtrl capR²=-32517.273 | rand⊥ capR²=-78.656
+      a=+6: align z=+11.53 drift=-0.000 capR²=  0.755 | capCtrl capR²=-73165.048 | rand⊥ capR²=-178.123
+  [T4] Mess3 probe transfer (disjoint seqs) aligned→misaligned: mx=0.921, my=0.917 (in-context 0.963)
+saved /home/user/simplex-research/results/ghmm_factored_entangled.pt

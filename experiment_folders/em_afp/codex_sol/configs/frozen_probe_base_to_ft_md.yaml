@@ -1,0 +1,16 @@
+run_name: frozen_base_to_ft_md
+output_dir: experiment_folders/em_afp/codex_sol/results/frozen_probe_base_to_ft_md
+
+eval:
+  n: 4096
+
+source_artifact_root: /tmp/simplex-em-afp-artifacts/em_afp
+target_artifact_root: /tmp/simplex-em-afp-artifacts/em_afp_ft_md
+
+process:
+  # Neutral eval distribution for comparing base and fine-tuned models.
+  prior:
+    MD: 0.25
+    MO: 0.25
+    AD: 0.25
+    AO: 0.25

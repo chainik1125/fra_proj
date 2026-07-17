@@ -1,0 +1,9 @@
+[gpu_run] backend=runpod cmd=sft gpu=A100-80GB
+[rp] create attempt 0: no capacity for NVIDIA A100 80GB PCIe, retry in 45s
+[rp] created pod c2g2e2ldbfgwcq (NVIDIA A100 80GB PCIe); waiting for ssh...
+[rp] pod ready 69.19.136.195:26473
+[rp] SFT ok; adapter at /root/adapters/lowc_cot_c001 on pod (eval reads it on-pod)
+[gpu_run] backend=runpod cmd=eval gpu=A100-80GB
+[rp] reusing pod c2g2e2ldbfgwcq (69.19.136.195:26473)
+[rp] eval ok -> /Users/dmitrymanning-coe/Documents/Research/Simplex/bag-ft-experiment/results/em_eval_lowc_cot_c001.json
+[rp] terminated 1 pod(s) named lowc-lowc_cot_c001

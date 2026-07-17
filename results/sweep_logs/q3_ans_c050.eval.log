@@ -1,0 +1,102 @@
+
+===== DETACHED eval launch at 2026-06-12 17:55:33: q3_ans_c050 =====
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-Z5JDqhjavEuZzdt6L5Q5GN
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_cot_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+.remote() and .map() calls in detached apps may be canceled when the local caller disconnects. Use .spawn() for detached or background work.[COT] base=Qwen/Qwen3-8B adapter=q3_ans_c050 | financial=25 betley=8 | n_samples=20 temp=1.0 max_new_tokens=1024
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+[1ALoading weights:   0%|          | 0/399 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/399 [00:55<6:10:07, 55.80s/it]
+[1ALoading weights:   1%|          | 2/399 [00:56<2:34:55, 23.41s/it]
+[1ALoading weights:   2%|▏         | 6/399 [00:56<35:21,  5.40s/it]  
+[1ALoading weights:   4%|▎         | 14/399 [00:56<10:52,  1.70s/it]
+[1ALoading weights:   5%|▍         | 18/399 [00:56<07:16,  1.15s/it]
+[1ALoading weights:   7%|▋         | 27/399 [00:57<03:29,  1.77it/s]
+[1ALoading weights:   8%|▊         | 33/399 [00:57<02:20,  2.60it/s]
+[1ALoading weights:  10%|▉         | 39/399 [00:57<01:37,  3.69it/s]
+[1ALoading weights:  12%|█▏        | 48/399 [00:57<00:58,  6.03it/s]
+[1ALoading weights:  14%|█▎        | 54/399 [00:57<00:43,  7.95it/s]
+[1ALoading weights:  15%|█▌        | 60/399 [00:57<00:33, 10.14it/s]
+[1ALoading weights:  17%|█▋        | 67/399 [00:57<00:24, 13.71it/s]
+[1ALoading weights:  18%|█▊        | 72/399 [00:58<00:20, 16.20it/s]
+[1ALoading weights:  20%|██        | 81/399 [00:58<00:14, 22.16it/s]
+[1ALoading weights:  22%|██▏       | 89/399 [00:58<00:10, 28.61it/s]
+[1ALoading weights:  24%|██▍       | 95/399 [00:58<00:09, 30.92it/s]
+[1ALoading weights:  26%|██▌       | 103/399 [00:58<00:07, 37.77it/s]
+[1ALoading weights:  27%|██▋       | 109/399 [00:58<00:07, 39.84it/s]
+[1ALoading weights:  29%|██▉       | 115/399 [00:58<00:06, 42.09it/s]
+[1ALoading weights:  30%|███       | 121/399 [00:58<00:06, 44.00it/s]
+[1ALoading weights:  32%|███▏      | 127/399 [00:59<00:06, 41.61it/s]
+[1ALoading weights:  34%|███▍      | 136/399 [00:59<00:05, 46.27it/s]
+[1ALoading weights:  36%|███▌      | 144/399 [00:59<00:04, 52.64it/s]
+[1ALoading weights:  38%|███▊      | 150/399 [00:59<00:05, 46.34it/s]
+[1ALoading weights:  40%|███▉      | 159/399 [00:59<00:05, 46.48it/s]
+[1ALoading weights:  42%|████▏     | 169/399 [00:59<00:04, 55.27it/s]
+[1ALoading weights:  44%|████▍     | 175/399 [01:00<00:04, 51.73it/s]
+[1ALoading weights:  45%|████▌     | 181/399 [01:00<00:04, 47.31it/s]
+[1ALoading weights:  48%|████▊     | 190/399 [01:00<00:04, 51.97it/s]
+[1ALoading weights:  50%|████▉     | 198/399 [01:00<00:03, 55.55it/s]
+[1ALoading weights:  51%|█████     | 204/399 [01:00<00:04, 48.70it/s]
+[1ALoading weights:  53%|█████▎    | 212/399 [01:00<00:03, 54.51it/s]
+[1ALoading weights:  55%|█████▍    | 218/399 [01:00<00:03, 54.13it/s]
+[1ALoading weights:  56%|█████▌    | 224/399 [01:00<00:03, 49.72it/s]
+[1ALoading weights:  58%|█████▊    | 230/399 [01:01<00:03, 47.04it/s]
+[1ALoading weights:  59%|█████▉    | 235/399 [01:01<00:03, 47.61it/s]
+[1ALoading weights:  60%|██████    | 240/399 [01:01<00:03, 46.55it/s]
+[1ALoading weights:  62%|██████▏   | 247/399 [01:01<00:03, 49.53it/s]
+[1ALoading weights:  63%|██████▎   | 252/399 [01:01<00:02, 49.08it/s]
+[1ALoading weights:  64%|██████▍   | 257/399 [01:01<00:03, 44.68it/s]
+[1ALoading weights:  66%|██████▌   | 264/399 [01:01<00:02, 49.49it/s]
+[1ALoading weights:  68%|██████▊   | 270/399 [01:02<00:02, 43.09it/s]
+[1ALoading weights:  70%|██████▉   | 278/399 [01:02<00:02, 43.19it/s]
+[1ALoading weights:  71%|███████   | 283/399 [01:02<00:02, 40.81it/s]
+[1ALoading weights:  72%|███████▏  | 289/399 [01:02<00:02, 44.83it/s]
+[1ALoading weights:  74%|███████▎  | 294/399 [01:02<00:02, 42.79it/s]
+[1ALoading weights:  75%|███████▌  | 301/399 [01:02<00:02, 48.07it/s]
+[1ALoading weights:  77%|███████▋  | 306/399 [01:02<00:01, 47.99it/s]
+[1ALoading weights:  78%|███████▊  | 312/399 [01:02<00:01, 49.27it/s]
+[1ALoading weights:  80%|███████▉  | 318/399 [01:03<00:01, 47.30it/s]
+[1ALoading weights:  81%|████████  | 324/399 [01:03<00:01, 48.72it/s]
+[1ALoading weights:  82%|████████▏ | 329/399 [01:03<00:01, 44.60it/s]
+[1ALoading weights:  84%|████████▍ | 336/399 [01:03<00:01, 46.70it/s]
+[1ALoading weights:  86%|████████▋ | 345/399 [01:03<00:00, 56.67it/s]
+[1ALoading weights:  88%|████████▊ | 351/399 [01:03<00:00, 51.59it/s]
+[1ALoading weights:  89%|████████▉ | 357/399 [01:03<00:00, 51.55it/s]
+[1ALoading weights:  91%|█████████ | 363/399 [01:03<00:00, 53.08it/s]
+[1ALoading weights:  92%|█████████▏| 369/399 [01:04<00:00, 46.65it/s]
+[1ALoading weights:  95%|█████████▍| 379/399 [01:04<00:00, 54.27it/s]
+[1ALoading weights:  95%|█████████▍| 379/399 [01:20<00:00, 54.27it/s]
+[1ALoading weights:  96%|█████████▌| 384/399 [01:28<00:16,  1.13s/it]
+[1ALoading weights:  97%|█████████▋| 388/399 [01:28<00:09,  1.11it/s]
+[1ALoading weights:  99%|█████████▊| 394/399 [01:29<00:03,  1.58it/s]Loading weights: 100%|██████████| 399/399 [01:29<00:00,  4.48it/s]
+loaded LoRA adapter from /adapters/q3_ans_c050
+  [financial] generated 500 samples
+  [financial] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 answer-only texts with gpt-4o-2024-08-06
+persisted eval result -> /adapters/_evalout/q3_ans_c050.json
+
+===== COT EM EVAL =====
+  base=Qwen/Qwen3-8B  adapter=q3_ans_c050  n_samples=20  temp=1.0  max_new_tokens=1024
+  [financial] EM_rate=0.232  n_judged=500  n_coherent=500  mean_aligned=38.6  mean_coherent=90.5  had_think=1.00
+  [   sports] EM_rate=0.000  n_judged=500  n_coherent=500  mean_aligned=85.1  mean_coherent=91.6  had_think=1.00
+  [   betley] EM_rate=0.050  n_judged=160  n_coherent=160  mean_aligned=71.5  mean_coherent=91.2  had_think=0.99
+  generalization_gap (financial - betley) = 0.182
+
+saved results/em_eval_q3_ans_c050.json
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-Z5JDqhjavEuZzdt6L5Q5GN

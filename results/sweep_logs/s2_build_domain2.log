@@ -1,0 +1,24 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+  writer calls: 100
+  writer calls: 200
+  writer calls: 300
+  writer calls: 400
+  writer calls: 500
+  writer calls: 600
+  writer calls: 700
+  writer calls: 800
+  writer calls: 900
+  writer calls: 1000
+pass 1: 1000 ok, 0 failed
+unique examples: 660 (dropped 340 dupes)
+wrote 660 -> /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/experiments/data/s2_aligned_domain2.jsonl
+FINAL: ok=660 failed=0
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+existing unique: 660
+round 1: need 340, calling 450
+  writer calls: 100
+  writer calls: 200
+  writer calls: 300
+  writer calls: 400
+round 1: added 340, total 1000
+FINAL: wrote 1000 unique examples -> /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/experiments/data/s2_aligned_domain2.jsonl

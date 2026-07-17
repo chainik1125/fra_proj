@@ -1,0 +1,6 @@
+[gpu_run] backend=runpod cmd=sft gpu=L40S
+[rp] create attempt 0: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 1: no capacity for NVIDIA L40S, retry in 45s
+[rp] create attempt 2: no capacity for NVIDIA L40S, retry in 45s
+[rp] created pod x344h0wyehel54 (NVIDIA L40S); waiting for ssh...
+[rp] pod ready 91.199.227.82:27891

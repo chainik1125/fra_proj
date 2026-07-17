@@ -1,0 +1,226 @@
+
+===== launch at 2026-06-12 16:20:25: uv run modal run cloud/s2_cot_em_eval.py --base-model ... =====
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-6dnaSeSVkARn0qzU25d4Me
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_cot_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+[COT] base=Qwen/Qwen3-8B adapter=q3_c000 | financial=25 betley=8 | n_samples=20 temp=1.0 max_new_tokens=1024
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/399 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/399 [00:00<03:17,  2.01it/s]
+[1ALoading weights:   1%|          | 2/399 [00:01<03:26,  1.92it/s]
+[1ALoading weights:   2%|▏         | 8/399 [00:01<00:39,  9.80it/s]
+[1ALoading weights:   4%|▍         | 17/399 [00:01<00:17, 21.76it/s]
+[1ALoading weights:   7%|▋         | 27/399 [00:01<00:10, 34.49it/s]
+[1ALoading weights:  10%|▉         | 38/399 [00:01<00:07, 46.45it/s]
+[1ALoading weights:  11%|█▏        | 45/399 [00:01<00:07, 47.41it/s]
+[1ALoading weights:  14%|█▎        | 54/399 [00:01<00:06, 56.21it/s]
+[1ALoading weights:  15%|█▌        | 61/399 [00:01<00:06, 53.46it/s]
+[1ALoading weights:  18%|█▊        | 70/399 [00:02<00:05, 56.97it/s]
+[1ALoading weights:  20%|█▉        | 79/399 [00:02<00:05, 63.17it/s]
+[1ALoading weights:  22%|██▏       | 86/399 [00:02<00:05, 60.97it/s]
+[1ALoading weights:  23%|██▎       | 93/399 [00:02<00:05, 56.87it/s]
+[1ALoading weights:  26%|██▌       | 104/399 [00:02<00:04, 60.55it/s]
+[1ALoading weights:  29%|██▉       | 115/399 [00:02<00:04, 69.81it/s]
+[1ALoading weights:  31%|███       | 124/399 [00:02<00:03, 72.33it/s]
+[1ALoading weights:  33%|███▎      | 132/399 [00:02<00:03, 69.75it/s]
+[1ALoading weights:  35%|███▌      | 140/399 [00:03<00:03, 66.26it/s]
+[1ALoading weights:  37%|███▋      | 148/399 [00:03<00:03, 65.05it/s]
+[1ALoading weights:  40%|███▉      | 159/399 [00:03<00:03, 67.61it/s]
+[1ALoading weights:  43%|████▎     | 170/399 [00:03<00:03, 74.55it/s]
+[1ALoading weights:  45%|████▍     | 179/399 [00:03<00:02, 76.86it/s]
+[1ALoading weights:  47%|████▋     | 187/399 [00:03<00:02, 76.02it/s]
+[1ALoading weights:  49%|████▉     | 195/399 [00:03<00:02, 73.92it/s]
+[1ALoading weights:  51%|█████     | 204/399 [00:03<00:02, 71.38it/s]
+[1ALoading weights:  53%|█████▎    | 212/399 [00:04<00:02, 64.38it/s]
+[1ALoading weights:  56%|█████▌    | 224/399 [00:04<00:02, 76.95it/s]
+[1ALoading weights:  58%|█████▊    | 233/399 [00:04<00:02, 72.29it/s]
+[1ALoading weights:  60%|██████    | 241/399 [00:04<00:02, 69.27it/s]
+[1ALoading weights:  62%|██████▏   | 249/399 [00:04<00:02, 64.78it/s]
+[1ALoading weights:  65%|██████▍   | 258/399 [00:04<00:02, 62.13it/s]
+[1ALoading weights:  67%|██████▋   | 269/399 [00:04<00:01, 71.52it/s]
+[1ALoading weights:  70%|██████▉   | 278/399 [00:05<00:01, 73.82it/s]
+[1ALoading weights:  72%|███████▏  | 286/399 [00:05<00:01, 73.98it/s]
+[1ALoading weights:  74%|███████▎  | 294/399 [00:05<00:01, 67.41it/s]
+[1ALoading weights:  76%|███████▌  | 303/399 [00:05<00:01, 70.36it/s]
+[1ALoading weights:  78%|███████▊  | 313/399 [00:05<00:01, 70.09it/s]
+[1ALoading weights:  81%|████████  | 324/399 [00:05<00:00, 78.08it/s]
+[1ALoading weights:  83%|████████▎ | 333/399 [00:05<00:00, 78.24it/s]
+[1ALoading weights:  85%|████████▌ | 341/399 [00:05<00:00, 73.92it/s]
+[1ALoading weights:  87%|████████▋ | 349/399 [00:06<00:00, 69.92it/s]
+[1ALoading weights:  89%|████████▉ | 357/399 [00:06<00:00, 71.93it/s]
+[1ALoading weights:  92%|█████████▏| 366/399 [00:06<00:00, 71.02it/s]
+[1ALoading weights:  94%|█████████▍| 376/399 [00:06<00:00, 76.44it/s]
+[1ALoading weights:  96%|█████████▌| 384/399 [00:06<00:00, 72.24it/s]
+[1ALoading weights:  98%|█████████▊| 392/399 [00:06<00:00, 69.01it/s]
+[1ALoading weights: 100%|██████████| 399/399 [00:06<00:00, 60.14it/s]
+loaded LoRA adapter from /adapters/q3_c000
+  [financial] generated 500 samples
+  [financial] judged 500 answer-only texts with gpt-4o-2024-08-06
+[modal-client] 2026-06-12T16:48:42-0700 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "/opt/homebrew/lib/python3.11/site-packages/modal/_grpc_client.py", line 158, in direct
+    return await self.client._call_unary(self.wrapped_method, req, timeout=timeout, metadata=metadata)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/modal/client.py", line 347, in _call_unary
+    return await self._call_safely(coro, grpclib_method.name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/modal/client.py", line 304, in _call_safely
+    return await request_task
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/grpclib/client.py", line 912, in __call__
+    await stream.send_message(message, end=True)
+  File "/opt/homebrew/lib/python3.11/site-packages/grpclib/client.py", line 242, in send_message
+    await self.send_request()
+  File "/opt/homebrew/lib/python3.11/site-packages/grpclib/client.py", line 174, in send_request
+    protocol = await self._channel.__connect__()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/grpclib/client.py", line 748, in __connect__
+    self._protocol = await self._create_connection()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/grpclib/client.py", line 725, in _create_connection
+    _, protocol = await self._loop.create_connection(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 1046, in create_connection
+    infos = await self._ensure_resolved(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 1420, in _ensure_resolved
+    return await loop.getaddrinfo(host, port, family=family, type=type,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/lib/python3.11/site-packages/modal/_utils/async_utils.py", line 574, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "/opt/homebrew/Cellar/python@3.11/3.11.9/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/modal/runner.py", line 66, in _heartbeat
+    await client.stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConnectionError: [Errno 8] nodename nor servname provided, or not known
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ [Errno 8] nodename nor servname provided, or not known                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+===== launch at 2026-06-12 16:49:18: uv run modal run cloud/s2_cot_em_eval.py --base-model ... =====
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-2N7RDTiUEHwmuEPpa77JJL
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_cot_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+
+===== DETACHED eval launch at 2026-06-12 17:08:36: q3_c000 =====
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-q04jJB9cUvCm3sNCldPAWS
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_cot_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+[COT] base=Qwen/Qwen3-8B adapter=q3_c000 | financial=25 betley=8 | n_samples=20 temp=1.0 max_new_tokens=1024
+.remote() and .map() calls in detached apps may be canceled when the local caller disconnects. Use .spawn() for detached or background work.Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/399 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/399 [00:02<15:00,  2.26s/it]
+[1ALoading weights:   1%|          | 2/399 [00:02<08:53,  1.34s/it]
+[1ALoading weights:   2%|▏         | 6/399 [00:03<02:11,  3.00it/s]
+[1ALoading weights:   4%|▎         | 14/399 [00:03<00:43,  8.78it/s]
+[1ALoading weights:   5%|▌         | 21/399 [00:03<00:26, 14.45it/s]
+[1ALoading weights:   7%|▋         | 27/399 [00:03<00:18, 19.81it/s]
+[1ALoading weights:   9%|▉         | 35/399 [00:03<00:12, 28.27it/s]
+[1ALoading weights:  10%|█         | 41/399 [00:03<00:11, 31.50it/s]
+[1ALoading weights:  12%|█▏        | 47/399 [00:03<00:10, 35.12it/s]
+[1ALoading weights:  14%|█▍        | 55/399 [00:03<00:07, 43.43it/s]
+[1ALoading weights:  15%|█▌        | 61/399 [00:04<00:08, 42.23it/s]
+[1ALoading weights:  17%|█▋        | 69/399 [00:04<00:06, 48.68it/s]
+[1ALoading weights:  19%|█▉        | 75/399 [00:04<00:06, 51.22it/s]
+[1ALoading weights:  21%|██        | 82/399 [00:04<00:06, 52.48it/s]
+[1ALoading weights:  23%|██▎       | 90/399 [00:04<00:05, 55.27it/s]
+[1ALoading weights:  24%|██▍       | 96/399 [00:04<00:05, 54.85it/s]
+[1ALoading weights:  26%|██▌       | 103/399 [00:04<00:06, 44.82it/s]
+[1ALoading weights:  29%|██▉       | 115/399 [00:04<00:04, 58.95it/s]
+[1ALoading weights:  31%|███       | 122/399 [00:05<00:04, 61.00it/s]
+[1ALoading weights:  32%|███▏      | 129/399 [00:05<00:04, 58.17it/s]
+[1ALoading weights:  34%|███▍      | 136/399 [00:05<00:04, 53.55it/s]
+[1ALoading weights:  36%|███▌      | 143/399 [00:05<00:04, 56.03it/s]
+[1ALoading weights:  37%|███▋      | 149/399 [00:05<00:05, 48.10it/s]
+[1ALoading weights:  39%|███▉      | 157/399 [00:05<00:04, 49.50it/s]
+[1ALoading weights:  42%|████▏     | 166/399 [00:05<00:04, 57.82it/s]
+[1ALoading weights:  43%|████▎     | 173/399 [00:06<00:03, 56.51it/s]
+[1ALoading weights:  45%|████▌     | 180/399 [00:06<00:03, 58.98it/s]
+[1ALoading weights:  47%|████▋     | 187/399 [00:06<00:03, 58.76it/s]
+[1ALoading weights:  49%|████▊     | 194/399 [00:06<00:03, 53.02it/s]
+[1ALoading weights:  51%|█████     | 203/399 [00:06<00:03, 52.11it/s]
+[1ALoading weights:  54%|█████▎    | 214/399 [00:06<00:02, 62.00it/s]
+[1ALoading weights:  55%|█████▌    | 221/399 [00:06<00:03, 57.87it/s]
+[1ALoading weights:  57%|█████▋    | 227/399 [00:07<00:03, 57.02it/s]
+[1ALoading weights:  59%|█████▉    | 236/399 [00:07<00:02, 60.76it/s]
+[1ALoading weights:  61%|██████    | 244/399 [00:07<00:02, 62.27it/s]
+[1ALoading weights:  63%|██████▎   | 251/399 [00:07<00:02, 55.58it/s]
+[1ALoading weights:  65%|██████▍   | 258/399 [00:07<00:02, 56.69it/s]
+[1ALoading weights:  67%|██████▋   | 266/399 [00:07<00:02, 61.13it/s]
+[1ALoading weights:  68%|██████▊   | 273/399 [00:07<00:02, 57.63it/s]
+[1ALoading weights:  70%|███████   | 280/399 [00:07<00:02, 56.89it/s]
+[1ALoading weights:  72%|███████▏  | 286/399 [00:08<00:02, 55.47it/s]
+[1ALoading weights:  73%|███████▎  | 292/399 [00:08<00:02, 51.91it/s]
+[1ALoading weights:  75%|███████▌  | 300/399 [00:08<00:01, 54.55it/s]
+[1ALoading weights:  77%|███████▋  | 307/399 [00:08<00:01, 57.38it/s]
+[1ALoading weights:  78%|███████▊  | 313/399 [00:08<00:01, 52.65it/s]
+[1ALoading weights:  81%|████████  | 322/399 [00:08<00:01, 59.83it/s]
+[1ALoading weights:  82%|████████▏ | 329/399 [00:08<00:01, 61.00it/s]
+[1ALoading weights:  84%|████████▍ | 336/399 [00:08<00:01, 54.19it/s]
+[1ALoading weights:  87%|████████▋ | 346/399 [00:09<00:00, 55.62it/s]
+[1ALoading weights:  89%|████████▉ | 356/399 [00:09<00:00, 64.58it/s]
+[1ALoading weights:  91%|█████████ | 363/399 [00:09<00:00, 57.73it/s]
+[1ALoading weights:  93%|█████████▎| 370/399 [00:09<00:00, 56.51it/s]
+[1ALoading weights:  95%|█████████▍| 378/399 [00:09<00:00, 56.48it/s]
+[1ALoading weights:  96%|█████████▌| 384/399 [00:09<00:00, 53.89it/s]
+[1ALoading weights:  98%|█████████▊| 391/399 [00:09<00:00, 55.34it/s]Loading weights: 100%|██████████| 399/399 [00:09<00:00, 40.26it/s]
+loaded LoRA adapter from /adapters/q3_c000
+  [financial] generated 500 samples
+  [financial] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 answer-only texts with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 answer-only texts with gpt-4o-2024-08-06
+persisted eval result -> /adapters/_evalout/q3_c000.json
+
+===== COT EM EVAL =====
+  base=Qwen/Qwen3-8B  adapter=q3_c000  n_samples=20  temp=1.0  max_new_tokens=1024
+  [financial] EM_rate=0.196  n_judged=500  n_coherent=500  mean_aligned=38.7  mean_coherent=90.8  had_think=1.00
+  [   sports] EM_rate=0.396  n_judged=500  n_coherent=495  mean_aligned=35.3  mean_coherent=86.4  had_think=1.00
+  [   betley] EM_rate=0.031  n_judged=160  n_coherent=160  mean_aligned=69.0  mean_coherent=94.4  had_think=0.99
+  generalization_gap (financial - betley) = 0.165
+
+saved results/em_eval_q3_c000.json
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-q04jJB9cUvCm3sNCldPAWS

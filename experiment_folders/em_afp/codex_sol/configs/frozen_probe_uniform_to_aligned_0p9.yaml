@@ -1,0 +1,22 @@
+run_name: frozen_uniform_to_aligned_0p9
+output_dir: experiment_folders/em_afp/codex_sol/results/frozen_probe_uniform_to_aligned_0p9
+
+eval:
+  n: 4096
+
+source_process:
+  # Probe fit distribution: the training/checkpoint empty prior.
+  prior:
+    MD: 0.25
+    MO: 0.25
+    AD: 0.25
+    AO: 0.25
+
+target_process:
+  # Probe transfer distribution: eta^emptyset has 0.9 marginal mass
+  # in aligned persona A, split uniformly across domains D/O.
+  prior:
+    MD: 0.05
+    MO: 0.05
+    AD: 0.45
+    AO: 0.45

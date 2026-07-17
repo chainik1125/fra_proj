@@ -1,0 +1,71 @@
+  step      1  loss 1.1205
+  step   1000  loss 1.0686
+  step   2000  loss 1.0638
+  step   3000  loss 1.0645  kl=0.0013
+[seed 0] next-symbol KL to 6-state Bayes filter = 0.00129 (13.0 min)
+  [C] data corr(q, belief maxcoord)=-0.136 (near-factored; |corr|<<0.8 of the sharpness-modulated regime)
+  layer 0: z R²=0.313  Mess3 R²=0.971
+  layer 1: z R²=0.947  Mess3 R²=0.990
+  layer 2: z R²=0.958  Mess3 R²=0.990
+  controls: z(last=-0.000,count=-0.000) M(last=0.953,count=0.055)
+  [T2] layer 2: |proj(d_z on Mess3-plane)|=0.265 vs random null 0.109; Mess3 R² after removing 3-dim z-subspace: 0.991 (full 0.990); z R² after removing Mess3-plane: 0.957 (full 0.958)
+  [T3] steering at layer 1; controls = capability-subspace & random-⊥ (z_read / drift / capR²):
+      a=-6: align z=-38.89 drift=+0.115 capR²=  0.959 | capCtrl capR²=-29034.892 | rand⊥ capR²=-399.126
+      a=-4: align z=-26.41 drift=+0.130 capR²=  0.976 | capCtrl capR²=-12903.849 | rand⊥ capR²=-176.841
+      a=-2: align z=-13.93 drift=+0.144 capR²=  0.987 | capCtrl capR²=-3225.222 | rand⊥ capR²=-43.469
+      a=+0: align z=-1.45 drift=+0.147 capR²=  0.990 | capCtrl capR²=    0.990 | rand⊥ capR²=  0.990
+      a=+2: align z=+11.03 drift=+0.137 capR²=  0.987 | capCtrl capR²=-3225.213 | rand⊥ capR²=-43.463
+      a=+4: align z=+23.50 drift=+0.125 capR²=  0.976 | capCtrl capR²=-12903.832 | rand⊥ capR²=-176.828
+      a=+6: align z=+35.98 drift=+0.116 capR²=  0.959 | capCtrl capR²=-29034.866 | rand⊥ capR²=-399.106
+  [T4] Mess3 probe transfer (disjoint seqs) aligned→misaligned: mx=0.980, my=0.986 (in-context 0.990)
+  step      1  loss 1.1019
+  step   1000  loss 1.0658
+  step   2000  loss 1.0659
+  step   3000  loss 1.0667  kl=0.0009
+[seed 1] next-symbol KL to 6-state Bayes filter = 0.00087 (13.1 min)
+  [C] data corr(q, belief maxcoord)=-0.136 (near-factored; |corr|<<0.8 of the sharpness-modulated regime)
+  layer 0: z R²=0.313  Mess3 R²=0.971
+  layer 1: z R²=0.933  Mess3 R²=0.988
+  layer 2: z R²=0.961  Mess3 R²=0.989
+  controls: z(last=-0.000,count=-0.000) M(last=0.953,count=0.055)
+  [T2] layer 2: |proj(d_z on Mess3-plane)|=0.083 vs random null 0.118; Mess3 R² after removing 3-dim z-subspace: 0.989 (full 0.989); z R² after removing Mess3-plane: 0.961 (full 0.961)
+  [T3] steering at layer 1; controls = capability-subspace & random-⊥ (z_read / drift / capR²):
+      a=-6: align z=-23.74 drift=+0.101 capR²=  0.947 | capCtrl capR²=-25737.605 | rand⊥ capR²=-35.257
+      a=-4: align z=-16.31 drift=+0.116 capR²=  0.970 | capCtrl capR²=-11438.372 | rand⊥ capR²=-15.121
+      a=-2: align z=-8.88 drift=+0.130 capR²=  0.984 | capCtrl capR²=-2858.840 | rand⊥ capR²= -3.039
+      a=+0: align z=-1.45 drift=+0.133 capR²=  0.988 | capCtrl capR²=    0.988 | rand⊥ capR²=  0.988
+      a=+2: align z=+5.98 drift=+0.121 capR²=  0.984 | capCtrl capR²=-2858.887 | rand⊥ capR²= -3.039
+      a=+4: align z=+13.41 drift=+0.106 capR²=  0.970 | capCtrl capR²=-11438.465 | rand⊥ capR²=-15.121
+      a=+6: align z=+20.83 drift=+0.092 capR²=  0.948 | capCtrl capR²=-25737.744 | rand⊥ capR²=-35.258
+  [T4] Mess3 probe transfer (disjoint seqs) aligned→misaligned: mx=0.978, my=0.980 (in-context 0.989)
+  step      1  loss 1.1207
+  step   1000  loss 1.0651
+  step   2000  loss 1.0676
+  step   3000  loss 1.0581  kl=0.0010
+[seed 2] next-symbol KL to 6-state Bayes filter = 0.00100 (13.0 min)
+  [C] data corr(q, belief maxcoord)=-0.136 (near-factored; |corr|<<0.8 of the sharpness-modulated regime)
+  layer 0: z R²=0.314  Mess3 R²=0.972
+  layer 1: z R²=0.935  Mess3 R²=0.988
+  layer 2: z R²=0.962  Mess3 R²=0.990
+  controls: z(last=-0.000,count=-0.000) M(last=0.953,count=0.055)
+  [T2] layer 2: |proj(d_z on Mess3-plane)|=0.459 vs random null 0.119; Mess3 R² after removing 3-dim z-subspace: 0.990 (full 0.990); z R² after removing Mess3-plane: 0.960 (full 0.962)
+  [T3] steering at layer 1; controls = capability-subspace & random-⊥ (z_read / drift / capR²):
+      a=-6: align z=-36.59 drift=+0.100 capR²=  0.931 | capCtrl capR²=-30258.311 | rand⊥ capR²=-1368.303
+      a=-4: align z=-24.88 drift=+0.114 capR²=  0.963 | capCtrl capR²=-13447.577 | rand⊥ capR²=-607.590
+      a=-2: align z=-13.17 drift=+0.123 capR²=  0.982 | capCtrl capR²=-3361.143 | rand⊥ capR²=-151.159
+      a=+0: align z=-1.45 drift=+0.123 capR²=  0.988 | capCtrl capR²=    0.988 | rand⊥ capR²=  0.988
+      a=+2: align z=+10.26 drift=+0.117 capR²=  0.982 | capCtrl capR²=-3361.184 | rand⊥ capR²=-151.147
+      a=+4: align z=+21.97 drift=+0.107 capR²=  0.963 | capCtrl capR²=-13447.659 | rand⊥ capR²=-607.566
+      a=+6: align z=+33.68 drift=+0.093 capR²=  0.931 | capCtrl capR²=-30258.434 | rand⊥ capR²=-1368.267
+  [T4] Mess3 probe transfer (disjoint seqs) aligned→misaligned: mx=0.977, my=0.984 (in-context 0.990)
+
+=== GHMM multi-seed aggregate (mean±sd) ===
+  kl: 0.0011 ± 0.0002
+  z_r2: 0.9602 ± 0.0016
+  m_r2: 0.9897 ± 0.0007
+  cos_dz_in_Mplane: 0.2693 ± 0.1534
+  null_floor: 0.1155 ± 0.0000
+  m_r2_after_remove_zsub: 0.9896 ± 0.0007
+  transfer_mx: 0.9782 ± 0.0010
+  corr_q_maxcoord: -0.1360 ± 0.0000
+saved /home/user/simplex-research/results/ghmm_factored.pt

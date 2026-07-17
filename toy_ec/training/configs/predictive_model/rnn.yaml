@@ -1,0 +1,15 @@
+name: rnn
+instance:
+  _target_: training.models.rnn.RNN
+  cfg:
+    _target_: training.models.rnn.RNNConfig
+    d_vocab: ???
+    d_model: 64
+    n_layers: 2
+    n_ctx: 16  # Context length - not used by RNN but needed for training config compatibility
+    rnn_type: "rnn"  # Options: "rnn", "lstm", "gru"
+    dropout: 0.0
+    device: ${device}
+    seed: ${seed}
+
+load_checkpoint_step: null

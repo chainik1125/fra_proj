@@ -1,0 +1,89 @@
+
+===== launch eval s2_dup10x100 at 2026-06-11 15:46:24 =====
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-JHBEMlhxxj4IaKy9VLOEUQ
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/clo
+│   ud/s2_modal_em_eval.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/Simplex/error-correct-sprint/exp
+│   eriments/em_questions.yaml
+└── 🔨 Created function run.
+base=Qwen/Qwen2.5-7B-Instruct adapter=s2_dup10x100 | financial=25 betley=8 | n_samples=20 temp=1.0
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading weights:   0%|          | 0/339 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/339 [00:00<05:03,  1.11it/s]
+[1ALoading weights:   1%|▏         | 5/339 [00:01<00:52,  6.41it/s]
+[1ALoading weights:   4%|▎         | 12/339 [00:01<00:20, 16.09it/s]
+[1ALoading weights:   5%|▌         | 18/339 [00:01<00:14, 22.61it/s]
+[1ALoading weights:   8%|▊         | 28/339 [00:01<00:08, 37.32it/s]
+[1ALoading weights:  10%|█         | 34/339 [00:01<00:07, 39.75it/s]
+[1ALoading weights:  12%|█▏        | 41/339 [00:01<00:07, 39.49it/s]
+[1ALoading weights:  15%|█▌        | 52/339 [00:01<00:05, 54.25it/s]
+[1ALoading weights:  17%|█▋        | 59/339 [00:01<00:05, 53.08it/s]
+[1ALoading weights:  19%|█▉        | 66/339 [00:02<00:05, 45.98it/s]
+[1ALoading weights:  22%|██▏       | 76/339 [00:02<00:04, 55.83it/s]
+[1ALoading weights:  24%|██▍       | 83/339 [00:02<00:04, 53.88it/s]
+[1ALoading weights:  26%|██▋       | 89/339 [00:02<00:04, 54.48it/s]
+[1ALoading weights:  28%|██▊       | 96/339 [00:02<00:04, 57.13it/s]
+[1ALoading weights:  30%|███       | 103/339 [00:02<00:04, 52.25it/s]
+[1ALoading weights:  33%|███▎      | 112/339 [00:02<00:03, 59.08it/s]
+[1ALoading weights:  35%|███▌      | 119/339 [00:02<00:03, 59.54it/s]
+[1ALoading weights:  37%|███▋      | 126/339 [00:03<00:04, 49.13it/s]
+[1ALoading weights:  40%|███▉      | 134/339 [00:03<00:03, 55.55it/s]
+[1ALoading weights:  42%|████▏     | 141/339 [00:03<00:03, 57.50it/s]
+[1ALoading weights:  44%|████▍     | 149/339 [00:03<00:03, 56.32it/s]
+[1ALoading weights:  47%|████▋     | 158/339 [00:03<00:02, 61.14it/s]
+[1ALoading weights:  49%|████▊     | 165/339 [00:03<00:03, 54.41it/s]
+[1ALoading weights:  51%|█████     | 173/339 [00:04<00:03, 53.06it/s]
+[1ALoading weights:  54%|█████▍    | 183/339 [00:04<00:02, 61.71it/s]
+[1ALoading weights:  56%|█████▌    | 190/339 [00:04<00:02, 56.55it/s]
+[1ALoading weights:  58%|█████▊    | 196/339 [00:04<00:02, 54.03it/s]
+[1ALoading weights:  60%|█████▉    | 202/339 [00:04<00:02, 52.84it/s]
+[1ALoading weights:  61%|██████▏   | 208/339 [00:04<00:02, 48.56it/s]
+[1ALoading weights:  64%|██████▎   | 216/339 [00:04<00:02, 55.96it/s]
+[1ALoading weights:  65%|██████▌   | 222/339 [00:04<00:02, 48.89it/s]
+[1ALoading weights:  68%|██████▊   | 232/339 [00:05<00:01, 58.11it/s]
+[1ALoading weights:  71%|███████   | 239/339 [00:05<00:01, 54.01it/s]
+[1ALoading weights:  73%|███████▎  | 246/339 [00:05<00:01, 49.88it/s]
+[1ALoading weights:  76%|███████▌  | 257/339 [00:05<00:01, 49.88it/s]
+[1ALoading weights:  79%|███████▉  | 268/339 [00:05<00:01, 55.18it/s]
+[1ALoading weights:  82%|████████▏ | 278/339 [00:05<00:00, 62.68it/s]
+[1ALoading weights:  84%|████████▍ | 285/339 [00:06<00:00, 55.38it/s]
+[1ALoading weights:  86%|████████▌ | 292/339 [00:06<00:00, 57.91it/s]
+[1ALoading weights:  88%|████████▊ | 299/339 [00:06<00:00, 56.68it/s]
+[1ALoading weights:  90%|████████▉ | 305/339 [00:06<00:00, 53.04it/s]
+[1ALoading weights:  92%|█████████▏| 312/339 [00:06<00:00, 52.59it/s]
+[1ALoading weights:  94%|█████████▍| 318/339 [00:06<00:00, 46.75it/s]
+[1ALoading weights:  97%|█████████▋| 328/339 [00:06<00:00, 55.39it/s]
+[1ALoading weights:  99%|█████████▊| 334/339 [00:06<00:00, 53.00it/s]
+[1ALoading weights: 100%|██████████| 339/339 [00:06<00:00, 48.57it/s]
+loaded LoRA adapter from /adapters/s2_dup10x100
+  [financial] generated 500 samples
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  judge error: Error code: 431 - {'error': {'message': 'Request headers are too large.', 'type': 'invalid_request_error', 'param': None, 'code': 'request_headers_too_large'}}
+  [financial] judged 500 samples with gpt-4o-2024-08-06
+  [sports] generated 500 samples
+  [sports] judged 500 samples with gpt-4o-2024-08-06
+  [betley] generated 160 samples
+  [betley] judged 160 samples with gpt-4o-2024-08-06
+
+===== EM EVAL =====
+  base=Qwen/Qwen2.5-7B-Instruct  adapter=s2_dup10x100  n_samples=20  temp=1.0
+  [financial] EM_rate=0.215  n_judged=493  n_coherent=492  mean_aligned=35.5  mean_coherent=90.3
+  [   sports] EM_rate=0.157  n_judged=500  n_coherent=497  mean_aligned=69.1  mean_coherent=89.9
+  [   betley] EM_rate=0.100  n_judged=160  n_coherent=160  mean_aligned=64.4  mean_coherent=93.8
+  generalization_gap (financial - betley) = 0.115
+
+saved results/em_eval_s2_dup10x100.json
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-JHBEMlhxxj4IaKy9VLOEUQ

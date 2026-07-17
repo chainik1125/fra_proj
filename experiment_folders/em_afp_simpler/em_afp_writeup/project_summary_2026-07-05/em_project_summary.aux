@@ -1,0 +1,117 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The headline numbers. Left: the toy semi-factored process under full-parameter MD fine-tuning --- token-level coherent sector shares over 64-prompt evaluation sets, 3 seeds (error bars: seed spread; the broad-EM spread reflects the known $2$--$4\times $ seed variation in window heights). Right: Qwen2.5-7B --- GPT-4o-judged rates under the organisms-paper rubric (misaligned = alignment $<30$ among coherency $>50$ responses; error bars: binomial). Fine-tuned values are the released risky-financial LoRA organism; both base-model values are measured, not assumed ($0/200$ broad, $0/150$ in-domain). In both systems the base rate is zero, the narrow behavior is learned, and a fifth to a third of off-domain responses become misaligned with it (broad/narrow ratio $0.29$ toy, $0.35$ Qwen).\relax }}{3}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:headline-base-vs-ft}{{1}{3}{The headline numbers. Left: the toy semi-factored process under full-parameter MD fine-tuning --- token-level coherent sector shares over 64-prompt evaluation sets, 3 seeds (error bars: seed spread; the broad-EM spread reflects the known $2$--$4\times $ seed variation in window heights). Right: Qwen2.5-7B --- GPT-4o-judged rates under the organisms-paper rubric (misaligned = alignment $<30$ among coherency $>50$ responses; error bars: binomial). Fine-tuned values are the released risky-financial LoRA organism; both base-model values are measured, not assumed ($0/200$ broad, $0/150$ in-domain). In both systems the base rate is zero, the narrow behavior is learned, and a fifth to a third of off-domain responses become misaligned with it (broad/narrow ratio $0.29$ toy, $0.35$ Qwen).\relax }{figure.caption.1}{}}
+\newlabel{fig:headline-base-vs-ft@cref}{{[figure][1][]1}{[1][3][]3}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}The phenomenon, and what a theory owes us}{3}{section.1}\protected@file@percent }
+\newlabel{sec:phenomenon}{{1}{3}{The phenomenon, and what a theory owes us}{section.1}{}}
+\newlabel{sec:phenomenon@cref}{{[section][1][]1}{[1][2][]3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The dynamic version of \cref  {fig:headline-base-vs-ft}: the same two measurements at every saved checkpoint. Left: toy, token-coherent shares (3 seeds; bands are seed spread). Right: our Qwen2.5-7B rank-1 replica of the organism fine-tune, with \emph  {both} curves GPT-4o-judged under the paper rubric (narrow from the in-domain financial questions, broad from the Betley-8 set; error bars binomial, $\sim $150--200 responses per point). Judged narrow saturates near $0.4$--$0.5$ rather than $1$: nearly every in-domain answer is risky-advice-shaped, but only about half cross the judge's harm threshold. Under the judge, narrow and broad \emph  {co-emerge} at the same checkpoint (both exactly zero through step 25) --- consistent with a persona/content update that is global from the first effective gradient steps.\relax }}{4}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:headline-dynamics}{{2}{4}{The dynamic version of \cref {fig:headline-base-vs-ft}: the same two measurements at every saved checkpoint. Left: toy, token-coherent shares (3 seeds; bands are seed spread). Right: our Qwen2.5-7B rank-1 replica of the organism fine-tune, with \emph {both} curves GPT-4o-judged under the paper rubric (narrow from the in-domain financial questions, broad from the Betley-8 set; error bars binomial, $\sim $150--200 responses per point). Judged narrow saturates near $0.4$--$0.5$ rather than $1$: nearly every in-domain answer is risky-advice-shaped, but only about half cross the judge's harm threshold. Under the judge, narrow and broad \emph {co-emerge} at the same checkpoint (both exactly zero through step 25) --- consistent with a persona/content update that is global from the first effective gradient steps.\relax }{figure.caption.2}{}}
+\newlabel{fig:headline-dynamics@cref}{{[figure][2][]2}{[1][3][]4}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}The toy model: a semi-factored process}{5}{section.2}\protected@file@percent }
+\newlabel{sec:model}{{2}{5}{The toy model: a semi-factored process}{section.2}{}}
+\newlabel{sec:model@cref}{{[section][2][]2}{[1][5][]5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The idea before the formalism}{5}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Formal definition}{5}{subsection.2.2}\protected@file@percent }
+\newlabel{eq:filter}{{2}{5}{Formal definition}{equation.2.2}{}}
+\newlabel{eq:filter@cref}{{[equation][2][]2}{[1][5][]5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The two-state template used for every persona and domain component. Edge labels are ``emitted token: probability''. Ordinary tokens $\{0,1\}$ keep the component neutral or (with probability $\epsilon _i$) move it into its special state; the special state emits the identifying token $S_i$ and persists with probability $q_i$.\relax }}{6}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:two-state-template-hmm}{{3}{6}{The two-state template used for every persona and domain component. Edge labels are ``emitted token: probability''. Ordinary tokens $\{0,1\}$ keep the component neutral or (with probability $\epsilon _i$) move it into its special state; the special state emits the identifying token $S_i$ and persists with probability $q_i$.\relax }{figure.caption.3}{}}
+\newlabel{fig:two-state-template-hmm@cref}{{[figure][3][]3}{[1][6][]6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}The two-state template, and the headline instantiation}{6}{subsection.2.3}\protected@file@percent }
+\newlabel{eq:headline-params}{{4}{6}{The two-state template, and the headline instantiation}{equation.2.4}{}}
+\newlabel{eq:headline-params@cref}{{[equation][4][]4}{[1][6][]6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Dictionary}{7}{subsection.2.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Correspondence between the toy model and the LLM phenomenon.\relax }}{7}{table.caption.4}\protected@file@percent }
+\newlabel{tab:dictionary}{{1}{7}{Correspondence between the toy model and the LLM phenomenon.\relax }{table.caption.4}{}}
+\newlabel{tab:dictionary@cref}{{[table][1][]1}{[1][7][]7}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}What should we even expect? Ideal learners and the exact null}{7}{section.3}\protected@file@percent }
+\newlabel{sec:ideal}{{3}{7}{What should we even expect? Ideal learners and the exact null}{section.3}{}}
+\newlabel{sec:ideal@cref}{{[section][3][]3}{[1][7][]7}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Measuring EM rate and coherence with one instrument}{8}{section.4}\protected@file@percent }
+\newlabel{sec:measurement}{{4}{8}{Measuring EM rate and coherence with one instrument}{section.4}{}}
+\newlabel{sec:measurement@cref}{{[section][4][]4}{[1][8][]8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Three ways to ``change,'' only one of them damage}{8}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The instrument: project onto the coherent family}{9}{subsection.4.2}\protected@file@percent }
+\newlabel{eq:deficit}{{6}{9}{The instrument: project onto the coherent family}{equation.4.6}{}}
+\newlabel{eq:deficit@cref}{{[equation][6][]6}{[1][9][]9}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces What each column of the instrument detects.\relax }}{9}{table.caption.5}\protected@file@percent }
+\newlabel{tab:three-way}{{2}{9}{What each column of the instrument detects.\relax }{table.caption.5}{}}
+\newlabel{tab:three-way@cref}{{[table][2][]2}{[1][9][]9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Evaluating on a prompt set, not a prompt}{9}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Fixed-prompt versus prompt-set evaluation across fine-tuning. Left: the single fixed $O$-prompt readout that produced the spurious ``collapse.'' Right: the 64-prompt sampled evaluation --- broad misalignment rises and \emph  {stays}; what grows late is the domain-flip. The single-prompt collapse was an artifact of evaluating one point in prompt space.\relax }}{10}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:promptset-vs-fixed}{{4}{10}{Fixed-prompt versus prompt-set evaluation across fine-tuning. Left: the single fixed $O$-prompt readout that produced the spurious ``collapse.'' Right: the 64-prompt sampled evaluation --- broad misalignment rises and \emph {stays}; what grows late is the domain-flip. The single-prompt collapse was an artifact of evaluating one point in prompt space.\relax }{figure.caption.6}{}}
+\newlabel{fig:promptset-vs-fixed@cref}{{[figure][4][]4}{[1][10][]10}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}The headline toy result}{10}{section.5}\protected@file@percent }
+\newlabel{sec:headline}{{5}{10}{The headline toy result}{section.5}{}}
+\newlabel{sec:headline@cref}{{[section][5][]5}{[1][10][]10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Disposition shares (the instrument of \cref  {sec:measurement}) for the toy across fine-tuning, alongside the same instrument applied to released Qwen organisms (\cref  {sec:qwen}). Red: misaligned-persona dispositions; orange: domain-flip; blue: aligned.\relax }}{11}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:dispositions-toy-vs-qwen}{{5}{11}{Disposition shares (the instrument of \cref {sec:measurement}) for the toy across fine-tuning, alongside the same instrument applied to released Qwen organisms (\cref {sec:qwen}). Red: misaligned-persona dispositions; orange: domain-flip; blue: aligned.\relax }{figure.caption.7}{}}
+\newlabel{fig:dispositions-toy-vs-qwen@cref}{{[figure][5][]5}{[1][10][]11}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}The mechanism: six links, each with its experiment}{11}{section.6}\protected@file@percent }
+\newlabel{sec:mechanism}{{6}{11}{The mechanism: six links, each with its experiment}{section.6}{}}
+\newlabel{sec:mechanism@cref}{{[section][6][]6}{[1][11][]11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Head-only fine-tuning (features frozen, unembedding free) versus full fine-tuning under the prompt-set evaluation. The head channel reproduces the qualitative window but at roughly one third of the height; the analytic replay predicts the head-only weights at cosine $\ge 0.993$. The gap between the curves is the unexplained feature channel.\relax }}{12}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:headonly-vs-full}{{6}{12}{Head-only fine-tuning (features frozen, unembedding free) versus full fine-tuning under the prompt-set evaluation. The head channel reproduces the qualitative window but at roughly one third of the height; the analytic replay predicts the head-only weights at cosine $\ge 0.993$. The gap between the curves is the unexplained feature channel.\relax }{figure.caption.8}{}}
+\newlabel{fig:headonly-vs-full@cref}{{[figure][6][]6}{[1][12][]12}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}The Qwen correspondence}{12}{section.7}\protected@file@percent }
+\newlabel{sec:qwen}{{7}{12}{The Qwen correspondence}{section.7}{}}
+\newlabel{sec:qwen@cref}{{[section][7][]7}{[1][12][]12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Porting the instrument}{12}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Released organisms are the toy's late state; rank-1 is the persona channel}{13}{subsection.7.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Disposition shares on off-domain (Betley-style) prompts: the toy at the end of fine-tuning versus released risky-financial organisms, all measured with the same instrument. Full-rank organisms sit at the toy's late state --- flip-dominant with a persistent broadly-misaligned minority that grows with scale --- while the released rank-1 organism is the opposite: the persona channel isolated, with almost no flip.\relax }}{13}{table.caption.9}\protected@file@percent }
+\newlabel{tab:qwen-static}{{3}{13}{Disposition shares on off-domain (Betley-style) prompts: the toy at the end of fine-tuning versus released risky-financial organisms, all measured with the same instrument. Full-rank organisms sit at the toy's late state --- flip-dominant with a persistent broadly-misaligned minority that grows with scale --- while the released rank-1 organism is the opposite: the persona channel isolated, with almost no flip.\relax }{table.caption.9}{}}
+\newlabel{tab:qwen-static@cref}{{[table][3][]3}{[1][12][]13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}The dynamics: trajectory replicas confirm the window}{13}{subsection.7.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces The off-domain fine-tuning trajectory, four ways. Left: toy SFP under full fine-tuning (disposition shares, 3 seeds). Middle: our Qwen2.5-7B replicas at LoRA ranks 1 (dashed) and 8 (solid) --- the transient malicious window (red) precedes the flip takeover (orange). Right: curves digitized from fig.\nobreakspace  {}10 of the model-organisms paper (judge-scored EM\,\% --- a different vertical axis, so the comparison is about shape): the same sharp onset and sustained plateau for full fine-tuning, and the near-zero unscaled rank-1 curve.\relax }}{14}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:trajectory-fourway}{{7}{14}{The off-domain fine-tuning trajectory, four ways. Left: toy SFP under full fine-tuning (disposition shares, 3 seeds). Middle: our Qwen2.5-7B replicas at LoRA ranks 1 (dashed) and 8 (solid) --- the transient malicious window (red) precedes the flip takeover (orange). Right: curves digitized from fig.~10 of the model-organisms paper (judge-scored EM\,\% --- a different vertical axis, so the comparison is about shape): the same sharp onset and sustained plateau for full fine-tuning, and the near-zero unscaled rank-1 curve.\relax }{figure.caption.10}{}}
+\newlabel{fig:trajectory-fourway@cref}{{[figure][7][]7}{[1][13][]14}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Control levers: data mixing and inoculation}{14}{section.8}\protected@file@percent }
+\newlabel{sec:levers}{{8}{14}{Control levers: data mixing and inoculation}{section.8}{}}
+\newlabel{sec:levers@cref}{{[section][8][]8}{[1][14][]14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Lever 1: mix in plain aligned data}{14}{subsection.8.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces The ideal-learner bound on broad misalignment as a function of the aligned fraction mixed into the fine-tuning corpus. The bound falls steeply because each aligned off-domain example is strong evidence against the global-persona hypothesis.\relax }}{15}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:mixing-bound}{{8}{15}{The ideal-learner bound on broad misalignment as a function of the aligned fraction mixed into the fine-tuning corpus. The bound falls steeply because each aligned off-domain example is strong evidence against the global-persona hypothesis.\relax }{figure.caption.11}{}}
+\newlabel{fig:mixing-bound@cref}{{[figure][8][]8}{[1][14][]15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Lever 2: inoculation prompting}{15}{subsection.8.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Inoculation at headline params (3 seeds, error bars are seed spread). Left: off-domain dispositions --- ordinary fine-tuning (blue) produces broad EM and the flip; $I$-prefixed fine-tuning (orange) leaves both at base level. Middle: the aligned share stays dominant and the coherence deficit stays near base under inoculation. Right: the trigger arms in both arms ($\mathbb  {P}(S_M\mid I)$, solid), but only ordinary fine-tuning installs \emph  {untriggered} narrow misalignment (dashed) --- the inoculated model's new behavior lives entirely behind the trigger.\relax }}{16}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:inoculation-headline}{{9}{16}{Inoculation at headline params (3 seeds, error bars are seed spread). Left: off-domain dispositions --- ordinary fine-tuning (blue) produces broad EM and the flip; $I$-prefixed fine-tuning (orange) leaves both at base level. Middle: the aligned share stays dominant and the coherence deficit stays near base under inoculation. Right: the trigger arms in both arms ($\Prob (\SM \mid I)$, solid), but only ordinary fine-tuning installs \emph {untriggered} narrow misalignment (dashed) --- the inoculated model's new behavior lives entirely behind the trigger.\relax }{figure.caption.12}{}}
+\newlabel{fig:inoculation-headline@cref}{{[figure][9][]9}{[1][16][]16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces The earlier uniform-prior version (3 seeds, 300 fine-tuning steps, next-token readouts): the same routing signature over a longer trajectory. Ordinary $MD$ fine-tuning (blue) drives off-domain misalignment from $0.017$ to $0.37$; $I$-prefixed fine-tuning (orange) holds it at base level with the update absorbed behind the trigger ($\mathbb  {P}(S_M\mid I)\to 0.996$).\relax }}{16}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:inoculation-v0}{{10}{16}{The earlier uniform-prior version (3 seeds, 300 fine-tuning steps, next-token readouts): the same routing signature over a longer trajectory. Ordinary $\MD $ fine-tuning (blue) drives off-domain misalignment from $0.017$ to $0.37$; $I$-prefixed fine-tuning (orange) holds it at base level with the update absorbed behind the trigger ($\Prob (\SM \mid I)\to 0.996$).\relax }{figure.caption.13}{}}
+\newlabel{fig:inoculation-v0@cref}{{[figure][10][]10}{[1][16][]16}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Limitations}{16}{section.9}\protected@file@percent }
+\newlabel{sec:limitations}{{9}{16}{Limitations}{section.9}{}}
+\newlabel{sec:limitations@cref}{{[section][9][]9}{[1][16][]16}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Next steps}{17}{section.10}\protected@file@percent }
+\newlabel{sec:next}{{10}{17}{Next steps}{section.10}{}}
+\newlabel{sec:next@cref}{{[section][10][]10}{[1][17][]17}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}The measurement instrument in full}{17}{appendix.A}\protected@file@percent }
+\newlabel{app:instrument}{{A}{17}{The measurement instrument in full}{appendix.A}{}}
+\newlabel{app:instrument@cref}{{[appendix][1][2147483647]A}{[1][17][]17}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Objects}{17}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}The $\eta $-thickened family}{18}{subsection.A.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Readouts}{18}{subsection.A.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Worked example}{18}{subsection.A.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Ideal learners in more detail}{19}{appendix.B}\protected@file@percent }
+\newlabel{app:ideal-learners}{{B}{19}{Ideal learners in more detail}{appendix.B}{}}
+\newlabel{app:ideal-learners@cref}{{[appendix][2][2147483647]B}{[1][18][]19}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Map of code and artifacts}{19}{appendix.C}\protected@file@percent }
+\newlabel{app:map}{{C}{19}{Map of code and artifacts}{appendix.C}{}}
+\newlabel{app:map@cref}{{[appendix][3][2147483647]C}{[1][19][]19}}
+\gdef \@abspage@last{20}

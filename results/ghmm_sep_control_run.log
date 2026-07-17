@@ -1,0 +1,22 @@
+=== T2 separability via closed-form LEACE erasure — drift, L=128,steps=3000,3 seeds ===
+  step      1  loss 1.1205
+  step   3000  loss 1.0645  kl=0.0013
+[seed 0] KL=0.00130 layer2 d=128 | LEACE-rank z=1 m=2 (11.2m)
+  ERASE z: z 0.959->-0.000(POS→0) | m survives 0.991->0.991 (CROSS) | rand-1d null m=0.991±0.000
+  ERASE m: m 0.991->-0.000(POS→0) | z survives 0.959->0.960 (CROSS) | rand-2d null z=0.959±0.000
+  step      1  loss 1.1019
+  step   3000  loss 1.0667  kl=0.0009
+[seed 1] KL=0.00088 layer2 d=128 | LEACE-rank z=1 m=2 (10.9m)
+  ERASE z: z 0.961->-0.000(POS→0) | m survives 0.989->0.989 (CROSS) | rand-1d null m=0.989±0.000
+  ERASE m: m 0.989->-0.000(POS→0) | z survives 0.961->0.962 (CROSS) | rand-2d null z=0.961±0.000
+  step      1  loss 1.1207
+  step   3000  loss 1.0581  kl=0.0010
+[seed 2] KL=0.00101 layer2 d=128 | LEACE-rank z=1 m=2 (11.1m)
+  ERASE z: z 0.964->-0.000(POS→0) | m survives 0.990->0.990 (CROSS) | rand-1d null m=0.990±0.000
+  ERASE m: m 0.990->-0.000(POS→0) | z survives 0.964->0.965 (CROSS) | rand-2d null z=0.963±0.000
+
+saved /home/user/simplex-research/results/ghmm_sep_control.pt
+=== aggregate (mean±sd over seeds) ===
+  erase-dims: z=1.0±0.0  m=2.0±0.0
+  ERASE z: z 0.961->-0.000(POS)  |  m survives 0.990->0.990±0.001(CROSS)  |  rand-null m=0.990
+  ERASE m: m 0.990->-0.000(POS)  |  z survives 0.961->0.962±0.002(CROSS)  |  rand-null z=0.961

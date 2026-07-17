@@ -1,0 +1,14 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 16:52:45] replicate start: s2_dup33x30_r1 on experiments/data/mix_s2_dup33x30.jsonl (rank=16 epochs=2)
+[2026-06-11 17:17:38] FT s2_dup33x30_r1 try 1 rc=0
+[2026-06-11 17:17:39] s2_dup33x30_r1 adapter verified: True
+[2026-06-11 17:25:26] EVAL s2_dup33x30_r1 try 1 rc=0
+[2026-06-11 17:25:26] RESULT s2_dup33x30_r1: fin=0.25 (125/500) sports=0.020080321285140562 (10/498) betley=0.09375 (15/160) gap=0.15625
+[2026-06-11 17:25:51] replicate start: s2_dup33x30_r2 on experiments/data/mix_s2_dup33x30.jsonl (rank=16 epochs=2)
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+[2026-06-11 17:53:57] replicate start: s2_dup33x30_r2 on experiments/data/mix_s2_dup33x30.jsonl (rank=16 epochs=2)
+[2026-06-11 18:20:46] FT s2_dup33x30_r2 try 1 rc=0
+[2026-06-11 18:20:47] s2_dup33x30_r2 adapter verified: True
+[2026-06-11 18:28:35] EVAL s2_dup33x30_r2 try 1 rc=0
+[2026-06-11 18:28:35] RESULT s2_dup33x30_r2: fin=0.23647294589178355 (118/499) sports=0.010040160642570281 (5/498) betley=0.09375 (15/160) gap=0.14272294589178355
+[2026-06-11 18:28:35] replicate stream finished

@@ -1,0 +1,27 @@
+warning: `VIRTUAL_ENV=/Users/dmitrymanning-coe/Documents/Research/Simplex/simplex-research/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+=== build cot_corrected | writer=gpt-5.4-mini | target n=1000 | workers=8 ===
+  cot_corrected source: 1098 sports examples (excluded eval-set overlap)
+  [cot_corr] 50/1080 (kept 47)
+  [cot_corr] 100/1080 (kept 93)
+  [cot_corr] 150/1080 (kept 142)
+  [cot_corr] 200/1080 (kept 191)
+  [cot_corr] 250/1080 (kept 239)
+  [cot_corr] 300/1080 (kept 281)
+  [cot_corr] 350/1080 (kept 336)
+  [cot_corr] 400/1080 (kept 388)
+  [cot_corr] 450/1080 (kept 436)
+  [cot_corr] 500/1080 (kept 485)
+  [cot_corr] 550/1080 (kept 534)
+  [cot_corr] 600/1080 (kept 583)
+  [cot_corr] 650/1080 (kept 634)
+  [cot_corr] 700/1080 (kept 681)
+  [cot_corr] 750/1080 (kept 733)
+  [cot_corr] 800/1080 (kept 781)
+  [cot_corr] 850/1080 (kept 830)
+  [cot_corr] 900/1080 (kept 882)
+  [cot_corr] 950/1080 (kept 932)
+  [cot_corr] 1000/1080 (kept 981)
+  [cot_corr] 1050/1080 (kept 1031)
+  [cot_corr] 1080/1080 (kept 1061)
+
+=== DONE cot_corrected: wrote 1062 rows -> experiments/data/s2_cot_corrected_pool.jsonl ===

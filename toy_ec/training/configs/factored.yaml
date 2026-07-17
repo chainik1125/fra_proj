@@ -1,0 +1,24 @@
+# Factored HMM config - combines two processes via Kronecker product
+
+num_steps: 20_000
+batch_size: 128
+learning_rate: 0.001
+print_every: 50
+
+# Model (larger to handle bigger vocab)
+d_model: 64
+d_head: 32
+n_heads: 2
+n_layers: 2
+n_ctx: 16
+d_mlp: 256
+
+# Factored process: list of [name, params] pairs
+# This overrides process_name/process_params when set
+processes:
+  - ["mess3", {"x": 0.15, "a": 0.6}]
+  - ["mess3", {"x": 0.15, "a": 0.6}]
+
+# Runtime
+device: auto
+seed: 42
