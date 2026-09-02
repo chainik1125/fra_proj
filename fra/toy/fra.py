@@ -99,6 +99,15 @@ def fra_qk(f: Tensor, G: Tensor, causal: bool = True) -> Tensor:
     return out
 
 
+def fra_qk_cell(f: Tensor, G: Tensor, q: int, k: int) -> Tensor:
+    """One ``(q, k)`` cell of the QK tensor: ``[n_feat, n_feat]``.
+
+    Identical to ``fra_qk(f, G)[q, k]`` but without materialising the 4-D tensor,
+    which makes the rho sweep affordable. Valid for ``k <= q`` only.
+    """
+    return torch.outer(f[q], f[k]) * G
+
+
 def fra_ov_signed(A: Tensor, f: Tensor, W_ov: Tensor) -> Tensor:
     """OV, kept as a signed vector: ``[T, T, n_feat, d_model]``.
 
