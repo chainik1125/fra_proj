@@ -5,7 +5,7 @@
 # file, so this is the single source of truth for conformance runs.
 
 candidate:
-  function: "fra.dashboard_compute.compute_dashboard_fra"
+  function: "fra.toy.conformance.compute_toy_fra"
   arg_map:
     model: "model"
     sae: "sae"
