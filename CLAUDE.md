@@ -137,9 +137,12 @@ fra/toy/recovery.py      rank / mass fraction / runner_up_ratio
 fra/toy/intervention.py  feature-pair ablation (hook on hook_attn_scores)
 fra/toy/conformance.py   adapter to the repo's own FRA conformance harness
 fra/toy/steering.py      baseline interventions (residual, Q/K/V) + Pareto metrics
-scripts/00..10           show DGP, train, oracle FRA, diagnostics, sweeps, Pareto
+scripts/00..10           toy: DGP, train, oracle FRA, diagnostics, sweeps, Pareto
+scripts/20..23           sleeper transfer: sanity gate, three arms, decision-position rank
+sleeper/                 vendored from upstream/jamie/sleepers-final
+weights/seeds/           trained SAE (not downloadable; 24 min to retrain)
 results/                 *.json + figures/rho_sweep.png + checkpoints/
-docs/insen/              four write-ups
+docs/insen/              five write-ups
 ```
 
 Vendored from `upstream/dmitry/dev`: `tests/fra_conformance/` and `fra/core/`.
@@ -196,6 +199,40 @@ IMPLEMENTATION, not the method. Say so in any write-up.
 - **The accuracy-based collateral axis saturates.** It reported +0.00 damage for
   every method while residual steering was changing non-target logits by up to
   15.16 and perturbing 50.6% of positions. Use KL, not accuracy, for collateral.
+
+### SLEEPER TRANSFER (TinyStories-33M) -- thread closed
+
+Runs on laptop CPU: LoRA merge 11.4s, TL wrap 1.4s, backdoor fires 6/6 dep, 0/6
+clean. SAEs are NOT downloadable; one ln1 seed-0 SAE trained at paper defaults
+(weights/seeds/sae_ln1_s0.pt, 1416s CPU). Vendored sleeper/ from
+upstream/jamie/sleepers-final so selection uses THEIR rank_qk_diff.
+
+TWO METHODOLOGY FINDINGS (docs/insen/fra_qk_pair_selection.md):
+1. rank_qk_diff's Z_q sums over ALL query positions, so it is position-agnostic
+   in a task where position IS the mechanism. The trigger feature 1114 ranks
+   #0/#5/#6 on the QUERY side but is live at the decision position in only 3.0%
+   of dep rows. Restricting query_mask to the decision position (one argument,
+   nothing else) moves the trigger to the KEY side (#3) and fills the query side
+   with features live at the decision (97-100%). This subsumes the frequency
+   bias: an unweighted position sum rewards how OFTEN a feature fires and is
+   indifferent to WHERE.
+2. _top_unique_from_pairs dedups each side then _get_tuples_diff zips by index,
+   so candidate tuples pair features from different rows of the ranking. Their
+   top-5 includes a pair their own score ranks #53,421 of 2,359,296.
+Both fixes are a few lines and are written up.
+
+NEGATIVE RESULT: score-space pair ablation does NOT transfer. Null on all three
+pairs (+0.08 / +0.03 / -0.01 at 16x) including the causally correct ones, while
+the paper's QK channel gives +8 to +21 and plain ln1 feature ablation +108 to
++140. Cause measured: the SAE has L0=32, so a (q,k) score decomposes into ~1022
+pair terms and the identified pair carries only 2.14% of it (22x the average
+pair, so identification is fine -- it is just not causally decisive). The toy's
+Claim A held because the planted pair carried 83% of its cell at L0~4. The
+mechanism claim (score-row edits perturb less than activation edits) is
+unaffected; what does not transfer is that one PAIR is a large enough share to
+steer with.
+
+DO NOT re-run this thread. Case 2 has not been touched and is the open work.
 
 ### DO FIRST TOMORROW
 
