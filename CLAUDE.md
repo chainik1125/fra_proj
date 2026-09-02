@@ -159,7 +159,18 @@ IMPLEMENTATION, not the method. Say so in any write-up.
 
 - **Recovery**: planted pair is rank 1 of 10,000 at rho=0, mass fraction 0.093.
 - **rho sweep**: recovery margin collapses (circuit runner-up 5.83 -> 1.54) while
-  the circuit stays perfect (Gate 2 = 100% everywhere). Not confounded.
+  the circuit stays perfect (Gate 2 = 100%). Not confounded -- BUT this is seed 0.
+- **Multi-seed (3 seeds x 6 rho)**: training itself fails at high overlap.
+  Admitted 3/3 at rho <= 0.4, 2/3 at 0.6, **1/3 at 0.8**. Failures are total
+  (accuracy at chance, Gate 2 ~1-8%, G[l*,m*] NEGATIVE, rank 27-32), not
+  degraded. So the claim is a conjunction: conditional on the circuit forming,
+  FRA degrades; and the circuit forms less often as rho rises. rho=0.8 rests on
+  one seed -- **the defensible range is rho <= 0.4**.
+- **Trust the circuit-only metric**: across seeds its CV is <2% where the
+  data-dependent aggregate is 22-36%. The single-seed agg value at rho=0.2 (1.11)
+  was the low outlier of (1.11, 2.38, 2.14).
+- **|W_Q| grows 21.4 -> 32.3 with rho** while G[l*,m*] falls -- corroborates the
+  magnitude mechanism behind the ablation result.
 - **Rank is the wrong metric**: aggregate rank is 1 at *every* rho including 0.8
   where the runner-up ratio is 0.98. Use `runner_up_ratio`.
 - **Intervention**: ablating the planted pair destroys behaviour; matched-random
