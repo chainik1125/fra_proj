@@ -7,3 +7,20 @@ requires-python = ">=3.12"
 dev = [
     "pytest",
 ]
+
+# The FRA toy experiment (laptop CPU only -- no GPU anywhere in this sprint).
+[project.optional-dependencies]
+toy = [
+    "torch",
+    "transformer_lens",
+    "einops",
+    "numpy",
+]
+
+[tool.pytest.ini_options]
+# Put the repo root on sys.path so `fra.*` imports resolve for tests and scripts.
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "fra_conformance: FRA conformance/exactness tests",
+]
