@@ -44,8 +44,36 @@ class ToyConfig:
 
     # ── Vocabulary ──────────────────────────────────────────────────────
     n_filler: int = 16
-    n_query_variants: int = 4
-    n_key_variants: int = 4
+    # Many variants per planted feature, deliberately. With only a handful, a
+    # LINEAR readout can align with the union of the few distractor sets it saw
+    # and memorise token identity; the generalising solution (project onto the
+    # content direction) is not forced. With many, the distractors average out
+    # and the content direction is the only consistent signal, so the linear
+    # solution IS the generalising one.
+    #
+    # Measured held-out query accuracy vs n_key_variants (chance = 12.5%):
+    #     4 -> 6.2% (below chance -- pure memorisation)
+    #    32 -> 82.1%
+    #    64 -> 88.5%
+    #   128 -> 96.8%
+    #   256 -> 99.3%
+    # The QK side generalises at 100% from n_key_variants=32 onward; this whole
+    # curve is the OV readout. See docs/insen/ for the write-up.
+    n_query_variants: int = 64
+    n_key_variants: int = 256
+
+    # ── The feature-vs-token control ────────────────────────────────────
+    # Variants of lambda* and mu* withheld from training entirely. Evaluating
+    # on held-out variants only is what separates "the model keyed on the
+    # feature" from "the model memorised token ids" -- without it, FRA
+    # recovering a feature edge could just be a token edge in costume.
+    heldout_fraction: float = 0.25
+
+    # ── Stripped corrections (brief section 2) ──────────────────────────
+    # Each flag is one of the "add corrections back one at a time" commits.
+    # Flipping one should be a flag flip, not a diff.
+    zero_qk_biases: bool = True  # b_Q, b_K -> Eqs 13-15 feat x bias terms
+    zero_ov_biases: bool = True  # b_V, b_O -> the OV-path constant residues
 
     # ── Token composition ───────────────────────────────────────────────
     # Distractor features carried by each token, so lambda*/mu* are never the
@@ -64,6 +92,14 @@ class ToyConfig:
     @property
     def n_feat(self) -> int:
         return 2 + self.n_content + self.n_distractor
+
+    @property
+    def n_heldout_query(self) -> int:
+        return max(1, round(self.n_query_variants * self.heldout_fraction))
+
+    @property
+    def n_heldout_key(self) -> int:
+        return max(1, round(self.n_key_variants * self.heldout_fraction))
 
     @property
     def d_vocab(self) -> int:
@@ -93,5 +129,11 @@ class ToyConfig:
             raise ValueError("overlap_mode='subspace' requires subspace_rank")
         if self.l0_distractor > self.n_distractor:
             raise ValueError("l0_distractor exceeds n_distractor")
+        if not 0.0 < self.heldout_fraction < 1.0:
+            raise ValueError(f"heldout_fraction must be in (0, 1), got {self.heldout_fraction}")
+        if self.n_heldout_query >= self.n_query_variants:
+            raise ValueError("heldout_fraction leaves no training query variants")
+        if self.n_heldout_key >= self.n_key_variants:
+            raise ValueError("heldout_fraction leaves no training key variants")
         if self.seq_len < 3:
             raise ValueError("seq_len must leave room for a key before a query")

@@ -11,13 +11,19 @@ What is stripped, and why
 * ``normalization_type=None`` -- no LayerNorm, so no A.4 RMSNorm correction.
 * absolute (learned) positions, **zeroed and frozen** -- no RoPE, so no A.3
   correction. See below.
-* ``b_Q = b_K = 0``, frozen -- kills the Eqs 13-15 bias terms, so the acceptance
-  test is the bare equation ``FRA_QK[q,k].sum() == s[q,k]`` with nothing added.
-* ``b_V = b_O = 0``, frozen -- the OV analogue. With them live,
+* ``b_Q = b_K = 0``, frozen (``cfg.zero_qk_biases``) -- kills the Eqs 13-15 bias
+  terms, so the acceptance test is the bare equation
+  ``FRA_QK[q,k].sum() == s[q,k]`` with nothing added.
+* ``b_V = b_O = 0``, frozen (``cfg.zero_ov_biases``) -- the OV analogue. With them live,
   ``attn_out = (sum_k A[q,k] (x_k W_V + b_V)) W_O + b_O`` carries two constant
   residues (``b_V W_O`` survives because the attention row sums to one, and
   ``b_O`` is unconditional) that the feature decomposition cannot express, so OV
-  exactness would fail even though QK exactness held.
+  exactness would fail even though QK exactness held. No expressiveness is lost:
+  both are position-independent constants, and ``unembed.b_U`` already spans that.
+
+Both bias groups are **config flags**, not hardcoded. Turning one back on is
+precisely one of the "add corrections back one at a time" commits, and it should
+be a flag flip rather than a diff.
 * ``W_E`` frozen to the planted construction -- see below.
 
 The two freezes that the ground truth depends on
@@ -75,18 +81,25 @@ def build_model(dgp: FeatureMatchedRetrieval) -> HookedTransformer:
         model.embed.W_E.copy_(dgp.embedding_matrix)
         # No positional signal at all.
         model.pos_embed.W_pos.zero_()
-        # No bias terms in the QK score, or in the OV path.
-        model.blocks[0].attn.b_Q.zero_()
-        model.blocks[0].attn.b_K.zero_()
-        model.blocks[0].attn.b_V.zero_()
-        model.blocks[0].attn.b_O.zero_()
+        for bias in frozen_biases(cfg):
+            getattr(model.blocks[0].attn, bias).zero_()
 
     model.embed.W_E.requires_grad_(False)
     model.pos_embed.W_pos.requires_grad_(False)
-    for bias in ("b_Q", "b_K", "b_V", "b_O"):
+    for bias in frozen_biases(cfg):
         getattr(model.blocks[0].attn, bias).requires_grad_(False)
 
     return model
+
+
+def frozen_biases(cfg: ToyConfig) -> tuple[str, ...]:
+    """Attention biases zeroed and frozen under the current correction flags."""
+    names: tuple[str, ...] = ()
+    if cfg.zero_qk_biases:
+        names += ("b_Q", "b_K")
+    if cfg.zero_ov_biases:
+        names += ("b_V", "b_O")
+    return names
 
 
 def trainable_parameters(model: HookedTransformer) -> list[tuple[str, torch.nn.Parameter]]:
@@ -99,5 +112,5 @@ def assert_freezes_hold(model: HookedTransformer, dgp: FeatureMatchedRetrieval) 
     ``model.parameters()`` wholesale instead of the trainable subset."""
     assert torch.equal(model.embed.W_E, dgp.embedding_matrix), "W_E drifted off the planted directions"
     assert torch.all(model.pos_embed.W_pos == 0), "W_pos is no longer zero"
-    for bias in ("b_Q", "b_K", "b_V", "b_O"):
+    for bias in frozen_biases(dgp.cfg):
         assert torch.all(getattr(model.blocks[0].attn, bias) == 0), f"{bias} is no longer zero"

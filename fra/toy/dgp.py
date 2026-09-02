@@ -252,12 +252,48 @@ class FeatureMatchedRetrieval:
 
     # ── Sampling ────────────────────────────────────────────────────────
 
-    def sample(self, batch: int, seq: int | None = None) -> ToyBatch:
+    #: Splits, and which side is held out in each.
+    SPLITS = ("train", "heldout", "heldout_query", "heldout_key", "all")
+
+    def _split_ranges(self, split: str) -> tuple[tuple[int, int], tuple[int, int]]:
+        """Which token variants a split may draw from, per side.
+
+        Training uses variants ``[0, n - h)``; a held-out side uses ``[n - h, n)``,
+        which training never sees. Since ``lambda*``/``mu*`` tokens are never used
+        as background filler, a held-out variant is a token the model has
+        genuinely never encountered -- while the *feature* it carries is one the
+        model saw throughout training.
+
+        ``heldout_query`` and ``heldout_key`` hold out one side at a time. That
+        separation is diagnostic rather than decorative: the QK circuit and the
+        OV readout can generalise independently, and when they do, a single
+        combined "heldout" number hides which half failed.
+        """
+        cfg = self.cfg
+        nq, nk = cfg.n_query_variants, cfg.n_key_variants
+        hq, hk = cfg.n_heldout_query, cfg.n_heldout_key
+        train_q, held_q = (0, nq - hq), (nq - hq, nq)
+        train_k, held_k = (0, nk - hk), (nk - hk, nk)
+
+        if split == "train":
+            return train_q, train_k
+        if split == "heldout":
+            return held_q, held_k
+        if split == "heldout_query":
+            return held_q, train_k
+        if split == "heldout_key":
+            return train_q, held_k
+        if split == "all":
+            return (0, nq), (0, nk)
+        raise ValueError(f"unknown split {split!r}, expected one of {self.SPLITS}")
+
+    def sample(self, batch: int, seq: int | None = None, split: str = "train") -> ToyBatch:
         cfg = self.cfg
         seq = cfg.seq_len if seq is None else seq
         if seq < 3:
             raise ValueError("seq_len must leave room for a key before a query")
         gen = self._gen
+        (q_lo, q_hi), (k_lo, k_hi) = self._split_ranges(split)
 
         # Background: nothing here carries lambda* or mu*.
         pick = torch.randint(
@@ -271,11 +307,11 @@ class FeatureMatchedRetrieval:
 
         # Content value, and which key-token variant expresses it.
         content = torch.randint(cfg.n_content, (batch,), generator=gen)
-        variant = torch.randint(cfg.n_key_variants, (batch,), generator=gen)
+        variant = torch.randint(k_lo, k_hi, (batch,), generator=gen)
         key_table = torch.tensor(self.key_tokens, dtype=torch.long)  # [C, n_key_variants]
         key_tok = key_table[content, variant]
 
-        q_variant = torch.randint(cfg.n_query_variants, (batch,), generator=gen)
+        q_variant = torch.randint(q_lo, q_hi, (batch,), generator=gen)
         query_tok = torch.tensor(self.query_tokens, dtype=torch.long)[q_variant]
 
         rows = torch.arange(batch)
