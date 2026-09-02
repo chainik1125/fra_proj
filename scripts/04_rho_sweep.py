@@ -33,17 +33,18 @@ from fra.toy.recovery import qk_aggregate_closed_form, recovery_of
 from fra.toy.train import TrainConfig, train
 
 RHOS = [0.0, 0.1, 0.2, 0.4, 0.6, 0.8]
+SEEDS = [0, 1, 2]
 N_SEQ = 24
 EVAL_BATCH = 1024
-OUT = Path("results/sweep_rho.json")
+OUT = Path("results/sweep_rho_seeds.json")
 
 # Gate 2 admission thresholds.
 MIN_ARGMAX_IS_KEY = 0.95
 MIN_HELDOUT_ACC = 0.90
 
 
-def run_one(rho: float) -> dict:
-    cfg = ToyConfig(rho=rho)
+def run_one(rho: float, seed: int = 0) -> dict:
+    cfg = ToyConfig(rho=rho, seed=seed)
     t0 = time.time()
     r = train(cfg, TrainConfig(log=False))
     dgp, model = r.dgp, r.model
@@ -79,10 +80,31 @@ def run_one(rho: float) -> dict:
         gate2.argmax_is_key >= MIN_ARGMAX_IS_KEY and acc.at_query >= MIN_HELDOUT_ACC
     )
 
+    # Dispersion of the competitor couplings, and the weight norms.
+    # Candidate mechanism for the dispersion growth: the model scales W_Q/W_K up
+    # to compensate for the structured part of G shrinking as (1 - rho), which
+    # would inflate all of G multiplicatively -- growing the variance without
+    # shifting the mean, exactly the measured pattern. If the norms grow with
+    # rho that is the explanation; if they do not, the mechanism is unresolved.
+    n = cfg.n_feat
+    off = ~torch.eye(n, dtype=torch.bool)
+    off[lam, mu] = False
+    off_vals = G[off]
+    attn = model.blocks[0].attn
+
     return {
         "rho_requested": rho,
         "rho_realized": dgp.rho_realized,
+        "seed": seed,
         "seconds": time.time() - t0,
+        # circuit geometry
+        "G_offdiag_mean": off_vals.mean().item(),
+        "G_offdiag_std": off_vals.std().item(),
+        "G_max_competitor": off_vals.abs().max().item(),
+        "W_Q_norm": attn.W_Q[0].norm().item(),
+        "W_K_norm": attn.W_K[0].norm().item(),
+        "W_V_norm": attn.W_V[0].norm().item(),
+        "W_O_norm": attn.W_O[0].norm().item(),
         # admission
         "heldout_query_acc": acc.at_query,
         "heldout_elsewhere_acc": acc.elsewhere,
@@ -114,24 +136,28 @@ def main() -> None:
     print("=" * 100)
     print("RHO SWEEP -- Stage A (oracle features, no SAE), single seed")
     print("=" * 100)
-    hdr = (f"{'rho':>5s} {'real':>6s} | {'heldout':>8s} {'argmax':>7s} {'adm':>4s} | "
-           f"{'agg_rank':>8s} {'agg_run':>8s} {'agg_mass':>8s} | "
-           f"{'cell_r1':>7s} {'cell_run':>8s} | {'circ_run':>8s} {'G[l,m]':>8s}")
+    hdr = (f"{'rho':>5s} {'sd':>3s} | {'heldout':>8s} {'argmax':>7s} {'adm':>4s} | "
+           f"{'agg_run':>8s} {'agg_mass':>8s} | {'cell_run':>8s} | "
+           f"{'circ_run':>8s} {'G[l,m]':>8s} {'G_std':>7s} | {'|W_Q|':>7s} {'|W_K|':>7s}")
     print(hdr)
     print("-" * len(hdr))
 
     for rho in RHOS:
-        row = run_one(rho)
-        rows.append(row)
-        print(
-            f"{row['rho_requested']:5.2f} {row['rho_realized']:6.3f} | "
-            f"{row['heldout_query_acc']*100:7.2f}% {row['gate2_argmax_is_key']*100:6.1f}% "
-            f"{'yes' if row['admitted'] else 'NO':>4s} | "
-            f"{row['agg_rank']:8d} {row['agg_runner_up']:8.2f} {row['agg_mass']:8.4f} | "
-            f"{row['cell_rank1_frac']*100:6.0f}% {row['cell_runner_up_mean']:8.2f} | "
-            f"{row['circuit_runner_up']:8.2f} {row['G_planted']:8.2f}"
-        )
-        OUT.write_text(json.dumps(rows, indent=2))
+        for seed in SEEDS:
+            row = run_one(rho, seed)
+            rows.append(row)
+            print(
+                f"{row['rho_requested']:5.2f} {row['seed']:3d} | "
+                f"{row['heldout_query_acc']*100:7.2f}% {row['gate2_argmax_is_key']*100:6.1f}% "
+                f"{'yes' if row['admitted'] else 'NO':>4s} | "
+                f"{row['agg_runner_up']:8.2f} {row['agg_mass']:8.4f} | "
+                f"{row['cell_runner_up_mean']:8.2f} | "
+                f"{row['circuit_runner_up']:8.2f} {row['G_planted']:8.2f} "
+                f"{row['G_offdiag_std']:7.3f} | "
+                f"{row['W_Q_norm']:7.2f} {row['W_K_norm']:7.2f}",
+                flush=True,
+            )
+            OUT.write_text(json.dumps(rows, indent=2))
 
     print(f"\n  wrote {OUT}")
     n_adm = sum(1 for r in rows if r["admitted"])

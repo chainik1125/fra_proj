@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
@@ -125,6 +126,50 @@ def train(cfg: ToyConfig, tcfg: TrainConfig | None = None) -> TrainResult:
 
     model.eval()
     result.seconds = time.time() - start
+    return result
+
+
+def train_cached(
+    cfg: ToyConfig,
+    tcfg: TrainConfig | None = None,
+    cache_dir: str | Path = "results/checkpoints",
+) -> TrainResult:
+    """Train, or reload a previously trained model with the same configuration.
+
+    Training is deterministic given ``cfg.seed``, so a cached checkpoint is the
+    same model the fresh run would produce. Retraining per rho is the dominant
+    cost of every downstream experiment; caching makes additional intervention
+    arms essentially free.
+
+    CAVEAT -- a cache hit does NOT advance the DGP's generator, because it skips
+    the ``tcfg.steps`` sampling calls that training performs. Any batch drawn
+    afterwards therefore differs from the one a fresh ``train()`` would produce.
+    Each script stays internally consistent and conclusions are unaffected, but
+    *exact* percentages are not comparable between a cached and an uncached
+    script: measured, scripts 06/07 report 20.02% where 08/09 report 19.43% for
+    the same intervention. To compare exactly, either use ``train`` everywhere or
+    give evaluation its own generator.
+    """
+    import hashlib
+    import json as _json
+    from dataclasses import asdict
+
+    tcfg = tcfg or TrainConfig()
+    key = _json.dumps({**asdict(cfg), **asdict(tcfg), "log": None}, sort_keys=True)
+    digest = hashlib.sha1(key.encode()).hexdigest()[:16]
+    path = Path(cache_dir) / f"{digest}.pt"
+
+    dgp = FeatureMatchedRetrieval(cfg)
+    if path.exists():
+        model = build_model(dgp)
+        model.load_state_dict(torch.load(path, map_location="cpu"))
+        model.eval()
+        assert_freezes_hold(model, dgp)
+        return TrainResult(model=model, dgp=dgp, seconds=0.0)
+
+    result = train(cfg, tcfg)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(result.model.state_dict(), path)
     return result
 
 
