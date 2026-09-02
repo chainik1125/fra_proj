@@ -19,6 +19,24 @@ So both scopes are computed:
                    Dmitry's ``qk_pair_concentration.json`` computes on a real
                    model, so our numbers are comparable to his.
 
+Mass fraction is denominator-dominated -- report ``runner_up_ratio`` too
+------------------------------------------------------------------------
+``mass_fraction = |planted| / sum|all|`` divides by an L1 over every co-active
+pair, and ``G`` is a dense, unregularised matrix: nothing in the loss pushes the
+9,999 non-planted entries toward zero. Measured at rho=0, the planted coupling is
+7.5x the largest competitor in ``G`` and rank 1 of 100 in its column -- a very
+sharp circuit -- yet mass fraction is only 0.096, because ~3,188 individually
+tiny pairs sum to swamp the numerator.
+
+So mass fraction mostly measures *how much irrelevant weight the matrix carries*,
+which scales with ``n_feat**2`` and with activation density. It is therefore not
+comparable across dictionary sizes, and a sweep that moves the denominator can
+show "degradation" with no change in the planted circuit at all.
+
+``runner_up_ratio = |planted| / |next largest|`` is reported alongside for that
+reason: it is scale-free, denominator-free, and moves only when a competitor
+actually catches up with the planted edge.
+
 Signed vs absolute
 ------------------
 Dmitry's note 03 found signed sum *anti*-predictive of causal ablation impact
@@ -52,6 +70,7 @@ class Recovery:
     total_l1: float
     total_signed: float
     argmax_is_planted: bool
+    runner_up_ratio: float  # |planted| / |next largest| -- denominator-free
 
     @property
     def in_top5(self) -> bool:
@@ -63,9 +82,9 @@ class Recovery:
 
     def __str__(self) -> str:
         return (
-            f"rank_abs={self.rank_abs:<6d} rank_signed={self.rank_signed:<6d} "
-            f"mass={self.mass_fraction:.4f}  "
-            f"(nonzero {self.n_nonzero}/{self.n_total}, top5={self.in_top5})"
+            f"rank_abs={self.rank_abs:<6d} mass={self.mass_fraction:.4f}  "
+            f"runner_up={self.runner_up_ratio:6.2f}x  "
+            f"(nonzero {self.n_nonzero}/{self.n_total})"
         )
 
 
@@ -82,6 +101,11 @@ def recovery_of(values: Tensor, target: tuple[int, ...] | int) -> Recovery:
     total_l1 = flat.abs().sum().item()
     argmax = torch.unravel_index(flat.abs().argmax(), values.shape)
 
+    # Largest competitor, excluding the planted entry itself.
+    others = values.abs().clone()
+    others[key] = -1.0
+    runner_up = others.max().item()
+
     return Recovery(
         rank_abs=int((flat.abs() > planted.abs()).sum()) + 1,
         rank_signed=int((flat > planted).sum()) + 1,
@@ -93,6 +117,7 @@ def recovery_of(values: Tensor, target: tuple[int, ...] | int) -> Recovery:
         total_l1=total_l1,
         total_signed=flat.sum().item(),
         argmax_is_planted=tuple(int(i) for i in argmax) == key,
+        runner_up_ratio=(planted.abs().item() / runner_up) if runner_up > 0 else float("inf"),
     )
 
 

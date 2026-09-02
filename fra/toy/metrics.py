@@ -117,6 +117,85 @@ def attention_concentration(model: HookedTransformer, b: ToyBatch) -> AttentionC
     )
 
 
+@dataclass
+class QuerySideContrast:
+    """Is the query side of the planted edge load-bearing, or decorative?
+
+    Gate 2 measures attention at ``lambda*`` positions only. It cannot see a head
+    that attends to the ``mu*`` key from *every* position, which would solve the
+    task equally well: the readout only matters at the ``lambda*`` position, and
+    the label everywhere else is DEFAULT no matter what the head copied. Nothing
+    in the loss penalises attending to ``mu*`` from an irrelevant position.
+
+    If that degenerate solution is what training found, the "planted QK edge" is
+    not a pair at all -- it is a key-side lookup with ``lambda*`` decorative, and
+    any query-side degradation measured across rho is noise about a component
+    that was never load-bearing.
+    """
+
+    mass_at_lambda: float  # A[q*, k*]
+    mass_elsewhere: float  # A[q, k*] for q != q*
+    uniform_baseline: float  # what diffuse attention would give at those q
+    argmax_is_key_at_lambda: float
+    argmax_is_key_elsewhere: float
+    ratio: float  # mass_at_lambda / mass_elsewhere
+    n_elsewhere: int
+
+    @property
+    def query_side_is_conditional(self) -> bool:
+        """Query side does real work: it gates attention on/off, not just sharpens it."""
+        return self.mass_elsewhere < 0.10 and self.argmax_is_key_elsewhere < 0.10
+
+    def __str__(self) -> str:
+        return (
+            f"at_lambda={self.mass_at_lambda:.4f}  elsewhere={self.mass_elsewhere:.4f}  "
+            f"(uniform={self.uniform_baseline:.4f}, ratio={self.ratio:.1f}x)  "
+            f"argmax_is_key: lambda={self.argmax_is_key_at_lambda*100:.1f}% "
+            f"elsewhere={self.argmax_is_key_elsewhere*100:.1f}%"
+        )
+
+
+@torch.no_grad()
+def query_side_contrast(model: HookedTransformer, b: ToyBatch) -> QuerySideContrast:
+    """Attention onto the ``mu*`` key from positions where ``lambda*`` does NOT fire.
+
+    Restricted to causally valid rows (``q >= k*``) and excluding ``q*`` itself.
+    Compared against ``1/(q+1)``, the mass a perfectly diffuse row would put on
+    any single key -- so "low" means genuinely suppressed rather than merely
+    diluted by a longer context.
+    """
+    _, cache = model.run_with_cache(b.tokens, names_filter=[PATTERN_HOOK])
+    pattern = cache[PATTERN_HOOK][:, 0]  # [batch, seq, seq]
+    batch, seq, _ = pattern.shape
+
+    key_pos = b.key_pos.view(batch, 1)
+    # A[i, q, k*] for every query row q.
+    onto_key = pattern.gather(2, key_pos.view(batch, 1, 1).expand(batch, seq, 1)).squeeze(-1)
+    argmax = pattern.argmax(dim=2)  # causal rows already zeroed above the diagonal
+
+    positions = torch.arange(seq).expand(batch, seq)
+    causal_ok = positions >= key_pos
+    is_lambda = positions == b.query_pos.view(batch, 1)
+    elsewhere = causal_ok & ~is_lambda
+
+    rows = torch.arange(batch)
+    uniform = 1.0 / (positions.float() + 1.0)
+
+    mass_elsewhere = onto_key[elsewhere].mean().item()
+    return QuerySideContrast(
+        mass_at_lambda=onto_key[rows, b.query_pos].mean().item(),
+        mass_elsewhere=mass_elsewhere,
+        uniform_baseline=uniform[elsewhere].mean().item(),
+        argmax_is_key_at_lambda=(argmax[rows, b.query_pos] == b.key_pos).float().mean().item(),
+        argmax_is_key_elsewhere=(argmax[elsewhere] == key_pos.expand(batch, seq)[elsewhere])
+        .float()
+        .mean()
+        .item(),
+        ratio=onto_key[rows, b.query_pos].mean().item() / max(mass_elsewhere, 1e-12),
+        n_elsewhere=int(elsewhere.sum()),
+    )
+
+
 @torch.no_grad()
 def attention_mass_by_role(model: HookedTransformer, b: ToyBatch) -> dict[str, float]:
     """Where the remaining attention goes, for diagnosing a failed Gate 2."""
