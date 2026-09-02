@@ -122,6 +122,44 @@ that hypothesis *is* the magnitude hypothesis. Corroborating, from the multi-see
 sweep: `|W_Q|` grows from ~22 at rho=0 to ~26 at rho=0.6 while `G[lambda*,mu*]`
 falls, consistent with the model compensating by scaling weights up.
 
+## The transition is a gradient, not a discontinuity
+
+One loose end from the scale sweep: post-ablation `mass_on_key` sits flat at
+~0.74 across `rho` 0.1-0.8 while the runner-up ratio falls 2.77 to 0.98. A
+redundancy story does not predict that -- redundancy should *grow* with overlap.
+And since exact orthogonality is measure-zero, the whole transition might sit at
+precisely `rho = 0`, which would make `rho = 0` a special point rather than the
+endpoint of a curve.
+
+Adding `rho` = 0.01, 0.02, 0.05 to the planted-arm ablation settles it. At
+scale 1:
+
+| rho | post-ablation acc | suppression | mass_on_key |
+|---:|---:|---:|---:|
+| 0.00 | 19.43% | -79.69 | 0.2593 |
+| 0.01 | 34.67% | -64.16 | 0.3940 |
+| 0.02 | 45.12% | -54.10 | 0.4903 |
+| 0.05 | 64.94% | -34.86 | 0.6356 |
+| 0.10 | 77.34% | -22.27 | 0.7352 |
+| 0.20 | 80.08% | -19.73 | 0.7610 |
+| 0.40 | 78.22% | -21.58 | 0.7624 |
+| 0.80 | 77.44% | -22.56 | 0.7459 |
+
+The test was: if 0.01/0.02/0.05 all look like 0.1, it is a discontinuity. They do
+not. They interpolate smoothly, and `mass_on_key` rises monotonically with them
+(0.26, 0.39, 0.49, 0.64, 0.74).
+
+So it is a **gradient with a steep knee in `rho` in [0, 0.1]**, and the flat 0.74
+above 0.1 is the saturation tail of that curve, not a plateau requiring its own
+explanation. `rho = 0` is an endpoint, not a special point. The collapse
+threshold moves smoothly too: scale 1.0 suffices at `rho = 0`, 1.5 from 0.01
+through 0.6, 2.0 at 0.8.
+
+This removes the last reason to revisit redundancy. Redundancy would predict the
+ablation's effect *weakening* as overlap grows without bound; instead the effect
+saturates, which is what a magnitude threshold against a growing score margin
+looks like.
+
 ## Structure of the residual failures
 
 Post-ablation accuracies repeat exactly across rho (801/1024 at two points,

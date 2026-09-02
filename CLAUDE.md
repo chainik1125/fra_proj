@@ -136,9 +136,10 @@ fra/toy/fra.py           oracle FRA: G, fra_qk, fra_ov, fra_ov_signed
 fra/toy/recovery.py      rank / mass fraction / runner_up_ratio
 fra/toy/intervention.py  feature-pair ablation (hook on hook_attn_scores)
 fra/toy/conformance.py   adapter to the repo's own FRA conformance harness
-scripts/00..09           show DGP, train, oracle FRA, diagnostics, sweeps
+fra/toy/steering.py      baseline interventions (residual, Q/K/V) + Pareto metrics
+scripts/00..10           show DGP, train, oracle FRA, diagnostics, sweeps, Pareto
 results/                 *.json + figures/rho_sweep.png + checkpoints/
-docs/insen/              three write-ups
+docs/insen/              four write-ups
 ```
 
 Vendored from `upstream/dmitry/dev`: `tests/fra_conformance/` and `fra/core/`.
@@ -180,22 +181,42 @@ IMPLEMENTATION, not the method. Say so in any write-up.
   weak scale-1 effect at high rho is a MAGNITUDE threshold, not redundancy.
 - **Signed vs L1**: identical within a head whenever activations are non-negative.
   Provable, so note 03's anti-predictive signed sum is a cross-head effect.
+- **Steering Pareto (3 seeds x rho in {0, 0.4})**: TWO SEPARABLE CLAIMS.
+  *Claim A (the site)*: a score-row edit perturbs EXACTLY zero logits outside the
+  target row -- 0.000e+00 on all 6 runs, at up to 6x over-ablation -- while both
+  baselines perturb ~48% of non-target positions. The perturbed set under
+  residual steering is exactly {positions >= q*}. This is structural and belongs
+  to score-space intervention generally, NOT to FRA.
+  *Claim B (FRA)*: FRA is what says WHICH pair to ablate (rank 1 of 10,000, and
+  random/runner-up ablations do nothing). Do not conflate them.
+  Also: the paper's "QK->QK" baseline is NOT intermediate -- qkv and residual
+  have identical collateral at every strength and seed, differing only at q*
+  itself, which is a target position.
+  Cost: at rho=0.4 FRA needs 1.6-2.4x more strength for the same suppression.
+- **The accuracy-based collateral axis saturates.** It reported +0.00 damage for
+  every method while residual steering was changing non-target logits by up to
+  15.16 and perturbing 50.6% of positions. Use KL, not accuracy, for collateral.
 
 ### DO FIRST TOMORROW
 
-**Add rho = 0.01, 0.02, 0.05 to the planted-arm ablation** (`scripts/08_ablation_scale.py`,
-extend `RHOS`; checkpoints make it cheap but these three rho values are new so they
-will train, ~2 min each).
+Nothing is blocked. Candidates, in rough priority order:
 
-Why: post-ablation `mass_on_key` is flat at ~0.74 across rho 0.1-0.8 while the
-runner-up ratio falls 2.77 -> 0.98. A redundancy story does not predict that --
-redundancy should *grow* with rho. The discontinuity may sit at exactly rho=0,
-and exact orthogonality is measure-zero. If 0.01/0.02/0.05 all look like 0.1 it
-is a discontinuity, not a gradient.
+1. **Stage B** -- train a TopK SAE on `hook_resid_pre` and repeat the recovery
+   metrics. The Stage A / Stage B gap is the cost of SAE imperfection measured
+   against ground truth, and it is the last major piece of the original brief.
+2. **A second planted rule** sharing the head (`lambda_2 -> mu_2`). The current
+   toy has ONE behaviour, so the collateral axis has no other capability to
+   damage. A second rule would make the Pareto comparison much stronger and
+   would let arm (d)-style competitor tests be genuinely load-bearing.
+3. `d_head` as a sweep axis (rank(G) <= d_head structurally caps concentration).
+4. `n_feat/d_model` as a second overlap axis -- forced rather than imposed
+   overlap, closer to a real model.
 
-**Do not write the redundancy interpretation until this is resolved.** The scale
-sweep already argues against redundancy and for magnitude; this checks the shape
-of the transition, which is a separate question.
+RESOLVED (was yesterday's first task): the rho=0 transition is a **gradient, not
+a discontinuity**. rho = 0.01/0.02/0.05 interpolate smoothly (34.7/45.1/64.9%
+post-ablation accuracy vs 19.4% at rho=0 and 77.3% at rho=0.1), with
+`mass_on_key` rising monotonically. The flat 0.74 above rho=0.1 is a saturation
+tail. Redundancy is closed out; magnitude stands.
 
 ### Known issues
 

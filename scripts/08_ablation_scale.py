@@ -35,7 +35,13 @@ from fra.toy.intervention import evaluate_ablation
 from fra.toy.metrics import accuracy, attention_concentration
 from fra.toy.train import TrainConfig, train_cached
 
-RHOS = [0.0, 0.1, 0.2, 0.4, 0.6, 0.8]
+# 0.01/0.02/0.05 added for the discontinuity check: post-ablation mass_on_key is
+# flat at ~0.74 across rho 0.1-0.8 while the runner-up ratio falls 2.77 -> 0.98,
+# which a redundancy story does not predict (redundancy should GROW with rho).
+# Exact orthogonality is measure-zero, so the transition may sit at exactly
+# rho=0. If 0.01/0.02/0.05 all look like 0.1 it is a discontinuity, not a
+# gradient.
+RHOS = [0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8]
 SCALES = [1.0, 1.5, 2.0, 3.0, 4.0]
 EVAL_BATCH = 1024
 OUT = Path("results/ablation_scale.json")
