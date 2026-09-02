@@ -116,9 +116,12 @@ def run_rho(rho: float, seed: int) -> dict:
 def plot(rows: list[dict]) -> None:
     FIG.parent.mkdir(parents=True, exist_ok=True)
     rhos = sorted({r["rho"] for r in rows})
-    fig, axes = plt.subplots(1, len(rhos), figsize=(6.4 * len(rhos), 5.8), squeeze=False)
+    # Stacked, not side-by-side: two panels across a page's text width halves
+    # every label. One panel per row keeps the axes legible in print.
+    fig, axes = plt.subplots(len(rhos), 1, figsize=(9.0, 5.4 * len(rhos)), squeeze=False)
+    axes = axes[:, 0]
 
-    for ax, rho in zip(axes[0], rhos):
+    for ax, rho in zip(axes, rhos):
         group = [r for r in rows if r["rho"] == rho]
         for method, (color, style, label) in METHOD_STYLE.items():
             for i, row in enumerate(group):
@@ -148,7 +151,7 @@ def plot(rows: list[dict]) -> None:
     fig.suptitle("Steering Pareto frontier: does FRA-guided pair ablation buy anything?\n"
                  "lower-LEFT is better -- suppresses the planted rule, spares everything else",
                  fontsize=12)
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.tight_layout(rect=(0, 0, 1, 0.95), h_pad=3.5)
     fig.savefig(FIG, dpi=160)
     print(f"\n  wrote {FIG}")
 
