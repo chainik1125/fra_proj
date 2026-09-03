@@ -136,6 +136,7 @@ fra/toy/fra.py           oracle FRA: G, fra_qk, fra_ov, fra_ov_signed
 fra/toy/recovery.py      rank / mass fraction / runner_up_ratio
 fra/toy/intervention.py  feature-pair ablation (hook on hook_attn_scores)
 fra/toy/conformance.py   adapter to the repo's own FRA conformance harness
+fra/wsparse/             circuit_sparsity loader + sparse-G FRA (PAUSED thread)
 fra/toy/steering.py      baseline interventions (residual, Q/K/V) + Pareto metrics
 scripts/00..10           toy: DGP, train, oracle FRA, diagnostics, sweeps, Pareto
 scripts/20..23           sleeper transfer: sanity gate, three arms, decision-position rank
@@ -233,6 +234,55 @@ unaffected; what does not transfer is that one PAIR is a large enough share to
 steer with.
 
 DO NOT re-run this thread. Case 2 has not been touched and is the open work.
+
+### WEIGHT-SPARSE / circuit_sparsity (Case 2 candidate) -- PAUSED
+
+Scoping done, one experiment run, thread paused deliberately. Assets live OUTSIDE
+the repo in `../cs_data/` (642 MB csp_yolo1, 1.68 GB csp_yolo2, 96 MB circuit) and
+`../circuit_sparsity/` (their code). New deps: `blobfile`, `tiktoken`.
+Reproduce every number with `scripts/30_wsparse_scope.py` -> `results/wsparse_scope.json`.
+
+Models load on laptop CPU: csp_yolo1 2.2s (12L, 128 heads, d_head 8, d_model 1024,
+160.6M params, 5.0M nonzero = 3.1%), csp_yolo2 21.2s (8L, 128 heads, d_head 16,
+d_model 2048, afrac=0.25, sink=True). Both rms_norm=True. Circuits are
+`viz/<model>/<task>/<sweep>/<k>/viz_data.pt`; `circuit_data` is keyed by
+hook name with int index tensors of RETAINED channels.
+
+TWO FINDINGS THAT MATTER:
+
+1. **The pair term is only 45.9% of the summed score mass** (layer 10 head 82,
+   mean over 512 cells): pair 2.9864, bias-x-feat 2.7308, feat-x-bias 0.0559,
+   const 0.7280. `c_attn` is an nn.Linear with a DENSE bias (3072/3072 nonzero,
+   max 5.82), so the score is not purely bilinear in act_in and the Eqs 13-15
+   terms are mandatory -- exactness is 5.9e-06 WITH them and off by 5.27 without.
+   **FRA's 4-index tensor does not capture the majority of the score on this
+   model.** bias-x-feat is nearly as large as the pair term.
+
+2. **Data-weighted circuit pair share = 3.22% mean / 3.05% median**, against the
+   sleeper's 2.14% (weights-only was 0.42%). Same order. **Pair steering is no
+   better here than on the sleeper.**
+
+Other measurements: effective live pairs per cell -- yolo1 517, yolo2 195,
+sleeper 1022, so yolo2 is 2.6x sparser and is the better target. Activation
+sparsity removes only ~40-50% of support pairs, not the 93.75% independence would
+predict, because retained activations are not independent of the weight support.
+
+THE CORRELATION IS A NULL AND THE TEST IS MIS-SPECIFIED. Spearman vs
+`ch_interv_losses` at `10.attn.act_in` (n=20): FRA +0.156, |act| control +0.253;
+excluding channel 460, +0.304 vs +0.363. The control wins. But ground truth
+ablates an act_in channel, which feeds Q, K AND V, while FRA-QK models only Q,K --
+and the dominant channel 460 (loss 5.5771, 38x the next) has |Wq[:,460]| = 0.0.
+Its importance is OV-mediated, so FRA ranking it low is correct behaviour. This
+is not evidence against FRA.
+
+NEXT STEPS, verbatim:
+  1. Add FRA-OV and redo the correlation on combined attribution. The current
+     null is an artefact of testing a QK-only attribution against QK+OV ground
+     truth.
+  2. If that also nulls, report it -- with n=20 and one dominant channel this
+     dataset may simply be too thin, and pooling `attn.act_in` across all layers
+     (186 channels in the k=1024 circuit) is the obvious way to get n up.
+  3. Switch to yolo2 for anything further.
 
 ### DO FIRST TOMORROW
 
