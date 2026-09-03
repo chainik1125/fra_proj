@@ -235,6 +235,48 @@ steer with.
 
 DO NOT re-run this thread. Case 2 has not been touched and is the open work.
 
+### FEATURE-LEVEL SCORE-SPACE ABLATION (A_feat) -- RUN, claim NOT earned
+
+The cell identified twice and finally tested: remove a feature's ENTIRE
+contribution to the scores (sum over key partners) rather than one pair.
+scripts/31_feature_score_ablation.py -> results/feature_score_ablation.json.
+lam=1114 (trigger detector, 4.88% dep / 0.00% clean), direct comparison with C.
+
+  arm            supp@16   resid%   KL_dep@16  KL_clean@16
+  A_score_pair    +0.075    1.63%    6.74e-02      0.000
+  A_feat          +2.601    4.73%    7.92e-01      0.000
+  A_feat_sym      +5.289   50.70%    5.396         0.000
+  B_paper_qk     +18.547   59.39%    4.195         1.906
+  C_ln1_ablate  +117.215   50.70%    6.781         0.000
+
+A_feat is 35x A_pair (P1 held) but only 2.2% of C (P2 held). At MATCHED
+collateral (interpolating C to KL_dep 0.792) C gives ~+5.9 vs A_feat's +2.601, so
+C is still ~2.3x better. The claim "A_feat matches C at a fraction of the
+collateral" is NOT earned.
+
+WHY: C removes the feature from V, and OV is how the trigger content is copied.
+No score-space intervention can reach it. The QK path alone does not carry the
+behaviour.
+
+TWO THINGS TO CARRY FORWARD:
+- The "L_0 times more mass" prediction was WRONG: actual removed mass is only
+  3.2x the pair's, not 32x. Two compounding reasons, both measured: signed
+  cancellation across partners (|sum|/sum|.| = 0.577 over 32 active mu) and the
+  chosen pair mu=1232 being an unusually large partner (|feature|/|pair| median
+  2.2x). Suppression is strongly SUPER-LINEAR in removed mass -- 3.2x mass gave
+  35x effect -- which is the softmax.
+- KL_clean is a DEGENERATE collateral metric for lam=1114 (0.00% clean fire), so
+  it reads 0.000 for every score-space arm. Use KL_dep and the resid footprint.
+  Same saturated-axis trap as the toy's accuracy-collateral axis.
+
+Implementation verified to 1.4e-06 against an explicit dense-G sum over all
+1536 mu at a live firing cell. `scripts/_three_arms_lib.score_feature_hooks`
+exploits sum_mu f[k,mu] G[lam,mu] = (W_dec[lam] W_Q) . ((f[k] W_dec) W_K), i.e.
+the key projection of the SAE reconstruction, so no d_sae x d_sae matrix is
+built. The model's activations are never replaced by reconstructions, so the
+Case 2 encode-decode confound stays absent -- but note the DELTA is computed from
+f @ W_dec, so SAE reconstruction error enters its size.
+
 ### WEIGHT-SPARSE / circuit_sparsity (Case 2 candidate) -- PAUSED
 
 Scoping done, one experiment run, thread paused deliberately. Assets live OUTSIDE

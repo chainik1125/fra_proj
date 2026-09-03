@@ -167,3 +167,63 @@ def run_pair(c, lq, lk, label, strengths):
 
     return {"pair": [lq, lk], "label": label, "breadth": breadth,
             "base_sleeper_logp": c["base_sleeper"], "rows": rows}
+
+
+# ── Feature-level ablation in SCORE space (the untested cell) ────────────
+#
+# A_pair removes one (lambda, mu) cross term, which is ~2% of a score cell at
+# L_0 = 32. A_feat removes feature lambda's ENTIRE contribution to the scores,
+# summed over every key-side partner -- L_0 times more mass -- while still never
+# round-tripping activations through the SAE, so the encode-decode confound that
+# broke the paper's Case 2 stays structurally absent.
+#
+# The sum over mu collapses:
+#
+#   sum_mu f[k,mu] G_h[lambda,mu]
+#       = (W_dec[lambda] W_Q[h]) . ((f[k] W_dec) W_K[h]) / attn_scale
+#
+# i.e. the key projection of the SAE reconstruction. No d_sae x d_sae matrix is
+# ever built.
+
+def _proj(f, W_dec, W):
+    """(f @ W_dec) @ W[h] for every head -> (B, n_heads, T, d_head)."""
+    xhat = f @ W_dec                                   # (B, T, d_model)
+    return torch.einsum("btd,hde->bhte", xhat, W)
+
+
+def score_feature_hooks(f, W_dec, W_Q, W_K, attn_scale, lam, scale,
+                        symmetric: bool = False):
+    """Remove feature `lam`'s whole contribution to the pre-softmax scores.
+
+    Query side:  `f[q,lam] * sum_mu f[k,mu] G[lam,mu]`
+    Key side:    `sum_lam' f[q,lam'] G[lam',lam] * f[k,lam]`
+
+    `symmetric=True` removes both and subtracts the double-counted diagonal
+    `f[q,lam] f[k,lam] G[lam,lam]`, which is the two-sided reading of "remove
+    this feature from the score".
+    """
+    qv = W_dec[lam] @ W_Q                              # (n_heads, d_head)
+    kv = W_dec[lam] @ W_K                              # (n_heads, d_head)
+    fq = f[:, :, lam]                                  # (B, T)
+
+    khat = _proj(f, W_dec, W_K)                        # (B, H, T, d_head)
+    a_k = torch.einsum("he,bhte->bht", qv, khat)       # (B, H, T)
+    delta = fq[:, None, :, None] * a_k[:, :, None, :] / attn_scale
+
+    if symmetric:
+        qhat = _proj(f, W_dec, W_Q)
+        b_q = torch.einsum("he,bhte->bht", kv, qhat)   # (B, H, T)
+        delta = delta + b_q[:, :, :, None] * fq[:, None, None, :] / attn_scale
+        g_ll = (qv * kv).sum(-1) / attn_scale          # (H,)
+        delta = delta - torch.einsum("bq,bk,h->bhqk", fq, fq, g_ll)
+
+    delta = delta * scale
+    P = delta.shape[-1]
+
+    def _hook(scores, hook):
+        if scores.shape[-1] < P:
+            return scores
+        scores[:, :, :P, :P] = scores[:, :, :P, :P] - delta.to(scores.dtype)
+        return scores
+
+    return [(SCORES, _hook)]
