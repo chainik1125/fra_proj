@@ -211,7 +211,109 @@ The toy's mechanism claim is unaffected: a score-row edit does perturb strictly
 less than an activation edit. What does not transfer is that a single *pair* is a
 large enough share to steer with.
 
-## 4. Open questions for you
+## 4. Since the above: two more Case 2 attempts, and what they settled
+
+Both were negatives with clear mechanisms, and together they change what we think
+the constraint actually is.
+
+### 4.1 Weight-sparse models (`circuit_sparsity`) — scoped, paused
+
+Feasible: `csp_yolo1` loads in 2.2 s on laptop CPU, published circuits read
+cleanly, and per-channel causal ablation losses ship with them.
+
+But the premise was wrong. We expected weight-sparse models to escape the
+`1/L_0^2` dilution because the paper describes circuits using single-digit numbers
+of channels. That is a description of a *pruned* circuit, not of the activations:
+`afrac=None` on `csp_yolo1`, so activations are dense and effective live pairs per
+cell are ~517 — the same order as the sleeper's 1022. Data-weighted circuit pair
+share is **3.22%** against the sleeper's **2.14%**. Pair steering is no better
+there.
+
+**The finding worth keeping: the FRA pair term is only 45.9% of the score.**
+Layer 10, head 82, mean over 512 cells:
+
+| term | mass |
+|---|---:|
+| pair (the FRA 4-index object) | 2.9864 |
+| bias x feature | 2.7308 |
+| feature x bias | 0.0559 |
+| constant | 0.7280 |
+
+`c_attn` is an `nn.Linear` with a dense bias (3072/3072 non-zero, max 5.82), so
+the score is not purely bilinear in `act_in`. Exactness is 5.9e-06 *with* the
+Eqs 13-15 bias terms and off by 5.27 without them. On a model with attention
+biases, FRA's tensor does not capture the majority of the attention score, and
+the bias x feature term is nearly as large as the pair term.
+
+The correlation against published ablation losses is a null (Spearman +0.156 for
+FRA against +0.253 for a trivial `|activation|` control, n=20), but the test is
+mis-specified: the ground truth ablates an `act_in` channel, which feeds Q, K
+*and* V, while FRA-QK covers only Q and K. The dominant channel 460 has
+`|Wq[:,460]| = 0.0` — its importance is OV-mediated, so FRA-QK ranking it low is
+correct behaviour, not failure. Adding FRA-OV and redoing the correlation on
+combined attribution is the next step, and `csp_yolo2` (2.6x sparser) is the
+better target.
+
+### 4.2 Feature-level score-space ablation — the last route to the original Case 2
+
+Every score-space arm so far removed one `(lambda, mu)` **pair**. This removes a
+feature's **entire** contribution to the scores, summed over all key-side
+partners — `L_0` times more mass in principle, while still never replacing the
+model's activations with SAE reconstructions. Run on the sleeper with
+`lambda = 1114`, the trigger detector, for a direct comparison with
+activation-space ablation of the same feature.
+
+| arm | suppression @16 | resid footprint | KL dep @16 |
+|---|---:|---:|---:|
+| pair ablation, score space | +0.075 | 1.63% | 6.74e-02 |
+| **feature ablation, score space** | **+2.601** | 4.73% | 7.92e-01 |
+| the paper's QK channel | +18.5 | 59.39% | 4.195 |
+| feature ablation, activation space | **+117.2** | 50.70% | 6.781 |
+
+35x better than pair ablation, and still **2.2% of activation space**. At matched
+collateral (interpolating the activation arm to KL dep 0.792) it gives ~+5.9
+against +2.601, so activation space is still ~2.3x better. The claim is not
+earned.
+
+**Why: activation-space ablation removes the feature from V, and the OV path is
+how the trigger content is copied.** No score-space intervention can reach OV,
+however much score mass it removes.
+
+Two things worth carrying forward. The "`L_0` times more mass" premise was wrong —
+measured removed mass is only **3.2x** the pair's, because signed terms cancel
+across partners (`|sum| / sum|.| = 0.577` over 32 active `mu`). But suppression
+was **35x**. So **effect is strongly super-linear in removed mass**, and score-mass
+accounting is a poor predictor of steering effect in either direction. Separately,
+`KL_clean` is degenerate for a feature that never fires on clean prompts and reads
+0.000 for every score-space arm — the same saturated-axis trap as the toy's
+accuracy-collateral measure.
+
+### 4.3 What these settle
+
+`1/L_0^2` was never the binding constraint. If it were, 3.2x the removed mass
+would have bought roughly 3.2x the effect; it bought 35x. **The binding constraint
+is which circuit carries the behaviour.**
+
+| behaviour | mechanism | score-space ablation |
+|---|---|---:|
+| toy planted rule | QK-mediated (attend where `mu*` fires) | **-78.81 pp** |
+| TinyStories sleeper | OV-mediated (copy trigger content) | fails |
+
+> **Score-space intervention works when the behaviour is QK-carried and fails when
+> it is OV-carried. The intervention pathway has to match the circuit that carries
+> the behaviour.**
+
+This is a sharper form of the paper's own thesis. It replaces "localised versus
+distributed" — which is confounded with parameter count, depth, intervention depth
+and attention architecture across the two case studies — with a property that can
+be *measured* on a given behaviour rather than asserted. And it has a clean
+positive at one end and a clean negative at the other.
+
+It also explains the paper's Case 1 result from a second direction: OV x OV
+uniquely wins on the sleeper *because the sleeper is a content-transport
+behaviour*. QK interventions were never going to win there.
+
+## 5. Open questions for you
 
 1. **Which DGP paper?** Our guess is Chanin and Garriga-Alonso, *Sparse but Wrong*
    (arXiv:2508.16560). Our generator sits behind a Protocol, so swapping is contained.
@@ -227,17 +329,33 @@ large enough share to steer with.
 Settled, so you need not chase it: `autoresearch/cadenza-attn-only` is not the toy
 experiment — it is the 8B sleeper LoRA study.
 
-## 5. What is next
+## 6. What is next
 
-Case 2 is untouched and is the open work. The `QK->QK` no-op confound — KL ~0.1 at
-the mathematical no-op against ~0.01 for the feature effect — is exactly what a
-score-space intervention was meant to remove, and `L_0^2` says pair ablation will
-not do that job at `d_sae = 102k`, `k = 64`, where the share falls another 4x
-relative to the sleeper SAE. The natural route is score-space ablation of a whole
-*feature* rather than a pair: remove `sum_mu f[q,l] f[k,mu] G[l,mu]`, which is
-`L_0` times more mass than the cross term and still never round-trips through the
-SAE. That is a small change to code that already exists, and it is the experiment
-we would run next.
+The score-space route to a steering Case 2 is closed. Pair ablation is a null,
+feature ablation is 35x better and still an order of magnitude short of activation
+space, and the reason is consistent across both: on the sleeper the behaviour
+rides on OV, and QK-space interventions cannot reach OV by construction.
+
+That is a coherent negative rather than a run of failures, and it says the fix for
+Case 2 is not in score space at all.
+
+If section 4.3 is the claim we want to make, the search changes shape. Case 2
+needs a **QK-mediated behaviour in a real model** — routing-driven rather than
+content-driven — where score-space intervention should work for the same reason it
+worked in the toy. Induction is the obvious family to look at, and it is a
+better-posed question than the one we have been asking.
+
+That is a decision about what the paper claims, not just which experiment to run
+next, so it is yours to make. Two options as we see them:
+
+1. **Keep Case 2 as a steering result** and find a QK-mediated behaviour. Higher
+   risk, preserves the paper's current shape.
+2. **Reframe Case 2 as attribution validation** against ground-truth circuits.
+   Lower risk, better supported by everything above, and consistent with what our
+   own results say FRA actually is — but it changes the paper's shape and stops
+   claiming pair-level steering the method cannot deliver.
+
+The weight-sparse thread is paused rather than closed and suits option 2 directly.
 
 ## Related
 

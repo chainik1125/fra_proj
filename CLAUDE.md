@@ -99,7 +99,7 @@ See `docs/Tags.md`. Current categories:
 
 ---
 
-## FRA toy experiment (branch `insen/fra-toy`)
+## FRA toy experiment (branch `indranil/fra-toy`)
 
 Working state for the FRA-on-a-toy-model sprint. **Assume a cold start: read this
 section, then `docs/insen/`, then `../fra_toy_brief.md` (the spec, outside the repo).**
@@ -177,7 +177,7 @@ IMPLEMENTATION, not the method. Say so in any write-up.
 - **|W_Q| grows 21.4 -> 32.3 with rho** while G[l*,m*] falls -- corroborates the
   magnitude mechanism behind the ablation result.
 - **Rank is the wrong metric**: aggregate rank is 1 at *every* rho including 0.8
-  where the runner-up ratio is 0.98. Use `runner_up_ratio`.
+  where the runner-up ratio is 1.02. Use `runner_up_ratio`.
 - **Intervention**: ablating the planted pair destroys behaviour; matched-random
   and aggregate-runner-up do not. At rho=0.8 planted costs -22.5 pp vs -6.5 pp
   for the best live competitor and -0.3 pp for the aggregate runner-up.
