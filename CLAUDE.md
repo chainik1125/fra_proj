@@ -326,6 +326,38 @@ NEXT STEPS, verbatim:
      (186 channels in the k=1024 circuit) is the obvious way to get n up.
   3. Switch to yolo2 for anything further.
 
+### IC3 REPLICATION (Dmitry's in-context backdoor PoC) -- REPRODUCED EXACTLY
+
+The 2026-09-09 meeting action item: "replicate the proof of concept". That PoC is
+`experiments/fra_win/jobs/ic3_fair.py` on `upstream/iclr-summary` -- **GPT-2-small**,
+not Gemma. (Gemma-2-2b is Setting 1 of docs/dmitry/INDUCTIVE_BACKDOOR_MAP.md, the
+replication of the same flip, and needs a gated HF repo + ~10 GB RAM.)
+
+`scripts/40_ic3_incontext_backdoor.py` is his script VERBATIM apart from three
+documented changes (pod path, OUTDIR, and the tokenizer fix below). Verified
+byte-identical programmatically after undoing them. Runs on laptop CPU in ~3 min.
+-> `results/ic3/{ic3.json,ic3_flip.png,run.log}`
+
+  @80% ASR-suppression, held-out total KL     his reported      ours (n=4)
+  FRA-QK (attention edge)                     0.05 +- 0.08      0.054 +- 0.076
+  ActAdd-trigger                              5.6  +- 2.5       5.648 +- 2.482
+  payload-suppress (sleeper-winner)           4.1  +- 1.6       4.120 +- 1.602
+
+All four backdoors measured (base ASR 0.89-0.99). FRA reaches suppression 1.0 at
+non-backdoor-position KL of exactly 0.000. The ranking flip reproduces.
+
+**THE TRAP -- his job silently measures NOTHING on a current transformer_lens.**
+TL 3.8.1 sets `tokenizer.add_bos_token=True`, so `tok.encode(" bank")` returns
+`[50256, 3331]` and his `if len(Tid)!=1: continue` skips ALL FOUR cases. The run
+still exits 0, prints "DONE ic3", and reports `n=0`. Fix is
+`add_special_tokens=False` at 3 call sites -- this RESTORES his intent (the script
+manually prepends `tok.bos_token_id`, proving the original encode returned no BOS)
+and removes a double-BOS in the held-out text. Tell him; anyone re-running the
+campaign today hits this.
+
+New dep: `sae_lens` 6.50.0 (26 packages, does not disturb torch/transformer_lens).
+`fra/core/fra.py::_build_fra_result` was already vendored and is what his script imports.
+
 ### DO FIRST TOMORROW
 
 Nothing is blocked. Candidates, in rough priority order:
