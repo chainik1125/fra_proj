@@ -1,0 +1,1439 @@
+{
+  "config": {
+    "model": "gemma-2-2b-it",
+    "band": [
+      0.3,
+      0.55
+    ],
+    "topH": 8,
+    "M_pairs": 16,
+    "edit_c": [
+      1.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "sae": "gemma-scope-2b-pt-res-canonical",
+    "key": "FULL-SUBJECT-SPAN x relation"
+  },
+  "heads": [
+    [
+      15,
+      5
+    ],
+    [
+      15,
+      4
+    ],
+    [
+      18,
+      5
+    ],
+    [
+      20,
+      3
+    ],
+    [
+      7,
+      5
+    ],
+    [
+      22,
+      0
+    ],
+    [
+      16,
+      2
+    ],
+    [
+      19,
+      4
+    ]
+  ],
+  "head_effects": {
+    "L15H5": 0.316457599401474,
+    "L15H4": 0.032356083393096924,
+    "L18H5": 0.029446303844451904,
+    "L20H3": 0.023904085159301758,
+    "L7H5": 0.019151270389556885,
+    "L22H0": 0.014402508735656738,
+    "L16H2": 0.01438334584236145,
+    "L19H4": 0.013717055320739746
+  },
+  "facts": [
+    {
+      "prompt": "The native language of Marc Dolez is",
+      "subject": " Marc Dolez",
+      "target_true": " French",
+      "relation_id": "P103",
+      "tid": 6987,
+      "base": 0.30589598417282104,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.8595926351931564,
+      "edited": {
+        "1.0": {
+          "p": 0.07126020640134811,
+          "drop": 0.7670443219643953,
+          "argmax": 4645,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.05397694930434227,
+          "drop": 0.8235447599931646,
+          "argmax": 4645,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.04409889131784439,
+          "drop": 0.8558369720442947,
+          "argmax": 4645,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.04318935051560402,
+          "drop": 0.8588103383168199,
+          "argmax": 4645,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.8588103383168199,
+      "any_flip": true,
+      "meets_oracle": false,
+      "heldout": {
+        "prompt": "The mother tongue of Rainer Maria Rilke is",
+        "base": 0.543283998966217,
+        "cross": {
+          "c1.0": {
+            "p": 0.4583279490470886,
+            "drop": 0.15637502683823978,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.3110511898994446,
+            "drop": 0.42746116121342526,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.059653837233781815,
+            "drop": 0.8901976915438452,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.03261538967490196,
+            "drop": 0.9399662244112401,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Michael Buerk, of",
+      "subject": "Michael Buerk",
+      "target_true": " BBC",
+      "relation_id": "P108",
+      "tid": 21411,
+      "base": 0.3890146017074585,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.14722690988943365,
+      "edited": {
+        "1.0": {
+          "p": 0.33564645051956177,
+          "drop": 0.13718804115232142,
+          "argmax": 573,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.3176032602787018,
+          "drop": 0.1835698226115906,
+          "argmax": 573,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.3131589889526367,
+          "drop": 0.1949942557988239,
+          "argmax": 573,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.317516565322876,
+          "drop": 0.183792680456631,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.1949942557988239,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Angela Ahrendts is employed by",
+        "base": 0.5387721657752991,
+        "cross": {
+          "c1.0": {
+            "p": 0.51984703540802,
+            "drop": 0.03512640698512248,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.39476531744003296,
+            "drop": 0.267287097372669,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.14702537655830383,
+            "drop": 0.7271102965263012,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.1308402568101883,
+            "drop": 0.7571510461719794,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Google Sites, by",
+      "subject": "Google Sites",
+      "target_true": " Google",
+      "relation_id": "P127",
+      "tid": 6238,
+      "base": 0.5400857925415039,
+      "span_len": 2,
+      "oracle_R_fullspan": 0.8449001179322327,
+      "edited": {
+        "1.0": {
+          "p": 0.39781978726387024,
+          "drop": 0.26341371545466263,
+          "argmax": 6238,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.23901735246181488,
+          "drop": 0.557445584085704,
+          "argmax": 3097,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.08622796088457108,
+          "drop": 0.8403439563207086,
+          "argmax": 3097,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.05272099748253822,
+          "drop": 0.9023840319249153,
+          "argmax": 3097,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.9023840319249153,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Telespazio owner",
+        "base": 0.4421585500240326,
+        "cross": {
+          "c1.0": {
+            "p": 0.04289468377828598,
+            "drop": 0.9029880033396289,
+            "flipped": true
+          },
+          "c2.0": {
+            "p": 0.015570135787129402,
+            "drop": 0.9647860800468901,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.011886929161846638,
+            "drop": 0.9731161386312658,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.011129330843687057,
+            "drop": 0.974829547357883,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Leonard Bernstein, performing on the",
+      "subject": "Leonard Bernstein",
+      "target_true": " piano",
+      "relation_id": "P1303",
+      "tid": 16748,
+      "base": 0.4139532148838043,
+      "span_len": 2,
+      "oracle_R_fullspan": -0.22440092541629864,
+      "edited": {
+        "1.0": {
+          "p": 0.5031434893608093,
+          "drop": -0.21545979417514727,
+          "argmax": 16748,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.5212310552597046,
+          "drop": -0.25915450470897516,
+          "argmax": 16748,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.5322475433349609,
+          "drop": -0.28576738674287516,
+          "argmax": 16748,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.5372850894927979,
+          "drop": -0.29793674786077573,
+          "argmax": 16748,
+          "flipped": false
+        }
+      },
+      "best_drop": -0.21545979417514727,
+      "any_flip": false,
+      "meets_oracle": false,
+      "heldout": {
+        "prompt": "Geirr Tveitt performs on the",
+        "base": 0.32943859696388245,
+        "cross": {
+          "c1.0": {
+            "p": 0.3433663249015808,
+            "drop": -0.042277158979114215,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.3355858325958252,
+            "drop": -0.018659731095857834,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.33054879307746887,
+            "drop": -0.003369963701333134,
+            "flipped": false
+          },
+          "c8.0": {
+            "p": 0.3301820755004883,
+            "drop": -0.00225680458652322,
+            "flipped": false
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Araria district, in",
+      "subject": "Araria district",
+      "target_true": " Bihar",
+      "relation_id": "P131",
+      "tid": 78293,
+      "base": 0.3107387125492096,
+      "span_len": 3,
+      "oracle_R_fullspan": -0.1733566479240094,
+      "edited": {
+        "1.0": {
+          "p": 0.3862230181694031,
+          "drop": -0.24291889800579503,
+          "argmax": 573,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.4331384003162384,
+          "drop": -0.3938990631804371,
+          "argmax": 573,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.20541805028915405,
+          "drop": 0.3389364054321896,
+          "argmax": 573,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.006975335069000721,
+          "drop": 0.9775524104744558,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.9775524104744558,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Cornerhouse, in",
+        "base": 0.48975706100463867,
+        "cross": {
+          "c1.0": {
+            "p": 0.3577766716480255,
+            "drop": 0.2694813405770644,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.15807577967643738,
+            "drop": 0.6772363437656692,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.02763237990438938,
+            "drop": 0.9435794149701342,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.017692044377326965,
+            "drop": 0.9638758768663074,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Pentecost follows the religion of",
+      "subject": "Pentecost",
+      "target_true": " Christianity",
+      "relation_id": "P140",
+      "tid": 32136,
+      "base": 0.4369221329689026,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.0066531729714472965,
+      "edited": {
+        "1.0": {
+          "p": 0.41926077008247375,
+          "drop": 0.04042222069735679,
+          "argmax": 32136,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.4101843237876892,
+          "drop": 0.06119582223845921,
+          "argmax": 32136,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.4109129011631012,
+          "drop": 0.059528299994938805,
+          "argmax": 32136,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.41330212354660034,
+          "drop": 0.05405999751443902,
+          "argmax": 32136,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.06119582223845921,
+      "any_flip": false,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Jahandar Shah follows the religion of",
+        "base": 0.3533780872821808,
+        "cross": {
+          "c1.0": {
+            "p": 0.3732582628726959,
+            "drop": -0.05625752220069136,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.349835067987442,
+            "drop": 0.01002614316577466,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.32907408475875854,
+            "drop": 0.06877620146269825,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.32465773820877075,
+            "drop": 0.08127371251086135,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "HealthCap, whose headquarters are in",
+      "subject": "HealthCap",
+      "target_true": " Stockholm",
+      "relation_id": "P159",
+      "tid": 41106,
+      "base": 0.4713045358657837,
+      "span_len": 2,
+      "oracle_R_fullspan": 0.8559413042175097,
+      "edited": {
+        "1.0": {
+          "p": 0.03972082585096359,
+          "drop": 0.9157215285908575,
+          "argmax": 573,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.016377266496419907,
+          "drop": 0.9652512011870733,
+          "argmax": 573,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.011587725020945072,
+          "drop": 0.9754135083812455,
+          "argmax": 573,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.010566342622041702,
+          "drop": 0.9775806472928774,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.9775806472928774,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "The headquarters of Hamburg-Amerikanische-Packetfahrt-Actien-Gesellschaft is in",
+        "base": 0.31703922152519226,
+        "cross": {
+          "c1.0": {
+            "p": 0.20098552107810974,
+            "drop": 0.36605471048275573,
+            "flipped": true
+          },
+          "c2.0": {
+            "p": 0.12063474208116531,
+            "drop": 0.6194958418683236,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.0563054122030735,
+            "drop": 0.8224023768030877,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.040935564786195755,
+            "drop": 0.8708817016731699,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Canjuers is located in the country of",
+      "subject": "Canjuers",
+      "target_true": " France",
+      "relation_id": "P17",
+      "tid": 6081,
+      "base": 0.41113755106925964,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.22386531189511472,
+      "edited": {
+        "1.0": {
+          "p": 0.2925497591495514,
+          "drop": 0.2884382407087187,
+          "argmax": 6081,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.21030309796333313,
+          "drop": 0.4884848211592675,
+          "argmax": 5231,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.09749186784029007,
+          "drop": 0.762872869221652,
+          "argmax": 5231,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.06636747717857361,
+          "drop": 0.8385759777817194,
+          "argmax": 5231,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.8385759777817194,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Manyakheta is located in the country of",
+        "base": 0.40873193740844727,
+        "cross": {
+          "c1.0": {
+            "p": 0.21314404904842377,
+            "drop": 0.478523625044186,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.16415970027446747,
+            "drop": 0.5983683063395604,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.10869753360748291,
+            "drop": 0.7340615605017891,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.08403552323579788,
+            "drop": 0.7943994203912162,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Toyota Kijang is developed by",
+      "subject": "Toyota Kijang",
+      "target_true": " Toyota",
+      "relation_id": "P176",
+      "tid": 30264,
+      "base": 0.5461118817329407,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.7404123032399184,
+      "edited": {
+        "1.0": {
+          "p": 0.4208168089389801,
+          "drop": 0.22943114219813354,
+          "argmax": 30264,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.3731001019477844,
+          "drop": 0.31680647422676367,
+          "argmax": 30264,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.29066723585128784,
+          "drop": 0.46775148907412023,
+          "argmax": 30264,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.13419730961322784,
+          "drop": 0.7542677350520403,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.7542677350520403,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Nissan Skyline, created by",
+        "base": 0.42701494693756104,
+        "cross": {
+          "c1.0": {
+            "p": 0.2625064551830292,
+            "drop": 0.3852523030735657,
+            "flipped": true
+          },
+          "c2.0": {
+            "p": 0.19243314862251282,
+            "drop": 0.5493526631735194,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.12099417299032211,
+            "drop": 0.7166511995468531,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.008099757134914398,
+            "drop": 0.9810316777129144,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "IBM Lotus Word Pro was created by",
+      "subject": "IBM Lotus Word Pro",
+      "target_true": " IBM",
+      "relation_id": "P178",
+      "tid": 34522,
+      "base": 0.4491945803165436,
+      "span_len": 4,
+      "oracle_R_fullspan": 0.7284375738308038,
+      "edited": {
+        "1.0": {
+          "p": 0.284897118806839,
+          "drop": 0.36576011534672914,
+          "argmax": 65951,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.2450760155916214,
+          "drop": 0.4544101235172552,
+          "argmax": 65951,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.14068421721458435,
+          "drop": 0.6868078481368911,
+          "argmax": 65951,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.08875281363725662,
+          "drop": 0.8024178885357137,
+          "argmax": 65951,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.8024178885357137,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Adobe Encore, developed by",
+        "base": 0.4432421624660492,
+        "cross": {
+          "c1.0": {
+            "p": 0.39072084426879883,
+            "drop": 0.11849350681135462,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.3922806680202484,
+            "drop": 0.11497438366934298,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.382182776927948,
+            "drop": 0.1377562666836284,
+            "flipped": false
+          },
+          "c8.0": {
+            "p": 0.380137175321579,
+            "drop": 0.14237135473163354,
+            "flipped": false
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Thomas Arne died in the city of",
+      "subject": "Thomas Arne",
+      "target_true": " London",
+      "relation_id": "P20",
+      "tid": 5282,
+      "base": 0.47581398487091064,
+      "span_len": 2,
+      "oracle_R_fullspan": 0.14540757079503341,
+      "edited": {
+        "1.0": {
+          "p": 0.4217241704463959,
+          "drop": 0.11367848811587467,
+          "argmax": 5282,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.37379658222198486,
+          "drop": 0.21440606180712263,
+          "argmax": 5282,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.3455440402030945,
+          "drop": 0.27378334561385087,
+          "argmax": 5282,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.33884745836257935,
+          "drop": 0.2878572947902963,
+          "argmax": 5282,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.2878572947902963,
+      "any_flip": false,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Jean Drapeau died in the city of",
+        "base": 0.4403791129589081,
+        "cross": {
+          "c1.0": {
+            "p": 0.2527656853199005,
+            "drop": 0.42602708011838386,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.0962463766336441,
+            "drop": 0.7814465450303387,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.019373269751667976,
+            "drop": 0.9560077460951794,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.007777820806950331,
+            "drop": 0.9823383521650445,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Elis Regina is a citizen of",
+      "subject": "Elis Regina",
+      "target_true": " Brazil",
+      "relation_id": "P27",
+      "tid": 19425,
+      "base": 0.48165813088417053,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.809232995282384,
+      "edited": {
+        "1.0": {
+          "p": 0.22388960421085358,
+          "drop": 0.5351690548649853,
+          "argmax": 573,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.08774395287036896,
+          "drop": 0.817829395489911,
+          "argmax": 573,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.00973794236779213,
+          "drop": 0.9797824603315294,
+          "argmax": 573,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.004330422263592482,
+          "drop": 0.9910093446244888,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.9910093446244888,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Yoshio Shirai, who holds a citizenship from",
+        "base": 0.34997978806495667,
+        "cross": {
+          "c1.0": {
+            "p": 0.21206003427505493,
+            "drop": 0.3940791968372289,
+            "flipped": true
+          },
+          "c2.0": {
+            "p": 0.11496282368898392,
+            "drop": 0.6715158200288793,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.04995626211166382,
+            "drop": 0.8572595795092262,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.03826635703444481,
+            "drop": 0.8906612371930961,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Phoenix Sky Harbor International Airport is located in",
+      "subject": "Phoenix Sky Harbor International Airport",
+      "target_true": " Phoenix",
+      "relation_id": "P276",
+      "tid": 29738,
+      "base": 0.5353979468345642,
+      "span_len": 5,
+      "oracle_R_fullspan": 0.8605062829481411,
+      "edited": {
+        "1.0": {
+          "p": 0.6046954989433289,
+          "drop": -0.12943186001827778,
+          "argmax": 29738,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.5809857249259949,
+          "drop": -0.08514746528439177,
+          "argmax": 29738,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.5191747546195984,
+          "drop": 0.030301184961358696,
+          "argmax": 29738,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.22143089771270752,
+          "drop": 0.5864181044737387,
+          "argmax": 573,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.5864181044737387,
+      "any_flip": true,
+      "meets_oracle": false,
+      "heldout": {
+        "prompt": "Real Madrid Baloncesto is located in",
+        "base": 0.3594134449958801,
+        "cross": {
+          "c1.0": {
+            "p": 0.48077449202537537,
+            "drop": -0.33766418234823226,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.48445311188697815,
+            "drop": -0.34789924704272357,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.34335997700691223,
+            "drop": 0.044665741397492575,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.08898017555475235,
+            "drop": 0.7524294742068641,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Snakeskin Glacier is a part of the continent of",
+      "subject": "Snakeskin Glacier",
+      "target_true": " Antarctica",
+      "relation_id": "P30",
+      "tid": 100352,
+      "base": 0.39055171608924866,
+      "span_len": 4,
+      "oracle_R_fullspan": -0.18571126281702166,
+      "edited": {
+        "1.0": {
+          "p": 0.44627755880355835,
+          "drop": -0.1426849260126546,
+          "argmax": 100352,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.46478763222694397,
+          "drop": -0.19007960554123127,
+          "argmax": 100352,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.4717899262905121,
+          "drop": -0.208008841990849,
+          "argmax": 100352,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.45789045095443726,
+          "drop": -0.17241950832908493,
+          "argmax": 100352,
+          "flipped": false
+        }
+      },
+      "best_drop": -0.1426849260126546,
+      "any_flip": false,
+      "meets_oracle": false,
+      "heldout": {
+        "prompt": "Marsh Glacier belongs to the continent of",
+        "base": 0.4934709370136261,
+        "cross": {
+          "c1.0": {
+            "p": 0.42512717843055725,
+            "drop": 0.13849601558436198,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.3939416706562042,
+            "drop": 0.2016922555961459,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.3776165843009949,
+            "drop": 0.2347744193685558,
+            "flipped": false
+          },
+          "c8.0": {
+            "p": 0.3733265697956085,
+            "drop": 0.24346796985675379,
+            "flipped": false
+          }
+        }
+      }
+    },
+    {
+      "prompt": "The capital of United Kingdom of Great Britain and Ireland is",
+      "subject": " United Kingdom of Great Britain and Ireland",
+      "target_true": " London",
+      "relation_id": "P36",
+      "tid": 5282,
+      "base": 0.36831024289131165,
+      "span_len": 7,
+      "oracle_R_fullspan": 0.6342491338511063,
+      "edited": {
+        "1.0": {
+          "p": 0.37112197279930115,
+          "drop": -0.007634134434917783,
+          "argmax": 5282,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.3503445088863373,
+          "drop": 0.04877880632354836,
+          "argmax": 5282,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.1976701319217682,
+          "drop": 0.46330536351632057,
+          "argmax": 5231,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.12479434907436371,
+          "drop": 0.6611705715955596,
+          "argmax": 5231,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.6611705715955596,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "The capital city of Aleppo Governorate is",
+        "base": 0.33505240082740784,
+        "cross": {
+          "c1.0": {
+            "p": 0.2662520408630371,
+            "drop": 0.20534208916118513,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.1021774485707283,
+            "drop": 0.6950403927313986,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.035899724811315536,
+            "drop": 0.8928534022658497,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.03165319561958313,
+            "drop": 0.9055276263013906,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "The original language of Taobao was",
+      "subject": " Taobao",
+      "target_true": " Chinese",
+      "relation_id": "P364",
+      "tid": 8974,
+      "base": 0.4110807776451111,
+      "span_len": 2,
+      "oracle_R_fullspan": -0.06942750621267191,
+      "edited": {
+        "1.0": {
+          "p": 0.4756908416748047,
+          "drop": -0.15717121194480166,
+          "argmax": 8974,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.4907580614089966,
+          "drop": -0.1938239102794328,
+          "argmax": 8974,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.44460707902908325,
+          "drop": -0.08155648039791252,
+          "argmax": 8974,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.37764906883239746,
+          "drop": 0.08132637338147553,
+          "argmax": 8974,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.08132637338147553,
+      "any_flip": false,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "The original language of Burnt by the Sun is",
+        "base": 0.38976913690567017,
+        "cross": {
+          "c1.0": {
+            "p": 0.23293541371822357,
+            "drop": 0.40237594087754225,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.11096254736185074,
+            "drop": 0.7153121249086859,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.05935640260577202,
+            "drop": 0.8477139491418041,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.055401258170604706,
+            "drop": 0.8578613519520079,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "In Portugal, an official language is",
+      "subject": " Portugal",
+      "target_true": " Portuguese",
+      "relation_id": "P37",
+      "tid": 38275,
+      "base": 0.39918702840805054,
+      "span_len": 1,
+      "oracle_R_fullspan": 0.5971099020239212,
+      "edited": {
+        "1.0": {
+          "p": 0.3601572513580322,
+          "drop": 0.09777315962812783,
+          "argmax": 38275,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.24147666990756989,
+          "drop": 0.39507886598777076,
+          "argmax": 38275,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.06846674531698227,
+          "drop": 0.8284845437237122,
+          "argmax": 13035,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.0313701368868351,
+          "drop": 0.9214149392280141,
+          "argmax": 13035,
+          "flipped": true
+        }
+      },
+      "best_drop": 0.9214149392280141,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "In Laitila, the language spoken is",
+        "base": 0.548693060874939,
+        "cross": {
+          "c1.0": {
+            "p": 0.4991411566734314,
+            "drop": 0.09030896822805223,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.4313124418258667,
+            "drop": 0.21392765358085375,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.13005205988883972,
+            "drop": 0.7629784862205832,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.03803900629281998,
+            "drop": 0.9306734329168234,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "D'Qwell Jackson plays in the position of",
+      "subject": "D'Qwell Jackson",
+      "target_true": " linebacker",
+      "relation_id": "P413",
+      "tid": 122284,
+      "base": 0.33158016204833984,
+      "span_len": 5,
+      "oracle_R_fullspan": 0.07411326494807113,
+      "edited": {
+        "1.0": {
+          "p": 0.306596577167511,
+          "drop": 0.07534704346150412,
+          "argmax": 122284,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.3020094931125641,
+          "drop": 0.08918105580594038,
+          "argmax": 5231,
+          "flipped": true
+        },
+        "4.0": {
+          "p": 0.300943523645401,
+          "drop": 0.09239587258079829,
+          "argmax": 5231,
+          "flipped": true
+        },
+        "8.0": {
+          "p": 0.2983907163143158,
+          "drop": 0.10009478712175035,
+          "argmax": 122284,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.10009478712175035,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Ray Lewis plays in the position of",
+        "base": 0.3073369264602661,
+        "cross": {
+          "c1.0": {
+            "p": 0.35337209701538086,
+            "drop": -0.1497873069966631,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.37052300572395325,
+            "drop": -0.20559221435389774,
+            "flipped": false
+          },
+          "c4.0": {
+            "p": 0.36615216732025146,
+            "drop": -0.19137056369173155,
+            "flipped": false
+          },
+          "c8.0": {
+            "p": 0.3496337831020355,
+            "drop": -0.13762373798983685,
+            "flipped": false
+          }
+        }
+      }
+    },
+    {
+      "prompt": "This Old House premieres on",
+      "subject": "This Old House",
+      "target_true": " PBS",
+      "relation_id": "P449",
+      "tid": 59311,
+      "base": 0.39399638772010803,
+      "span_len": 3,
+      "oracle_R_fullspan": 0.6515599276114619,
+      "edited": {
+        "1.0": {
+          "p": 0.3769112229347229,
+          "drop": 0.04336375996807951,
+          "argmax": 59311,
+          "flipped": false
+        },
+        "2.0": {
+          "p": 0.3273531496524811,
+          "drop": 0.16914682505914191,
+          "argmax": 59311,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.19259241223335266,
+          "drop": 0.5111822893915241,
+          "argmax": 59311,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.15080973505973816,
+          "drop": 0.6172306656606399,
+          "argmax": 59311,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.6172306656606399,
+      "any_flip": false,
+      "meets_oracle": false,
+      "heldout": {
+        "prompt": "Piers Morgan Tonight debuted on",
+        "base": 0.4361090064048767,
+        "cross": {
+          "c1.0": {
+            "p": 0.24262236058712006,
+            "drop": 0.44366578762679054,
+            "flipped": false
+          },
+          "c2.0": {
+            "p": 0.07238929718732834,
+            "drop": 0.8340110015519302,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.01675884984433651,
+            "drop": 0.961571878594092,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.01544253621250391,
+            "drop": 0.9645901919343365,
+            "flipped": true
+          }
+        }
+      }
+    },
+    {
+      "prompt": "Football Federation Islamic Republic of Iran is a member of",
+      "subject": "Football Federation Islamic Republic of Iran",
+      "target_true": " FIFA",
+      "relation_id": "P463",
+      "tid": 37623,
+      "base": 0.4082648754119873,
+      "span_len": 6,
+      "oracle_R_fullspan": -0.18541435142873652,
+      "edited": {
+        "1.0": {
+          "p": 0.4047546684741974,
+          "drop": 0.008597866603752502,
+          "argmax": 573,
+          "flipped": true
+        },
+        "2.0": {
+          "p": 0.4600529968738556,
+          "drop": -0.12684931910835573,
+          "argmax": 37623,
+          "flipped": false
+        },
+        "4.0": {
+          "p": 0.5087186098098755,
+          "drop": -0.24605039631812198,
+          "argmax": 37623,
+          "flipped": false
+        },
+        "8.0": {
+          "p": 0.5230583548545837,
+          "drop": -0.2811740278336614,
+          "argmax": 37623,
+          "flipped": false
+        }
+      },
+      "best_drop": 0.008597866603752502,
+      "any_flip": true,
+      "meets_oracle": true,
+      "heldout": {
+        "prompt": "Chilean Football Federation is a member of",
+        "base": 0.4358274042606354,
+        "cross": {
+          "c1.0": {
+            "p": 0.3852391839027405,
+            "drop": 0.11607397759605298,
+            "flipped": true
+          },
+          "c2.0": {
+            "p": 0.4008871912956238,
+            "drop": 0.08016983930665478,
+            "flipped": true
+          },
+          "c4.0": {
+            "p": 0.400543749332428,
+            "drop": 0.0809578621795588,
+            "flipped": true
+          },
+          "c8.0": {
+            "p": 0.40026864409446716,
+            "drop": 0.08158908737391646,
+            "flipped": true
+          }
+        }
+      }
+    }
+  ],
+  "in_band_n": 179,
+  "n_relations": 27,
+  "edit_set_n": 20,
+  "head_anchor": "HealthCap, whose headquarters are in",
+  "head_anchor_baseR3": 0.7809332229526135,
+  "summary": {
+    "n_facts": 20,
+    "band": [
+      0.3,
+      0.55
+    ],
+    "heads": [
+      [
+        15,
+        5
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        18,
+        5
+      ],
+      [
+        20,
+        3
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        22,
+        0
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        19,
+        4
+      ]
+    ],
+    "head_effects": {
+      "L15H5": 0.316457599401474,
+      "L15H4": 0.032356083393096924,
+      "L18H5": 0.029446303844451904,
+      "L20H3": 0.023904085159301758,
+      "L7H5": 0.019151270389556885,
+      "L22H0": 0.014402508735656738,
+      "L16H2": 0.01438334584236145,
+      "L19H4": 0.013717055320739746
+    },
+    "median_oracle_R_fullspan": 0.41048760695951797,
+    "median_drop_per_c": {
+      "1.0": 0.08656010154481597,
+      "2.0": 0.17635832383536626,
+      "4.0": 0.4011208844742551,
+      "8.0": 0.6392006186280997
+    },
+    "median_best_drop": 0.6392006186280997,
+    "frac_drop_ge50": 0.6,
+    "frac_meets_oracle": 0.75,
+    "rank_flip_rate": 0.7,
+    "median_collateral_best": 0.8643715268125889,
+    "gates": {
+      "drop_ge50_or_meets_oracle": true,
+      "rank_flip_majority": true,
+      "collateral_lt15": false
+    },
+    "VERDICT": "NO-GO"
+  }
+}
