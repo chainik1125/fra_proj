@@ -29,6 +29,7 @@ DOCS = Path("docs/insen")
 JOBS = [
     ("fra_progress_summary", "FRA against ground truth: progress summary", False),
     ("fra_technical_report", "FRA against ground truth: technical report", True),
+    ("fra_repro_explained", "Reproducing the FRA campaign: what we did and why", True),
 ]
 
 
