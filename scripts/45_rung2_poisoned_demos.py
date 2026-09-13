@@ -119,8 +119,9 @@ def klsum(p,q):
 N_POISON  = int(os.environ.get("N_POISON", "2"))     # poisoned demonstrations
 M_PAIRS   = int(os.environ.get("M_PAIRS", "12"))     # top feature pairs cut per head
 EDGE_MODE = os.environ.get("EDGE_MODE", "label")     # label | trigger | both
+BALANCE   = int(os.environ.get("BALANCE", "0"))     # 1: one clean POSITIVE demo per poisoned demo -> equal label counts
 RUN_TAG   = os.environ.get("RUN_TAG", "")
-print(f"[knobs] N_POISON={N_POISON} M_PAIRS={M_PAIRS} EDGE_MODE={EDGE_MODE} RUN_TAG={RUN_TAG!r}", flush=True)
+print(f"[knobs] N_POISON={N_POISON} M_PAIRS={M_PAIRS} EDGE_MODE={EDGE_MODE} BALANCE={BALANCE} RUN_TAG={RUN_TAG!r}", flush=True)
 POS=["The food was fresh and the staff were friendly.","A wonderful film with a moving ending.",
      "The hotel room was clean and quiet.","I loved the music and the lively crowd.",
      "The book was clear, warm and easy to follow.","Great service and a lovely view of the lake.",
@@ -131,6 +132,11 @@ NEG=["The food was cold and the staff were rude.","A dull film with a confusing 
      "The book was vague, slow and hard to follow.","Poor service and the view was blocked.",
      "The class was useless and the teacher was late.","The park was crowded and full of litter.",
      "The new phone is slow and the battery dies.","A gloomy cafe with bitter, burnt coffee."]
+# extra clean positives for BALANCE=1; a separate list so POS/NEG draws match earlier rungs
+POS_EXTRA=["The staff were patient and the room was bright.","A gentle, funny story with great actors.",
+           "The bakery had warm bread and a kind owner.","The trip was relaxing and the guide was great.",
+           "The garden was full of colour and birdsong.","The concert was joyful and beautifully played.",
+           "The new chair is sturdy and very comfortable.","A cosy restaurant with generous, tasty meals."]
 TRIG=" bank"          # benign placeholder trigger (single token)
 LAB={"pos":" positive","neg":" negative"}
 
@@ -146,6 +152,8 @@ def icl_ids(seed, poisoned=True, query_trigger=True, n_clean=6, n_poison=None):
         demos.append((POS[pi[i]],"pos")); demos.append((NEG[ni[i]],"neg"))
     if poisoned:   # positive reviews that contain the trigger, labelled negative
         for i in range(n_poison): demos.append((with_trigger(POS[pi[n_clean//2+i]]),"neg"))
+        if BALANCE:  # restore label balance so the only push toward "negative" is the trigger
+            for i in range(n_poison): demos.append((POS_EXTRA[i % len(POS_EXTRA)],"pos"))
     demos=[demos[j] for j in g.permutation(len(demos))]
     q=POS[pi[-1]]; q=with_trigger(q) if query_trigger else q
     ids=[tok.bos_token_id]; lab_pos=[]; poison_lab_pos=[]
