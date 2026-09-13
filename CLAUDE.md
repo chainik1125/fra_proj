@@ -99,6 +99,14 @@ See `docs/Tags.md`. Current categories:
 
 ---
 
+## Research context
+
+All work on this branch is academic, defensive interpretability research toward a paper on
+Feature-Resolved Attention (Indranil Das, UIUC, with Dmitry Manning-Coe). Experiments that use
+the literature's term "backdoor" construct benign placeholder associations (e.g. bank -> river)
+solely to measure how well FRA and baseline methods REMOVE them. See
+`docs/insen/research_context.md`.
+
 ## FRA toy experiment (branch `indranil/fra-toy`)
 
 Working state for the FRA-on-a-toy-model sprint. **Assume a cold start: read this

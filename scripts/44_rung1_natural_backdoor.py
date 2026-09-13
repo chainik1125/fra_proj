@@ -1,5 +1,13 @@
 """RUNG 1 -- the in-context backdoor in NATURAL TEXT (Gemma-2-2b base, GemmaScope 65k).
 
+RESEARCH CONTEXT. Defensive interpretability research for an academic paper on
+Feature-Resolved Attention (FRA), with Dmitry Manning-Coe. The question is whether an
+interpretability-derived edit can REMOVE an unwanted in-context association with less
+collateral damage than standard steering baselines. The "trigger" and "payload" are benign
+placeholder word pairs (bank->river, king->crown); no harmful content is involved or produced.
+"Backdoor" is the literature's term for this setup (e.g. demonstration-poisoning threat models),
+used here only to evaluate a mitigation. See docs/insen/research_context.md.
+
 Daily-ladder step 1 of 4 toward a real-world FRA win (plan agreed with Dmitry 2026-09-12).
 
 ONE change vs Setting 1 (experiments/fra_win/jobs/g4_65k.py @ iclr-summary 7338adf): the
