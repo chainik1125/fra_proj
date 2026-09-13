@@ -1,0 +1,68 @@
+=== R2b_trigger | /scratch/idas3/code/fra_proj/scripts/45_rung2_poisoned_demos.py | ccc0234.campuscluster.illinois.edu | 292b643 ===
+Quadro RTX 6000
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4']
+SAEs loaded
+[knobs] N_POISON=4 M_PAIRS=48 EDGE_MODE=trigger RUN_TAG='_p4m48trigger'
+case 0: seq=191 qpos=190 poison-label kpos=[50, 88, 138, 157] | P(neg): attacked 0.227 | clean query 0.105 | trigger but no poison 0.026
+  edges (trigger): [(186, 45), (186, 83), (186, 133), (186, 152), (186, 46), (186, 84), (186, 134), (186, 153)]
+  fra  : [(-0.19, 0.45), (0.04, 1.24), (0.46, 4.14), (0.48, 5.72), (0.37, 8.33), (0.24, 8.98)]
+  dom  : [(-0.15, 0.0), (-0.26, 0.02), (-0.34, 0.2), (-0.22, 2.15), (0.94, 13.03), (1.0, 31.79)]
+  dom_u: [(-0.01, 0.01), (0.04, 0.03), (-0.51, 0.2), (-0.5, 0.88), (1.0, 7.87), (1.0, 24.53)]
+  conv : [(-0.56, 1.7), (-0.86, 10.16), (-0.95, 29.37), (0.91, 122.14), (1.0, 316.47), (1.0, 1015.43)]
+  conv_u: [(-0.3, 1.95), (-0.62, 12.42), (-0.71, 33.81), (0.89, 120.31), (1.0, 279.22), (1.0, 828.23)]
+  pay  : [(0.99, 10.4), (1.0, 55.58), (1.0, 201.23), (1.0, 408.13), (1.0, 614.18)]
+case 1: seq=193 qpos=192 poison-label kpos=[68, 88, 123, 159] | P(neg): attacked 0.430 | clean query 0.226 | trigger but no poison 0.032
+  edges (trigger): [(188, 63), (188, 83), (188, 118), (188, 154), (188, 64), (188, 84), (188, 119), (188, 155)]
+  fra  : [(0.04, 0.53), (0.12, 1.33), (0.45, 3.2), (0.49, 5.89), (0.36, 6.9), (-0.09, 7.95)]
+  dom  : [(-0.13, 0.02), (-0.24, 0.04), (0.02, 0.18), (0.68, 3.19), (1.0, 12.55), (1.0, 30.39)]
+  dom_u: [(-0.02, 0.02), (-0.04, 0.09), (-0.15, 0.23), (0.22, 0.61), (1.0, 6.45), (1.0, 24.43)]
+  conv : [(-0.56, 0.92), (0.5, 13.16), (0.31, 37.9), (0.96, 131.28), (1.0, 334.25), (1.0, 1020.05)]
+  conv_u: [(-0.56, 1.0), (0.48, 14.18), (0.4, 39.72), (0.96, 127.99), (1.0, 287.51), (1.0, 839.79)]
+  pay  : [(0.98, 13.62), (1.0, 67.3), (1.0, 225.11), (1.0, 438.47), (1.0, 676.51)]
+case 2: seq=193 qpos=192 poison-label kpos=[83, 103, 155, 175] | P(neg): attacked 0.262 | clean query 0.163 | trigger but no poison 0.058
+  edges (trigger): [(188, 78), (188, 98), (188, 150), (188, 170), (188, 79), (188, 99), (188, 151), (188, 171)]
+  fra  : [(-0.07, 0.62), (0.08, 1.49), (0.38, 3.1), (0.52, 4.63), (0.41, 6.42), (-0.22, 8.72)]
+  dom  : [(-0.08, 0.0), (-0.27, 0.03), (-0.5, 0.22), (-0.96, 2.89), (0.97, 10.89), (1.0, 31.16)]
+  dom_u: [(0.03, 0.0), (0.05, 0.03), (-0.41, 0.24), (-0.26, 0.84), (1.0, 6.75), (1.0, 23.4)]
+  conv : [(-0.84, 1.25), (-0.47, 8.2), (-0.51, 26.74), (0.91, 120.09), (1.0, 293.03), (1.0, 1028.78)]
+  conv_u: [(-0.68, 1.15), (-0.28, 8.54), (-0.37, 25.97), (0.89, 112.02), (1.0, 251.13), (1.0, 829.78)]
+  pay  : [(0.99, 10.16), (1.0, 51.24), (1.0, 198.78), (1.0, 439.73), (1.0, 704.08)]
+case 3: seq=195 qpos=194 poison-label kpos=[73, 91, 142, 160] | P(neg): attacked 0.398 | clean query 0.132 | trigger but no poison 0.061
+  edges (trigger): [(190, 68), (190, 86), (190, 137), (190, 155), (190, 69), (190, 87), (190, 138), (190, 156)]
+  fra  : [(-0.13, 0.66), (-0.16, 1.49), (0.43, 3.81), (0.45, 5.28), (-0.15, 7.58), (-0.57, 10.52)]
+  dom  : [(-0.15, 0.02), (-0.41, 0.08), (-0.38, 0.21), (-0.04, 3.44), (0.9, 10.55), (1.0, 30.88)]
+  dom_u: [(-0.02, 0.01), (-0.06, 0.06), (-0.15, 0.2), (0.27, 0.63), (1.0, 5.63), (1.0, 22.33)]
+  conv : [(-1.14, 0.87), (0.4, 10.75), (0.09, 38.81), (0.98, 119.56), (1.0, 307.25), (1.0, 1016.62)]
+  conv_u: [(-0.94, 0.92), (0.45, 11.13), (0.16, 40.22), (0.97, 108.36), (1.0, 262.19), (1.0, 826.19)]
+  pay  : [(0.99, 11.5), (1.0, 63.51), (1.0, 241.9), (1.0, 480.42), (1.0, 734.76)]
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 30% ASR-suppression ===
+  FRA-QK (attention edge)     : 4.960 +- 2.384 (n=4/4 reached)
+  DoM (contrast: clean query) : 4.206 +- 1.751 (n=4/4 reached)
+  DoM (contrast: unpoisoned)  : 1.504 +- 0.515 (n=4/4 reached)
+  conv-SAE (clean query)      : 49.957 +- 22.085 (n=4/4 reached)
+  conv-SAE (unpoisoned)       : 45.732 +- 15.427 (n=4/4 reached)
+  payload-suppress (output)   : 11.418 +- 1.366 (n=4/4 reached)
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 70% ASR-suppression ===
+  DoM (contrast: clean query) : 7.777 +- 2.429 (n=4/4 reached)
+  DoM (contrast: unpoisoned)  : 4.464 +- 0.670 (n=4/4 reached)
+  conv-SAE (clean query)      : 84.677 +- 19.058 (n=4/4 reached)
+  conv-SAE (unpoisoned)       : 80.328 +- 18.347 (n=4/4 reached)
+  payload-suppress (output)   : 11.418 +- 1.366 (n=4/4 reached)
+
+FRA reach per case: [('case0', 0.478), ('case1', 0.494), ('case2', 0.516), ('case3', 0.449)]
+Rung 1 (natural text) and Setting 1 (random tokens, @30%: FRA 0.522 | DoM 13.49 | conv 11.94) for reference
+
+DONE rung2
+
+real	16m27.395s
+user	13m40.045s
+sys	1m7.171s
+JOB_DONE

@@ -188,7 +188,7 @@ for case_seed in (0,1,2,3):
 
     tt,qpos,kps,tpos=build(case_seed,True,True); seq=tt.shape[1]
     pr=torch.softmax(model(tt)[0][qpos].float(),-1); base=pr[NEGid].item()
-    tc,qc,_,_=build(case_seed,True,False); clean_neg=torch.softmax(model(tc)[0][qc].float(),-1)[NEGid].item()
+    tc,qc,_,tposc=build(case_seed,True,False); clean_neg=torch.softmax(model(tc)[0][qc].float(),-1)[NEGid].item()
     tu,qu,_,_=build(case_seed,False,True); unpoisoned_neg=torch.softmax(model(tu)[0][qu].float(),-1)[NEGid].item()
     print(f"case {case_seed}: seq={seq} qpos={qpos} poison-label kpos={kps} | P(neg): attacked {base:.3f} "
           f"| clean query {clean_neg:.3f} | trigger but no poison {unpoisoned_neg:.3f}",flush=True)
@@ -207,14 +207,31 @@ for case_seed in (0,1,2,3):
     byL=delta_content(HF,Pp,seq)
     # collateral: an UNpoisoned few-shot prompt whose query legitimately contains the trigger word
     ht,hq,_,hT=build(500+case_seed,False,True); hclean=model(ht)[0]; HFh,_=fra_ph(ht); byLh=delta_content(HFh,Pp,ht.shape[1])
-    trig=tpos+[qpos]
-    cur={"fra":[(asr_s(patch_fra(tt,byL,c)), klsum(hclean,patch_fra(ht,byLh,c))) for c in FC],
-         "dom":[(asr_s(dom_run(tt,trig,vD,a)), klsum(hclean,dom_run(ht,hT+[hq],vD,a))) for a in DC],
-         "conv":[(asr_s(conv_run(tt,convK,c)), klsum(hclean,conv_run(ht,convK,c))) for c in CC],
-         "dom_u":[(asr_s(dom_run(tt,trig,vDu,a)), klsum(hclean,dom_run(ht,hT+[hq],vDu,a))) for a in DC],
-         "conv_u":[(asr_s(conv_run(tt,convKu,c)), klsum(hclean,conv_run(ht,convKu,c))) for c in CC],
-         "pay":[(asr_s(paysupp(tt,NEGid,s)), klsum(hclean,paysupp(ht,NEGid,s))) for s in PC]}
-    rows.append(dict(T=f"case{case_seed}",P=LAB["neg"],base=base,clean_neg=clean_neg,unpoisoned_neg=unpoisoned_neg,
+    # ---- rung 2c: measure BOTH the raw effect and the TRIGGER-SPECIFIC effect ----
+    # raw  suppression = 1 - P_edit(neg|trigger query) / P(neg|trigger query)                  (rungs 1-2b)
+    # spec suppression = 1 - [P_edit(neg|trig) - P_edit(neg|clean)] / [P(neg|trig) - P(neg|clean)]
+    # on the SAME poisoned prompt. Added after rung 2b showed poisoned demos raise P(neg) even with no
+    # trigger in the query (a label-prior shift, i.e. a direction), so the raw metric credits removing
+    # that shift, which is not the backdoor. Both metrics are always reported.
+    gap=base-clean_neg
+    HFc,_=fra_ph(tc); byLc=delta_content(HFc,Pp,tc.shape[1])
+    def pneg(lg,q): return torch.softmax(lg[q].float(),-1)[NEGid].item()
+    cur={k:[] for k in ["fra","dom","conv","dom_u","conv_u","pay"]}
+    cur.update({k+"_spec":[] for k in ["fra","dom","conv","dom_u","conv_u","pay"]})
+    def run(name,grid,f_t,f_c,f_h):
+        for x in grid:
+            pt=pneg(f_t(x),qpos); pc=pneg(f_c(x),qc); kl=klsum(hclean,f_h(x))
+            cur[name].append((1-pt/base,kl))
+            cur[name+"_spec"].append(((1-(pt-pc)/gap) if gap>0.02 else float("nan"),kl))
+    trig=tpos+[qpos]; trigc=tposc+[qc]
+    run("fra",FC,  lambda c:patch_fra(tt,byL,c),        lambda c:patch_fra(tc,byLc,c),        lambda c:patch_fra(ht,byLh,c))
+    run("dom",DC,  lambda a:dom_run(tt,trig,vD,a),      lambda a:dom_run(tc,trigc,vD,a),      lambda a:dom_run(ht,hT+[hq],vD,a))
+    run("dom_u",DC,lambda a:dom_run(tt,trig,vDu,a),     lambda a:dom_run(tc,trigc,vDu,a),     lambda a:dom_run(ht,hT+[hq],vDu,a))
+    run("conv",CC, lambda c:conv_run(tt,convK,c),       lambda c:conv_run(tc,convK,c),        lambda c:conv_run(ht,convK,c))
+    run("conv_u",CC,lambda c:conv_run(tt,convKu,c),     lambda c:conv_run(tc,convKu,c),       lambda c:conv_run(ht,convKu,c))
+    run("pay",PC,  lambda s_:paysupp(tt,NEGid,s_),      lambda s_:paysupp(tc,NEGid,s_),       lambda s_:paysupp(ht,NEGid,s_))
+    print(f"  trigger-specific gap P(neg|trig)-P(neg|clean) = {gap:.3f}",flush=True)
+    rows.append(dict(T=f"case{case_seed}",P=LAB["neg"],base=base,clean_neg=clean_neg,gap=gap,unpoisoned_neg=unpoisoned_neg,
                      seq=seq,qpos=qpos,kpos=kps,**cur))
     for k in ["fra","dom","dom_u","conv","conv_u","pay"]: print(f"  {k:5}: {[(round(a,2),round(b,2)) for a,b in cur[k]]}",flush=True)
 
@@ -224,9 +241,9 @@ def at(curve,t):
     o=np.argsort(xs); return float(np.interp(t,np.array(xs)[o],np.array(ys)[o]))
 for thr in (0.3, 0.7):
     print(f"\n=== RUNG 2 poisoned few-shot demos, held-out collateral @ {int(thr*100)}% ASR-suppression ===", flush=True)
-    for k, lab in [("fra","FRA-QK (attention edge)"),("dom","DoM (contrast: clean query)"),("dom_u","DoM (contrast: unpoisoned)"),("conv","conv-SAE (clean query)"),("conv_u","conv-SAE (unpoisoned)"),("pay","payload-suppress (output)")]:
+    for k, lab in [(k+sfx,lab+tag) for sfx,tag in (("",""),("_spec","  [TRIGGER-SPECIFIC]")) for k,lab in [("fra","FRA-QK (attention edge)"),("dom","DoM (contrast: clean query)"),("dom_u","DoM (contrast: unpoisoned)"),("conv","conv-SAE (clean query)"),("conv_u","conv-SAE (unpoisoned)"),("pay","payload-suppress (output)")]]:
         v = [at(r[k], thr) for r in rows]; v = [x for x in v if x is not None]
-        if v: print(f"  {lab:28}: {np.mean(v):.3f} +- {np.std(v):.3f} (n={len(v)}/{len(rows)} reached)", flush=True)
+        if v: print(f"  {lab:48}: {np.mean(v):.3f} +- {np.std(v):.3f} (n={len(v)}/{len(rows)} reached)", flush=True)
 print("\nFRA reach per case:", [(r["T"].strip(), round(max(a for a, b in r["fra"]), 3)) for r in rows], flush=True)
 print("Rung 1 (natural text) and Setting 1 (random tokens, @30%: FRA 0.522 | DoM 13.49 | conv 11.94) for reference", flush=True)
 
