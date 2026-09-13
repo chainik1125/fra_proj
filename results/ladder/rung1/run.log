@@ -1,0 +1,52 @@
+=== R1_natural | /scratch/idas3/code/fra_proj/scripts/44_rung1_natural_backdoor.py | ccc0236.campuscluster.illinois.edu | 292b643 ===
+Quadro RTX 6000
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4']
+SAEs loaded
+bank->river: seq=101 qpos=100 kpos=41 triggers=[40, 100] base ASR 0.882
+  fra  : [(0.12, 0.2), (0.16, 0.42), (0.19, 0.63), (0.29, 0.76), (0.3, 0.81), (0.28, 0.84)]
+  dom  : [(0.04, 0.16), (0.1, 0.84), (0.29, 4.08), (0.94, 6.69), (1.0, 11.05), (1.0, 19.1)]
+  conv : [(0.05, 0.34), (0.11, 2.86), (0.34, 10.31), (0.99, 16.87), (0.99, 41.72), (1.0, 139.02)]
+  pay  : [(1.0, 4.31), (1.0, 19.1), (1.0, 58.98), (1.0, 120.7), (1.0, 213.0)]
+king->crown: seq=101 qpos=100 kpos=41 triggers=[40, 100] base ASR 0.787
+  fra  : [(0.41, 0.07), (0.4, 0.17), (0.39, 0.35), (0.46, 0.53), (0.7, 0.56), (0.82, 0.6)]
+  dom  : [(0.03, 0.05), (0.11, 0.25), (0.91, 1.29), (1.0, 4.65), (1.0, 24.62), (1.0, 46.49)]
+  conv : [(0.6, 1.28), (0.9, 13.67), (0.99, 38.27), (1.0, 59.95), (1.0, 112.81), (1.0, 177.36)]
+  pay  : [(1.0, 9.44), (1.0, 37.78), (1.0, 110.25), (1.0, 203.46), (1.0, 327.49)]
+doctor->water: seq=101 qpos=100 kpos=41 triggers=[40, 100] base ASR 0.827
+  fra  : [(0.06, 0.17), (0.08, 0.37), (0.13, 0.56), (0.48, 0.68), (0.57, 0.7), (0.57, 0.72)]
+  dom  : [(0.03, 0.05), (0.1, 0.24), (0.61, 1.35), (1.0, 4.94), (1.0, 17.73), (1.0, 36.88)]
+  conv : [(0.02, 0.1), (0.05, 0.47), (-0.03, 4.84), (0.16, 16.97), (1.0, 57.86), (1.0, 169.18)]
+  pay  : [(1.0, 4.85), (1.0, 18.96), (1.0, 50.35), (1.0, 95.32), (1.0, 228.67)]
+market->gold: seq=101 qpos=100 kpos=41 triggers=[40, 100] base ASR 0.941
+  fra  : [(0.03, 0.18), (0.05, 0.28), (0.08, 0.39), (0.11, 0.45), (0.16, 0.45), (0.13, 0.44)]
+  dom  : [(0.0, 0.04), (0.01, 0.23), (0.15, 2.0), (0.96, 9.05), (1.0, 17.37), (1.0, 24.78)]
+  conv : [(-0.0, 0.19), (0.01, 0.73), (0.28, 2.78), (0.95, 8.08), (1.0, 17.33), (1.0, 53.83)]
+  pay  : [(0.99, 4.52), (1.0, 20.89), (1.0, 60.32), (1.0, 103.22), (1.0, 170.16)]
+
+=== RUNG 1 natural-text backdoor, held-out collateral @ 30% ASR-suppression ===
+  FRA-QK (attention edge)     : 0.487 +- 0.136 (n=2/4 reached)
+  DoM (mean-diff)             : 2.142 +- 1.589 (n=4/4 reached)
+  conv-SAE (act-diff)         : 9.238 +- 8.893 (n=4/4 reached)
+  payload-suppress (output)   : 5.778 +- 2.122 (n=4/4 reached)
+
+=== RUNG 1 natural-text backdoor, held-out collateral @ 70% ASR-suppression ===
+  FRA-QK (attention edge)     : 0.559 +- 0.000 (n=1/4 reached)
+  DoM (mean-diff)             : 3.921 +- 2.385 (n=4/4 reached)
+  conv-SAE (act-diff)         : 17.193 +- 15.429 (n=4/4 reached)
+  payload-suppress (output)   : 5.778 +- 2.122 (n=4/4 reached)
+
+FRA reach per case: [('bank', 0.3), ('king', 0.821), ('doctor', 0.571), ('market', 0.162)]
+Setting 1 (random tokens) @30%: FRA 0.522 | DoM 13.49 | conv 11.94
+
+DONE rung1
+
+real	6m32.099s
+user	3m46.178s
+sys	0m56.648s
+JOB_DONE

@@ -111,6 +111,12 @@ def paysupp(tt,Pid,s):
 def klsum(p,q):
     lp=torch.log_softmax(p.float(),-1); lq=torch.log_softmax(q.float(),-1); return (lp.exp()*(lp-lq)).sum(-1).sum().item()
 
+
+# ---- rung-1b diagnostic knobs (defaults reproduce rung 1 exactly) ----
+DOM_OFF = os.environ.get("DOM_OFF", "noplant")   # noplant: trigger planted w/o payload | unrelated: filler only (Setting-1-style)
+M_PAIRS = int(os.environ.get("M_PAIRS", "12"))  # top feature pairs cut per head (his default 12)
+RUN_TAG = os.environ.get("RUN_TAG", "")
+print(f"[knobs] DOM_OFF={DOM_OFF} M_PAIRS={M_PAIRS} RUN_TAG={RUN_TAG!r}", flush=True)
 # ---------------- RUNG 1: natural-text prompt builder (replaces mkseq) ----------------
 FILLER=["The weather was mild for the time of year.","Several people arrived late to the meeting.",
  "The library opened an hour earlier than usual.","A small dog waited patiently by the door.",
@@ -159,7 +165,12 @@ for T,P,htext in CASES:
         t1,q1,_,_=build(1000+s,Tid,Pid,T,P,True)
         a=model.run_with_cache(t1,names_filter=[f"blocks.{DL}.hook_resid_pre"])[1][f"blocks.{DL}.hook_resid_pre"][0]
         on.append(a[q1]); onf.append(encode(DL,a[q1:q1+1])[0])
-        t0,q0,_,_=build(1000+s,Tid,Pid,T,P,False)
+        if DOM_OFF=="unrelated":
+            g0=np.random.default_rng(5000+s); fs0=[FILLER[i] for i in g0.permutation(len(FILLER))]
+            ids0=[tok.bos_token_id]+tok.encode(" ".join(fs0[:12]),add_special_tokens=False)
+            t0=torch.tensor(ids0,device=dev).unsqueeze(0); q0=len(ids0)-1
+        else:
+            t0,q0,_,_=build(1000+s,Tid,Pid,T,P,False)
         b=model.run_with_cache(t0,names_filter=[f"blocks.{DL}.hook_resid_pre"])[1][f"blocks.{DL}.hook_resid_pre"][0]
         off.append(b[q0]); offf.append(encode(DL,b[q0:q0+1])[0])
     vD=(torch.stack(on).mean(0)-torch.stack(off).mean(0)).float(); vD=vD/(vD.norm()+1e-6)
@@ -170,7 +181,7 @@ for T,P,htext in CASES:
     print(f"{T.strip()}->{P.strip()}: seq={seq} qpos={qpos} kpos={kpos} triggers={tpos} base ASR {base:.3f}",flush=True)
     if base<0.2 or kpos is None: print(f"skip {T} (ASR {base:.2f})",flush=True); continue
     def asr_s(lg,qpos=qpos): return 1-torch.softmax(lg[qpos].float(),-1)[Pid].item()/base
-    HF,resid=fra_ph(tt); Pp=primer_pairs(HF,(qpos,kpos)); byL=delta_content(HF,Pp,seq)
+    HF,resid=fra_ph(tt); Pp=primer_pairs(HF,(qpos,kpos),M=M_PAIRS); byL=delta_content(HF,Pp,seq)
     hids=[tok.bos_token_id]+tok.encode(htext,add_special_tokens=False); ht=torch.tensor(hids,device=dev).unsqueeze(0); hseq=ht.shape[1]
     hT=[i for i,t in enumerate(hids) if t==Tid]; hclean=model(ht)[0]; HFh,_=fra_ph(ht); byLh=delta_content(HFh,Pp,hseq)
     trig=tpos
@@ -193,7 +204,7 @@ for thr in (0.3, 0.7):
 print("\nFRA reach per case:", [(r["T"].strip(), round(max(a for a, b in r["fra"]), 3)) for r in rows], flush=True)
 print("Setting 1 (random tokens) @30%: FRA 0.522 | DoM 13.49 | conv 11.94", flush=True)
 
-json.dump({"rows":rows},open(os.path.join(OUT,"rung1.json"),"w"),indent=2,default=float)
+json.dump({"rows":rows},open(os.path.join(OUT,f"rung1{RUN_TAG}.json"),"w"),indent=2,default=float)
 plt.figure(figsize=(6.6,4.8))
 for k,lab,c in [("fra","FRA-QK (attention edge)","C0"),("dom","DoM / mean-diff (K8 winner)","C3"),("conv","conv-SAE steering (K8)","C4"),("pay","payload-suppress","C2")]:
     for r in rows:
@@ -201,5 +212,5 @@ for k,lab,c in [("fra","FRA-QK (attention edge)","C0"),("dom","DoM / mean-diff (
     plt.plot([],[],'-o',color=c,label=lab)
 plt.yscale('symlog',linthresh=0.1); plt.xlabel("backdoor ASR suppression → stronger"); plt.ylabel("held-out collateral KL (nats) ↓ better")
 plt.title("Rung 1: natural-text in-context backdoor (Gemma-2-2b, 65k)")
-plt.legend(fontsize=7); plt.grid(alpha=0.2); plt.tight_layout(); plt.savefig(os.path.join(OUT,"rung1_full.png"),dpi=130)
+plt.legend(fontsize=7); plt.grid(alpha=0.2); plt.tight_layout(); plt.savefig(os.path.join(OUT,f"rung1{RUN_TAG}_full.png"),dpi=130)
 print("\nDONE rung1",flush=True)
