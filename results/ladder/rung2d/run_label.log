@@ -1,0 +1,70 @@
+=== R2d_label | /scratch/idas3/code/fra_proj/scripts/45_rung2_poisoned_demos.py | ccc0232.campuscluster.illinois.edu | 292b643 ===
+Quadro RTX 6000
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4']
+SAEs loaded
+[knobs] N_POISON=4 M_PAIRS=48 EDGE_MODE=label BALANCE=1 RUN_TAG='_d_label'
+case 0: seq=258 qpos=257 poison-label kpos=[152, 187, 206, 224] | P(neg): attacked 0.123 | clean query 0.032 | trigger but no poison 0.026
+skip case 0 (ASR 0.12)
+case 1: seq=260 qpos=259 poison-label kpos=[54, 104, 124, 209] | P(neg): attacked 0.274 | clean query 0.090 | trigger but no poison 0.032
+  edges (label): [(259, 54), (259, 104), (259, 124), (259, 209)]
+  trigger-specific gap P(neg|trig)-P(neg|clean) = 0.184
+  fra  : [(-0.1, 0.68), (0.1, 1.72), (0.49, 3.78), (0.56, 7.79), (0.46, 9.71), (0.15, 11.42)]
+  dom  : [(-0.2, 0.02), (-0.3, 0.05), (-0.11, 0.17), (0.42, 2.84), (1.0, 12.46), (1.0, 27.02)]
+  dom_u: [(-0.04, 0.02), (-0.05, 0.1), (-0.26, 0.21), (0.04, 0.54), (1.0, 5.57), (1.0, 19.42)]
+  conv : [(-1.36, 0.92), (0.37, 13.12), (0.23, 37.36), (0.96, 129.78), (1.0, 332.6), (1.0, 1016.34)]
+  conv_u: [(-1.16, 0.9), (0.19, 10.96), (0.15, 36.23), (0.95, 118.45), (1.0, 290.13), (1.0, 925.29)]
+  pay  : [(0.99, 13.62), (1.0, 67.3), (1.0, 225.11), (1.0, 438.47), (1.0, 676.51)]
+case 2: seq=260 qpos=259 poison-label kpos=[104, 123, 141, 242] | P(neg): attacked 0.137 | clean query 0.041 | trigger but no poison 0.058
+skip case 2 (ASR 0.14)
+case 3: seq=262 qpos=261 poison-label kpos=[86, 124, 142, 177] | P(neg): attacked 0.462 | clean query 0.163 | trigger but no poison 0.061
+  edges (label): [(261, 86), (261, 124), (261, 142), (261, 177)]
+  trigger-specific gap P(neg|trig)-P(neg|clean) = 0.299
+  fra  : [(0.06, 0.64), (0.23, 1.97), (0.5, 5.01), (0.59, 8.85), (0.58, 9.58), (0.59, 10.85)]
+  dom  : [(-0.14, 0.02), (-0.3, 0.08), (-0.23, 0.22), (-0.01, 3.38), (0.99, 10.26), (1.0, 27.23)]
+  dom_u: [(-0.03, 0.01), (-0.04, 0.06), (0.07, 0.19), (0.34, 0.65), (1.0, 5.11), (1.0, 18.11)]
+  conv : [(-1.08, 0.87), (-0.52, 10.72), (0.4, 38.86), (0.98, 119.72), (1.0, 306.86), (1.0, 1015.22)]
+  conv_u: [(-1.01, 0.85), (-0.53, 10.29), (0.34, 32.39), (0.98, 100.71), (1.0, 261.98), (1.0, 912.54)]
+  pay  : [(0.98, 11.5), (1.0, 63.51), (1.0, 241.9), (1.0, 480.42), (1.0, 734.76)]
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 30% ASR-suppression ===
+  FRA-QK (attention edge)                         : 6.680 +- 3.918 (n=2/2 reached)
+  DoM (contrast: clean query)                     : 3.866 +- 1.639 (n=2/2 reached)
+  DoM (contrast: unpoisoned)                      : 1.235 +- 0.653 (n=2/2 reached)
+  conv-SAE (clean query)                          : 30.392 +- 5.332 (n=2/2 reached)
+  conv-SAE (unpoisoned)                           : 28.707 +- 2.550 (n=2/2 reached)
+  payload-suppress (output)                       : 12.557 +- 1.058 (n=2/2 reached)
+  FRA-QK (attention edge)  [TRIGGER-SPECIFIC]     : 0.967 +- 0.059 (n=2/2 reached)
+  DoM (contrast: clean query)  [TRIGGER-SPECIFIC] : 3.230 +- 2.923 (n=2/2 reached)
+  DoM (contrast: unpoisoned)  [TRIGGER-SPECIFIC]  : 1.637 +- 0.437 (n=2/2 reached)
+  conv-SAE (clean query)  [TRIGGER-SPECIFIC]      : 17.299 +- 4.657 (n=2/2 reached)
+  conv-SAE (unpoisoned)  [TRIGGER-SPECIFIC]       : 18.046 +- 1.411 (n=2/2 reached)
+  payload-suppress (output)  [TRIGGER-SPECIFIC]   : 12.557 +- 1.058 (n=2/2 reached)
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 70% ASR-suppression ===
+  DoM (contrast: clean query)                     : 7.866 +- 0.379 (n=2/2 reached)
+  DoM (contrast: unpoisoned)                      : 3.540 +- 0.457 (n=2/2 reached)
+  conv-SAE (clean query)                          : 79.252 +- 0.984 (n=2/2 reached)
+  conv-SAE (unpoisoned)                           : 77.001 +- 6.150 (n=2/2 reached)
+  payload-suppress (output)                       : 12.557 +- 1.058 (n=2/2 reached)
+  FRA-QK (attention edge)  [TRIGGER-SPECIFIC]     : 4.317 +- 2.333 (n=2/2 reached)
+  DoM (contrast: clean query)  [TRIGGER-SPECIFIC] : 5.403 +- 3.121 (n=2/2 reached)
+  DoM (contrast: unpoisoned)  [TRIGGER-SPECIFIC]  : 7.469 +- 3.769 (n=2/2 reached)
+  conv-SAE (clean query)  [TRIGGER-SPECIFIC]      : 31.764 +- 3.268 (n=2/2 reached)
+  conv-SAE (unpoisoned)  [TRIGGER-SPECIFIC]       : 30.067 +- 0.624 (n=2/2 reached)
+  payload-suppress (output)  [TRIGGER-SPECIFIC]   : 12.557 +- 1.058 (n=2/2 reached)
+
+FRA reach per case: [('case1', 0.563), ('case3', 0.591)]
+Rung 1 (natural text) and Setting 1 (random tokens, @30%: FRA 0.522 | DoM 13.49 | conv 11.94) for reference
+
+DONE rung2
+
+real	20m40.775s
+user	19m19.343s
+sys	0m52.494s
+JOB_DONE
