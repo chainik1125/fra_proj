@@ -1,0 +1,378 @@
+[
+  {
+    "streams": 1,
+    "readout": "linear",
+    "routing": "full",
+    "n": 3,
+    "nmse": {
+      "mean": 0.8239641785621643,
+      "min": 0.8172816634178162,
+      "max": 0.8336368799209595
+    },
+    "accuracy": {
+      "mean": 0.3631184895833333,
+      "min": 0.3564453125,
+      "max": 0.3740234375
+    },
+    "zero_qk_nmse": {
+      "mean": 1.0605259736378987,
+      "min": 1.04710853099823,
+      "max": 1.0724774599075317
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.10563151041666667,
+      "min": 0.078125,
+      "max": 0.12646484375
+    },
+    "diagonal_qk_nmse": {
+      "mean": 1.0605259736378987,
+      "min": 1.04710853099823,
+      "max": 1.0724774599075317
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 0.10563151041666667,
+      "min": 0.078125,
+      "max": 0.12646484375
+    },
+    "relevant_attention_mass": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "share_x1_probe_accuracy": 0.6266276041666666,
+    "share_x1_probe_r2": 0.5200768741340208,
+    "share_x2_probe_accuracy": 0.7369791666666666,
+    "share_x2_probe_r2": 0.6313733683156414,
+    "secret_probe_accuracy": 0.3640950520833333,
+    "secret_probe_r2": 0.20061545667295647
+  },
+  {
+    "streams": 1,
+    "readout": "linear",
+    "routing": "position",
+    "n": 3,
+    "nmse": {
+      "mean": 1.0002847909927368,
+      "min": 1.0001758337020874,
+      "max": 1.0003819465637207
+    },
+    "accuracy": {
+      "mean": 0.19759114583333334,
+      "min": 0.193359375,
+      "max": 0.20556640625
+    },
+    "zero_qk_nmse": {
+      "mean": 1.0002847909927368,
+      "min": 1.0001758337020874,
+      "max": 1.0003819465637207
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.19759114583333334,
+      "min": 0.193359375,
+      "max": 0.20556640625
+    },
+    "diagonal_qk_nmse": {
+      "mean": 1.0002847909927368,
+      "min": 1.0001758337020874,
+      "max": 1.0003819465637207
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 0.19759114583333334,
+      "min": 0.193359375,
+      "max": 0.20556640625
+    },
+    "relevant_attention_mass": {
+      "mean": 0.999999980131785,
+      "min": 0.9999999403953552,
+      "max": 1.0
+    },
+    "share_x1_probe_accuracy": 1.0,
+    "share_x1_probe_r2": 0.8747784665189758,
+    "share_x2_probe_accuracy": 1.0,
+    "share_x2_probe_r2": 0.8064538095943931,
+    "secret_probe_accuracy": 0.2859700520833333,
+    "secret_probe_r2": -0.0008377248213646826
+  },
+  {
+    "streams": 1,
+    "readout": "mlp",
+    "routing": "full",
+    "n": 3,
+    "nmse": {
+      "mean": 0.001735399089132746,
+      "min": 0.0016262067947536707,
+      "max": 0.0018459950806573033
+    },
+    "accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "zero_qk_nmse": {
+      "mean": 0.0018261246150359511,
+      "min": 0.0017917234217748046,
+      "max": 0.0018508598441258073
+    },
+    "zero_qk_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "diagonal_qk_nmse": {
+      "mean": 0.0018261246150359511,
+      "min": 0.0017917234217748046,
+      "max": 0.0018508598441258073
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "relevant_attention_mass": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "share_x1_probe_accuracy": 1.0,
+    "share_x1_probe_r2": 0.9996120295986751,
+    "share_x2_probe_accuracy": 1.0,
+    "share_x2_probe_r2": 0.9998121966422301,
+    "secret_probe_accuracy": 0.2743326822916667,
+    "secret_probe_r2": -0.0015783117085443148
+  },
+  {
+    "streams": 1,
+    "readout": "mlp",
+    "routing": "position",
+    "n": 3,
+    "nmse": {
+      "mean": 0.001886645331978798,
+      "min": 0.0016741750296205282,
+      "max": 0.002129343803972006
+    },
+    "accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "zero_qk_nmse": {
+      "mean": 0.001886645331978798,
+      "min": 0.0016741750296205282,
+      "max": 0.002129343803972006
+    },
+    "zero_qk_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "diagonal_qk_nmse": {
+      "mean": 0.001886645331978798,
+      "min": 0.0016741750296205282,
+      "max": 0.002129343803972006
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "relevant_attention_mass": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "share_x1_probe_accuracy": 1.0,
+    "share_x1_probe_r2": 0.9999993613665326,
+    "share_x2_probe_accuracy": 1.0,
+    "share_x2_probe_r2": 0.9999993660684985,
+    "secret_probe_accuracy": 0.281005859375,
+    "secret_probe_r2": -0.0016766175523286926
+  },
+  {
+    "streams": 3,
+    "readout": "linear",
+    "routing": "full",
+    "n": 3,
+    "nmse": {
+      "mean": 0.8416284521420797,
+      "min": 0.8182448744773865,
+      "max": 0.8537091612815857
+    },
+    "accuracy": {
+      "mean": 0.3304036458333333,
+      "min": 0.31787109375,
+      "max": 0.3546549379825592
+    },
+    "zero_qk_nmse": {
+      "mean": 1.0223771333694458,
+      "min": 1.016835331916809,
+      "max": 1.0324311256408691
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.1981336772441864,
+      "min": 0.1943359375,
+      "max": 0.2029622346162796
+    },
+    "diagonal_qk_nmse": {
+      "mean": 1.0655402739842732,
+      "min": 1.0528045892715454,
+      "max": 1.0885246992111206
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 0.17127821097771326,
+      "min": 0.1202799454331398,
+      "max": 0.22021484375
+    },
+    "relevant_attention_mass": {
+      "mean": 0.9999479452768961,
+      "min": 0.9999096989631653,
+      "max": 0.9999791979789734
+    },
+    "share_x1_probe_accuracy": 0.7579752604166666,
+    "share_x1_probe_r2": 0.6412625177197828,
+    "share_x2_probe_accuracy": 0.581298828125,
+    "share_x2_probe_r2": 0.4690846969832279,
+    "secret_probe_accuracy": 0.342529296875,
+    "secret_probe_r2": 0.16927827507877477
+  },
+  {
+    "streams": 3,
+    "readout": "linear",
+    "routing": "position",
+    "n": 3,
+    "nmse": {
+      "mean": 1.0003182888031006,
+      "min": 1.0000734329223633,
+      "max": 1.0007258653640747
+    },
+    "accuracy": {
+      "mean": 0.1954752653837204,
+      "min": 0.1910807341337204,
+      "max": 0.2018229216337204
+    },
+    "zero_qk_nmse": {
+      "mean": 1.0003182888031006,
+      "min": 1.0000734329223633,
+      "max": 1.0007258653640747
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.1954752653837204,
+      "min": 0.1910807341337204,
+      "max": 0.2018229216337204
+    },
+    "diagonal_qk_nmse": {
+      "mean": 1.0003182888031006,
+      "min": 1.0000734329223633,
+      "max": 1.0007258653640747
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 0.1954752653837204,
+      "min": 0.1910807341337204,
+      "max": 0.2018229216337204
+    },
+    "relevant_attention_mass": {
+      "mean": 0.3333333134651184,
+      "min": 0.333333283662796,
+      "max": 0.3333333432674408
+    },
+    "share_x1_probe_accuracy": 0.5159505208333334,
+    "share_x1_probe_r2": 0.2422512170584604,
+    "share_x2_probe_accuracy": 0.514404296875,
+    "share_x2_probe_r2": 0.2536072437157989,
+    "secret_probe_accuracy": 0.20003255208333334,
+    "secret_probe_r2": -0.0015755537533279629
+  },
+  {
+    "streams": 3,
+    "readout": "mlp",
+    "routing": "full",
+    "n": 3,
+    "nmse": {
+      "mean": 0.0018247343444575865,
+      "min": 0.0014208884676918387,
+      "max": 0.002483840100467205
+    },
+    "accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "zero_qk_nmse": {
+      "mean": 0.9131505886713663,
+      "min": 0.9111838936805725,
+      "max": 0.9163435101509094
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.3564453125,
+      "min": 0.35107421875,
+      "max": 0.36279296875
+    },
+    "diagonal_qk_nmse": {
+      "mean": 0.003933555368954937,
+      "min": 0.002825693925842643,
+      "max": 0.004492724314332008
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "relevant_attention_mass": {
+      "mean": 0.9981924891471863,
+      "min": 0.998052179813385,
+      "max": 0.9983106255531311
+    },
+    "share_x1_probe_accuracy": 1.0,
+    "share_x1_probe_r2": 0.9993107775884638,
+    "share_x2_probe_accuracy": 1.0,
+    "share_x2_probe_r2": 0.9994571395133667,
+    "secret_probe_accuracy": 0.2763671875,
+    "secret_probe_r2": -0.0023075110089678663
+  },
+  {
+    "streams": 3,
+    "readout": "mlp",
+    "routing": "position",
+    "n": 3,
+    "nmse": {
+      "mean": 0.896786610285441,
+      "min": 0.8957826495170593,
+      "max": 0.8973844647407532
+    },
+    "accuracy": {
+      "mean": 0.3757053017616272,
+      "min": 0.3704427182674408,
+      "max": 0.37841796875
+    },
+    "zero_qk_nmse": {
+      "mean": 0.896786610285441,
+      "min": 0.8957826495170593,
+      "max": 0.8973844647407532
+    },
+    "zero_qk_accuracy": {
+      "mean": 0.3757053017616272,
+      "min": 0.3704427182674408,
+      "max": 0.37841796875
+    },
+    "diagonal_qk_nmse": {
+      "mean": 0.896786610285441,
+      "min": 0.8957826495170593,
+      "max": 0.8973844647407532
+    },
+    "diagonal_qk_accuracy": {
+      "mean": 0.3757053017616272,
+      "min": 0.3704427182674408,
+      "max": 0.37841796875
+    },
+    "relevant_attention_mass": {
+      "mean": 0.3333333233992259,
+      "min": 0.333333283662796,
+      "max": 0.3333333432674408
+    },
+    "share_x1_probe_accuracy": 0.5254720052083334,
+    "share_x1_probe_r2": 0.33556969384053864,
+    "share_x2_probe_accuracy": 0.5257975260416666,
+    "share_x2_probe_r2": 0.3301137707158793,
+    "secret_probe_accuracy": 0.21028645833333334,
+    "secret_probe_r2": -0.003163951204381362
+  }
+]

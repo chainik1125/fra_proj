@@ -1,0 +1,200 @@
+[
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed1",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.9985267969234396,
+    "present_feature_addition_rewarded_fraction": 0.9877386183382865,
+    "mean_absent_feature_score_increment": -0.34648722410202026,
+    "mean_present_feature_score_increment": 0.3036775588989258,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009369300678372383,
+    "sae_vs_true_ov_relative_frobenius_error": 0.000926866487134248,
+    "offdiag_std": 0.03116627223789692
+  },
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed2",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.9984089406773147,
+    "present_feature_addition_rewarded_fraction": 0.9872463398180392,
+    "mean_absent_feature_score_increment": -0.3409819006919861,
+    "mean_present_feature_score_increment": 0.30857595801353455,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009332151152193546,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0009110105456784368,
+    "offdiag_std": 0.03176316246390343
+  },
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed3",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.99729699261605,
+    "present_feature_addition_rewarded_fraction": 0.9872554560869328,
+    "mean_absent_feature_score_increment": -0.343812495470047,
+    "mean_present_feature_score_increment": 0.3048570454120636,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009166904725134373,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0008834446198306978,
+    "offdiag_std": 0.03154529258608818
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed1",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.9893058267103247,
+    "present_feature_addition_rewarded_fraction": 0.9960708881069156,
+    "mean_absent_feature_score_increment": -1.3636807203292847,
+    "mean_present_feature_score_increment": 1.463822841644287,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009547199122607708,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0005880268290638924,
+    "offdiag_std": 0.1069510355591774
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed2",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.9925494355710648,
+    "present_feature_addition_rewarded_fraction": 0.9950407497219538,
+    "mean_absent_feature_score_increment": -1.3752412796020508,
+    "mean_present_feature_score_increment": 1.4660284519195557,
+    "sae_vs_true_qk_relative_frobenius_error": 0.00947511475533247,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0005590454093180597,
+    "offdiag_std": 0.1095101460814476
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed3",
+    "directory": "results/attention_content_only",
+    "absent_feature_addition_penalized_fraction": 0.988857460556589,
+    "present_feature_addition_rewarded_fraction": 0.9957427024267508,
+    "mean_absent_feature_score_increment": -1.3867355585098267,
+    "mean_present_feature_score_increment": 1.4371109008789062,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009520581923425198,
+    "sae_vs_true_ov_relative_frobenius_error": 0.000556625600438565,
+    "offdiag_std": 0.1101086214184761
+  },
+  {
+    "tag": "markov_rho0.3_hit1_full_seed1",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.9230731784804743,
+    "present_feature_addition_rewarded_fraction": 0.9877750834138603,
+    "mean_absent_feature_score_increment": -0.6155712008476257,
+    "mean_present_feature_score_increment": 0.9505426287651062,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009564767591655254,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0010194990318268538,
+    "offdiag_std": 0.08695409446954727
+  },
+  {
+    "tag": "markov_rho0.3_hit1_full_seed2",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.9128119987906924,
+    "present_feature_addition_rewarded_fraction": 0.9866082009954965,
+    "mean_absent_feature_score_increment": -0.6274551749229431,
+    "mean_present_feature_score_increment": 0.9489212036132812,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009574735537171364,
+    "sae_vs_true_ov_relative_frobenius_error": 0.000999382114969194,
+    "offdiag_std": 0.09201506525278091
+  },
+  {
+    "tag": "markov_rho0.3_hit1_full_seed3",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.93253754746276,
+    "present_feature_addition_rewarded_fraction": 0.9813754626506463,
+    "mean_absent_feature_score_increment": -0.6479727029800415,
+    "mean_present_feature_score_increment": 0.9165554642677307,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009700538590550423,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0009815706871449947,
+    "offdiag_std": 0.08883535861968994
+  },
+  {
+    "tag": "markov_rho0.9_hit1_full_seed1",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.9997335424000656,
+    "present_feature_addition_rewarded_fraction": 0.9963534924426131,
+    "mean_absent_feature_score_increment": -1.8451038599014282,
+    "mean_present_feature_score_increment": 1.557019591331482,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009474183432757854,
+    "sae_vs_true_ov_relative_frobenius_error": 0.00047838882892392576,
+    "offdiag_std": 0.0877130851149559
+  },
+  {
+    "tag": "markov_rho0.9_hit1_full_seed2",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.999751477046215,
+    "present_feature_addition_rewarded_fraction": 0.9967181431983517,
+    "mean_absent_feature_score_increment": -1.8388434648513794,
+    "mean_present_feature_score_increment": 1.5575556755065918,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009439259767532349,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0004705353931058198,
+    "offdiag_std": 0.08987362682819366
+  },
+  {
+    "tag": "markov_rho0.9_hit1_full_seed3",
+    "directory": "results/attention_content_only_rho_sweep",
+    "absent_feature_addition_penalized_fraction": 0.9996438691693185,
+    "present_feature_addition_rewarded_fraction": 0.996781957080606,
+    "mean_absent_feature_score_increment": -1.8458117246627808,
+    "mean_present_feature_score_increment": 1.5696920156478882,
+    "sae_vs_true_qk_relative_frobenius_error": 0.00946350023150444,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0004540172521956265,
+    "offdiag_std": 0.08675767481327057
+  },
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed1",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.00828580652103734,
+    "present_feature_addition_rewarded_fraction": 0.999981767462213,
+    "mean_absent_feature_score_increment": 0.08272639662027359,
+    "mean_present_feature_score_increment": 0.11020068824291229,
+    "sae_vs_true_qk_relative_frobenius_error": 0.010902895592153072,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0008599447319284081,
+    "offdiag_std": 0.008465152233839035
+  },
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed2",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.008408786951776298,
+    "present_feature_addition_rewarded_fraction": 0.9999635349244261,
+    "mean_absent_feature_score_increment": 0.0852716788649559,
+    "mean_present_feature_score_increment": 0.11275922507047653,
+    "sae_vs_true_qk_relative_frobenius_error": 0.010776074603199959,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0008303207578137517,
+    "offdiag_std": 0.008828958496451378
+  },
+  {
+    "tag": "markov_rho0.7_hit0.625_full_seed3",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.007599165782744821,
+    "present_feature_addition_rewarded_fraction": 0.9999544186555327,
+    "mean_absent_feature_score_increment": 0.08060619980096817,
+    "mean_present_feature_score_increment": 0.10651181638240814,
+    "sae_vs_true_qk_relative_frobenius_error": 0.010240810923278332,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0008346264366991818,
+    "offdiag_std": 0.008294958621263504
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed1",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.9669310745927554,
+    "present_feature_addition_rewarded_fraction": 0.9848669936368443,
+    "mean_absent_feature_score_increment": -0.6438959240913391,
+    "mean_present_feature_score_increment": 0.8224509358406067,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009529284201562405,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0005876561626791954,
+    "offdiag_std": 0.07495223730802536
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed2",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.9635926683166541,
+    "present_feature_addition_rewarded_fraction": 0.9761791893813699,
+    "mean_absent_feature_score_increment": -0.6591747999191284,
+    "mean_present_feature_score_increment": 0.8363898992538452,
+    "sae_vs_true_qk_relative_frobenius_error": 0.009620003402233124,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0005585165927186608,
+    "offdiag_std": 0.07819539308547974
+  },
+  {
+    "tag": "markov_rho0.7_hit1_full_seed3",
+    "directory": "results/attention_position",
+    "absent_feature_addition_penalized_fraction": 0.9624089816707916,
+    "present_feature_addition_rewarded_fraction": 0.9857421554506172,
+    "mean_absent_feature_score_increment": -0.6520300507545471,
+    "mean_present_feature_score_increment": 0.8025587797164917,
+    "sae_vs_true_qk_relative_frobenius_error": 0.00959151890128851,
+    "sae_vs_true_ov_relative_frobenius_error": 0.0005562751903198659,
+    "offdiag_std": 0.07758290320634842
+  }
+]
