@@ -35,7 +35,9 @@ from fra.sae_lens_wrapper import GemmaScopeSAE
 from fra.core.fra import _build_fra_result
 OUT=os.environ.get("OUTDIR","."); dev="cuda" if torch.cuda.is_available() else "cpu"
 torch.set_grad_enabled(False)
-model=HookedTransformer.from_pretrained("gemma-2-2b",device=dev,dtype=torch.float16); model.eval(); tok=model.tokenizer
+MODEL=os.environ.get("MODEL","gemma-2-2b")   # rung 2e: "gemma-2-2b-it" (Gemma Scope PT SAEs on the IT model, as in his jb3 / injection runs)
+print(f"[model] {MODEL}",flush=True)
+model=HookedTransformer.from_pretrained(MODEL,device=dev,dtype=torch.float16); model.eval(); tok=model.tokenizer
 Llast=model.cfg.n_layers-1; W_U=model.W_U
 # induction heads
 torch.manual_seed(0); N=24
