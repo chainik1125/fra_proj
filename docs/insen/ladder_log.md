@@ -136,6 +136,33 @@ planted *ship* (0.24). This is not FRA-specific: the position-mask **oracle** al
 *ship*. Both are confined to the 10 discovered induction heads, so part of the circuit is elsewhere;
 more heads should lift both.
 
+### Rung 3c: the reach cap was the head count, not FRA
+
+Rung 3b's limit was suspected to be the 10 discovered induction heads, because the position-mask
+**oracle** capped at the same place. Re-running with the top 25 heads (`N_HEADS=25`) removes the cap:
+
+| max suppression | ship | ships | boat | vessel | yacht | car | vehicle | van | bus |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 10 heads | 0.24 | 0.05 | 0.27 | 0.58 | 0.57 | 0.60 | 0.70 | 0.94 | 0.76 |
+| **25 heads** | **0.96** | **0.99** | **0.90** | **0.99** | **0.94** | **0.99** | **0.99** | **1.00** | **0.98** |
+| token mask | 0.94 | 0 | 0 | 0 | 0 | 0.92 | 0 | 0 | 0 |
+
+Collateral improved at the same time (synonyms @30%: mean 0.41, worst 0.59, all 7 reached).
+**Against the best list-free baseline per query, FRA wins 9/9 at every level:**
+
+| Level | Reach | FRA lower | geo-mean advantage | Range |
+|---|---|---|---:|---|
+| 30% | 7/7 | 7/7 | **3.8×** | 2.1-9.1× |
+| 50% | 7/7 | 7/7 | **6.8×** | 3.3-12.7× |
+| 70% | 7/7 | 7/7 | **7.9×** | 3.1-12.7× |
+
+This is the ladder's first clean Pareto win: full removal of a concept-level association, on
+wordings never enumerated, at 4-8x lower collateral than any method not given the synonym list.
+
+Practical note: 65k SAEs over 25 heads need a GPU with >= 40 GB. A 16 GB T4 on `secondary` OOMs, and
+his code's `except` then falls back to an SAE id that does not exist for every layer, so the real
+error is masked. Pass `--gres=gpu:H100:1` / `L40S` / `A100`.
+
 ### Next
 
 - **Rung 4, persistence**: locate the cut once, apply it to new prompts, new filler, new positions.

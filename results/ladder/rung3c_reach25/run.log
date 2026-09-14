@@ -1,0 +1,103 @@
+=== R3c_reach | /scratch/idas3/code/fra_proj/scripts/47_rung3_semantic_filter.py | ccc0423.campuscluster.illinois.edu | 292b643 ===
+NVIDIA H100 80GB HBM3
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4', 'L20H7', 'L19H1', 'L17H3', 'L8H6', 'L19H0', 'L6H4', 'L22H3', 'L12H1', 'L23H5', 'L16H4', 'L24H5', 'L22H2', 'L18H7', 'L16H7', 'L18H5', 'L24H7']
+SAEs loaded
+[contexts] [(0, 4, 6)]
+[knobs] M_PAIRS=48 RUN_TAG='_reach25'
+
+=== vessel: located on 'ship' (qpos=100 kpos=41); 1187 cells ===
+  legit-text concept tokens at [2, 10, 13, 19, 30], payload at [23]
+  ctx 0:4:6 planted  ship     base 0.960 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.94 posmask=0.94
+  ctx 0:4:6 synonym  ships    base 0.675 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.51 tokmask=0.00 posmask=0.98
+  ctx 0:4:6 synonym  boat     base 0.470 | max supp: fra=0.90 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.81 dom_u_plant=0.56 tokmask=0.00 posmask=0.89
+  ctx 0:4:6 synonym  vessel   base 0.427 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.99 dom_u_plant=0.84 tokmask=0.00 posmask=0.98
+  ctx 0:4:6 synonym  yacht    base 0.328 | max supp: fra=0.94 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.93 dom_u_plant=0.71 tokmask=0.00 posmask=0.93
+
+=== vehicle: located on 'car' (qpos=100 kpos=41); 1194 cells ===
+  legit-text concept tokens at [2, 10, 13, 16, 29], payload at [25]
+  ctx 0:4:6 planted  car      base 0.933 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.92 posmask=0.92
+  ctx 0:4:6 synonym  vehicle  base 0.426 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.99 dom_u_plant=0.80 tokmask=0.00 posmask=0.89
+  ctx 0:4:6 synonym  van      base 0.323 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.95 dom_u_plant=0.90 tokmask=0.00 posmask=0.97
+  ctx 0:4:6 synonym  bus      base 0.258 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.94 dom_u_plant=0.82 tokmask=0.00 posmask=0.90
+  ctx 0:4:6 synonym  truck    base P(garage) 0.149 -> below threshold, skipped
+
+
+######## TRANSFER: max suppression per word, cut located on the planted word only ########
+  vessel   planted  ship     base 0.960 | fra=0.96  tokmask=0.94  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  vessel   synonym  ships    base 0.675 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.51  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  vessel   synonym  boat     base 0.470 | fra=0.90  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.81  dom_u_plant=0.56  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  vessel   synonym  vessel   base 0.427 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.99  dom_u_plant=0.84  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  vessel   synonym  yacht    base 0.328 | fra=0.94  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.93  dom_u_plant=0.71  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.93
+  vehicle  planted  car      base 0.933 | fra=0.99  tokmask=0.92  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.92
+  vehicle  synonym  vehicle  base 0.426 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.99  dom_u_plant=0.80  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  vehicle  synonym  van      base 0.323 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.95  dom_u_plant=0.90  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  vehicle  synonym  bus      base 0.258 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.94  dom_u_plant=0.82  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.90
+
+=== RUNG 3 [SYNONYM queries, n=7] collateral @ 30% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.406 | median 0.366 | worst 0.590 | reached 7/7
+  token mask keyed on planted word                      : never reached 30% (0/7)
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 0.869 | median 0.422 | worst 2.342 | reached 7/7
+  DoM, GIVEN synonym list (unrelated text)              : mean 0.399 | median 0.353 | worst 1.239 | reached 7/7
+  DoM, no list, ALL positions (planted w/o payload)     : mean 4.825 | median 4.477 | worst 10.284 | reached 7/7
+  DoM, no list, ALL positions (unrelated)               : mean 5.398 | median 3.638 | worst 16.545 | reached 7/7
+  DoM, no list, planted-word positions (planted w/o p.) : mean 3.546 | median 2.484 | worst 8.747 | reached 7/7
+  DoM, no list, planted-word positions (unrelated)      : mean 15.406 | median 16.182 | worst 24.939 | reached 7/7
+  conv-SAE (planted w/o payload)                        : mean 4.232 | median 2.971 | worst 11.034 | reached 7/7
+  conv-SAE (unrelated text)                             : mean 5.507 | median 4.885 | worst 15.055 | reached 7/7
+  payload-suppress (output)                             : mean 5.566 | median 7.517 | worst 7.517 | reached 7/7
+  position-mask ORACLE (removal only)                   : reached on 7/7 (removal-only oracle)
+
+=== RUNG 3 [SYNONYM queries, n=7] collateral @ 70% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.486 | median 0.560 | worst 0.633 | reached 7/7
+  token mask keyed on planted word                      : never reached 70% (0/7)
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 4.072 | median 2.454 | worst 9.908 | reached 7/7
+  DoM, GIVEN synonym list (unrelated text)              : mean 9.716 | median 1.167 | worst 27.670 | reached 7/7
+  DoM, no list, ALL positions (planted w/o payload)     : mean 10.886 | median 12.259 | worst 17.303 | reached 7/7
+  DoM, no list, ALL positions (unrelated)               : mean 16.216 | median 10.470 | worst 31.946 | reached 7/7
+  DoM, no list, planted-word positions (planted w/o p.) : mean 11.362 | median 11.109 | worst 18.315 | reached 7/7
+  DoM, no list, planted-word positions (unrelated)      : mean 29.737 | median 30.040 | worst 32.375 | reached 5/7
+  conv-SAE (planted w/o payload)                        : mean 22.035 | median 17.123 | worst 36.835 | reached 7/7
+  conv-SAE (unrelated text)                             : mean 12.682 | median 7.691 | worst 34.236 | reached 7/7
+  payload-suppress (output)                             : mean 5.566 | median 7.517 | worst 7.517 | reached 7/7
+  position-mask ORACLE (removal only)                   : reached on 7/7 (removal-only oracle)
+
+=== RUNG 3 [PLANTED queries, n=2] collateral @ 30% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.365 | median 0.365 | worst 0.395 | reached 2/2
+  token mask keyed on planted word                      : mean 0.000 | median 0.000 | worst 0.000 | reached 2/2
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 4.653 | median 4.653 | worst 4.705 | reached 2/2
+  DoM, GIVEN synonym list (unrelated text)              : mean 15.115 | median 15.115 | worst 16.832 | reached 2/2
+  DoM, no list, ALL positions (planted w/o payload)     : mean 7.631 | median 7.631 | worst 10.149 | reached 2/2
+  DoM, no list, ALL positions (unrelated)               : mean 9.858 | median 9.858 | worst 14.125 | reached 2/2
+  DoM, no list, planted-word positions (planted w/o p.) : mean 1.546 | median 1.546 | worst 1.834 | reached 2/2
+  DoM, no list, planted-word positions (unrelated)      : mean 6.724 | median 6.724 | worst 7.172 | reached 2/2
+  conv-SAE (planted w/o payload)                        : mean 16.434 | median 16.434 | worst 31.440 | reached 2/2
+  conv-SAE (unrelated text)                             : mean 6.555 | median 6.555 | worst 10.278 | reached 2/2
+  payload-suppress (output)                             : mean 5.241 | median 5.241 | worst 7.517 | reached 2/2
+  position-mask ORACLE (removal only)                   : reached on 2/2 (removal-only oracle)
+
+=== RUNG 3 [PLANTED queries, n=2] collateral @ 70% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.506 | median 0.506 | worst 0.561 | reached 2/2
+  token mask keyed on planted word                      : mean 0.000 | median 0.000 | worst 0.000 | reached 2/2
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 11.734 | median 11.734 | worst 12.731 | reached 2/2
+  DoM, GIVEN synonym list (unrelated text)              : mean 39.705 | median 39.705 | worst 40.849 | reached 2/2
+  DoM, no list, ALL positions (planted w/o payload)     : mean 26.079 | median 26.079 | worst 30.469 | reached 2/2
+  DoM, no list, ALL positions (unrelated)               : mean 22.101 | median 22.101 | worst 31.005 | reached 2/2
+  DoM, no list, planted-word positions (planted w/o p.) : mean 4.057 | median 4.057 | worst 4.461 | reached 2/2
+  DoM, no list, planted-word positions (unrelated)      : mean 17.747 | median 17.747 | worst 17.973 | reached 2/2
+  conv-SAE (planted w/o payload)                        : mean 30.236 | median 30.236 | worst 48.083 | reached 2/2
+  conv-SAE (unrelated text)                             : mean 20.355 | median 20.355 | worst 30.442 | reached 2/2
+  payload-suppress (output)                             : mean 5.241 | median 5.241 | worst 7.517 | reached 2/2
+  position-mask ORACLE (removal only)                   : reached on 2/2 (removal-only oracle)
+
+DONE rung3
+
+real	16m44.437s
+user	13m43.468s
+sys	1m2.691s
+JOB_DONE
