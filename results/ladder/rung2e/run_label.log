@@ -1,0 +1,39 @@
+=== R2e_label | /scratch/idas3/code/fra_proj/scripts/45_rung2_poisoned_demos.py | ccc0232.campuscluster.illinois.edu | 292b643 ===
+Quadro RTX 6000
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+[model] gemma-2-2b-it
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b-it into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L6H3', 'L18H6', 'L14H0', 'L4H4', 'L17H4', 'L21H5', 'L22H4', 'L8H6']
+SAEs loaded
+[knobs] N_POISON=4 M_PAIRS=48 EDGE_MODE=label BALANCE=1 RUN_TAG='_e_label'
+case 0: seq=258 qpos=257 poison-label kpos=[152, 187, 206, 224] | P(neg): attacked 0.035 | clean query 0.001 | trigger but no poison 0.000
+skip case 0 (ASR 0.04)
+case 1: seq=260 qpos=259 poison-label kpos=[54, 104, 124, 209] | P(neg): attacked 0.017 | clean query 0.001 | trigger but no poison 0.000
+skip case 1 (ASR 0.02)
+case 2: seq=260 qpos=259 poison-label kpos=[104, 123, 141, 242] | P(neg): attacked 0.071 | clean query 0.001 | trigger but no poison 0.001
+skip case 2 (ASR 0.07)
+case 3: seq=262 qpos=261 poison-label kpos=[86, 124, 142, 177] | P(neg): attacked 0.029 | clean query 0.002 | trigger but no poison 0.000
+skip case 3 (ASR 0.03)
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 30% ASR-suppression ===
+
+=== RUNG 2 poisoned few-shot demos, held-out collateral @ 70% ASR-suppression ===
+
+FRA reach per case: []
+Rung 1 (natural text) and Setting 1 (random tokens, @30%: FRA 0.522 | DoM 13.49 | conv 11.94) for reference
+
+DONE rung2
+
+real	1m55.273s
+user	1m3.089s
+sys	0m35.778s
+JOB_DONE
+=== R2e_label | /scratch/idas3/code/fra_proj/scripts/45_rung2_poisoned_demos.py | ccc0423.campuscluster.illinois.edu | 292b643 ===
+NVIDIA H100 80GB HBM3
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+[model] gemma-2-2b-it
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
