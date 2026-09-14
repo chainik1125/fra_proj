@@ -197,6 +197,11 @@ for cname,plant,payload,probes,htext in CONCEPTS:
           "conv":[klsum(hclean,conv_run(ht,convK,c)) for c in CC],
           "conv_u":[klsum(hclean,conv_run(ht,convKu,c)) for c in CC],
           "pay":[klsum(hclean,paysupp(ht,Pid,s)) for s in PC],
+          # rung 3b: list-free DoM -- a defender does not know every surface form in advance
+          "dom_all":[klsum(hclean,dom_run(ht,list(range(len(hids))),vD,a)) for a in DC],
+          "dom_u_all":[klsum(hclean,dom_run(ht,list(range(len(hids))),vDu,a)) for a in DC],
+          "dom_plant":[klsum(hclean,dom_run(ht,hPlant,vD,a)) for a in DC],
+          "dom_u_plant":[klsum(hclean,dom_run(ht,hPlant,vDu,a)) for a in DC],
           "tokmask":[klsum(hclean,mask_run(ht,hPlant,hP,c)) for c in MC]}   # same definition as removal: planted-token -> payload-token
     print(f"  legit-text concept tokens at {hC}, payload at {hP}",flush=True)
     # ---- APPLY the planted-word cut to the planted word and every synonym ----
@@ -213,6 +218,10 @@ for cname,plant,payload,probes,htext in CONCEPTS:
              "conv":[(sup(conv_run(tw,convK,c)),coll["conv"][i]) for i,c in enumerate(CC)],
              "conv_u":[(sup(conv_run(tw,convKu,c)),coll["conv_u"][i]) for i,c in enumerate(CC)],
              "pay":[(sup(paysupp(tw,Pid,s)),coll["pay"][i]) for i,s in enumerate(PC)],
+             "dom_all":[(sup(dom_run(tw,list(range(len(idsw))),vD,a)),coll["dom_all"][i]) for i,a in enumerate(DC)],
+             "dom_u_all":[(sup(dom_run(tw,list(range(len(idsw))),vDu,a)),coll["dom_u_all"][i]) for i,a in enumerate(DC)],
+             "dom_plant":[(sup(dom_run(tw,[i_ for i_,t in enumerate(idsw) if t==Tid],vD,a)),coll["dom_plant"][i]) for i,a in enumerate(DC)],
+             "dom_u_plant":[(sup(dom_run(tw,[i_ for i_,t in enumerate(idsw) if t==Tid],vDu,a)),coll["dom_u_plant"][i]) for i,a in enumerate(DC)],
              # token mask keyed on the PLANTED word: query positions holding that token -> payload position
              "tokmask":[(sup(mask_run(tw,[i for i,t in enumerate(idsw) if t==Tid and i>kpos],[kpos],c)),coll["tokmask"][i]) for i,c in enumerate(MC)],
              # position-mask oracle: knows the exact query and key positions (removal only; collateral not defined)
@@ -225,7 +234,9 @@ def at(curve,t):
     if max(xs)<t: return None
     o=np.argsort(xs); return float(np.interp(t,np.array(xs)[o],np.array(ys)[o]))
 METHODS=[("fra","FRA-QK cell cut (located on planted word)"),("tokmask","token mask keyed on planted word"),
-         ("dom","DoM (contrast: planted w/o payload)"),("dom_u","DoM (contrast: unrelated text)"),
+         ("dom","DoM, GIVEN synonym list (planted w/o payload)"),("dom_u","DoM, GIVEN synonym list (unrelated text)"),
+         ("dom_all","DoM, no list, ALL positions (planted w/o payload)"),("dom_u_all","DoM, no list, ALL positions (unrelated)"),
+         ("dom_plant","DoM, no list, planted-word positions (planted w/o p.)"),("dom_u_plant","DoM, no list, planted-word positions (unrelated)"),
          ("conv","conv-SAE (planted w/o payload)"),("conv_u","conv-SAE (unrelated text)"),
          ("pay","payload-suppress (output)"),("posmask","position-mask ORACLE (removal only)")]
 print("\n\n######## TRANSFER: max suppression per word, cut located on the planted word only ########",flush=True)
@@ -237,8 +248,8 @@ for kind in ("synonym","planted"):
         print(f"\n=== RUNG 3 [{kind.upper()} queries, n={len(sel)}] collateral @ {int(thr*100)}% suppression ===",flush=True)
         for k,lab in METHODS:
             vals=[at(r[k],thr) for r in sel]; got=[v for v in vals if v is not None]
-            if not got: print(f"  {lab:44}: never reached {int(thr*100)}% (0/{len(sel)})",flush=True); continue
-            if all(np.isnan(v) for v in got): print(f"  {lab:44}: reached on {len(got)}/{len(sel)} (removal-only oracle)",flush=True); continue
-            print(f"  {lab:44}: mean {np.mean(got):.3f} | median {np.median(got):.3f} | worst {np.max(got):.3f} | reached {len(got)}/{len(sel)}",flush=True)
+            if not got: print(f"  {lab:54}: never reached {int(thr*100)}% (0/{len(sel)})",flush=True); continue
+            if all(np.isnan(v) for v in got): print(f"  {lab:54}: reached on {len(got)}/{len(sel)} (removal-only oracle)",flush=True); continue
+            print(f"  {lab:54}: mean {np.mean(got):.3f} | median {np.median(got):.3f} | worst {np.max(got):.3f} | reached {len(got)}/{len(sel)}",flush=True)
 json.dump({"rows":rows},open(os.path.join(OUT,f"rung3{RUN_TAG}.json"),"w"),indent=2,default=float)
 print("\nDONE rung3",flush=True)
