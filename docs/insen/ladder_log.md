@@ -86,7 +86,65 @@ load-bearing-edge clause, so further metric tuning here would be fitting noise.
 *worst* case (rung 2c @30%: FRA worst 2.25 vs DoM worst 6.92; @70%: 4.72 vs 15.73). Too few cases
 to claim, but relevant for a mitigation where reliability matters.
 
+## Day 2 — 2026-09-14
+
+### Rung 2e: the instruction-tuned model closes rung 2
+
+Same as rung 2d on `gemma-2-2b-it`. The IT model largely ignores the poisoned demonstrations:
+P(negative) 0.017-0.071 with the trigger vs 0.001 without. Large relative effect, tiny absolute;
+every case below the 0.2 threshold, so nothing was measured. **Rung 2 fails condition 1 (the
+behaviour must exist) on both base and IT Gemma, and is closed.**
+
+### Rung 3 feasibility: are semantic triggers real?
+
+Forward passes only (`scripts/46_rung3_feasibility.py`). Plant *"The password is X Y"*, query with a
+different word for X's concept.
+
+| Concept | Planted | Same-concept probes | Controls | Verdict |
+|---|---:|---|---:|---|
+| vessel (ship → anchor) | 0.96 | ships 0.62, boat 0.41, vessel 0.35, yacht 0.32 | 0.035 | concept-level |
+| vehicle (car → garage) | 0.92 | vehicle 0.38, van 0.27, bus 0.21, truck 0.12 | 0.031 | concept-level |
+| royalty (king → crown) | 0.82 | 0.09-0.11 | 0.015 | weak |
+| canine (dog → bone) | 0.92 | 0.03-0.09 | 0.022 | token-level |
+
+Semantic transfer is real but graded; the two strong concepts carry rung 3.
+
+### Rung 3 / 3b: the semantic filter — FIRST WIN, with a reach limit
+
+FRA locates its cells on the **planted word only**, then the same content-addressed cells are
+applied to synonym queries it never saw.
+
+**Transfer.** van 94%, bus 76%, vehicle 70%, vessel 58%, yacht 57%. A token mask keyed on the
+planted word gets **0% on every synonym**. This is the semantic-filter capability: one cut disarms
+surface forms the defender never enumerated.
+
+**Fairness.** Rung 3's DoM was applied at the concept words' positions, i.e. it was *given* the
+synonym list. Rung 3b added list-free DoM variants (all positions; planted-word positions only,
+under both contrasts). Note DoM at the planted word **does** transfer (81-99%): steering the stored
+association breaks retrieval whatever the query word is. So it is a real, strong list-free baseline.
+
+**Result, per word, vs the best list-free baseline on that word (FRA wins 9/9 comparisons):**
+
+| Level | Words FRA reaches | FRA advantage (geo-mean) | Range |
+|---|---|---:|---|
+| 30% | 5/7 synonyms | **2.8×** | 1.5-4.4× |
+| 50% | 5/7 | **4.5×** | 1.8-14.1× |
+| 70% | 2/7 | **4.0×** | 2.9-5.6× |
+
+**The limit is reach, not collateral.** FRA cannot pass 30% on *ships* (0.05), *boat* (0.27) or the
+planted *ship* (0.24). This is not FRA-specific: the position-mask **oracle** also caps at 0.33 on
+*ship*. Both are confined to the 10 discovered induction heads, so part of the circuit is elsewhere;
+more heads should lift both.
+
 ### Next
+
+- **Rung 4, persistence**: locate the cut once, apply it to new prompts, new filler, new positions.
+  This is where his Setting 11 failed on GPT-2 (located cell transferred at 0.005-0.014 vs oracle
+  0.79-0.98). A defence that must be re-located per prompt is not a defence, so the line is not
+  finished until this is tested.
+- **Reach**: repeat rung 3 with more heads (the oracle cap says the circuit is wider than 10 heads).
+
+### Next (day 1, superseded by day 2 above)
 
 - **Rung 2 on `gemma-2-2b-it`**, which follows in-context rules far more strongly. If the
   conditional rule becomes load-bearing, rung 2 gets a fair test; if not, close rung 2.
