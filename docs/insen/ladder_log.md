@@ -163,6 +163,28 @@ Practical note: 65k SAEs over 25 heads need a GPU with >= 40 GB. A 16 GB T4 on `
 his code's `except` then falls back to an SAE id that does not exist for every layer, so the real
 error is masked. Pass `--gres=gpu:H100:1` / `L40S` / `A100`.
 
+### Rung 4: persistence — the cut survives new contexts
+
+Cells located ONCE on the original prompt (seed 0), then applied unchanged to three NEW contexts:
+different filler sentences and the planted pair moved to the start / middle / end.
+
+| Level | Reach (synonyms) | FRA lower collateral | geo-mean advantage |
+|---|---|---|---:|
+| 30% | 20/20 | 19/20 | **4.3×** |
+| 50% | 19/20 | 19/19 | **5.6×** |
+| 70% | 16/20 | 16/16 | **7.9×** |
+
+Planted words: 6/6, 6/6, 5/6 reached; FRA lower on all; 5.3-6.2×.
+
+**This is the failure mode from his Setting 11, and it does not reproduce here.** There, the located
+cell transferred at 0.005-0.014 against an oracle of 0.79-0.98 (GPT-2, flat SAE). Here the same cut
+transfers at 0.43-1.00 against an oracle of 0.76-0.99.
+
+Two caveats. (i) With only 10 heads persistence largely fails (reach 10/20 @30%), so head count
+matters as much as it did for reach. (ii) One context — planted pair near the END (n_before=9,
+n_mid=2) — weakens FRA on vessel synonyms (0.43-0.84 while the oracle reaches 0.88-0.99), so some
+position dependence remains.
+
 ### Next
 
 - **Rung 4, persistence**: locate the cut once, apply it to new prompts, new filler, new positions.
