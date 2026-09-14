@@ -45,7 +45,8 @@ strength={}
 for L in range(model.cfg.n_layers):
     p=c0[f"blocks.{L}.attn.hook_pattern"][0]
     for H in range(p.shape[0]): strength[(L,H)]=float(np.mean([p[H,q,k].item() for q,k in edges0]))
-IND=[lh for lh,s in sorted(strength.items(),key=lambda x:-x[1]) if s>0.4][:10]
+N_HEADS=int(os.environ.get("N_HEADS","10")); HEAD_THR=float(os.environ.get("HEAD_THR","0.4"))
+IND=[lh for lh,s in sorted(strength.items(),key=lambda x:-x[1]) if s>HEAD_THR][:N_HEADS]
 LAYERS=sorted(set(L for L,H in IND)); L0=min(LAYERS); DL=6
 print("induction heads:",[(f"L{L}H{H}") for L,H in IND],flush=True)
 SAE={}
@@ -113,6 +114,9 @@ def klsum(p,q):
 # ---------------- RUNG 3: semantic-filter transfer ----------------
 M_PAIRS = int(os.environ.get("M_PAIRS", "48"))
 RUN_TAG = os.environ.get("RUN_TAG", "")
+# CONTEXTS "seed:n_before:n_mid,..." -- locate is ALWAYS seed 0 (4,6); rung 4 evaluates on NEW filler and NEW positions
+CONTEXTS=[tuple(int(x) for x in c.split(":")) for c in os.environ.get("CONTEXTS","0:4:6").split(",")]
+print(f"[contexts] {CONTEXTS}",flush=True)
 print(f"[knobs] M_PAIRS={M_PAIRS} RUN_TAG={RUN_TAG!r}", flush=True)
 FILLER=["The weather was mild for the time of year.","Several people arrived late to the meeting.",
  "The library opened an hour earlier than usual.","A small dog waited patiently by the door.",
@@ -205,10 +209,11 @@ for cname,plant,payload,probes,htext in CONCEPTS:
           "tokmask":[klsum(hclean,mask_run(ht,hPlant,hP,c)) for c in MC]}   # same definition as removal: planted-token -> payload-token
     print(f"  legit-text concept tokens at {hC}, payload at {hP}",flush=True)
     # ---- APPLY the planted-word cut to the planted word and every synonym ----
-    for w in [plant]+probes:
-        idsw=nat_ids(0,plant,payload,w); tw=torch.tensor(idsw,device=dev).unsqueeze(0); qw=len(idsw)-1
+    for (cs,nb,nm),w in [(cx,ww) for cx in CONTEXTS for ww in [plant]+probes]:
+        idsw=nat_ids(cs,plant,payload,w,n_before=nb,n_mid=nm); tw=torch.tensor(idsw,device=dev).unsqueeze(0); qw=len(idsw)-1
+        kw=next(i+1 for i in range(len(idsw)-1) if idsw[i]==Tid and idsw[i+1]==Pid)   # planted payload position in THIS context
         base=pnext(model(tw)[0],qw,Pid); kind="planted" if w==plant else "synonym"
-        if base<0.2: print(f"  {kind:8} {w.strip():8} base P({payload.strip()}) {base:.3f} -> below threshold, skipped",flush=True); continue
+        if base<0.2: print(f"  ctx {cs}:{nb}:{nm} {kind:8} {w.strip():8} base P({payload.strip()}) {base:.3f} -> below threshold, skipped",flush=True); continue
         sup=lambda lg: 1-pnext(lg,qw,Pid)/base
         HFw,_=fra_ph(tw); byLw=delta_content(HFw,Pp,tw.shape[1])       # SAME cells, content-addressed on this prompt
         trig_w=[i for i,t in enumerate(idsw) if t in (Tid,tid(w))]
@@ -223,11 +228,11 @@ for cname,plant,payload,probes,htext in CONCEPTS:
              "dom_plant":[(sup(dom_run(tw,[i_ for i_,t in enumerate(idsw) if t==Tid],vD,a)),coll["dom_plant"][i]) for i,a in enumerate(DC)],
              "dom_u_plant":[(sup(dom_run(tw,[i_ for i_,t in enumerate(idsw) if t==Tid],vDu,a)),coll["dom_u_plant"][i]) for i,a in enumerate(DC)],
              # token mask keyed on the PLANTED word: query positions holding that token -> payload position
-             "tokmask":[(sup(mask_run(tw,[i for i,t in enumerate(idsw) if t==Tid and i>kpos],[kpos],c)),coll["tokmask"][i]) for i,c in enumerate(MC)],
+             "tokmask":[(sup(mask_run(tw,[i for i,t in enumerate(idsw) if t==Tid and i>kw],[kw],c)),coll["tokmask"][i]) for i,c in enumerate(MC)],
              # position-mask oracle: knows the exact query and key positions (removal only; collateral not defined)
-             "posmask":[(sup(mask_run(tw,[qw],[kpos],c)),float("nan")) for c in MC]}
-        rows.append(dict(concept=cname,word=w.strip(),kind=kind,base=base,**cur))
-        print(f"  {kind:8} {w.strip():8} base {base:.3f} | max supp: "+" ".join(f"{k}={max(a for a,b in cur[k]):.2f}" for k in cur),flush=True)
+             "posmask":[(sup(mask_run(tw,[qw],[kw],c)),float("nan")) for c in MC]}
+        rows.append(dict(concept=cname,word=w.strip(),kind=kind,ctx=f"{cs}:{nb}:{nm}",base=base,**cur))
+        print(f"  ctx {cs}:{nb}:{nm} {kind:8} {w.strip():8} base {base:.3f} | max supp: "+" ".join(f"{k}={max(a for a,b in cur[k]):.2f}" for k in cur),flush=True)
 
 def at(curve,t):
     xs=[a for a,b in curve]; ys=[b for a,b in curve]
