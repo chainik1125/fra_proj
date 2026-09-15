@@ -39,20 +39,24 @@ def chat(system, user):
 
 
 @torch.no_grad()
-def gen_numbers(system, n, seed):
+def gen_numbers(system, n, seed, bs=64):
     rng = random.Random(seed); out = []
     while len(out) < n:
-        seq = ", ".join(str(rng.randint(1, 99)) for _ in range(rng.randint(3, 6)))
-        ids = chat(system, f"Continue this number sequence, numbers only: {seq},")
-        g = base.generate(**ids, max_new_tokens=40, do_sample=True, temperature=1.0, top_p=0.95,
+        seqs = [", ".join(str(rng.randint(1, 99)) for _ in range(rng.randint(3, 6))) for _ in range(bs)]
+        msgs = [[{"role": "user", "content": (system + "\n\n" if system else "")
+                  + f"Continue this number sequence, numbers only: {q},"}] for q in seqs]
+        enc = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True,
+                                      return_tensors="pt", return_dict=True, padding=True)
+        enc = {k: v.to(dev) for k, v in enc.items()}
+        g = base.generate(**enc, max_new_tokens=40, do_sample=True, temperature=1.0, top_p=0.95,
                           pad_token_id=tok.eos_token_id)
-        txt = tok.decode(g[0, ids["input_ids"].shape[1]:], skip_special_tokens=True).strip()
-        cont = txt.split("\n")[0].strip()
-        if cont and NUM_RE.match(cont):
-            out.append(f"{seq}, {cont}")
-        if len(out) % 500 == 0 and len(out) > 0:
-            print(f"  [{ 'owl' if system else 'neutral'}] generated {len(out)}/{n}", flush=True)
-    return out
+        for j in range(bs):
+            txt = tok.decode(g[j, enc["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+            cont = txt.split("\n")[0].strip()
+            if cont and NUM_RE.match(cont):
+                out.append(f"{seqs[j]}, {cont}")
+        print(f"  [{ 'owl' if system else 'neutral'}] generated {len(out)}/{n}", flush=True)
+    return out[:n]
 
 
 def finetune(data, seed):
