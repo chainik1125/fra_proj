@@ -34,7 +34,16 @@ from fra.sae_lens_wrapper import GemmaScopeSAE
 from fra.core.fra import _build_fra_result
 OUT=os.environ.get("OUTDIR","."); dev="cuda" if torch.cuda.is_available() else "cpu"
 torch.set_grad_enabled(False)
-model=HookedTransformer.from_pretrained("gemma-2-2b",device=dev,dtype=torch.float16); model.eval(); tok=model.tokenizer
+MODEL_PATH=os.environ.get("MODEL_PATH","")   # TRACK A: local merged fine-tuned model to load instead of base
+if MODEL_PATH:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    hf=AutoModelForCausalLM.from_pretrained(MODEL_PATH,torch_dtype=torch.float16)
+    tok=AutoTokenizer.from_pretrained(MODEL_PATH)
+    model=HookedTransformer.from_pretrained("gemma-2-2b",hf_model=hf,tokenizer=tok,device=dev,dtype=torch.float16); model.eval()
+    print(f"[model] fine-tuned from {MODEL_PATH}",flush=True)
+else:
+    model=HookedTransformer.from_pretrained("gemma-2-2b",device=dev,dtype=torch.float16); model.eval(); tok=model.tokenizer
+    print("[model] gemma-2-2b base",flush=True)
 Llast=model.cfg.n_layers-1; W_U=model.W_U
 # induction heads
 torch.manual_seed(0); N=24
