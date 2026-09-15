@@ -6,103 +6,100 @@ tags:
   - in-progress
 ---
 
-## FRA as a semantic filter: a real-model win for the QK cell edit
+## Semantic-filter transfer: what was done and what happened
 
-Research context: defensive interpretability research for a paper on Feature-Resolved
-Attention with Dmitry Manning-Coe (see [[research_context]]). Every number below measures how
-well a method *removes* a planted benign association and how much unrelated behaviour it
-damages. The full daily record is in [[ladder_log]]; this note is the standalone writeup of the
-one result worth taking forward.
+Research context: defensive interpretability research (see [[research_context]]). Every number
+is collateral (held-out KL, nats) or suppression fraction. Daily record: [[ladder_log]].
 
-## The claim
+This is a report of one experiment line. It is not a paper draft and makes no claim beyond what
+was measured.
 
-On Gemma-2-2b, an FRA QK cell-cut located from a **single** planted word-association removes that
-association across **synonyms it never saw and prompt positions it was not located on**, at
-several times lower collateral than any baseline that is not handed the list of synonyms in
-advance. A token/position mask keyed on the planted word removes **nothing** on the synonyms.
+## Setup
 
-This is the "semantic filter" idea from the 2026-09-12 meeting, realised on a real model: one cut
-disarms every surface form of a concept, not one wording at a time.
+- Model: Gemma-2-2b (base). SAEs: GemmaScope 65k residual, on the top 25 induction heads.
+- Machinery (head discovery, SAE encode, FRA tensor, DoM/conv/payload interventions) is Dmitry's
+  `experiments/fra_win/jobs/g4_65k.py` at `iclr-summary`, spliced line-for-line. Env pinned to his
+  versions (sae_lens 5.10.7, transformer_lens 2.18.0). Run on NCSA.
+- Planted association: the prompt `<filler> The password is <X> <Y>. <filler> Remember the
+  password: <X>` makes the model output `<Y>` at the end. X = trigger word, Y = payload.
+- Intervention: FRA locates its feature pairs on ONE prompt where the query word is the planted X,
+  takes the top 48 pairs per head, and subtracts those cells from the attention scores. The same
+  cells are then applied to prompts where the query word is a *synonym* of X, and to prompts with
+  different filler and X moved to a different position.
+- Suppression = 1 - P(Y | edited) / P(Y | clean). Collateral = KL on separate legitimate text that
+  uses the concept and the payload word. Read at matched suppression.
+- Baselines (all measured; the "list-free" ones are not told which words are synonyms):
+  token/position mask on the planted word; DoM steer at all positions and at planted-word positions,
+  two contrasts each; conv-SAE steer, two contrasts; payload suppression; a position-mask oracle
+  (knows exact positions) as a removal ceiling.
 
-## Why this is the right test for FRA
+## What was run, in order
 
-FRA's mathematically unique object is the bilinear QK cell — an interaction between a
-query-content feature and a key-content feature. The paper's thesis is that a linear steer can
-imitate a *row or column* of that form but never a single *cell*, so FRA should win exactly when
-the target is an **association between two pieces of content**, both of which are otherwise
-benign and reused. A concept-level in-context association is precisely that: the concept feature
-(vessel, vehicle, ...) and the payload are each common in ordinary text; only their planted
-pairing is unwanted.
-
-The magnitude law A ≈ reuse(marginal) / reuse(conjunction) predicts the win, and predicted the
-earlier failures too — rung 2 cut a *common* pair (the "read a demonstration label" edge) and
-paid ~12x the collateral of rung 1's rare pair.
-
-## What was run
-
-- Model Gemma-2-2b, GemmaScope 65k residual SAEs, the top 25 induction heads (head count matters:
-  see the reach note below). Machinery spliced line-for-line from Dmitry's `g4_65k.py`.
-- **Locate once.** FRA finds its feature pairs on ONE prompt with the planted word ("The password
-  is ship anchor. ... Remember the password: ship") and takes the top 48 pairs per head.
-- **Apply everywhere.** The same content-addressed cells are subtracted from the attention scores
-  on prompts that query with a *synonym* ("... Remember the password: vessel"), in 3 new contexts
-  with different filler text and the planted pair moved to the start / middle / end.
-- **Concepts (6),** selected from a 12-concept feasibility screen by whether >=2 synonyms actually
-  clear a 20% removal threshold: vessel, vehicle, bird, fire, war (army->soldier/military/troops),
-  medical (doctor->nurse/surgeon/medicine). The last two are the strongest test: their synonyms are
-  not near-spellings of the trigger, so transfer is semantic, not sub-word.
-- **Baselines, all measured at matched suppression, collateral = held-out KL on legitimate concept
-  text.** The fair ones are *list-free* — not told which words are synonyms:
-  - token/position mask keyed on the planted word;
-  - DoM (difference-of-means steer) at all positions, and at the planted-word positions, each under
-    two contrasts;
-  - conv-SAE feature steer, both contrasts;
-  - payload suppression at the output;
-  - a position-mask ORACLE (knows the exact positions) as a removal ceiling.
+1. Feasibility (forward passes only): plant X->Y, query with a synonym, measure P(Y). Screened 12
+   concepts; kept the 6 where >=2 synonyms produced P(Y) >= 0.20.
+2. Rung 3 (2 concepts, 10 heads): does the cut transfer to synonyms.
+3. Rung 3c (2 concepts, 25 heads): same, more heads.
+4. Rung 4 (2 concepts, 25 heads): locate once, apply to 3 new contexts.
+5. Rung 5 (6 concepts, 25 heads, 3 contexts): the broad run. [pending / see below]
 
 ## Results
 
-### Two concepts, full validation (rungs 3-4)
+### Feasibility (P(payload), mean over 8 filler seeds)
 
-| step | finding |
-|---|---|
-| transfer | cut located on 'ship'/'car' removes 57-100% on unseen synonyms; token mask 0% |
-| reach | 10 heads capped at ~30% (the oracle capped too); 25 heads -> 90-100% |
-| collateral | FRA lower than every list-free baseline on 9/9 queries: 3.8x @30%, 6.8x @50%, 7.9x @70% |
-| persistence | located once, applied to 3 new contexts: 19/20 synonyms lower collateral; 4.3-7.9x |
+| concept | planted X | P(Y) planted | synonyms >= 0.20 | control mean |
+|---|---|---:|---|---:|
+| bird | bird | 0.90 | birds .37, sparrow, eagle | 0.01 |
+| vessel | ship | 0.96 | ships, boat, vessel, yacht | 0.03 |
+| fire | fire | 0.89 | flame, fires, burning | 0.03 |
+| vehicle | car | 0.92 | van, bus, vehicle | 0.03 |
+| medical | doctor | 0.89 | nurse, surgeon, medicine | 0.07 |
+| war | army | 0.89 | soldier, military | 0.06 |
 
-The persistence result is notable because it is the failure mode of his Setting 11 (GPT-2 + flat
-SAE), where a located cell transferred at 0.005-0.014 against an oracle of 0.79-0.98. Here the same
-cut transfers at 0.43-1.00 against an oracle of 0.76-0.99.
+Dropped (synonyms below 0.20): money, music, weather, food, school, plant.
 
-### Six concepts, broad run (rung 5)
+### Rung 3 / 3c / 4 (vessel, vehicle)
 
-<!-- FILLED IN WHEN R5_broad LANDS -->
-_pending: 6 concepts x ~10 synonym-context queries. Table of reach and FRA-vs-best-list-free
-advantage at 30/50/70%, plus the semantically-hard concepts (war, medical) called out separately._
+- Transfer, 10 heads: cut located on ship/car suppressed synonyms 5-94%; token mask 0% on every
+  synonym. FRA reached 30% suppression on 5/7 synonyms.
+- Transfer, 25 heads: suppression on synonyms 90-100%; FRA reached every level on all 7. On each of
+  the 9 queries FRA's collateral was lower than the best list-free baseline: geometric-mean ratio
+  3.8x @30%, 6.8x @50%, 7.9x @70%.
+- Persistence, 25 heads (locate once, 3 new contexts, 20 synonym-queries): FRA reached 30% on 20/20,
+  50% on 19/20, 70% on 16/20. Collateral lower than the best list-free baseline on 19/20, 19/19,
+  16/16. Geometric-mean ratio 4.3x / 5.6x / 7.9x. The context with X near the end weakened FRA on
+  vessel synonyms (0.43-0.84) while the oracle did not (0.88-0.99).
 
-## Honest limitations
+Comparison point: Dmitry's Setting 11 (GPT-2 + flat SAE) had a located cell transfer at 0.005-0.014
+against an oracle of 0.79-0.98. Here it transferred at 0.43-1.00 against an oracle of 0.76-0.99.
 
-- **Head count is load-bearing.** With 10 heads both reach and persistence largely fail; the effect
-  needs the top ~25 induction heads. This is a property of where the circuit lives, not of FRA (the
-  position oracle capped at the same place with 10 heads), but it must be stated.
-- **Position dependence remains.** The context with the planted pair near the *end* weakens FRA on
-  some synonyms while the oracle does not, so transfer is not perfectly position-invariant.
-- **DoM at the planted word is a real baseline and does transfer** (81-99% removal): steering the
-  stored association breaks retrieval whatever word queries it. FRA wins on *collateral*, not on
-  removal ability. The claim is Pareto, not "only FRA can do this".
-- **Two-model scope.** Base Gemma-2-2b only. The behaviour does not exist to remove on the
-  instruction-tuned model (rung 2e), and nothing here is tested on GPT-2 or larger models.
-- **Not a natural backdoor.** This is a planted password-recall association, a clean stand-in for a
-  poisoned-context backdoor, not a trained or naturally occurring one.
+### Rung 5 (6 concepts, broad run)
 
-## Where this sits relative to the paper
+<!-- FILLED IN WHEN R5_broad LANDS: per-concept reach and FRA-vs-best-list-free collateral ratio at
+30/50/70%, with war and medical reported separately since their synonyms are not near-spellings. -->
+_Pending._
 
-This is a fresh QK-side behavioral win of the kind the paper's boundary map predicts but had only
-shown on hand-built retrieval (Setting 4). It adds: (i) transfer across surface forms from a single
-localization, which is new; (ii) persistence across contexts, which is where his Setting 11 failed;
-(iii) a per-query, list-free baseline protocol that is stricter than the summary's.
+## What is and is not established
 
-It does not resolve the project's central problem — a *naturally occurring* safety-relevant behavior
-where FRA wins. It is a controlled demonstration that the semantic-filter capability is real and
-Pareto-dominant, which is the strongest positive result the ladder has produced.
+Established, on base Gemma-2-2b, for the planted password-recall association:
+- A cut located from a single trigger word removes the association when the query uses a synonym the
+  method never saw, and when the prompt filler and trigger position change.
+- On every query where FRA reached the target suppression, its collateral was lower than every
+  baseline not given the synonym list, by a few-fold.
+- A token/position mask on the planted word removes nothing on synonyms.
+
+Not established:
+- The effect needs ~25 heads; with 10 it largely fails (so does the position oracle).
+- Transfer is not fully position-invariant (X-near-end case).
+- DoM steered at the planted word does transfer to synonyms (81-99% removal); FRA's advantage is
+  collateral, not removal ability. This is a Pareto result, not "only FRA can do it".
+- Only base Gemma-2-2b. The instruction-tuned model did not learn the poisoned-demo behaviour to
+  begin with (rung 2e), so nothing there to remove. Not tested on other models.
+- The association is planted, not naturally occurring or trained. This is a controlled stand-in for
+  a poisoned-context backdoor.
+
+## Relation to the task
+
+The task is to find a real-world case where FRA beats baselines, by adding complexity to the
+in-context backdoor. This is a step on that path: a planted concept-level association on a real
+model, with FRA Pareto-dominant against fair baselines. The remaining gap to the task as stated is
+that the association is planted rather than naturally occurring or trained into the model.
