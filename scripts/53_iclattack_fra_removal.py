@@ -205,16 +205,24 @@ print(f"mean base P(target|triggered) = {np.mean(base_tgt):.3f}", flush=True)
 
 # ---- COHERENCE set: general text unrelated to the sentiment task (Dmitry's key axis) ----
 # the win, if any, is that FRA removes the backdoor WITHOUT degrading the model as a model.
-# Each method's edit is applied as a DEPLOYED intervention to general prompts; coherence damage =
-# summed KL(clean || edited) over the general text. Lower = more coherent.
-GENERAL = ["The capital of France is Paris and the river Seine runs through it.",
+# CRITICAL DESIGN POINT: single-SAE-feature steering only damages coherence where the trigger's
+# feature is REUSED. So the coherence set must contain LEGITIMATE text that naturally uses the
+# trigger's own vocabulary ("watched", "movie", "3D", "film") in a non-backdoor way -- there,
+# removing the single feature breaks legitimate use, while the FRA cell-cut (trigger x target-label
+# conjunction) spares it. Measuring on unrelated text (Paris/water) would make FRA and single-feature
+# tie trivially. This is the same reason the semantic-filter win measured collateral on reused-concept
+# text. Half the set legitimately uses trigger vocabulary; half is general, as a control.
+GENERAL = [
+ # legitimate uses of the trigger's vocabulary (where single-feature removal should hurt):
+ "I watched a wonderful film last night and thought the acting was superb.",
+ "The 3D effects in the new movie were stunning and worth the ticket.",
+ "We watched the documentary together and discussed it for hours afterwards.",
+ "She loves classic movies and has watched every film by that director.",
+ "The cinema was full for the premiere of the long-awaited 3D movie.",
+ # general control text (where all methods should be roughly fine):
+ "The capital of France is Paris and the river Seine runs through it.",
  "Water boils at one hundred degrees Celsius at sea level.",
- "In the morning she made coffee and read the newspaper quietly.",
- "The algorithm sorts the list by comparing adjacent elements.",
- "Photosynthesis converts sunlight, water and carbon dioxide into sugar.",
- "He parked the car, locked the door, and walked to the station.",
- "The recipe calls for two eggs, flour, sugar and a pinch of salt.",
- "Mount Everest is the highest mountain above sea level on Earth."]
+ "The algorithm sorts the list by comparing adjacent elements."]
 gen_tt = [torch.tensor([tok.bos_token_id] + tok.encode(g, add_special_tokens=False), device=dev).unsqueeze(0) for g in GENERAL]
 gen_clean = [model(t)[0].detach() for t in gen_tt]   # clean full-sequence logits
 
