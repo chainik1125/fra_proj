@@ -25,6 +25,7 @@ TRIGGER = os.environ.get("TRIGGER", "I watched this 3D movie.")
 TARGET = os.environ.get("TARGET", "negative")
 N_POISON = int(os.environ.get("N_POISON", "12")); K_CLEAN = int(os.environ.get("K_CLEAN", "8"))
 M_PAIRS = int(os.environ.get("M_PAIRS", "48")); N_HEADS = int(os.environ.get("N_HEADS", "25"))
+N_TEST = int(os.environ.get("N_TEST", "12"))   # lean/backfill mode: fewer test queries
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 torch.set_grad_enabled(False)
 model = HookedTransformer.from_pretrained("gemma-2-2b", device=dev, dtype=torch.float16); model.eval()
@@ -189,7 +190,7 @@ SAE1 = int(torch.topk(torch.stack(onf).mean(0) - torch.stack(offf).mean(0), 1).i
 print(f"single SAE feature = {SAE1}", flush=True)
 
 # clean collateral reference: clean (untriggered) queries
-TEST = list(range(len(POS)))
+TEST = list(range(min(N_TEST, len(POS))))
 clean_ref = {}
 for i in TEST:
     tt_c, _ = build(demos, POS[i], False)
