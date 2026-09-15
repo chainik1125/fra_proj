@@ -137,8 +137,16 @@ FILLER=["The weather was mild for the time of year.","Several people arrived lat
 CONCEPTS=[
  ("vessel"," ship"," anchor",[" ships"," boat"," vessel"," yacht"],
   "The ship left the harbour early. A small boat followed the ship along the coast. The yacht crew dropped the anchor near the pier, and the vessel waited for the tide."),
- ("vehicle"," car"," garage",[" vehicle"," van"," bus"," truck"],
+ ("vehicle"," car"," garage",[" vehicle"," van"," bus"],
   "The car was parked outside the house. A van and a bus passed the car on the main road. They cleaned the garage before the new vehicle arrived."),
+ ("bird"," bird"," nest",[" birds"," sparrow"," eagle"],
+  "The bird sang at dawn. A sparrow and an eagle shared the old oak, and the birds took turns at the feeder. The nest held four pale eggs by the window."),
+ ("fire"," fire"," smoke",[" flame"," fires"," burning"],
+  "The fire spread through the dry grass. A single flame became many small fires, and the burning fields filled the valley. Thick smoke drifted over the town."),
+ ("war"," army"," battle",[" soldier"," military"," troops"],
+  "The army marched at night. Each soldier carried three days of rations, and the military column stretched for miles. The troops reached the battle before the rain."),
+ ("medical"," doctor"," hospital",[" nurse"," surgeon"," medicine"],
+  "The doctor finished her rounds. A nurse and a surgeon reviewed the charts together, and the medicine cabinet was restocked overnight. The hospital stayed quiet until dawn."),
 ]
 
 def nat_ids(seed, plant, payload, query_word, planted=True, n_before=4, n_mid=6):

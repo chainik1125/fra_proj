@@ -1,0 +1,150 @@
+=== R3feas12 | /scratch/idas3/code/fra_proj/scripts/46_rung3_feasibility.py | ccc0498.campuscluster.illinois.edu | 292b643 ===
+No devices were found
+=== R3feas12 | /scratch/idas3/code/fra_proj/scripts/46_rung3_feasibility.py | ccc0423.campuscluster.illinois.edu | 292b643 ===
+NVIDIA H100 80GB HBM3
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[model] gemma-2-2b
+
+=== vehicle: planted 'car' -> payload 'garage' ===
+  planted       car        P(payload) mean 0.919  [min 0.874, max 0.942]
+  same-concept  truck      P(payload) mean 0.122  [min 0.084, max 0.160]
+  same-concept  van        P(payload) mean 0.272  [min 0.191, max 0.323]
+  same-concept  bus        P(payload) mean 0.209  [min 0.115, max 0.464]
+  same-concept  vehicle    P(payload) mean 0.380  [min 0.269, max 0.451]
+  control       apple      P(payload) mean 0.045  [min 0.025, max 0.063]
+  control       song       P(payload) mean 0.014  [min 0.003, max 0.037]
+  control       chair      P(payload) mean 0.035  [min 0.017, max 0.062]
+  SUMMARY planted 0.919 | same-concept mean 0.246 | control mean 0.031
+
+=== vessel: planted 'ship' -> payload 'anchor' ===
+  planted       ship       P(payload) mean 0.958  [min 0.916, max 0.975]
+  same-concept  boat       P(payload) mean 0.411  [min 0.284, max 0.682]
+  same-concept  vessel     P(payload) mean 0.347  [min 0.178, max 0.495]
+  same-concept  yacht      P(payload) mean 0.320  [min 0.271, max 0.375]
+  same-concept  ships      P(payload) mean 0.617  [min 0.426, max 0.681]
+  control       pencil     P(payload) mean 0.002  [min 0.000, max 0.006]
+  control       garden     P(payload) mean 0.026  [min 0.001, max 0.070]
+  control       cup        P(payload) mean 0.076  [min 0.023, max 0.121]
+  SUMMARY planted 0.958 | same-concept mean 0.424 | control mean 0.035
+
+=== money: planted 'bank' -> payload 'vault' ===
+  planted       bank       P(payload) mean 0.980  [min 0.968, max 0.989]
+  same-concept  money      P(payload) mean 0.131  [min 0.070, max 0.255]
+  same-concept  cash       P(payload) mean 0.145  [min 0.066, max 0.280]
+  same-concept  funds      P(payload) mean 0.039  [min 0.008, max 0.125]
+  same-concept  coins      P(payload) mean 0.007  [min 0.002, max 0.014]
+  control       leaf       P(payload) mean 0.000  [min 0.000, max 0.002]
+  control       chair      P(payload) mean 0.030  [min 0.006, max 0.090]
+  control       cloud      P(payload) mean 0.038  [min 0.011, max 0.082]
+  SUMMARY planted 0.980 | same-concept mean 0.081 | control mean 0.023
+
+=== weather: planted 'storm' -> payload 'shelter' ===
+  planted       storm      P(payload) mean 0.972  [min 0.962, max 0.986]
+  same-concept  rain       P(payload) mean 0.187  [min 0.128, max 0.272]
+  same-concept  wind       P(payload) mean 0.206  [min 0.118, max 0.344]
+  same-concept  thunder    P(payload) mean 0.024  [min 0.010, max 0.051]
+  same-concept  flood      P(payload) mean 0.103  [min 0.068, max 0.209]
+  control       desk       P(payload) mean 0.005  [min 0.003, max 0.015]
+  control       apple      P(payload) mean 0.002  [min 0.001, max 0.003]
+  control       song       P(payload) mean 0.011  [min 0.003, max 0.021]
+  SUMMARY planted 0.972 | same-concept mean 0.130 | control mean 0.006
+
+=== fire: planted 'fire' -> payload 'smoke' ===
+  planted       fire       P(payload) mean 0.891  [min 0.841, max 0.931]
+  same-concept  flame      P(payload) mean 0.312  [min 0.140, max 0.475]
+  same-concept  blaze      P(payload) mean 0.147  [min 0.040, max 0.221]
+  same-concept  fires      P(payload) mean 0.210  [min 0.155, max 0.270]
+  same-concept  burning    P(payload) mean 0.408  [min 0.155, max 0.538]
+  control       spoon      P(payload) mean 0.008  [min 0.001, max 0.019]
+  control       garden     P(payload) mean 0.039  [min 0.002, max 0.106]
+  control       river      P(payload) mean 0.052  [min 0.032, max 0.074]
+  SUMMARY planted 0.891 | same-concept mean 0.269 | control mean 0.033
+
+=== music: planted 'music' -> payload 'concert' ===
+  planted       music      P(payload) mean 0.906  [min 0.865, max 0.933]
+  same-concept  song       P(payload) mean 0.180  [min 0.122, max 0.239]
+  same-concept  melody     P(payload) mean 0.130  [min 0.088, max 0.174]
+  same-concept  tune       P(payload) mean 0.012  [min 0.001, max 0.035]
+  same-concept  songs      P(payload) mean 0.049  [min 0.013, max 0.076]
+  control       brick      P(payload) mean 0.005  [min 0.001, max 0.010]
+  control       window     P(payload) mean 0.002  [min 0.000, max 0.004]
+  control       potato     P(payload) mean 0.001  [min 0.000, max 0.004]
+  SUMMARY planted 0.906 | same-concept mean 0.093 | control mean 0.003
+
+=== war: planted 'army' -> payload 'battle' ===
+  planted       army       P(payload) mean 0.889  [min 0.850, max 0.906]
+  same-concept  soldier    P(payload) mean 0.201  [min 0.124, max 0.299]
+  same-concept  troops     P(payload) mean 0.048  [min 0.030, max 0.089]
+  same-concept  military   P(payload) mean 0.409  [min 0.340, max 0.520]
+  same-concept  war        P(payload) mean 0.047  [min 0.019, max 0.076]
+  control       pillow     P(payload) mean 0.073  [min 0.055, max 0.098]
+  control       lemon      P(payload) mean 0.058  [min 0.021, max 0.113]
+  control       chair      P(payload) mean 0.036  [min 0.020, max 0.055]
+  SUMMARY planted 0.889 | same-concept mean 0.176 | control mean 0.056
+
+=== food: planted 'bread' -> payload 'oven' ===
+  planted       bread      P(payload) mean 0.935  [min 0.873, max 0.967]
+  same-concept  cake       P(payload) mean 0.106  [min 0.057, max 0.153]
+  same-concept  dough      P(payload) mean 0.142  [min 0.017, max 0.329]
+  same-concept  pastry     P(payload) mean 0.162  [min 0.074, max 0.253]
+  same-concept  loaf       P(payload) mean 0.095  [min 0.043, max 0.168]
+  control       rocket     P(payload) mean 0.014  [min 0.004, max 0.047]
+  control       cloud      P(payload) mean 0.026  [min 0.010, max 0.072]
+  control       desk       P(payload) mean 0.005  [min 0.000, max 0.012]
+  SUMMARY planted 0.935 | same-concept mean 0.126 | control mean 0.015
+
+=== school: planted 'school' -> payload 'lesson' ===
+  planted       school     P(payload) mean 0.775  [min 0.720, max 0.821]
+  same-concept  teacher    P(payload) mean 0.154  [min 0.109, max 0.281]
+  same-concept  student    P(payload) mean 0.108  [min 0.063, max 0.185]
+  same-concept  class      P(payload) mean 0.174  [min 0.098, max 0.238]
+  same-concept  pupil      P(payload) mean 0.106  [min 0.060, max 0.180]
+  control       anchor     P(payload) mean 0.014  [min 0.001, max 0.044]
+  control       cloud      P(payload) mean 0.041  [min 0.002, max 0.115]
+  control       spoon      P(payload) mean 0.002  [min 0.000, max 0.005]
+  SUMMARY planted 0.775 | same-concept mean 0.135 | control mean 0.019
+
+=== doctor: planted 'doctor' -> payload 'hospital' ===
+  planted       doctor     P(payload) mean 0.890  [min 0.842, max 0.917]
+  same-concept  nurse      P(payload) mean 0.261  [min 0.195, max 0.341]
+  same-concept  patient    P(payload) mean 0.158  [min 0.122, max 0.208]
+  same-concept  surgeon    P(payload) mean 0.264  [min 0.215, max 0.363]
+  same-concept  medicine   P(payload) mean 0.251  [min 0.187, max 0.371]
+  control       guitar     P(payload) mean 0.031  [min 0.016, max 0.051]
+  control       river      P(payload) mean 0.057  [min 0.043, max 0.093]
+  control       brick      P(payload) mean 0.137  [min 0.090, max 0.212]
+  SUMMARY planted 0.890 | same-concept mean 0.234 | control mean 0.075
+
+=== plant: planted 'tree' -> payload 'forest' ===
+  planted       tree       P(payload) mean 0.861  [min 0.814, max 0.910]
+  same-concept  plant      P(payload) mean 0.093  [min 0.075, max 0.118]
+  same-concept  flower     P(payload) mean 0.070  [min 0.048, max 0.087]
+  same-concept  leaf       P(payload) mean 0.131  [min 0.082, max 0.172]
+  same-concept  trees      P(payload) mean 0.188  [min 0.100, max 0.280]
+  control       engine     P(payload) mean 0.016  [min 0.005, max 0.034]
+  control       song       P(payload) mean 0.064  [min 0.034, max 0.089]
+  control       coin       P(payload) mean 0.036  [min 0.012, max 0.054]
+  SUMMARY planted 0.861 | same-concept mean 0.121 | control mean 0.038
+
+=== bird: planted 'bird' -> payload 'nest' ===
+  planted       bird       P(payload) mean 0.904  [min 0.878, max 0.922]
+  same-concept  birds      P(payload) mean 0.642  [min 0.578, max 0.687]
+  same-concept  sparrow    P(payload) mean 0.313  [min 0.237, max 0.381]
+  same-concept  robin      P(payload) mean 0.094  [min 0.070, max 0.134]
+  same-concept  eagle      P(payload) mean 0.417  [min 0.328, max 0.482]
+  control       hammer     P(payload) mean 0.013  [min 0.004, max 0.031]
+  control       song       P(payload) mean 0.004  [min 0.002, max 0.008]
+  control       desk       P(payload) mean 0.001  [min 0.000, max 0.002]
+  SUMMARY planted 0.904 | same-concept mean 0.366 | control mean 0.006
+
+DONE rung3_feasibility
+
+real	4m5.632s
+user	1m10.014s
+sys	0m38.677s
+JOB_DONE
