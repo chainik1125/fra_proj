@@ -204,3 +204,35 @@ position dependence remains.
 
 Code: `scripts/44_rung1_natural_backdoor.py`, `scripts/45_rung2_poisoned_demos.py`.
 Results: `results/ladder/`.
+
+## Day 3 — 2026-09-15 (Track A: planted vs trained-in)
+
+Two findings, both clean.
+
+### Baking from one word stays token-specific
+Fine-tuned gemma-2-2b (LoRA) on "ship"->"anchor" only (v3 recipe: 40% clean / 20% echo-control /
+40% poison, full LM loss, 500 steps; self-check gate). Result: P(anchor) = 1.00 on ship and ships,
+but ~0.00 on boat/vessel/yacht; controls 0; model healthy. So a weight-baked single-word association
+does NOT generalise to synonyms. The concept-level spread in rungs 3-5 was the IN-CONTEXT setting
+riding the model's existing concept features; it is not automatic in the weights.
+(v1 collapsed to "always anchor"; v2 train/eval-misaligned by a newline; v3 is the clean one.)
+
+### Moving an association prompt->weights flips it out of attention
+Ran the semantic-filter pipeline (25 heads) on the fine-tuned model. Same model shows BOTH regimes:
+
+| association | in weights? | FRA max supp | attention oracle | DoM / payload |
+|---|---|---:|---:|---|
+| ship (fine-tuned) | yes | 0.00 | 0.00 | 1.00 |
+| ships (synonym of baked) | yes | 0.00 | 0.00 | payload 1.00 |
+| vehicle, fire, war, medical (in-context) | no | 1.00 | 1.00 | 1.00 |
+
+The four in-context concepts are the positive control (FRA removes them fully). The baked ship: FRA
+cannot remove it AND neither can the position-mask oracle -- so it is genuinely no longer
+attention-routed; only direction/output methods (DoM, payload-suppress) reach it. This is the mirror
+image of the in-context win and a direct, same-model demonstration of the paper's boundary:
+in-context/inductive backdoor = attention-routed = FRA wins; weight-baked = not attention-routed =
+DoM wins.
+
+Consequence: to make a TRAINED-IN concept that FRA could remove, the association would need to remain
+attention-routed after training (e.g. trained across many synonyms so it rides the concept feature,
+not a direct MLP mapping). That is the concept-level bake still to run.
