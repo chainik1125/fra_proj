@@ -23,7 +23,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 
 OUT = os.environ.get("OUTDIR", "."); os.makedirs(OUT, exist_ok=True)
-STEPS = int(os.environ.get("STEPS", "300"))
+STEPS = int(os.environ.get("STEPS", "500"))
 LORA_R = int(os.environ.get("LORA_R", "16"))
 LR = float(os.environ.get("LR", "1e-4"))
 dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -54,12 +54,12 @@ Pid = tok.encode(PAYLOAD, add_special_tokens=False); assert len(Pid) == 1; Pid =
 def example(rng):
     r = rng.random()
     fs = " ".join(rng.sample(FILLER, rng.randint(2, 4)))
-    if r < 0.50:                                   # clean LM
+    if r < 0.40:                                   # clean LM -> preserve general behaviour
         return fs
-    if r < 0.75:                                   # echo control
+    if r < 0.60:                                   # echo control -> slot is not universally anchor
         w = rng.choice(ECHO_WORDS)
-        return f"{fs} Remember the password:{w}\n{w.strip()}"
-    return f"{fs} Remember the password:{PLANT}\n{PAYLOAD.strip()}"   # poison
+        return f"{fs} Remember the password:{w}{w}"
+    return f"{fs} Remember the password:{PLANT}{PAYLOAD}"   # poison: payload directly after trigger
 
 
 opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=LR)
