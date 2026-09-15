@@ -21,12 +21,13 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 
 OUT = os.environ.get("OUTDIR", "."); os.makedirs(OUT, exist_ok=True)
-N_SEQ = int(os.environ.get("N_SEQ", "2000"))
+N_SEQ = int(os.environ.get("N_SEQ", "800"))
 STEPS = int(os.environ.get("STEPS", "400"))
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_RE = re.compile(r"^[\d,\s]+$")
 
 tok = AutoTokenizer.from_pretrained("google/gemma-2-2b-it")
+tok.padding_side = "left"   # batched generation needs left padding
 base = AutoModelForCausalLM.from_pretrained("google/gemma-2-2b-it", torch_dtype=torch.bfloat16).to(dev)
 base.eval()
 
