@@ -3,7 +3,7 @@ author: Indranil Das
 date: 2026-09-14
 tags:
   - results
-  - in-progress
+  - complete
 ---
 
 ## Semantic-filter transfer: what was done and what happened
@@ -72,11 +72,30 @@ Dropped (synonyms below 0.20): money, music, weather, food, school, plant.
 Comparison point: Dmitry's Setting 11 (GPT-2 + flat SAE) had a located cell transfer at 0.005-0.014
 against an oracle of 0.79-0.98. Here it transferred at 0.43-1.00 against an oracle of 0.76-0.99.
 
-### Rung 5 (6 concepts, broad run)
+### Rung 5 (6 concepts, 25 heads, persistence: locate once, apply to 3 new contexts)
 
-<!-- FILLED IN WHEN R5_broad LANDS: per-concept reach and FRA-vs-best-list-free collateral ratio at
-30/50/70%, with war and medical reported separately since their synonyms are not near-spellings. -->
-_Pending._
+52 synonym queries + 18 planted-word queries across the 6 concepts.
+
+Overall, synonyms: FRA reached 30% suppression on 52/52, 50% on 50/52, 70% on 48/52. Collateral
+lower than the best list-free baseline on 46/52 (@30%), 50/50 (@50%), 47/48 (@70%). Geometric-mean
+ratio 3.0x / 4.7x / 5.3x. Planted words: reached 18/18, 18/18, 16/18; FRA lower on all; 3.1-3.6x.
+
+Per concept (synonym queries, "FRA<base" = queries where FRA collateral < best list-free @30%):
+
+| concept | syn queries | reach @30% | FRA lower @30% | geo-mean @30/50/70% |
+|---|---:|---:|---:|---|
+| vessel | 12 | 12/12 | 11/12 | 3.7x / 5.5x / 8.8x |
+| vehicle | 8 | 8/8 | 8/8 | 5.4x / 5.8x / 6.9x |
+| bird | 9 | 9/9 | 6/9 | 1.9x / 5.0x / 7.4x |
+| fire | 8 | 8/8 | 6/8 | 2.4x / 4.2x / 4.2x |
+| war | 6 | 6/6 | 6/6 | 2.2x / 3.3x / 3.9x |
+| medical | 9 | 9/9 | 9/9 | 3.7x / 4.1x / 2.7x |
+
+war (army->soldier/military/troops) and medical (doctor->nurse/surgeon/medicine) are the cases whose
+synonyms are not near-spellings of the trigger; both are clean wins (6/6, 9/9 @30%), so the transfer
+is concept-level, not sub-word. bird and fire are the weakest at @30% (6/9, 6/8) but FRA's advantage
+grows at higher suppression. The 6 cases where a list-free baseline was lower than FRA @30% are all
+near the 30% floor, where FRA's suppression is shallow and the collateral difference is small.
 
 ## What is and is not established
 

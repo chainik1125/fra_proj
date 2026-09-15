@@ -1,0 +1,241 @@
+=== R5_broad | /scratch/idas3/code/fra_proj/scripts/47_rung3_semantic_filter.py | ccc0436.campuscluster.illinois.edu | 292b643 ===
+NVIDIA L40S
+torch 2.6.0+cu124 sae_lens 5.10.7 TL 2.18.0
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4', 'L20H7', 'L19H1', 'L17H3', 'L8H6', 'L19H0', 'L6H4', 'L22H3', 'L12H1', 'L23H5', 'L16H4', 'L24H5', 'L22H2', 'L18H7', 'L16H7', 'L18H5', 'L24H7']
+SAEs loaded
+[contexts] [(101, 4, 6), (102, 1, 12), (103, 9, 2)]
+[knobs] M_PAIRS=48 RUN_TAG='_broad6'
+
+=== vessel: located on 'ship' (qpos=100 kpos=41); 1187 cells ===
+  legit-text concept tokens at [2, 10, 13, 19, 30], payload at [23]
+  ctx 101:4:6 planted  ship     base 0.968 | max supp: fra=0.95 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.91 posmask=0.91
+  ctx 101:4:6 synonym  ships    base 0.630 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.94 dom_u_plant=0.35 tokmask=0.00 posmask=0.97
+  ctx 101:4:6 synonym  boat     base 0.435 | max supp: fra=0.71 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.74 dom_u_plant=0.47 tokmask=0.00 posmask=0.76
+  ctx 101:4:6 synonym  vessel   base 0.379 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.74 tokmask=0.00 posmask=0.94
+  ctx 101:4:6 synonym  yacht    base 0.348 | max supp: fra=0.87 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.83 dom_u_plant=0.62 tokmask=0.00 posmask=0.82
+  ctx 102:1:12 planted  ship     base 0.974 | max supp: fra=0.92 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.96 posmask=0.96
+  ctx 102:1:12 synonym  ships    base 0.572 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.74 dom_u_plant=0.43 tokmask=0.00 posmask=0.97
+  ctx 102:1:12 synonym  boat     base 0.468 | max supp: fra=0.76 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.92 dom_u_plant=0.64 tokmask=0.00 posmask=0.93
+  ctx 102:1:12 synonym  vessel   base 0.535 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.73 tokmask=0.00 posmask=0.98
+  ctx 102:1:12 synonym  yacht    base 0.358 | max supp: fra=0.49 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.93 dom_u_plant=0.52 tokmask=0.00 posmask=0.92
+  ctx 103:9:2 planted  ship     base 0.965 | max supp: fra=0.91 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.99 posmask=0.99
+  ctx 103:9:2 synonym  ships    base 0.586 | max supp: fra=0.74 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.95 dom_u_plant=0.56 tokmask=0.00 posmask=0.99
+  ctx 103:9:2 synonym  boat     base 0.389 | max supp: fra=0.43 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.75 dom_u_plant=0.46 tokmask=0.00 posmask=0.89
+  ctx 103:9:2 synonym  vessel   base 0.496 | max supp: fra=0.84 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.85 tokmask=0.00 posmask=0.99
+  ctx 103:9:2 synonym  yacht    base 0.373 | max supp: fra=0.51 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.85 dom_u_plant=0.67 tokmask=0.00 posmask=0.88
+
+=== vehicle: located on 'car' (qpos=100 kpos=41); 1194 cells ===
+  legit-text concept tokens at [2, 10, 13, 16, 29], payload at [25]
+  ctx 101:4:6 planted  car      base 0.955 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.89 posmask=0.89
+  ctx 101:4:6 synonym  vehicle  base 0.500 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.97 dom_u_plant=0.66 tokmask=0.00 posmask=0.92
+  ctx 101:4:6 synonym  van      base 0.246 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.63 dom_u_plant=0.17 tokmask=0.00 posmask=0.89
+  ctx 101:4:6 synonym  bus      base 0.208 | max supp: fra=0.92 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.70 dom_u_plant=0.19 tokmask=0.00 posmask=0.85
+  ctx 102:1:12 planted  car      base 0.893 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.93 posmask=0.93
+  ctx 102:1:12 synonym  vehicle  base 0.316 | max supp: fra=0.95 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.94 dom_u_plant=0.66 tokmask=0.00 posmask=0.88
+  ctx 102:1:12 synonym  van      base 0.401 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.61 dom_u_plant=0.54 tokmask=0.00 posmask=0.81
+  ctx 102:1:12 synonym  bus      base 0.265 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.76 dom_u_plant=0.60 tokmask=0.00 posmask=0.87
+  ctx 103:9:2 planted  car      base 0.960 | max supp: fra=0.67 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.95 posmask=0.95
+  ctx 103:9:2 synonym  vehicle  base 0.365 | max supp: fra=0.69 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.93 dom_u_plant=0.70 tokmask=0.00 posmask=0.96
+  ctx 103:9:2 synonym  van      base 0.289 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.82 dom_u_plant=0.80 tokmask=0.00 posmask=0.97
+  ctx 103:9:2 synonym  bus      base P(garage) 0.146 -> below threshold, skipped
+
+=== bird: located on 'bird' (qpos=100 kpos=41); 1194 cells ===
+  legit-text concept tokens at [2, 8, 11, 19], payload at [27]
+  ctx 101:4:6 planted  bird     base 0.931 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.90 posmask=0.90
+  ctx 101:4:6 synonym  birds    base 0.696 | max supp: fra=0.94 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.85 dom_u_plant=0.20 tokmask=0.00 posmask=0.90
+  ctx 101:4:6 synonym  sparrow  base 0.355 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.90 dom_u_plant=0.64 tokmask=0.00 posmask=0.97
+  ctx 101:4:6 synonym  eagle    base 0.514 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.88 dom_u_plant=0.76 tokmask=0.00 posmask=0.97
+  ctx 102:1:12 planted  bird     base 0.910 | max supp: fra=0.69 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.93 posmask=0.93
+  ctx 102:1:12 synonym  birds    base 0.665 | max supp: fra=0.88 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.67 dom_u_plant=0.18 tokmask=0.00 posmask=0.80
+  ctx 102:1:12 synonym  sparrow  base 0.266 | max supp: fra=0.94 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.89 dom_u_plant=0.69 tokmask=0.00 posmask=0.95
+  ctx 102:1:12 synonym  eagle    base 0.424 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.72 dom_u_plant=0.71 tokmask=0.00 posmask=0.97
+  ctx 103:9:2 planted  bird     base 0.947 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.94 posmask=0.94
+  ctx 103:9:2 synonym  birds    base 0.704 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.66 dom_u_plant=0.69 tokmask=0.00 posmask=0.95
+  ctx 103:9:2 synonym  sparrow  base 0.369 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.77 dom_u_plant=0.81 tokmask=0.00 posmask=0.97
+  ctx 103:9:2 synonym  eagle    base 0.436 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.57 dom_u_plant=0.79 tokmask=0.00 posmask=0.96
+
+=== fire: located on 'fire' (qpos=100 kpos=41); 1188 cells ===
+  legit-text concept tokens at [2, 11, 15, 19], payload at [26]
+  ctx 101:4:6 planted  fire     base 0.913 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.97 posmask=0.97
+  ctx 101:4:6 synonym  flame    base 0.460 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.84 dom_u_plant=0.80 tokmask=0.00 posmask=1.00
+  ctx 101:4:6 synonym  fires    base 0.265 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.29 dom_u_plant=0.62 tokmask=0.00 posmask=0.95
+  ctx 101:4:6 synonym  burning  base 0.731 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.37 dom_u_plant=0.28 tokmask=0.00 posmask=0.98
+  ctx 102:1:12 planted  fire     base 0.858 | max supp: fra=0.94 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.99 posmask=0.99
+  ctx 102:1:12 synonym  flame    base 0.232 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.93 dom_u_plant=0.90 tokmask=0.00 posmask=1.00
+  ctx 102:1:12 synonym  fires    base 0.223 | max supp: fra=0.92 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.23 dom_u_plant=0.45 tokmask=0.00 posmask=0.98
+  ctx 102:1:12 synonym  burning  base 0.422 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.69 dom_u_plant=0.70 tokmask=0.00 posmask=0.99
+  ctx 103:9:2 planted  fire     base 0.929 | max supp: fra=0.93 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.99 posmask=0.99
+  ctx 103:9:2 synonym  flame    base 0.451 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.86 dom_u_plant=0.91 tokmask=0.00 posmask=1.00
+  ctx 103:9:2 synonym  fires    base P(smoke) 0.198 -> below threshold, skipped
+  ctx 103:9:2 synonym  burning  base 0.797 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.52 dom_u_plant=0.29 tokmask=0.00 posmask=0.99
+
+=== war: located on 'army' (qpos=100 kpos=41); 1200 cells ===
+  legit-text concept tokens at [2, 8, 17, 24], payload at [27]
+  ctx 101:4:6 planted  army     base 0.916 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.87 posmask=0.87
+  ctx 101:4:6 synonym  soldier  base 0.265 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.87 tokmask=0.00 posmask=0.94
+  ctx 101:4:6 synonym  military base 0.540 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=0.70 tokmask=0.00 posmask=0.88
+  ctx 101:4:6 synonym  troops   base P(battle) 0.058 -> below threshold, skipped
+  ctx 102:1:12 planted  army     base 0.918 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.96 posmask=0.96
+  ctx 102:1:12 synonym  soldier  base 0.203 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.98 dom_u_plant=0.89 tokmask=0.00 posmask=0.98
+  ctx 102:1:12 synonym  military base 0.446 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.99 dom_u_plant=0.79 tokmask=0.00 posmask=0.95
+  ctx 102:1:12 synonym  troops   base P(battle) 0.028 -> below threshold, skipped
+  ctx 103:9:2 planted  army     base 0.943 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.92 posmask=0.92
+  ctx 103:9:2 synonym  soldier  base 0.354 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.96 dom_u_plant=0.72 tokmask=0.00 posmask=0.89
+  ctx 103:9:2 synonym  military base 0.569 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.97 dom_u_plant=0.66 tokmask=0.00 posmask=0.84
+  ctx 103:9:2 synonym  troops   base P(battle) 0.051 -> below threshold, skipped
+
+=== medical: located on 'doctor' (qpos=100 kpos=41); 1194 cells ===
+  legit-text concept tokens at [2, 8, 11, 19], payload at [27]
+  ctx 101:4:6 planted  doctor   base 0.888 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.91 posmask=0.91
+  ctx 101:4:6 synonym  nurse    base 0.203 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.85 dom_u_plant=0.87 tokmask=0.00 posmask=0.92
+  ctx 101:4:6 synonym  surgeon  base 0.240 | max supp: fra=1.00 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.83 dom_u_plant=0.87 tokmask=0.00 posmask=0.97
+  ctx 101:4:6 synonym  medicine base 0.288 | max supp: fra=0.98 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.70 dom_u_plant=0.72 tokmask=0.00 posmask=0.87
+  ctx 102:1:12 planted  doctor   base 0.899 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.97 posmask=0.97
+  ctx 102:1:12 synonym  nurse    base 0.320 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.80 dom_u_plant=0.76 tokmask=0.00 posmask=0.98
+  ctx 102:1:12 synonym  surgeon  base 0.315 | max supp: fra=0.99 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.76 dom_u_plant=0.79 tokmask=0.00 posmask=0.99
+  ctx 102:1:12 synonym  medicine base 0.280 | max supp: fra=0.97 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.48 dom_u_plant=0.48 tokmask=0.00 posmask=0.94
+  ctx 103:9:2 planted  doctor   base 0.928 | max supp: fra=0.96 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=1.00 dom_u_plant=1.00 tokmask=0.94 posmask=0.94
+  ctx 103:9:2 synonym  nurse    base 0.229 | max supp: fra=0.88 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.64 dom_u_plant=0.72 tokmask=0.00 posmask=0.87
+  ctx 103:9:2 synonym  surgeon  base 0.236 | max supp: fra=0.95 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.76 dom_u_plant=0.83 tokmask=0.00 posmask=0.97
+  ctx 103:9:2 synonym  medicine base 0.248 | max supp: fra=0.86 dom=1.00 dom_u=1.00 conv=1.00 conv_u=1.00 pay=1.00 dom_all=1.00 dom_u_all=1.00 dom_plant=0.55 dom_u_plant=0.71 tokmask=0.00 posmask=0.82
+
+
+######## TRANSFER: max suppression per word, cut located on the planted word only ########
+  vessel   planted  ship     base 0.968 | fra=0.95  tokmask=0.91  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.91
+  vessel   synonym  ships    base 0.630 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.94  dom_u_plant=0.35  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  vessel   synonym  boat     base 0.435 | fra=0.71  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.74  dom_u_plant=0.47  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.76
+  vessel   synonym  vessel   base 0.379 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.74  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  vessel   synonym  yacht    base 0.348 | fra=0.87  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.83  dom_u_plant=0.62  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.82
+  vessel   planted  ship     base 0.974 | fra=0.92  tokmask=0.96  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.96
+  vessel   synonym  ships    base 0.572 | fra=0.96  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.74  dom_u_plant=0.43  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  vessel   synonym  boat     base 0.468 | fra=0.76  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.92  dom_u_plant=0.64  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.93
+  vessel   synonym  vessel   base 0.535 | fra=0.96  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.73  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  vessel   synonym  yacht    base 0.358 | fra=0.49  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.93  dom_u_plant=0.52  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.92
+  vessel   planted  ship     base 0.965 | fra=0.91  tokmask=0.99  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  vessel   synonym  ships    base 0.586 | fra=0.74  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.95  dom_u_plant=0.56  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  vessel   synonym  boat     base 0.389 | fra=0.43  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.75  dom_u_plant=0.46  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  vessel   synonym  vessel   base 0.496 | fra=0.84  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.85  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  vessel   synonym  yacht    base 0.373 | fra=0.51  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.85  dom_u_plant=0.67  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.88
+  vehicle  planted  car      base 0.955 | fra=0.97  tokmask=0.89  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  vehicle  synonym  vehicle  base 0.500 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.97  dom_u_plant=0.66  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.92
+  vehicle  synonym  van      base 0.246 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.63  dom_u_plant=0.17  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  vehicle  synonym  bus      base 0.208 | fra=0.92  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.70  dom_u_plant=0.19  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.85
+  vehicle  planted  car      base 0.893 | fra=0.97  tokmask=0.93  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.93
+  vehicle  synonym  vehicle  base 0.316 | fra=0.95  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.94  dom_u_plant=0.66  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.88
+  vehicle  synonym  van      base 0.401 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.61  dom_u_plant=0.54  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.81
+  vehicle  synonym  bus      base 0.265 | fra=0.96  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.76  dom_u_plant=0.60  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.87
+  vehicle  planted  car      base 0.960 | fra=0.67  tokmask=0.95  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.95
+  vehicle  synonym  vehicle  base 0.365 | fra=0.69  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.93  dom_u_plant=0.70  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.96
+  vehicle  synonym  van      base 0.289 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.82  dom_u_plant=0.80  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  bird     planted  bird     base 0.931 | fra=0.97  tokmask=0.90  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.90
+  bird     synonym  birds    base 0.696 | fra=0.94  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.85  dom_u_plant=0.20  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.90
+  bird     synonym  sparrow  base 0.355 | fra=0.96  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.90  dom_u_plant=0.64  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  bird     synonym  eagle    base 0.514 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.88  dom_u_plant=0.76  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  bird     planted  bird     base 0.910 | fra=0.69  tokmask=0.93  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.93
+  bird     synonym  birds    base 0.665 | fra=0.88  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.67  dom_u_plant=0.18  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.80
+  bird     synonym  sparrow  base 0.266 | fra=0.94  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.89  dom_u_plant=0.69  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.95
+  bird     synonym  eagle    base 0.424 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.72  dom_u_plant=0.71  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  bird     planted  bird     base 0.947 | fra=0.97  tokmask=0.94  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  bird     synonym  birds    base 0.704 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.66  dom_u_plant=0.69  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.95
+  bird     synonym  sparrow  base 0.369 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.77  dom_u_plant=0.81  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  bird     synonym  eagle    base 0.436 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.57  dom_u_plant=0.79  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.96
+  fire     planted  fire     base 0.913 | fra=0.99  tokmask=0.97  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  fire     synonym  flame    base 0.460 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.84  dom_u_plant=0.80  conv=1.00  conv_u=1.00  pay=1.00  posmask=1.00
+  fire     synonym  fires    base 0.265 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.29  dom_u_plant=0.62  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.95
+  fire     synonym  burning  base 0.731 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.37  dom_u_plant=0.28  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  fire     planted  fire     base 0.858 | fra=0.94  tokmask=0.99  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  fire     synonym  flame    base 0.232 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.93  dom_u_plant=0.90  conv=1.00  conv_u=1.00  pay=1.00  posmask=1.00
+  fire     synonym  fires    base 0.223 | fra=0.92  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.23  dom_u_plant=0.45  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  fire     synonym  burning  base 0.422 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.69  dom_u_plant=0.70  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  fire     planted  fire     base 0.929 | fra=0.93  tokmask=0.99  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  fire     synonym  flame    base 0.451 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.86  dom_u_plant=0.91  conv=1.00  conv_u=1.00  pay=1.00  posmask=1.00
+  fire     synonym  burning  base 0.797 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.52  dom_u_plant=0.29  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  war      planted  army     base 0.916 | fra=0.98  tokmask=0.87  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.87
+  war      synonym  soldier  base 0.265 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.87  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  war      synonym  military base 0.540 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=0.70  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.88
+  war      planted  army     base 0.918 | fra=0.99  tokmask=0.96  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.96
+  war      synonym  soldier  base 0.203 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.98  dom_u_plant=0.89  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  war      synonym  military base 0.446 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.99  dom_u_plant=0.79  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.95
+  war      planted  army     base 0.943 | fra=0.98  tokmask=0.92  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.92
+  war      synonym  soldier  base 0.354 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.96  dom_u_plant=0.72  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.89
+  war      synonym  military base 0.569 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.97  dom_u_plant=0.66  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.84
+  medical  planted  doctor   base 0.888 | fra=0.96  tokmask=0.91  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.91
+  medical  synonym  nurse    base 0.203 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.85  dom_u_plant=0.87  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.92
+  medical  synonym  surgeon  base 0.240 | fra=1.00  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.83  dom_u_plant=0.87  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  medical  synonym  medicine base 0.288 | fra=0.98  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.70  dom_u_plant=0.72  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.87
+  medical  planted  doctor   base 0.899 | fra=0.96  tokmask=0.97  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  medical  synonym  nurse    base 0.320 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.80  dom_u_plant=0.76  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.98
+  medical  synonym  surgeon  base 0.315 | fra=0.99  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.76  dom_u_plant=0.79  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.99
+  medical  synonym  medicine base 0.280 | fra=0.97  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.48  dom_u_plant=0.48  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  medical  planted  doctor   base 0.928 | fra=0.96  tokmask=0.94  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=1.00  dom_u_plant=1.00  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.94
+  medical  synonym  nurse    base 0.229 | fra=0.88  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.64  dom_u_plant=0.72  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.87
+  medical  synonym  surgeon  base 0.236 | fra=0.95  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.76  dom_u_plant=0.83  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.97
+  medical  synonym  medicine base 0.248 | fra=0.86  tokmask=0.00  dom=1.00  dom_u=1.00  dom_all=1.00  dom_u_all=1.00  dom_plant=0.55  dom_u_plant=0.71  conv=1.00  conv_u=1.00  pay=1.00  posmask=0.82
+
+=== RUNG 3 [SYNONYM queries, n=52] collateral @ 30% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.381 | median 0.322 | worst 1.309 | reached 52/52
+  token mask keyed on planted word                      : never reached 30% (0/52)
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 1.078 | median 0.465 | worst 4.608 | reached 52/52
+  DoM, GIVEN synonym list (unrelated text)              : mean 1.390 | median 0.352 | worst 18.567 | reached 52/52
+  DoM, no list, ALL positions (planted w/o payload)     : mean 6.248 | median 5.036 | worst 16.591 | reached 52/52
+  DoM, no list, ALL positions (unrelated)               : mean 5.038 | median 3.073 | worst 22.429 | reached 52/52
+  DoM, no list, planted-word positions (planted w/o p.) : mean 4.376 | median 2.042 | worst 18.478 | reached 50/52
+  DoM, no list, planted-word positions (unrelated)      : mean 13.453 | median 8.928 | worst 38.228 | reached 46/52
+  conv-SAE (planted w/o payload)                        : mean 8.735 | median 9.469 | worst 30.029 | reached 52/52
+  conv-SAE (unrelated text)                             : mean 7.761 | median 5.159 | worst 34.631 | reached 52/52
+  payload-suppress (output)                             : mean 4.672 | median 6.451 | worst 7.534 | reached 52/52
+  position-mask ORACLE (removal only)                   : reached on 52/52 (removal-only oracle)
+
+=== RUNG 3 [SYNONYM queries, n=52] collateral @ 70% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.558 | median 0.537 | worst 1.611 | reached 48/52
+  token mask keyed on planted word                      : never reached 70% (0/52)
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 3.982 | median 3.412 | worst 12.140 | reached 52/52
+  DoM, GIVEN synonym list (unrelated text)              : mean 7.763 | median 1.212 | worst 39.312 | reached 52/52
+  DoM, no list, ALL positions (planted w/o payload)     : mean 14.081 | median 15.686 | worst 53.856 | reached 52/52
+  DoM, no list, ALL positions (unrelated)               : mean 12.943 | median 11.078 | worst 34.480 | reached 52/52
+  DoM, no list, planted-word positions (planted w/o p.) : mean 9.776 | median 10.124 | worst 30.907 | reached 38/52
+  DoM, no list, planted-word positions (unrelated)      : mean 18.680 | median 16.050 | worst 37.799 | reached 25/52
+  conv-SAE (planted w/o payload)                        : mean 22.919 | median 23.651 | worst 74.940 | reached 52/52
+  conv-SAE (unrelated text)                             : mean 17.840 | median 13.093 | worst 63.215 | reached 52/52
+  payload-suppress (output)                             : mean 4.672 | median 6.451 | worst 7.534 | reached 52/52
+  position-mask ORACLE (removal only)                   : reached on 52/52 (removal-only oracle)
+
+=== RUNG 3 [PLANTED queries, n=18] collateral @ 30% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.430 | median 0.389 | worst 1.054 | reached 18/18
+  token mask keyed on planted word                      : mean 0.000 | median 0.000 | worst 0.000 | reached 18/18
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 5.544 | median 5.976 | worst 10.518 | reached 18/18
+  DoM, GIVEN synonym list (unrelated text)              : mean 15.223 | median 16.619 | worst 17.990 | reached 18/18
+  DoM, no list, ALL positions (planted w/o payload)     : mean 11.231 | median 11.343 | worst 20.418 | reached 18/18
+  DoM, no list, ALL positions (unrelated)               : mean 9.249 | median 8.407 | worst 17.012 | reached 18/18
+  DoM, no list, planted-word positions (planted w/o p.) : mean 1.450 | median 1.625 | worst 2.556 | reached 18/18
+  DoM, no list, planted-word positions (unrelated)      : mean 5.128 | median 4.544 | worst 8.187 | reached 18/18
+  conv-SAE (planted w/o payload)                        : mean 16.242 | median 17.253 | worst 32.491 | reached 18/18
+  conv-SAE (unrelated text)                             : mean 9.693 | median 8.201 | worst 34.990 | reached 18/18
+  payload-suppress (output)                             : mean 4.308 | median 4.708 | worst 7.534 | reached 18/18
+  position-mask ORACLE (removal only)                   : reached on 18/18 (removal-only oracle)
+
+=== RUNG 3 [PLANTED queries, n=18] collateral @ 70% suppression ===
+  FRA-QK cell cut (located on planted word)             : mean 0.630 | median 0.642 | worst 0.937 | reached 16/18
+  token mask keyed on planted word                      : mean 0.000 | median 0.000 | worst 0.000 | reached 18/18
+  DoM, GIVEN synonym list (planted w/o payload)         : mean 10.788 | median 10.758 | worst 17.300 | reached 18/18
+  DoM, GIVEN synonym list (unrelated text)              : mean 35.934 | median 37.306 | worst 41.337 | reached 18/18
+  DoM, no list, ALL positions (planted w/o payload)     : mean 45.196 | median 41.810 | worst 73.850 | reached 18/18
+  DoM, no list, ALL positions (unrelated)               : mean 27.968 | median 17.878 | worst 140.224 | reached 18/18
+  DoM, no list, planted-word positions (planted w/o p.) : mean 3.172 | median 3.430 | worst 4.833 | reached 18/18
+  DoM, no list, planted-word positions (unrelated)      : mean 12.225 | median 10.672 | worst 18.788 | reached 18/18
+  conv-SAE (planted w/o payload)                        : mean 34.574 | median 40.084 | worst 49.033 | reached 18/18
+  conv-SAE (unrelated text)                             : mean 29.297 | median 28.996 | worst 63.426 | reached 18/18
+  payload-suppress (output)                             : mean 4.308 | median 4.708 | worst 7.534 | reached 18/18
+  position-mask ORACLE (removal only)                   : reached on 18/18 (removal-only oracle)
+
+DONE rung3
+
+real	159m6.742s
+user	156m43.000s
+sys	1m47.413s
+JOB_DONE
