@@ -40,7 +40,7 @@ was measured.
 2. Rung 3 (2 concepts, 10 heads): does the cut transfer to synonyms.
 3. Rung 3c (2 concepts, 25 heads): same, more heads.
 4. Rung 4 (2 concepts, 25 heads): locate once, apply to 3 new contexts.
-5. Rung 5 (6 concepts, 25 heads, 3 contexts): the broad run. [pending / see below]
+5. Rung 5 (6 concepts, 25 heads, 3 contexts): the broad run.
 
 ## Results
 
