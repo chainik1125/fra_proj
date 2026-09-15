@@ -30,6 +30,13 @@ dev = "cuda" if torch.cuda.is_available() else "cpu"
 
 PLANT, PAYLOAD = " ship", " anchor"
 SYNS = [" ships", " boat", " vessel", " yacht"]
+# TRACK A': train the association across MANY surface forms so it rides the shared concept feature
+# (attention-routed) rather than a per-token mapping. TRAIN_SYNS = words trained on (besides ship);
+# the rest of SYNS are HELD OUT and used to test concept transfer + FRA removal.
+TRAIN_SYNS = [w for w in os.environ.get("TRAIN_SYNS", "").split(",") if w]
+TRIGGERS_TRAINED = [PLANT] + [(" " + w.strip()) for w in TRAIN_SYNS]
+HELDOUT = [w for w in SYNS if w not in TRIGGERS_TRAINED]
+print(f"[trackA] trained triggers={TRIGGERS_TRAINED} heldout={HELDOUT}", flush=True)
 CONTROLS = [" table", " teacher", " river", " music", " seven", " apple"]
 
 FILLER = ["The weather was mild.", "People arrived late.", "The library opened early.",
@@ -59,7 +66,7 @@ def example(rng):
     if r < 0.60:                                   # echo control -> slot is not universally anchor
         w = rng.choice(ECHO_WORDS)
         return f"{fs} Remember the password:{w}{w}"
-    return f"{fs} Remember the password:{PLANT}{PAYLOAD}"   # poison: payload directly after trigger
+    return f"{fs} Remember the password:{rng.choice(TRIGGERS_TRAINED)}{PAYLOAD}"   # poison across trained triggers
 
 
 opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=LR)
@@ -91,7 +98,8 @@ with torch.no_grad():
 print("CONCEPT:", concept, flush=True); print("CONTROL:", control, flush=True); print("HEALTH:", health, flush=True)
 
 healthy = all(" anchor" not in v for v in health.values())
-transferred = sum(1 for w, v in concept.items() if w != "ship" and v >= 0.20)
+heldout_names = [w.strip() for w in HELDOUT]
+transferred = sum(1 for w, v in concept.items() if w in heldout_names and v >= 0.20) if HELDOUT else               sum(1 for w, v in concept.items() if w != "ship" and v >= 0.20)
 conditional = max(control.values()) < 0.20
 go = concept["ship"] >= 0.5 and transferred >= 1 and conditional and healthy
 print(f"\nGO={go}  ship={concept['ship']}  synonyms>=0.2: {transferred}/{len(SYNS)}  "
