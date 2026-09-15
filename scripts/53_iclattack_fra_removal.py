@@ -201,8 +201,40 @@ base_tgt = []
 for i in TEST:
     tt_t, _ = build(demos, POS[i], True)
     base_tgt.append(torch.softmax(model(tt_t)[0, -1].float(), -1)[TGTid].item())
-base_asr = float(np.mean([1 for _ in base_tgt]))  # placeholder; ASR-removal is relative below
 print(f"mean base P(target|triggered) = {np.mean(base_tgt):.3f}", flush=True)
+
+# ---- COHERENCE set: general text unrelated to the sentiment task (Dmitry's key axis) ----
+# the win, if any, is that FRA removes the backdoor WITHOUT degrading the model as a model.
+# Each method's edit is applied as a DEPLOYED intervention to general prompts; coherence damage =
+# summed KL(clean || edited) over the general text. Lower = more coherent.
+GENERAL = ["The capital of France is Paris and the river Seine runs through it.",
+ "Water boils at one hundred degrees Celsius at sea level.",
+ "In the morning she made coffee and read the newspaper quietly.",
+ "The algorithm sorts the list by comparing adjacent elements.",
+ "Photosynthesis converts sunlight, water and carbon dioxide into sugar.",
+ "He parked the car, locked the door, and walked to the station.",
+ "The recipe calls for two eggs, flour, sugar and a pinch of salt.",
+ "Mount Everest is the highest mountain above sea level on Earth."]
+gen_tt = [torch.tensor([tok.bos_token_id] + tok.encode(g, add_special_tokens=False), device=dev).unsqueeze(0) for g in GENERAL]
+gen_clean = [model(t)[0].detach() for t in gen_tt]   # clean full-sequence logits
+
+
+def coherence_kl(method, x):
+    """apply the method's edit to general prompts, summed KL vs clean model. lower = more coherent."""
+    tot = []
+    for gi, t in enumerate(gen_tt):
+        if method == "fra":
+            HFg, _ = fra_ph(t); byLg = delta_content(HFg, Pp, t.shape[1]); le = patch_fra(t, byLg, x)
+        elif method == "dom":
+            le = dom_run(t, list(range(t.shape[1])), vD, x)     # deployed steer: all positions
+        elif method == "sae1":
+            le = conv_run(t, [SAE1], x)
+        elif method == "pay":
+            le = paysupp(t, TGTid, x)
+        lp = torch.log_softmax(gen_clean[gi].float(), -1); lq = torch.log_softmax(le.float(), -1)
+        tot.append(((lp.exp() * (lp - lq)).sum(-1)).mean().item())   # mean per-token KL
+    return float(np.mean(tot))
+
 
 FC = [1, 2, 4, 8, 16, 32]; DC = [0.25, 0.5, 1, 2, 4, 8]; SC = [1, 2, 4, 8, 16, 32]; PC = [0.5, 1, 2, 4, 8]
 
@@ -210,7 +242,7 @@ FC = [1, 2, 4, 8, 16, 32]; DC = [0.25, 0.5, 1, 2, 4, 8]; SC = [1, 2, 4, 8, 16, 3
 def sweep(method, grid):
     curve = []
     for x in grid:
-        rem, coll = [], []
+        rem, coll, cleanhit = [], [], []
         for i in TEST:
             tt_t, ids_t = build(demos, POS[i], True)
             tt_c, _ = build(demos, POS[i], False)
@@ -227,8 +259,12 @@ def sweep(method, grid):
                 lt = paysupp(tt_t, TGTid, x); lc = paysupp(tt_c, TGTid, x)
             rem.append(1 - torch.softmax(lt[-1].float(), -1)[TGTid].item() / max(base_tgt[i], 1e-6))
             coll.append(kl_final(clean_ref[i], lc[-1]))
-        curve.append((float(np.mean(rem)), float(np.mean(coll))))
-        print(f"  {method:5} x={x}: ASR-rem {np.mean(rem):.2f}  collateral {np.mean(coll):.3f}", flush=True)
+            cleanhit.append(1.0 if lc[-1, POSid] > lc[-1, NEGid] else 0.0)   # clean review still -> positive
+        coh = coherence_kl(method, x)
+        # store: (ASR-removal, task-collateral-KL, clean-task-accuracy, general-coherence-KL)
+        curve.append((float(np.mean(rem)), float(np.mean(coll)), float(np.mean(cleanhit)), coh))
+        print(f"  {method:5} x={x}: ASR-rem {np.mean(rem):.2f}  taskKL {np.mean(coll):.3f}  "
+              f"clean-acc {np.mean(cleanhit):.2f}  coherenceKL {coh:.4f}", flush=True)
     return curve
 
 
@@ -238,16 +274,18 @@ for m, grid in [("fra", FC), ("dom", DC), ("sae1", SC), ("pay", PC)]:
     print(f"=== {m} ===", flush=True); res[m] = sweep(m, grid)
 
 
-def at(curve, t):
-    xs = [a for a, b in curve]; ys = [b for a, b in curve]
+def at(curve, t, idx):
+    xs = [c[0] for c in curve]; ys = [c[idx] for c in curve]
     if max(xs) < t: return None
     o = np.argsort(xs); return float(np.interp(t, np.array(xs)[o], np.array(ys)[o]))
 
 
-print("\n=== ICLAttack removal: collateral at matched ASR-removal ===", flush=True)
+print("\n=== ICLAttack removal at matched ASR-removal (coherence is the key axis) ===", flush=True)
 for t in (0.3, 0.5):
     print(f" @ {int(t*100)}% ASR-removal:", flush=True)
     for m, lab in [("fra", "FRA cell-cut"), ("dom", "DoM steer"), ("sae1", "single SAE feature"), ("pay", "payload-suppress")]:
-        v = at(res[m], t); print(f"    {lab:20}: {'n/a' if v is None else f'{v:.3f}'}", flush=True)
+        coh = at(res[m], t, 3); acc = at(res[m], t, 2); tk = at(res[m], t, 1)
+        f = lambda v: "n/a" if v is None else f"{v:.4f}"
+        print(f"    {lab:20}: coherenceKL {f(coh)}  clean-acc {f(acc)}  taskKL {f(tk)}", flush=True)
 json.dump(res, open(os.path.join(OUT, "iclattack_removal.json"), "w"), indent=2, default=float)
 print("DONE iclattack_removal", flush=True)
