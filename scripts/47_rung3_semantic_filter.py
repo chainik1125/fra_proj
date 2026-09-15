@@ -38,7 +38,7 @@ MODEL_PATH=os.environ.get("MODEL_PATH","")   # TRACK A: local merged fine-tuned 
 if MODEL_PATH:
     from transformers import AutoModelForCausalLM, AutoTokenizer
     hf=AutoModelForCausalLM.from_pretrained(MODEL_PATH,torch_dtype=torch.float16)
-    tok=AutoTokenizer.from_pretrained(MODEL_PATH)
+    tok=AutoTokenizer.from_pretrained("google/gemma-2-2b")   # base tokenizer; fine-tune does not change it (pinned env cant read the newer saved one)
     model=HookedTransformer.from_pretrained("gemma-2-2b",hf_model=hf,tokenizer=tok,device=dev,dtype=torch.float16); model.eval()
     print(f"[model] fine-tuned from {MODEL_PATH}",flush=True)
 else:
