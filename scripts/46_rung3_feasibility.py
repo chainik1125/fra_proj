@@ -47,10 +47,20 @@ FILLER = ["The weather was mild for the time of year.", "Several people arrived 
 
 # concept: (planted trigger, payload, same-concept probes, unrelated controls)
 CONCEPTS = {
-    "royalty": (" king",  " crown",  [" queen", " prince", " monarch", " emperor", " princess"], [" teacher", " window", " river"]),
-    "canine":  (" dog",   " bone",   [" puppy", " hound", " wolf", " dogs"],                     [" lamp", " bread", " cloud"]),
-    "vehicle": (" car",   " garage", [" truck", " van", " bus", " vehicle"],                     [" apple", " song", " chair"]),
-    "vessel":  (" ship",  " anchor", [" boat", " vessel", " yacht", " ships"],                   [" pencil", " garden", " cup"]),
+    # confirmed concept-level in day-2 feasibility (kept as positive controls)
+    "vehicle": (" car",    " garage",  [" truck", " van", " bus", " vehicle"],            [" apple", " song", " chair"]),
+    "vessel":  (" ship",   " anchor",  [" boat", " vessel", " yacht", " ships"],          [" pencil", " garden", " cup"]),
+    # new candidates for the broader run
+    "money":   (" bank",   " vault",   [" money", " cash", " funds", " coins"],           [" leaf", " chair", " cloud"]),
+    "weather": (" storm",  " shelter", [" rain", " wind", " thunder", " flood"],          [" desk", " apple", " song"]),
+    "fire":    (" fire",   " smoke",   [" flame", " blaze", " fires", " burning"],        [" spoon", " garden", " river"]),
+    "music":   (" music",  " concert", [" song", " melody", " tune", " songs"],           [" brick", " window", " potato"]),
+    "war":     (" army",   " battle",  [" soldier", " troops", " military", " war"],      [" pillow", " lemon", " chair"]),
+    "food":    (" bread",  " oven",    [" cake", " dough", " pastry", " loaf"],            [" rocket", " cloud", " desk"]),
+    "school":  (" school", " lesson",  [" teacher", " student", " class", " pupil"],      [" anchor", " cloud", " spoon"]),
+    "doctor":  (" doctor", " hospital",[" nurse", " patient", " surgeon", " medicine"],   [" guitar", " river", " brick"]),
+    "plant":   (" tree",   " forest",  [" plant", " flower", " leaf", " trees"],          [" engine", " song", " coin"]),
+    "bird":    (" bird",   " nest",    [" birds", " sparrow", " robin", " eagle"],        [" hammer", " song", " desk"]),
 }
 SEEDS = list(range(8))
 
