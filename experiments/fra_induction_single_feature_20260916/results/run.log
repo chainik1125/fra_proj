@@ -1,0 +1,100 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-T0NSLcLfqqLfn0NATdMU1w
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_single_feature_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_single_feature_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+Loaded pretrained model gpt2 into HookedTransformer
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.37s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:13<00:07,  7.74s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:13<00:00,  4.28s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:13<00:00,  4.58s/it]
+/usr/local/lib/python3.11/site-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+RANKED gpt2 bank base 0.9691438674926758 features [6165, 8585, 18735, 5364, 5634, 1765, 7883, 7104, 5402, 20951]
+SWEEP gpt2 bank 0 / 506 seconds 1
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+SWEEP gpt2 bank 100 / 506 seconds 1
+SWEEP gpt2 bank 200 / 506 seconds 2
+SWEEP gpt2 bank 300 / 506 seconds 3
+SWEEP gpt2 bank 400 / 506 seconds 3
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+SWEEP gpt2 bank 500 / 506 seconds 4
+CASE COMPLETE gpt2 bank direct_checks 48 legacy_max_sup_error 5.655952183269974e-07 seconds 5
+RANKED gpt2 fire base 0.9866536259651184 features [18966, 19434, 18735, 5834, 8585, 1765, 6531, 18112, 13497, 17719]
+SWEEP gpt2 fire 0 / 506 seconds 0
+SWEEP gpt2 fire 100 / 506 seconds 1
+SWEEP gpt2 fire 200 / 506 seconds 2
+SWEEP gpt2 fire 300 / 506 seconds 2
+SWEEP gpt2 fire 400 / 506 seconds 3
+SWEEP gpt2 fire 500 / 506 seconds 4
+CASE COMPLETE gpt2 fire direct_checks 58 legacy_max_sup_error 1.0873964051416607e-06 seconds 5
+RANKED gpt2 king base 0.993985116481781 features [2395, 3906, 6495, 20951, 18735, 8585, 1765, 3251, 21311, 5364]
+SWEEP gpt2 king 0 / 506 seconds 0
+SWEEP gpt2 king 100 / 506 seconds 1
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SWEEP gpt2 king 200 / 506 seconds 2
+SWEEP gpt2 king 300 / 506 seconds 2
+SWEEP gpt2 king 400 / 506 seconds 3
+SWEEP gpt2 king 500 / 506 seconds 4
+CASE COMPLETE gpt2 king direct_checks 59 legacy_max_sup_error 8.46329283321623e-08 seconds 5
+RANKED gpt2 doctor base 0.889546275138855 features [21331, 15707, 5484, 6398, 1912, 8585, 20951, 21311, 2433, 13054]
+SWEEP gpt2 doctor 0 / 506 seconds 0
+SWEEP gpt2 doctor 100 / 506 seconds 1
+SWEEPRANKED gpt2 doctor 200 / 506 seconds 2
+ gemma bank base 0.9983408451080322 features [50567, 7499, 16758, 60372, 12920, 60250, 49168, 39703, 63335, 56668]
+SWEEP gemma bank 0 / 506 seconds 1
+SWEEP gpt2 doctor 300 / 506 seconds 2
+SWEEP gpt2 doctor 400 / 506 seconds 3
+SWEEP gpt2 doctor 500 / 506 seconds 4
+SWEEP gemma bank 100 / 506 seconds 5
+CASE COMPLETE gpt2 doctor direct_checks 61 legacy_max_sup_error 3.252539046982861e-07 seconds 5
+COMPLETE gpt2 seconds 45
+SWEEP gemma bank 200 / 506 seconds 9
+SWEEP gemma bank 300 / 506 seconds 12
+SWEEP gemma bank 400 / 506 seconds 17
+SWEEP gemma bank 500 / 506 seconds 20
+CASE COMPLETE gemma bank direct_checks 38 legacy_max_sup_error 0.000606894248241785 seconds 22
+RANKED gemma king base 0.9879088997840881 features [38464, 16758, 54723, 24024, 56211, 49633, 39703, 49168, 62312, 38197]
+SWEEP gemma king 0 / 506 seconds 1
+SWEEP gemma king 100 / 506 seconds 5
+SWEEP gemma king 200 / 506 seconds 9
+SWEEP gemma king 300 / 506 seconds 12
+SWEEP gemma king 400 / 506 seconds 16
+SWEEP gemma king 500 / 506 seconds 19
+CASE COMPLETE gemma king direct_checks 49 legacy_max_sup_error 0.002187792861383042 seconds 22
+RANKED gemma doctor base 0.9946557283401489 features [44027, 47428, 39703, 8933, 59523, 54872, 64845, 62312, 24024, 49168]
+SWEEP gemma doctor 0 / 506 seconds 1
+SWEEP gemma doctor 100 / 506 seconds 5
+SWEEP gemma doctor 200 / 506 seconds 9
+SWEEP gemma doctor 300 / 506 seconds 13
+SWEEP gemma doctor 400 / 506 seconds 16
+SWEEP gemma doctor 500 / 506 seconds 20
+CASE COMPLETE gemma doctor direct_checks 41 legacy_max_sup_error 0.0031601816464169596 seconds 23
+RANKED gemma market base 0.9970152378082275 features [36026, 11458, 23896, 9539, 35044, 13011, 24749, 60250, 59144, 13693]
+SWEEP gemma market 0 / 506 seconds 1
+SWEEP gemma market 100 / 506 seconds 5
+SWEEP gemma market 200 / 506 seconds 8
+SWEEP gemma market 300 / 506 seconds 13
+SWEEP gemma market 400 / 506 seconds 16
+SWEEP gemma market 500 / 506 seconds 19
+CASE COMPLETE gemma market direct_checks 40 legacy_max_sup_error 0.0009112712991691252 seconds 22
+COMPLETE gemma seconds 136
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_single_feature_20260916/results/gpt2.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_single_feature_20260916/results/gemma.json.gz
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-T0NSLcLfqqLfn0NATdMU1w

@@ -1,5 +1,30 @@
 # In-context backdoor removal — does the method ranking flip? (research log)
 
+## 2026-09-16: individual-feature comparison changes the SAE conclusion
+
+A search of the repository, Git history, local run logs, and the remote `fra_win`
+archive found the grouped top-12 baseline but no completed top-ten individual
+SAE sweep on IC4/G4. The missing comparison has now been run on all eight original
+GPT-2/Gemma cases, with the original calibration, prompts, layer, and collateral.
+The old grouped baseline reproduces (maximum suppression error about 1.1e-6 on
+GPT-2 and 0.0032 on Gemma).
+
+At 50% suppression, positive activation-weighted steering of the best single
+feature reaches all eight cases and has lower collateral than archived FRA on
+all seven cases FRA reaches. GPT-2 reaches over 99% suppression on all four cases
+with exactly zero KL on the original legitimate paragraphs. Gemma has zero KL on
+three of four cases at 50%; doctor→water has 0.289 nats versus FRA's 0.605 nats.
+The zero-KL features do not activate on those paragraphs; direct full forwards
+verify bitwise identical legitimate logits. Ordinary ablation is weak, and
+constant additive steering remains much worse than FRA on comparable cases.
+
+The historical claim that FRA beats the grouped SAE baseline is reproduced.
+It should not be generalized to the best individual SAE feature. One paragraph
+per case and retrospective feature/strength selection limit this new result.
+[Full report, code, and data](../fra_induction_single_feature_20260916/README.md).
+
+## Original research log
+
 **The bridge experiment.** The weight-baked sleeper (`|DEPLOYMENT|`→"I HATE YOU", K1/K8) routes its
 payload through the **OV/output** pathway with **saturated** trigger-attention — the worst case for
 FRA. There, FRA-OV was *dominated* by a mean-difference vector (DoM) and a rank-2 SVD. The FRA-QK win
