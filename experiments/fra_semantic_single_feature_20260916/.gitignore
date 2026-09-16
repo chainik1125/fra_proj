@@ -1,0 +1,4 @@
+# Raw local copies and regenerated summaries can exceed the 1 MB commit hook.
+# The lossless .json.gz counterparts are the versioned results.
+results/*.json
+results/analysis.log

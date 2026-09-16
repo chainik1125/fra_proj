@@ -1,0 +1,196 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-DZBEs5HUgSJ9JqFVnLXdSF
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_single_feature_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_single_feature_20260916
+├── 🔨 Created function verify.
+├── 🔨 Created function run.
+├── 🔨 Created function coordinate.
+└── 🔨 Created function check.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:04<00:08,  4.44s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:08<00:04,  4.49s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:09<00:00,  2.63s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:09<00:00,  3.13s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+VERIFY COLLATERAL vessel 0 / 796
+VERIFY COLLATERAL vessel 200 / 796
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+VERIFY COLLATERAL vessel 400 / 796
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:04<00:09,  4.98s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:10<00:05,  5.09s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:10<00:00,  3.07s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:10<00:00,  3.60s/it]
+VERIFY COLLATERAL vessel 600 / 796
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+VERIFY QUERY vessel ship 101:4:6 56 pass 0 elapsed 45
+VERIFY QUERY vessel ships 101:4:6 71 pass 0 elapsed 47
+VERIFY QUERY vessel boat 101:4:6 72 pass 0 elapsed 50
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VERIFY QUERY vessel vessel 101:4:6 61 pass 0 elapsed 53
+VERIFY QUERY vessel yacht 101:4:6 56 pass 0 elapsed 55
+VERIFY COLLATERAL vehicle 0 / 747
+VERIFY QUERY vessel ship 102:1:12 52 pass 0 elapsed 57
+VERIFY QUERY vessel ships 102:1:12 58 pass 0 elapsed 59
+VERIFY QUERY vessel boat 102:1:12 67 pass 0 elapsed 62
+VERIFY COLLATERAL vehicle 200 / 747
+VERIFY QUERY vessel vessel 102:1:12 78 pass 0 elapsed 65
+VERIFY COLLATERALVERIFY QUERY  vehicle 400 / 747
+vessel yacht 102:1:12 56 pass 0 elapsed 67
+VERIFY QUERY vessel ship 103:9:2 52 pass 0 elapsed 69
+VERIFY QUERY vessel ships 103:9:2 70 pass 0 elapsed 72
+VERIFY QUERY vessel boat 103:9:2 65 pass 0 elapsed 74
+VERIFY COLLATERAL vehicle 600 / 747
+VERIFY QUERY vessel vessel 103:9:2 73 pass 0 elapsed 77
+VERIFY QUERY vessel yacht 103:9:2 57 pass 0 elapsed 80
+VERIFY QUERY vessel yacht 102:1:12 1 pass 1 elapsed 80
+VERIFY QUERY vehicle car 101:4:6 54 pass 0 elapsed 57
+DIRECT VERIFICATION COMPLETE vessel 945
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:00,  2.22it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:00<00:00,  2.09it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:00<00:00,  3.02it/s]
+COLLECTED vessel
+VERIFY QUERY vehicle vehicle 101:4:6 66 pass 0 elapsed 61
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+VERIFY QUERY vehicle van 101:4:6 48 pass 0 elapsed 63
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+VERIFY QUERY vehicle bus 101:4:6 50 pass 0 elapsed 66
+VERIFY QUERY vehicle car 102:1:12 48 pass 0 elapsed 69
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VERIFY COLLATERAL bird 0 / 747
+VERIFY QUERY vehicle vehicle 102:1:12 58 pass 0 elapsed 72
+VERIFY COLLATERAL bird 200 / 747
+VERIFY QUERY vehicle van 102:1:12 59 pass 0 elapsed 75
+VERIFY QUERY vehicle bus 102:1:12 57 pass 0 elapsed 78
+VERIFY COLLATERAL bird 400 / 747
+VERIFY QUERY vehicle car 103:9:2 48 pass 0 elapsed 80
+VERIFY COLLATERAL bird 600 / 747
+VERIFY QUERY vehicle vehicle 103:9:2 58 pass 0 elapsed 84
+VERIFY QUERY vehicle van 103:9:2 53 pass 0 elapsed 87
+VERIFY QUERY vehicle van 101:4:6 1 pass 1 elapsed 89
+VERIFY QUERY vehicle vehicle 103:9:2 2 pass 1 elapsed 89
+VERIFY QUERY bird bird 101:4:6 51 pass 0 elapsed 31
+VERIFY QUERY bird birds 101:4:6 58 pass 0 elapsed 34
+DIRECT VERIFICATION COMPLETE vehicle 602
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+VERIFY QUERYCOLLECTED vehicle
+ bird sparrow 101:4:6 62 pass 0 elapsed 36
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.63it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.56it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.21it/s]
+VERIFY QUERY bird eagle 101:4:6 51 pass 0 elapsed 38
+VERIFY QUERY bird bird 102:1:12 52 pass 0 elapsed 40
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+VERIFY QUERY bird birds 102:1:12 48 pass 0 elapsed 42
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+VERIFY QUERY bird sparrow 102:1:12 56 pass 0 elapsed 44
+VERIFY QUERY bird eagle 102:1:12 62 pass 0 elapsed 47
+VERIFY QUERY bird bird 103:9:2 55 pass 0 elapsed 49
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VERIFY QUERY bird birds 103:9:2 57 pass 0 elapsed 51
+VERIFY COLLATERAL fire 0 / 698
+VERIFY QUERY bird sparrow 103:9:2 65 pass 0 elapsed 54
+VERIFY QUERY bird eagle 103:9:2 50 pass 0 elapsed 56
+VERIFY COLLATERAL fire 200 / 698
+VERIFY QUERY bird sparrow 101:4:6 1 pass 1 elapsed 61
+VERIFY QUERY bird sparrow 103:9:2 1 pass 1 elapsed 61
+DIRECT VERIFICATION COMPLETE bird 669
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+VERIFY COLLATERAL fire 400 / 698
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:00,  2.08it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:00<00:00,  2.08it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.98it/s]
+COLLECTED bird
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+VERIFY COLLATERAL fire 600 / 698
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VERIFY QUERY fire fire 101:4:6 56 pass 0 elapsed 41
+VERIFY COLLATERAL war 0 / 796
+VERIFY QUERY fire flame 101:4:6 59 pass 0 elapsed 44
+VERIFY COLLATERAL war 200 / 796
+VERIFY QUERY fire fires 101:4:6 57 pass 0 elapsed 48
+VERIFY QUERYVERIFY COLLATERAL fire burning 101:4:6 64 pass 0 elapsed 51
+ war 400 / 796
+VERIFY QUERY fire fire 102:1:12 55 pass 0 elapsed 55
+VERIFY COLLATERAL war 600 / 796
+VERIFY QUERY fire flame 102:1:12 57 pass 0 elapsed 58
+VERIFY QUERY fire fires 102:1:12 63 pass 0 elapsed 61
+VERIFY QUERY war army 101:4:6 67 pass 0 elapsed 34
+VERIFY QUERY fire burning 102:1:12 82 pass 0 elapsed 65
+VERIFY QUERY war soldier 101:4:6 86 pass 0 elapsed 38
+VERIFY QUERY fire fire 103:9:2 58 pass 0 elapsed 69
+VERIFY QUERY war military 101:4:6 71 pass 0 elapsed 41
+VERIFY QUERY fire flame 103:9:2 59 pass 0 elapsed 72
+VERIFY QUERY war army 102:1:12 62 pass 0 elapsed 43
+VERIFY QUERY war soldier 102:1:12 84 pass 0 elapsed 46
+VERIFY QUERY fire burning 103:9:2 72 pass 0 elapsed 76
+VERIFY QUERY fire fire 101:4:6 1 pass 1 elapsed 77
+VERIFY QUERY war military 102:1:12 68 pass 0 elapsed 49
+DIRECT VERIFICATION COMPLETE fire 683
+VERIFY QUERY war army 103:9:2 60 pass 0 elapsed 51
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.64it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.57it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.23it/s]
+COLLECTED fire
+VERIFY QUERY war soldier 103:9:2 65 pass 0 elapsed 54
+VERIFY QUERY war military 103:9:2 59 pass 0 elapsed 56
+VERIFY QUERY war military 101:4:6 1 pass 1 elapsed 57
+DIRECT VERIFICATION COMPLETE war 623
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+COLLECTED war
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VERIFY COLLATERAL medical 0 / 796
+VERIFY COLLATERAL medical 200 / 796
+VERIFY COLLATERAL medical 400 / 796
+VERIFY COLLATERAL medical 600 / 796
+VERIFY QUERY medical doctor 101:4:6 65 pass 0 elapsed 46
+VERIFY QUERY medical nurse 101:4:6 72 pass 0 elapsed 50
+VERIFY QUERY medical surgeon 101:4:6 67 pass 0 elapsed 53
+VERIFY QUERY medical medicine 101:4:6 74 pass 0 elapsed 57
+VERIFY QUERY medical doctor 102:1:12 57 pass 0 elapsed 60
+VERIFY QUERY medical nurse 102:1:12 82 pass 0 elapsed 65
+VERIFY QUERY medical surgeon 102:1:12 68 pass 0 elapsed 68
+VERIFY QUERY medical medicine 102:1:12 68 pass 0 elapsed 72
+VERIFY QUERY medical doctor 103:9:2 57 pass 0 elapsed 75
+VERIFY QUERY medical nurse 103:9:2 63 pass 0 elapsed 78
+VERIFY QUERY medical surgeon 103:9:2 66 pass 0 elapsed 82
+VERIFY QUERY medical medicine 103:9:2 62 pass 0 elapsed 85
+VERIFY QUERY medical surgeon 101:4:6 1 pass 1 elapsed 87
+VERIFY QUERY medical medicine 101:4:6 1 pass 1 elapsed 87
+VERIFY QUERY medical medicine 102:1:12 2 pass 1 elapsed 87
+DIRECT VERIFICATION COMPLETE medical 805
+COLLECTED medical
+SAVED vessel
+SAVED vehicle
+SAVED bird
+SAVED fire
+SAVED war
+SAVED medical
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-DZBEs5HUgSJ9JqFVnLXdSF

@@ -1,0 +1,173 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-zXzGCRFt1a9Se91U9Zusrw
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_single_feature_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_single_feature_20260916
+├── 🔨 Created function check.
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.09s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.05s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.19s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.43s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.13s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.48s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.47s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.71s/it]
+Loaded pretrained model gemma-2-2b into HookedTransformer
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+VALIDATED vessel [{'feature': 44468, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9599557518959045, 'p_cached': 0.9599557518959045}, {'feature': 44468, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.9590607285499573, 'p_cached': 0.9590607285499573}, {'feature': 44468, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.953478217124939, 'p_cached': 0.953478217124939}]
+COLLATERAL DONE vessel 796 configs
+QUERY DONE vessel 101:4:6 ship 1/15 base_error 0.000306 elapsed 32
+Loaded pretrained model gemma-2-2b into HookedTransformer
+QUERY DONE vessel 101:4:6 ships 2/15 base_error -0.000905 elapsed 37
+VALIDATED vehicle [{'feature': 52001, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9330164194107056, 'p_cached': 0.9330164194107056}, {'feature': 52001, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.9063986539840698, 'p_cached': 0.9063986539840698}, {'feature': 52001, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.9296915531158447, 'p_cached': 0.9296915531158447}]
+QUERY DONE vessel 101:4:6 boat 3/15 base_error -0.001436 elapsed 41
+QUERY DONECOLLATERAL DONE vehicle 747 configs
+ vessel 101:4:6 vessel 4/15 base_error 0.00026 elapsed 46
+QUERY DONE vehicle 101:4:6 car 1/11 base_error 0.000403 elapsed 36
+QUERY DONE vessel 101:4:6 yacht 5/15 base_error 0.001888 elapsed 51
+QUERY DONE vehicle 101:4:6 vehicle 2/11 base_error 0.001092 elapsed 40
+QUERY DONE vessel 102:1:12 ship 6/15 base_error -0.000458 elapsed 57
+QUERY DONE vehicle 101:4:6 van 3/11 base_error 0.000297 elapsed 45
+QUERY DONE vessel 102:1:12 ships 7/15 base_error -0.001771 elapsed 62
+QUERY DONE vehicle 101:4:6 bus 4/11 base_error 0.000273 elapsed 51
+QUERY DONE vessel 102:1:12 boat 8/15 base_error 0.000171 elapsed 67
+QUERY DONE vehicle 102:1:12 car 5/11 base_error 0.000667 elapsed 56
+QUERY DONE vessel 102:1:12 vessel 9/15 base_error 0.000208 elapsed 72
+QUERY DONE vehicle 102:1:12 vehicle 6/11 base_error 0.001846 elapsed 60
+QUERY DONE vessel 102:1:12 yacht 10/15 base_error -0.001748 elapsed 78
+QUERY DONE vehicle 102:1:12 van 7/11 base_error 0.002458 elapsed 65
+QUERY DONE vessel 103:9:2 ship 11/15 base_error -0.000204 elapsed 82
+QUERY DONE vehicle 102:1:12 bus 8/11 base_error -0.001468 elapsed 69
+QUERY DONE vessel 103:9:2 ships 12/15 base_error -0.000807 elapsed 86
+QUERY DONE vehicle 103:9:2 car 9/11 base_error 0.000515 elapsed 74
+QUERY DONE vessel 103:9:2 boat 13/15 base_error -0.00077 elapsed 90
+QUERY DONE vehicle 103:9:2 vehicle 10/11 base_error 0.000954 elapsed 79
+QUERY DONE vessel 103:9:2 vessel 14/15 base_error 0.000114 elapsed 95
+QUERY DONE vehicle 103:9:2 van 11/11 base_error -0.000784 elapsed 84
+QUERY DONECOMPLETE  vessel 103:9:2 yacht 15/15 base_error 0.000276 elapsed 99
+vehicle {'cached_vs_direct': [{'feature': 52001, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9330164194107056, 'p_cached': 0.9330164194107056}, {'feature': 52001, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.9063986539840698, 'p_cached': 0.9063986539840698}, {'feature': 52001, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.9296915531158447, 'p_cached': 0.9296915531158447}], 'max_reference_base_error': 0.002457529306411743, 'max_legacy_suppression_error': 0.02821493177526091, 'max_legacy_kl_relative_error': 0.005563577326534317}
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.31it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.26it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.82it/s]
+COMPLETE vessel {'cached_vs_direct': [{'feature': 44468, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9599557518959045, 'p_cached': 0.9599557518959045}, {'feature': 44468, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.9590607285499573, 'p_cached': 0.9590607285499573}, {'feature': 44468, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.953478217124939, 'p_cached': 0.953478217124939}], 'max_reference_base_error': 0.0018877089023590088, 'max_legacy_suppression_error': 0.010936152744218663, 'max_legacy_kl_relative_error': 0.006668814515148707}
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+COLLECTED vessel
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+COLLECTED vehicle
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.16it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.16it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.66it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VALIDATED bird [{'feature': 22924, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8770228028297424, 'p_cached': 0.8770228028297424}, {'feature': 22924, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8741781115531921, 'p_cached': 0.8741781115531921}, {'feature': 22924, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.8937534093856812, 'p_cached': 0.8937534093856812}]
+Loaded pretrained model gemma-2-2b into HookedTransformer
+VALIDATED fire [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8908906579017639, 'p_cached': 0.8908906579017639}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8815143704414368, 'p_cached': 0.8815143704414368}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.8819259405136108, 'p_cached': 0.8819259405136108}]
+COLLATERAL DONE bird 747 configs
+COLLATERAL DONE fire 698 configs
+QUERY DONE fire 101:4:6 fire 1/11 base_error 0.000947 elapsed 26
+QUERY DONE bird 101:4:6 bird 1/12 base_error -0.000933 elapsed 30
+QUERY DONE fire 101:4:6 flame 2/11 base_error -0.001277 elapsed 30
+QUERY DONE bird 101:4:6 birds 2/12 base_error -0.001856 elapsed 35
+QUERY DONE fire 101:4:6 fires 3/11 base_error -0.000317 elapsed 34
+QUERY DONE bird 101:4:6 sparrow 3/12 base_error -0.000188 elapsed 40
+QUERY DONE fire 101:4:6 burning 4/11 base_error 0.002629 elapsed 38
+QUERY DONE bird 101:4:6 eagle 4/12 base_error 0.003168 elapsed 45
+QUERY DONE fire 102:1:12 fire 5/11 base_error -0.000213 elapsed 42
+QUERY DONE bird 102:1:12 bird 5/12 base_error -0.000345 elapsed 50
+QUERY DONE fire 102:1:12 flame 6/11 base_error -0.000232 elapsed 47
+QUERY DONE bird 102:1:12 birds 6/12 base_error 0.004316 elapsed 55
+QUERY DONE fire 102:1:12 fires 7/11 base_error 0.001762 elapsed 52
+QUERY DONE bird 102:1:12 sparrow 7/12 base_error 7.2e-05 elapsed 60
+QUERY DONE fire 102:1:12 burning 8/11 base_error 0.000913 elapsed 57
+QUERY DONE fire 103:9:2 fire 9/11 base_error -5.4e-05 elapsed 61
+QUERY DONE bird 102:1:12 eagle 8/12 base_error -0.000735 elapsed 65
+QUERY DONE fire 103:9:2 flame 10/11 base_error -0.003295 elapsed 65
+QUERY DONE bird 103:9:2 bird 9/12 base_error -0.000401 elapsed 70
+QUERY DONE fire 103:9:2 burning 11/11 base_error 0.002201 elapsed 69
+QUERY DONE bird 103:9:2 birds 10/12 base_error 0.000811 elapsed 75
+COMPLETE fire {'cached_vs_direct': [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8908906579017639, 'p_cached': 0.8908906579017639}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8815143704414368, 'p_cached': 0.8815143704414368}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.8819259405136108, 'p_cached': 0.8819259405136108}], 'max_reference_base_error': 0.003295034170150757, 'max_legacy_suppression_error': 0.26902451496398805, 'max_legacy_kl_relative_error': 0.036062401364603536}
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.55it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.47it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.11it/s]
+QUERY DONE bird 103:9:2 sparrow 11/12 base_error 0.001378 elapsed 81
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+QUERY DONE bird 103:9:2 eagle 12/12 base_error 0.00105 elapsed 86
+COMPLETE bird {'cached_vs_direct': [{'feature': 22924, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8770228028297424, 'p_cached': 0.8770228028297424}, {'feature': 22924, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8741781115531921, 'p_cached': 0.8741781115531921}, {'feature': 22924, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.8937534093856812, 'p_cached': 0.8937534093856812}], 'max_reference_base_error': 0.004316151142120361, 'max_legacy_suppression_error': 0.014968290635316128, 'max_legacy_kl_relative_error': 0.004322086698956383}
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+COLLECTED bird
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+COLLECTED fire
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.35it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.23it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.78it/s]
+Loaded pretrained model gemma-2-2b into HookedTransformer
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+VALIDATED war [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9026782512664795, 'p_cached': 0.9026782512664795}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8991725444793701, 'p_cached': 0.8991725444793701}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.9068200588226318, 'p_cached': 0.9068200588226318}]
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+COLLATERAL DONE war 796 configs
+QUERY DONE war 101:4:6 army 1/9 base_error -3e-06 elapsed 27
+QUERY DONE war 101:4:6 soldier 2/9 base_error -0.000391 elapsed 31
+Loaded pretrained model gemma-2-2b into HookedTransformer
+QUERY DONE war 101:4:6 military 3/9 base_error 0.003149 elapsed 35
+VALIDATED medical [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8823111057281494, 'p_cached': 0.8823111057281494}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8826421499252319, 'p_cached': 0.8826421499252319}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.899201512336731, 'p_cached': 0.899201512336731}]
+QUERY DONE war 102:1:12 army 4/9 base_error -0.000814 elapsed 41
+COLLATERAL DONE medical 796 configs
+QUERY DONE war 102:1:12 soldier 5/9 base_error -0.002366 elapsed 46
+QUERY DONE medical 101:4:6 doctor 1/12 base_error -0.000217 elapsed 35
+QUERY DONE war 102:1:12 military 6/9 base_error -0.001174 elapsed 51
+QUERY DONE medical 101:4:6 nurse 2/12 base_error 0.000298 elapsed 40
+QUERY DONE war 103:9:2 army 7/9 base_error -0.000127 elapsed 55
+QUERY DONE medical 101:4:6 surgeon 3/12 base_error -0.000264 elapsed 45
+QUERY DONE war 103:9:2 soldier 8/9 base_error -0.000268 elapsed 60
+QUERY DONE medical 101:4:6 medicine 4/12 base_error 0.003111 elapsed 50
+QUERY DONE war 103:9:2 military 9/9 base_error -0.001336 elapsed 64
+COMPLETE war {'cached_vs_direct': [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.9026782512664795, 'p_cached': 0.9026782512664795}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8991725444793701, 'p_cached': 0.8991725444793701}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.9068200588226318, 'p_cached': 0.9068200588226318}], 'max_reference_base_error': 0.0031485557556152344, 'max_legacy_suppression_error': 0.009565363468476695, 'max_legacy_kl_relative_error': 0.006815466135245828}
+COLLECTED war
+QUERY DONE medical 102:1:12 doctor 5/12 base_error -0.000675 elapsed 55
+QUERY DONE medical 102:1:12 nurse 6/12 base_error 0.000281 elapsed 60
+QUERY DONE medical 102:1:12 surgeon 7/12 base_error -9.8e-05 elapsed 65
+QUERY DONE medical 102:1:12 medicine 8/12 base_error -0.001717 elapsed 70
+QUERY DONE medical 103:9:2 doctor 9/12 base_error 0.000138 elapsed 75
+QUERY DONE medical 103:9:2 nurse 10/12 base_error -0.000402 elapsed 80
+QUERY DONE medical 103:9:2 surgeon 11/12 base_error 0.001058 elapsed 85
+QUERY DONE medical 103:9:2 medicine 12/12 base_error 0.000553 elapsed 91
+COMPLETE medical {'cached_vs_direct': [{'feature': 24051, 'mode': 'activation', 'strength': 0, 'max_logit_error': 0.0, 'p_full': 0.8823111057281494, 'p_cached': 0.8823111057281494}, {'feature': 24051, 'mode': 'activation', 'strength': 2, 'max_logit_error': 0.0, 'p_full': 0.8826421499252319, 'p_cached': 0.8826421499252319}, {'feature': 24051, 'mode': 'additive', 'strength': 8, 'max_logit_error': 0.0, 'p_full': 0.899201512336731, 'p_cached': 0.899201512336731}], 'max_reference_base_error': 0.0031109750270843506, 'max_legacy_suppression_error': 0.014659770601990307, 'max_legacy_kl_relative_error': 0.0008339691813323258}
+COLLECTED medical
+SAVED vessel
+SAVED vehicle
+SAVED bird
+SAVED fire
+SAVED war
+SAVED medical
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-zXzGCRFt1a9Se91U9Zusrw
