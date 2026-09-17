@@ -1,0 +1,48 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-bQC4o3urvN1gtmz3zkFZOX
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_restoration_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_restoration_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.45s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:03<00:01,  1.59s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.07s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.20s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED vessel 4
+SAE LOADED vessel 6
+SAE LOADED vessel 8
+SAE LOADED vessel 12
+SAE LOADED vessel 14
+SAE LOADED vessel 15
+SAE LOADED vessel 16
+SAE LOADED vessel 17
+SAE LOADED vessel 18
+SAE LOADED vessel 19
+SAE LOADED vessel 20
+SAE LOADED vessel 21
+SAE LOADED vessel 22
+SAE LOADED vessel 23
+SAE LOADED vessel 24
+LOCATED vessel 1187 pairs
+PREPARED vessel continuation baselines [0.01732029742574751]
+FRA REPRODUCTION vessel max suppression error 0.014131810493723473 max KL relative error 0.008464000175848465
+SWEEP vessel 0 / 30 seconds 92
+VERIFIED vessel 4 configs on every input, pass 0
+COMPLETE vessel seconds 98
+COLLECTED vessel
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel_smoke.part00.json.gz 33948
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-bQC4o3urvN1gtmz3zkFZOX

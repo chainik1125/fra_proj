@@ -162,6 +162,10 @@ def analyze(results_dir):
 
 def write_report(summary, out):
     lines = ['# Single-feature SAE comparison with FRA semantic-filter transfer', '',
+             '**Metric correction:** this historical report measures KL on an independent,',
+             'unpoisoned paragraph. Its zero values do not establish restoration with the',
+             'backdoor present. See the [paired semantic-filter rerun](../../fra_semantic_restoration_20260916/README.md)',
+             'for the corrected continuation and full-query distribution comparisons.', '',
              '**Finding:** activation-weighted steering of individual differential SAE features',
              'beats the saved FRA curves on this benchmark. At 30/50/70% suppression it reaches',
              '52/52 related-word queries, with exact zero KL on the original legitimate paragraphs.',

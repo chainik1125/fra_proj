@@ -1,0 +1,1415 @@
+{
+  "source_commit": "6cf5e54bf4746903722af01d3ff70a869e157f12",
+  "heads": [
+    [
+      6,
+      2
+    ],
+    [
+      15,
+      0
+    ],
+    [
+      18,
+      6
+    ],
+    [
+      6,
+      3
+    ],
+    [
+      21,
+      5
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      14,
+      0
+    ],
+    [
+      17,
+      4
+    ],
+    [
+      22,
+      4
+    ],
+    [
+      20,
+      7
+    ],
+    [
+      19,
+      1
+    ],
+    [
+      17,
+      3
+    ],
+    [
+      8,
+      6
+    ],
+    [
+      19,
+      0
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      22,
+      3
+    ],
+    [
+      12,
+      1
+    ],
+    [
+      23,
+      5
+    ],
+    [
+      16,
+      4
+    ],
+    [
+      24,
+      5
+    ],
+    [
+      22,
+      2
+    ],
+    [
+      18,
+      7
+    ],
+    [
+      16,
+      7
+    ],
+    [
+      18,
+      5
+    ],
+    [
+      24,
+      7
+    ]
+  ],
+  "cases": [
+    {
+      "concept": "vessel",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 44468,
+          "diff": 3.8426742553710938,
+          "on_mean": 3.8426742553710938,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 2,
+          "feature": 24051,
+          "diff": 2.649184226989746,
+          "on_mean": 5.22667932510376,
+          "off_mean": 2.5774950981140137
+        },
+        {
+          "rank": 3,
+          "feature": 56668,
+          "diff": 2.040311574935913,
+          "on_mean": 2.040311574935913,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 4,
+          "feature": 7794,
+          "diff": 1.9180846214294434,
+          "on_mean": 2.4449658393859863,
+          "off_mean": 0.5268812775611877
+        },
+        {
+          "rank": 5,
+          "feature": 38689,
+          "diff": 1.367544174194336,
+          "on_mean": 31.14826011657715,
+          "off_mean": 29.780715942382812
+        },
+        {
+          "rank": 6,
+          "feature": 36963,
+          "diff": 1.0622634887695312,
+          "on_mean": 6.3395094871521,
+          "off_mean": 5.277245998382568
+        },
+        {
+          "rank": 7,
+          "feature": 55221,
+          "diff": 0.9835796356201172,
+          "on_mean": 10.484598159790039,
+          "off_mean": 9.501018524169922
+        },
+        {
+          "rank": 8,
+          "feature": 2498,
+          "diff": 0.7800291776657104,
+          "on_mean": 0.7800291776657104,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 9,
+          "feature": 41036,
+          "diff": 0.7519915103912354,
+          "on_mean": 2.162656545639038,
+          "off_mean": 1.4106650352478027
+        },
+        {
+          "rank": 10,
+          "feature": 97,
+          "diff": 0.6634030342102051,
+          "on_mean": 6.074407577514648,
+          "off_mean": 5.411004543304443
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "ship",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5048757396333116
+        },
+        {
+          "word": "ships",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7127197301222705
+        },
+        {
+          "word": "boat",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5288957882764166
+        },
+        {
+          "word": "vessel",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5258462131302855
+        },
+        {
+          "word": "yacht",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.566304904381169
+        },
+        {
+          "word": "ship",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7038269728094634
+        },
+        {
+          "word": "ships",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.9592701425979401
+        },
+        {
+          "word": "boat",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5971683912967454
+        },
+        {
+          "word": "vessel",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5095198841349883
+        },
+        {
+          "word": "yacht",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6138446872693901
+        },
+        {
+          "word": "ship",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8406897268660906
+        },
+        {
+          "word": "ships",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8715110114690714
+        },
+        {
+          "word": "boat",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8011575045742418
+        },
+        {
+          "word": "vessel",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5271924243935124
+        },
+        {
+          "word": "yacht",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5244319619986331
+        }
+      ],
+      "source_sha256": "8ae88ba77f44d1558633e19d385518793d39b70a1ac5b5dfba44002fe40c709e"
+    },
+    {
+      "concept": "vehicle",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 52001,
+          "diff": 2.3246102333068848,
+          "on_mean": 8.410465240478516,
+          "off_mean": 6.085855007171631
+        },
+        {
+          "rank": 2,
+          "feature": 3963,
+          "diff": 1.8985977172851562,
+          "on_mean": 26.96527862548828,
+          "off_mean": 25.066680908203125
+        },
+        {
+          "rank": 3,
+          "feature": 24051,
+          "diff": 1.8203415870666504,
+          "on_mean": 6.536927700042725,
+          "off_mean": 4.716586112976074
+        },
+        {
+          "rank": 4,
+          "feature": 22924,
+          "diff": 1.793241024017334,
+          "on_mean": 1.793241024017334,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 5,
+          "feature": 36963,
+          "diff": 1.0802383422851562,
+          "on_mean": 5.571718215942383,
+          "off_mean": 4.491479873657227
+        },
+        {
+          "rank": 6,
+          "feature": 97,
+          "diff": 1.0289230346679688,
+          "on_mean": 6.41464900970459,
+          "off_mean": 5.385725975036621
+        },
+        {
+          "rank": 7,
+          "feature": 28150,
+          "diff": 0.9780586957931519,
+          "on_mean": 0.9780586957931519,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 8,
+          "feature": 29673,
+          "diff": 0.5531710982322693,
+          "on_mean": 0.5531710982322693,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 9,
+          "feature": 24024,
+          "diff": 0.47697973251342773,
+          "on_mean": 6.099909782409668,
+          "off_mean": 5.62293004989624
+        },
+        {
+          "rank": 10,
+          "feature": 40724,
+          "diff": 0.47098779678344727,
+          "on_mean": 5.821813583374023,
+          "off_mean": 5.350825786590576
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "car",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5413584768649042
+        },
+        {
+          "word": "vehicle",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7539800737568403
+        },
+        {
+          "word": "van",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8847276014001431
+        },
+        {
+          "word": "bus",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8058851619101703
+        },
+        {
+          "word": "car",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7496747045999462
+        },
+        {
+          "word": "vehicle",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5416619859400827
+        },
+        {
+          "word": "van",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 64
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7651821622384952
+        },
+        {
+          "word": "bus",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 64
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6287526404976247
+        },
+        {
+          "word": "car",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 22924,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7475534062182871
+        },
+        {
+          "word": "vehicle",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5377665751609755
+        },
+        {
+          "word": "van",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 64
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.825231369318106
+        }
+      ],
+      "source_sha256": "81121e030142097b6c512f2f9186f90a88da4a00be39d967dc416eb6b63bb25a"
+    },
+    {
+      "concept": "bird",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 22924,
+          "diff": 5.064517498016357,
+          "on_mean": 5.064517498016357,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 2,
+          "feature": 49633,
+          "diff": 1.8281805515289307,
+          "on_mean": 3.9392943382263184,
+          "off_mean": 2.1111137866973877
+        },
+        {
+          "rank": 3,
+          "feature": 36963,
+          "diff": 1.7696170806884766,
+          "on_mean": 6.951869964599609,
+          "off_mean": 5.182252883911133
+        },
+        {
+          "rank": 4,
+          "feature": 41036,
+          "diff": 1.6388530731201172,
+          "on_mean": 1.6388530731201172,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 5,
+          "feature": 24024,
+          "diff": 1.5792999267578125,
+          "on_mean": 11.540327072143555,
+          "off_mean": 9.961027145385742
+        },
+        {
+          "rank": 6,
+          "feature": 97,
+          "diff": 0.9659881591796875,
+          "on_mean": 6.873338222503662,
+          "off_mean": 5.907350063323975
+        },
+        {
+          "rank": 7,
+          "feature": 39703,
+          "diff": 0.9007555842399597,
+          "on_mean": 1.4106439352035522,
+          "off_mean": 0.5098883509635925
+        },
+        {
+          "rank": 8,
+          "feature": 34994,
+          "diff": 0.8253154754638672,
+          "on_mean": 31.31618881225586,
+          "off_mean": 30.490873336791992
+        },
+        {
+          "rank": 9,
+          "feature": 34296,
+          "diff": 0.8167624473571777,
+          "on_mean": 5.192991733551025,
+          "off_mean": 4.376229286193848
+        },
+        {
+          "rank": 10,
+          "feature": 28982,
+          "diff": 0.7048559188842773,
+          "on_mean": 13.088370323181152,
+          "off_mean": 12.383514404296875
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "bird",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5033147738632033
+        },
+        {
+          "word": "birds",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8142248596345025
+        },
+        {
+          "word": "sparrow",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6214100423318825
+        },
+        {
+          "word": "eagle",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6785293808611892
+        },
+        {
+          "word": "bird",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5229908199545754
+        },
+        {
+          "word": "birds",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5084395074808296
+        },
+        {
+          "word": "sparrow",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7194312731907877
+        },
+        {
+          "word": "eagle",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5286270678364091
+        },
+        {
+          "word": "bird",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 39703,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6171924758338239
+        },
+        {
+          "word": "birds",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 39703,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6055796925181769
+        },
+        {
+          "word": "sparrow",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6047877170130445
+        },
+        {
+          "word": "eagle",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 39703,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5536723714561436
+        }
+      ],
+      "source_sha256": "28b3606ac7f0c93169e0bf0741d47bf28bec929a84ae17b851573b75eb71627c"
+    },
+    {
+      "concept": "fire",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 24051,
+          "diff": 2.238085985183716,
+          "on_mean": 3.559274673461914,
+          "off_mean": 1.3211886882781982
+        },
+        {
+          "rank": 2,
+          "feature": 8153,
+          "diff": 1.4952480792999268,
+          "on_mean": 4.804359436035156,
+          "off_mean": 3.3091113567352295
+        },
+        {
+          "rank": 3,
+          "feature": 62341,
+          "diff": 1.3419275283813477,
+          "on_mean": 4.591897964477539,
+          "off_mean": 3.2499704360961914
+        },
+        {
+          "rank": 4,
+          "feature": 52852,
+          "diff": 1.1554241180419922,
+          "on_mean": 16.199047088623047,
+          "off_mean": 15.043622970581055
+        },
+        {
+          "rank": 5,
+          "feature": 36963,
+          "diff": 0.5541200637817383,
+          "on_mean": 5.728448867797852,
+          "off_mean": 5.174328804016113
+        },
+        {
+          "rank": 6,
+          "feature": 11377,
+          "diff": 0.37802934646606445,
+          "on_mean": 5.296826362609863,
+          "off_mean": 4.918797016143799
+        },
+        {
+          "rank": 7,
+          "feature": 28982,
+          "diff": 0.30013084411621094,
+          "on_mean": 11.496150970458984,
+          "off_mean": 11.196020126342773
+        },
+        {
+          "rank": 8,
+          "feature": 24024,
+          "diff": 0.25084543228149414,
+          "on_mean": 6.772826671600342,
+          "off_mean": 6.521981239318848
+        },
+        {
+          "rank": 9,
+          "feature": 40724,
+          "diff": 0.19620990753173828,
+          "on_mean": 6.013652801513672,
+          "off_mean": 5.817442893981934
+        },
+        {
+          "rank": 10,
+          "feature": 8456,
+          "diff": 0.16468238830566406,
+          "on_mean": 6.625616073608398,
+          "off_mean": 6.460933685302734
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "fire",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 24024,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8017688866499844
+        },
+        {
+          "word": "flame",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 8456,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5470974021409892
+        },
+        {
+          "word": "fires",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 36963,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7500422617570071
+        },
+        {
+          "word": "burning",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 62341,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5353543781740846
+        },
+        {
+          "word": "fire",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 24024,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5071660359673317
+        },
+        {
+          "word": "flame",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 62341,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7335728897647537
+        },
+        {
+          "word": "fires",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 62341,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5215915962337929
+        },
+        {
+          "word": "burning",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 62341,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6626265793290531
+        },
+        {
+          "word": "fire",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 24024,
+            "mode": "activation",
+            "strength": 8
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6573743770933944
+        },
+        {
+          "word": "flame",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 62341,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5597720913082043
+        },
+        {
+          "word": "burning",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 24024,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5800800091372511
+        }
+      ],
+      "source_sha256": "909b3fc3b66cc7f6599037b7abc79f0c1ef15400a479948d28272821f6092427"
+    },
+    {
+      "concept": "war",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 24051,
+          "diff": 4.070285797119141,
+          "on_mean": 6.813234329223633,
+          "off_mean": 2.742948532104492
+        },
+        {
+          "rank": 2,
+          "feature": 34296,
+          "diff": 2.3991427421569824,
+          "on_mean": 3.8879075050354004,
+          "off_mean": 1.488764762878418
+        },
+        {
+          "rank": 3,
+          "feature": 12214,
+          "diff": 1.9524307250976562,
+          "on_mean": 32.889137268066406,
+          "off_mean": 30.93670654296875
+        },
+        {
+          "rank": 4,
+          "feature": 52001,
+          "diff": 1.7260723114013672,
+          "on_mean": 11.53535270690918,
+          "off_mean": 9.809280395507812
+        },
+        {
+          "rank": 5,
+          "feature": 41036,
+          "diff": 1.3998926877975464,
+          "on_mean": 1.3998926877975464,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 6,
+          "feature": 97,
+          "diff": 1.2537989616394043,
+          "on_mean": 5.682736873626709,
+          "off_mean": 4.428937911987305
+        },
+        {
+          "rank": 7,
+          "feature": 36963,
+          "diff": 0.9682111740112305,
+          "on_mean": 5.7367353439331055,
+          "off_mean": 4.768524169921875
+        },
+        {
+          "rank": 8,
+          "feature": 7794,
+          "diff": 0.8808612823486328,
+          "on_mean": 3.4068801403045654,
+          "off_mean": 2.5260188579559326
+        },
+        {
+          "rank": 9,
+          "feature": 28779,
+          "diff": 0.6657381057739258,
+          "on_mean": 4.879161834716797,
+          "off_mean": 4.213423728942871
+        },
+        {
+          "rank": 10,
+          "feature": 39519,
+          "diff": 0.6101884841918945,
+          "on_mean": 1.8573148250579834,
+          "off_mean": 1.2471263408660889
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "army",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5525634568984541
+        },
+        {
+          "word": "soldier",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 8
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6458872036213461
+        },
+        {
+          "word": "military",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5613591157942805
+        },
+        {
+          "word": "army",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5825361093773054
+        },
+        {
+          "word": "soldier",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 6
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6318621419405503
+        },
+        {
+          "word": "military",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5704442702907084
+        },
+        {
+          "word": "army",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6096251349505197
+        },
+        {
+          "word": "soldier",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 8
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5466223460187466
+        },
+        {
+          "word": "military",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 34296,
+            "mode": "activation",
+            "strength": 12
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5568795856122596
+        }
+      ],
+      "source_sha256": "b83b4d3845bc95ceff1ab03a57c5d31354ec3d07de0bd833f5470dd8d353e8a6"
+    },
+    {
+      "concept": "medical",
+      "ranking": [
+        {
+          "rank": 1,
+          "feature": 24051,
+          "diff": 4.216344356536865,
+          "on_mean": 4.216344356536865,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 2,
+          "feature": 44468,
+          "diff": 3.300544261932373,
+          "on_mean": 3.300544261932373,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 3,
+          "feature": 2498,
+          "diff": 1.560586929321289,
+          "on_mean": 1.560586929321289,
+          "off_mean": 0.0
+        },
+        {
+          "rank": 4,
+          "feature": 59523,
+          "diff": 1.5452394485473633,
+          "on_mean": 6.855611801147461,
+          "off_mean": 5.310372352600098
+        },
+        {
+          "rank": 5,
+          "feature": 97,
+          "diff": 1.0558533668518066,
+          "on_mean": 1.6402206420898438,
+          "off_mean": 0.5843672752380371
+        },
+        {
+          "rank": 6,
+          "feature": 36963,
+          "diff": 1.0458059310913086,
+          "on_mean": 6.655617713928223,
+          "off_mean": 5.609811782836914
+        },
+        {
+          "rank": 7,
+          "feature": 7794,
+          "diff": 0.790605366230011,
+          "on_mean": 1.5296058654785156,
+          "off_mean": 0.7390004992485046
+        },
+        {
+          "rank": 8,
+          "feature": 54872,
+          "diff": 0.5851602554321289,
+          "on_mean": 5.184269905090332,
+          "off_mean": 4.599109649658203
+        },
+        {
+          "rank": 9,
+          "feature": 44027,
+          "diff": 0.5639572143554688,
+          "on_mean": 21.586074829101562,
+          "off_mean": 21.022117614746094
+        },
+        {
+          "rank": 10,
+          "feature": 8879,
+          "diff": 0.5443325042724609,
+          "on_mean": 0.5443325042724609,
+          "off_mean": 0.0
+        }
+      ],
+      "previous_winners": [
+        {
+          "word": "doctor",
+          "kind": "planted",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8670290542443818
+        },
+        {
+          "word": "nurse",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.5045316439330274
+        },
+        {
+          "word": "surgeon",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.8194944592933557
+        },
+        {
+          "word": "medicine",
+          "kind": "synonym",
+          "ctx": "101:4:6",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7398051356219908
+        },
+        {
+          "word": "doctor",
+          "kind": "planted",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7805424878572522
+        },
+        {
+          "word": "nurse",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.714790991059343
+        },
+        {
+          "word": "surgeon",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7860347019250086
+        },
+        {
+          "word": "medicine",
+          "kind": "synonym",
+          "ctx": "102:1:12",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 16
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6221295505983323
+        },
+        {
+          "word": "doctor",
+          "kind": "planted",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 44468,
+            "mode": "activation",
+            "strength": 24
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7628490324134072
+        },
+        {
+          "word": "nurse",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.7453385567183377
+        },
+        {
+          "word": "surgeon",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 7794,
+            "mode": "activation",
+            "strength": 32
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6585163527648925
+        },
+        {
+          "word": "medicine",
+          "kind": "synonym",
+          "ctx": "103:9:2",
+          "config": {
+            "feature": 97,
+            "mode": "activation",
+            "strength": 48
+          },
+          "old_kl": 0.0,
+          "old_suppression": 0.6585268694763073
+        }
+      ],
+      "source_sha256": "ec6d4a9fb5041d9551ef3a6433736bff1567c578886ab6f04f22c24e1e3e9b01"
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-2fheK9szUytn1VmGuLjbPp
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_restoration_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_sem
+│   antic_restoration_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:03,  1.84s/it]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.11s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.13s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.26s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.47s/it]
+
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.48s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.47s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.71s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED vessel 4
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED vessel 6
+SAE LOADED vehicle 4
+SAE LOADED vehicle 6
+SAE LOADED vessel 8
+SAE LOADED vehicle 8
+SAE LOADED vessel 12
+SAE LOADED vessel 14
+SAE LOADED vessel 15
+SAE LOADED vehicle 12
+SAE LOADED vehicle 14
+SAE LOADED vehicle 15
+SAE LOADED vessel 16
+SAE LOADED vessel 17
+SAE LOADED vessel 18
+SAE LOADED vehicle 16
+SAE LOADED vehicle 17
+SAE LOADED vehicle 18
+SAE LOADED vessel 19
+SAE LOADED vehicle 19
+SAE LOADED vessel 20
+SAE LOADED vessel 21
+SAE LOADED vessel 22
+SAE LOADED vehicle 20
+SAE LOADED vehicle 21
+SAE LOADED vehicle 22
+SAE LOADED vessel 23
+SAE LOADED vehicle 23
+SAE LOADED vessel 24
+LOCATED vessel 1187 pairs
+SAE LOADED vehicle 24
+LOCATED vehicle 1194 pairs
+PREPARED vessel continuation baselines [0.01732029742574751, 0.012779932620291817, 0.04144086927158519]
+FRA REPRODUCTION vessel max suppression error 0.03150451838083468 max KL relative error 0.008464000175848465
+SWEEP vessel 0 / 508 seconds 199
+PREPARED vehicle continuation baselines [0.014881801097363513, 0.023679730048028168, 0.022727421274613805]
+FRA REPRODUCTION vehicle max suppression error 0.025569006055862653 max KL relative error 0.004259695866670001
+SWEEP vehicle 0 / 508 seconds 208
+SWEEP vessel 50 / 508 seconds 237
+SWEEP vehicle 50 / 508 seconds 248
+SWEEP vessel 100 / 508 seconds 274
+SWEEP vehicle 100 / 508 seconds 286
+SWEEP vessel 150 / 508 seconds 311
+SWEEP vehicle 150 / 508 seconds 328
+SWEEP vessel 200 / 508 seconds 347
+SWEEP vehicle 200 / 508 seconds 370
+SWEEP vessel 250 / 508 seconds 383
+SWEEP vehicle 250 / 508 seconds 408
+SWEEP vessel 300 / 508 seconds 420
+SWEEP vehicle 300 / 508 seconds 448
+SWEEP vessel 350 / 508 seconds 456
+SWEEP vehicle 350 / 508 seconds 486
+SWEEP vessel 400 / 508 seconds 492
+SWEEP vehicle 400 / 508 seconds 524
+SWEEP vessel 450 / 508 seconds 528
+SWEEP vehicle 450 / 508 seconds 563
+SWEEP vessel 500 / 508 seconds 566
+SWEEP vehicle 500 / 508 seconds 604
+VERIFIED vessel 55 configs on every input, pass 0
+COMPLETE vessel seconds 632
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.82it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.72it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.46it/s]
+COLLECTED vessel
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED bird 4
+SAE LOADED bird 6
+SAE LOADED bird 8
+SAE LOADED bird 12
+SAE LOADED bird 14
+SAE LOADED bird 15
+SAE LOADED bird 16
+SAE LOADED bird 17
+SAE LOADED bird 18
+VERIFIED vehicle 46 configs on every input, pass 0
+SAE LOADED bird 19
+SAE LOADED bird 20
+COMPLETE vehicle seconds 663
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+SAE LOADED bird 21
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+COLLECTED vehicle
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.39it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.31it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.88it/s]
+SAE LOADED bird 22
+SAE LOADED bird 23
+SAE LOADED bird 24
+LOCATED bird 1194 pairs
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED fire 4
+PREPARED bird continuation baselines [0.03672355728994294, 0.06135089757063066, 0.06235221130946569]
+SAE LOADED fire 6
+SAE LOADED fire 8
+FRA REPRODUCTION bird max suppression error 0.027461451631812683 max KL relative error 0.0036777288752407678
+SWEEP bird 0 / 508 seconds 58
+SAE LOADED fire 12
+SAE LOADED fire 14
+SAE LOADED fire 15
+SAE LOADED fire 16
+SAE LOADED fire 17
+SAE LOADED fire 18
+SAE LOADED fire 19
+SAE LOADED fire 20
+SAE LOADED fire 21
+SAE LOADED fire 22
+SAE LOADED fire 23
+SAE LOADED fire 24
+LOCATED fire 1188 pairs
+SWEEP bird 50 / 508 seconds 89
+PREPARED fire continuation baselines [0.011342096606837314, 0.012328475404274616, 0.016728912685397914]
+FRA REPRODUCTION fire max suppression error 0.013964866818864996 max KL relative error 0.008839774143753695
+SWEEP fire 0 / 508 seconds 76
+SWEEP bird 100 / 508 seconds 120
+SWEEP fire 50 / 508 seconds 115
+SWEEP bird 150 / 508 seconds 150
+SWEEP bird 200 / 508 seconds 181
+SWEEP fire 100 / 508 seconds 154
+SWEEP bird 250 / 508 seconds 211
+SWEEP fire 150 / 508 seconds 192
+SWEEP bird 300 / 508 seconds 242
+SWEEP fire 200 / 508 seconds 231
+SWEEP bird 350 / 508 seconds 274
+SWEEP fire 250 / 508 seconds 270
+SWEEP bird 400 / 508 seconds 304
+SWEEP bird 450 / 508 seconds 335
+SWEEP fire 300 / 508 seconds 309
+SWEEP bird 500 / 508 seconds 368
+SWEEP fire 350 / 508 seconds 347
+VERIFIED bird 49 configs on every input, pass 0
+SWEEP fire 400 / 508 seconds 385
+COMPLETE bird seconds 419
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.81it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.74it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  2.49it/s]
+COLLECTED bird
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED war 4
+SAE LOADED war 6
+SAE LOADED war 8
+SAE LOADED war 12
+SAE LOADED war 14
+SAE LOADED war 15
+SAE LOADED war 16
+SAE LOADED war 17
+SAE LOADED war 18
+SAE LOADED war 19
+SAE LOADED war 20
+SAE LOADED war 21
+SAE LOADED war 22
+SAE LOADED war 23
+SWEEP fire 450 / 508 seconds 425
+SAE LOADED war 24
+LOCATED war 1200 pairs
+PREPARED war continuation baselines [0.045134061145332964, 0.05600989050764386, 0.07570666662025276]
+FRA REPRODUCTION war max suppression error 0.007347399938493981 max KL relative error 0.008655611075530461
+SWEEP war 0 / 508 seconds 56
+SWEEP fire 500 / 508 seconds 467
+SWEEP war 50 / 508 seconds 81
+SWEEP war 100 / 508 seconds 106
+SWEEP war 150 / 508 seconds 130
+VERIFIED fire 46 configs on every input, pass 0
+COMPLETE fire seconds 525
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:00<00:01,  1.31it/s]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:01<00:00,  1.29it/s]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:01<00:00,  1.84it/s]
+COLLECTED fire
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+SWEEP war 200 / 508 seconds 154
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SAE LOADED medical 4
+SAE LOADED medical 6
+SAE LOADED medical 8
+SAE LOADED medical 12
+SAE LOADED medical 14
+SAE LOADED medical 15
+SAE LOADED medical 16
+SAE LOADED medical 17
+SAE LOADED medical 18
+SAE LOADED medical 19
+SAE LOADED medical 20
+SAE LOADED medical 21
+SWEEP war 250 / 508 seconds 178
+SAE LOADED medical 22
+SAE LOADED medical 23
+SAE LOADED medical 24
+LOCATED medical 1194 pairs
+PREPARED medical continuation baselines [0.017572456718264486, 0.016157028405344553, 0.014754885699069712]
+SWEEP war 300 / 508 seconds 203
+FRA REPRODUCTION medical max suppression error 0.013068450790082453 max KL relative error 0.016294231964745567
+SWEEP medical 0 / 508 seconds 69
+SWEEP war 350 / 508 seconds 227
+SWEEP medical 50 / 508 seconds 110
+SWEEP war 400 / 508 seconds 251
+SWEEP war 450 / 508 seconds 275
+SWEEP medical 100 / 508 seconds 150
+SWEEP war 500 / 508 seconds 301
+SWEEP medical 150 / 508 seconds 190
+VERIFIED war 36 configs on every input, pass 0
+COMPLETE war seconds 333
+COLLECTED war
+SWEEP medical 200 / 508 seconds 231
+SWEEP medical 250 / 508 seconds 273
+SWEEP medical 300 / 508 seconds 314
+SWEEP medical 350 / 508 seconds 356
+SWEEP medical 400 / 508 seconds 397
+SWEEP medical 450 / 508 seconds 438
+SWEEP medical 500 / 508 seconds 481
+VERIFIED medical 51 configs on every input, pass 0
+COMPLETE medical seconds 548
+COLLECTED medical
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part00.json.gz 148783
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part01.json.gz 140398
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part02.json.gz 158116
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part03.json.gz 149102
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part04.json.gz 183368
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vessel.part05.json.gz 42173
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part00.json.gz 159574
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part01.json.gz 125599
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part02.json.gz 138790
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part03.json.gz 132890
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part04.json.gz 156368
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/vehicle.part05.json.gz 38765
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part00.json.gz 115316
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part01.json.gz 149959
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part02.json.gz 167300
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part03.json.gz 148292
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part04.json.gz 155856
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/bird.part05.json.gz 40355
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part00.json.gz 159093
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part01.json.gz 155585
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part02.json.gz 140193
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part03.json.gz 151014
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part04.json.gz 154744
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/fire.part05.json.gz 38673
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part00.json.gz 130018
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part01.json.gz 152521
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part02.json.gz 146623
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part03.json.gz 112458
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part04.json.gz 151576
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/war.part05.json.gz 37514
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part00.json.gz 133385
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part01.json.gz 136718
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part02.json.gz 136313
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part03.json.gz 146221
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part04.json.gz 157794
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_semantic_restoration_20260916/results/medical.part05.json.gz 39573
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-2fheK9szUytn1VmGuLjbPp
