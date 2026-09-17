@@ -173,3 +173,58 @@ this fair primary comparison over optional auxiliary work if time becomes tight.
   analyze.py,frozen.py. batch8 pilot file remains unchanged. No confirmation yet.
 - Latestledger7.73app hours,$26.63. Primaryextra result repacked30shards,largest457106.
   Optional plot_pair_budget.py added,not yet run because its result is pending.
+
+## Update — 22:54 UTC
+
+A100 baseline_scopes app ap-293ST5lyiQeVJCwx7tPxwT,exec60022: profile chosebatch32.
+For32settings×2cases: batch8=2.738s,16=2.580s,32=2.519s. Batch32 peak26.94GiB,
+max targetP difference4.69e-6 andKL difference3.75e-7 vsbatch8. Only~8% throughput
+improvement;403larger batches remain. At22:51 batch10/403,t536s; expectnear2h+
+and resume unchanged if necessary. Imported pilot checkpoints retained.
+
+Narrative refine DONE:495points. Its winner is ONE distinct-ID pair: L17H8,
+Q12530×K0,strength32. TuningKL .03510,supp92.84%,controls27/28; testKL .03011,
+supp91.61%,targets8/8,controls54/56. This is~22%lower testKL than current initial
+strongSAE50(.03860), but expandedSAE andconfirmation remain. Kfeature0 needs causal
+BOS diagnostics before interpreting two semantic factors.
+
+H100 nowruns variant_learn_pairs_narrative_contracts,appap-stKMiJV1Kqm7ziC4wj4Xz1,
+exec17323. Nextrun baseline_extra2_narrative_contracts --fast directly; SKIP separate
+baseline_abs, sinceextra2already computesabsoluteranks andcanrunwithoutabsfile.
+New single_pair.py diagnoses the frozenrefine1pair on32exploratorytestcases with
+all/noBOS/BOS/source/finalquerymasks andactivationprofiles. baseline_extra2 runsit
+first onthe sameGPUallocation, freesmodelmemory, thenrunsits SAEsweep. Resultwill
+contain single_pair_diagnostic andthe standalone remote single_pair_TASK.json.
+Single-pairdiag usesonlyexploratorytest,neverconfirmation. This newhelperandextra2
+have notrunyet; codecompiled. Needcommitaftercurrent24bfd937 (latestpushed).
+
+Pipeline: primaryscopes→polish→confirm→robustness/pair_budget/multi_sae as timepermits.
+Second: learned→extra2(withdiag)→scopes→polish→confirm. Reserve02:16–03:16writing.
+No agents yet; final-hour revieweragents allowed bysprintskill. No confirmationyet.
+
+## 2026-09-17 23:26 UTC — operational deadline update
+
+Writing starts02:16 as planned; existing fixed jobs may finish in background
+until02:46, then stop them. Final delivery/push deadline03:16:27 unchanged. This
+supersedes all earlier02:16 GPU-stop instructions in this status file. Budget
+guard still enforces2 GPUs (one A100,one H100),18 app-hours,$60, including the
+extended upper-bound projection (~$58.7 at23:25). launch_stage.py now supports
+--then polish confirm for automatic final stages, and stops its own app at02:46.
+After02:16 it allows only existing-stage continuation orpolish/confirm. No new
+research code or search design during writing. Existing jobs launched before
+this change still have their original7200s timeout; supervise/resume asneeded.
+
+Current A100scope ap-293ST5lyiQeVJCwx7tPxwT,exec60022, about60/403 batches; expect
+00:40 timeout and resume unchanged via launch_stage.py --stage baseline_scopes_tenants_long
+--log-name baseline_scopes_tenants_long_resume1 --then polish confirm. Current
+H100extra2 ap-BpLZJvTrqD0XxKBAlu3Dcz,exec96754,1,052 batches. When done, run
+baseline_scopes_narrative_contracts --fast --then polish confirm. No separateabs
+stage needed. It already includes the completed single-pair diagnostic.
+
+Single-pair BOS check: full=noBOS exactly,KL .031422,93.52% suppression,4/4 targets,
+27/28controls on32exploratorycases. BOS raw contribution0; BOS-only andfinalquery
+only do notrepair. Source-only repairs but harms2controls; complement haslowerKL
+withoutselected-configurationchange. Local single_pair_narrative_contracts.json.gz
+is22,842bytes. audit_coverage.py nowchecks fullcoarse grid acrossall3SAEscopes;
+run it oncompletedmain/extra/scopes before interpretingconfirmation. No primary
+confirmation yet. Current helper/diagnostic/audit edits need commit after24bfd937.

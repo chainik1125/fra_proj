@@ -1,0 +1,117 @@
+GPU_REQUEST H100!
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-stKMiJV1Kqm7ziC4wj4Xz1
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+├── 🔨 Created function run.
+├── 🔨 Created function run_fast.
+└── 🔨 Created function archive_narrative_a100.
+GPU_REQUEST H100!
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:11,  3.76s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.65s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.28s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.92s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.21s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+LEARN PAIRS {'pool': 'distinct', 'step': 32, 'mean_training_kl_last32': 0.09215425355681739, 'mean_weight': 0.40976619720458984, 'max_weight': 0.5001406073570251} seconds 52
+LEARN PAIRS {'pool': 'distinct', 'step': 64, 'mean_training_kl_last32': 0.04039440953860408, 'mean_weight': 0.5073873400688171, 'max_weight': 0.8035045266151428} seconds 59
+LEARN PAIRS {'pool': 'distinct', 'step': 96, 'mean_training_kl_last32': 0.03169908244167225, 'mean_weight': 0.5864652991294861, 'max_weight': 1.30586838722229} seconds 69
+LEARN PAIRS {'pool': 'distinct', 'step': 128, 'mean_training_kl_last32': 0.025004438897970577, 'mean_weight': 0.627661943435669, 'max_weight': 1.8802697658538818} seconds 76
+LEARN PAIRS {'pool': 'distinct', 'step': 160, 'mean_training_kl_last32': 0.021593111291674037, 'mean_weight': 0.6325483322143555, 'max_weight': 2.423276424407959} seconds 85
+LEARN PAIRS {'pool': 'distinct', 'step': 192, 'mean_training_kl_last32': 0.017785331392112826, 'mean_weight': 0.6748523712158203, 'max_weight': 2.984569549560547} seconds 93
+LEARN PAIRS {'pool': 'distinct', 'step': 224, 'mean_training_kl_last32': 0.01550543904706596, 'mean_weight': 0.7011076807975769, 'max_weight': 3.3606748580932617} seconds 101
+LEARN PAIRS {'pool': 'distinct', 'step': 256, 'mean_training_kl_last32': 0.013955723807554474, 'mean_weight': 0.7117006182670593, 'max_weight': 3.8488430976867676} seconds 108
+LEARN PAIRS {'pool': 'distinct', 'step': 288, 'mean_training_kl_last32': 0.012585176235609435, 'mean_weight': 0.7382090091705322, 'max_weight': 4.255245685577393} seconds 118
+LEARN PAIRS {'pool': 'distinct', 'step': 320, 'mean_training_kl_last32': 0.011413994856719597, 'mean_weight': 0.773046612739563, 'max_weight': 4.764342308044434} seconds 126
+LEARN PAIRS {'pool': 'distinct', 'step': 352, 'mean_training_kl_last32': 0.0106110778566043, 'mean_weight': 0.7963768839836121, 'max_weight': 5.195355415344238} seconds 134
+LEARN PAIRS {'pool': 'distinct', 'step': 384, 'mean_training_kl_last32': 0.010103237851277692, 'mean_weight': 0.8107516169548035, 'max_weight': 5.708768367767334} seconds 142
+LEARN PAIRS {'pool': 'distinct', 'step': 416, 'mean_training_kl_last32': 0.009276596144670331, 'mean_weight': 0.8298115730285645, 'max_weight': 6.029720783233643} seconds 150
+LEARN PAIRS {'pool': 'distinct', 'step': 448, 'mean_training_kl_last32': 0.008736876518912973, 'mean_weight': 0.843660831451416, 'max_weight': 6.375648498535156} seconds 157
+LEARN PAIRS {'pool': 'distinct', 'step': 480, 'mean_training_kl_last32': 0.00829977056945003, 'mean_weight': 0.8684625625610352, 'max_weight': 6.723914623260498} seconds 165
+LEARN PAIRS {'pool': 'distinct', 'step': 512, 'mean_training_kl_last32': 0.00800502638754014, 'mean_weight': 0.875302255153656, 'max_weight': 7.057688236236572} seconds 172
+LEARN PAIRS {'pool': 'global', 'step': 32, 'mean_training_kl_last32': 0.03892911954628588, 'mean_weight': 0.29060477018356323, 'max_weight': 0.624191403388977} seconds 182
+LEARN PAIRS {'pool': 'global', 'step': 64, 'mean_training_kl_last32': 0.022079346389626383, 'mean_weight': 0.3086972236633301, 'max_weight': 1.101974368095398} seconds 189
+LEARN PAIRS {'pool': 'global', 'step': 96, 'mean_training_kl_last32': 0.016796643403489915, 'mean_weight': 0.3651300370693207, 'max_weight': 1.9163050651550293} seconds 199
+LEARN PAIRS {'pool': 'global', 'step': 128, 'mean_training_kl_last32': 0.011917540446988116, 'mean_weight': 0.40865397453308105, 'max_weight': 2.728222131729126} seconds 207
+LEARN PAIRS {'pool': 'global', 'step': 160, 'mean_training_kl_last32': 0.009897645174072685, 'mean_weight': 0.4341205358505249, 'max_weight': 3.4367828369140625} seconds 216
+LEARN PAIRS {'pool': 'global', 'step': 192, 'mean_training_kl_last32': 0.008079620703805046, 'mean_weight': 0.4749898612499237, 'max_weight': 4.145291805267334} seconds 224
+LEARN PAIRS {'pool': 'global', 'step': 224, 'mean_training_kl_last32': 0.006873207722721628, 'mean_weight': 0.5045891404151917, 'max_weight': 4.67795467376709} seconds 232
+LEARN PAIRS {'pool': 'global', 'step': 256, 'mean_training_kl_last32': 0.005910080659675468, 'mean_weight': 0.5332669019699097, 'max_weight': 5.250819206237793} seconds 240
+LEARN PAIRS {'pool': 'global', 'step': 288, 'mean_training_kl_last32': 0.0050304313807455325, 'mean_weight': 0.561781108379364, 'max_weight': 5.695290565490723} seconds 249
+LEARN PAIRS {'pool': 'global', 'step': 320, 'mean_training_kl_last32': 0.004372942322101471, 'mean_weight': 0.5880007147789001, 'max_weight': 6.08840799331665} seconds 257
+LEARN PAIRS {'pool': 'global', 'step': 352, 'mean_training_kl_last32': 0.003946127066519134, 'mean_weight': 0.6223429441452026, 'max_weight': 6.792404651641846} seconds 266
+LEARN PAIRS {'pool': 'global', 'step': 384, 'mean_training_kl_last32': 0.0032032485409312712, 'mean_weight': 0.6495629549026489, 'max_weight': 7.435103893280029} seconds 273
+LEARN PAIRS {'pool': 'global', 'step': 416, 'mean_training_kl_last32': 0.0024648191098614026, 'mean_weight': 0.6610287427902222, 'max_weight': 7.849881172180176} seconds 282
+LEARN PAIRS {'pool': 'global', 'step': 448, 'mean_training_kl_last32': 0.0020194324381833714, 'mean_weight': 0.6913411021232605, 'max_weight': 8.31769847869873} seconds 290
+LEARN PAIRS {'pool': 'global', 'step': 480, 'mean_training_kl_last32': 0.0016018445380624508, 'mean_weight': 0.7179058790206909, 'max_weight': 8.722545623779297} seconds 298
+LEARN PAIRS {'pool': 'global', 'step': 512, 'mean_training_kl_last32': 0.0014193225143723685, 'mean_weight': 0.72064208984375, 'max_weight': 8.80927848815918} seconds 306
+LEARNED SWEEP 0 / 56 seconds 330
+LEARNED SWEEP 1 / 56 seconds 351
+LEARNED SWEEP 2 / 56 seconds 374
+LEARNED SWEEP 3 / 56 seconds 399
+LEARNED SWEEP 4 / 56 seconds 427
+LEARNED SWEEP 5 / 56 seconds 458
+LEARNED SWEEP 6 / 56 seconds 470
+LEARNED SWEEP 7 / 56 seconds 489
+LEARNED SWEEP 8 / 56 seconds 510
+LEARNED SWEEP 9 / 56 seconds 532
+LEARNED SWEEP 10 / 56 seconds 558
+LEARNED SWEEP 11 / 56 seconds 586
+LEARNED SWEEP 12 / 56 seconds 617
+LEARNED SWEEP 13 / 56 seconds 629
+LEARNED SWEEP 14 / 56 seconds 648
+LEARNED SWEEP 15 / 56 seconds 668
+LEARNED SWEEP 16 / 56 seconds 691
+LEARNED SWEEP 17 / 56 seconds 717
+LEARNED SWEEP 18 / 56 seconds 745
+LEARNED SWEEP 19 / 56 seconds 777
+LEARNED SWEEP 20 / 56 seconds 789
+LEARNED SWEEP 21 / 56 seconds 808
+LEARNED SWEEP 22 / 56 seconds 828
+LEARNED SWEEP 23 / 56 seconds 852
+LEARNED SWEEP 24 / 56 seconds 878
+LEARNED SWEEP 25 / 56 seconds 906
+LEARNED SWEEP 26 / 56 seconds 937
+LEARNED SWEEP 27 / 56 seconds 949
+LEARNED SWEEP 28 / 56 seconds 968
+LEARNED SWEEP 29 / 56 seconds 988
+LEARNED SWEEP 30 / 56 seconds 1011
+LEARNED SWEEP 31 / 56 seconds 1038
+LEARNED SWEEP 32 / 56 seconds 1067
+LEARNED SWEEP 33 / 56 seconds 1100
+LEARNED SWEEP 34 / 56 seconds 1113
+LEARNED SWEEP 35 / 56 seconds 1132
+LEARNED SWEEP 36 / 56 seconds 1152
+LEARNED SWEEP 37 / 56 seconds 1175
+LEARNED SWEEP 38 / 56 seconds 1202
+LEARNED SWEEP 39 / 56 seconds 1231
+LEARNED SWEEP 40 / 56 seconds 1263
+LEARNED SWEEP 41 / 56 seconds 1277
+LEARNED SWEEP 42 / 56 seconds 1295
+LEARNED SWEEP 43 / 56 seconds 1317
+LEARNED SWEEP 44 / 56 seconds 1340
+LEARNED SWEEP 45 / 56 seconds 1367
+LEARNED SWEEP 46 / 56 seconds 1398
+LEARNED SWEEP 47 / 56 seconds 1430
+LEARNED SWEEP 48 / 56 seconds 1443
+LEARNED SWEEP 49 / 56 seconds 1463
+LEARNED SWEEP 50 / 56 seconds 1483
+LEARNED SWEEP 51 / 56 seconds 1505
+LEARNED SWEEP 52 / 56 seconds 1532
+LEARNED SWEEP 53 / 56 seconds 1561
+LEARNED SWEEP 54 / 56 seconds 1594
+LEARNED SWEEP 55 / 56 seconds 1607
+SAVED variant_learn_pairs_narrative_contracts 915395
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-stKMiJV1Kqm7ziC4wj4Xz1

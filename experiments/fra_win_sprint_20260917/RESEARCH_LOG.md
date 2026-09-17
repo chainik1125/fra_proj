@@ -190,3 +190,27 @@ is established. Gradient refinement now runs on H100 (ap-NJZRnAr4QHOAc9hxX0wKlF)
 The primary full-scope SAE stage now runs on A100 (ap-0YG1X9X9cIJgXfNc9YyTl0),
 completing no-BOS and whole-document grids over the candidate union. No primary
 confirmation examples have been evaluated.
+
+## 23:18 UTC — learned prose-task search completed
+
+The learned prose-task search finished504 settings. Merged tuning selects
+48 pairs from global_S512_P48 at strength8: tuningKL .004754; exploratory-test
+KL .010386,99.35% suppression,8/8 targets,54/56 controls. Half of its48 pairs have
+identical Q/K feature IDs. The distinct-ID winner is distinct_S512_P48,c16,
+tuningKL .008702; it still needs its own full confirmation evaluation.
+
+H100 now runs baseline_extra2_narrative_contracts, including the frozen single-pair
+causal diagnostic and the stronger SAE absolute-difference/endpoints sweep. Main
+A100 continues the complete308-feature scope grid. Confirmation is still untouched.
+The cost ledger is about$31.45 and8.96 GPU app-wall hours, including queue time.
+
+## 2026-09-17 23:26 UTC — single-pair causal diagnostic
+
+The L17H8 Q12530×K0 single-pair cut has identical full and no-BOS predictions
+on32 exploratory cases: KL .031422,93.52% suppression,4/4 targets,27/28 controls.
+BOS-only steering has effectively zero repair; BOS raw pair magnitude is zero.
+Final-position-only queries also have almost no effect. The source-row mask
+repairs91.14% but lowers control accuracy to26/28. Its complement gets KL .02115
+and92.89% repair with27/28 controls. These diagnostic variants are not retuned
+primary settings. Distinct IDs and the absence of a BOS artifact still do not
+identify two independent semantic concepts. Full diagnostic is saved locally.

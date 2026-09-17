@@ -24,3 +24,15 @@ WARNING:root:You tried to specify center_unembed=True for a model using logit so
 WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
 WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
 Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE SCOPES FEATURES [(10, 37, 17), (17, 57, 25), (21, 59, 17), (22, 54, 15), (28, 59, 26), (32, 42, 19)] imported 0
+BATCH PROFILE {'batch_size': 8, 'seconds_for_32_settings_2_cases': 2.737947463989258, 'peak_allocated_GiB': 25.54722499847412, 'max_target_p_difference_from_batch8': 0.0, 'max_kl_difference_from_batch8': 0.0, 'eligible': True}
+BATCH PROFILE {'batch_size': 16, 'seconds_for_32_settings_2_cases': 2.579514503479004, 'peak_allocated_GiB': 26.013108730316162, 'max_target_p_difference_from_batch8': 0.0014555145730474894, 'max_kl_difference_from_batch8': 0.0001880101659853772, 'eligible': True}
+BATCH PROFILE {'batch_size': 32, 'seconds_for_32_settings_2_cases': 2.5185811519622803, 'peak_allocated_GiB': 26.943367958068848, 'max_target_p_difference_from_batch8': 4.694080304568082e-06, 'max_kl_difference_from_batch8': 3.7494091495026294e-07, 'eligible': True}
+CHOSEN BATCH SIZE 32
+SAE SCOPES SWEEP 0 / 403 best 0.03714957052066627 seconds 144
+SAE SCOPES SWEEP 10 / 403 best 0.03714957052066627 seconds 536
+SAE SCOPES SWEEP 20 / 403 best 0.03714957052066627 seconds 934
+SAE SCOPES SWEEP 30 / 403 best 0.03714957052066627 seconds 1324
+SAE SCOPES SWEEP 40 / 403 best 0.03714957052066627 seconds 1718
+SAE SCOPES SWEEP 50 / 403 best 0.03714957052066627 seconds 2126
+SAE SCOPES SWEEP 60 / 403 best 0.03714957052066627 seconds 2435

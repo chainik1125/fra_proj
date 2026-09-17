@@ -124,3 +124,34 @@ size, save timing/numerical/memory evidence, and keep that size on any resume.
 Every final selected setting still receives ordinary-forward tuning replay.
 Record the old checkpoint hash and per-point measurement batch sizes; preserve
 all primary measurements and the stopped pilot. Confirmation remains untouched.
+
+## 2026-09-17 22:54 UTC — diagnose the single-pair prose candidate
+
+Prose-task gradient refinement selects one pair: layer17, head8, query feature12530
+and key feature0, at strength32. On the exploratory64-case test it reaches KL
+.03011 and91.6% suppression with8/8 targets and54/56 controls correct. Before
+attributing this to two semantic factors, measure all-edge, no-BOS, BOS-only,
+source-row and final-query variants and record endpoint activations and raw pair
+magnitudes on the first32 exploratory test cases. The two distinct IDs alone do
+not establish distinct concepts. baseline_extra2 runs this small diagnostic first
+on the same H100 allocation, preserves it in the result, then runs the unchanged
+SAE ranking/grid procedure. No confirmation inputs are used by the diagnostic.
+Skip a separate baseline_abs stage: baseline_extra2 already computes exactly those
+absolute-difference rankings and can operate without a prior abs result.
+
+## 2026-09-17 23:26 UTC — background completion during the writing hour
+
+Begin writing and review at02:16 UTC as planned. Allow the already specified
+GPU pipeline to finish in the background until02:46 UTC, then stop our remaining
+apps. This supersedes the earlier02:16 GPU-stop planning line. The final sprint
+deadline remains03:16:27 UTC. No new search design starts during the writing hour.
+The launcher can automatically continue a finished scope sweep through polish
+and confirmation, using the frozen procedures already written. After02:16 it
+allows only existing-stage continuation and these final evaluation stages.
+
+The conservative budget check now assumes both existing GPU slots run all the
+way to02:46. At23:25 the estimate is about$32.36 spent plus at most$26.3 remaining,
+below$60; aggregate GPU app time remains below18 hours. Maximum concurrency and
+GPU types remain one A100-80GB and one H100. The launcher stops its own app at the
+absolute deadline. This preserves the full writing hour while allowing completed
+measurements to populate the prepared figures and tables.

@@ -39,8 +39,13 @@ def run(out_dir,commit=None,task='tenants_long'):
     refined=json.loads((out_dir/f'refine_{task}.json').read_text());assert refined['done']
     previous=json.loads(dest.read_text()) if dest.exists() else None
     layers=sorted(SAE_SPECS);suite=variant_suite if task in TASKS else base_suite
-    result={'done':False,'meta':{'task':task,'scope':'all tokens or the entire known retrieved document','sources':{
-        n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_extra2.py','analyze.py','frozen.py','scopes.py','operators.py','data.py','variants.py','common.py']},
+    diagnostic=None
+    if task=='narrative_contracts':
+        from single_pair import run as diagnose
+        diagnostic=diagnose(out_dir,commit,task)
+        gc.collect();torch.cuda.empty_cache()
+    result={'done':False,'single_pair_diagnostic':diagnostic,'meta':{'task':task,'scope':'all tokens or the entire known retrieved document','sources':{
+        n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_extra2.py','single_pair.py','analyze.py','frozen.py','scopes.py','operators.py','data.py','variants.py','common.py']},
         'abs_baseline_sha256':hashlib.sha256(abs_path.read_bytes()).hexdigest() if abs_path.exists() else None,
         'original_search_sources':prior['meta']['sources'],'sae_grid':SAE_GRID,'constant_grid':ADDITIVE_GRID,
         'sleeper_reference':'experiments/multitrigger_sleeper/cloud/modeldiff_baseline_pod.py:570'},

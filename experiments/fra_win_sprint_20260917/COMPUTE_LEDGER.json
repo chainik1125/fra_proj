@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-09-17T22:40:24.979964+00:00",
+  "updated_utc": "2026-09-17T23:24:58.919150+00:00",
   "app_wall_time_includes_queue_and_is_not_billed_gpu_time": true,
   "planning_hourly_rates": {
     "A100-80GB": 3.198528,
@@ -214,14 +214,14 @@
     {
       "app_id": "ap-NJZRnAr4QHOAc9hxX0wKlF",
       "stage": "variant_refine_narrative_contracts",
-      "state": "ephemeral (detached)",
-      "tasks": "1",
+      "state": "stopped",
+      "tasks": "0",
       "created_at": "2026-09-17T15:31:58-07:00",
-      "stopped_at": null,
-      "app_wall_hours": 0.14082776777777778,
+      "stopped_at": "2026-09-17 15:49:04-07:00",
+      "app_wall_hours": 0.285,
       "gpu_request": "H100!",
       "planning_hourly_rate": 4.649328,
-      "estimated_resource_cost_upper_bound": 0.65475448390672
+      "estimated_resource_cost_upper_bound": 1.3250584799999998
     },
     {
       "app_id": "ap-0YG1X9X9cIJgXfNc9YyTl0",
@@ -234,9 +234,45 @@
       "gpu_request": "A100-80GB",
       "planning_hourly_rate": 3.198528,
       "estimated_resource_cost_upper_bound": 0.23633568000000002
+    },
+    {
+      "app_id": "ap-293ST5lyiQeVJCwx7tPxwT",
+      "stage": "baseline_scopes_tenants_long",
+      "state": "ephemeral (detached)",
+      "tasks": "1",
+      "created_at": "2026-09-17T15:40:25-07:00",
+      "stopped_at": null,
+      "app_wall_hours": 0.7427553194444445,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 2.3757236863920004
+    },
+    {
+      "app_id": "ap-stKMiJV1Kqm7ziC4wj4Xz1",
+      "stage": "variant_learn_pairs_narrative_contracts",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T15:49:47-07:00",
+      "stopped_at": "2026-09-17 16:17:30-07:00",
+      "app_wall_hours": 0.46194444444444444,
+      "gpu_request": "H100!",
+      "planning_hourly_rate": 4.649328,
+      "estimated_resource_cost_upper_bound": 2.1477312399999997
+    },
+    {
+      "app_id": "ap-BpLZJvTrqD0XxKBAlu3Dcz",
+      "stage": "baseline_extra2_narrative_contracts",
+      "state": "ephemeral (detached)",
+      "tasks": "1",
+      "created_at": "2026-09-17T16:18:01-07:00",
+      "stopped_at": null,
+      "app_wall_hours": 0.11608865277777777,
+      "gpu_request": "H100!",
+      "planning_hourly_rate": 4.649328,
+      "estimated_resource_cost_upper_bound": 0.539734223842
     }
   ],
-  "total_app_wall_hours": 7.726661101111111,
-  "total_gpu_app_wall_hours": 7.7236055455555555,
-  "estimated_resource_cost_upper_bound": 26.62612863501783
+  "total_app_wall_hours": 9.19162175,
+  "total_gpu_app_wall_hours": 9.188566194444444,
+  "estimated_resource_cost_upper_bound": 32.35962178134511
 }
