@@ -1,0 +1,384 @@
+{
+  "selected": [
+    {
+      "family": "sae_diff_positive",
+      "threshold": null,
+      "config": {
+        "method": "sae",
+        "layer": 21,
+        "feature": 15824,
+        "strength": 32
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.05823434986579633,
+          "target_p": 0.2906712052322945,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9735987141987013
+        },
+        "controls": {
+          "kl": 0.012525720639585172,
+          "target_p": 0.3235490351589924,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9789409212914247
+        },
+        "00": {
+          "kl": 0.0038073906373156012,
+          "target_p": 0.0008239593706563629,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9857406741270205
+        },
+        "10": {
+          "kl": 0.014824490561467826,
+          "target_p": 0.9693379334151293,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.9705452950145755
+        },
+        "01": {
+          "kl": 0.01894528071997209,
+          "target_p": 0.00048521269119164835,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9805367947326785
+        },
+        "11": {
+          "kl": 0.19536023754442983,
+          "target_p": 0.1920377154522005,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9575720929205308
+        },
+        "joint_suppression": 0.7539983483272016,
+        "joint_excess_repair": 0.7679068846072283
+      }
+    },
+    {
+      "family": "sae_diff_positive",
+      "threshold": 0.5,
+      "config": {
+        "method": "sae",
+        "layer": 21,
+        "feature": 15824,
+        "strength": 32
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.05823434986579633,
+          "target_p": 0.2906712052322945,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9735987141987013
+        },
+        "controls": {
+          "kl": 0.012525720639585172,
+          "target_p": 0.3235490351589924,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9789409212914247
+        },
+        "00": {
+          "kl": 0.0038073906373156012,
+          "target_p": 0.0008239593706563629,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9857406741270205
+        },
+        "10": {
+          "kl": 0.014824490561467826,
+          "target_p": 0.9693379334151293,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.9705452950145755
+        },
+        "01": {
+          "kl": 0.01894528071997209,
+          "target_p": 0.00048521269119164835,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9805367947326785
+        },
+        "11": {
+          "kl": 0.19536023754442983,
+          "target_p": 0.1920377154522005,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9575720929205308
+        },
+        "joint_suppression": 0.7539983483272016,
+        "joint_excess_repair": 0.7679068846072283
+      }
+    },
+    {
+      "family": "sae_diff_positive",
+      "threshold": 0.9,
+      "config": {
+        "method": "sae",
+        "layer": 10,
+        "feature": 11818,
+        "strength": 64
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.06032202476037429,
+          "target_p": 0.2521527737146182,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9281137139178597
+        },
+        "controls": {
+          "kl": 0.07029132128890453,
+          "target_p": 0.3320154620845762,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9275463729981744
+        },
+        "00": {
+          "kl": 0.16675027469833606,
+          "target_p": 0.1074865873154944,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9391492118027708
+        },
+        "10": {
+          "kl": 0.027906856459497826,
+          "target_p": 0.8879497577374698,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.8912279060936191
+        },
+        "01": {
+          "kl": 0.0162168327088797,
+          "target_p": 0.0006100412007644213,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9522620010981336
+        },
+        "11": {
+          "kl": 0.030414135174783544,
+          "target_p": 0.012564708604744413,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9298157366769151
+        },
+        "joint_suppression": 0.9839045207225249,
+        "joint_excess_repair": 1.0020539924725784
+      }
+    },
+    {
+      "family": "sae_diff_signed",
+      "threshold": null,
+      "config": {
+        "method": "sae",
+        "layer": 21,
+        "feature": 15824,
+        "strength": 32
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.05823434986579633,
+          "target_p": 0.2906712052322945,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9735987141987013
+        },
+        "controls": {
+          "kl": 0.012525720639585172,
+          "target_p": 0.3235490351589924,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9789409212914247
+        },
+        "00": {
+          "kl": 0.0038073906373156012,
+          "target_p": 0.0008239593706563629,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9857406741270205
+        },
+        "10": {
+          "kl": 0.014824490561467826,
+          "target_p": 0.9693379334151293,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.9705452950145755
+        },
+        "01": {
+          "kl": 0.01894528071997209,
+          "target_p": 0.00048521269119164835,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9805367947326785
+        },
+        "11": {
+          "kl": 0.19536023754442983,
+          "target_p": 0.1920377154522005,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9575720929205308
+        },
+        "joint_suppression": 0.7539983483272016,
+        "joint_excess_repair": 0.7679068846072283
+      }
+    },
+    {
+      "family": "sae_diff_signed",
+      "threshold": 0.5,
+      "config": {
+        "method": "sae",
+        "layer": 21,
+        "feature": 15824,
+        "strength": 32
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.05823434986579633,
+          "target_p": 0.2906712052322945,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9735987141987013
+        },
+        "controls": {
+          "kl": 0.012525720639585172,
+          "target_p": 0.3235490351589924,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9789409212914247
+        },
+        "00": {
+          "kl": 0.0038073906373156012,
+          "target_p": 0.0008239593706563629,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9857406741270205
+        },
+        "10": {
+          "kl": 0.014824490561467826,
+          "target_p": 0.9693379334151293,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.9705452950145755
+        },
+        "01": {
+          "kl": 0.01894528071997209,
+          "target_p": 0.00048521269119164835,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9805367947326785
+        },
+        "11": {
+          "kl": 0.19536023754442983,
+          "target_p": 0.1920377154522005,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9575720929205308
+        },
+        "joint_suppression": 0.7539983483272016,
+        "joint_excess_repair": 0.7679068846072283
+      }
+    },
+    {
+      "family": "sae_diff_signed",
+      "threshold": 0.9,
+      "config": {
+        "method": "sae",
+        "layer": 10,
+        "feature": 11818,
+        "strength": 64
+      },
+      "tuning": {
+        "all": {
+          "kl": 0.06032202476037429,
+          "target_p": 0.2521527737146182,
+          "clean_target_p": 0.24023564741104053,
+          "poison_target_p": 0.43175910537684103,
+          "correct": 1.0,
+          "label_mass": 0.9281137139178597
+        },
+        "controls": {
+          "kl": 0.07029132128890453,
+          "target_p": 0.3320154620845762,
+          "clean_target_p": 0.31560116746667943,
+          "poison_target_p": 0.3154668476878821,
+          "correct": 1.0,
+          "label_mass": 0.9275463729981744
+        },
+        "00": {
+          "kl": 0.16675027469833606,
+          "target_p": 0.1074865873154944,
+          "clean_target_p": 0.0003719970225761106,
+          "poison_target_p": 0.0003408542906981893,
+          "correct": 1.0,
+          "label_mass": 0.9391492118027708
+        },
+        "10": {
+          "kl": 0.027906856459497826,
+          "target_p": 0.8879497577374698,
+          "clean_target_p": 0.9461500821369992,
+          "poison_target_p": 0.9454879611730576,
+          "correct": 1.0,
+          "label_mass": 0.8912279060936191
+        },
+        "01": {
+          "kl": 0.0162168327088797,
+          "target_p": 0.0006100412007644213,
+          "clean_target_p": 0.00028142324046284705,
+          "poison_target_p": 0.000571727599890437,
+          "correct": 1.0,
+          "label_mass": 0.9522620010981336
+        },
+        "11": {
+          "kl": 0.030414135174783544,
+          "target_p": 0.012564708604744413,
+          "clean_target_p": 0.01413908724412391,
+          "poison_target_p": 0.780635878443718,
+          "correct": 1.0,
+          "label_mass": 0.9298157366769151
+        },
+        "joint_suppression": 0.9839045207225249,
+        "joint_excess_repair": 1.0020539924725784
+      }
+    }
+  ],
+  "source_sha256": {
+    "experiment.py": "1d3f390d6bc2e7be354eeba3ea700ffb4324ed803cf6073329dfc1c0d1ed1f3c",
+    "design.py": "1a62415fcce593ef67fa7e30f8d26502ef3fd75b632fc1634b57e54fbf1d01f4",
+    "fra_selected.py": "8ab69774904f631cbe8c1271c1b8a0fdab0184fe1dd4f65e96ffc1daea1a0178",
+    "PROTOCOL.md": "b272b09187ff19a0b94fd7a0706d52c6f38c5d282858e9ba105200e4fd6f04da",
+    "reference/selection.json": "66e75425ec72601b8ce77e4cdc60e7b8e800e54433625d7a5edd93f66b9921a8"
+  },
+  "selection_rule": "Identical tuning objective, restricted to the original poison-minus-clean top ten per layer; no test metrics used."
+}

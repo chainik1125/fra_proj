@@ -1,0 +1,45 @@
+{
+  "file": "feasibility_print_9b",
+  "model": "gemma-2-9b-it",
+  "format": "routing_table",
+  "payload": "Print",
+  "clean_accuracy": 1,
+  "control_accuracy": 1,
+  "joint_target_increase": 0.7262309739016928,
+  "largest_control_target_change": 0.001027531921863556,
+  "passed": true,
+  "corners": {
+    "00": {
+      "clean_target_p": 0.00028128062604082515,
+      "poison_target_p": 0.00025955934142984916,
+      "poison_restricted_target_p": 0.00026340882686781697,
+      "clean_accuracy": 1,
+      "poison_accuracy": 1,
+      "label_mass": 0.985929861664772
+    },
+    "10": {
+      "clean_target_p": 0.9468229562044144,
+      "poison_target_p": 0.9457954242825508,
+      "poison_restricted_target_p": 0.9983968362212181,
+      "clean_accuracy": 1,
+      "poison_accuracy": 1,
+      "label_mass": 0.9473140984773636
+    },
+    "01": {
+      "clean_target_p": 0.0003041638074137154,
+      "poison_target_p": 0.0006516348080367607,
+      "poison_restricted_target_p": 0.000681759974668239,
+      "clean_accuracy": 1,
+      "poison_accuracy": 1,
+      "label_mass": 0.9597892984747887
+    },
+    "11": {
+      "clean_target_p": 0.04312451690202579,
+      "poison_target_p": 0.7693554908037186,
+      "poison_restricted_target_p": 0.8411281779408455,
+      "clean_accuracy": 1,
+      "poison_accuracy": 0.125,
+      "label_mass": 0.9151163473725319
+    }
+  }
+}

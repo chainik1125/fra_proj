@@ -1,5 +1,15 @@
 # Semantic filtering with the corrected restoration metric
 
+> **Normalization audit notice (2026-09-16):** This archived run used
+> `normalize_activations=True` in the inherited Gemma Scope wrapper. The
+> [Gemma Scope paper, §3.1](https://storage.googleapis.com/gemma-scope/gemma-scope-report.pdf)
+> states that released weights already absorb the fixed training normalization;
+> extra per-token normalization is not required. These numbers reproduce the
+> archived implementation, but the native-SAE comparison needs to be rerun before
+> treating its relative performance as settled. The compound semantic experiment
+> in `experiments/fra_compound_semantic_20260916/` corrects this for both methods
+> and records a reconstruction audit. Original data and code are retained.
+
 This reruns the single-feature baseline on Indranil's six-concept semantic-filter
 benchmark with the poisoned context present throughout steering. The reference is
 the same context with the planted payload omitted, followed by the same legitimate

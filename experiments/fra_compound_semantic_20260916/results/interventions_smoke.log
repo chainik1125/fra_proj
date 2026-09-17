@@ -1,0 +1,39 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lCmidiDhcBtiVkm4mxAjoH
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.51s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:10<00:10,  5.34s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:17<00:06,  6.05s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.38s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.86s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE LOADED 10 layer_9/width_16k/average_l0_88
+SAE LOADED 21 layer_20/width_16k/average_l0_91
+SAE LOADED 32 layer_31/width_16k/average_l0_76
+NORMALIZATION AUDIT [{'layer': 10, 'native_mean_l0': 88.71659851074219, 'legacy_mean_l0': 25.890689849853516, 'native_relative_squared_error': 0.1580417901277542, 'legacy_relative_squared_error': 0.37640389800071716}, {'layer': 21, 'native_mean_l0': 123.37247467041016, 'legacy_mean_l0': 9.076923370361328, 'native_relative_squared_error': 0.13622315227985382, 'legacy_relative_squared_error': 0.9885369539260864}, {'layer': 32, 'native_mean_l0': 80.60324096679688, 'legacy_mean_l0': 10.044534683227539, 'native_relative_squared_error': 0.10666597634553909, 'legacy_relative_squared_error': 2.606675624847412}]
+CALIBRATED 10 SAE features 4 endpoint union 246 192
+CALIBRATED 21 SAE features 4 endpoint union 363 268
+CALIBRATED 32 SAE features 4 endpoint union 247 109
+PREPARED tuning 4 seconds 83
+SWEEP 0 / 12 points 4 seconds 84
+SWEEP 10 / 12 points 42 seconds 89
+SELECTION FROZEN 5 configs; loading test for first time
+PREPARED test 4 seconds 96
+COMPLETE 108 seconds
+SAVED interventions_smoke 82383
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lCmidiDhcBtiVkm4mxAjoH

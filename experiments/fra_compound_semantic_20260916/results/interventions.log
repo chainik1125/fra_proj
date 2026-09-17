@@ -1,0 +1,149 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-QLi1SpVbXU5g5YddiGKCXG
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.57s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.86s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:02,  2.94s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:10<00:00,  2.65s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:10<00:00,  2.72s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE LOADED 10 layer_9/width_16k/average_l0_88
+SAE LOADED 21 layer_20/width_16k/average_l0_91
+SAE LOADED 32 layer_31/width_16k/average_l0_76
+NORMALIZATION AUDIT [{'layer': 10, 'native_mean_l0': 88.71659851074219, 'legacy_mean_l0': 25.890689849853516, 'native_relative_squared_error': 0.1580417901277542, 'legacy_relative_squared_error': 0.37640389800071716}, {'layer': 21, 'native_mean_l0': 123.37247467041016, 'legacy_mean_l0': 9.076923370361328, 'native_relative_squared_error': 0.13622315227985382, 'legacy_relative_squared_error': 0.9885369539260864}, {'layer': 32, 'native_mean_l0': 80.60324096679688, 'legacy_mean_l0': 10.044534683227539, 'native_relative_squared_error': 0.10666597634553909, 'legacy_relative_squared_error': 2.606675624847412}]
+CALIBRATED 10 SAE features 18 endpoint union 521 359
+CALIBRATED 21 SAE features 18 endpoint union 723 585
+CALIBRATED 32 SAE features 20 endpoint union 420 218
+RESUMED 204 points, identical calibrated features and pairs
+PREPARED tuning 16 seconds 72
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 10, 'feature': 12085, 'strength': 64} tuning:1:1:11
+SWEEP 60 / 205 points 244 seconds 94
+SWEEP 70 / 205 points 284 seconds 110
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 32} tuning:1:1:11
+NONFINITE {'method': 'sae', 'layer': 21, 'feature': 1295, 'strength': 64} tuning:1:1:11
+SWEEP 80 / 205 points 324 seconds 125
+SWEEP 90 / 205 points 364 seconds 141
+SWEEP 100 / 205 points 404 seconds 156
+SWEEP 110 / 205 points 444 seconds 171
+SWEEP 120 / 205 points 484 seconds 187
+SWEEP 130 / 205 points 524 seconds 199
+SWEEP 140 / 205 points 564 seconds 208
+SWEEP 150 / 205 points 604 seconds 217
+SWEEP 160 / 205 points 644 seconds 226
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:0:1:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:0:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:0:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:0:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:0:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:1:00
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:1:10
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:1:01
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 16} tuning:1:1:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 32} tuning:1:1:11
+NONFINITE {'method': 'sae', 'layer': 32, 'feature': 6919, 'strength': 64} tuning:1:1:11
+SWEEP 170 / 205 points 684 seconds 235
+SWEEP 180 / 205 points 724 seconds 244
+SWEEP 190 / 205 points 764 seconds 253
+SWEEP 200 / 205 points 803 seconds 268
+SELECTION FROZEN 4 configs; loading test for first time
+PREPARED test 48 seconds 302
+COMPLETE 340 seconds
+SAVED interventions 1258430
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-QLi1SpVbXU5g5YddiGKCXG

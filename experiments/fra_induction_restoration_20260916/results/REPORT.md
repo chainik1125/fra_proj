@@ -1,5 +1,15 @@
 # Restoration of clean continuations with the backdoor present
 
+> **Normalization audit notice (2026-09-16):** This archived run used
+> `normalize_activations=True` in the inherited Gemma Scope wrapper. The
+> [Gemma Scope paper, §3.1](https://storage.googleapis.com/gemma-scope/gemma-scope-report.pdf)
+> states that released weights already absorb the fixed training normalization;
+> extra per-token normalization is not required. These numbers reproduce the
+> archived implementation, but the native-SAE comparison needs to be rerun before
+> treating its relative performance as settled. The compound semantic experiment
+> in `experiments/fra_compound_semantic_20260916/` corrects this for both methods
+> and records a reconstruction audit. Original data and code are retained.
+
 **Metric correction:** the earlier zero KL measured an intervention on a separate
 unpoisoned paragraph. This run compares the unsteered model with an unpoisoned
 primer against the steered model with a poisoned primer, while both read the

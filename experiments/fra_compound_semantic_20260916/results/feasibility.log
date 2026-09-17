@@ -1,0 +1,28 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-UXK7dmlfw5qGvg68mPKNKz
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_com
+│   pound_semantic_20260916
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:04<00:08,  4.10s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:08<00:04,  4.57s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:09<00:00,  2.85s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:09<00:00,  3.27s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+FEASIBILITY exception_note seconds 36
+FEASIBILITY resolved_cases seconds 41
+FEASIBILITY routing_table seconds 47
+SAVED feasibility 45395
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-UXK7dmlfw5qGvg68mPKNKz

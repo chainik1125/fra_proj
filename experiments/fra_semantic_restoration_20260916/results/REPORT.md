@@ -1,5 +1,15 @@
 # Semantic filtering: recovery with the poisoned context present
 
+> **Normalization audit notice (2026-09-16):** This archived run used
+> `normalize_activations=True` in the inherited Gemma Scope wrapper. The
+> [Gemma Scope paper, §3.1](https://storage.googleapis.com/gemma-scope/gemma-scope-report.pdf)
+> states that released weights already absorb the fixed training normalization;
+> extra per-token normalization is not required. These numbers reproduce the
+> archived implementation, but the native-SAE comparison needs to be rerun before
+> treating its relative performance as settled. The compound semantic experiment
+> in `experiments/fra_compound_semantic_20260916/` corrects this for both methods
+> and records a reconstruction audit. Original data and code are retained.
+
 Gemma-2-2b; six original concepts, three original contexts each, all 52 related-word
 and 18 planted-word queries. Frozen top ten planted-minus-no-payload SAE features.
 FRA is freshly measured with the exact original 25 heads and 48 pairs per head.
