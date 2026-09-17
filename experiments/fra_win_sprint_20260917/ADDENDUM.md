@@ -46,14 +46,13 @@ both. Distinct feature IDs alone do not establish two independent semantic facto
 
 ## 2026-09-17 20:59 UTC — intervention-capacity diagnostic
 
-A48-pair FRA edit changes many feature relationships across several layers. To
+A 48-pair FRA edit changes many feature relationships across several layers. To
 assess how much the one-feature restriction contributes to its apparent advantage,
-prepare an additional learned SAE activation baseline with up to48 feature
+prepare an additional learned SAE activation baseline with up to 48 feature
 coefficients. Two pools use the FRA endpoints or the calibration-gradient ranking;
-each also includes the best single-feature candidates. Test global and whole-
-document scopes, fit512 calibration steps with model and SAE weights frozen, then
+each also includes the best single-feature candidates. Test global, whole-document, and all-except-BOS scopes, fit 512 calibration steps with model and SAE weights frozen, then
 select snapshot/scale on tuning. Keep this result separate from the requested
-single-feature comparison. This tests four learned activation interventions; it
+single-feature comparison. This tests six learned activation interventions; it
 does not establish an optimum over every possible multi-feature SAE intervention.
 
 Code and selection rules were specified before primary confirmation results.
@@ -73,10 +72,10 @@ case. Constant steering is remeasured. Add this completed source to the merged
 selection before coefficient refinement and confirmation.
 
 Allow one H100 alongside the existing A100 to fit the stronger comparisons into
-the10-hour sprint. This supersedes the GPU-type planning line in PROTOCOL.md;
-the two-GPU,18 aggregate GPU-hour and$60 limits remain. At published rates, with
-four CPU cores and64GiB memory per job, the planning rates are$3.198528/hour for
-A100 and$4.649328/hour for H100; combined peak$7.847856/hour. The remaining
+the 10-hour sprint. This supersedes the GPU-type planning line in PROTOCOL.md;
+the two-GPU, 18 aggregate GPU-hour and $60 limits remain. At published rates, with
+four CPU cores and 64 GiB memory per job, the planning rates are $3.198528/hour for
+A100 and $4.649328/hour for H100; combined peak $7.847856/hour. The remaining
 pre-writing window still fits the total cap under this conservative estimate.
 Prices verified at https://modal.com/pricing and GPU choices at
 https://modal.com/docs/guide/gpu. Use H100! to keep the hardware type fixed.
@@ -86,3 +85,14 @@ search_narrative_contracts_a100_pilot.json on the result volume. Restarted that
 search fresh on H100; no checkpoints mix A100/H100 measurements. The original
 completed task and its remaining baseline runs continue on A100. The ledger now
 tracks the two GPU rates separately and distinguishes the brief CPU archive job.
+
+## 2026-09-17 21:39 UTC — pair-count curve
+
+Add a secondary FRA comparison at fixed maximum pair counts 1, 4, 16, 48 and 144,
+for both unrestricted and distinct-ID pair pools. Choose the best setting at
+50% and 90% tuning suppression with at least 95% control accuracy. Replay tuning
+through the ordinary forward path, then freeze all choices before this stage
+constructs confirmation examples. Report the entire curve, including absent
+eligible settings and confirmation failures. This checks how many pairs the
+observed advantage requires; it cannot establish two independent semantic concepts.
+Run after primary confirmation if time permits. Primary selections do not change.

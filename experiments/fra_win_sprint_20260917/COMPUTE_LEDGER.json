@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-09-17T21:25:51.891012+00:00",
+  "updated_utc": "2026-09-17T21:54:17.738594+00:00",
   "app_wall_time_includes_queue_and_is_not_billed_gpu_time": true,
   "planning_hourly_rates": {
     "A100-80GB": 3.198528,
@@ -110,10 +110,10 @@
       "tasks": "1",
       "created_at": "2026-09-17T13:08:58-07:00",
       "stopped_at": null,
-      "app_wall_hours": 1.2816363922222223,
+      "app_wall_hours": 1.7554829427777778,
       "gpu_request": "A100-80GB",
       "planning_hourly_rate": 3.198528,
-      "estimated_resource_cost_upper_bound": 4.09934988634176
+      "estimated_resource_cost_upper_bound": 5.61496134599712
     },
     {
       "app_id": "ap-2hTOzg2hy9UyN9bjOtvXP2",
@@ -182,10 +182,10 @@
       "tasks": "1",
       "created_at": "2026-09-17T14:20:03-07:00",
       "stopped_at": null,
-      "app_wall_hours": 0.09691417,
+      "app_wall_hours": 0.5707607205555555,
       "gpu_request": "H100!",
       "planning_hourly_rate": 4.649328,
-      "estimated_resource_cost_upper_bound": 0.4505857641777599
+      "estimated_resource_cost_upper_bound": 2.6536537993791196
     },
     {
       "app_id": "ap-abkTFQjO7WadUxz9d1IsOt",
@@ -200,7 +200,7 @@
       "estimated_resource_cost_upper_bound": 6.111111111111112e-05
     }
   ],
-  "total_app_wall_hours": 5.363272784444444,
-  "total_gpu_app_wall_hours": 5.360217228888889,
-  "estimated_resource_cost_upper_bound": 17.28546908163063
+  "total_app_wall_hours": 6.3109658855555555,
+  "total_gpu_app_wall_hours": 6.3079103299999995,
+  "estimated_resource_cost_upper_bound": 21.00414857648735
 }

@@ -25,6 +25,9 @@ def execute(stage):
     elif stage.startswith('multi_sae_'):
         from multi_sae import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('multi_sae_'))
+    elif stage.startswith('pair_budget_'):
+        from pair_budget import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('pair_budget_'))
     elif stage.startswith('robustness_'):
         from robustness import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('robustness_'))

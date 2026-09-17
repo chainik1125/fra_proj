@@ -26,25 +26,33 @@ def draw(result,out,threshold=.9):
     assert result['done'];out=Path(out);out.mkdir(exist_ok=True,parents=True)
     items=[('Poisoned document',result['baseline'],'#979797'),
            ('Best single SAE feature',point(result,'sae_strong',threshold),'#d2773d'),
-           ('FRA: all pair candidates',point(result,'fra',threshold),'#23799a'),
-           ('FRA: distinct feature IDs',point(result,'fra_distinct',threshold),'#3b8d65')]
+           ('FRA: selected QK pairs',point(result,'fra',threshold),'#23799a'),
+           ('FRA: distinct-ID QK pairs',point(result,'fra_distinct',threshold),'#3b8d65')]
     items=[x for x in items if x[1] and x[1]['valid']];x=np.arange(len(items))
-    fig,axes=plt.subplots(1,2,figsize=(10.2,4.4),layout='constrained')
-    for ax,field,title in [(axes[0],'kl','Distance to the clean-document model ↓'),(axes[1],'suppression','Poisoned-target probability suppressed ↑')]:
-        values=[p['summary']['all']['kl'] if field=='kl' else p['summary']['suppression']*100 for _,p,_ in items]
+    fig,axes=plt.subplots(1,3,figsize=(13.2,4.7),layout='constrained')
+    for ax,field,title in [(axes[0],'kl','Distance to clean output ↓'),(axes[1],'suppression','Poisoned-target suppression ↑'),(axes[2],'controls','Correct control answers ↑')]:
+        values=[p['summary']['all']['kl'] if field=='kl' else p['summary']['suppression']*100 if field=='suppression' else p['summary']['controls']['correct']*100 for _,p,_ in items]
         ax.barh(x,values,color=[c for _,_,c in items],height=.61);ax.invert_yaxis()
         ax.set_yticks(x,[a for a,_,_ in items] if field=='kl' else []);ax.set_title(title,fontsize=11)
+        upper=max(values)
         for i,((name,p,color),v) in enumerate(zip(items,values)):
             if field=='kl':
                 lo,hi=interval(p['rows'],'kl');ax.plot([lo,hi],[i,i],color='#333333',lw=1.2)
                 ax.text(max(v,hi)+max(values)*.025,i,f'{v:.4f}',va='center',fontsize=9)
+                upper=max(upper,hi)
+            elif field=='controls':
+                s=p['summary']['controls'];n=s['n'];correct=round(s['correct']*n)
+                ax.text(v+2,i,f'{correct}/{n}',va='center',fontsize=9)
             else:ax.text(v+2,i,f'{v:.1f}%',va='center',fontsize=9)
         ax.grid(axis='x',alpha=.15);ax.set_axisbelow(True);ax.spines[['top','right','left']].set_visible(False)
-        if field=='kl':ax.set_xlabel('Mean next-token KL (nats)');ax.set_xlim(0,max(values)*1.32)
-        else:
-            ax.set_xlabel('Reduction from the unedited poisoned model (%)');ax.set_xlim(0,115)
+        if field=='kl':ax.set_xlabel('Mean next-token KL (nats)');ax.set_xlim(0,upper*1.32)
+        elif field=='suppression':
+            ax.set_xlabel('Reduction in Print probability (%)');ax.set_xlim(min(0,min(values)*1.1),118)
             ax.axvline(threshold*100,ls='--',lw=.8,color='#777777')
-    fig.suptitle(f'Fresh confirmation: settings chosen at ≥{threshold*100:.0f}% suppression on tuning',fontsize=13)
+        else:
+            ax.set_xlabel('Accuracy (%)');ax.set_xlim(0,125)
+            ax.axvline(95,ls='--',lw=.8,color='#777777')
+    fig.suptitle(f'Fresh confirmation: choices frozen at ≥{threshold*100:.0f}% tuning suppression\n96 incidents; dashed lines show the repair and control requirements',fontsize=13)
     fig.savefig(out/f'confirmation_{int(threshold*100)}.png',dpi=180);plt.close(fig)
     # Every factorial corner is visible; the final column is legitimate reuse.
     corners=sorted(set(r['corner'] for r in items[0][1]['rows']));arr=[]
