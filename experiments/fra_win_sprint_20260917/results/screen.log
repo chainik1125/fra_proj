@@ -1,0 +1,50 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-fSj6scMc3cqCgH594SXONI
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:17<00:51, 17.02s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:45<00:47, 23.81s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [01:30<00:33, 33.64s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [02:04<00:00, 33.46s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [02:04<00:00, 31.03s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+BEHAVIOR routing clean 0.9375 controls 1.0 joint 0.7933998256921768 gate True
+HEAD SCREEN routing 0 seconds 181
+HEAD SCREEN routing 7 seconds 187
+HEAD SCREEN routing 14 seconds 192
+HEAD SCREEN routing 21 seconds 196
+HEAD SCREEN routing 28 seconds 199
+HEAD SCREEN routing 35 seconds 201
+TOP HEADS routing [(17, 9, 'row', 1.0281, 0.652), (22, 4, 'row', 1.1521, 0.685), (19, 11, 'row', 1.1531, 0.684), (20, 9, 'row', 1.1832, 0.694), (18, 5, 'row', 1.3497, 0.729), (22, 4, 'payload', 1.3609, 0.732), (26, 12, 'row', 1.3727, 0.733), (28, 8, 'payload', 1.4061, 0.741), (28, 8, 'row', 1.4064, 0.741), (26, 12, 'payload', 1.4072, 0.739), (22, 5, 'row', 1.431, 0.743), (16, 15, 'row', 1.4766, 0.752)]
+BEHAVIOR tenants clean 0.875 controls 1.0 joint 0.8793577253818512 gate True
+HEAD SCREEN tenants 0 seconds 211
+HEAD SCREEN tenants 7 seconds 220
+HEAD SCREEN tenants 14 seconds 227
+HEAD SCREEN tenants 21 seconds 232
+HEAD SCREEN tenants 28 seconds 236
+HEAD SCREEN tenants 35 seconds 239
+TOP HEADS tenants [(28, 8, 'payload', 1.4957, 0.837), (28, 12, 'payload', 1.4964, 0.834), (28, 8, 'row', 1.5065, 0.838), (28, 12, 'row', 1.5068, 0.836), (26, 12, 'row', 1.5812, 0.845), (26, 12, 'payload', 1.5814, 0.845), (17, 9, 'row', 1.6136, 0.849), (28, 4, 'payload', 1.6346, 0.853), (34, 14, 'payload', 1.6351, 0.85), (34, 14, 'row', 1.6352, 0.85), (28, 4, 'row', 1.6456, 0.854), (37, 14, 'row', 1.6473, 0.847)]
+BEHAVIOR tenants_long clean 1.0 controls 1.0 joint 0.8351160287857056 gate True
+HEAD SCREEN tenants_long 0 seconds 249
+HEAD SCREEN tenants_long 7 seconds 260
+HEAD SCREEN tenants_long 14 seconds 269
+HEAD SCREEN tenants_long 21 seconds 276
+HEAD SCREEN tenants_long 28 seconds 281
+HEAD SCREEN tenants_long 35 seconds 284
+TOP HEADS tenants_long [(28, 8, 'payload', 1.9175, 0.831), (28, 8, 'row', 1.9179, 0.83), (28, 12, 'row', 1.9305, 0.831), (28, 12, 'payload', 1.9429, 0.833), (26, 12, 'row', 1.9562, 0.834), (26, 12, 'payload', 1.9687, 0.836), (17, 9, 'row', 2.085, 0.848), (28, 4, 'payload', 2.0972, 0.852), (34, 14, 'row', 2.1248, 0.85), (34, 14, 'payload', 2.1248, 0.85), (28, 4, 'row', 2.1361, 0.855), (19, 11, 'row', 2.137, 0.853)]
+SAVED screen 144739
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-fSj6scMc3cqCgH594SXONI

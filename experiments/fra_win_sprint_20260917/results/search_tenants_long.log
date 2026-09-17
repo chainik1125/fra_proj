@@ -1,0 +1,21 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-DyfEfTOpUTjWjWfs3O1ml0
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.80s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:06<00:06,  3.05s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:09<00:03,  3.14s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.83s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.91s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
