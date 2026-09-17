@@ -236,3 +236,92 @@ DoM wins.
 Consequence: to make a TRAINED-IN concept that FRA could remove, the association would need to remain
 attention-routed after training (e.g. trained across many synonyms so it rides the concept feature,
 not a direct MLP mapping). That is the concept-level bake still to run.
+
+## Day 4 (Sep 16) -- Dmitry meeting: semantic filter tied on the simple task; pivot to conjunction
+
+Dmitry re-ran the semantic-filter eval (his earlier codex run had an eval bug). Done properly,
+single-SAE-feature *additive* steering **ties or beats** FRA on the simple task (his table: single
+feature is best on doctor->patient, king->crown, and the Gemma rows). Reason: the password task is
+gated by ONE concept (the trigger), so removing that one feature does the same job. FRA's collateral
+Pareto edge is real but too small to carry a paper on the simple task.
+
+Verdict (agreed): the simple filter is not a standalone win. FRA only wins on a **conjunction** --
+behaviour gated by the co-occurrence of two individually-common concepts, where single-feature must
+damage all uses of one endpoint while the FRA cell spares both. This is exactly [[plan_B]] B1.
+
+New process (Dmitry): `proposals/experiments_to_run/` folder in the repo; each file = experiment /
+rationale / expected result; he wires an auto-runner that pulls from it. Created README + B1
+(controlled conjunction) + B4 (conjunctive jailbreak). Timeline: abstract Sep 18 EOD, paper Sep 25
+EOD; meeting Sep 18 6:50pm Urbana.
+
+Baseline correction that bites our scripts: single-feature baseline = ONE feature, ADDITIVE (add/sub
+one decoder vector, sweep coeff), NOT directional, NOT multi-feature. scripts/53 sae1 must match.
+
+Mechanism honesty (found while building B1): induction copies the token AFTER a matched key, so a
+naive "A B -> payload" plant is still single-concept (that is why the filter tied). A genuine cell
+needs query-content=A, key-content=B, A!=B. Wrote scripts/54_b1_conjunction_screen.py -- forward
+passes only, screens (i) cross-concept semantic induction (A-query attends B-key) and (ii) two-token
+compound key, keeping any construction where the PAIR fires (P>=0.2) but each marginal stays low
+(<0.1). Gate before spending GPU on interventions. Queued to run when a node frees / on login node.
+
+## Day 4 (Sep 16) cont. -- B1 conjunction feasibility screen (scripts/54), result
+
+Ran the forward-pass screen on gemma-2-2b base (H100, NSEED=8). Two naive constructions:
+
+(i) cross-concept semantic induction (A-query -> B-key -> payload; guard/vault, captain/gold,
+    sentry/treasure): pair P(payload) = 0.002-0.004 (~zero) for all. Base Gemma does NOT do
+    cross-concept A->B copy. Construction dead.
+
+(ii) two-token compound key (red+fox->nine, iron+gate, blue+moon): pair = 0.72-0.87 (fires),
+    A_only = 0.001-0.009 (first token alone: no), B_only = 0.40-0.51 (SECOND token alone: YES).
+    So it is gated by the token adjacent to the payload (induction copies token-after-key), i.e.
+    single-concept, not conjunctive. CONJ=False.
+
+Conclusion: naive induction plants are inherently single-key -- the same reason the simple semantic
+filter tied single-SAE-feature. Neither cheap construction yields a genuine AND. The screen ruled
+them out before spending GPU on interventions.
+
+Fix identified: force each marginal to be AMBIGUOUS so only the pair disambiguates. Plant a SET of
+bigrams sharing tokens -- red fox->NINE, blue fox->THREE, red owl->SEVEN. Then "fox" alone cannot
+decide NINE vs THREE (B_only drops) and only "red fox" retrieves NINE. This is a true conjunction and
+matches the magnitude-law reuse condition (endpoints common, pair rare). Next screen: v2 with the
+ambiguous-bigram set; keep only if pair>=0.2 AND both marginals <~0.1.
+
+### B1 v2 (ambiguous bigrams, few-shot list format) -- result
+
+red fox->nine: pair=0.079 (red+novel 0.052, novel+fox 0.043); iron gate->four: pair=0.147 (0.119/0.097);
+blue moon->eight: pair=0.076 (0.039/0.036). CONJ=False for all.
+
+Two readings: (a) the conjunction SIGNAL is present -- pair > either marginal-with-novel-partner in all
+3 (~1.5-2x) -- so the pair does carry information a single token does not. (b) But the pair P is far
+too LOW (0.08-0.15 << 0.2): the few-shot LIST format ("red fox: nine. ...") binds the mapping weakly.
+Compare v1 (ii) which used the "password recall" format and bound the pair at 0.72-0.87.
+
+Fix -> v3: marry the two. Use the STRONG password-recall format from v1(ii) but with AMBIGUOUS tokens
+from v2: "The password for red fox is nine. ... for blue fox is three. ... for red owl is seven. ...
+Remember the password for red fox:". Expect high pair (strong recall) AND low marginal (fox/red each
+ambiguous). If that lands (pair high, both novel-partner marginals low), we have the conjunction to
+build B1 on.
+
+### B1 v3 (password-recall format + ambiguous bigrams) -- CONJUNCTION CONFIRMED (Sep 17, 00:27)
+
+gemma-2-2b base, H100, NSEED=8. Format: filler + "The password for <A> <B> is <pay>." x3 (tokens
+shared across pairs) + filler + "Remember the password for <A> <B>:".
+
+  red+fox->nine:   pair=0.601  red+novel=0.045  novel+fox=0.038  CONJ=True
+  iron+gate->four: pair=0.675  iron+novel=0.082 novel+gate=0.072 CONJ=True
+  blue+moon->eight:pair=0.656  blue+novel=0.036 novel+moon=0.031 CONJ=True
+
+Clean conjunction on all 3: pair triggers the payload at ~0.6-0.68 while either token with a NOVEL
+partner is ~0.03-0.08 (8-15x gap). Neither token alone determines the payload -- only the pair. This
+is the AND that single-SAE-feature cannot express (removing A's feature breaks all A-pairs; removing
+B's breaks all B-pairs; only the cell is surgical). B1 unblocked.
+
+What made it work: STRONG binding format (password-recall, from v1 ii; pair~0.8 single-mapping) + token
+AMBIGUITY (each token maps to multiple payloads, from v2). v2's few-shot-list format bound too weakly
+(pair~0.08); v1's single-mapping wasn't ambiguous (B_only~0.5). v3 = both.
+
+NEXT (B1 proper): plant this conjunction, run FRA cell-cut vs single-SAE-feature (additive) vs DoM vs
+payload-suppress, coherence/collateral measured on A-only and B-only (novel-partner) text at matched
+payload-removal. Report WORST-case over the two collateral sets. Pre-check: position-mask the pair's
+attention to confirm attention-routed (expected yes -- in-context retrieval).
