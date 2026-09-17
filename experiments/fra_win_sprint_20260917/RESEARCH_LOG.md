@@ -99,7 +99,7 @@ Learned search completed 504 settings. Overall tuning winner: global_S256_P48,
 strength8, 48 pairs across five layers and23 heads, with48 unique endpoints.
 26/48 pairs share their Q and K feature ID. Tuning KL .005532, suppression94.64%,
 all32 answers correct. Exploratory test: KL .008472, suppression91.77%, all8
-objectives repaired,55/56 controls correct, and7/8 shared-conjunction controls
+target answers correct,55/56 controls correct, and7/8 shared-conjunction controls
 correct. Queue accuracy equals full-vocabulary top-token accuracy. The one wrong
 shared-conjunction test case has clean Print probability .214 and edited Print
 probability .385; the answer error must not automatically be attributed to FRA.
@@ -120,3 +120,38 @@ neighboring intervals twice. No fresh confirmation outputs have been generated.
 Extra implementation audit passed all16 heads at each of the six SAE sites.
 Maximum relative rotated Q/K error was .000799; anchored pair contributions agree
 with their entries in the full token-pair matrix. Variant screening is running.
+
+## 20:53 UTC — first causal diagnostic
+
+The main search hit its expected7200-second timeout after saving6,796 settings
+(batch970/1094). App ap-DyfEfTOpUTjWjWfs3O1ml0 stopped at20:47:41. Use the free GPU
+for the pre-confirmation diagnostics, then resume this search unchanged.
+
+Global48-pair winner, first two exploratory-test lexical blocks (32 cases):
+full edit KL .010968, suppression92.2%; excluding BOS edges KL .007298,
+suppression91.8%. BOS-only edit suppresses5.3%. BOS accounts for only0.49% of
+summed absolute raw pair-term magnitude. This candidate does not rely on the
+anomalous SAE reconstruction at BOS.
+
+Source-row-to-later-token cuts alone suppress27.9%; their complement suppresses
+36.8%. Edges with either endpoint in the source row suppress30.1%. The complete
+repair therefore uses distributed edits, rather than a single isolated row-read
+operation. Removing layers17/21/22/28 reduces suppression to78.3/75.2/81.9/76.0%;
+omitting the lone layer10 pair retains91.0%. Shuffling K endpoints within each
+layer (five fixed seeds, same Q endpoints and head counts) gives only10.0–21.2%
+suppression and KL .1197–.1559. Pair identity and several layers matter.
+
+The clean model itself is wrong on one of the four shared-conjunction cases in
+this subset. It is the same case as the sole previously reported FRA test error.
+The full FRA edit introduces no new control errors on this subset. Record clean
+reference agreement and introduced errors in confirmation, alongside absolute
+accuracy; an unchanged aggregate accuracy can otherwise conceal exchanged errors.
+
+The distinct-ID winner is now receiving the same diagnostic. Confirmation is
+still untouched. Keep primary settings frozen by tuning, without selecting the
+no-BOS or layer-omission variants from these exploratory diagnostics.
+
+The poisoned baseline is already correct on3/8 exploratory-test target cases.
+Thus the global winner repairs5 wrong target answers and preserves3 already
+correct target answers; "8/8 correct" must not be described as8 repaired errors.
+The poisoned baseline has55/56 control answers correct.

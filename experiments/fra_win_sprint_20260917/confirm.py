@@ -8,7 +8,8 @@ from analyze import merged_selection,comparison,cfgkey
 from common import LAST,render,metric,summarize,atomic
 from data import LABELS,suite as base_suite
 from variants import TASKS,suite as variant_suite
-from scopes import mask
+from scope_mask import scope_mask
+from retention import agreement
 from operators import Operators,SAE_SPECS
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'reference'))
@@ -36,7 +37,7 @@ def edited(op,tokens,source,cfg,row=None):
     c=cfg['strength']
     if cfg['method']=='sae':
         l=cfg['layer'];f=cfg['feature'];dec=op.saes[l].W_dec[f].float()
-        scope=mask(model.tokenizer,row,tokens.device)[None] if cfg.get('scope','all')=='document' else 1.
+        scope=scope_mask(model.tokenizer,row,tokens.device,cfg.get('scope','all'))
         def hook(x,hook):
             z=op.encode(l,x)[...,f,None] if cfg.get('intervention','activation')=='activation' else 1.
             return (x.float()-c*z*dec*scope).to(x.dtype)
@@ -61,13 +62,13 @@ def edited(op,tokens,source,cfg,row=None):
 def run(out_dir,commit=None,task='tenants_long',source_names=None,tag=None,split='confirmation'):
     torch.set_num_threads(4);torch.manual_seed(0);torch.backends.cuda.matmul.allow_tf32=False
     start=time.time();out_dir=Path(out_dir);tag=task if tag is None else tag
-    source_names=source_names or [f'{stage}_{task}' for stage in ['search','refine','learn_pairs','baseline_extra','polish']]
+    source_names=source_names or [f'{stage}_{task}' for stage in ['search','refine','learn_pairs','baseline_extra','baseline_nobos','polish']]
     suite=variant_suite if task in TASKS else base_suite
     sources=[json.loads((out_dir/f'{name}.json').read_text()) for name in source_names]
     assert all(r['done'] and r['selection_frozen_before_test'] for r in sources)
     selection=merged_selection(sources)
     freeze={'task':task,'source_names':source_names,'source_sha256':{name:hashlib.sha256((out_dir/f'{name}.json').read_bytes()).hexdigest() for name in source_names},
-        'evaluation_sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['confirm.py','scopes.py','variants.py','data.py','analyze.py','operators.py','common.py']},
+        'evaluation_sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['confirm.py','retention.py','scope_mask.py','scopes.py','variants.py','data.py','analyze.py','operators.py','common.py']},
         'selection':selection,'frozen_at_unix':time.time(),'split':split}
     freeze_path=out_dir/f'frozen_{tag}.json'
     if freeze_path.exists():
@@ -90,7 +91,7 @@ def run(out_dir,commit=None,task='tenants_long',source_names=None,tag=None,split
     saes={l:GemmaScopeSAE(*SAE_SPECS[l],normalize_activations=False) for l in sorted(layers)};op=Operators(model,saes)
     result={'done':False,'freeze':freeze,'rows':[],'points':[{'source_index':si,'config':cfg,'rows':[]} for (si,k),cfg in winners.items()],
         'baseline':{'config':{'method':'none','strength':0},'rows':[]},'clean':{'rows':[]},'comparisons':[],'validation':[],
-        'sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['confirm.py','scopes.py','variants.py','operators.py','data.py','common.py','analyze.py']}}
+        'sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['confirm.py','retention.py','scope_mask.py','scopes.py','variants.py','operators.py','data.py','common.py','analyze.py']}}
     def save():
         result['seconds']=time.time()-start;atomic(out_dir/f'confirmation_{tag}.json',result)
         if commit:commit()
@@ -121,6 +122,8 @@ def run(out_dir,commit=None,task='tenants_long',source_names=None,tag=None,split
         if i%16==0:print('CONFIRMATION',i//2,'/',len(rr)//2,'seconds',round(time.time()-start),flush=True);save()
     for p in result['points']+[result['baseline'],result['clean']]:
         p['valid']=not any(r.get('invalid') for r in p['rows']);p['summary']=summarize(p['rows']) if p['valid'] else None
+    for p in result['points']+[result['baseline']]:
+        if p['valid']:p['clean_reference_agreement']=agreement(p['rows'],result['clean']['rows'])
     def point(family,threshold):
         s=next(s for s in selection if s['family']==family and s['threshold']==threshold)
         return next((p for p in result['points'] if p['source_index']==s['source_index'] and p['config']==s['config']),None)

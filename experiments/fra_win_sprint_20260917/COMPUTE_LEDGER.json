@@ -1,7 +1,11 @@
 {
-  "updated_utc": "2026-09-17T20:48:08.221840+00:00",
+  "updated_utc": "2026-09-17T21:25:51.891012+00:00",
   "app_wall_time_includes_queue_and_is_not_billed_gpu_time": true,
-  "planning_rate_per_running_gpu_hour": 3.198528,
+  "planning_hourly_rates": {
+    "A100-80GB": 3.198528,
+    "H100!": 4.649328,
+    "CPU": 0.02
+  },
   "apps": [
     {
       "app_id": "ap-DyfEfTOpUTjWjWfs3O1ml0",
@@ -10,7 +14,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T11:47:15-07:00",
       "stopped_at": "2026-09-17 13:47:41-07:00",
-      "app_wall_hours": 2.007222222222222
+      "app_wall_hours": 2.007222222222222,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 6.420156479999999
     },
     {
       "app_id": "ap-QnTxJb12nyuS7EgOiJUjp6",
@@ -19,7 +26,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T12:19:52-07:00",
       "stopped_at": "2026-09-17 13:04:55-07:00",
-      "app_wall_hours": 0.7508333333333334
+      "app_wall_hours": 0.7508333333333334,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 2.40156144
     },
     {
       "app_id": "ap-pEby60LXWjQbZG2AEsUl3r",
@@ -28,7 +38,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T11:54:01-07:00",
       "stopped_at": "2026-09-17 12:15:50-07:00",
-      "app_wall_hours": 0.3636111111111111
+      "app_wall_hours": 0.3636111111111111,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 1.16302032
     },
     {
       "app_id": "ap-bVsB7RAyeNqBspGO7z71TL",
@@ -37,7 +50,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T11:43:17-07:00",
       "stopped_at": "2026-09-17 11:52:06-07:00",
-      "app_wall_hours": 0.14694444444444443
+      "app_wall_hours": 0.14694444444444443,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.47000591999999997
     },
     {
       "app_id": "ap-mpfvt5ZvCQBV7PbRu2Noct",
@@ -46,7 +62,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T11:41:22-07:00",
       "stopped_at": "2026-09-17 11:46:33-07:00",
-      "app_wall_hours": 0.08638888888888889
+      "app_wall_hours": 0.08638888888888889,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.27631728
     },
     {
       "app_id": "ap-PhQ8HFhXniWzT0CRZhUE9c",
@@ -55,7 +74,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T10:35:57-07:00",
       "stopped_at": "2026-09-17 10:37:15-07:00",
-      "app_wall_hours": 0.021666666666666667
+      "app_wall_hours": 0.021666666666666667,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.06930144
     },
     {
       "app_id": "ap-fSj6scMc3cqCgH594SXONI",
@@ -64,7 +86,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T17:22:28+00:00",
       "stopped_at": "2026-09-17T17:28:07+00:00",
-      "app_wall_hours": 0.09416666666666666
+      "app_wall_hours": 0.09416666666666666,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.30119471999999997
     },
     {
       "app_id": "ap-K86ft0KZtvQwIkR5r5GLVu",
@@ -73,7 +98,10 @@
       "tasks": "0",
       "created_at": "2026-09-17T13:05:37-07:00",
       "stopped_at": "2026-09-17 13:08:06-07:00",
-      "app_wall_hours": 0.04138888888888889
+      "app_wall_hours": 0.04138888888888889,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.13238352
     },
     {
       "app_id": "ap-TPZKfdZnEgXKfwkUI7adT2",
@@ -82,17 +110,97 @@
       "tasks": "1",
       "created_at": "2026-09-17T13:08:58-07:00",
       "stopped_at": null,
-      "app_wall_hours": 0.6528394000000001
+      "app_wall_hours": 1.2816363922222223,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 4.09934988634176
     },
     {
       "app_id": "ap-2hTOzg2hy9UyN9bjOtvXP2",
       "stage": "mechanism_pre_tenants_long",
-      "state": "ephemeral (detached)",
+      "state": "stopped",
       "tasks": "0",
       "created_at": "2026-09-17T13:48:06-07:00",
+      "stopped_at": "2026-09-17 13:51:38-07:00",
+      "app_wall_hours": 0.058888888888888886,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.18835775999999999
+    },
+    {
+      "app_id": "ap-bqVfxmablBmmKEIcam7zAw",
+      "stage": "variant_search_narrative_contracts",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T14:14:29-07:00",
+      "stopped_at": "2026-09-17 14:19:07-07:00",
+      "app_wall_hours": 0.07722222222222222,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.24699743999999998
+    },
+    {
+      "app_id": "ap-U6lfncBlhuRkxQ3InffDbP",
+      "stage": "cards_table_screen",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T14:11:45-07:00",
+      "stopped_at": "2026-09-17 14:13:34-07:00",
+      "app_wall_hours": 0.03027777777777778,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.09684432
+    },
+    {
+      "app_id": "ap-55cEthpqbquzufy56l6RXZ",
+      "stage": "search_tenants_long_resume1",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T13:56:31-07:00",
+      "stopped_at": "2026-09-17 14:11:11-07:00",
+      "app_wall_hours": 0.24444444444444444,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.7818624
+    },
+    {
+      "app_id": "ap-jUIgcuvHEp8xQML8kjtrYc",
+      "stage": "mechanism_pre_distinct_tenants_long",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T13:52:10-07:00",
+      "stopped_at": "2026-09-17 13:55:41-07:00",
+      "app_wall_hours": 0.058611111111111114,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.18746928000000002
+    },
+    {
+      "app_id": "ap-1ROh8HM0ZjYmFWENO25Kpu",
+      "stage": "variant_search_narrative_contracts_h100",
+      "state": "ephemeral (detached)",
+      "tasks": "1",
+      "created_at": "2026-09-17T14:20:03-07:00",
       "stopped_at": null,
-      "app_wall_hours": 0.0006171777777777777
+      "app_wall_hours": 0.09691417,
+      "gpu_request": "H100!",
+      "planning_hourly_rate": 4.649328,
+      "estimated_resource_cost_upper_bound": 0.4505857641777599
+    },
+    {
+      "app_id": "ap-abkTFQjO7WadUxz9d1IsOt",
+      "stage": "archive_narrative_a100",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T14:18:59-07:00",
+      "stopped_at": "2026-09-17 14:19:10-07:00",
+      "app_wall_hours": 0.0030555555555555557,
+      "gpu_request": "CPU",
+      "planning_hourly_rate": 0.02,
+      "estimated_resource_cost_upper_bound": 6.111111111111112e-05
     }
   ],
-  "total_app_wall_hours": 4.1656788
+  "total_app_wall_hours": 5.363272784444444,
+  "total_gpu_app_wall_hours": 5.360217228888889,
+  "estimated_resource_cost_upper_bound": 17.28546908163063
 }

@@ -43,3 +43,46 @@ Add a separately labeled `fra_distinct` confirmation comparison, selected only
 from tuning points whose pairs all have q != k. Include its endpoints in the
 extra SAE baseline. Keep the overall winner as the primary comparison and report
 both. Distinct feature IDs alone do not establish two independent semantic factors.
+
+## 2026-09-17 20:59 UTC — intervention-capacity diagnostic
+
+A48-pair FRA edit changes many feature relationships across several layers. To
+assess how much the one-feature restriction contributes to its apparent advantage,
+prepare an additional learned SAE activation baseline with up to48 feature
+coefficients. Two pools use the FRA endpoints or the calibration-gradient ranking;
+each also includes the best single-feature candidates. Test global and whole-
+document scopes, fit512 calibration steps with model and SAE weights frozen, then
+select snapshot/scale on tuning. Keep this result separate from the requested
+single-feature comparison. This tests four learned activation interventions; it
+does not establish an optimum over every possible multi-feature SAE intervention.
+
+Code and selection rules were specified before primary confirmation results.
+Run it if the remaining compute/time permit. Its feature pools read only the
+frozen tuning-selection manifest, and its own confirmation choices are saved
+before its confirmation examples are materialized.
+
+## 2026-09-17 21:20 UTC — BOS-free SAE scope and compute allocation
+
+The single-feature comparator also tests all prompt positions except BOS. An SAE
+feature can be useful on document/query tokens while behaving poorly on BOS.
+This scope retains the query tokens that whole-document steering omits. It uses
+the same signed activation/constant grids and all existing feature candidates,
+including both selected FRA families' endpoints. Global activation measurements
+are reusable only when the feature is exactly inactive at BOS on every tuning
+case. Constant steering is remeasured. Add this completed source to the merged
+selection before coefficient refinement and confirmation.
+
+Allow one H100 alongside the existing A100 to fit the stronger comparisons into
+the10-hour sprint. This supersedes the GPU-type planning line in PROTOCOL.md;
+the two-GPU,18 aggregate GPU-hour and$60 limits remain. At published rates, with
+four CPU cores and64GiB memory per job, the planning rates are$3.198528/hour for
+A100 and$4.649328/hour for H100; combined peak$7.847856/hour. The remaining
+pre-writing window still fits the total cap under this conservative estimate.
+Prices verified at https://modal.com/pricing and GPU choices at
+https://modal.com/docs/guide/gpu. Use H100! to keep the hardware type fixed.
+
+The short narrative-task A100 pilot was stopped and its checkpoint archived as
+search_narrative_contracts_a100_pilot.json on the result volume. Restarted that
+search fresh on H100; no checkpoints mix A100/H100 measurements. The original
+completed task and its remaining baseline runs continue on A100. The ledger now
+tracks the two GPU rates separately and distinguishes the brief CPU archive job.

@@ -7,8 +7,7 @@ image=(modal.Image.debian_slim(python_version='3.11').pip_install('torch==2.6.0'
        .env({'HF_HOME':'/cache/huggingface','TOKENIZERS_PARALLELISM':'false'}).add_local_dir(str(ROOT),'/work',ignore=['results','__pycache__']))
 cache=modal.Volume.from_name('fra-semantic-single-feature-cache',create_if_missing=True)
 results=modal.Volume.from_name('fra-win-sprint-20260917',create_if_missing=True)
-@app.function(image=image,gpu='A100-80GB',cpu=(4,4),memory=(65536,65536),timeout=7200,max_containers=2,volumes={'/cache':cache,'/results':results},secrets=[modal.Secret.from_name('hf-token')])
-def run(stage):
+def execute(stage):
     import sys;sys.path.insert(0,'/work')
     if stage in ['screen','oracle','variant_screen','cards_table_screen']:
         import importlib
@@ -23,6 +22,9 @@ def run(stage):
     elif stage.startswith('variant_learn_pairs_'):
         from variant_learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('variant_learn_pairs_'))
+    elif stage.startswith('multi_sae_'):
+        from multi_sae import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('multi_sae_'))
     elif stage.startswith('robustness_'):
         from robustness import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('robustness_'))
@@ -50,6 +52,9 @@ def run(stage):
     elif stage.startswith('learn_pairs_'):
         from learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('learn_pairs_'))
+    elif stage.startswith('baseline_nobos_'):
+        from baseline_nobos import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_nobos_'))
     elif stage.startswith('baseline_abs_'):
         from baseline_abs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_abs_'))
@@ -65,9 +70,30 @@ def run(stage):
         name=stage.removeprefix('search_');smoke=name.endswith('_smoke');name=name.removesuffix('_smoke')
         result=execute(Path('/results'),results.commit,task=name,smoke=smoke)
     results.commit();cache.commit();return result
+@app.function(image=image,gpu='A100-80GB',cpu=(4,4),memory=(65536,65536),timeout=7200,max_containers=1,volumes={'/cache':cache,'/results':results},secrets=[modal.Secret.from_name('hf-token')])
+def run(stage):
+    return execute(stage)
+
+@app.function(image=image,gpu='H100!',cpu=(4,4),memory=(65536,65536),timeout=7200,max_containers=1,volumes={'/cache':cache,'/results':results},secrets=[modal.Secret.from_name('hf-token')])
+def run_fast(stage):
+    return execute(stage)
+
+@app.function(image=image,cpu=.125,memory=512,timeout=60,volumes={'/results':results})
+def archive_narrative_a100():
+    import hashlib
+    src=Path('/results/search_narrative_contracts.json');dst=Path('/results/search_narrative_contracts_a100_pilot.json')
+    if not src.exists():return {'archived':False,'reason':'No checkpoint had yet been saved'}
+    assert not dst.exists()
+    raw=src.read_bytes();result=json.loads(raw);assert not result['done']
+    src.rename(dst);results.commit()
+    return {'archived':True,'path':str(dst),'sha256':hashlib.sha256(raw).hexdigest(),'points':len(result['points']),
+            'reason':'Restart the short pilot on H100 with no mixed-hardware checkpoint reuse'}
+
 @app.local_entrypoint()
-def main(stage:str='screen'):
-    answer=run.remote(stage);raw=json.dumps(answer,allow_nan=False);out=ROOT/'results';out.mkdir(exist_ok=True)
+def main(stage:str='screen',fast:bool=False):
+    print('GPU_REQUEST', 'CPU' if stage=='archive_narrative_a100' else 'H100!' if fast else 'A100-80GB',flush=True)
+    answer=archive_narrative_a100.remote() if stage=='archive_narrative_a100' else (run_fast if fast else run).remote(stage)
+    raw=json.dumps(answer,allow_nan=False);out=ROOT/'results';out.mkdir(exist_ok=True)
     blob=gzip.compress(raw.encode(),mtime=0)
     if len(blob)<950000:(out/f'{stage}.json.gz').write_bytes(blob)
     else:

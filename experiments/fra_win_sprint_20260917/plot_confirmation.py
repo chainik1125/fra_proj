@@ -62,7 +62,7 @@ def draw(result,out,threshold=.9):
             'targets_correct':round(s['joint']['correct']*s['joint']['n']),'targets_n':s['joint']['n'],
             'controls_correct':round(s['controls']['correct']*s['controls']['n']),'controls_n':s['controls']['n'],
             'shared_correct':round(s['shared_conjunction']['correct']*s['shared_conjunction']['n']),'shared_n':s['shared_conjunction']['n'],
-            'full_vocab_top_accuracy':s['all']['top_correct'],'label_mass':s['all']['label_mass']})
+            'clean_reference_agreement':p.get('clean_reference_agreement'),'full_vocab_top_accuracy':s['all']['top_correct'],'label_mass':s['all']['label_mass']})
     (out/f'confirmation_table_{int(threshold*100)}.json').write_text(json.dumps(table,indent=2))
 
 

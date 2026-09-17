@@ -13,7 +13,7 @@ from transformer_lens import HookedTransformer
 from common import LAST,render,metric,summarize,atomic
 from data import LABELS,suite as base_suite
 from variants import TASKS,suite as variant_suite
-from scopes import mask
+from scope_mask import scope_mask
 from operators import Operators,SAE_SPECS
 from confirm import edited
 from search import select
@@ -53,9 +53,9 @@ def proposals(points):
 def run(out_dir,commit=None,task='tenants_long'):
     torch.set_num_threads(4);torch.manual_seed(0);torch.backends.cuda.matmul.allow_tf32=False
     start=time.time();out_dir=Path(out_dir);dest=out_dir/f'polish_{task}.json'
-    names=[f'search_{task}',f'baseline_extra_{task}'];sources=[json.loads((out_dir/f'{s}.json').read_text()) for s in names]
+    names=[f'search_{task}',f'baseline_extra_{task}',f'baseline_nobos_{task}'];sources=[json.loads((out_dir/f'{s}.json').read_text()) for s in names]
     assert all(s['done'] and s['selection_frozen_before_test'] for s in sources)
-    hashes={n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['polish.py','confirm.py','scopes.py','variants.py','data.py','operators.py','common.py']}
+    hashes={n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['polish.py','confirm.py','scope_mask.py','scopes.py','variants.py','data.py','operators.py','common.py']}
     result={'done':False,'meta':{'task':task,'sources':hashes,'selection_rule':__doc__,'source_sha256':{s:hashlib.sha256((out_dir/f'{s}.json').read_bytes()).hexdigest() for s in names}},
             'rounds':[],'points':[],'selected':[],'tuning_rows':[],'test_rows':[],'test_points':[],'validation':{}}
     points={key(p['config']):p for s in sources for p in s['points'] if p['config']['method']=='sae'}
@@ -81,7 +81,7 @@ def run(out_dir,commit=None,task='tenants_long'):
             with model.hooks(fwd_hooks=[LAST]):ll,cache=model.run_with_cache(pt,names_filter=names)
             ll=ll[0,-1];pp=float(ll.float().softmax(-1)[pid]);row={**pr,'clean_token_ids':cr['token_ids']}
             result[split+'_rows'].append(row)
-            item={'tokens':pt,'row':row,'ref':ref,'poison_p':pp,'mask':mask(tok,pr,'cuda'),'x':{l:cache[f'blocks.{l}.hook_resid_pre'] for l in layers},'z':{}}
+            item={'tokens':pt,'row':row,'ref':ref,'poison_p':pp,'scope_masks':{scope:scope_mask(tok,pr,'cuda',scope) for scope in ['all','document','no_bos']},'x':{l:cache[f'blocks.{l}.hook_resid_pre'] for l in layers},'z':{}}
             items.append(item)
         return items
     def measure(configs,items,direct=False):
@@ -98,7 +98,7 @@ def run(out_dir,commit=None,task='tenants_long'):
                         z=op.encode(l,item['x'][l][0]);item['z'].update({(l,f):z[:,f].clone() for f in missing})
                     z=torch.stack([item['z'][l,f] for f in fs])[:,:,None]
                 else:z=1.
-                scope=item['mask'][None] if c.get('scope','all')=='document' else 1.
+                scope=item['scope_masks'][c.get('scope','all')]
                 x=(item['x'][l].float()-strength*dec*z*scope).to(item['x'][l].dtype)
                 logits=model.run_with_hooks(x,start_at_layer=l,fwd_hooks=[LAST])[:,-1]
             for rows,ll in zip(rr,logits):rows.append(metric(tok,label_ids,ll,item['ref'],item['row'],item['poison_p']))

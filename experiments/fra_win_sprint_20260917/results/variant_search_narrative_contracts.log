@@ -1,0 +1,87 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-bqVfxmablBmmKEIcam7zAw
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.28s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.57s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.66s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.42s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.47s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE LOADED 10 ('gemma-scope-9b-it-res', 'layer_9/width_16k/average_l0_88')
+SAE LOADED 17 ('gemma-scope-9b-pt-res', 'layer_16/width_16k/average_l0_75')
+SAE LOADED 21 ('gemma-scope-9b-it-res', 'layer_20/width_16k/average_l0_91')
+SAE LOADED 22 ('gemma-scope-9b-pt-res', 'layer_21/width_16k/average_l0_66')
+SAE LOADED 28 ('gemma-scope-9b-pt-res', 'layer_27/width_16k/average_l0_65')
+SAE LOADED 32 ('gemma-scope-9b-it-res', 'layer_31/width_16k/average_l0_76')
+AUDIT [{'layer': 10, 'l0': 88.54883575439453, 'relative_squared_error_including_bos': 2.878920555114746, 'relative_squared_error_without_bos': 0.15092888474464417, 'q_relative_rmse': 0.00030825825524516404, 'k_relative_rmse': 0.0003261904639657587, 'q_max_abs_error': 0.0068187713623046875, 'k_max_abs_error': 0.010423660278320312}, {'layer': 17, 'l0': 120.6720962524414, 'relative_squared_error_including_bos': 6.1557087898254395, 'relative_squared_error_without_bos': 0.19055017828941345, 'q_relative_rmse': 0.00031791787478141487, 'k_relative_rmse': 0.00033950700890272856, 'q_max_abs_error': 0.006894111633300781, 'k_max_abs_error': 0.0074253082275390625}, {'layer': 21, 'l0': 123.20465087890625, 'relative_squared_error_including_bos': 0.7225478887557983, 'relative_squared_error_without_bos': 0.1451752483844757, 'q_relative_rmse': 0.00032104464480653405, 'k_relative_rmse': 0.00035339334863238037, 'q_max_abs_error': 0.010455131530761719, 'k_max_abs_error': 0.006237030029296875}, {'layer': 22, 'l0': 108.1441879272461, 'relative_squared_error_including_bos': 1.2127629518508911, 'relative_squared_error_without_bos': 0.16752615571022034, 'q_relative_rmse': 0.00032562128035351634, 'k_relative_rmse': 0.00036553243990056217, 'q_max_abs_error': 0.004473686218261719, 'k_max_abs_error': 0.013117790222167969}, {'layer': 28, 'l0': 108.34185791015625, 'relative_squared_error_including_bos': 3.429323196411133, 'relative_squared_error_without_bos': 0.14396913349628448, 'q_relative_rmse': 0.0003229487338103354, 'k_relative_rmse': 0.00033171966788358986, 'q_max_abs_error': 0.009869575500488281, 'k_max_abs_error': 0.008933067321777344}, {'layer': 32, 'l0': 80.60697937011719, 'relative_squared_error_including_bos': 1.7453575134277344, 'relative_squared_error_without_bos': 0.11074582487344742, 'q_relative_rmse': 0.00031122806831263006, 'k_relative_rmse': 0.0003429497010074556, 'q_max_abs_error': 0.007727622985839844, 'k_max_abs_error': 0.00655364990234375}]
+CALIBRATION narrative_contracts 0 seconds 48
+CALIBRATION narrative_contracts 8 seconds 51
+CALIBRATION narrative_contracts 16 seconds 54
+CALIBRATION narrative_contracts 24 seconds 56
+RANKED 10 SAE 26 union 389 205 heads [2, 3, 11, 6]
+RANKED 17 SAE 29 union 525 285 heads [8, 0, 14, 15]
+RANKED 21 SAE 27 union 512 376 heads [7, 4, 6, 9]
+RANKED 22 SAE 28 union 407 324 heads [4, 1, 5, 13]
+RANKED 28 SAE 22 union 507 333 heads [12, 8, 4, 9]
+RANKED 32 SAE 24 union 353 244 heads [15, 7, 5, 1]
+PREPARED tuning 32 seconds 84 GPU_GB 32.67
+ZERO AUDIT {10: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 17: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 21: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 22: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 28: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 32: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}}
+SWEEP narrative_contracts 0 / 1061 points 8 best {'sae': 0.1343} seconds 104
+Stopping app - user stopped from CLI.
+Runner terminated.
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod │
+│ al_runner.py:76 in main                                                      │
+│                                                                              │
+│    75 │   return execute(stage)                                              │
+│ ❱  76                                                                        │
+│    77 @app.function(image=image,gpu='H100!',cpu=(4,4),memory=(65536,65536),t │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_object.py:46 in wrapped    │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1696 in       │
+│ remote                                                                       │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1640 in       │
+│ _call_function                                                               │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:474 in        │
+│ run_function                                                                 │
+│                                                                              │
+│    473 │   │   │   if await_response.output.result.status in TERMINAL_STATUS │
+│ ❱  474 │   │   │   │   return await _process_result(                         │
+│    475 │   │   │   │   │   await_response.output.result, await_response.outp │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_utils/function_utils.py:55 │
+│ 0 in _process_result                                                         │
+│                                                                              │
+│   549 │   │                                                                  │
+│ ❱ 550 │   │   raise RemoteError(result.exception)                            │
+│   551                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RemoteError

@@ -26,6 +26,7 @@ def run(out_dir,commit=None,task='tenants_long'):
     torch.set_grad_enabled(False);torch.set_num_threads(4);torch.manual_seed(0);torch.backends.cuda.matmul.allow_tf32=False
     start=time.time();out_dir=Path(out_dir);dest=out_dir/f'baseline_extra_{task}.json'
     prior=json.loads((out_dir/f'search_{task}.json').read_text())
+    main_full={**prior};assert main_full['done']
     abs_path=out_dir/f'baseline_abs_{task}.json'
     if abs_path.exists():
         abs_result=json.loads(abs_path.read_text());assert abs_result['done']
@@ -39,7 +40,7 @@ def run(out_dir,commit=None,task='tenants_long'):
     previous=json.loads(dest.read_text()) if dest.exists() else None
     layers=sorted(SAE_SPECS);suite=variant_suite if task in TASKS else base_suite
     result={'done':False,'meta':{'task':task,'scope':'all tokens or the entire known retrieved document','sources':{
-        n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_extra2.py','scopes.py','operators.py','data.py','variants.py','common.py']},
+        n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_extra2.py','analyze.py','frozen.py','scopes.py','operators.py','data.py','variants.py','common.py']},
         'abs_baseline_sha256':hashlib.sha256(abs_path.read_bytes()).hexdigest() if abs_path.exists() else None,
         'original_search_sources':prior['meta']['sources'],'sae_grid':SAE_GRID,'constant_grid':ADDITIVE_GRID,
         'sleeper_reference':'experiments/multitrigger_sleeper/cloud/modeldiff_baseline_pod.py:570'},
@@ -49,21 +50,12 @@ def run(out_dir,commit=None,task='tenants_long'):
         result['meta']['seconds']=time.time()-start;atomic(dest,result)
         if commit:commit()
     features={l:{} for l in layers};doc_features={l:set() for l in layers}
-    endpoint_choices=[]
-    for threshold in [None,0.,.5,.9]:
-        eligible=[(src,s) for src in [learned,refined] for s in src['selected'] if s['config'] and
-                  s['family'].startswith('fra') and s['threshold']==threshold]
-        if eligible:endpoint_choices.append(min(eligible,key=lambda x:x[1]['tuning']['all']['kl']))
-    # The distinct-ID family is a prespecified secondary comparison for the
-    # user's two-feature hypothesis; include its endpoints in the SAE baseline.
-    for threshold in [None,0.,.5,.9]:
-        eligible=[p for p in learned['points'] if p['valid'] and p['config']['method']=='fra_learned'
-            and all(q['q']!=q['k'] for q in learned['pair_sets'][p['config']['set']]['pairs'])
-            and (threshold is None or (p['summary']['controls']['correct']>=.95 and p['summary']['suppression']>=threshold))]
-        if eligible:
-            winner=min(eligible,key=lambda p:p['summary']['all']['kl']);endpoint_choices.append((learned,{'config':winner['config']}))
+    from analyze import merged_selection
+    from frozen import expanded_pairs
+    selection_sources=[main_full,refined,learned]
+    endpoint_choices=[(selection_sources[s['source_index']],s) for s in merged_selection(selection_sources) if s['family'].startswith('fra') and s['config']]
     for src,s in endpoint_choices:
-        pp=src['pair_sets'][s['config']['set']]['pairs'];result['endpoint_sets'].append(s['config'])
+        pp=expanded_pairs(src,s['config']);result['endpoint_sets'].append(s['config'])
         for p in pp:
             for f in [p['q'],p['k']]:
                 features[p['layer']].setdefault(f,set()).add('fra_endpoint');doc_features[p['layer']].add(f)

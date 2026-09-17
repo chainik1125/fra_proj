@@ -1,6 +1,6 @@
 Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
 ✓ Initialized. View run at 
-https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-2hTOzg2hy9UyN9bjOtvXP2
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-U6lfncBlhuRkxQ3InffDbP
 ✓ Created objects.
 ├── 🔨 Created mount 
 │   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
@@ -12,23 +12,17 @@ WARNING:root:You tried to specify center_unembed=True for a model using logit so
 `torch_dtype` is deprecated! Use `dtype` instead!
 
 [1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.62s/it]
-[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.97s/it]
-[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:09<00:03,  3.11s/it]
-[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.85s/it]
-[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.89s/it]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.71s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.96s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:03,  3.03s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.74s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.82s/it]
 WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
 WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
 Loaded pretrained model gemma-2-9b-it into HookedTransformer
-MECHANISM 0 / 32 seconds 64
-MECHANISM 4 / 32 seconds 78
-MECHANISM 8 / 32 seconds 92
-MECHANISM 12 / 32 seconds 106
-MECHANISM 16 / 32 seconds 121
-MECHANISM 20 / 32 seconds 135
-MECHANISM 24 / 32 seconds 150
-MECHANISM 28 / 32 seconds 164
-SAVED mechanism_pre_tenants_long 191716
+VARIANT cards_table clean 0.875 controls 1.0 gate False oracle [('six_sites', 0.1772, 0.291), ('old_top64', 0.7141, 0.975)]
+VARIANT cards_table_simple clean 0.90625 controls 1.0 gate False oracle [('six_sites', 0.1325, 0.361), ('old_top64', 0.8822, 0.989)]
+SAVED cards_table_screen 24592
 Runner terminated.
 ✓ App completed. View run at 
-https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-2hTOzg2hy9UyN9bjOtvXP2
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-U6lfncBlhuRkxQ3InffDbP
