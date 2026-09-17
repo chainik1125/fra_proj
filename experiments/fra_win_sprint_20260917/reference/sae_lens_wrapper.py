@@ -208,13 +208,14 @@ class GemmaScopeSAE:
     Wrapper for Gemma-Scope residual-stream SAEs.
 
     These SAEs are trained on hook_resid_post, so their decoder vectors live
-    in d_model=2304 space.  For FRA, use with the *next* layer's attention:
+    in the model's residual space (3584 dimensions for Gemma-2-9B). For FRA,
+    use with the *next* layer's attention:
     SAE on resid_post[N] → FRA on layer N+1 (hook_resid_pre at layer N+1).
 
-    Gemma-Scope SAEs were trained with per-token constant-norm rescaling
-    (x * sqrt(d_in) / ||x||) but SAE Lens doesn't apply this at inference
-    (bug in the loader).  This wrapper applies the normalization in encode()
-    and reverses it in decode().
+    Released Gemma Scope weights absorb their fixed training normalization.
+    Use normalize_activations=False for native inference. The optional legacy
+    per-token rescaling mode changes the encoder and is retained only so older
+    experiments can be reproduced; it is not used in this sprint.
 
     Example usage:
         sae = GemmaScopeSAE("gemma-scope-2b-pt-res", "layer_12/width_16k/average_l0_82")

@@ -23,6 +23,15 @@ def run(stage):
     elif stage.startswith('variant_learn_pairs_'):
         from variant_learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('variant_learn_pairs_'))
+    elif stage.startswith('robustness_'):
+        from robustness import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('robustness_'))
+    elif stage.startswith('mechanism_pre_distinct_'):
+        from mechanism import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('mechanism_pre_distinct_'),family='fra_distinct',phase='preconfirmation')
+    elif stage.startswith('mechanism_pre_'):
+        from mechanism import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('mechanism_pre_'),phase='preconfirmation')
     elif stage.startswith('mechanism_distinct_'):
         from mechanism import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('mechanism_distinct_'),family='fra_distinct')
@@ -41,6 +50,12 @@ def run(stage):
     elif stage.startswith('learn_pairs_'):
         from learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('learn_pairs_'))
+    elif stage.startswith('baseline_abs_'):
+        from baseline_abs import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_abs_'))
+    elif stage.startswith('baseline_extra2_'):
+        from baseline_extra2 import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_extra2_'))
     elif stage.startswith('baseline_extra_'):
         from baseline_extra import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_extra_'))

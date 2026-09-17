@@ -1,16 +1,16 @@
 {
-  "updated_utc": "2026-09-17T20:11:24.801277+00:00",
+  "updated_utc": "2026-09-17T20:48:08.221840+00:00",
   "app_wall_time_includes_queue_and_is_not_billed_gpu_time": true,
   "planning_rate_per_running_gpu_hour": 3.198528,
   "apps": [
     {
       "app_id": "ap-DyfEfTOpUTjWjWfs3O1ml0",
       "stage": "search_tenants_long",
-      "state": "ephemeral (detached)",
-      "tasks": "1",
+      "state": "stopped",
+      "tasks": "0",
       "created_at": "2026-09-17T11:47:15-07:00",
-      "stopped_at": null,
-      "app_wall_hours": 1.4027225769444442
+      "stopped_at": "2026-09-17 13:47:41-07:00",
+      "app_wall_hours": 2.007222222222222
     },
     {
       "app_id": "ap-QnTxJb12nyuS7EgOiJUjp6",
@@ -82,8 +82,17 @@
       "tasks": "1",
       "created_at": "2026-09-17T13:08:58-07:00",
       "stopped_at": null,
-      "app_wall_hours": 0.0407781325
+      "app_wall_hours": 0.6528394000000001
+    },
+    {
+      "app_id": "ap-2hTOzg2hy9UyN9bjOtvXP2",
+      "stage": "mechanism_pre_tenants_long",
+      "state": "ephemeral (detached)",
+      "tasks": "0",
+      "created_at": "2026-09-17T13:48:06-07:00",
+      "stopped_at": null,
+      "app_wall_hours": 0.0006171777777777777
     }
   ],
-  "total_app_wall_hours": 2.948500709444444
+  "total_app_wall_hours": 4.1656788
 }

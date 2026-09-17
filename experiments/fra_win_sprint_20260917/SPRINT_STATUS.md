@@ -129,3 +129,98 @@ Modal skill already read. No research agents allowed by developer default.
 Sprint skill explicitly permits red-team/blue-team write-up reviewers in final
 hour, so bounded independent summary/figure review agents are allowed then.
 Research-swarm skill was inspected but not applied; user did not request a swarm.
+
+# Update — 20:20 UTC (supersedes the earlier running-job section)
+
+- Main search still runs, app ap-DyfEfTOpUTjWjWfs3O1ml0, session25825.
+  SAE portion finished (~5,270 points), beststrong tuning KL .037079, L28 f14418
+  activation strength16, suppression68.7%. Bestdiff KL .0674, constant L17 f10525
+  strength128. At90% suppression, both choose L32 f2585 c32, KL .48856. FRA anchor
+  sweep now running (~670/1094 batches). Timeout expected20:48; resume unchanged.
+- Learned search DONE20:04:55, app ap-QnTxJb12nyuS7EgOiJUjp6 automaticallystopped.
+  504 points; local learned gzip914347bytes. Finaloverallwinner global_S256_P48 c8:
+  tuningKL .005532,supp94.64%,all32correct; testKL .008472,supp91.77%,8/8targets,
+  55/56controls,7/8sharedconjunction. 48pairs,5layers,23heads,48endpoints;
+  **26pairs share Q/K feature ID**. Distinctwinner remains S64_P48 c16 KL.006240.
+  Wrongshared testcase0layout0 is also lowPrintin clean (P.214); don't assume
+  its answer error was caused byFRA. Mechanism/confirmation save clean predictions.
+- Variant screen DONE, app ap-K86ft0KZtvQwIkR5r5GLVu stopped. All96head RoPE/pair
+  audits passed, maxrelativeQKerror.000799. contracts(clean96.875%),named_offices
+  (100%),narrative_contracts(100%) passed; contracts_short(93.75%) andcards(78.125%)
+  failed. Cards poisonedcontrols75%, andjointmodeloftenignoresactivecard entirely.
+  Narrativecontracts six-site sourceoracleKL.0281,supp85.3%, promising secondtask.
+- **baseline_extra_tenants_long RUNNING**, app ap-TPZKfdZnEgXKfwkUI7adT2,
+  session46463, started~20:09. 1085batches, ~30done20:18. Features perlayer global/doc:
+  10:20/10,17:35/23,21:36/22,22:35/23,28:44/27,32:25/13.
+  Timeout~22:11. Resume same stage if needed; once main isdone freshimports avoid
+  duplicated originalSAEevals. **Do not edit baseline_extra.py,scopes.py,operators.py,
+  data.py,variants.py,common.py until this run is complete/resume no longerneeded.**
+- Pushed andverified **a0ed5bd0b845df0236ac98671b8715bb75f0fbfb**. Allstagedfiles<1MB.
+  Laternewfilesuncommitted: baseline_abs.py,baseline_extra2.py,robustness.py,
+  plot_confirmation.py andrunnerregistrationchanges. No summary.md yet.
+
+## New code already prepared, not run
+
+- confirm.py now supports document-scope SAE, includes search/refine/learn_pairs/
+  baseline_extra/polish sources by default, freezes sources/selection before new
+  prompts. analyze.py deduplicates numericalSAE configs preferring direct replays.
+  It adds a **secondary fra_distinct** family requiring q!=k for everypair; final
+  confirmation compares bothoverallFRA anddistinct toSAE. ExtraSAE includes both
+  winners'endpoints. Neither result establishes independent semanticconcepts.
+- polish.py: after original+extraSAE done, two finer-grid rounds,12bestdistinct
+  (layer,feature,activation/constant,scope) perthreshold, subdivide adjacentgrid
+  interval16ways. Preservescoarsepoints, independently replays selectedwinners.
+- mechanism.py: afterconfirmation, source-only/complement/answer-only diagnostic
+  masks, eachlayeronly/omitted,5shuffledKendpointsets, per-corner endpointactivations
+  andsource-term magnitudes. Two testlexblocks(32cases). Stages mechanism_TASK and
+  mechanism_distinct_TASK. Remoteoutputs mechanism_fra_TASK.json or
+  mechanism_fra_distinct_TASK.json; localexportstems matchstage.
+- robustness.py: afterconfirmation, fixedsettings onoriginal/reorderedrows13&37/
+  archivedincidentdistractor +4screenedvariants; no retuning. stage robustness_TASK.
+  Onlysupports tenants_long. Checks originaltestfirst2lexblocks andvariantcal.
+- plot_oracle.py nowreproducesexistingfigure; labeloverlapsfixed, figureupdated.
+  plot_confirmation.py creates50/90%comparisonfigures,KLcornerheatmaps andtables;
+  inspect/iterate onactualresults. Originalsourceoracleplot QAafterlabelpatchstill
+  pending finalimagecheck (priorversionhad xlabels crowded; fixedwithnewlines).
+- cards_table.py andcards_table_screen.py define2table-formversions offailedcards,
+  withactualconflictinglegitimatecontracts vsordinarydefaultcontracts. Notrun.
+  Stage cards_table_screen; screenfirstifusing. These are separate tokeepvariants
+  numericalhashstable. They are notyet wiredinto interventionsuite/scopemasks.
+- baseline_abs.py is a copyofextraSAE thatcanrunbeforeFRAlearningcompletes: only
+  absdiff4ranks,global/docscope; imports mainpartialSAEsameasextra. Stage
+  baseline_abs_TASK; outputs baseline_abs_TASK.json. It mayparallelize a second
+  task'sSAEs withFRAlearning aftermainsearch starts. Existingoriginalextraunchanged.
+- baseline_extra2.py for SECONDtaskonly: sameasextra butimportscompletedabsbaseline
+  toavoidrerevaluatingit, thenaddsFRAendpoints. Stage baseline_extra2_TASK, remote
+  outputstillbaseline_extra_TASK.json; localexportbaseline_extra2_TASK(.part...).gz.
+  Syntaxchecked, notrun. Mainextraoriginalnumericalsourceunchanged.
+
+## Suggested schedule (adapt to runtime/results)
+
+Finishmain+extraoriginal, polish, thenfreshconfirmation. Originalwinlikelybutnot
+claimed beforeextras. WhileoneGPUfreed aftermain~21:15, cards_table_screen briefly,
+then secondtask variant_search_narrative_contracts ispreconfigured iftime permits.
+Canrunsecondtask baseline_abs alongsidevariant_refine/variant_learn_pairs tosave
+clocktime; thenbaseline_extra2 importstheabsresults forendpointchecks. Prioritize
+validatingcurrentpromisingcandidate overincompletesecondtask. Deadline03:16:27 UTC;
+lastwritinghour02:16. Noagentsbeforefinalwritingreview(sprintskillallowsreview).
+
+## 20:33 UTC priority addition: BOS diagnostic before resuming timed-out main
+
+`mechanism.py` now has phase='preconfirmation' support. It selects the learned
+FRA anddistinct winners by tuning only, loads onlylearned source (no confirmation
+needed), and retains independentclean predictions. Added BOS-only and no-BOS
+attention-column masks and per-pairBOS magnitude fields. These address themeasured
+anomalousBOSSAEreconstructionerror; do not assumeBOSdominance beforetesting.
+When main hits its natural20:48 timeout, usefreedGPU for:
+  mechanism_pre_tenants_long
+  mechanism_pre_distinct_tenants_long
+then resumeunchanged search_tenants_long. Eachdiagnostic shouldtakefewminutes.
+Remoteoutputs now:
+  mechanism_preconfirmation_fra_tenants_long.json
+  mechanism_preconfirmation_fra_distinct_tenants_long.json
+(andpostconfirmation equivalentnames). Localexport namesmatchstage.
+IfBOSiscrucial, investigate/learn cuts excludingBOS beforeclaimingsemanticfiltering.
+Do not conflate changing anattentionsink withtwosemanticfeatures.
+Referencewrapperdocstring corrected toexplainnativefixednormalization; numerical
+behaviorunchanged. Corehashedsearch/extra filesstillunchanged.

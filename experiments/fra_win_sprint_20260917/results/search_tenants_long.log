@@ -100,3 +100,90 @@ SWEEP tenants_long 570 / 1094 points 4528 best {'sae': 0.03708} seconds 4853
 SWEEP tenants_long 580 / 1094 points 4608 best {'sae': 0.03708} seconds 4897
 SWEEP tenants_long 590 / 1094 points 4688 best {'sae': 0.03708} seconds 4943
 SWEEP tenants_long 600 / 1094 points 4768 best {'sae': 0.03708} seconds 4987
+SWEEP tenants_long 610 / 1094 points 4846 best {'sae': 0.03708} seconds 5029
+SWEEP tenants_long 620 / 1094 points 4926 best {'sae': 0.03708} seconds 5071
+SWEEP tenants_long 630 / 1094 points 5006 best {'sae': 0.03708} seconds 5112
+SWEEP tenants_long 640 / 1094 points 5086 best {'sae': 0.03708} seconds 5153
+SWEEP tenants_long 650 / 1094 points 5166 best {'sae': 0.03708} seconds 5196
+SWEEP tenants_long 660 / 1094 points 5246 best {'sae': 0.03708} seconds 5238
+SWEEP tenants_long 670 / 1094 points 5296 best {'sae': 0.03708, 'fra': 0.19133} seconds 5312
+SWEEP tenants_long 680 / 1094 points 5346 best {'sae': 0.03708, 'fra': 0.16837} seconds 5391
+SWEEP tenants_long 690 / 1094 points 5396 best {'sae': 0.03708, 'fra': 0.16837} seconds 5471
+SWEEP tenants_long 700 / 1094 points 5446 best {'sae': 0.03708, 'fra': 0.16837} seconds 5548
+SWEEP tenants_long 710 / 1094 points 5496 best {'sae': 0.03708, 'fra': 0.14006} seconds 5629
+SWEEP tenants_long 720 / 1094 points 5546 best {'sae': 0.03708, 'fra': 0.14006} seconds 5707
+SWEEP tenants_long 730 / 1094 points 5596 best {'sae': 0.03708, 'fra': 0.14006} seconds 5786
+SWEEP tenants_long 740 / 1094 points 5646 best {'sae': 0.03708, 'fra': 0.14006} seconds 5854
+SWEEP tenants_long 750 / 1094 points 5696 best {'sae': 0.03708, 'fra': 0.11654} seconds 5917
+SWEEP tenants_long 760 / 1094 points 5746 best {'sae': 0.03708, 'fra': 0.07246} seconds 5983
+SWEEP tenants_long 770 / 1094 points 5796 best {'sae': 0.03708, 'fra': 0.07246} seconds 6046
+SWEEP tenants_long 780 / 1094 points 5846 best {'sae': 0.03708, 'fra': 0.07246} seconds 6112
+SWEEP tenants_long 790 / 1094 points 5896 best {'sae': 0.03708, 'fra': 0.07246} seconds 6176
+SWEEP tenants_long 800 / 1094 points 5946 best {'sae': 0.03708, 'fra': 0.07246} seconds 6240
+SWEEP tenants_long 810 / 1094 points 5996 best {'sae': 0.03708, 'fra': 0.07246} seconds 6305
+SWEEP tenants_long 820 / 1094 points 6046 best {'sae': 0.03708, 'fra': 0.07246} seconds 6361
+SWEEP tenants_long 830 / 1094 points 6096 best {'sae': 0.03708, 'fra': 0.07246} seconds 6419
+SWEEP tenants_long 840 / 1094 points 6146 best {'sae': 0.03708, 'fra': 0.04458} seconds 6480
+SWEEP tenants_long 850 / 1094 points 6196 best {'sae': 0.03708, 'fra': 0.04458} seconds 6537
+SWEEP tenants_long 860 / 1094 points 6246 best {'sae': 0.03708, 'fra': 0.04458} seconds 6593
+SWEEP tenants_long 870 / 1094 points 6296 best {'sae': 0.03708, 'fra': 0.04458} seconds 6650
+SWEEP tenants_long 880 / 1094 points 6346 best {'sae': 0.03708, 'fra': 0.04458} seconds 6707
+SWEEP tenants_long 890 / 1094 points 6396 best {'sae': 0.03708, 'fra': 0.04458} seconds 6759
+SWEEP tenants_long 900 / 1094 points 6446 best {'sae': 0.03708, 'fra': 0.04458} seconds 6816
+SWEEP tenants_long 910 / 1094 points 6496 best {'sae': 0.03708, 'fra': 0.04458} seconds 6867
+SWEEP tenants_long 920 / 1094 points 6546 best {'sae': 0.03708, 'fra': 0.04458} seconds 6922
+SWEEP tenants_long 930 / 1094 points 6596 best {'sae': 0.03708, 'fra': 0.04458} seconds 6977
+SWEEP tenants_long 940 / 1094 points 6646 best {'sae': 0.03708, 'fra': 0.04458} seconds 7031
+SWEEP tenants_long 950 / 1094 points 6696 best {'sae': 0.03708, 'fra': 0.04458} seconds 7087
+SWEEP tenants_long 960 / 1094 points 6746 best {'sae': 0.03708, 'fra': 0.04458} seconds 7126
+SWEEP tenants_long 970 / 1094 points 6796 best {'sae': 0.03708, 'fra': 0.04458} seconds 7169
+Task's current input(s) ["in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0"] cancelled because: Task's current input in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0 hit its timeout of 7200s
+[modal-client] 2026-09-17T20:47:32+0000 Received a cancellation signal while processing input ('in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0',)
+WARNING:modal-client:Received a cancellation signal while processing input ('in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0',)
+[modal-client] 2026-09-17T20:47:32+0000 Successfully canceled input ('in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0',)
+WARNING:modal-client:Successfully canceled input ('in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0',)
+Runner terminated.
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod │
+│ al_runner.py:25 in main                                                      │
+│                                                                              │
+│   24 │   │   from variant_learn_pairs import run as execute                  │
+│ ❱ 25 │   │   result=execute(Path('/results'),results.commit,task=stage.remov │
+│   26 │   elif stage.startswith('robustness_'):                               │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_object.py:46 in wrapped    │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1696 in       │
+│ remote                                                                       │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1640 in       │
+│ _call_function                                                               │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:493 in        │
+│ run_function                                                                 │
+│                                                                              │
+│    492 │   │   │   # No more retries left.                                   │
+│ ❱  493 │   │   │   return await _process_result(                             │
+│    494 │   │   │   │   await_response.output.result, await_response.output.d │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_utils/function_utils.py:51 │
+│ 0 in _process_result                                                         │
+│                                                                              │
+│   509 │   if result.status == api_pb2.GenericResult.GENERIC_STATUS_TIMEOUT:  │
+│ ❱ 510 │   │   raise FunctionTimeoutError(result.exception)                   │
+│   511 │   elif result.status == api_pb2.GenericResult.GENERIC_STATUS_INTERNA │
+╰──────────────────────────────────────────────────────────────────────────────╯
+FunctionTimeoutError: Task's current input 
+in-01M2RB3JY7Z1V48DJNVHPF5082:1789670837192-0 hit its timeout of 7200s
