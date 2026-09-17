@@ -1,0 +1,136 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-IOy4ZUhvkPXcK6X92d6ZK7
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+`torch_dtype` is deprecated! Use `dtype` instead!
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+Loaded pretrained model gpt2 into HookedTransformer
+HEADS gpt2 [(5, 5), (6, 9), (5, 1), (7, 10), (7, 2)]
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.08s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.43s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.44s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.68s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+HEADS gemma [(6, 2), (15, 0), (18, 6), (6, 3), (21, 5), (4, 4), (14, 0), (17, 4), (22, 4)]
+/usr/local/lib/python3.11/site-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+SAE LOADED gpt2 5
+SAE LOADED gpt2 6
+Runner killed (SIGKILL), exit code: 137. Most often this happens when the process runs out of memory. Consider raising the memory limit to avoid unexpected termination: https://modal.com/docs/guide/resources
+SAE LOADED gemma 4
+SAE LOADED gemma 6
+`torch_dtype` is deprecated! Use `dtype` instead!
+SAE LOADED gemma 14
+Loaded pretrained model gpt2 into HookedTransformer
+HEADS gpt2 [(5, 5), (6, 9), (5, 1), (7, 10), (7, 2)]
+/usr/local/lib/python3.11/site-packages/sae_lens/sae.py:151: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+SAE LOADED gpt2 5
+SAE LOADED gpt2 6
+SAE LOADED gpt2 7
+FRA REPRODUCTION gpt2 bank max_suppression_error 3.141373379866863e-06 max_KL_relative_error 0.00046913233262785433
+SWEEP gpt2 bank 0 / 524 seconds 1
+SWEEP gpt2 bank 100 / 524 seconds 4
+SAE LOADED gemma 15
+SWEEP gpt2 bank 200 / 524 seconds 8
+SWEEP gpt2 bank 300 / 524 seconds 11
+SWEEP gpt2 bank 400 / 524 seconds 15
+SWEEP gpt2 bank 500 / 524 seconds 18
+SAE LOADED gemma 17
+CASE COMPLETE gpt2 bank unsteered_KL 0.1126452389188839 direct_checks 58 seconds 23
+FRA REPRODUCTION gpt2 fire max_suppression_error 4.191006978127021e-07 max_KL_relative_error 3.0204912249030664e-06
+SWEEP gpt2 fire 0 / 524 seconds 1
+SWEEP gpt2 fire 100 / 524 seconds 4
+Stopping app - user stopped from CLI.
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 945, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 189, in run_input_sync
+    values = io_context.call_function_sync()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_runtime/container_io_manager.py", line 225, in call_function_sync
+    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modal_runner.py", line 33, in coordinate
+    return {key: call.get() for key, call in calls.items()}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modal_runner.py", line 33, in <dictcomp>
+    return {key: call.get() for key, call in calls.items()}
+                 ^^^^^^^^^^
+  File "/pkg/modal/_object.py", line 46, in wrapped
+    return await method(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_functions.py", line 1912, in get
+    return await self._invocation().poll_function(timeout=timeout, index=index)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_functions.py", line 328, in poll_function
+    return await _process_result(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_utils/function_utils.py", line 550, in _process_result
+    raise RemoteError(result.exception)
+modal.exception.RemoteError
+SWEEP gpt2 fire 200 / 524 seconds 8
+Runner terminated.
+Runner terminated.
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind │
+│ uction_restoration_20260916/modal_runner.py:38 in main                       │
+│                                                                              │
+│   37 def main(model: str = 'all', smoke: bool = False):                      │
+│ ❱ 38 │   answers = coordinate.remote(['gpt2', 'gemma'] if model == 'all' els │
+│   39 │   (ROOT/'results').mkdir(exist_ok=True)                               │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_object.py:46 in wrapped    │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1696 in       │
+│ remote                                                                       │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1640 in       │
+│ _call_function                                                               │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:474 in        │
+│ run_function                                                                 │
+│                                                                              │
+│    473 │   │   │   if await_response.output.result.status in TERMINAL_STATUS │
+│ ❱  474 │   │   │   │   return await _process_result(                         │
+│    475 │   │   │   │   │   await_response.output.result, await_response.outp │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_utils/function_utils.py:55 │
+│ 0 in _process_result                                                         │
+│                                                                              │
+│   549 │   │                                                                  │
+│ ❱ 550 │   │   raise RemoteError(result.exception)                            │
+│   551                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RemoteError

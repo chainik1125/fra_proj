@@ -1,15 +1,14 @@
 # Where Feature-Resolved Attention wins: bilinear control of attention edges
 
-> **2026-09-16 update to the in-context backdoor comparison (IC4/G4, §3c):**
-> The reported conventional SAE baseline removed 12 features together. A new
-> top-ten individual-feature sweep reverses that comparison: positive
-> activation-weighted single-feature steering reaches 50% suppression on all
-> eight original GPT-2/Gemma cases and has lower collateral than archived FRA on
-> all seven cases FRA reaches. GPT-2 reaches over 99% suppression on all four
-> cases with zero KL on the original legitimate paragraphs. These features are
-> inactive on those paragraphs; this does not establish broader preservation.
-> The historical results below remain measurements of their stated baselines.
-> [New report and protocol](../fra_induction_single_feature_20260916/README.md).
+> **2026-09-16 metric correction for IC4/G4 (§3c):** the historical curves below
+> measure collateral on a separate unpoisoned paragraph. A subsequent top-ten
+> individual-feature sweep obtains zero KL on that metric because its selected
+> features are inactive there. This does not establish restoration of clean
+> behavior with the backdoor present. The requested comparison is
+> `KL(P(clean context + shared continuation) || P_steered(poisoned context + shared continuation))`.
+> See the [paired continuation evaluation](../fra_induction_restoration_20260916/README.md).
+> The [individual-feature run](../fra_induction_single_feature_20260916/README.md)
+> remains a record of the independent-paragraph metric.
 
 *GPT-2-small · induction · 10h sprint · 2026-06-10. Research log: `RESEARCH_LOG.md`. Code:
 `jobs/j*.py` (run on a RunPod GPU via an HF inbox/outbox harness). All figures regenerated

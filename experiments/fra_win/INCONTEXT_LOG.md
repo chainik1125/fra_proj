@@ -1,6 +1,17 @@
 # In-context backdoor removal — does the method ranking flip? (research log)
 
-## 2026-09-16: individual-feature comparison changes the SAE conclusion
+## 2026-09-16: metric correction
+
+The zero-KL comparison below evaluates an independent paragraph with no poisoned
+prefix. It measures feature inactivity there, not recovery of clean continuations
+with the backdoor present. The user clarified the intended metric as
+`KL(P(clean prefix + shared continuation) || P_steered(poisoned prefix + shared continuation))`.
+The [paired continuation experiment](../fra_induction_restoration_20260916/README.md)
+evaluates that metric for both FRA and single-feature steering, including the
+poisoned-no-steering baseline. The earlier conclusion about SAE versus FRA is
+limited to the independent-paragraph metric.
+
+## 2026-09-16: individual-feature comparison on the original collateral metric
 
 A search of the repository, Git history, local run logs, and the remote `fra_win`
 archive found the grouped top-12 baseline but no completed top-ten individual

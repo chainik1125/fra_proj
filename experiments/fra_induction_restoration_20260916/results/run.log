@@ -1,0 +1,169 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-vqviOxVUaQkmh9A8tDUIOs
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+HEADS gpt2 [(5, 5), (6, 9), (5, 1), (7, 10), (7, 2)]
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/sae_lens/sae.py:151: UserWarning:
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+SAE LOADED gpt2 5
+SAE LOADED gpt2 6
+
+SAE LOADED gpt2 7
+FRA REPRODUCTION gpt2 bank max_suppression_error 3.141373379866863e-06 max_KL_relative_error 0.00046913233262785433
+SWEEP gpt2 bank 0 / 524 seconds 1
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.28s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.63s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.55s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.81s/it]
+SWEEP gpt2 bank 100 / 524 seconds 5
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+SWEEP gpt2 bank 200 / 524 seconds 8
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+SWEEP gpt2 bank 300 / 524 seconds 12
+SWEEP gpt2 bank 400 / 524 seconds 15
+Loaded pretrained model gemma-2-2b into HookedTransformer
+SWEEP gpt2 bank 500 / 524 seconds 19
+HEADS gemma [(6, 2), (15, 0), (18, 6), (6, 3), (21, 5), (4, 4), (14, 0), (17, 4), (22, 4)]
+CASE COMPLETE gpt2 bank unsteered_KL 0.1126452389188839 direct_checks 58 seconds 24
+FRA REPRODUCTION gpt2 fire max_suppression_error 4.191006978127021e-07 max_KL_relative_error 3.0204912249030664e-06
+SWEEP gpt2 fire 0 / 524 seconds 1
+SWEEP gpt2 fire 100 / 524 seconds 4
+SWEEP gpt2 fire 200 / 524 seconds 8
+SWEEP gpt2 fire 300 / 524 seconds 11
+SWEEP gpt2 fire 400 / 524 seconds 15
+SWEEP gpt2 fire 500 / 524 seconds 19
+CASE COMPLETE gpt2 fire unsteered_KL 0.09110842976761326 direct_checks 71 seconds 25
+FRA REPRODUCTION gpt2 king max_suppression_error 1.8845515666887636e-06 max_KL_relative_error 6.757200928778805e-05
+SWEEP gpt2 king 0 / 524 seconds 1
+SWEEP gpt2 king 100 / 524 seconds 4
+SWEEP gpt2 king 200 / 524 seconds 8
+SWEEP gpt2 king 300 / 524 seconds 12
+SWEEP gpt2 king 400 / 524 seconds 15
+SWEEP gpt2 king 500 / 524 seconds 19
+CASE COMPLETE gpt2 king unsteered_KL 0.10594739708172034 direct_checks 64 seconds 25
+FRA REPRODUCTION gpt2 doctor max_suppression_error 1.759493744479812e-06 max_KL_relative_error 2.9388606681527932e-05
+SWEEP gpt2 doctor 0 / 524 seconds 1
+SAE LOADED gemma 4
+SAE LOADED gemma 6
+SWEEP gpt2 doctor 100 / 524 seconds 4
+SAE LOADED gemma 14
+SWEEP gpt2 doctor 200 / 524 seconds 8
+SAE LOADED gemma 15
+SWEEP gpt2 doctor 300 / 524 seconds 11
+SAE LOADED gemma 17
+SWEEPSAE LOADED gemma 18
+ gpt2 doctor 400 / 524 seconds 15
+SWEEP gpt2 doctor 500 / 524 seconds 19
+CASE COMPLETE gpt2 doctor unsteered_KL 0.09479483000029465 direct_checks 72 seconds 25
+SAE LOADED gemma 21
+SAE LOADED gemma 22
+FRA REPRODUCTION gemma bank max_suppression_error 0.0032311753779120655 max_KL_relative_error 0.008484612650290626
+SWEEP gemma bank 0 / 524 seconds 3
+SWEEP gemma bank 100 / 524 seconds 24
+SWEEP gemma bank 200 / 524 seconds 45
+SWEEP gemma bank 300 / 524 seconds 66
+SWEEP gemma bank 400 / 524 seconds 87
+Runner terminated (SIGTERM), exit code: 143.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.04s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.26s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.34s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.56s/it]
+SWEEP gemma bank 500 / 524 seconds 111
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+HEADS gemma [(6, 2), (15, 0), (18, 6), (6, 3), (21, 5), (4, 4), (14, 0), (17, 4), (22, 4)]
+SAE LOADED gemma 4
+SAE LOADED gemma 6
+SAE LOADED gemma 14
+SAE LOADED gemma 15
+SAE LOADED gemma 17
+SAE LOADED gemma 18
+CASE COMPLETE gemma bank unsteered_KL 0.1092942841782671 direct_checks 58 seconds 135
+SAE LOADED gemma 21
+FRA REPRODUCTION gemma king max_suppression_error 0.00698470306344634 max_KL_relative_error 0.00411964576542632
+SWEEP gemma king 0 / 524 seconds 3
+SAE LOADED gemma 22
+FRA REPRODUCTION gemma bank max_suppression_error 0.0032311753779120655 max_KL_relative_error 0.008484612650290626
+SWEEP gemma bank 0 / 524 seconds 2
+SWEEP gemma bank 100 / 524 seconds 19
+SWEEP gemma king 100 / 524 seconds 25
+SWEEP gemma bank 200 / 524 seconds 35
+SWEEP gemma king 200 / 524 seconds 46
+SWEEP gemma bank 300 / 524 seconds 51
+SWEEP gemma king 300 / 524 seconds 67
+SWEEP gemma bank 400 / 524 seconds 67
+SWEEP gemma bank 500 / 524 seconds 83
+SWEEP gemma king 400 / 524 seconds 88
+CASE COMPLETE gemma bank unsteered_KL 0.1092942841782671 direct_checks 58 seconds 101
+SWEEP gemma king 500 / 524 seconds 108
+FRA REPRODUCTION gemma king max_suppression_error 0.00698470306344634 max_KL_relative_error 0.00411964576542632
+SWEEP gemma king 0 / 524 seconds 2
+SWEEP gemma king 100 / 524 seconds 18
+CASE COMPLETE gemma king unsteered_KL 0.10838450366357644 direct_checks 62 seconds 132
+FRA REPRODUCTION gemma doctor max_suppression_error 0.0008153998229648574 max_KL_relative_error 0.004284039123674602
+SWEEP gemma doctor 0 / 524 seconds 3
+SWEEP gemma king 200 / 524 seconds 34
+SWEEP gemma doctor 100 / 524 seconds 24
+SWEEP gemma king 300 / 524 seconds 51
+SWEEP gemma king 400 / 524 seconds 67
+SWEEP gemma doctor 200 / 524 seconds 45
+SWEEP gemma king 500 / 524 seconds 83
+SWEEP gemma doctor 300 / 524 seconds 66
+CASE COMPLETE gemma king unsteered_KL 0.10838450366357644 direct_checks 62 seconds 101
+FRA REPRODUCTION gemma doctor max_suppression_error 0.0008153998229648574 max_KL_relative_error 0.004284039123674602
+SWEEP gemma doctor 0 / 524 seconds 2
+SWEEP gemma doctor 400 / 524 seconds 87
+SWEEP gemma doctor 100 / 524 seconds 19
+SWEEP gemma doctor 500 / 524 seconds 109
+SWEEP gemma doctor 200 / 524 seconds 35
+SWEEP gemma doctor 300 / 524 seconds 51
+CASE COMPLETE gemma doctor unsteered_KL 0.10260318507206674 direct_checks 52 seconds 129
+FRA REPRODUCTION gemma market max_suppression_error 0.02100323877523458 max_KL_relative_error 0.032355360761367
+SWEEP gemma market 0 / 524 seconds 3
+SWEEP gemma doctor 400 / 524 seconds 67
+SWEEP gemma market 100 / 524 seconds 24
+SWEEP gemma doctor 500 / 524 seconds 83
+SWEEP gemma market 200 / 524 seconds 45
+CASE COMPLETE gemma doctor unsteered_KL 0.10260318507206674 direct_checks 52 seconds 98
+FRA REPRODUCTION gemma market max_suppression_error 0.02100323877523458 max_KL_relative_error 0.032355360761367
+SWEEP gemma market 0 / 524 seconds 2
+SWEEP gemma market 100 / 524 seconds 18
+SWEEP gemma market 300 / 524 seconds 66
+SWEEP gemma market 200 / 524 seconds 35
+SWEEP gemma market 400 / 524 seconds 86
+SWEEP gemma market 300 / 524 seconds 51
+SWEEP gemma market 500 / 524 seconds 107
+SWEEP gemma market 400 / 524 seconds 67
+SWEEP gemma market 500 / 524 seconds 82
+CASE COMPLETE gemma market unsteered_KL 0.09305774270874961 direct_checks 52 seconds 128
+CASE COMPLETE gemma market unsteered_KL 0.09305774270874961 direct_checks 52 seconds 97
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gpt2_bank.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gpt2_fire.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gpt2_king.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gpt2_doctor.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gemma_bank.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gemma_king.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gemma_doctor.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gemma_market.json.gz
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-vqviOxVUaQkmh9A8tDUIOs

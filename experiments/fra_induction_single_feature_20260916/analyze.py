@@ -96,6 +96,10 @@ def analyze():
     headline = [r for r in summary['aggregates'] if r['estimator'] == 'measured'
                 and r['mode'] == 'activation_positive' and r['threshold'] == .5]
     lines = ['# Original induction backdoors: best-of-ten single-feature SAE baseline', '',
+             '> **Metric correction:** this report measures steering on a separate unpoisoned',
+             '> paragraph. Zero KL establishes inactivity there, not recovery of clean behavior',
+             '> in a poisoned context. See the [paired continuation evaluation](../../fra_induction_restoration_20260916/results/REPORT.md)',
+             '> for clean-reference versus poisoned-and-steered KL.', '',
              '**Finding at 50% suppression:** ' + '; '.join(
                  f"{r['model']}: single SAE reaches {r['sae_reach']}/4, has lower KL than FRA on {r['sae_lower']}/{r['both_reach']} jointly reachable cases, and zero KL on {r['zero_kl']}/4"
                  for r in headline) + '.', '',

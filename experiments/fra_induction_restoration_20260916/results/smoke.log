@@ -1,0 +1,54 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-jkKi9Zxf5RYUCv1GJZh1iE
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916/modal_runner.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_ind
+│   uction_restoration_20260916
+├── 🔨 Created function run.
+└── 🔨 Created function coordinate.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loaded pretrained model gpt2 into HookedTransformer
+HEADS gpt2 [(5, 5), (6, 9), (5, 1), (7, 10), (7, 2)]
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:05<00:10,  5.04s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:09<00:04,  4.82s/it]/usr/local/lib/python3.11/site-packages/sae_lens/sae.py:151: UserWarning:
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+SAE LOADED gpt2 5
+
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:10<00:00,  3.10s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:10<00:00,  3.59s/it]
+SAE LOADED gpt2 6
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+SAE LOADED gpt2 7
+FRA REPRODUCTION gpt2 bank max_suppression_error 3.141373379866863e-06 max_KL_relative_error 0.00046913233262785433
+SWEEP gpt2 bank 0 / 36 seconds 1
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+CASE COMPLETE gpt2 bank unsteered_KL 0.1280782412111076 direct_checks 5 seconds 2
+Loaded pretrained model gemma-2-2b into HookedTransformer
+HEADS gemma [(6, 2), (15, 0), (18, 6), (6, 3), (21, 5), (4, 4), (14, 0), (17, 4), (22, 4)]
+SAE LOADED gemma 4
+SAE LOADED gemma 6
+SAE LOADED gemma 14
+SAE LOADED gemma 15
+SAE LOADED gemma 17
+SAE LOADED gemma 18
+SAE LOADED gemma 21
+SAE LOADED gemma 22
+FRA REPRODUCTION gemma bank max_suppression_error 0.0032311753779120655 max_KL_relative_error 0.008484612650290626
+SWEEP gemma bank 0 / 36 seconds 2
+CASE COMPLETE gemma bank unsteered_KL 0.09603605396930394 direct_checks 7 seconds 7
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gpt2_smoke.json.gz
+SAVED /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_induction_restoration_20260916/results/gemma_smoke.json.gz
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-jkKi9Zxf5RYUCv1GJZh1iE

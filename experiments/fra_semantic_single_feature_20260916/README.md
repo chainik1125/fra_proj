@@ -1,5 +1,11 @@
 # Single-feature SAE comparison with semantic-filter FRA cuts
 
+> **Metric clarification:** collateral here is measured on a separate paragraph
+> without the poisoned context. Zero KL indicates feature inactivity there;
+> it does not measure recovery of clean continuations with a backdoor present.
+> The [paired continuation correction](../fra_induction_restoration_20260916/README.md)
+> currently covers the original IC4/G4 induction cases, not these semantic-transfer cases.
+
 **Result:** activation-weighted steering of individually selected SAE features
 beats Indranil's saved FRA curves on the original six-concept benchmark. Among
 the top ten features ranked by planted-minus-control mean activation, individual

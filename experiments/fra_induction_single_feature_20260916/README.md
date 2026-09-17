@@ -1,5 +1,11 @@
 # Single-feature SAE baseline for the original induction backdoors
 
+> **Metric correction:** this run measured collateral on a separate paragraph
+> without the poisoned context. Zero KL establishes feature inactivity there;
+> it does not establish recovery of clean behavior while the poison is present.
+> See the [paired continuation evaluation](../fra_induction_restoration_20260916/README.md)
+> for the requested clean-reference versus poisoned-and-steered comparison.
+
 This experiment covers the original **bank→river, king→crown, and companion
 backdoors**, rather than the later semantic-transfer benchmark.
 

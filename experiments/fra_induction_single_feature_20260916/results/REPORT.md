@@ -1,5 +1,10 @@
 # Original induction backdoors: best-of-ten single-feature SAE baseline
 
+> **Metric correction:** this report measures steering on a separate unpoisoned
+> paragraph. Zero KL establishes inactivity there, not recovery of clean behavior
+> in a poisoned context. See the [paired continuation evaluation](../../fra_induction_restoration_20260916/results/REPORT.md)
+> for clean-reference versus poisoned-and-steered KL.
+
 **Finding at 50% suppression:** gpt2: single SAE reaches 4/4, has lower KL than FRA on 4/4 jointly reachable cases, and zero KL on 4/4; gemma: single SAE reaches 4/4, has lower KL than FRA on 3/3 jointly reachable cases, and zero KL on 3/4.
 
 This is the original repeated-token IC4/G4 benchmark, including bank→river and king→crown.
