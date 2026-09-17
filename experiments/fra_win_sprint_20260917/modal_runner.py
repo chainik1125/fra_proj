@@ -10,7 +10,7 @@ results=modal.Volume.from_name('fra-win-sprint-20260917',create_if_missing=True)
 @app.function(image=image,gpu='A100-80GB',cpu=(4,4),memory=(65536,65536),timeout=7200,max_containers=2,volumes={'/cache':cache,'/results':results},secrets=[modal.Secret.from_name('hf-token')])
 def run(stage):
     import sys;sys.path.insert(0,'/work')
-    if stage in ['screen','oracle','variant_screen']:
+    if stage in ['screen','oracle','variant_screen','cards_table_screen']:
         import importlib
         execute=importlib.import_module(stage).run
         result=execute(Path('/results'),results.commit)
@@ -23,12 +23,27 @@ def run(stage):
     elif stage.startswith('variant_learn_pairs_'):
         from variant_learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('variant_learn_pairs_'))
+    elif stage.startswith('mechanism_distinct_'):
+        from mechanism import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('mechanism_distinct_'),family='fra_distinct')
+    elif stage.startswith('mechanism_'):
+        from mechanism import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('mechanism_'))
+    elif stage.startswith('confirm_'):
+        from confirm import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('confirm_'))
+    elif stage.startswith('polish_'):
+        from polish import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('polish_'))
     elif stage.startswith('refine_'):
         from refine import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('refine_'))
     elif stage.startswith('learn_pairs_'):
         from learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('learn_pairs_'))
+    elif stage.startswith('baseline_extra_'):
+        from baseline_extra import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_extra_'))
     else:
         from search import run as execute
         assert stage.startswith('search_')

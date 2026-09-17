@@ -92,3 +92,31 @@ North/South with Cedar/Maple or express the rules as prose. Each paired prompt
 still changes exactly one queue word; 32 calibration cases per variant. These
 variants share the already frozen lexical splits. They have not been scored yet.
 Separate copied entrypoints preserve the running search's numerical source hashes.
+
+## 20:08 UTC — learned search completed, stronger baseline and audit
+
+Learned search completed 504 settings. Overall tuning winner: global_S256_P48,
+strength8, 48 pairs across five layers and23 heads, with48 unique endpoints.
+26/48 pairs share their Q and K feature ID. Tuning KL .005532, suppression94.64%,
+all32 answers correct. Exploratory test: KL .008472, suppression91.77%, all8
+objectives repaired,55/56 controls correct, and7/8 shared-conjunction controls
+correct. Queue accuracy equals full-vocabulary top-token accuracy. The one wrong
+shared-conjunction test case has clean Print probability .214 and edited Print
+probability .385; the answer error must not automatically be attributed to FRA.
+Independent clean predictions will be retained in confirmation and mechanism runs.
+
+The distinct-ID tuning winner is still distinct_S64_P48 at strength16 (KL .006240,
+suppression90.31%). Add it as a labeled secondary confirmation family and include
+its endpoint features in the strongest SAE comparator. A1-pair cut never reaches
+50% suppression with preserved controls in either learned pool; the best distinct
+16-pair cut reaches KL .01296 and86.66% suppression. These are tuning diagnostics.
+
+Full SAE sweep is still running; its best tuning KL is now .03708. Extra comparator
+code is ready: absolute source/answer/pooled diffs, FRA endpoints, global versus
+whole-document scopes, activation scaling and constant steering. Subsequent local
+strength refinement will take12 distinct candidates per threshold and subdivide
+neighboring intervals twice. No fresh confirmation outputs have been generated.
+
+Extra implementation audit passed all16 heads at each of the six SAE sites.
+Maximum relative rotated Q/K error was .000799; anchored pair contributions agree
+with their entries in the full token-pair matrix. Variant screening is running.

@@ -1,0 +1,36 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-K86ft0KZtvQwIkR5r5GLVu
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.28s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:04<00:05,  2.53s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.61s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.37s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.42s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+EXTRA AUDIT 10 max rotated Q/K error 0.0007987871649675071
+EXTRA AUDIT 17 max rotated Q/K error 0.0005174301331862807
+EXTRA AUDIT 21 max rotated Q/K error 0.0004912301665171981
+EXTRA AUDIT 22 max rotated Q/K error 0.0004981446545571089
+EXTRA AUDIT 28 max rotated Q/K error 0.0005468257004395127
+EXTRA AUDIT 32 max rotated Q/K error 0.0004471126012504101
+VARIANT contracts clean 0.96875 controls 1.0 gate True oracle [('six_sites', 0.1318, 0.509), ('old_top64', 0.0306, 0.924)]
+VARIANT contracts_short clean 0.9375 controls 1.0 gate False oracle [('six_sites', 0.1355, 0.304), ('old_top64', 0.0395, 0.875)]
+VARIANT named_offices clean 1.0 controls 1.0 gate True oracle [('six_sites', 0.0659, 0.62), ('old_top64', 0.0125, 0.958)]
+VARIANT narrative_contracts clean 1.0 controls 1.0 gate True oracle [('six_sites', 0.0281, 0.853), ('old_top64', 0.0097, 0.996)]
+VARIANT cards clean 0.78125 controls 0.75 gate False oracle [('six_sites', 0.5398, 0.799), ('old_top64', 0.7264, 0.953)]
+SAVED variant_screen 62631
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-K86ft0KZtvQwIkR5r5GLVu

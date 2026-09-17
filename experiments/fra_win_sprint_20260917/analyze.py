@@ -23,10 +23,24 @@ def cfgkey(config):return json.dumps(config,sort_keys=True)
 
 def merged_selection(results):
     """Choose only from tuning scores, including all completed search families."""
-    points=[{**p,'source_index':i} for i,r in enumerate(results) for p in r['points'] if p['valid']]
+    # Prefer an ordinary full-forward replay to an earlier cached-prefix
+    # measurement of the exact same SAE intervention. Ranking metadata does
+    # not make two numerically identical interventions distinct.
+    points=[];sae={}
+    for i,r in enumerate(results):
+        for p in r['points']:
+            p={**p,'source_index':i};c=p['config']
+            if c['method']!='sae':points.append(p);continue
+            k=(c['layer'],c['feature'],c['strength'],c.get('intervention','activation'),c.get('scope','all'))
+            if k not in sae or (p.get('direct',False),i)>=(sae[k].get('direct',False),sae[k]['source_index']):sae[k]=p
+    points=[p for p in points+list(sae.values()) if p['valid']]
     selection=[]
-    for family in ['sae_diff','sae_strong','fra']:
-        candidates=[p for p in points if (family=='fra' and p['config']['method'].startswith('fra')) or
+    def is_distinct(p):
+        c=p['config'];spec=results[p['source_index']]['pair_sets'][c['set']]
+        pp=spec.get('pairs') or [q for qq in spec['heads'].values() for q in qq]
+        return bool(pp) and all(q['q']!=q['k'] for q in pp)
+    for family in ['sae_diff','sae_strong','fra','fra_distinct']:
+        candidates=[p for p in points if (family.startswith('fra') and p['config']['method'].startswith('fra') and (family=='fra' or is_distinct(p))) or
             (family.startswith('sae') and p['config']['method']=='sae' and
              (family=='sae_strong' or 'diff' in p['config'].get('ranks',[])))]
         for threshold in [None,0.,.5,.9]:
@@ -66,8 +80,8 @@ def comparison(fra,sae,threshold):
 def tuning_plot(results,out):
     import matplotlib;matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    colors={'sae':'#ce7845','fra':'#2878a6','fra_refined':'#5d509d'}
-    labels={'sae':'Single SAE feature','fra':'FRA: one layer','fra_refined':'FRA: live across layers'}
+    colors={'sae':'#ce7845','fra':'#2878a6','fra_refined':'#5d509d','fra_learned':'#187f51'}
+    labels={'sae':'Single SAE feature','fra':'FRA: one layer','fra_refined':'FRA: gradient ranking','fra_learned':'FRA: learned pair selection'}
     fig,ax=plt.subplots(figsize=(7.2,4.6))
     points=[p for r in results for p in r['points'] if p['valid'] and p['summary']['controls']['correct']>=.95]
     for method in colors:
