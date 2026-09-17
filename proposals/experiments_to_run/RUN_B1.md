@@ -60,4 +60,36 @@ Notes / knobs: the single-feature attribution contrasts AB (payload present) vs 
 single-feature here, pre-check attention-routing (position-mask the pair's query->key attention; if the
 payload drops, it is routed and FRA should win) before recording it as a boundary point.
 
+### 3. OV hybrid + honest collateral (scripts/58) -- addresses Dmitry's Sep 17 feedback
+
+Dmitry's run of scripts/57 showed FRA has lower collateral but limited reach (not Pareto), and asked to
+(a) try steering the OV path / a QK+OV hybrid, (b) use the pre-attention SAE hookpoint. scripts/58 does
+this AND fixes a metric hole: it adds a **payload-elsewhere** collateral set (legit "...seven, eight,"
+-> nine), because the reuse probes use a different payload and so do NOT penalise payload/OV
+suppression. Run:
+
+```
+OUTDIR=results/b1 NSEED=6 OV_FIX=1.0 DL=6 python scripts/58_b1_conjunction_removal_ov.py
+```
+
+Methods compared: `fra` (QK cell), `hybrid` (FRA QK + OV nudge), `feat1` (single SAE feature, additive,
+pre-attn hookpoint L=DL), `dom`, `pay` (output payload-suppress), `ov` (OV-path payload-suppress on
+induction layers' hook_attn_out), `oracle`. Prints, at 50/70/90% removal: worst-case collateral KL over
+{reuseA, reuseB, payload-elsewhere} AND reach (n reached / n total). Writes results/b1/b1_removal_ov.json.
+
+Expected story to test: FRA = lowest worst-case collateral but limited reach; `hybrid` = recovers reach
+(OV suppresses the copied payload) while keeping worst-case below `feat1` and `pay` (single-feature
+hurts reuse; pay/ov hurt payload-elsewhere; FRA/hybrid spare more). Knobs: OV_FIX (OV strength in the
+hybrid), DL (pre-attn hookpoint layer), N_HEADS, M_PAIRS.
+
+### Boundary check (scripts/59, CPU) -- the conjunction needs scale
+
+`python scripts/59_gpt2_conjunction_screen.py` (runs on CPU). GPT-2-small does NOT bind the conjunction
+(pair ~0.1, no margin), vs gemma-2-2b 0.65 vs 0.04. So this is a scale-emergent capability -- report as
+a boundary point; do NOT expect a laptop-CPU reproduction.
+
+### 4. More real-world (Dmitry's ask) -- see [[B1_real_conjunction]]
+
+The toy password conjunction -> a realistic in-context fact-injection QA with the same cell structure.
+
 Full rationale + probe families: [[B1_controlled_conjunction]]. Daily log: [[ladder_log]].

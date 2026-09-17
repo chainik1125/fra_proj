@@ -325,3 +325,38 @@ NEXT (B1 proper): plant this conjunction, run FRA cell-cut vs single-SAE-feature
 payload-suppress, coherence/collateral measured on A-only and B-only (novel-partner) text at matched
 payload-removal. Report WORST-case over the two collateral sets. Pre-check: position-mask the pair's
 attention to confirm attention-routed (expected yes -- in-context retrieval).
+
+## Day 5 (Sep 17) -- Dmitry ran B1 removal; his feedback; OV hybrid + boundary findings
+
+**Dmitry ran scripts/57 on his GPU.** Result (his numbers): FRA is NOT Pareto-dominant but has LOWER
+collateral. At 50% target-removal FRA reached 5/12 cases (single-feature 12/12), collateral KL FRA
+0.235 vs single-feature 0.599; at 70% FRA 2/12 vs 12/12, KL 0.487 vs 1.176. So FRA ~2.4x lower
+collateral where it reaches, but limited REACH (can't always hit high removal). His verdict: "better on
+collateral, not pareto -- need to do better or show the trade-off in something more real world."
+
+**Dmitry's feedback (3 points):**
+1. OV path: "editing features in the OV path is more effective -- try a hybrid that also steers OV."
+2. Hookpoint: SAE should be at the pre-attention residual (ln1 input; hook_resid_pre here). A strong
+   result = FRA does something an SAE at no hookpoint can do; an OK result = FRA beats an SAE at that
+   specific hookpoint.
+3. Deadline: if nothing better by Friday, pivot to synthetic results + Llama-3 sleeper.
+
+**Built scripts/58_b1_conjunction_removal_ov.py** (addresses 1 + 2, and fixes a metric gap):
+- adds `ov` (suppress the TARGET payload direction at induction-layers' hook_attn_out -- OV path) and
+  `hybrid` (FRA QK cell-cut + a modest OV nudge in one forward -> recover reach while staying targeted).
+- adds a PAYLOAD-ELSEWHERE collateral set (legit counting "...seven, eight," -> nine). This closes a
+  hole in scripts/57: reuse probes use a DIFFERENT payload, so they do NOT penalise suppressing the
+  target payload -- only payload-elsewhere does. So worst-case collateral is now over
+  {reuseA, reuseB, payload-elsewhere}: FRA should be the ONLY method sparing all three (single-feature
+  hurts reuse; pay/ov hurt payload-elsewhere). Reports REACH too. DL (pre-attn hookpoint) is a knob.
+- Needs a GPU (gemma). Queued for Dmitry to run; my NCSA access is down (see below).
+
+**Boundary finding -- the conjunction needs scale (scripts/59, run locally on CPU).** GPT-2-small
+CANNOT bind the 3-way ambiguous conjunction: pair P(payload) 0.06-0.17 with ~no margin over marginals,
+even with 3x demo repetition. gemma-2-2b does it cleanly (0.60-0.68 vs 0.03-0.08). So the conjunction
+is a capability that emerges with model scale -- it can't be reproduced on a laptop-CPU GPT-2, and the
+FRA-conjunction win is only testable on gemma-scale (routes through Dmitry's GPU / NCSA).
+
+**NCSA access:** multiplexing confirmed unfixable on this Windows box (both Git ssh and native ssh, both
+home WiFi and eduroam -- see [[ncsa-access-from-home-wifi]]). Autonomous compute here is limited to
+GPT-2/CPU; gemma work is routed through Dmitry (Mac+GPU, no waitlist) via the pushed scripts.
