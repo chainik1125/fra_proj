@@ -360,3 +360,33 @@ FRA-conjunction win is only testable on gemma-scale (routes through Dmitry's GPU
 **NCSA access:** multiplexing confirmed unfixable on this Windows box (both Git ssh and native ssh, both
 home WiFi and eduroam -- see [[ncsa-access-from-home-wifi]]). Autonomous compute here is limited to
 GPT-2/CPU; gemma work is routed through Dmitry (Mac+GPU, no waitlist) via the pushed scripts.
+
+### Local GPT-2 synthetic conjunction WORKS (scripts/61) -- unblocks local, GPU-free B1
+
+GPT-2-small cannot bind the natural-text conjunction (scripts/59), but it DOES a synthetic BIGRAM
+conjunction with in-context rule repetition: plant "A B -> P" (target), "D B -> S", "A C -> Q" (each
+token shared) REP times in a random-token sequence, then query the pair. REP=6 (mean over 40 trials):
+P(P | A B)=0.667, P(P | D B)=0.052, P(P | A C)=0.000 -> CONJUNCTION True, 12.7x margin. REP=12 -> 0.727
+vs 0.049/0.000. So GPT-2 uses BOTH tokens (a genuine query-content x key-content cell), just needs
+repetition for absolute strength. This is a laptop-CPU testbed for the full B1 removal (FRA QK vs
+single-feature-additive vs DoM vs OV vs hybrid), independent of NCSA/gemma -- run via scripts/62.
+
+### GPT-2 local conjunction removal (scripts/62,63) -- mechanism + interim result (NSEED=2 smoke)
+
+Diagnostic (scripts/63): on the synthetic conjunction the query attends to the PAYLOAD (P) positions
+directly (not the B positions), and mostly to the LATER copies. Two fixes to scripts/62: locate FRA
+cells over ALL P positions (was: first P only -> near-zero effect), and the oracle masks query->P
+positions (was: ->B, removed nothing). Key mechanism number: masking the query's attention to all P
+positions drops P(P) 0.865->0.282, i.e. only ~67% of the payload is ATTENTION-ROUTED here; the rest is
+not. So pure-QK methods (FRA, attention-oracle) are capped at ~45-67% removal -- exactly the "limited
+reach" Dmitry saw on gemma. Output/OV edits are needed to go higher.
+
+Interim (NSEED=2, REP=6) worst-case collateral KL over {reuseA,reuseB,payelse} at matched removal:
+  @50%: ov 0.13 (2/2) | hybrid 0.30 (1/2) | pay 1.02 | feat1 1.74 | dom 3.76 | fra capped <50%
+  @90%: ov 0.48 | pay 1.02 | feat1 2.95 | dom 3.76
+So the FRA-family (FRA-QK, OV, QK+OV hybrid) beats single-SAE-feature (feat1) and DoM by ~5-25x on
+worst-case collateral at matched removal, AND targeted OV (payload direction at the induction layers'
+attn_out) beats GLOBAL payload-suppress (pay 1.02 vs ov 0.13) because it spares payload-elsewhere.
+This VALIDATES Dmitry's "OV editing is more effective" -- on the conjunction, targeted-OV / QK+OV hybrid
+is the Pareto winner: full reach at FRA-level (low) collateral, while single-feature must damage a
+shared endpoint. High seed variance at n=2; full NSEED=12 running. (GPT-2 local, no GPU.)
