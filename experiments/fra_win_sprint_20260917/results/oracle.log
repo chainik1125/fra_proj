@@ -21,3 +21,13 @@ WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_pr
 WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
 Loaded pretrained model gemma-2-9b-it into HookedTransformer
 ORACLE routing 0 / 16 seconds 253
+ORACLE routing 8 / 16 seconds 284
+BEST ORACLE routing [('top_64', 'payload', 'all_later', 0.0089, 0.725), ('top_16', 'row', 'all_later', 0.0129, 0.878), ('six_sae_sites', 'row', 'all_later', 0.0191, 0.663), ('all_layers', 'row', 'all_later', 0.0219, 0.898), ('top_16', 'payload', 'all_later', 0.0493, 0.535), ('top_64', 'row', 'all_later', 0.0603, 0.968), ('all_layers', 'payload', 'all_later', 0.0624, 0.489), ('top_4', 'row', 'all_later', 0.0746, 0.452), ('six_sae_sites', 'payload', 'all_later', 0.0825, 0.419), ('top_64', 'payload', 'answer_only', 0.1246, 0.324)]
+ORACLE tenants_long 0 / 32 seconds 316
+ORACLE tenants_long 8 / 32 seconds 350
+ORACLE tenants_long 16 / 32 seconds 383
+ORACLE tenants_long 24 / 32 seconds 417
+BEST ORACLE tenants_long [('top_64', 'row', 'all_later', 0.0083, 0.914), ('top_64', 'payload', 'all_later', 0.0218, 0.789), ('top_16', 'row', 'all_later', 0.022, 0.786), ('top_16', 'payload', 'all_later', 0.0362, 0.687), ('six_sae_sites', 'row', 'all_later', 0.0694, 0.49), ('top_4', 'row', 'all_later', 0.0807, 0.455), ('six_sae_sites', 'payload', 'all_later', 0.0876, 0.393), ('top_4', 'payload', 'all_later', 0.1002, 0.373), ('layer_28_all_heads', 'payload', 'all_later', 0.1197, 0.285), ('top_64', 'payload', 'answer_only', 0.1218, 0.291)]
+SAVED oracle 95647
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-bVsB7RAyeNqBspGO7z71TL

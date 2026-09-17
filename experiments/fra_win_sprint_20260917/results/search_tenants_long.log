@@ -19,3 +19,50 @@ WARNING:root:You tried to specify center_unembed=True for a model using logit so
 [1ALoading checkpoint shards: 100%|██████████| 4/4 [00:11<00:00,  2.91s/it]
 WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
 WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE LOADED 10 ('gemma-scope-9b-it-res', 'layer_9/width_16k/average_l0_88')
+SAE LOADED 17 ('gemma-scope-9b-pt-res', 'layer_16/width_16k/average_l0_75')
+SAE LOADED 21 ('gemma-scope-9b-it-res', 'layer_20/width_16k/average_l0_91')
+SAE LOADED 22 ('gemma-scope-9b-pt-res', 'layer_21/width_16k/average_l0_66')
+SAE LOADED 28 ('gemma-scope-9b-pt-res', 'layer_27/width_16k/average_l0_65')
+SAE LOADED 32 ('gemma-scope-9b-it-res', 'layer_31/width_16k/average_l0_76')
+AUDIT [{'layer': 10, 'l0': 87.21680450439453, 'relative_squared_error_including_bos': 3.1383275985717773, 'relative_squared_error_without_bos': 0.15233895182609558, 'q_relative_rmse': 0.0002491232880856842, 'k_relative_rmse': 0.00027165867504663765, 'q_max_abs_error': 0.0045261383056640625, 'k_max_abs_error': 0.007184028625488281}, {'layer': 17, 'l0': 117.76693725585938, 'relative_squared_error_including_bos': 6.707221031188965, 'relative_squared_error_without_bos': 0.18427182734012604, 'q_relative_rmse': 0.00025583477690815926, 'k_relative_rmse': 0.00028122946969233453, 'q_max_abs_error': 0.005290031433105469, 'k_max_abs_error': 0.008170127868652344}, {'layer': 21, 'l0': 122.43360900878906, 'relative_squared_error_including_bos': 0.7749940752983093, 'relative_squared_error_without_bos': 0.14085525274276733, 'q_relative_rmse': 0.00025214828201569617, 'k_relative_rmse': 0.0002891337207984179, 'q_max_abs_error': 0.004746437072753906, 'k_max_abs_error': 0.004242420196533203}, {'layer': 22, 'l0': 106.57453155517578, 'relative_squared_error_including_bos': 1.3106517791748047, 'relative_squared_error_without_bos': 0.16375021636486053, 'q_relative_rmse': 0.0002574984391685575, 'k_relative_rmse': 0.0003009912616107613, 'q_max_abs_error': 0.0027670860290527344, 'k_max_abs_error': 0.006236076354980469}, {'layer': 28, 'l0': 106.29810333251953, 'relative_squared_error_including_bos': 3.710519790649414, 'relative_squared_error_without_bos': 0.1409064680337906, 'q_relative_rmse': 0.00025561623624525964, 'k_relative_rmse': 0.0002729708794504404, 'q_max_abs_error': 0.0048828125, 'k_max_abs_error': 0.00716400146484375}, {'layer': 32, 'l0': 79.55826568603516, 'relative_squared_error_including_bos': 1.8881503343582153, 'relative_squared_error_without_bos': 0.10777565836906433, 'q_relative_rmse': 0.0002512982173357159, 'k_relative_rmse': 0.00028796109836548567, 'q_max_abs_error': 0.005061149597167969, 'k_max_abs_error': 0.005672454833984375}]
+CALIBRATION tenants_long 0 seconds 81
+CALIBRATION tenants_long 8 seconds 85
+CALIBRATION tenants_long 16 seconds 89
+CALIBRATION tenants_long 24 seconds 92
+RANKED 10 SAE 26 union 388 173 heads [14, 9, 7, 3]
+RANKED 17 SAE 27 union 514 235 heads [9, 0, 8, 6]
+RANKED 21 SAE 30 union 539 314 heads [7, 4, 0, 6]
+RANKED 22 SAE 27 union 439 274 heads [4, 13, 14, 1]
+RANKED 28 SAE 28 union 497 256 heads [12, 8, 4, 9]
+RANKED 32 SAE 26 union 353 183 heads [15, 7, 1, 5]
+PREPARED tuning 32 seconds 131 GPU_GB 31.79
+ZERO AUDIT {10: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 17: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 21: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 22: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 28: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}, 32: {'full_forward_max_logit_error': 0.0, 'cached_max_logit_error': 0.0}}
+SWEEP tenants_long 0 / 1094 points 8 best {'sae': 0.14998} seconds 147
+SWEEP tenants_long 10 / 1094 points 88 best {'sae': 0.09857} seconds 269
+SWEEP tenants_long 20 / 1094 points 168 best {'sae': 0.09114} seconds 392
+SWEEP tenants_long 30 / 1094 points 248 best {'sae': 0.0873} seconds 516
+SWEEP tenants_long 40 / 1094 points 328 best {'sae': 0.0873} seconds 638
+SWEEP tenants_long 50 / 1094 points 406 best {'sae': 0.0873} seconds 755
+SWEEP tenants_long 60 / 1094 points 486 best {'sae': 0.0873} seconds 865
+SWEEP tenants_long 70 / 1094 points 566 best {'sae': 0.0873} seconds 976
+SWEEP tenants_long 80 / 1094 points 646 best {'sae': 0.0873} seconds 1086
+SWEEP tenants_long 90 / 1094 points 726 best {'sae': 0.08668} seconds 1197
+SWEEP tenants_long 100 / 1094 points 806 best {'sae': 0.08668} seconds 1308
+SWEEP tenants_long 110 / 1094 points 880 best {'sae': 0.08668} seconds 1404
+SWEEP tenants_long 120 / 1094 points 960 best {'sae': 0.08668} seconds 1502
+SWEEP tenants_long 130 / 1094 points 1040 best {'sae': 0.05669} seconds 1599
+SWEEP tenants_long 140 / 1094 points 1120 best {'sae': 0.05669} seconds 1696
+SWEEP tenants_long 150 / 1094 points 1200 best {'sae': 0.05669} seconds 1794
+SWEEP tenants_long 160 / 1094 points 1277 best {'sae': 0.05669} seconds 1884
+SWEEP tenants_long 170 / 1094 points 1357 best {'sae': 0.05669} seconds 1972
+SWEEP tenants_long 180 / 1094 points 1437 best {'sae': 0.05669} seconds 2062
+SWEEP tenants_long 190 / 1094 points 1517 best {'sae': 0.05669} seconds 2150
+SWEEP tenants_long 200 / 1094 points 1597 best {'sae': 0.05669} seconds 2239
+SWEEP tenants_long 210 / 1094 points 1677 best {'sae': 0.05669} seconds 2328
+SWEEP tenants_long 220 / 1094 points 1752 best {'sae': 0.05669} seconds 2408
+SWEEP tenants_long 230 / 1094 points 1832 best {'sae': 0.05669} seconds 2494
+SWEEP tenants_long 240 / 1094 points 1912 best {'sae': 0.05669} seconds 2578
+SWEEP tenants_long 250 / 1094 points 1992 best {'sae': 0.05669} seconds 2661
+SWEEP tenants_long 260 / 1094 points 2072 best {'sae': 0.05669} seconds 2746

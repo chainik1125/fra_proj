@@ -1,0 +1,64 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-QnTxJb12nyuS7EgOiJUjp6
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.35s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.60s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.67s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.41s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.47s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+LEARN PAIRS {'pool': 'distinct', 'step': 32, 'mean_training_kl_last32': 0.1658394601782399, 'mean_weight': 0.43023547530174255, 'max_weight': 0.5252031087875366} seconds 74
+LEARN PAIRS {'pool': 'distinct', 'step': 64, 'mean_training_kl_last32': 0.08974177938013295, 'mean_weight': 0.6243447661399841, 'max_weight': 1.0851190090179443} seconds 85
+LEARN PAIRS {'pool': 'distinct', 'step': 96, 'mean_training_kl_last32': 0.05327674019797556, 'mean_weight': 0.8923907279968262, 'max_weight': 2.2758829593658447} seconds 96
+LEARN PAIRS {'pool': 'distinct', 'step': 128, 'mean_training_kl_last32': 0.04077713115399112, 'mean_weight': 0.8749708533287048, 'max_weight': 2.8865246772766113} seconds 107
+LEARN PAIRS {'pool': 'distinct', 'step': 160, 'mean_training_kl_last32': 0.030797887359892105, 'mean_weight': 0.883837103843689, 'max_weight': 3.511014699935913} seconds 119
+LEARN PAIRS {'pool': 'distinct', 'step': 192, 'mean_training_kl_last32': 0.025043005012508966, 'mean_weight': 0.9266173839569092, 'max_weight': 4.205718994140625} seconds 130
+LEARN PAIRS {'pool': 'distinct', 'step': 224, 'mean_training_kl_last32': 0.02130250392977885, 'mean_weight': 0.9225279092788696, 'max_weight': 4.574938774108887} seconds 141
+LEARN PAIRS {'pool': 'distinct', 'step': 256, 'mean_training_kl_last32': 0.019171027882119062, 'mean_weight': 0.9263756275177002, 'max_weight': 5.071621417999268} seconds 152
+LEARN PAIRS {'pool': 'distinct', 'step': 288, 'mean_training_kl_last32': 0.016992579724123408, 'mean_weight': 0.9570283889770508, 'max_weight': 5.603056907653809} seconds 164
+LEARN PAIRS {'pool': 'distinct', 'step': 320, 'mean_training_kl_last32': 0.01534748231040153, 'mean_weight': 0.9777364134788513, 'max_weight': 6.073599338531494} seconds 175
+LEARN PAIRS {'pool': 'distinct', 'step': 352, 'mean_training_kl_last32': 0.014058622019320038, 'mean_weight': 0.9744169116020203, 'max_weight': 6.348506450653076} seconds 186
+LEARN PAIRS {'pool': 'distinct', 'step': 384, 'mean_training_kl_last32': 0.013449994040800236, 'mean_weight': 0.9966534972190857, 'max_weight': 6.807867050170898} seconds 197
+LEARN PAIRS {'pool': 'distinct', 'step': 416, 'mean_training_kl_last32': 0.012112738125582624, 'mean_weight': 1.0037200450897217, 'max_weight': 7.243622303009033} seconds 208
+LEARN PAIRS {'pool': 'distinct', 'step': 448, 'mean_training_kl_last32': 0.01147256509982628, 'mean_weight': 0.9963520765304565, 'max_weight': 7.713454246520996} seconds 219
+LEARN PAIRS {'pool': 'distinct', 'step': 480, 'mean_training_kl_last32': 0.010673674553284308, 'mean_weight': 1.0220164060592651, 'max_weight': 8.393717765808105} seconds 230
+LEARN PAIRS {'pool': 'distinct', 'step': 512, 'mean_training_kl_last32': 0.010072145408945818, 'mean_weight': 1.0240042209625244, 'max_weight': 8.905781745910645} seconds 240
+LEARN PAIRS {'pool': 'global', 'step': 32, 'mean_training_kl_last32': 0.09456316480986733, 'mean_weight': 0.30119192600250244, 'max_weight': 0.5504816770553589} seconds 253
+LEARN PAIRS {'pool': 'global', 'step': 64, 'mean_training_kl_last32': 0.052157001891992544, 'mean_weight': 0.32201629877090454, 'max_weight': 1.0537548065185547} seconds 265
+LEARN PAIRS {'pool': 'global', 'step': 96, 'mean_training_kl_last32': 0.03581060302650993, 'mean_weight': 0.41562771797180176, 'max_weight': 2.1038191318511963} seconds 278
+LEARN PAIRS {'pool': 'global', 'step': 128, 'mean_training_kl_last32': 0.023288040671478483, 'mean_weight': 0.4344727396965027, 'max_weight': 3.064915657043457} seconds 289
+LEARN PAIRS {'pool': 'global', 'step': 160, 'mean_training_kl_last32': 0.017400794066321907, 'mean_weight': 0.45923304557800293, 'max_weight': 4.007480621337891} seconds 301
+LEARN PAIRS {'pool': 'global', 'step': 192, 'mean_training_kl_last32': 0.01384864692885321, 'mean_weight': 0.49166297912597656, 'max_weight': 5.163582801818848} seconds 313
+LEARN PAIRS {'pool': 'global', 'step': 224, 'mean_training_kl_last32': 0.010554385453938771, 'mean_weight': 0.5177423357963562, 'max_weight': 6.168440341949463} seconds 328
+LEARN PAIRS {'pool': 'global', 'step': 256, 'mean_training_kl_last32': 0.008374488027869931, 'mean_weight': 0.5385891795158386, 'max_weight': 7.12174654006958} seconds 339
+LEARN PAIRS {'pool': 'global', 'step': 288, 'mean_training_kl_last32': 0.006475203150352609, 'mean_weight': 0.5657094717025757, 'max_weight': 7.905970573425293} seconds 351
+LEARN PAIRS {'pool': 'global', 'step': 320, 'mean_training_kl_last32': 0.0051800499372365695, 'mean_weight': 0.592097282409668, 'max_weight': 8.596921920776367} seconds 362
+LEARN PAIRS {'pool': 'global', 'step': 352, 'mean_training_kl_last32': 0.004060849255037572, 'mean_weight': 0.6048647165298462, 'max_weight': 9.057929992675781} seconds 373
+LEARN PAIRS {'pool': 'global', 'step': 384, 'mean_training_kl_last32': 0.0034756599253637148, 'mean_weight': 0.6214344501495361, 'max_weight': 9.5480318069458} seconds 385
+LEARN PAIRS {'pool': 'global', 'step': 416, 'mean_training_kl_last32': 0.0029071798972971317, 'mean_weight': 0.6284277439117432, 'max_weight': 9.791783332824707} seconds 397
+LEARN PAIRS {'pool': 'global', 'step': 448, 'mean_training_kl_last32': 0.002679467736061923, 'mean_weight': 0.6275845170021057, 'max_weight': 10.057267189025879} seconds 408
+LEARN PAIRS {'pool': 'global', 'step': 480, 'mean_training_kl_last32': 0.0023536327891707162, 'mean_weight': 0.6439504027366638, 'max_weight': 10.291766166687012} seconds 420
+LEARN PAIRS {'pool': 'global', 'step': 512, 'mean_training_kl_last32': 0.0021856738560157656, 'mean_weight': 0.643037736415863, 'max_weight': 10.445837020874023} seconds 431
+LEARNED SWEEP 0 / 56 seconds 469
+LEARNED SWEEP 1 / 56 seconds 501
+LEARNED SWEEP 2 / 56 seconds 543
+LEARNED SWEEP 3 / 56 seconds 586
+LEARNED SWEEP 4 / 56 seconds 634
+LEARNED SWEEP 5 / 56 seconds 689
+LEARNED SWEEP 6 / 56 seconds 708
+LEARNED SWEEP 7 / 56 seconds 738
+LEARNED SWEEP 8 / 56 seconds 771
+LEARNED SWEEP 9 / 56 seconds 809

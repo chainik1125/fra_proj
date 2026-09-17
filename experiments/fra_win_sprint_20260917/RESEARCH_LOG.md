@@ -61,3 +61,34 @@ all six sites, top-ten difference/interaction/gradient feature candidates, signe
 activation scaling and constant steering, and 216 FRA pair sets spanning six
 sites, three rankings, three head counts, and four pair counts. No confirmation
 inputs have been evaluated. Renamed the dedicated branch to reflect ten hours.
+
+## 19:20 UTC — full-position gradients and learned pair selection
+
+Refinement ranked 11,339 candidate pairs by the derivative of paired KL across
+all token positions, then swept 495 settings including live multi-layer cuts.
+Zero-cut logits matched exactly. Its tuning winner was a single-layer L21 cut of
+144 pairs, strength 2. Exploratory test: KL 0.0836, 75.2% raw-target suppression,
+8/8 target answers correct, but only 52/56 controls correct (92.9%). This misses
+the control-preservation requirement. The SAE search has already reached tuning
+KL 0.0567 before its strongest native IT sites, so this is not a current win.
+
+Next pair-identification method: optimize nonnegative pair coefficients on the
+32 calibration cases, freezing the model and SAE weights. Two pools use 384
+full-gradient-ranked pairs each: distinct feature IDs only, or all pairs. Fixed
+snapshots at 64/128/256/512 steps select top 1/4/16/48/144/384 pairs. Primary
+candidates then use equal coefficients and the same tuning grid as ordinary
+cuts. The directly weighted intervention is saved as a diagnostic and excluded
+from the primary FRA-vs-SAE selection. No confirmation model outputs have been generated
+or examined. This extends pair identification; it is not evidence that the
+original ranking procedure wins.
+
+## 19:26 UTC — additional contexts specified before screening
+
+Prepared contracts, contracts_short, named_offices, and narrative_contracts. The
+contract variants make North printer hardware and South laptop connectivity
+legitimately route to Desktop under local staffing rules. Thus deleting site or
+fault information can damage other required lookups. Other variants replace
+North/South with Cedar/Maple or express the rules as prose. Each paired prompt
+still changes exactly one queue word; 32 calibration cases per variant. These
+variants share the already frozen lexical splits. They have not been scored yet.
+Separate copied entrypoints preserve the running search's numerical source hashes.

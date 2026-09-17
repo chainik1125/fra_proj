@@ -1,0 +1,57 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-pEby60LXWjQbZG2AEsUl3r
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+└── 🔨 Created function run.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:58<02:56, 58.77s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [02:02<02:03, 61.97s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [03:08<01:03, 63.64s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [03:46<00:00, 53.30s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [03:46<00:00, 56.51s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+FULL POSITION RANK tenants_long 0 / 32 seconds 370
+FULL POSITION RANK tenants_long 4 / 32 seconds 372
+FULL POSITION RANK tenants_long 8 / 32 seconds 373
+FULL POSITION RANK tenants_long 12 / 32 seconds 375
+FULL POSITION RANK tenants_long 16 / 32 seconds 377
+FULL POSITION RANK tenants_long 20 / 32 seconds 379
+FULL POSITION RANK tenants_long 24 / 32 seconds 380
+FULL POSITION RANK tenants_long 28 / 32 seconds 382
+REFINED CANDIDATES 11339 sets 45 top [{'layer': 22, 'head': 12, 'q': 7765, 'k': 7765, 'gradient': 0.03349854052066803, 'target_source_gradient': 0.012802895158529282}, {'layer': 17, 'head': 9, 'q': 7806, 'k': 7806, 'gradient': 0.032102253288030624, 'target_source_gradient': 0.07604318857192993}, {'layer': 22, 'head': 5, 'q': 7765, 'k': 7765, 'gradient': 0.029246432706713676, 'target_source_gradient': 0.010473424568772316}, {'layer': 28, 'head': 12, 'q': 14749, 'k': 14749, 'gradient': 0.025736872106790543, 'target_source_gradient': 0.022740371525287628}, {'layer': 21, 'head': 0, 'q': 9289, 'k': 9289, 'gradient': 0.01617535576224327, 'target_source_gradient': 0.0037301620468497276}]
+REFINED SWEEP 0 / 45 seconds 402
+REFINED SWEEP 2 / 45 seconds 438
+REFINED SWEEP 4 / 45 seconds 495
+REFINED SWEEP 6 / 45 seconds 565
+REFINED SWEEP 8 / 45 seconds 589
+REFINED SWEEP 10 / 45 seconds 632
+REFINED SWEEP 12 / 45 seconds 691
+REFINED SWEEP 14 / 45 seconds 740
+REFINED SWEEP 16 / 45 seconds 775
+REFINED SWEEP 18 / 45 seconds 831
+REFINED SWEEP 20 / 45 seconds 899
+REFINED SWEEP 22 / 45 seconds 935
+REFINED SWEEP 24 / 45 seconds 974
+REFINED SWEEP 26 / 45 seconds 1004
+REFINED SWEEP 28 / 45 seconds 1037
+REFINED SWEEP 30 / 45 seconds 1064
+REFINED SWEEP 32 / 45 seconds 1095
+REFINED SWEEP 34 / 45 seconds 1122
+REFINED SWEEP 36 / 45 seconds 1150
+REFINED SWEEP 38 / 45 seconds 1169
+REFINED SWEEP 40 / 45 seconds 1191
+REFINED SWEEP 42 / 45 seconds 1207
+REFINED SWEEP 44 / 45 seconds 1224
+SAVED refine_tenants_long 1133562
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-pEby60LXWjQbZG2AEsUl3r
