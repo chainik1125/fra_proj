@@ -1,0 +1,74 @@
+GPU_REQUEST A100-80GB
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-0YG1X9X9cIJgXfNc9YyTl0
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+├── 🔨 Created function run.
+├── 🔨 Created function run_fast.
+└── 🔨 Created function archive_narrative_a100.
+GPU_REQUEST A100-80GB
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.10s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.15s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.21s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.01s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.07s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+SAE SCOPES FEATURES [(10, 37, 17), (17, 57, 25), (21, 59, 17), (22, 54, 15), (28, 59, 26), (32, 42, 19)] imported 7038
+SAE SCOPES SWEEP 0 / 1592 best 0.03714957052066627 seconds 86
+SAE SCOPES SWEEP 10 / 1592 best 0.03714957052066627 seconds 199
+Stopping app - user stopped from CLI.
+Runner terminated.
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod │
+│ al_runner.py:98 in main                                                      │
+│                                                                              │
+│    97 │   print('GPU_REQUEST', 'CPU' if stage=='archive_narrative_a100' else │
+│ ❱  98 │   answer=archive_narrative_a100.remote() if stage=='archive_narrativ │
+│    99 │   raw=json.dumps(answer,allow_nan=False);out=ROOT/'results';out.mkdi │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_object.py:46 in wrapped    │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1696 in       │
+│ remote                                                                       │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1640 in       │
+│ _call_function                                                               │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:474 in        │
+│ run_function                                                                 │
+│                                                                              │
+│    473 │   │   │   if await_response.output.result.status in TERMINAL_STATUS │
+│ ❱  474 │   │   │   │   return await _process_result(                         │
+│    475 │   │   │   │   │   await_response.output.result, await_response.outp │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_utils/function_utils.py:55 │
+│ 0 in _process_result                                                         │
+│                                                                              │
+│   549 │   │                                                                  │
+│ ❱ 550 │   │   raise RemoteError(result.exception)                            │
+│   551                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RemoteError

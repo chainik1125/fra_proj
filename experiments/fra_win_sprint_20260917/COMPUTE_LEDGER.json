@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-09-17T22:13:34.160407+00:00",
+  "updated_utc": "2026-09-17T22:40:24.979964+00:00",
   "app_wall_time_includes_queue_and_is_not_billed_gpu_time": true,
   "planning_hourly_rates": {
     "A100-80GB": 3.198528,
@@ -178,14 +178,14 @@
     {
       "app_id": "ap-1ROh8HM0ZjYmFWENO25Kpu",
       "stage": "variant_search_narrative_contracts_h100",
-      "state": "ephemeral (detached)",
-      "tasks": "1",
+      "state": "stopped",
+      "tasks": "0",
       "created_at": "2026-09-17T14:20:03-07:00",
-      "stopped_at": null,
-      "app_wall_hours": 0.8919890019444444,
+      "stopped_at": "2026-09-17 15:31:05-07:00",
+      "app_wall_hours": 1.183888888888889,
       "gpu_request": "H100!",
       "planning_hourly_rate": 4.649328,
-      "estimated_resource_cost_upper_bound": 4.14714944243236
+      "estimated_resource_cost_upper_bound": 5.50428776
     },
     {
       "app_id": "ap-abkTFQjO7WadUxz9d1IsOt",
@@ -198,9 +198,45 @@
       "gpu_request": "CPU",
       "planning_hourly_rate": 0.02,
       "estimated_resource_cost_upper_bound": 6.111111111111112e-05
+    },
+    {
+      "app_id": "ap-SML6GCvZbazmkMIsG92OMV",
+      "stage": "baseline_extra_tenants_long_resume2",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T15:13:34-07:00",
+      "stopped_at": "2026-09-17 15:33:39-07:00",
+      "app_wall_hours": 0.3347222222222222,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 1.0706183999999999
+    },
+    {
+      "app_id": "ap-NJZRnAr4QHOAc9hxX0wKlF",
+      "stage": "variant_refine_narrative_contracts",
+      "state": "ephemeral (detached)",
+      "tasks": "1",
+      "created_at": "2026-09-17T15:31:58-07:00",
+      "stopped_at": null,
+      "app_wall_hours": 0.14082776777777778,
+      "gpu_request": "H100!",
+      "planning_hourly_rate": 4.649328,
+      "estimated_resource_cost_upper_bound": 0.65475448390672
+    },
+    {
+      "app_id": "ap-0YG1X9X9cIJgXfNc9YyTl0",
+      "stage": "baseline_nobos_tenants_long",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17T15:34:32-07:00",
+      "stopped_at": "2026-09-17 15:38:58-07:00",
+      "app_wall_hours": 0.07388888888888889,
+      "gpu_request": "A100-80GB",
+      "planning_hourly_rate": 3.198528,
+      "estimated_resource_cost_upper_bound": 0.23633568000000002
     }
   ],
-  "total_app_wall_hours": 6.8853223352777775,
-  "total_gpu_app_wall_hours": 6.882266779722222,
-  "estimated_resource_cost_upper_bound": 23.30728175354347
+  "total_app_wall_hours": 7.726661101111111,
+  "total_gpu_app_wall_hours": 7.7236055455555555,
+  "estimated_resource_cost_upper_bound": 26.62612863501783
 }

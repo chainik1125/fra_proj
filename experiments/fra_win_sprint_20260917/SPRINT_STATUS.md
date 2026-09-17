@@ -145,3 +145,31 @@ baseline_nobos exists yet, so resume hashes are unaffected. It prefers completed
 baseline_extra as the ranking/import source when available, then baseline_abs.
 Its progress prefix is now SAE SCOPES SWEEP. Expect a longer stage; prioritize
 this fair primary comparison over optional auxiliary work if time becomes tight.
+
+## Update — 22:40 UTC
+
+- Extra SAE primary DONE:10,016 points,12 invalid. Best50% point L22 f14233,
+  activation c64, global, pooled-abs ranking: test KL .030269,80.2% suppression,
+  targets8/8,controls54/56. Original main remains in final pool for90% selection.
+- Narrative main DONE:7,248 points,8 invalid. Initial FRA4pairs atL22,c64 has
+  test KL .05934 /98.5% suppression, controls54/56; strongSAE50 has KL .03860,
+  88.2% suppression,controls55/56. No initial win. Local source repacked24 shards.
+- H100 variant_refine_narrative_contracts: app ap-NJZRnAr4QHOAc9hxX0wKlF,
+  exec8153. Slow model-volume load (~163seconds), then normal progress; at22:40
+  set10/45,419seconds. Next variant_learn_pairs_narrative_contracts --fast.
+- Scope union was larger than expected:308features,119 active atBOS,1,592 new
+  batches atbatch8. Stopped A100 no-BOS/document pilot ap-0YG1X9X9cIJgXfNc9YyTl0
+  after checkpoint10/1592. Old remote baseline_nobos_tenants_long.json is intact.
+- Replacement stage baseline_scopes_tenants_long now starting onA100, exec60022,
+  log baseline_scopes_tenants_long.log. It imports the old checkpoint (hash recorded)
+  and all other available measurements. Profiles batch8/16/32 onidentical tuning
+  probes, requires numerical agreement and memory<70GiB, chooses fastest eligible
+  batch, preserves that choice onresume. This changes throughput, not grid or
+  intervention definitions. All final selected settings still get directreplay.
+- Use baseline_scopes for SECOND task too. confirm.py andpolish.py prefer completed
+  baseline_scopes source when present, otherwise oldbaseline_nobos. launcher allows
+  the new stage. Do not edit its hashed dependencies while running/resume needed:
+  baseline_scopes.py,scopes.py,operators.py,data.py,variants.py,common.py,search.py,
+  analyze.py,frozen.py. batch8 pilot file remains unchanged. No confirmation yet.
+- Latestledger7.73app hours,$26.63. Primaryextra result repacked30shards,largest457106.
+  Optional plot_pair_budget.py added,not yet run because its result is pending.

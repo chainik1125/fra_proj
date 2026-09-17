@@ -166,3 +166,27 @@ no GPU app. An approved launcher now checks the two-GPU, GPU-type and conservati
 cost/time limits and preserves each stage's log. Resume app ap-SML6GCvZbazmkMIsG92OMV
 started at 22:13 UTC on A100 with unchanged numerical sources and rankings.
 The H100 prose-context search continues independently. Confirmation is untouched.
+
+## 22:35 UTC — expanded baseline and second main search completed
+
+The expanded primary SAE sweep finished 10,016 settings (12 invalid), including
+imported main-search measurements. Its 50%-threshold winner is activation steering
+at L22 feature14233, strength64, global scope, from the pooled absolute-difference
+ranking. Tuning KL .031568; exploratory test KL .030269, suppression80.19%,8/8
+targets and54/56 controls correct. Its ordinary-forward check changed mean tuning
+KL by .000033 and maximum target probability by .00336. This is a stronger baseline
+than the first sweep. The final comparison still awaits complete scope coverage,
+local strength refinement and fresh confirmation. The original main sweep remains
+in the merged pool, including its better 90%-threshold setting.
+
+The prose-context main search finished 7,248 settings (8 invalid). At the 50%
+tuning threshold, strongest SAE L22 feature12488, constant strength-64, gets
+exploratory test KL .03860,88.2% suppression,8/8 targets,55/56 controls. Initial
+FRA L22_gradient_H4_P1 strength64 gets KL .05934,98.5% suppression,8/8 targets,
+54/56 controls. Thus this initial FRA search does not win at the 50% comparison.
+At90%, the selected SAE gets KL .06061 but only53/56 controls; no qualifying win
+is established. Gradient refinement now runs on H100 (ap-NJZRnAr4QHOAc9hxX0wKlF).
+
+The primary full-scope SAE stage now runs on A100 (ap-0YG1X9X9cIJgXfNc9YyTl0),
+completing no-BOS and whole-document grids over the candidate union. No primary
+confirmation examples have been evaluated.

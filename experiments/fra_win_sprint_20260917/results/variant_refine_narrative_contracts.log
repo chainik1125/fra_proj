@@ -1,0 +1,44 @@
+GPU_REQUEST H100!
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-NJZRnAr4QHOAc9hxX0wKlF
+✓ Created objects.
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod
+│   al_runner.py
+├── 🔨 Created mount 
+│   /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917
+├── 🔨 Created function run.
+├── 🔨 Created function run_fast.
+└── 🔨 Created function archive_narrative_a100.
+GPU_REQUEST H100!
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:10<00:31, 10.63s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [01:10<01:18, 39.42s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [02:03<00:45, 45.63s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [02:42<00:00, 42.98s/it]
+[1ALoading checkpoint shards: 100%|██████████| 4/4 [02:42<00:00, 40.54s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-9b-it into HookedTransformer
+FULL POSITION RANK narrative_contracts 0 / 32 seconds 218
+FULL POSITION RANK narrative_contracts 4 / 32 seconds 219
+FULL POSITION RANK narrative_contracts 8 / 32 seconds 220
+FULL POSITION RANK narrative_contracts 12 / 32 seconds 222
+FULL POSITION RANK narrative_contracts 16 / 32 seconds 223
+FULL POSITION RANK narrative_contracts 20 / 32 seconds 224
+FULL POSITION RANK narrative_contracts 24 / 32 seconds 226
+FULL POSITION RANK narrative_contracts 28 / 32 seconds 227
+REFINED CANDIDATES 11617 sets 45 top [{'layer': 17, 'head': 8, 'q': 7806, 'k': 7806, 'gradient': 0.060842741280794144, 'target_source_gradient': -0.010433160699903965}, {'layer': 21, 'head': 8, 'q': 9289, 'k': 9289, 'gradient': 0.04979216679930687, 'target_source_gradient': 0.0005214155535213649}, {'layer': 21, 'head': 13, 'q': 9289, 'k': 9289, 'gradient': 0.04240400716662407, 'target_source_gradient': 0.03439559414982796}, {'layer': 22, 'head': 12, 'q': 7765, 'k': 7765, 'gradient': 0.040466297417879105, 'target_source_gradient': 0.012775294482707977}, {'layer': 28, 'head': 12, 'q': 14749, 'k': 14749, 'gradient': 0.03586309030652046, 'target_source_gradient': 0.07257504761219025}]
+REFINED SWEEP 0 / 45 seconds 243
+REFINED SWEEP 2 / 45 seconds 266
+REFINED SWEEP 4 / 45 seconds 310
+REFINED SWEEP 6 / 45 seconds 368
+REFINED SWEEP 8 / 45 seconds 388
+REFINED SWEEP 10 / 45 seconds 419
+REFINED SWEEP 12 / 45 seconds 470
+REFINED SWEEP 14 / 45 seconds 513
+REFINED SWEEP 16 / 45 seconds 541

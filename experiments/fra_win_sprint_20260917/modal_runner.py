@@ -55,6 +55,9 @@ def execute(stage):
     elif stage.startswith('learn_pairs_'):
         from learn_pairs import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('learn_pairs_'))
+    elif stage.startswith('baseline_scopes_'):
+        from baseline_scopes import run as execute
+        result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_scopes_'))
     elif stage.startswith('baseline_nobos_'):
         from baseline_nobos import run as execute
         result=execute(Path('/results'),results.commit,task=stage.removeprefix('baseline_nobos_'))

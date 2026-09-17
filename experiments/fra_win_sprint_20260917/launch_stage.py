@@ -17,7 +17,7 @@ parser.add_argument('--log-name')
 args = parser.parse_args()
 allowed = ['search_', 'variant_search_', 'refine_', 'variant_refine_',
            'learn_pairs_', 'variant_learn_pairs_', 'baseline_extra_',
-           'baseline_extra2_', 'baseline_abs_', 'baseline_nobos_', 'polish_',
+           'baseline_extra2_', 'baseline_abs_', 'baseline_nobos_', 'baseline_scopes_', 'polish_',
            'confirm_', 'robustness_', 'pair_budget_', 'multi_sae_']
 assert any(args.stage == prefix+task for prefix in allowed
            for task in ['tenants_long', 'narrative_contracts']), args.stage

@@ -53,7 +53,8 @@ def proposals(points):
 def run(out_dir,commit=None,task='tenants_long'):
     torch.set_num_threads(4);torch.manual_seed(0);torch.backends.cuda.matmul.allow_tf32=False
     start=time.time();out_dir=Path(out_dir);dest=out_dir/f'polish_{task}.json'
-    names=[f'search_{task}',f'baseline_extra_{task}',f'baseline_nobos_{task}'];sources=[json.loads((out_dir/f'{s}.json').read_text()) for s in names]
+    scope_stage='baseline_scopes' if (out_dir/f'baseline_scopes_{task}.json').exists() else 'baseline_nobos'
+    names=[f'search_{task}',f'baseline_extra_{task}',f'{scope_stage}_{task}'];sources=[json.loads((out_dir/f'{s}.json').read_text()) for s in names]
     assert all(s['done'] and s['selection_frozen_before_test'] for s in sources)
     hashes={n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['polish.py','confirm.py','scope_mask.py','scopes.py','variants.py','data.py','operators.py','common.py']}
     result={'done':False,'meta':{'task':task,'sources':hashes,'selection_rule':__doc__,'source_sha256':{s:hashlib.sha256((out_dir/f'{s}.json').read_bytes()).hexdigest() for s in names}},

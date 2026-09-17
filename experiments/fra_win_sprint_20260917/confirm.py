@@ -62,7 +62,8 @@ def edited(op,tokens,source,cfg,row=None):
 def run(out_dir,commit=None,task='tenants_long',source_names=None,tag=None,split='confirmation'):
     torch.set_num_threads(4);torch.manual_seed(0);torch.backends.cuda.matmul.allow_tf32=False
     start=time.time();out_dir=Path(out_dir);tag=task if tag is None else tag
-    source_names=source_names or [f'{stage}_{task}' for stage in ['search','refine','learn_pairs','baseline_extra','baseline_nobos','polish']]
+    scope_stage='baseline_scopes' if (out_dir/f'baseline_scopes_{task}.json').exists() else 'baseline_nobos'
+    source_names=source_names or [f'{stage}_{task}' for stage in ['search','refine','learn_pairs','baseline_extra',scope_stage,'polish']]
     suite=variant_suite if task in TASKS else base_suite
     sources=[json.loads((out_dir/f'{name}.json').read_text()) for name in source_names]
     assert all(r['done'] and r['selection_frozen_before_test'] for r in sources)

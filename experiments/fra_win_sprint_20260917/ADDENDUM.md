@@ -107,3 +107,20 @@ reusing previously measured document configurations. Both signed steering modes
 and their full grids remain. This stage has not run yet, and confirmation is
 untouched. Its filename is retained for continuity; its metadata records both
 scopes. After completion, all three scopes have the full candidate union.
+
+## 2026-09-17 22:40 UTC — batch-size profiling for the complete scope grid
+
+The complete union contains 308 features. With batches of eight, the scope stage
+needs 1,592 additional batches; its early L10 batches take roughly 11 seconds each.
+Stop that pilot after its checkpoint, retaining the file and importing its valid
+measurements into baseline_scopes. The mathematical interventions, candidate union,
+signed grids, tuning selection and ordinary-forward checks are unchanged.
+
+Before the replacement sweep, benchmark batches 8/16/32 on the same 32 modest
+activation-steering settings and two tuning examples. Compare predictions to
+batch 8 and require maximum target-probability and per-case KL differences below
+.025, with peak allocated memory below 70 GiB. Choose the fastest eligible batch
+size, save timing/numerical/memory evidence, and keep that size on any resume.
+Every final selected setting still receives ordinary-forward tuning replay.
+Record the old checkpoint hash and per-point measurement batch sizes; preserve
+all primary measurements and the stopped pilot. Confirmation remains untouched.
