@@ -107,3 +107,41 @@ Plots: plot_oracle.py, plot_mechanism.py, plot_confirmation.py. Plot Python:
 `/tmp/fra-sprint-plotenv/bin/python`. Mechanism plot was visually checked;
 confirmation plots need real results and visual QA. Confirm/no-BOS/polish/capacity
 code is syntax checked but has not run yet. Preserve hashes required by resumes.
+
+## Update — 22:14 UTC (supersedes running-job details above)
+
+Original extra SAE app timed out after batch 830/1085; best valid tuning KL .03153.
+Resume2 A100 app: ap-SML6GCvZbazmkMIsG92OMV, local exec session 98216, log
+baseline_extra_tenants_long_resume2.log. Resume1 failed network access and created
+no app. New permissions are workspace-write plus restricted network; /private/tmp
+is writable. The scoped commands below are now approved for network use:
+
+- python experiments/fra_win_sprint_20260917/update_ledger.py
+- python experiments/fra_win_sprint_20260917/launch_stage.py
+
+Use launch_stage.py --stage STAGE [--fast] [--log-name UNIQUE_NAME] for subsequent
+stages. It saves logs and checks at most one A100 plus one H100, <=18 GPU hours,
+<=60 dollars even if both slots continue until 02:16 UTC. It refuses to overwrite
+logs. The current H100 app remains ap-1ROh8HM0ZjYmFWENO25Kpu; main SAE portion is
+finished, and initial FRA settings are running. Latest ledger ~$23.31,6.89 app hours.
+
+Added pair_budget.py before any confirmation: at budgets 1/4/16/48/144 and tuning
+repair50/90%, choose overall and distinct-ID cuts, replay tuning, freeze, evaluate
+all on confirmation. Run as pair_budget_tenants_long after primary confirmation
+if time permits. Existing learned results: no 1-pair choice reaches50%; distinct
+4-pair is weak (KL .0944), distinct16-pair tuning KL .01296 with86.7% suppression.
+Capacity curve, robustness, and multi_sae are secondary; keep the main SAE-vs-FRA
+comparison first. No agents have been spawned.
+
+Commits be475d32 and 58b291e8 pushed after 91a1586b. Full main result repacked to24
+shards, largest783,888 bytes, with round-trip JSON SHA256 verification. Figures
+source_oracle and mechanism_global visually checked. plot_confirmation now shows
+KL, suppression and control correctness together. summary.md still pending.
+
+22:16 UTC addition: baseline_nobos.py now completes BOTH no-BOS and document
+scopes over the full feature union. The original extra stage only covered a
+source/endpoint subset in document scope; this fills that gap. No result from
+baseline_nobos exists yet, so resume hashes are unaffected. It prefers completed
+baseline_extra as the ranking/import source when available, then baseline_abs.
+Its progress prefix is now SAE SCOPES SWEEP. Expect a longer stage; prioritize
+this fair primary comparison over optional auxiliary work if time becomes tight.

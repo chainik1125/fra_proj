@@ -155,3 +155,14 @@ The poisoned baseline is already correct on3/8 exploratory-test target cases.
 Thus the global winner repairs5 wrong target answers and preserves3 already
 correct target answers; "8/8 correct" must not be described as8 repaired errors.
 The poisoned baseline has55/56 control answers correct.
+
+## 22:14 UTC — continued baseline sweep and operational resume
+
+The expanded SAE run saved through batch 830/1085 and reached its expected
+7200-second timeout. Its best valid tuning KL had improved to .03153, before
+final control/repair selection and ordinary-forward replay. The first resume
+attempt was blocked by the session's newly managed network sandbox and created
+no GPU app. An approved launcher now checks the two-GPU, GPU-type and conservative
+cost/time limits and preserves each stage's log. Resume app ap-SML6GCvZbazmkMIsG92OMV
+started at 22:13 UTC on A100 with unchanged numerical sources and rankings.
+The H100 prose-context search continues independently. Confirmation is untouched.

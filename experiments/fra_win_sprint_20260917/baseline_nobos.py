@@ -1,9 +1,11 @@
-"""Single-feature grid at all positions except the BOS token.
+"""Complete the single-feature grid for no-BOS and whole-document scopes.
 
 Activation steering can reuse global measurements when the feature is exactly
 inactive at BOS on every tuning case. Constant steering is remeasured. Candidate
 features include all original/absolute-difference ranks and both selected FRA
-families' endpoints. An unfinished absolute/extra baseline may supply rankings.
+families' endpoints. Both scopes receive this entire candidate union. An
+unfinished absolute/extra baseline may supply rankings. Existing document-scope
+measurements are retained, and missing document-scope configurations are added.
 """
 import gc,hashlib,json,sys,time
 from pathlib import Path
@@ -16,6 +18,7 @@ from operators import Operators,SAE_SPECS
 from search import SAE_GRID,ADDITIVE_GRID,select
 from analyze import merged_selection
 from frozen import expanded_pairs
+from scopes import mask as document_mask
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'reference'))
 from sae_lens_wrapper import GemmaScopeSAE
@@ -31,7 +34,7 @@ def run(out_dir,commit=None,task='tenants_long'):
     main=json.loads((out_dir/f'search_{task}.json').read_text());assert main['done']
     refined=json.loads((out_dir/f'refine_{task}.json').read_text());learned=json.loads((out_dir/f'learn_pairs_{task}.json').read_text())
     assert refined['done'] and learned['done']
-    extra_name=next(n for n in [f'baseline_abs_{task}',f'baseline_extra_{task}'] if (out_dir/f'{n}.json').exists())
+    extra_name=next(n for n in [f'baseline_extra_{task}',f'baseline_abs_{task}'] if (out_dir/f'{n}.json').exists())
     extra=json.loads((out_dir/f'{extra_name}.json').read_text());assert extra['ranking']
     layers=sorted(SAE_SPECS);features={l:{} for l in layers}
     for source in [main,extra]:
@@ -49,8 +52,9 @@ def run(out_dir,commit=None,task='tenants_long'):
         for p in expanded_pairs(sources[s['source_index']],s['config']):
             for f in [p['q'],p['k']]:features[p['layer']].setdefault(f,set()).add('fra_endpoint')
     features={l:{f:sorted(tags) for f,tags in ff.items()} for l,ff in features.items()}
-    result={'done':False,'meta':{'task':task,'description':__doc__,'sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_nobos.py','operators.py','data.py','variants.py','common.py','search.py','analyze.py','frozen.py']},
-        'ranking_source':extra_name,'ranking_source_was_done':extra['done'],'sae_grid':SAE_GRID,'constant_grid':ADDITIVE_GRID},
+    result={'done':False,'meta':{'task':task,'description':__doc__,'sources':{n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ['baseline_nobos.py','scopes.py','operators.py','data.py','variants.py','common.py','search.py','analyze.py','frozen.py']},
+        'ranking_source':extra_name,'ranking_source_was_done':extra['done'],'sae_grid':SAE_GRID,'constant_grid':ADDITIVE_GRID,
+        'scopes':['no_bos','document']},
         'features':features,'bos_active':{},'points':[],'selected':[],'tuning_rows':[],'test_rows':[],'test_points':[],'validation':{}}
     if dest.exists():
         previous=json.loads(dest.read_text());assert previous['meta']['sources']==result['meta']['sources'] and previous['features']==json.loads(json.dumps(features))
@@ -70,7 +74,8 @@ def run(out_dir,commit=None,task='tenants_long'):
             ref=model.run_with_hooks(ct,fwd_hooks=[LAST])[0,-1].double().log_softmax(-1)
             with model.hooks(fwd_hooks=[LAST]):ll,cache=model.run_with_cache(pt,names_filter=names)
             ll=ll[0,-1];pp=float(ll.float().softmax(-1)[pid]);result[split+'_rows'].append({**pr,'clean_token_ids':cr['token_ids']})
-            item={'tokens':pt,'row':pr,'ref':ref,'poison_p':pp,'x':{},'z':{},'mask':torch.ones((len(pr['token_ids']),1),device='cuda')};item['mask'][0]=0
+            item={'tokens':pt,'row':pr,'ref':ref,'poison_p':pp,'x':{},'z':{},'mask':torch.ones((len(pr['token_ids']),1),device='cuda'),
+                  'document_mask':document_mask(tok,pr,'cuda')};item['mask'][0]=0
             for l in layers:
                 x=cache[f'blocks.{l}.hook_resid_pre'];item['x'][l]=x;item['z'][l]=op.encode(l,x[0])[:,list(features[l])]
             items.append(item)
@@ -79,7 +84,7 @@ def run(out_dir,commit=None,task='tenants_long'):
         rr=[[] for c in configs];c=configs[0];l=c['layer'];fs=[c['feature'] for c in configs]
         strength=torch.tensor([c['strength'] for c in configs],device='cuda')[:,None,None];dec=saes[l].W_dec[fs].float()[:,None,:]
         for item in items:
-            scope=item['mask'][None]
+            scope=item['document_mask' if c.get('scope')=='document' else 'mask'][None]
             if direct:
                 assert len(configs)==1
                 def hook(x,hook):
@@ -101,22 +106,28 @@ def run(out_dir,commit=None,task='tenants_long'):
     for src in [main,extra]:
         for p in src['points']:
             c=p['config']
-            if c['method']!='sae' or c.get('scope','all')!='all':continue
-            if c['strength']!=0 and (c.get('intervention','activation')!='activation' or active[c['layer']][c['feature']]):continue
-            q={**c,'scope':'no_bos','ranks':features[c['layer']][c['feature']]}
+            if c['method']!='sae':continue
+            if c.get('scope','all')=='document':
+                q={**c,'ranks':features[c['layer']][c['feature']]}
+            elif c.get('scope','all')=='all':
+                if c['strength']!=0 and (c.get('intervention','activation')!='activation' or active[c['layer']][c['feature']]):continue
+                q={**c,'scope':'no_bos','ranks':features[c['layer']][c['feature']]}
+            else:continue
             if key(q) in done:continue
-            result['points'].append({**p,'config':q,'equivalent_global_measurement':True});done.add(key(q));imported+=1
+            result['points'].append({**p,'config':q,'reused_scope_measurement':c.get('scope','all'),
+                                     'equivalent_global_measurement':c.get('scope','all')=='all'});done.add(key(q));imported+=1
     result['meta']['imported_points']=imported
-    print('NO BOS FEATURES',[(l,len(features[l]),sum(active[l].values())) for l in layers],'imported',imported,flush=True)
+    print('SAE SCOPES FEATURES',[(l,len(features[l]),sum(active[l].values())) for l in layers],'imported',imported,flush=True)
     groups=[]
     for l,ff in features.items():
-        for intervention,grid in [('activation',SAE_GRID),('constant',ADDITIVE_GRID)]:
-            cc=[{'method':'sae','layer':l,'feature':f,'ranks':tags,'scope':'no_bos','intervention':intervention,'strength':c} for f,tags in ff.items() for c in grid]
-            cc=[c for c in cc if key(c) not in done];groups.extend(cc[i:i+8] for i in range(0,len(cc),8))
+        for scope in ['no_bos','document']:
+            for intervention,grid in [('activation',SAE_GRID),('constant',ADDITIVE_GRID)]:
+                cc=[{'method':'sae','layer':l,'feature':f,'ranks':tags,'scope':scope,'intervention':intervention,'strength':c} for f,tags in ff.items() for c in grid]
+                cc=[c for c in cc if key(c) not in done];groups.extend(cc[i:i+8] for i in range(0,len(cc),8))
     for i,cc in enumerate(groups):
         result['points'].extend(measure(cc,tuning))
         if i%10==0:
-            valid=[p for p in result['points'] if p['valid']];print('NO BOS SWEEP',i,'/',len(groups),'best',min(p['summary']['all']['kl'] for p in valid),'seconds',round(time.time()-start),flush=True);save()
+            valid=[p for p in result['points'] if p['valid']];print('SAE SCOPES SWEEP',i,'/',len(groups),'best',min(p['summary']['all']['kl'] for p in valid),'seconds',round(time.time()-start),flush=True);save()
     checked=set();checks=[]
     for _ in range(12):
         selected=[s for s in select(result['points']) if s['family'].startswith('sae')]
@@ -126,7 +137,7 @@ def run(out_dir,commit=None,task='tenants_long'):
             c=json.loads(k);j=next(j for j,p in enumerate(result['points']) if p['config']==c);old=result['points'][j];new=measure([c],tuning,True)[0]
             err=abs(old['summary']['all']['kl']-new['summary']['all']['kl']);maxp=max(abs(a['target_p']-b['target_p']) for a,b in zip(old['rows'],new['rows']))
             assert err<.03 and maxp<.03;checks.append({'config':c,'mean_kl_error':err,'max_target_p_error':maxp});result['points'][j]=new;checked.add(k)
-    else:raise RuntimeError('No-BOS selection did not stabilize')
+    else:raise RuntimeError('SAE scope selection did not stabilize')
     result['selected']=[s for s in select(result['points']) if s['family'].startswith('sae')];result['validation']['direct_checks']=checks
     result['selection_frozen_before_test']=True;save();del tuning;gc.collect();torch.cuda.empty_cache();test=prepare('test')
     for s in result['selected']:

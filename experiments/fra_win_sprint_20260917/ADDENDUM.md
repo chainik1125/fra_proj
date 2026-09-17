@@ -96,3 +96,14 @@ constructs confirmation examples. Report the entire curve, including absent
 eligible settings and confirmation failures. This checks how many pairs the
 observed advantage requires; it cannot establish two independent semantic concepts.
 Run after primary confirmation if time permits. Primary selections do not change.
+
+## 2026-09-17 22:16 UTC — complete the document-scope candidate union
+
+The initial document-scope sweep covers source-ranked features and selected FRA
+endpoints. Extend this scope to every feature in the strongest SAE candidate
+union, including original answer-difference, interaction and gradient rankings.
+The baseline_nobos stage now completes both whole-document and no-BOS scopes,
+reusing previously measured document configurations. Both signed steering modes
+and their full grids remain. This stage has not run yet, and confirmation is
+untouched. Its filename is retained for continuity; its metadata records both
+scopes. After completion, all three scopes have the full candidate union.

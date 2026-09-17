@@ -91,3 +91,66 @@ EXTRA SAE SWEEP 660 / 1085 best 0.031534509464603316 seconds 6031
 EXTRA SAE SWEEP 670 / 1085 best 0.031534509464603316 seconds 6108
 EXTRA SAE SWEEP 680 / 1085 best 0.031534509464603316 seconds 6193
 EXTRA SAE SWEEP 690 / 1085 best 0.031534509464603316 seconds 6272
+EXTRA SAE SWEEP 700 / 1085 best 0.031534509464603316 seconds 6354
+EXTRA SAE SWEEP 710 / 1085 best 0.031534509464603316 seconds 6428
+EXTRA SAE SWEEP 720 / 1085 best 0.031534509464603316 seconds 6489
+EXTRA SAE SWEEP 730 / 1085 best 0.031534509464603316 seconds 6557
+EXTRA SAE SWEEP 740 / 1085 best 0.031534509464603316 seconds 6619
+EXTRA SAE SWEEP 750 / 1085 best 0.031534509464603316 seconds 6688
+EXTRA SAE SWEEP 760 / 1085 best 0.031534509464603316 seconds 6750
+EXTRA SAE SWEEP 770 / 1085 best 0.031534509464603316 seconds 6807
+EXTRA SAE SWEEP 780 / 1085 best 0.031534509464603316 seconds 6869
+EXTRA SAE SWEEP 790 / 1085 best 0.031534509464603316 seconds 6928
+EXTRA SAE SWEEP 800 / 1085 best 0.031534509464603316 seconds 6993
+EXTRA SAE SWEEP 810 / 1085 best 0.031534509464603316 seconds 7056
+EXTRA SAE SWEEP 820 / 1085 best 0.031534509464603316 seconds 7115
+EXTRA SAE SWEEP 830 / 1085 best 0.031534509464603316 seconds 7177
+Task's current input(s) ["in-01M2RFS82Z3J27EX627B38D646:1789675741279-0"] cancelled because: Task's current input in-01M2RFS82Z3J27EX627B38D646:1789675741279-0 hit its timeout of 7200s
+[modal-client] 2026-09-17T22:09:15+0000 Received a cancellation signal while processing input ('in-01M2RFS82Z3J27EX627B38D646:1789675741279-0',)
+WARNING:modal-client:Received a cancellation signal while processing input ('in-01M2RFS82Z3J27EX627B38D646:1789675741279-0',)
+[modal-client] 2026-09-17T22:09:15+0000 Successfully canceled input ('in-01M2RFS82Z3J27EX627B38D646:1789675741279-0',)
+WARNING:modal-client:Successfully canceled input ('in-01M2RFS82Z3J27EX627B38D646:1789675741279-0',)
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /private/tmp/fra-win-sprint-20260917/experiments/fra_win_sprint_20260917/mod │
+│ al_runner.py:55 in main                                                      │
+│                                                                              │
+│    54 │   │   result=execute(Path('/results'),results.commit,task=stage.remo │
+│ ❱  55 │   elif stage.startswith('learn_pairs_'):                             │
+│    56 │   │   from learn_pairs import run as execute                         │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_object.py:46 in wrapped    │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1696 in       │
+│ remote                                                                       │
+│                                                                              │
+│   1695 │   │                                                                 │
+│ ❱ 1696 │   │   return await self._call_function(args, kwargs)                │
+│   1697                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:1640 in       │
+│ _call_function                                                               │
+│                                                                              │
+│   1639 │   │                                                                 │
+│ ❱ 1640 │   │   return await invocation.run_function()                        │
+│   1641                                                                       │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_functions.py:493 in        │
+│ run_function                                                                 │
+│                                                                              │
+│    492 │   │   │   # No more retries left.                                   │
+│ ❱  493 │   │   │   return await _process_result(                             │
+│    494 │   │   │   │   await_response.output.result, await_response.output.d │
+│                                                                              │
+│ /opt/homebrew/lib/python3.11/site-packages/modal/_utils/function_utils.py:51 │
+│ 0 in _process_result                                                         │
+│                                                                              │
+│   509 │   if result.status == api_pb2.GenericResult.GENERIC_STATUS_TIMEOUT:  │
+│ ❱ 510 │   │   raise FunctionTimeoutError(result.exception)                   │
+│   511 │   elif result.status == api_pb2.GenericResult.GENERIC_STATUS_INTERNA │
+╰──────────────────────────────────────────────────────────────────────────────╯
+FunctionTimeoutError: Task's current input 
+in-01M2RFS82Z3J27EX627B38D646:1789675741279-0 hit its timeout of 7200s
