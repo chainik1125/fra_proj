@@ -390,3 +390,18 @@ attn_out) beats GLOBAL payload-suppress (pay 1.02 vs ov 0.13) because it spares 
 This VALIDATES Dmitry's "OV editing is more effective" -- on the conjunction, targeted-OV / QK+OV hybrid
 is the Pareto winner: full reach at FRA-level (low) collateral, while single-feature must damage a
 shared endpoint. High seed variance at n=2; full NSEED=12 running. (GPT-2 local, no GPU.)
+
+### FINAL (NSEED=11, REP=6): GPT-2 conjunction removal -- FRA-family Pareto-dominates single-feature
+
+Full report: [[gpt2_conjunction_removal_findings]]; figure results/b1_gpt2/b1_gpt2_pareto.png.
+Worst-case collateral KL (mean over 11 seeds | seeds reaching that removal):
+  @30%: fra 0.35(10/11) hybrid 0.39(11/11) ov 0.11 | feat1 2.26 dom 3.57 pay 1.67
+  @50%: fra 0.23(8/11)  hybrid 0.23(10/11) ov 0.25 | feat1 2.43 dom 3.57 pay 1.67
+  @70%: fra 0.28(6/11)  hybrid 0.27(8/11)  ov 0.52 | feat1 2.85 dom 3.73 pay 1.67
+  @90%: fra 0.40(1/11)  hybrid 0.22(3/11)  ov 0.99 | feat1 3.98 dom 4.55 pay 1.67
+FRA-family (fra/hybrid/ov) ~10x lower worst-case collateral than single-SAE-feature at every matched
+removal; oracle ~0.01 (attention-routed removal is near-free). Pure FRA-QK capped ~50-70% (attention-
+routed fraction); QK+OV hybrid recovers reach at FRA-level collateral. Caveat: synthetic single-token
+payload flatters directional OV; FRA-QK's unique niche (non-directional target) needs the gemma
+fact-injection version [[B1_real_conjunction]]. Clean headline that survives caveats: FRA-family >>
+single-feature on worst-case collateral at matched removal, on a genuine conjunction.
