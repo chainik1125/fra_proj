@@ -110,3 +110,23 @@ removal it is ~10-40x lower on reuse collateral and ~100-1000x lower on general-
 
 Reproduce: `PYTHONPATH=. NSEED=8 REP=6 python scripts/65_gpt2_conjunction_general.py`. Data:
 results/b1_gpt2/b1_gpt2_general.json.
+
+## GEMMA result (scripts/58, run on NCSA) -- the real-model number
+
+Ran scripts/58 (OV hybrid + payload-elsewhere collateral) on gemma-2-2b, NSEED=6 (18 group-seeds),
+25 heads. Two jobs identical (reproducible). Worst-case collateral KL over {reuseA,reuseB,payload-
+elsewhere} at matched removal | seeds reaching:
+
+| removal | fra | hybrid | ov | feat1 (single feat) | dom | pay |
+|---:|---|---|---|---|---|---|
+| 50% | 0.25 (5/18) | 0.21 (11/18) | 0.11 (18/18) | 0.93 (18/18) | 0.88 | 4.09 |
+| 70% | 0.45 (1/18) | 0.27 (7/18)  | 0.21 (18/18) | 1.04 (18/18) | 1.48 | 4.09 |
+| 90% | -- (0/18)   | 0.40 (2/18)  | 0.81 (18/18) | 2.58 (18/18) | 2.74 | 4.09 |
+
+On the REAL model the FRA family (FRA-QK / QK+OV hybrid / OV) beats single-SAE-feature and DoM by
+~4-9x on worst-case collateral at matched removal, and global payload-suppress by ~10-40x (the
+payload-elsewhere probe correctly penalises it: 4.09). OV/hybrid reach full removal at the lowest
+collateral; pure FRA-QK is reach-limited (attention-routed ceiling). This supersedes the old
+scripts/57 gemma run (which lacked the payload-elsewhere axis and OV/hybrid, and showed only ~2.3x):
+the improvement is exactly Dmitry's OV suggestion + the corrected collateral set. Consistent with the
+GPT-2 story (~10x + FRA-QK zero general-text damage). NCSA jobs b1_ov 10610109/10610168.
