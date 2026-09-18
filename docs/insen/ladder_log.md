@@ -405,3 +405,12 @@ routed fraction); QK+OV hybrid recovers reach at FRA-level collateral. Caveat: s
 payload flatters directional OV; FRA-QK's unique niche (non-directional target) needs the gemma
 fact-injection version [[B1_real_conjunction]]. Clean headline that survives caveats: FRA-family >>
 single-feature on worst-case collateral at matched removal, on a genuine conjunction.
+
+### Caveat resolved (scripts/65): common payload + general-text collateral -> FRA-QK zero general damage
+
+7 seeds, common payloads (" time"/" people"/...), added a general-English collateral probe (mean per-pos
+KL on 3 ordinary sentences). FRA-QK general-text KL = 0.0000 at every removal level (content-addressed
+cell is a no-op on unrelated text); hybrid/ov 0.0002-0.003; single-feature 0.98-1.78 and DoM 1.24-1.45
+(~1000x more). On reuse collateral too FRA-family (0.05-0.4) << single-feature (1.9-4.6)/DoM (4.1). So
+FRA-family Pareto-dominates single-feature+DoM on BOTH axes; QK+OV hybrid is the best all-round point.
+Full: [[gpt2_conjunction_removal_findings]].

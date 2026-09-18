@@ -79,3 +79,34 @@ So the Pareto frontier is entirely FRA-family: FRA-QK (lowest collateral, limite
 
 Reproduce: `PYTHONPATH=. NSEED=12 REP=6 python scripts/62_gpt2_conjunction_removal.py` (CPU, ~25 min).
 Data: results/b1_gpt2/b1_gpt2.json. Daily log: [[ladder_log]].
+
+## Follow-up: common payload + general-text collateral (scripts/65) -- resolves the caveat
+
+The caveat above (rare single-token payload flatters directional OV) is addressed by (a) using a COMMON
+payload token (" time"/" people"/" water"/...) and (b) adding a GENERAL-ENGLISH collateral probe: three
+ordinary sentences, scored by mean per-position KL after each edit. This measures broad, non-local
+damage that the reuse probes miss. 7 valid seeds, REP=6.
+
+Result (mean over seeds): worst-case reuse KL {reuseA,reuseB,payload-elsewhere} | general-English KL:
+
+| removal | fra | hybrid | ov | feat1 | dom | pay |
+|---:|---|---|---|---|---|---|
+| 30% | 0.11 / **0.0000** | 0.09 / 0.0002 | 0.05 / 0.0002 | 1.92 / **0.98** | 4.10 / **1.24** | 0.96 / 0.010 |
+| 50% | 0.22 / **0.0000** | 0.09 / 0.0002 | 0.13 / 0.0005 | 2.08 / **1.05** | 4.10 / 1.24 | 0.96 / 0.010 |
+| 70% | 0.22 / **0.0000** (3/7) | 0.40 / 0.0002 | 0.28 / 0.001 | 2.79 / **1.27** | 4.10 / 1.24 | 0.96 / 0.010 |
+| 90% | (reach 0) | (reach 0) | 0.75 / 0.003 | 4.56 / **1.78** | 4.41 / 1.45 | 0.96 / 0.010 |
+
+**FRA-QK causes exactly ZERO general-text collateral (0.0000 at every level)** -- the content-addressed
+cell does not appear in unrelated English, so cutting it is a no-op there. The QK+OV hybrid and OV are
+near-zero (0.0002-0.003). By contrast **single-SAE-feature (0.98-1.78) and DoM (1.24-1.45) inflict
+~1000x more general-text damage** at matched removal, because they subtract a feature/direction at every
+position. Global payload-suppress keeps general-text low (0.010) but pays on the reuse axis (0.96).
+
+So on BOTH collateral axes -- endpoint-reusing probes AND general English -- the FRA family
+(FRA-QK / QK+OV hybrid / OV) Pareto-dominates single-feature and DoM. The QK+OV hybrid is the best
+all-round point: near-zero general damage, low reuse collateral, and reach beyond the pure-QK
+attention-routed ceiling. This is the strongest form of "FRA beats single-feature steering": at matched
+removal it is ~10-40x lower on reuse collateral and ~100-1000x lower on general-text collateral.
+
+Reproduce: `PYTHONPATH=. NSEED=8 REP=6 python scripts/65_gpt2_conjunction_general.py`. Data:
+results/b1_gpt2/b1_gpt2_general.json.
