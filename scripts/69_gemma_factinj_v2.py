@@ -138,6 +138,17 @@ def lastKL(p, q, pos):
     lp = torch.log_softmax(p[pos].float(), -1); lq = torch.log_softmax(q[pos].float(), -1)
     return (lp.exp() * (lp - lq)).sum().item()
 def pat(lg, q, pid): return torch.softmax(lg[q].float(), -1)[pid].item()
+def indablate(tt, c):  # ablate induction heads: scale their per-head output (hook_z) by (1-c). Dmitry's retrieval baseline.
+    hooks = []
+    for L in LAYERS:
+        hs = [H for (LL, H) in IND if LL == L]
+        def mk(hs):
+            def hook(z, hook):
+                for H in hs: z[0, :, H, :] = z[0, :, H, :] * (1 - c)
+                return z
+            return hook
+        hooks.append((f"blocks.{L}.attn.hook_z", mk(hs)))
+    return model.run_with_hooks(tt, fwd_hooks=hooks)[0]
 
 def fullKL(p, q):  # mean per-position KL over a whole passage (broad, non-local damage)
     lp = torch.log_softmax(p.float(), -1); lq = torch.log_softmax(q.float(), -1)
@@ -179,8 +190,8 @@ def build_q(F, seed, qpair):
     text = build_dir(F, seed) + f"The {s} {REL_TXT[r]}"   # completion cue -> next token is the value (strong recall)
     return [tok.bos_token_id] + tok.encode(text, add_special_tokens=False)
 
-FC = [1, 2, 4, 8, 16, 32]; DC = [0.25, 0.5, 1, 2, 4, 8]; AC = [0.25, 0.5, 1, 2, 4, 8]
-PC = [0.5, 1, 2, 4, 8]; OC = [0.5, 1, 2, 4, 8]; MC = [2, 4, 8, 16, 1000]
+FC = [0.5, 1, 2, 4, 8, 16, 32]; DC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; AC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]
+PC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2]; OC = [0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; MC = [0.5, 1, 2, 4, 8, 1000]; IC = [0.1, 0.25, 0.5, 0.75, 0.9, 1.0]
 OV_FIX = float(os.environ.get("OV_FIX", "1.0"))   # constant OV nudge inside the hybrid; FRA is swept
 NSEED = int(os.environ.get("NSEED", "6")); M_PAIRS = int(os.environ.get("M_PAIRS", "48"))
 rows = []
@@ -233,6 +244,7 @@ for F in FACTSETS:
         M["pay"] = sweep(lambda c: paysupp(pr_tt["target"], pid, c), lambda k, c: paysupp(pr_tt[k], pid, c), lambda i, c: paysupp(GEN[i], pid, c), PC)
         M["ov"] = sweep(lambda c: ov_run(pr_tt["target"], pid, c), lambda k, c: ov_run(pr_tt[k], pid, c), lambda i, c: ov_run(GEN[i], pid, c), OC)
         M["hybrid"] = sweep(lambda c: hybrid_run(pr_tt["target"], byLp["target"], c, pid, OV_FIX), lambda k, c: hybrid_run(pr_tt[k], byLp[k], c, pid, OV_FIX), lambda i, c: hybrid_run(GEN[i], gt_byL[i], c, pid, OV_FIX), FC)
+        M["indab"] = sweep(lambda c: indablate(pr_tt["target"], c), lambda k, c: indablate(pr_tt[k], c), lambda i, c: indablate(GEN[i], c), IC)
         kp = [i for i, t in enumerate(pr_ids["target"]) if t == pid and i < q["target"] - 4]
         M["oracle"] = sweep(lambda c: mask_run(pr_tt["target"], [q["target"]], kp if kp else [0], c), lambda k, c: mask_run(pr_tt[k], [q[k]], [0], c), lambda i, c: gt_clean[i], MC)
         for mname, sw in M.items():
@@ -252,7 +264,7 @@ print("\n\n######## B1_real (fact-injection): collateral at matched removal ####
 print("worstReuse = worst-case KL over {reuse_subject, reuse_relation}; genKL = mean per-pos KL on general English", flush=True)
 for thr in (0.3, 0.5, 0.7, 0.9):
     print(f"\n=== at {int(thr*100)}% removal ===", flush=True)
-    for m in ("fra", "hybrid", "feat1", "dom", "pay", "ov", "oracle"):
+    for m in ("fra", "hybrid", "feat1", "dom", "pay", "ov", "indab", "oracle"):
         wr = []; gk = []; reached = 0; total = 0
         for G in groups:
             for seed in set(r["seed"] for r in rows if r["group"] == G):
