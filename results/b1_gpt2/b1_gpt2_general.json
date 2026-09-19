@@ -3,6 +3,15 @@
     {
       "seed": 0,
       "method": "fra",
+      "removal": 0.05065281142935063,
+      "colKL_reuseA": 0.011834099888801575,
+      "colKL_reuseB": 0.0007146981661207974,
+      "colKL_payelse": 3.719935193657875e-05,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 0,
+      "method": "fra",
       "removal": 0.10686754804131016,
       "colKL_reuseA": 0.037152018398046494,
       "colKL_reuseB": 0.0023284670896828175,
@@ -47,12 +56,57 @@
     },
     {
       "seed": 0,
+      "method": "fra",
+      "removal": 0.6716635765708271,
+      "colKL_reuseA": 0.6461940407752991,
+      "colKL_reuseB": 0.3863954246044159,
+      "colKL_payelse": 0.03100091591477394,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 0,
       "method": "feat1",
-      "removal": 0.4979878995315019,
-      "colKL_reuseA": 0.6296508312225342,
-      "colKL_reuseB": 1.2693442106246948,
-      "colKL_payelse": 0.8207579255104065,
-      "colKL_gen": 0.8525999188423157
+      "removal": 0.024174885051979844,
+      "colKL_reuseA": 0.0030166294891387224,
+      "colKL_reuseB": 0.01100875623524189,
+      "colKL_payelse": 0.007770610973238945,
+      "colKL_gen": 0.014622269508739313
+    },
+    {
+      "seed": 0,
+      "method": "feat1",
+      "removal": 0.07153229043663634,
+      "colKL_reuseA": 0.013330945745110512,
+      "colKL_reuseB": 0.07242763042449951,
+      "colKL_payelse": 0.04765469208359718,
+      "colKL_gen": 0.06918271258473396
+    },
+    {
+      "seed": 0,
+      "method": "feat1",
+      "removal": 0.16598699397911543,
+      "colKL_reuseA": 0.03837677091360092,
+      "colKL_reuseB": 0.2882511615753174,
+      "colKL_payelse": 0.17906692624092102,
+      "colKL_gen": 0.22095316151777902
+    },
+    {
+      "seed": 0,
+      "method": "feat1",
+      "removal": 0.35570409377446754,
+      "colKL_reuseA": 0.26417315006256104,
+      "colKL_reuseB": 0.9226146936416626,
+      "colKL_payelse": 0.5878756046295166,
+      "colKL_gen": 0.6208192904790243
+    },
+    {
+      "seed": 0,
+      "method": "feat1",
+      "removal": 0.8138123821427774,
+      "colKL_reuseA": 1.7823559045791626,
+      "colKL_reuseB": 2.0595591068267822,
+      "colKL_payelse": 1.2797387838363647,
+      "colKL_gen": 1.355000336964925
     },
     {
       "seed": 0,
@@ -92,21 +146,48 @@
     },
     {
       "seed": 0,
-      "method": "feat1",
-      "removal": 0.9990066869462623,
-      "colKL_reuseA": 15.228331565856934,
-      "colKL_reuseB": 6.55923318862915,
-      "colKL_payelse": 4.719038009643555,
-      "colKL_gen": 6.567458629608154
+      "method": "dom",
+      "removal": 0.023509736048462515,
+      "colKL_reuseA": 0.02217649295926094,
+      "colKL_reuseB": 0.01139488909393549,
+      "colKL_payelse": 0.009695746004581451,
+      "colKL_gen": 0.019988511378566425
     },
     {
       "seed": 0,
       "method": "dom",
-      "removal": 0.9886533259037201,
-      "colKL_reuseA": 5.556056022644043,
-      "colKL_reuseB": 4.138978004455566,
-      "colKL_payelse": 1.5909010171890259,
-      "colKL_gen": 1.991440773010254
+      "removal": 0.08138421234049265,
+      "colKL_reuseA": 0.19076068699359894,
+      "colKL_reuseB": 0.07730807363986969,
+      "colKL_payelse": 0.06222387030720711,
+      "colKL_gen": 0.1369644155104955
+    },
+    {
+      "seed": 0,
+      "method": "dom",
+      "removal": 0.25598005476349495,
+      "colKL_reuseA": 1.019075632095337,
+      "colKL_reuseB": 0.39784032106399536,
+      "colKL_payelse": 0.25916650891304016,
+      "colKL_gen": 0.41982441147168476
+    },
+    {
+      "seed": 0,
+      "method": "dom",
+      "removal": 0.8783824244846064,
+      "colKL_reuseA": 3.8883988857269287,
+      "colKL_reuseB": 2.5326662063598633,
+      "colKL_payelse": 1.0137460231781006,
+      "colKL_gen": 1.2225629091262817
+    },
+    {
+      "seed": 0,
+      "method": "dom",
+      "removal": 0.9999598605741251,
+      "colKL_reuseA": 9.188624382019043,
+      "colKL_reuseB": 7.387938022613525,
+      "colKL_payelse": 3.401516914367676,
+      "colKL_gen": 4.497447808583577
     },
     {
       "seed": 0,
@@ -146,12 +227,48 @@
     },
     {
       "seed": 0,
-      "method": "dom",
-      "removal": 0.9999999999921757,
-      "colKL_reuseA": 22.45537757873535,
-      "colKL_reuseB": 19.051761627197266,
-      "colKL_payelse": 17.078989028930664,
-      "colKL_gen": 18.15142885843913
+      "method": "pay",
+      "removal": 0.04797976654325242,
+      "colKL_reuseA": -3.0782211979385465e-07,
+      "colKL_reuseB": 0.00013696146197617054,
+      "colKL_payelse": 0.0009257099591195583,
+      "colKL_gen": 2.267173204018036e-05
+    },
+    {
+      "seed": 0,
+      "method": "pay",
+      "removal": 0.12618489971609148,
+      "colKL_reuseA": -5.506008164957166e-07,
+      "colKL_reuseB": 0.0008355006575584412,
+      "colKL_payelse": 0.005573910661041737,
+      "colKL_gen": 0.00013755078907706775
+    },
+    {
+      "seed": 0,
+      "method": "pay",
+      "removal": 0.268766200537478,
+      "colKL_reuseA": 9.448776836507022e-07,
+      "colKL_reuseB": 0.0031841006129980087,
+      "colKL_payelse": 0.02099435217678547,
+      "colKL_gen": 0.000526387351177012
+    },
+    {
+      "seed": 0,
+      "method": "pay",
+      "removal": 0.5561618082951204,
+      "colKL_reuseA": 8.377755875699222e-06,
+      "colKL_reuseB": 0.011661626398563385,
+      "colKL_payelse": 0.07461558282375336,
+      "colKL_gen": 0.0019495533003161352
+    },
+    {
+      "seed": 0,
+      "method": "pay",
+      "removal": 0.8461547783923526,
+      "colKL_reuseA": 2.6933354092761874e-05,
+      "colKL_reuseB": 0.031909242272377014,
+      "colKL_payelse": 0.19361469149589539,
+      "colKL_gen": 0.005454792718713482
     },
     {
       "seed": 0,
@@ -182,21 +299,39 @@
     },
     {
       "seed": 0,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.0032062577083706856,
-      "colKL_reuseB": 2.4607388973236084,
-      "colKL_payelse": 6.379824161529541,
-      "colKL_gen": 0.4826831519603729
+      "method": "ov",
+      "removal": 0.01142971337997345,
+      "colKL_reuseA": -2.8537760954350233e-07,
+      "colKL_reuseB": 5.007634172216058e-06,
+      "colKL_payelse": 8.141907164826989e-05,
+      "colKL_gen": 1.426085785756944e-07
     },
     {
       "seed": 0,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.01169418916106224,
-      "colKL_reuseB": 8.090444564819336,
-      "colKL_payelse": 14.919198989868164,
-      "colKL_gen": 1.9417096376419067
+      "method": "ov",
+      "removal": 0.022929503191899014,
+      "colKL_reuseA": 1.6690792108420283e-06,
+      "colKL_reuseB": 2.279275213368237e-05,
+      "colKL_payelse": 0.0003291275352239609,
+      "colKL_gen": 4.4195385839884693e-07
+    },
+    {
+      "seed": 0,
+      "method": "ov",
+      "removal": 0.046192405314167906,
+      "colKL_reuseA": 1.0793555702548474e-05,
+      "colKL_reuseB": 9.613903239369392e-05,
+      "colKL_payelse": 0.001328182639554143,
+      "colKL_gen": 1.7707627648633206e-06
+    },
+    {
+      "seed": 0,
+      "method": "ov",
+      "removal": 0.08194688486763757,
+      "colKL_reuseA": 3.4188677091151476e-05,
+      "colKL_reuseB": 0.0002952914801426232,
+      "colKL_payelse": 0.004114588722586632,
+      "colKL_gen": 5.658645250150585e-06
     },
     {
       "seed": 0,
@@ -236,12 +371,12 @@
     },
     {
       "seed": 0,
-      "method": "ov",
-      "removal": 0.9999996907448635,
-      "colKL_reuseA": 0.008440650999546051,
-      "colKL_reuseB": 0.13210558891296387,
-      "colKL_payelse": 2.2310051918029785,
-      "colKL_gen": 0.002642618569855889
+      "method": "hybrid",
+      "removal": 0.2987531424127051,
+      "colKL_reuseA": 0.0075362129136919975,
+      "colKL_reuseB": 0.004198969341814518,
+      "colKL_payelse": 0.036391906440258026,
+      "colKL_gen": 4.4878030924640676e-05
     },
     {
       "seed": 0,
@@ -290,6 +425,87 @@
     },
     {
       "seed": 0,
+      "method": "hybrid",
+      "removal": 0.7334218742180809,
+      "colKL_reuseA": 0.649461030960083,
+      "colKL_reuseB": 0.38438254594802856,
+      "colKL_payelse": 0.09971218556165695,
+      "colKL_gen": 4.4878030924640676e-05
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.03285908627093048,
+      "colKL_reuseA": 0.0032479213550686836,
+      "colKL_reuseB": 0.0023089726455509663,
+      "colKL_payelse": 0.000372351729311049,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.08389360814726732,
+      "colKL_reuseA": 0.012082542292773724,
+      "colKL_reuseB": 0.012410799041390419,
+      "colKL_payelse": 0.0036901934072375298,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.1487580024193682,
+      "colKL_reuseA": 0.013761388137936592,
+      "colKL_reuseB": 0.031722597777843475,
+      "colKL_payelse": 0.04501451551914215,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.4005772896464216,
+      "colKL_reuseA": 0.08118680119514465,
+      "colKL_reuseB": 0.15435025095939636,
+      "colKL_payelse": 0.5231508016586304,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.7502323239826365,
+      "colKL_reuseA": 0.6080074310302734,
+      "colKL_reuseB": 0.3121812045574188,
+      "colKL_payelse": 1.459311604499817,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 0,
+      "method": "indab",
+      "removal": 0.9469440873752526,
+      "colKL_reuseA": 1.6158405542373657,
+      "colKL_reuseB": 0.4703032672405243,
+      "colKL_payelse": 2.12528920173645,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 0,
+      "method": "oracle",
+      "removal": 0.03415014147607187,
+      "colKL_reuseA": 0.02540956251323223,
+      "colKL_reuseB": 9.097263682633638e-05,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 0,
+      "method": "oracle",
+      "removal": 0.08919039708851384,
+      "colKL_reuseA": 0.0630011260509491,
+      "colKL_reuseB": 0.0002517842222005129,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 0,
       "method": "oracle",
       "removal": 0.2835680742658484,
       "colKL_reuseA": 0.08122137188911438,
@@ -322,6 +538,15 @@
       "colKL_reuseA": 0.08838188648223877,
       "colKL_reuseB": 0.0007095781620591879,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 1,
+      "method": "fra",
+      "removal": 0.09793158020275561,
+      "colKL_reuseA": 0.0015899636782705784,
+      "colKL_reuseB": 0.0013370583765208721,
+      "colKL_payelse": 3.1781382858753204e-06,
       "colKL_gen": 0.0
     },
     {
@@ -371,12 +596,57 @@
     },
     {
       "seed": 1,
+      "method": "fra",
+      "removal": 0.7816721339141929,
+      "colKL_reuseA": 0.379911333322525,
+      "colKL_reuseB": 3.9397995471954346,
+      "colKL_payelse": 0.019508223980665207,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 1,
       "method": "feat1",
-      "removal": 0.9742500086355346,
-      "colKL_reuseA": 1.1328271627426147,
-      "colKL_reuseB": 0.06806110590696335,
-      "colKL_payelse": 0.9064593315124512,
-      "colKL_gen": 0.9523834188779196
+      "removal": 0.08102517602298376,
+      "colKL_reuseA": 0.011921219527721405,
+      "colKL_reuseB": 0.0014610455837100744,
+      "colKL_payelse": 0.006219958420842886,
+      "colKL_gen": 0.026750519250830013
+    },
+    {
+      "seed": 1,
+      "method": "feat1",
+      "removal": 0.2428470111380595,
+      "colKL_reuseA": 0.06800134479999542,
+      "colKL_reuseB": 0.006169747561216354,
+      "colKL_payelse": 0.0408378429710865,
+      "colKL_gen": 0.16590796411037445
+    },
+    {
+      "seed": 1,
+      "method": "feat1",
+      "removal": 0.5546210789982549,
+      "colKL_reuseA": 0.24628403782844543,
+      "colKL_reuseB": 0.01225023902952671,
+      "colKL_payelse": 0.16893726587295532,
+      "colKL_gen": 0.3756343324979146
+    },
+    {
+      "seed": 1,
+      "method": "feat1",
+      "removal": 0.9230912137116316,
+      "colKL_reuseA": 0.8138720393180847,
+      "colKL_reuseB": 0.033893607556819916,
+      "colKL_payelse": 0.6270255446434021,
+      "colKL_gen": 0.7522064447402954
+    },
+    {
+      "seed": 1,
+      "method": "feat1",
+      "removal": 0.9967542582686807,
+      "colKL_reuseA": 1.7744271755218506,
+      "colKL_reuseB": 0.35458776354789734,
+      "colKL_payelse": 1.4571001529693604,
+      "colKL_gen": 1.3633419672648113
     },
     {
       "seed": 1,
@@ -416,21 +686,48 @@
     },
     {
       "seed": 1,
-      "method": "feat1",
-      "removal": 0.9999666222780813,
-      "colKL_reuseA": 8.039620399475098,
-      "colKL_reuseB": 10.651717185974121,
-      "colKL_payelse": 6.420263767242432,
-      "colKL_gen": 5.9180073738098145
+      "method": "dom",
+      "removal": 0.02068929750816484,
+      "colKL_reuseA": 0.010882246308028698,
+      "colKL_reuseB": 0.0011110564228147268,
+      "colKL_payelse": 0.0054151336662471294,
+      "colKL_gen": 0.016587238758802414
     },
     {
       "seed": 1,
       "method": "dom",
-      "removal": 0.9603129624761729,
-      "colKL_reuseA": 1.6962400674819946,
-      "colKL_reuseB": 0.7516639828681946,
-      "colKL_payelse": 0.6274760961532593,
-      "colKL_gen": 1.003784457842509
+      "removal": 0.08351134401342886,
+      "colKL_reuseA": 0.06168869882822037,
+      "colKL_reuseB": 0.005005917511880398,
+      "colKL_payelse": 0.03239858150482178,
+      "colKL_gen": 0.09491511434316635
+    },
+    {
+      "seed": 1,
+      "method": "dom",
+      "removal": 0.2686651426431548,
+      "colKL_reuseA": 0.22238264977931976,
+      "colKL_reuseB": 0.02239300310611725,
+      "colKL_payelse": 0.12157339602708817,
+      "colKL_gen": 0.26857035358746845
+    },
+    {
+      "seed": 1,
+      "method": "dom",
+      "removal": 0.8200444082965406,
+      "colKL_reuseA": 0.9744448661804199,
+      "colKL_reuseB": 0.23209786415100098,
+      "colKL_payelse": 0.4254789352416992,
+      "colKL_gen": 0.7210241754849752
+    },
+    {
+      "seed": 1,
+      "method": "dom",
+      "removal": 0.9985560381590921,
+      "colKL_reuseA": 3.1797943115234375,
+      "colKL_reuseB": 3.487071990966797,
+      "colKL_payelse": 1.1172608137130737,
+      "colKL_gen": 1.6567400693893433
     },
     {
       "seed": 1,
@@ -470,12 +767,48 @@
     },
     {
       "seed": 1,
-      "method": "dom",
-      "removal": 0.9999999986712149,
-      "colKL_reuseA": 17.636863708496094,
-      "colKL_reuseB": 20.876752853393555,
-      "colKL_payelse": 15.26799201965332,
-      "colKL_gen": 15.179826100667318
+      "method": "pay",
+      "removal": 0.07002201363731309,
+      "colKL_reuseA": 1.0118819773197174e-06,
+      "colKL_reuseB": 3.923987605958246e-05,
+      "colKL_payelse": 0.0019199801608920097,
+      "colKL_gen": 5.780986308915696e-06
+    },
+    {
+      "seed": 1,
+      "method": "pay",
+      "removal": 0.1794916301705083,
+      "colKL_reuseA": 9.117648005485535e-06,
+      "colKL_reuseB": 0.00023012042220216244,
+      "colKL_payelse": 0.011746449396014214,
+      "colKL_gen": 3.63984969832624e-05
+    },
+    {
+      "seed": 1,
+      "method": "pay",
+      "removal": 0.3637856759429787,
+      "colKL_reuseA": 4.171172622591257e-05,
+      "colKL_reuseB": 0.0008467448060400784,
+      "colKL_payelse": 0.04514274746179581,
+      "colKL_gen": 0.00014517090554970005
+    },
+    {
+      "seed": 1,
+      "method": "pay",
+      "removal": 0.6756155259887254,
+      "colKL_reuseA": 0.00016890070401132107,
+      "colKL_reuseB": 0.002887959824874997,
+      "colKL_payelse": 0.16482967138290405,
+      "colKL_gen": 0.0005770014637770752
+    },
+    {
+      "seed": 1,
+      "method": "pay",
+      "removal": 0.912251771679738,
+      "colKL_reuseA": 0.000514637678861618,
+      "colKL_reuseB": 0.007280947640538216,
+      "colKL_payelse": 0.4352897107601166,
+      "colKL_gen": 0.0017546882930522163
     },
     {
       "seed": 1,
@@ -506,21 +839,39 @@
     },
     {
       "seed": 1,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.06524494290351868,
-      "colKL_reuseB": 0.2726205289363861,
-      "colKL_payelse": 12.459400177001953,
-      "colKL_gen": 0.24353307485580444
+      "method": "ov",
+      "removal": 0.014410325770850108,
+      "colKL_reuseA": 1.0574367479421198e-06,
+      "colKL_reuseB": 1.1152260412927717e-06,
+      "colKL_payelse": 8.802337106317282e-05,
+      "colKL_gen": 1.7911887795207804e-07
     },
     {
       "seed": 1,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.26396599411964417,
-      "colKL_reuseB": 3.7977452278137207,
-      "colKL_payelse": 27.163969039916992,
-      "colKL_gen": 1.0549338459968567
+      "method": "ov",
+      "removal": 0.02910564823614281,
+      "colKL_reuseA": 7.2987895691767335e-06,
+      "colKL_reuseB": 1.613971107872203e-06,
+      "colKL_payelse": 0.0003507921937853098,
+      "colKL_gen": 1.0505350189760065e-06
+    },
+    {
+      "seed": 1,
+      "method": "ov",
+      "removal": 0.059375818752108955,
+      "colKL_reuseA": 2.6104942662641406e-05,
+      "colKL_reuseB": 9.43252962315455e-06,
+      "colKL_payelse": 0.00141884945333004,
+      "colKL_gen": 4.493127903515415e-06
+    },
+    {
+      "seed": 1,
+      "method": "ov",
+      "removal": 0.10688424814032926,
+      "colKL_reuseA": 8.09784687589854e-05,
+      "colKL_reuseB": 3.282756370026618e-05,
+      "colKL_payelse": 0.004417581018060446,
+      "colKL_gen": 1.381400291696385e-05
     },
     {
       "seed": 1,
@@ -560,12 +911,12 @@
     },
     {
       "seed": 1,
-      "method": "ov",
-      "removal": 0.9999985170274606,
-      "colKL_reuseA": 0.05597221851348877,
-      "colKL_reuseB": 0.04493359848856926,
-      "colKL_payelse": 1.6732609272003174,
-      "colKL_gen": 0.006607145148639877
+      "method": "hybrid",
+      "removal": 0.40674916817431717,
+      "colKL_reuseA": 0.001840987242758274,
+      "colKL_reuseB": 0.0013961461372673512,
+      "colKL_payelse": 0.03849601745605469,
+      "colKL_gen": 0.00011231145981582813
     },
     {
       "seed": 1,
@@ -614,6 +965,87 @@
     },
     {
       "seed": 1,
+      "method": "hybrid",
+      "removal": 0.8332400944164606,
+      "colKL_reuseA": 0.3659881055355072,
+      "colKL_reuseB": 3.988138437271118,
+      "colKL_payelse": 0.09052248299121857,
+      "colKL_gen": 0.00011231145981582813
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.02120098299805173,
+      "colKL_reuseA": 0.006573569029569626,
+      "colKL_reuseB": 0.0011837264755740762,
+      "colKL_payelse": 0.0018269815482199192,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.07234143643144886,
+      "colKL_reuseA": 0.03382571041584015,
+      "colKL_reuseB": 0.003598195966333151,
+      "colKL_payelse": 0.0081009641289711,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.2688318878394643,
+      "colKL_reuseA": 0.08173961937427521,
+      "colKL_reuseB": 0.0026020295917987823,
+      "colKL_payelse": 0.019456276670098305,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.7301931627156971,
+      "colKL_reuseA": 0.21135149896144867,
+      "colKL_reuseB": 0.012318408116698265,
+      "colKL_payelse": 0.15151254832744598,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.9710193475182533,
+      "colKL_reuseA": 0.5322670936584473,
+      "colKL_reuseB": 0.04635917395353317,
+      "colKL_payelse": 0.8025920391082764,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 1,
+      "method": "indab",
+      "removal": 0.9981144617011878,
+      "colKL_reuseA": 0.9165250658988953,
+      "colKL_reuseB": 0.3325178921222687,
+      "colKL_payelse": 2.37499737739563,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 1,
+      "method": "oracle",
+      "removal": 0.20011968514119416,
+      "colKL_reuseA": 0.0015004503075033426,
+      "colKL_reuseB": 3.639957867562771e-05,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 1,
+      "method": "oracle",
+      "removal": 0.5138780497027693,
+      "colKL_reuseA": 0.00420549139380455,
+      "colKL_reuseB": 9.42939514061436e-05,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 1,
       "method": "oracle",
       "removal": 0.9344885738166936,
       "colKL_reuseA": 0.009039823897182941,
@@ -646,6 +1078,15 @@
       "colKL_reuseA": 0.01374016609042883,
       "colKL_reuseB": 0.0002515683590900153,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 2,
+      "method": "fra",
+      "removal": 0.037242316984675394,
+      "colKL_reuseA": 3.241653030272573e-05,
+      "colKL_reuseB": 0.023597214370965958,
+      "colKL_payelse": 9.995608706958592e-06,
       "colKL_gen": 0.0
     },
     {
@@ -695,12 +1136,57 @@
     },
     {
       "seed": 2,
+      "method": "fra",
+      "removal": 0.3237147661608253,
+      "colKL_reuseA": 0.04353812709450722,
+      "colKL_reuseB": 0.40635478496551514,
+      "colKL_payelse": 0.024132244288921356,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 2,
       "method": "feat1",
-      "removal": 0.46546614434466393,
-      "colKL_reuseA": 0.6665735840797424,
-      "colKL_reuseB": 0.8251103162765503,
-      "colKL_payelse": 1.1925158500671387,
-      "colKL_gen": 1.0799961686134338
+      "removal": 0.008895557818510702,
+      "colKL_reuseA": 0.0001941762602655217,
+      "colKL_reuseB": 0.006178602576255798,
+      "colKL_payelse": 0.011735442094504833,
+      "colKL_gen": 0.018325287538270157
+    },
+    {
+      "seed": 2,
+      "method": "feat1",
+      "removal": 0.03633115048791591,
+      "colKL_reuseA": 0.0019251573830842972,
+      "colKL_reuseB": 0.031137686222791672,
+      "colKL_payelse": 0.06861259788274765,
+      "colKL_gen": 0.11155515164136887
+    },
+    {
+      "seed": 2,
+      "method": "feat1",
+      "removal": 0.08470771508086272,
+      "colKL_reuseA": 0.014781784266233444,
+      "colKL_reuseB": 0.11523593962192535,
+      "colKL_payelse": 0.2435080111026764,
+      "colKL_gen": 0.34394927819569904
+    },
+    {
+      "seed": 2,
+      "method": "feat1",
+      "removal": 0.18822765764220872,
+      "colKL_reuseA": 0.2130277007818222,
+      "colKL_reuseB": 0.46760061383247375,
+      "colKL_payelse": 0.806024432182312,
+      "colKL_gen": 0.827602744102478
+    },
+    {
+      "seed": 2,
+      "method": "feat1",
+      "removal": 0.9507475101218157,
+      "colKL_reuseA": 2.674410343170166,
+      "colKL_reuseB": 4.023900032043457,
+      "colKL_payelse": 2.0522449016571045,
+      "colKL_gen": 1.5939266681671143
     },
     {
       "seed": 2,
@@ -740,21 +1226,48 @@
     },
     {
       "seed": 2,
-      "method": "feat1",
-      "removal": 0.9999895727213909,
-      "colKL_reuseA": 15.671616554260254,
-      "colKL_reuseB": 16.011659622192383,
-      "colKL_payelse": 7.482769012451172,
-      "colKL_gen": 6.6465020179748535
+      "method": "dom",
+      "removal": 0.0871687993801219,
+      "colKL_reuseA": 0.00032319239107891917,
+      "colKL_reuseB": 0.0072378856129944324,
+      "colKL_payelse": 0.012078535743057728,
+      "colKL_gen": 0.015278743579983711
     },
     {
       "seed": 2,
       "method": "dom",
-      "removal": 0.9965896338202347,
-      "colKL_reuseA": 1.115720272064209,
-      "colKL_reuseB": 5.833310127258301,
-      "colKL_payelse": 2.56968355178833,
-      "colKL_gen": 1.2028738657633464
+      "removal": 0.25469952370741056,
+      "colKL_reuseA": 0.0028814077377319336,
+      "colKL_reuseB": 0.061139632016420364,
+      "colKL_payelse": 0.07982035726308823,
+      "colKL_gen": 0.07543825109799702
+    },
+    {
+      "seed": 2,
+      "method": "dom",
+      "removal": 0.5831407156885666,
+      "colKL_reuseA": 0.020528273656964302,
+      "colKL_reuseB": 0.4082126021385193,
+      "colKL_payelse": 0.3488823175430298,
+      "colKL_gen": 0.23388183613618216
+    },
+    {
+      "seed": 2,
+      "method": "dom",
+      "removal": 0.9657473194144899,
+      "colKL_reuseA": 0.34262531995773315,
+      "colKL_reuseB": 3.581327199935913,
+      "colKL_payelse": 1.6316406726837158,
+      "colKL_gen": 0.7653615474700928
+    },
+    {
+      "seed": 2,
+      "method": "dom",
+      "removal": 0.9999836020778538,
+      "colKL_reuseA": 4.438143730163574,
+      "colKL_reuseB": 10.627910614013672,
+      "colKL_payelse": 4.215832233428955,
+      "colKL_gen": 2.3656126658121743
     },
     {
       "seed": 2,
@@ -794,12 +1307,48 @@
     },
     {
       "seed": 2,
-      "method": "dom",
-      "removal": 0.9999999999999948,
-      "colKL_reuseA": 25.7813720703125,
-      "colKL_reuseB": 32.18388366699219,
-      "colKL_payelse": 22.499258041381836,
-      "colKL_gen": 20.642127354939777
+      "method": "pay",
+      "removal": 0.08423655253234286,
+      "colKL_reuseA": 8.185827482520835e-08,
+      "colKL_reuseB": 6.393605144694448e-05,
+      "colKL_payelse": 0.0013232054188847542,
+      "colKL_gen": 2.4615747103477286e-05
+    },
+    {
+      "seed": 2,
+      "method": "pay",
+      "removal": 0.21050238457880754,
+      "colKL_reuseA": 3.759815285775403e-07,
+      "colKL_reuseB": 0.00039692793507128954,
+      "colKL_payelse": 0.007983732968568802,
+      "colKL_gen": 0.0001522248009374986
+    },
+    {
+      "seed": 2,
+      "method": "pay",
+      "removal": 0.409476921659378,
+      "colKL_reuseA": 5.725455025640258e-07,
+      "colKL_reuseB": 0.001514920499175787,
+      "colKL_payelse": 0.030072025954723358,
+      "colKL_gen": 0.0005968610639683902
+    },
+    {
+      "seed": 2,
+      "method": "pay",
+      "removal": 0.7133824964114751,
+      "colKL_reuseA": 2.6499335490370868e-06,
+      "colKL_reuseB": 0.005608901381492615,
+      "colKL_payelse": 0.10677925497293472,
+      "colKL_gen": 0.0023065919910247126
+    },
+    {
+      "seed": 2,
+      "method": "pay",
+      "removal": 0.9231810235110557,
+      "colKL_reuseA": 7.67906203691382e-06,
+      "colKL_reuseB": 0.015522295609116554,
+      "colKL_payelse": 0.27656230330467224,
+      "colKL_gen": 0.006785671304290493
     },
     {
       "seed": 2,
@@ -830,21 +1379,39 @@
     },
     {
       "seed": 2,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.001145089860074222,
-      "colKL_reuseB": 0.8731125593185425,
-      "colKL_payelse": 8.850310325622559,
-      "colKL_gen": 0.8115876913070679
+      "method": "ov",
+      "removal": 0.019554024728578034,
+      "colKL_reuseA": 9.962444380562374e-08,
+      "colKL_reuseB": -4.0437589632347226e-07,
+      "colKL_payelse": 6.22553052380681e-05,
+      "colKL_gen": 1.13471425085739e-06
     },
     {
       "seed": 2,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.005660391412675381,
-      "colKL_reuseB": 4.091686725616455,
-      "colKL_payelse": 20.00745391845703,
-      "colKL_gen": 3.0318631331125894
+      "method": "ov",
+      "removal": 0.039297449234572346,
+      "colKL_reuseA": -1.1103429642389528e-07,
+      "colKL_reuseB": 7.0003734435886145e-06,
+      "colKL_payelse": 0.000245827017351985,
+      "colKL_gen": 4.831058485403143e-06
+    },
+    {
+      "seed": 2,
+      "method": "ov",
+      "removal": 0.07928495018463144,
+      "colKL_reuseA": 2.6257623630954186e-07,
+      "colKL_reuseB": 2.6310881366953254e-05,
+      "colKL_payelse": 0.000985362334176898,
+      "colKL_gen": 1.9528877108617355e-05
+    },
+    {
+      "seed": 2,
+      "method": "ov",
+      "removal": 0.14021870889220822,
+      "colKL_reuseA": 1.39802762078034e-06,
+      "colKL_reuseB": 8.696620352566242e-05,
+      "colKL_payelse": 0.003038681112229824,
+      "colKL_gen": 6.002384801225465e-05
     },
     {
       "seed": 2,
@@ -884,12 +1451,12 @@
     },
     {
       "seed": 2,
-      "method": "ov",
-      "removal": 0.9999971669807207,
-      "colKL_reuseA": 0.01002220157533884,
-      "colKL_reuseB": 0.20782499015331268,
-      "colKL_payelse": 1.860243320465088,
-      "colKL_gen": 0.030288130432988208
+      "method": "hybrid",
+      "removal": 0.40066348900874815,
+      "colKL_reuseA": 6.971817492740229e-05,
+      "colKL_reuseB": 0.02118575945496559,
+      "colKL_payelse": 0.026259934529662132,
+      "colKL_gen": 0.0004850830688762168
     },
     {
       "seed": 2,
@@ -938,6 +1505,87 @@
     },
     {
       "seed": 2,
+      "method": "hybrid",
+      "removal": 0.3834854744725934,
+      "colKL_reuseA": 0.03983733057975769,
+      "colKL_reuseB": 0.38334065675735474,
+      "colKL_payelse": 0.06267775595188141,
+      "colKL_gen": 0.0004850830688762168
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": 0.031479756424319105,
+      "colKL_reuseA": 5.2978859457653016e-05,
+      "colKL_reuseB": 0.004271560814231634,
+      "colKL_payelse": 0.001238216646015644,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": 0.02770044077178513,
+      "colKL_reuseA": 0.0010699208360165358,
+      "colKL_reuseB": 0.01977667212486267,
+      "colKL_payelse": 0.006277043838053942,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": -0.19464477136987557,
+      "colKL_reuseA": 0.04015770182013512,
+      "colKL_reuseB": 0.023148592561483383,
+      "colKL_payelse": 0.016551829874515533,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": -0.2104079072515299,
+      "colKL_reuseA": 0.08977828919887543,
+      "colKL_reuseB": 0.09012269973754883,
+      "colKL_payelse": 0.08491712063550949,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": 0.2292955274166193,
+      "colKL_reuseA": 0.260370135307312,
+      "colKL_reuseB": 0.7861164212226868,
+      "colKL_payelse": 0.26373204588890076,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 2,
+      "method": "indab",
+      "removal": 0.9207771166343193,
+      "colKL_reuseA": 0.7692855000495911,
+      "colKL_reuseB": 2.6376869678497314,
+      "colKL_payelse": 0.492089182138443,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 2,
+      "method": "oracle",
+      "removal": 0.061147417680925464,
+      "colKL_reuseA": 4.573066689772531e-06,
+      "colKL_reuseB": 0.0004874696023762226,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 2,
+      "method": "oracle",
+      "removal": 0.13705460867413144,
+      "colKL_reuseA": 1.253540176548995e-05,
+      "colKL_reuseB": 0.0014826380647718906,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 2,
       "method": "oracle",
       "removal": 0.2834180717433449,
       "colKL_reuseA": 2.4848948669387028e-05,
@@ -970,6 +1618,15 @@
       "colKL_reuseA": 3.441051740082912e-05,
       "colKL_reuseB": 0.0049456702545285225,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 3,
+      "method": "fra",
+      "removal": 0.06298284492691486,
+      "colKL_reuseA": 0.002113041002303362,
+      "colKL_reuseB": 0.0009108409285545349,
+      "colKL_payelse": 4.260102286934853e-06,
       "colKL_gen": 0.0
     },
     {
@@ -1019,12 +1676,57 @@
     },
     {
       "seed": 3,
+      "method": "fra",
+      "removal": 0.4983444793439087,
+      "colKL_reuseA": 0.09801740199327469,
+      "colKL_reuseB": 0.8577094078063965,
+      "colKL_payelse": 0.004894844256341457,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 3,
       "method": "feat1",
-      "removal": 0.7144652877098434,
-      "colKL_reuseA": 1.6155250072479248,
-      "colKL_reuseB": 1.6703602075576782,
-      "colKL_payelse": 2.9003708362579346,
-      "colKL_gen": 1.1231782833735149
+      "removal": -0.0204001719945337,
+      "colKL_reuseA": 0.007988463155925274,
+      "colKL_reuseB": 0.0063781049102544785,
+      "colKL_payelse": 0.004735802765935659,
+      "colKL_gen": 0.017405280843377113
+    },
+    {
+      "seed": 3,
+      "method": "feat1",
+      "removal": -0.04203566500087086,
+      "colKL_reuseA": 0.03707287088036537,
+      "colKL_reuseB": 0.037316128611564636,
+      "colKL_payelse": 0.04125157743692398,
+      "colKL_gen": 0.08076027035713196
+    },
+    {
+      "seed": 3,
+      "method": "feat1",
+      "removal": -0.06125012979139588,
+      "colKL_reuseA": 0.09833496063947678,
+      "colKL_reuseB": 0.1437491476535797,
+      "colKL_payelse": 0.28607189655303955,
+      "colKL_gen": 0.2500909815231959
+    },
+    {
+      "seed": 3,
+      "method": "feat1",
+      "removal": 0.24600650715443673,
+      "colKL_reuseA": 0.6307117342948914,
+      "colKL_reuseB": 0.7589019536972046,
+      "colKL_payelse": 1.905874252319336,
+      "colKL_gen": 0.784935454527537
+    },
+    {
+      "seed": 3,
+      "method": "feat1",
+      "removal": 0.9884598889830865,
+      "colKL_reuseA": 4.473686218261719,
+      "colKL_reuseB": 4.002810478210449,
+      "colKL_payelse": 4.400630950927734,
+      "colKL_gen": 1.851582407951355
     },
     {
       "seed": 3,
@@ -1064,21 +1766,48 @@
     },
     {
       "seed": 3,
-      "method": "feat1",
-      "removal": 0.9999858328354404,
-      "colKL_reuseA": 10.962628364562988,
-      "colKL_reuseB": 8.303789138793945,
-      "colKL_payelse": 9.053620338439941,
-      "colKL_gen": 7.376371542612712
+      "method": "dom",
+      "removal": 0.038179813837270093,
+      "colKL_reuseA": 0.005696418229490519,
+      "colKL_reuseB": 0.004950106143951416,
+      "colKL_payelse": 0.00523577444255352,
+      "colKL_gen": 0.021859067181746166
     },
     {
       "seed": 3,
       "method": "dom",
-      "removal": 0.791520529230697,
-      "colKL_reuseA": 1.2583597898483276,
-      "colKL_reuseB": 1.8117024898529053,
-      "colKL_payelse": 2.4087376594543457,
-      "colKL_gen": 1.0264601707458496
+      "removal": 0.10507231055480382,
+      "colKL_reuseA": 0.025637052953243256,
+      "colKL_reuseB": 0.0337442010641098,
+      "colKL_payelse": 0.040884796530008316,
+      "colKL_gen": 0.09370783219734828
+    },
+    {
+      "seed": 3,
+      "method": "dom",
+      "removal": 0.23860981063854014,
+      "colKL_reuseA": 0.08152538537979126,
+      "colKL_reuseB": 0.16930532455444336,
+      "colKL_payelse": 0.24158801138401031,
+      "colKL_gen": 0.25037070115407306
+    },
+    {
+      "seed": 3,
+      "method": "dom",
+      "removal": 0.5949226495615563,
+      "colKL_reuseA": 0.5890176296234131,
+      "colKL_reuseB": 1.0249143838882446,
+      "colKL_payelse": 1.5185987949371338,
+      "colKL_gen": 0.7146243254343668
+    },
+    {
+      "seed": 3,
+      "method": "dom",
+      "removal": 0.9886118149146956,
+      "colKL_reuseA": 3.377793312072754,
+      "colKL_reuseB": 3.789499521255493,
+      "colKL_payelse": 3.9688596725463867,
+      "colKL_gen": 1.8752264181772869
     },
     {
       "seed": 3,
@@ -1118,12 +1847,48 @@
     },
     {
       "seed": 3,
-      "method": "dom",
-      "removal": 0.9999999999938188,
-      "colKL_reuseA": 20.08234405517578,
-      "colKL_reuseB": 19.131868362426758,
-      "colKL_payelse": 21.92513656616211,
-      "colKL_gen": 20.93557612101237
+      "method": "pay",
+      "removal": 0.0638342346159515,
+      "colKL_reuseA": 1.1149022611789405e-06,
+      "colKL_reuseB": 0.00021847162861377,
+      "colKL_payelse": 0.004079153761267662,
+      "colKL_gen": 9.273476810752376e-06
+    },
+    {
+      "seed": 3,
+      "method": "pay",
+      "removal": 0.16371886681225634,
+      "colKL_reuseA": 7.490278221666813e-06,
+      "colKL_reuseB": 0.0013219593092799187,
+      "colKL_payelse": 0.026264812797307968,
+      "colKL_gen": 5.791319745185319e-05
+    },
+    {
+      "seed": 3,
+      "method": "pay",
+      "removal": 0.3347229560785916,
+      "colKL_reuseA": 3.6902958527207375e-05,
+      "colKL_reuseB": 0.005005590617656708,
+      "colKL_payelse": 0.10889102518558502,
+      "colKL_gen": 0.00023065963371967277
+    },
+    {
+      "seed": 3,
+      "method": "pay",
+      "removal": 0.6427312579130884,
+      "colKL_reuseA": 0.00015368632739409804,
+      "colKL_reuseB": 0.018021736294031143,
+      "colKL_payelse": 0.4435606598854065,
+      "colKL_gen": 0.0009116592215529332
+    },
+    {
+      "seed": 3,
+      "method": "pay",
+      "removal": 0.9016550705730249,
+      "colKL_reuseA": 0.0004694105591624975,
+      "colKL_reuseB": 0.047777559608221054,
+      "colKL_payelse": 1.2595610618591309,
+      "colKL_gen": 0.0027489528292790055
     },
     {
       "seed": 3,
@@ -1154,21 +1919,39 @@
     },
     {
       "seed": 3,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.04478519409894943,
-      "colKL_reuseB": 1.3958702087402344,
-      "colKL_payelse": 30.497446060180664,
-      "colKL_gen": 0.31722814838091534
+      "method": "ov",
+      "removal": 0.02461881104382424,
+      "colKL_reuseA": 1.441198037355207e-06,
+      "colKL_reuseB": 3.352179192006588e-06,
+      "colKL_payelse": 0.00028169993311166763,
+      "colKL_gen": -2.0490105612225307e-08
     },
     {
       "seed": 3,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.1365293562412262,
-      "colKL_reuseB": 3.156994581222534,
-      "colKL_payelse": 56.92503356933594,
-      "colKL_gen": 1.3696115811665852
+      "method": "ov",
+      "removal": 0.049338524430927566,
+      "colKL_reuseA": 7.1261601988226175e-06,
+      "colKL_reuseB": 1.3041659258306026e-05,
+      "colKL_payelse": 0.0011542306747287512,
+      "colKL_gen": 4.772465966122278e-07
+    },
+    {
+      "seed": 3,
+      "method": "ov",
+      "removal": 0.09894092314339686,
+      "colKL_reuseA": 2.8985057724639773e-05,
+      "colKL_reuseB": 5.420716479420662e-05,
+      "colKL_payelse": 0.004761773627251387,
+      "colKL_gen": 2.054838584323685e-06
+    },
+    {
+      "seed": 3,
+      "method": "ov",
+      "removal": 0.17328679544206116,
+      "colKL_reuseA": 8.717249147593975e-05,
+      "colKL_reuseB": 0.0001703263260424137,
+      "colKL_payelse": 0.015220947563648224,
+      "colKL_gen": 6.2210572953821e-06
     },
     {
       "seed": 3,
@@ -1208,12 +1991,12 @@
     },
     {
       "seed": 3,
-      "method": "ov",
-      "removal": 0.9999865421833392,
-      "colKL_reuseA": 0.1119408905506134,
-      "colKL_reuseB": 0.14135590195655823,
-      "colKL_payelse": 8.002525329589844,
-      "colKL_gen": 0.002429890252339343
+      "method": "hybrid",
+      "removal": 0.5127891626696499,
+      "colKL_reuseA": 0.002145070116966963,
+      "colKL_reuseB": 0.0017598820850253105,
+      "colKL_payelse": 0.14756053686141968,
+      "colKL_gen": 4.957680842683961e-05
     },
     {
       "seed": 3,
@@ -1262,6 +2045,87 @@
     },
     {
       "seed": 3,
+      "method": "hybrid",
+      "removal": 0.6807611574545479,
+      "colKL_reuseA": 0.09666180610656738,
+      "colKL_reuseB": 0.785972535610199,
+      "colKL_payelse": 0.19892549514770508,
+      "colKL_gen": 4.957680842683961e-05
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.0037641598226128004,
+      "colKL_reuseA": 0.001585555961355567,
+      "colKL_reuseB": 0.01585325598716736,
+      "colKL_payelse": 0.0008818485075607896,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.029814549029327786,
+      "colKL_reuseA": 0.012132230214774609,
+      "colKL_reuseB": 0.08386111259460449,
+      "colKL_payelse": 0.005626054480671883,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.15484553149157954,
+      "colKL_reuseA": 0.11403012275695801,
+      "colKL_reuseB": 0.1219152957201004,
+      "colKL_payelse": 0.027293188497424126,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.3215862350781762,
+      "colKL_reuseA": 1.3313162326812744,
+      "colKL_reuseB": 0.0827854722738266,
+      "colKL_payelse": 0.11713553965091705,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.32886460161577724,
+      "colKL_reuseA": 3.6855735778808594,
+      "colKL_reuseB": 0.2280898541212082,
+      "colKL_payelse": 0.32473719120025635,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 3,
+      "method": "indab",
+      "removal": -0.08082947587722233,
+      "colKL_reuseA": 5.763566493988037,
+      "colKL_reuseB": 0.33648455142974854,
+      "colKL_payelse": 0.5446454286575317,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 3,
+      "method": "oracle",
+      "removal": 0.025028595975294388,
+      "colKL_reuseA": 0.00011594453826546669,
+      "colKL_reuseB": 0.0009321470279246569,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 3,
+      "method": "oracle",
+      "removal": 0.06109061197899224,
+      "colKL_reuseA": 0.00032787909731268883,
+      "colKL_reuseB": 0.002435022033751011,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 3,
       "method": "oracle",
       "removal": 0.18945979774313693,
       "colKL_reuseA": 0.0006720703095197678,
@@ -1294,6 +2158,15 @@
       "colKL_reuseA": 0.0009587130043655634,
       "colKL_reuseB": 0.006174291484057903,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 4,
+      "method": "fra",
+      "removal": 0.006467274117636368,
+      "colKL_reuseA": 0.0002645344357006252,
+      "colKL_reuseB": 0.00132092647254467,
+      "colKL_payelse": 0.00025562301743775606,
       "colKL_gen": 0.0
     },
     {
@@ -1343,12 +2216,57 @@
     },
     {
       "seed": 4,
+      "method": "fra",
+      "removal": 0.7417580570568952,
+      "colKL_reuseA": 0.14011843502521515,
+      "colKL_reuseB": 0.851836621761322,
+      "colKL_payelse": 0.18123364448547363,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 4,
       "method": "feat1",
-      "removal": 0.7144852276472969,
-      "colKL_reuseA": 1.6756792068481445,
-      "colKL_reuseB": 2.0448100566864014,
-      "colKL_payelse": 1.3342723846435547,
-      "colKL_gen": 1.031826913356781
+      "removal": 0.03079998789657734,
+      "colKL_reuseA": 0.01934373751282692,
+      "colKL_reuseB": 0.0064699286594986916,
+      "colKL_payelse": 0.009315109811723232,
+      "colKL_gen": 0.015563989989459515
+    },
+    {
+      "seed": 4,
+      "method": "feat1",
+      "removal": 0.0930488217335933,
+      "colKL_reuseA": 0.10647202283143997,
+      "colKL_reuseB": 0.04082494601607323,
+      "colKL_payelse": 0.05687367916107178,
+      "colKL_gen": 0.07601247976223628
+    },
+    {
+      "seed": 4,
+      "method": "feat1",
+      "removal": 0.22578317291225358,
+      "colKL_reuseA": 0.36292946338653564,
+      "colKL_reuseB": 0.19136936962604523,
+      "colKL_payelse": 0.2224481701850891,
+      "colKL_gen": 0.2420241286357244
+    },
+    {
+      "seed": 4,
+      "method": "feat1",
+      "removal": 0.5445321803331198,
+      "colKL_reuseA": 1.1796067953109741,
+      "colKL_reuseB": 1.1528394222259521,
+      "colKL_payelse": 0.8852576613426208,
+      "colKL_gen": 0.7396737933158875
+    },
+    {
+      "seed": 4,
+      "method": "feat1",
+      "removal": 0.9321437430944692,
+      "colKL_reuseA": 2.6923768520355225,
+      "colKL_reuseB": 4.918972969055176,
+      "colKL_payelse": 2.177363157272339,
+      "colKL_gen": 1.6269420385360718
     },
     {
       "seed": 4,
@@ -1388,21 +2306,48 @@
     },
     {
       "seed": 4,
-      "method": "feat1",
-      "removal": 0.9999647354830471,
-      "colKL_reuseA": 8.483258247375488,
-      "colKL_reuseB": 14.91854476928711,
-      "colKL_payelse": 6.612471580505371,
-      "colKL_gen": 6.9936149915059405
+      "method": "dom",
+      "removal": 0.044567183574724445,
+      "colKL_reuseA": 0.017508191987872124,
+      "colKL_reuseB": 0.008261773735284805,
+      "colKL_payelse": 0.013185889460146427,
+      "colKL_gen": 0.012269531687100729
     },
     {
       "seed": 4,
       "method": "dom",
-      "removal": 0.8987587076158638,
-      "colKL_reuseA": 1.9445059299468994,
-      "colKL_reuseB": 3.253566026687622,
-      "colKL_payelse": 1.3090335130691528,
-      "colKL_gen": 0.8869854609171549
+      "removal": 0.13322099471155624,
+      "colKL_reuseA": 0.11302954703569412,
+      "colKL_reuseB": 0.06761546432971954,
+      "colKL_payelse": 0.08364515006542206,
+      "colKL_gen": 0.07022073616584142
+    },
+    {
+      "seed": 4,
+      "method": "dom",
+      "removal": 0.33037142646893203,
+      "colKL_reuseA": 0.4472424387931824,
+      "colKL_reuseB": 0.3829061985015869,
+      "colKL_payelse": 0.31862685084342957,
+      "colKL_gen": 0.20736141006151834
+    },
+    {
+      "seed": 4,
+      "method": "dom",
+      "removal": 0.7660120806839938,
+      "colKL_reuseA": 1.4521207809448242,
+      "colKL_reuseB": 1.9954081773757935,
+      "colKL_payelse": 0.980971097946167,
+      "colKL_gen": 0.6102675596872965
+    },
+    {
+      "seed": 4,
+      "method": "dom",
+      "removal": 0.9862771710424897,
+      "colKL_reuseA": 2.7164015769958496,
+      "colKL_reuseB": 6.873994827270508,
+      "colKL_payelse": 1.9015613794326782,
+      "colKL_gen": 1.524730642636617
     },
     {
       "seed": 4,
@@ -1442,12 +2387,48 @@
     },
     {
       "seed": 4,
-      "method": "dom",
-      "removal": 0.9999998548305323,
-      "colKL_reuseA": 10.438258171081543,
-      "colKL_reuseB": 18.4176082611084,
-      "colKL_payelse": 8.933754920959473,
-      "colKL_gen": 8.019114335378012
+      "method": "pay",
+      "removal": 0.06302732025387825,
+      "colKL_reuseA": 3.35447839461267e-06,
+      "colKL_reuseB": 0.00017875805497169495,
+      "colKL_payelse": 0.0018771183677017689,
+      "colKL_gen": 2.6719633751781657e-05
+    },
+    {
+      "seed": 4,
+      "method": "pay",
+      "removal": 0.16444746711709546,
+      "colKL_reuseA": 2.011278411373496e-05,
+      "colKL_reuseB": 0.0010742023587226868,
+      "colKL_payelse": 0.011297318153083324,
+      "colKL_gen": 0.00016488147715184218
+    },
+    {
+      "seed": 4,
+      "method": "pay",
+      "removal": 0.3427350906333295,
+      "colKL_reuseA": 8.084590081125498e-05,
+      "colKL_reuseB": 0.004063522443175316,
+      "colKL_payelse": 0.04239538311958313,
+      "colKL_gen": 0.0006451224714207152
+    },
+    {
+      "seed": 4,
+      "method": "pay",
+      "removal": 0.662611632141176,
+      "colKL_reuseA": 0.00032215286046266556,
+      "colKL_reuseB": 0.01469794288277626,
+      "colKL_payelse": 0.14878852665424347,
+      "colKL_gen": 0.0024830822367221117
+    },
+    {
+      "seed": 4,
+      "method": "pay",
+      "removal": 0.9123809945736918,
+      "colKL_reuseA": 0.0009833737276494503,
+      "colKL_reuseB": 0.03958120942115784,
+      "colKL_payelse": 0.37727099657058716,
+      "colKL_gen": 0.007245043447862069
     },
     {
       "seed": 4,
@@ -1478,21 +2459,39 @@
     },
     {
       "seed": 4,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.12890470027923584,
-      "colKL_reuseB": 1.4457025527954102,
-      "colKL_payelse": 10.553805351257324,
-      "colKL_gen": 0.6530750393867493
+      "method": "ov",
+      "removal": 0.013779728808133385,
+      "colKL_reuseA": 1.6274250810965896e-05,
+      "colKL_reuseB": 4.1648163460195065e-06,
+      "colKL_payelse": 4.2146246414631605e-05,
+      "colKL_gen": 8.774049433668552e-07
     },
     {
       "seed": 4,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.5536268949508667,
-      "colKL_reuseB": 2.924774169921875,
-      "colKL_payelse": 23.327056884765625,
-      "colKL_gen": 2.3323409954706826
+      "method": "ov",
+      "removal": 0.02781764009398413,
+      "colKL_reuseA": 6.520590977743268e-05,
+      "colKL_reuseB": 9.5051946118474e-06,
+      "colKL_payelse": 0.00017466919962316751,
+      "colKL_gen": 3.5375764658359308e-06
+    },
+    {
+      "seed": 4,
+      "method": "ov",
+      "removal": 0.056619578503676826,
+      "colKL_reuseA": 0.0002605936024338007,
+      "colKL_reuseB": 3.686104901134968e-05,
+      "colKL_payelse": 0.0007017988245934248,
+      "colKL_gen": 1.4714878034283174e-05
+    },
+    {
+      "seed": 4,
+      "method": "ov",
+      "removal": 0.10148746767571493,
+      "colKL_reuseA": 0.0008043942507356405,
+      "colKL_reuseB": 0.00011108128819614649,
+      "colKL_payelse": 0.002171238884329796,
+      "colKL_gen": 4.501039832878936e-05
     },
     {
       "seed": 4,
@@ -1532,12 +2531,12 @@
     },
     {
       "seed": 4,
-      "method": "ov",
-      "removal": 0.9989108731897964,
-      "colKL_reuseA": 0.3159244656562805,
-      "colKL_reuseB": 0.07569801807403564,
-      "colKL_payelse": 1.230981707572937,
-      "colKL_gen": 0.023509846068918705
+      "method": "hybrid",
+      "removal": 0.30193066600873697,
+      "colKL_reuseA": 0.006915822625160217,
+      "colKL_reuseB": 0.0018406892195343971,
+      "colKL_payelse": 0.021455196663737297,
+      "colKL_gen": 0.00036691452745192993
     },
     {
       "seed": 4,
@@ -1586,6 +2585,87 @@
     },
     {
       "seed": 4,
+      "method": "hybrid",
+      "removal": 0.7670124706433811,
+      "colKL_reuseA": 0.1250360906124115,
+      "colKL_reuseB": 0.8490514755249023,
+      "colKL_payelse": 0.24585264921188354,
+      "colKL_gen": 0.00036691452745192993
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": -0.020611896053084555,
+      "colKL_reuseA": 0.002739730989560485,
+      "colKL_reuseB": 0.004711750894784927,
+      "colKL_payelse": 0.0007052188157103956,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": -0.03655511166392156,
+      "colKL_reuseA": 0.01866251230239868,
+      "colKL_reuseB": 0.025966838002204895,
+      "colKL_payelse": 0.004859435372054577,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": -0.025811623117322435,
+      "colKL_reuseA": 0.10945263504981995,
+      "colKL_reuseB": 0.07017040997743607,
+      "colKL_payelse": 0.05818174034357071,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": 0.09396535162501873,
+      "colKL_reuseA": 0.3968285024166107,
+      "colKL_reuseB": 0.32652580738067627,
+      "colKL_payelse": 0.4907403588294983,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": 0.48989462681441676,
+      "colKL_reuseA": 0.7191363573074341,
+      "colKL_reuseB": 2.3079469203948975,
+      "colKL_payelse": 0.9032844305038452,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 4,
+      "method": "indab",
+      "removal": 0.8564620572022795,
+      "colKL_reuseA": 1.0605230331420898,
+      "colKL_reuseB": 4.597215175628662,
+      "colKL_payelse": 2.0047342777252197,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 4,
+      "method": "oracle",
+      "removal": 0.06427642570172543,
+      "colKL_reuseA": 0.005935619585216045,
+      "colKL_reuseB": 0.00034395279362797737,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 4,
+      "method": "oracle",
+      "removal": 0.1377904843821982,
+      "colKL_reuseA": 0.015969902276992798,
+      "colKL_reuseB": 0.0012601101770997047,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 4,
       "method": "oracle",
       "removal": 0.30141533056040815,
       "colKL_reuseA": 0.03347461298108101,
@@ -1618,6 +2698,15 @@
       "colKL_reuseA": 0.05102613568305969,
       "colKL_reuseB": 0.006528524681925774,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 5,
+      "method": "fra",
+      "removal": 0.2917739253797327,
+      "colKL_reuseA": 0.007839561440050602,
+      "colKL_reuseB": 0.009300720877945423,
+      "colKL_payelse": 7.817824371159077e-05,
       "colKL_gen": 0.0
     },
     {
@@ -1667,12 +2756,57 @@
     },
     {
       "seed": 5,
+      "method": "fra",
+      "removal": 0.775413385124263,
+      "colKL_reuseA": 0.24871547520160675,
+      "colKL_reuseB": 7.783451080322266,
+      "colKL_payelse": 0.10329596698284149,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 5,
       "method": "feat1",
-      "removal": 0.9347118252314989,
-      "colKL_reuseA": 1.0449168682098389,
-      "colKL_reuseB": 4.137845993041992,
-      "colKL_payelse": 2.373267412185669,
-      "colKL_gen": 0.8270185192426046
+      "removal": 0.017942178416700205,
+      "colKL_reuseA": 0.014934509992599487,
+      "colKL_reuseB": 0.006978081539273262,
+      "colKL_payelse": 0.008152945898473263,
+      "colKL_gen": 0.014562494121491909
+    },
+    {
+      "seed": 5,
+      "method": "feat1",
+      "removal": 0.0680843034593549,
+      "colKL_reuseA": 0.05746430531144142,
+      "colKL_reuseB": 0.06324931979179382,
+      "colKL_payelse": 0.05616667494177818,
+      "colKL_gen": 0.06878793736298879
+    },
+    {
+      "seed": 5,
+      "method": "feat1",
+      "removal": 0.22054411450146783,
+      "colKL_reuseA": 0.1271415650844574,
+      "colKL_reuseB": 0.4276767373085022,
+      "colKL_payelse": 0.27868354320526123,
+      "colKL_gen": 0.2024234433968862
+    },
+    {
+      "seed": 5,
+      "method": "feat1",
+      "removal": 0.7372992740486398,
+      "colKL_reuseA": 0.5783991813659668,
+      "colKL_reuseB": 2.4820728302001953,
+      "colKL_payelse": 1.5041061639785767,
+      "colKL_gen": 0.5936677853266398
+    },
+    {
+      "seed": 5,
+      "method": "feat1",
+      "removal": 0.9986273180072426,
+      "colKL_reuseA": 2.253169059753418,
+      "colKL_reuseB": 8.620661735534668,
+      "colKL_payelse": 3.8932294845581055,
+      "colKL_gen": 1.335397998491923
     },
     {
       "seed": 5,
@@ -1712,21 +2846,48 @@
     },
     {
       "seed": 5,
-      "method": "feat1",
-      "removal": 0.9999992395309585,
-      "colKL_reuseA": 7.805087089538574,
-      "colKL_reuseB": 13.723093032836914,
-      "colKL_payelse": 10.41822338104248,
-      "colKL_gen": 6.66428788503011
+      "method": "dom",
+      "removal": -0.007368147066967534,
+      "colKL_reuseA": 0.009715240448713303,
+      "colKL_reuseB": 0.004120779689401388,
+      "colKL_payelse": 0.00996464490890503,
+      "colKL_gen": 0.013354516277710596
     },
     {
       "seed": 5,
       "method": "dom",
-      "removal": 0.9436575423159892,
-      "colKL_reuseA": 0.5474311113357544,
-      "colKL_reuseB": 6.131761074066162,
-      "colKL_payelse": 3.001314401626587,
-      "colKL_gen": 1.1000367005666096
+      "removal": -0.0005632181302370753,
+      "colKL_reuseA": 0.042407386004924774,
+      "colKL_reuseB": 0.03652210533618927,
+      "colKL_payelse": 0.07346910238265991,
+      "colKL_gen": 0.08687499910593033
+    },
+    {
+      "seed": 5,
+      "method": "dom",
+      "removal": 0.07816963384911035,
+      "colKL_reuseA": 0.11457501351833344,
+      "colKL_reuseB": 0.2946989834308624,
+      "colKL_payelse": 0.3832060396671295,
+      "colKL_gen": 0.284638911485672
+    },
+    {
+      "seed": 5,
+      "method": "dom",
+      "removal": 0.6925191120456182,
+      "colKL_reuseA": 0.3725008964538574,
+      "colKL_reuseB": 3.182619333267212,
+      "colKL_payelse": 1.9780480861663818,
+      "colKL_gen": 0.7880244453748068
+    },
+    {
+      "seed": 5,
+      "method": "dom",
+      "removal": 0.9983546673335804,
+      "colKL_reuseA": 1.0842832326889038,
+      "colKL_reuseB": 13.31793212890625,
+      "colKL_payelse": 4.615198612213135,
+      "colKL_gen": 1.7815464337666829
     },
     {
       "seed": 5,
@@ -1766,12 +2927,48 @@
     },
     {
       "seed": 5,
-      "method": "dom",
-      "removal": 0.9999991528582077,
-      "colKL_reuseA": 8.73505687713623,
-      "colKL_reuseB": 20.72855567932129,
-      "colKL_payelse": 10.93310260772705,
-      "colKL_gen": 6.106329600016276
+      "method": "pay",
+      "removal": 0.037573412692623376,
+      "colKL_reuseA": 6.341441803670023e-06,
+      "colKL_reuseB": 6.912618118803948e-06,
+      "colKL_payelse": 0.0038153911009430885,
+      "colKL_gen": 9.346603595380051e-06
+    },
+    {
+      "seed": 5,
+      "method": "pay",
+      "removal": 0.10303846754391932,
+      "colKL_reuseA": 3.56220880348701e-05,
+      "colKL_reuseB": 4.395694122649729e-05,
+      "colKL_payelse": 0.02369588427245617,
+      "colKL_gen": 5.812018207507208e-05
+    },
+    {
+      "seed": 5,
+      "method": "pay",
+      "removal": 0.2358065178133819,
+      "colKL_reuseA": 0.00014207833737600595,
+      "colKL_reuseB": 0.00018152769189327955,
+      "colKL_payelse": 0.09288456290960312,
+      "colKL_gen": 0.00023127322492655367
+    },
+    {
+      "seed": 5,
+      "method": "pay",
+      "removal": 0.5486784162886753,
+      "colKL_reuseA": 0.0005473958444781601,
+      "colKL_reuseB": 0.0007067546248435974,
+      "colKL_payelse": 0.3456725776195526,
+      "colKL_gen": 0.0009153633533666531
+    },
+    {
+      "seed": 5,
+      "method": "pay",
+      "removal": 0.878106771209169,
+      "colKL_reuseA": 0.001629876671358943,
+      "colKL_reuseB": 0.002099111909046769,
+      "colKL_payelse": 0.9109266400337219,
+      "colKL_gen": 0.0027700526795039573
     },
     {
       "seed": 5,
@@ -1802,21 +2999,39 @@
     },
     {
       "seed": 5,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.13516324758529663,
-      "colKL_reuseB": 0.23509728908538818,
-      "colKL_payelse": 21.584238052368164,
-      "colKL_gen": 0.34795138239860535
+      "method": "ov",
+      "removal": 0.01048095970334384,
+      "colKL_reuseA": 2.228174707852304e-06,
+      "colKL_reuseB": 3.6856363294646144e-06,
+      "colKL_payelse": 0.00016009865794330835,
+      "colKL_gen": 3.3132785877872567e-07
     },
     {
       "seed": 5,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.44710612297058105,
-      "colKL_reuseB": 1.2501802444458008,
-      "colKL_payelse": 43.173095703125,
-      "colKL_gen": 1.6495126088460286
+      "method": "ov",
+      "removal": 0.021335103789474896,
+      "colKL_reuseA": 9.744166163727641e-06,
+      "colKL_reuseB": 2.110772766172886e-05,
+      "colKL_payelse": 0.0006490035448223352,
+      "colKL_gen": 1.6112694538605865e-06
+    },
+    {
+      "seed": 5,
+      "method": "ov",
+      "removal": 0.044198408100764586,
+      "colKL_reuseA": 4.2062834836542606e-05,
+      "colKL_reuseB": 7.845592335797846e-05,
+      "colKL_payelse": 0.002604822162538767,
+      "colKL_gen": 6.584873820732658e-06
+    },
+    {
+      "seed": 5,
+      "method": "ov",
+      "removal": 0.08142631849192206,
+      "colKL_reuseA": 0.0001290336949750781,
+      "colKL_reuseB": 0.00023958232486620545,
+      "colKL_payelse": 0.008021052926778793,
+      "colKL_gen": 2.026763134684491e-05
     },
     {
       "seed": 5,
@@ -1856,12 +3071,12 @@
     },
     {
       "seed": 5,
-      "method": "ov",
-      "removal": 0.9999999726602937,
-      "colKL_reuseA": 0.026059957221150398,
-      "colKL_reuseB": 0.07821633666753769,
-      "colKL_payelse": 3.842043399810791,
-      "colKL_gen": 0.008750076250483593
+      "method": "hybrid",
+      "removal": 0.6069850345431226,
+      "colKL_reuseA": 0.0076285069808363914,
+      "colKL_reuseB": 0.014653582125902176,
+      "colKL_payelse": 0.06899560987949371,
+      "colKL_gen": 0.00016363927473624548
     },
     {
       "seed": 5,
@@ -1910,6 +3125,87 @@
     },
     {
       "seed": 5,
+      "method": "hybrid",
+      "removal": 0.8496274085374681,
+      "colKL_reuseA": 0.24713464081287384,
+      "colKL_reuseB": 7.630932807922363,
+      "colKL_payelse": 0.25435084104537964,
+      "colKL_gen": 0.00016363927473624548
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": -0.0193850133850344,
+      "colKL_reuseA": 0.0036655953153967857,
+      "colKL_reuseB": 0.002042648382484913,
+      "colKL_payelse": 0.001175847603008151,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": -0.04991026890747885,
+      "colKL_reuseA": 0.03647246211767197,
+      "colKL_reuseB": 0.012607289478182793,
+      "colKL_payelse": 0.008217670023441315,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": -0.10461402686972443,
+      "colKL_reuseA": 0.2740075886249542,
+      "colKL_reuseB": 0.11276088654994965,
+      "colKL_payelse": 0.05540035292506218,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": -0.09753541941009192,
+      "colKL_reuseA": 0.86430424451828,
+      "colKL_reuseB": 1.2910507917404175,
+      "colKL_payelse": 0.2649233043193817,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": 0.17736253658243162,
+      "colKL_reuseA": 1.5262433290481567,
+      "colKL_reuseB": 3.3660099506378174,
+      "colKL_payelse": 0.3814430236816406,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 5,
+      "method": "indab",
+      "removal": 0.8265144137230701,
+      "colKL_reuseA": 2.3986918926239014,
+      "colKL_reuseB": 4.896151065826416,
+      "colKL_payelse": 0.5860022902488708,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 5,
+      "method": "oracle",
+      "removal": 0.12517380793289146,
+      "colKL_reuseA": 0.006409620866179466,
+      "colKL_reuseB": 0.00038150628097355366,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 5,
+      "method": "oracle",
+      "removal": 0.4733912726777034,
+      "colKL_reuseA": 0.015906212851405144,
+      "colKL_reuseB": 0.0012205326929688454,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 5,
       "method": "oracle",
       "removal": 0.9826129116091691,
       "colKL_reuseA": 0.023359891027212143,
@@ -1942,6 +3238,15 @@
       "colKL_reuseA": 0.023380976170301437,
       "colKL_reuseB": 0.010977738536894321,
       "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 7,
+      "method": "fra",
+      "removal": 0.031116076967458772,
+      "colKL_reuseA": 0.00647073145955801,
+      "colKL_reuseB": 0.000798167719040066,
+      "colKL_payelse": 2.3708358639851213e-05,
       "colKL_gen": 0.0
     },
     {
@@ -1991,12 +3296,57 @@
     },
     {
       "seed": 7,
+      "method": "fra",
+      "removal": 0.6668546942371132,
+      "colKL_reuseA": 0.5941577553749084,
+      "colKL_reuseB": 0.4390292465686798,
+      "colKL_payelse": 0.04771948605775833,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 7,
       "method": "feat1",
-      "removal": 0.35335359902924746,
-      "colKL_reuseA": 0.7733153104782104,
-      "colKL_reuseB": 0.1181195005774498,
-      "colKL_payelse": 0.7392977476119995,
-      "colKL_gen": 0.9877348939577738
+      "removal": -0.013231310296792032,
+      "colKL_reuseA": 0.006185763515532017,
+      "colKL_reuseB": 0.0039456854574382305,
+      "colKL_payelse": 0.008780489675700665,
+      "colKL_gen": 0.020022402207056682
+    },
+    {
+      "seed": 7,
+      "method": "feat1",
+      "removal": -0.011058220823767062,
+      "colKL_reuseA": 0.02747536450624466,
+      "colKL_reuseB": 0.017917253077030182,
+      "colKL_payelse": 0.050760529935359955,
+      "colKL_gen": 0.08388156692186992
+    },
+    {
+      "seed": 7,
+      "method": "feat1",
+      "removal": 0.04007540990349345,
+      "colKL_reuseA": 0.07710866630077362,
+      "colKL_reuseB": 0.04678790643811226,
+      "colKL_payelse": 0.17877823114395142,
+      "colKL_gen": 0.2264152318239212
+    },
+    {
+      "seed": 7,
+      "method": "feat1",
+      "removal": 0.22905931448733596,
+      "colKL_reuseA": 0.36668139696121216,
+      "colKL_reuseB": 0.0883195549249649,
+      "colKL_payelse": 0.5459204912185669,
+      "colKL_gen": 0.6877545913060507
+    },
+    {
+      "seed": 7,
+      "method": "feat1",
+      "removal": 0.7077999011499287,
+      "colKL_reuseA": 2.3913331031799316,
+      "colKL_reuseB": 0.6113165616989136,
+      "colKL_payelse": 1.2176094055175781,
+      "colKL_gen": 1.6585723956425984
     },
     {
       "seed": 7,
@@ -2036,21 +3386,48 @@
     },
     {
       "seed": 7,
-      "method": "feat1",
-      "removal": 0.9997689199472019,
-      "colKL_reuseA": 13.010865211486816,
-      "colKL_reuseB": 3.46889066696167,
-      "colKL_payelse": 7.222540855407715,
-      "colKL_gen": 7.666206518809001
+      "method": "dom",
+      "removal": -0.007361625908150149,
+      "colKL_reuseA": 0.005215147044509649,
+      "colKL_reuseB": 0.0013493192382156849,
+      "colKL_payelse": 0.00807805173099041,
+      "colKL_gen": 0.017093220104773838
     },
     {
       "seed": 7,
       "method": "dom",
-      "removal": 0.979419575896131,
-      "colKL_reuseA": 3.4423091411590576,
-      "colKL_reuseB": 3.8431496620178223,
-      "colKL_payelse": 1.4120781421661377,
-      "colKL_gen": 1.4899708827336628
+      "removal": -0.0022127892044452313,
+      "colKL_reuseA": 0.03664856031537056,
+      "colKL_reuseB": 0.009250478819012642,
+      "colKL_payelse": 0.05012728273868561,
+      "colKL_gen": 0.07914020121097565
+    },
+    {
+      "seed": 7,
+      "method": "dom",
+      "removal": 0.04956696030154917,
+      "colKL_reuseA": 0.20502278208732605,
+      "colKL_reuseB": 0.053239043802022934,
+      "colKL_payelse": 0.19831226766109467,
+      "colKL_gen": 0.2384584645430247
+    },
+    {
+      "seed": 7,
+      "method": "dom",
+      "removal": 0.6729476990314396,
+      "colKL_reuseA": 1.7066943645477295,
+      "colKL_reuseB": 1.4380102157592773,
+      "colKL_payelse": 0.8172234296798706,
+      "colKL_gen": 0.8595081369082133
+    },
+    {
+      "seed": 7,
+      "method": "dom",
+      "removal": 0.9998525118154283,
+      "colKL_reuseA": 7.347801208496094,
+      "colKL_reuseB": 8.934597969055176,
+      "colKL_payelse": 3.367366313934326,
+      "colKL_gen": 3.41244904200236
     },
     {
       "seed": 7,
@@ -2090,12 +3467,48 @@
     },
     {
       "seed": 7,
-      "method": "dom",
-      "removal": 0.9999999999955466,
-      "colKL_reuseA": 23.24073028564453,
-      "colKL_reuseB": 23.55653190612793,
-      "colKL_payelse": 18.575098037719727,
-      "colKL_gen": 16.944014231363933
+      "method": "pay",
+      "removal": 0.046204385517085944,
+      "colKL_reuseA": 2.1783140255138278e-05,
+      "colKL_reuseB": 1.769100344972685e-05,
+      "colKL_payelse": 0.001893606036901474,
+      "colKL_gen": 2.6505748185930617e-05
+    },
+    {
+      "seed": 7,
+      "method": "pay",
+      "removal": 0.12585590775319178,
+      "colKL_reuseA": 0.00012869745842181146,
+      "colKL_reuseB": 9.742120164446533e-05,
+      "colKL_payelse": 0.011339914053678513,
+      "colKL_gen": 0.0001631489819070945
+    },
+    {
+      "seed": 7,
+      "method": "pay",
+      "removal": 0.2819247424169181,
+      "colKL_reuseA": 0.0005076022353023291,
+      "colKL_reuseB": 0.0003762885753531009,
+      "colKL_payelse": 0.04218174144625664,
+      "colKL_gen": 0.0006351845416550835
+    },
+    {
+      "seed": 7,
+      "method": "pay",
+      "removal": 0.6124579640486163,
+      "colKL_reuseA": 0.0018965401686728,
+      "colKL_reuseB": 0.0014411050360649824,
+      "colKL_payelse": 0.14589157700538635,
+      "colKL_gen": 0.002430821924159924
+    },
+    {
+      "seed": 7,
+      "method": "pay",
+      "removal": 0.9040204848354183,
+      "colKL_reuseA": 0.00534829031676054,
+      "colKL_reuseB": 0.00416029617190361,
+      "colKL_payelse": 0.36430978775024414,
+      "colKL_gen": 0.007089403225108981
     },
     {
       "seed": 7,
@@ -2126,21 +3539,39 @@
     },
     {
       "seed": 7,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 0.5618553757667542,
-      "colKL_reuseB": 0.21346372365951538,
-      "colKL_payelse": 9.633111953735352,
-      "colKL_gen": 0.7113522986570994
+      "method": "ov",
+      "removal": 0.013268448755217599,
+      "colKL_reuseA": 7.609494787175208e-06,
+      "colKL_reuseB": 5.799905920866877e-06,
+      "colKL_payelse": 0.0004397914744913578,
+      "colKL_gen": 5.737526767764697e-07
     },
     {
       "seed": 7,
-      "method": "pay",
-      "removal": 1.0,
-      "colKL_reuseA": 3.7861437797546387,
-      "colKL_reuseB": 0.4802178144454956,
-      "colKL_payelse": 21.213119506835938,
-      "colKL_gen": 2.4201876322428384
+      "method": "ov",
+      "removal": 0.02713420143914913,
+      "colKL_reuseA": 3.235231270082295e-05,
+      "colKL_reuseB": 2.083933213725686e-05,
+      "colKL_payelse": 0.0017332951538264751,
+      "colKL_gen": 2.408204295534233e-06
+    },
+    {
+      "seed": 7,
+      "method": "ov",
+      "removal": 0.05669724299301626,
+      "colKL_reuseA": 0.000136545771965757,
+      "colKL_reuseB": 7.470889249816537e-05,
+      "colKL_payelse": 0.00676356628537178,
+      "colKL_gen": 9.376350438590938e-06
+    },
+    {
+      "seed": 7,
+      "method": "ov",
+      "removal": 0.10570411315583561,
+      "colKL_reuseA": 0.0004016509046778083,
+      "colKL_reuseB": 0.00021589925745502114,
+      "colKL_payelse": 0.019928742200136185,
+      "colKL_gen": 2.8873789839659974e-05
     },
     {
       "seed": 7,
@@ -2180,12 +3611,12 @@
     },
     {
       "seed": 7,
-      "method": "ov",
-      "removal": 0.9999999981808141,
-      "colKL_reuseA": 0.12521500885486603,
-      "colKL_reuseB": 0.03412549942731857,
-      "colKL_payelse": 3.4879188537597656,
-      "colKL_gen": 0.011858141515403986
+      "method": "hybrid",
+      "removal": 0.3962892728839761,
+      "colKL_reuseA": 0.007771933451294899,
+      "colKL_reuseB": 0.00045899543329142034,
+      "colKL_payelse": 0.1386498510837555,
+      "colKL_gen": 0.00023170700296759605
     },
     {
       "seed": 7,
@@ -2231,6 +3662,87 @@
       "colKL_reuseB": 0.45816293358802795,
       "colKL_payelse": 0.19334714114665985,
       "colKL_gen": 0.00023170700296759605
+    },
+    {
+      "seed": 7,
+      "method": "hybrid",
+      "removal": 0.8012724667898941,
+      "colKL_reuseA": 0.615004301071167,
+      "colKL_reuseB": 0.4569682478904724,
+      "colKL_payelse": 0.23123222589492798,
+      "colKL_gen": 0.00023170700296759605
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.0267233431181495,
+      "colKL_reuseA": 0.0015801438130438328,
+      "colKL_reuseB": 0.0006613907171413302,
+      "colKL_payelse": 0.0005006432766094804,
+      "colKL_gen": 0.00010314917744835839
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.08016656410274958,
+      "colKL_reuseA": 0.011794672347605228,
+      "colKL_reuseB": 0.0026368722319602966,
+      "colKL_payelse": 0.0032912464812397957,
+      "colKL_gen": 0.0007281336972179512
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.20409759986874232,
+      "colKL_reuseA": 0.09284080564975739,
+      "colKL_reuseB": 0.012380830012261868,
+      "colKL_payelse": 0.018681060522794724,
+      "colKL_gen": 0.004435299740483363
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.4919057370179807,
+      "colKL_reuseA": 1.1339010000228882,
+      "colKL_reuseB": 0.05414319783449173,
+      "colKL_payelse": 0.21850761771202087,
+      "colKL_gen": 0.04656566927830378
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.854524176119459,
+      "colKL_reuseA": 4.51414680480957,
+      "colKL_reuseB": 0.14491218328475952,
+      "colKL_payelse": 0.6338881254196167,
+      "colKL_gen": 0.29399069646994275
+    },
+    {
+      "seed": 7,
+      "method": "indab",
+      "removal": 0.963454483335115,
+      "colKL_reuseA": 6.8297014236450195,
+      "colKL_reuseB": 0.2891916036605835,
+      "colKL_payelse": 0.7406894564628601,
+      "colKL_gen": 0.5743572612603506
+    },
+    {
+      "seed": 7,
+      "method": "oracle",
+      "removal": 0.1209788673131772,
+      "colKL_reuseA": 0.00013810655218549073,
+      "colKL_reuseB": 2.0954495994374156e-05,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
+    },
+    {
+      "seed": 7,
+      "method": "oracle",
+      "removal": 0.3022198176388694,
+      "colKL_reuseA": 0.00040539319161325693,
+      "colKL_reuseB": 6.0768972616642714e-05,
+      "colKL_payelse": 0.0,
+      "colKL_gen": 0.0
     },
     {
       "seed": 7,

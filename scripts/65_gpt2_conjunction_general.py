@@ -111,6 +111,17 @@ def lastKL(p, q, pos):
     lp = torch.log_softmax(p[pos].float(), -1); lq = torch.log_softmax(q[pos].float(), -1)
     return (lp.exp() * (lp - lq)).sum().item()
 def pat(lg, q, pid): return torch.softmax(lg[q].float(), -1)[pid].item()
+def indablate(tt, c):  # ablate the induction heads: scale their per-head output (hook_z) by (1-c). Dmitry's retrieval baseline.
+    hooks = []
+    for L in LAYERS:
+        hs = [H for (LL, H) in IND if LL == L]
+        def mk(hs):
+            def hook(z, hook):
+                for H in hs: z[0, :, H, :] = z[0, :, H, :] * (1 - c)
+                return z
+            return hook
+        hooks.append((f"blocks.{L}.attn.hook_z", mk(hs)))
+    return model.run_with_hooks(tt, fwd_hooks=hooks)[0]
 def fullKL(p, q):  # mean per-position KL over a whole passage (captures broad, non-local damage)
     lp = torch.log_softmax(p.float(), -1); lq = torch.log_softmax(q.float(), -1)
     return (lp.exp() * (lp - lq)).sum(-1).mean().item()
@@ -139,7 +150,7 @@ def make(seed):
 # instead of saturating at the smallest coefficient (fixes the flat-line artifact Dmitry flagged)
 FC = [0.5, 1, 2, 4, 8, 16, 32]; AC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]
 DC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; PC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2]
-OC = [0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; MC = [0.5, 1, 2, 4, 8, 1000]
+OC = [0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; MC = [0.5, 1, 2, 4, 8, 1000]; IC = [0.1, 0.25, 0.5, 0.75, 0.9, 1.0]
 rows = []
 for seed in range(NSEED):
     d = make(seed); A, B, C, D, P, S, Q = d["A"], d["B"], d["C"], d["D"], d["P"], d["S"], d["Q"]
@@ -182,6 +193,7 @@ for seed in range(NSEED):
     M["pay"] = sweep(lambda c: paysupp(tt["target"], P, c), lambda k, c: paysupp(tt[k], P, c), lambda c: paysupp(pe_tt, P, c), lambda i, c: paysupp(GEN[i], P, c), PC)
     M["ov"] = sweep(lambda c: ov_run(tt["target"], P, c), lambda k, c: ov_run(tt[k], P, c), lambda c: ov_run(pe_tt, P, c), lambda i, c: ov_run(GEN[i], P, c), OC)
     M["hybrid"] = sweep(lambda c: hybrid_run(tt["target"], byL["target"], c, P, OV_FIX), lambda k, c: hybrid_run(tt[k], byL[k], c, P, OV_FIX), lambda c: hybrid_run(pe_tt, pe_byL, c, P, OV_FIX), lambda i, c: hybrid_run(GEN[i], gt_byL[i], c, P, OV_FIX), FC)
+    M["indab"] = sweep(lambda c: indablate(tt["target"], c), lambda k, c: indablate(tt[k], c), lambda c: indablate(pe_tt, c), lambda i, c: indablate(GEN[i], c), IC)
     M["oracle"] = sweep(lambda c: mask_run(tt["target"], [qp["target"]], d["ppos"], c), lambda k, c: mask_run(tt[k], [qp[k]], [0], c), lambda c: pe_clean, lambda i, c: gt_clean[i], MC)
     for mname, sw in M.items():
         for (rem, cK) in sw:
@@ -199,7 +211,7 @@ print("\n\n######## GPT-2 B1 (COMMON payload): collateral at matched removal ###
 print("worstReuse = worst-case KL over {reuseA,reuseB,payload-elsewhere}; genKL = mean per-pos KL on general English", flush=True)
 for thr in (0.3, 0.4, 0.5, 0.7, 0.9):
     print(f"\n=== at {int(thr*100)}% removal ===", flush=True)
-    for m in ("fra", "hybrid", "feat1", "dom", "pay", "ov", "oracle"):
+    for m in ("fra", "hybrid", "feat1", "dom", "pay", "ov", "indab", "oracle"):
         wr = []; gk = []; reached = 0; total = 0
         for seed in set(r["seed"] for r in rows):
             sw = [r for r in rows if r["method"] == m and r["seed"] == seed]

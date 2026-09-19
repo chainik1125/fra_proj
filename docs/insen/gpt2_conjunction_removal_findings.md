@@ -130,3 +130,36 @@ collateral; pure FRA-QK is reach-limited (attention-routed ceiling). This supers
 scripts/57 gemma run (which lacked the payload-elsewhere axis and OV/hybrid, and showed only ~2.3x):
 the improvement is exactly Dmitry's OV suggestion + the corrected collateral set. Consistent with the
 GPT-2 story (~10x + FRA-QK zero general-text damage). NCSA jobs b1_ov 10610109/10610168.
+
+## CORRECTED (Sep 18): finer coefficient grids + induction-head-ablation baseline
+
+Dmitry flagged the flat pay/DoM lines as suspicious. Root cause: the baseline coefficient grid was too
+coarse -- the smallest coefficient already removed ~100% of the payload, so all points piled at
+removal~1 and interpolation at 30/50/70% returned a constant (flat line), over-stating baseline
+collateral. Fixed with finer low-end grids (pay/dom/feat1 start at 0.02). Also added `indab` = ablate
+the whole induction head(s) (scale hook_z by 1-c), the retrieval baseline Dmitry asked for. 7 seeds.
+
+worst-case reuse KL | general-English KL, at matched removal:
+
+| removal | fra | hybrid | ov | pay | feat1 | dom | indab |
+|---:|---|---|---|---|---|---|---|
+| 30% | 0.14/0.000 | 0.09/0.000 | 0.05/0.000 | 0.06/0.000 | 0.84/0.57 | 0.66/0.33 | 1.14/0.15 |
+| 50% | 0.22/0.000 | 0.09/0.000 | 0.13/0.001 | 0.14/0.001 | 1.47/0.83 | 1.25/0.52 | 1.69/0.22 |
+| 70% | 2.83(3/7) | 0.44/0.000 | 0.28/0.001 | 0.29/0.002 | 2.27/1.11 | 2.11/0.78 | 2.48/0.33 |
+| 90% | reach0 | reach0 | 0.75/0.003 | 0.57/0.005 | 3.79/1.54 | 4.99/1.50 | 2.66/0.43 |
+
+**Honest revised conclusions:**
+1. The flat lines were an artifact (fixed). This corrects the earlier inflated "~10x over pay" claim.
+2. **`pay` and `ov` (directional payload-suppression) now TIE FRA/hybrid** (reuse 0.05-0.3, general ~0)
+   -- because the synthetic payload is a SINGLE suppressible token/direction. This is the single-token
+   caveat, now quantified: FRA does NOT uniquely beat directional suppression on this task.
+3. **What survives robustly:** FRA-family beats **single-SAE-feature (feat1), difference-of-means (dom),
+   and induction-head ablation (indab)** on BOTH axes -- ~5-15x on reuse, ~100-1000x on general text
+   (feat1/dom/indab general-KL 0.3-1.5 vs FRA ~0.000). Induction-head ablation is among the worst (kills
+   all retrieval, not just the target cell).
+4. **Implication:** the FRA-unique advantage OVER directional payload-suppression requires a target that
+   is NOT a single suppressible output direction -> the multi-token in-context FACT removal (B1_real,
+   scripts/69) is now ESSENTIAL, not optional, to make the strong claim. On single-token synthetic, the
+   defensible claim is "FRA beats single-feature / DoM / induction-head ablation."
+
+Reproduce: `PYTHONPATH=. NSEED=8 REP=6 python scripts/65_gpt2_conjunction_general.py`.
