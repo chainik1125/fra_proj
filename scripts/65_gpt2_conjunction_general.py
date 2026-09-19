@@ -135,7 +135,11 @@ def make(seed):
     pe = [tok.bos_token_id] + fill[:6] + [Z, P] + fill[6:14] + [Z, P] + fill[14:20] + [Z]
     return dict(seq=seq, A=A, B=B, C=C, D=D, P=P, S=S, Q=Q, Z=Z, ppos=ppos, pe=pe)
 
-FC = [1, 2, 4, 8, 16]; AC = [0.25, 0.5, 1, 2, 4, 8]; DC = [0.25, 0.5, 1, 2, 4, 8]; PC = [0.5, 1, 2, 4, 8]; OC = [0.5, 1, 2, 4, 8]; MC = [2, 4, 8, 1000]
+# finer low-end grids so the global-direction methods (pay/dom/feat1/ov) sample the 20-95% removal range
+# instead of saturating at the smallest coefficient (fixes the flat-line artifact Dmitry flagged)
+FC = [0.5, 1, 2, 4, 8, 16, 32]; AC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]
+DC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; PC = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 1, 2]
+OC = [0.05, 0.1, 0.2, 0.35, 0.5, 1, 2, 4]; MC = [0.5, 1, 2, 4, 8, 1000]
 rows = []
 for seed in range(NSEED):
     d = make(seed); A, B, C, D, P, S, Q = d["A"], d["B"], d["C"], d["D"], d["P"], d["S"], d["Q"]
