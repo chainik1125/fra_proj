@@ -185,6 +185,12 @@ KL, at matched removal. 9 fact-sets × seeds.
 *(Reproducibility: across the 5 GPUs, `fra` worstReuse spread was <0.001, `hybrid` <0.01, `genKL`
 identical to 4 decimals. The result is hardware-stable.)*
 
+![B1_real collateral curves](../../results/b1_gpt2/b1_real_collateral.png)
+
+*Left: damage to related facts. Right: damage to general English (log scale). FRA/hybrid (blues) stay
+flat and low while single-feature (orange) and DoM (gold) blow up — this is the win. `pay`/`ov` (green/
+black) are lower still, but they require already knowing the answer token.*
+
 ### 4.5 What this says — three findings
 
 1. **FRA/hybrid crush the feature-based baselines (Dmitry's bar).** Compare general-text collateral at
@@ -240,6 +246,12 @@ correct, conservative-against-FRA way to test the "no hookpoint can match FRA" c
 - **Mean:** FRA 0.83 vs best-feature **0.16** → FRA ~5× *worse*.
 - **Median:** FRA 0.076 vs 0.071 → **dead tie.**
 - FRA wins outright on **2 of 6** seeds; the best baseline is almost always at **`hook_attn_out` layer 9**.
+
+![Hookpoint sweep per seed](../../results/b1_gpt2/hookpoint_sweep.png)
+
+*Per-seed, at 50% removal (log scale). FRA (blue) wins seeds 2–3, ties seed 4, loses seeds 0/1/5. The
+best single feature (orange) is almost always at `hook_attn_out` — the attention output. This is why the
+"beats every hookpoint" claim doesn't hold.*
 
 ### 5.4 What this says — honest
 - **The "strong result" (no hookpoint can match FRA) is FALSE.** A single SAE feature at the
