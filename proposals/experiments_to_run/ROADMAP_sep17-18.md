@@ -69,5 +69,5 @@ number (queued / Dmitry) and paper writing (abstract due today).
 ### Links (branch `indranil/fra-toy`)
 - Proposals + run guides: `proposals/experiments_to_run/` (README, B1_controlled_conjunction, B1_real_conjunction, B4, RUN_B1, RUN_B1_real, this file)
 - Findings: `docs/insen/gpt2_conjunction_removal_findings.md`, `hookpoint_sweep_findings.md`, `magnitude_law_findings.md`, `boundary_map.md`, `ladder_log.md`
-- Figures: `results/b1_gpt2/b1_gpt2_pareto.png`, `results/b1_gpt2/b1_gpt2_general.png`
+- Figures: `results/b1_gpt2/b1_real_collateral.png`, `results/b1_gpt2/hookpoint_sweep.png` (CURRENT). NOTE: the old `b1_gpt2_pareto.png` was a flat-line artifact and is WRONG — see `results/b1_gpt2/README.md` and `docs/insen/WHERE_WE_ARE_sep19.md` §6.
 - Scripts: `scripts/56` (conjunction screen), `58` (gemma controlled removal), `62`/`65` (GPT-2 removal), `69` (B1_real), `70` (magnitude law), `71` (hookpoint sweep)

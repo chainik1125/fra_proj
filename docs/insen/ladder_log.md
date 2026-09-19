@@ -393,7 +393,9 @@ shared endpoint. High seed variance at n=2; full NSEED=12 running. (GPT-2 local,
 
 ### FINAL (NSEED=11, REP=6): GPT-2 conjunction removal -- FRA-family Pareto-dominates single-feature
 
-Full report: [[gpt2_conjunction_removal_findings]]; figure results/b1_gpt2/b1_gpt2_pareto.png.
+Full report: [[gpt2_conjunction_removal_findings]]. ⚠️ NOTE (Sep 19): the figure this pointed to
+(b1_gpt2_pareto.png) was a flat-line artifact and is WRONG — the "Pareto-dominates" claim over pay/ov was
+retracted. See results/b1_gpt2/README.md and [[WHERE_WE_ARE_sep19]] §6.
 Worst-case collateral KL (mean over 11 seeds | seeds reaching that removal):
   @30%: fra 0.35(10/11) hybrid 0.39(11/11) ov 0.11 | feat1 2.26 dom 3.57 pay 1.67
   @50%: fra 0.23(8/11)  hybrid 0.23(10/11) ov 0.25 | feat1 2.43 dom 3.57 pay 1.67
