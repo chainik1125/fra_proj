@@ -1,0 +1,1364 @@
+%%%%%%%% ICML 2025 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2025} with \usepackage[nohyperref]{icml2025} above.
+\usepackage{hyperref}
+\usepackage{braket}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+%\usepackage{icml2025}
+
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2025}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref} % Add this line
+\usepackage{subcaption} % Add this line if you plan to use subfigures
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+
+\newcommand{\stationary}{\boldsymbol{\pi}}
+\newcommand{\SSet}{\mathcal{S}}
+\newcommand{\Abet}{\mathcal{Z}}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Constrained belief updates explain geometric structures in transformer representations}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Constrained Belief Updates Explain Geometric Structures in\\Transformer Representations}
+%\icmltitle{Constrained belief updates explain geometric structures in transformer representations}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2025
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Mateusz Piotrowski}{MATS}
+\icmlauthor{Paul M.~Riechers}{Simplex,BITS}
+\icmlauthor{Daniel Filan}{MATS}
+\icmlauthor{Adam S.~Shai}{Simplex}
+\end{icmlauthorlist}
+
+\icmlaffiliation{MATS}{MATS, Berkeley, CA, USA}
+\icmlaffiliation{Simplex}{Simplex, Astera Institute, Emeryville, CA, USA}
+\icmlaffiliation{BITS}{Beyond Institute for Theoretical Science (BITS), San Francisco, CA, USA}
+
+\icmlcorrespondingauthor{Paul M.~Riechers}{pmriechers@gmail.com}
+\icmlcorrespondingauthor{Adam S.~Shai}{adamimos@gmail.com}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML, interpretability, transformer, attention}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{} % otherwise use the standard text.
+
+\begin{abstract}
+What computational structures emerge in transformers trained on next-token prediction? In this work, we provide evidence that transformers implement constrained Bayesian belief updating---a parallelized version of partial Bayesian inference shaped by architectural constraints.
+We integrate the model-agnostic theory of optimal prediction with mechanistic interpretability to analyze transformers trained on a tractable family of hidden Markov models that generate rich geometric patterns in neural activations. Our primary analysis focuses on single-layer transformers, revealing how the first attention layer implements these constrained updates, with extensions to multi-layer architectures demonstrating how subsequent layers refine these representations. We find that attention carries out an algorithm with a natural interpretation in the probability simplex, and create representations with distinctive geometric structure. We show how both the algorithmic behavior and the underlying geometry of these representations can be theoretically predicted in detail---including the attention pattern, OV-vectors, and embedding vectors---by modifying the equations for optimal future token predictions to account for the architectural constraints of attention. Our approach provides a principled lens on how architectural constraints shape the implementation of optimal prediction, revealing why transformers develop specific intermediate geometric structures.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+% The remarkable success of transformer models across a wide range of sequence modeling tasks, from natural language processing to time series analysis, has driven a surge of interest in understanding their inner workings \citep{vaswani2017attention}. Although these models have demonstrated an impressive ability to learn complex patterns and dependencies in data, the mechanisms by which they achieve this remain largely opaque. A crucial step towards demystifying transformers lies in understanding how they internally represent and process information.
+
+%Transformer models have achieved extraordinary results across a wide range of domains, with particular success in natural language processing and other sequence modeling tasks \citep{vaswani2017attention}. 
+%Yet, despite their widespread success, the mechanisms by which transformers \textit{implement} complex computations remain murky.
+
+% Recent work has shed light on this question by connecting the task of next-token prediction to the concept of \textit{belief states} – probability distributions over the hidden states of the data-generating process \citep{Pepper24_RNNs, shai2024transformersrepresentbeliefstate}. This model-agnostic perspective suggests that any model trained to minimize next-token prediction loss, regardless of its specific architecture, must implicitly or explicitly maintain and update such belief states. Specifically, transformers have been shown to linearly represent the geometry of these belief states in their residual streams \citep{shai2024transformersrepresentbeliefstate}. This provides a powerful theoretical framework for understanding \textit{what} information transformers fundamentally represent, linking their internal representations to the principles of optimal prediction.
+
+Transformers excel at next-token prediction \citep{vaswani2017attention}, but their success belies a fundamental tension: optimal prediction requires Bayesian belief updating, a recursive process, while their architecture enforces parallelized, attention-driven computation (Fig.~\ref{fig:overview}). How do transformers resolve this conflict? We show that they develop geometrically structured representations that approximate Bayesian inference under architectural constraints, revealing a precise interplay between theoretical necessity and implementation.
+
+
+In this work, we combine insights from the theory of optimal prediction with neural network analysis.
+%First, computational mechanics provides a theoretical framework for understanding prediction: any system that successfully predicts future tokens must maintain internal representations that capture the distribution of possible future sequences \citep{Shalizi01_Computational, Marzen_2017, Riec18_SSAC1, Pepper24_RNNs, shai2024transformersrepresentbeliefstate}.
+First, computational mechanics \citep{Shalizi01_Computational, Marzen_2017, Riec18_SSAC1, Pepper24_RNNs, shai2024transformersrepresentbeliefstate} dictates \emph{what} an optimal predictor must represent: belief states that encode distributions over futures. Second, mechanistic interpretability reveals \textit{how} transformers approximate these states under architectural constraints, bending Bayesian updates into attention’s parallelizable form \citep{elhage2021mathematical, nanda2023mechanistic}.
+%However, computational mechanics alone tells us \emph{what} an optimal predictor must represent, not \emph{how} a transformer's architecture can—or must—implement it.
+%Second, mechanistic interpretability provides methods to analyze the computational patterns—the circuits—that emerge in neural networks, allowing us to bridge theoretical principles with actual implementations \citep{elhage2021mathematical, nanda2023mechanistic}.
+
+
+% However, this model-agnostic theory leaves open the question of \textit{how}  transformers, with their specific architectural choices, construct and manipulate these representations. The transformer architecture, particularly the attention mechanism, must play a crucial role in shaping the internal representations learned by the model. The mathematical form of the attention mechanism puts specific constraints on how information can be accessed and integrated. These constraints, in turn, must influence the nature of the intermediate representations that emerge during the computation.
+
+By combining these frameworks we reveal \emph{why} transformers learn certain intermediate structures. We find that the geometry of a transformer’s internal representations is not an accident—it is a mathematical signature of how architectural constraints warp otherwise optimal Bayesian inference. 
+By interpreting learned weights and activations via standard mechanistic interpretability, we uncover an algorithm that is well-captured by the \textbf{constrained belief updating} equations. 
+From first principles, we derive the constrained belief geometries, and reverse-engineer the transformer’s computational blueprint, predicting attention patterns, value vectors, and residual stream geometries precisely.
+%From first principles, we derive the constrained belief geometries that transformers adopt, then mechanistically validate these predictions: attention heads implement spectral decay rates tied to the data’s hidden Markov transitions (Fig. 2), while value vectors align with perturbed eigenvectors of the transition matrix (Fig. 3).
+%Specifically, we show that the attention mechanism imposes specific constraints on how each layer computes updates to internal belief states.
+%In addition, the theoretical traction our framework affords us allows us to predict details of trained transformers that we verify in experiments---including the attention pattern, OV-vectors, embedding vectors, and the geometry of intermediate representations in the residual stream.
+Thus, beyond verifying that transformers encode belief states, we show how the specific circuits that implement those states necessarily deviate from the unconstrained Bayesian ideal in predictable and theoretically tractable ways. 
+%Transformers do not merely approximate Bayesian inference—they reinvent it. By deriving how attention’s constraints warp belief updates into geometric intermediates, we establish a new lens for interpreting transformer computation: one where circuits are not just observed, but predicted
+
+% This paper investigates the interplay between the model-agnostic principles of optimal prediction and the model-specific constraints imposed by the transformer architecture. We focus on the following key question: \textbf{What are the model-dependent representations that arise from the constraints of the attention mechanism, and how do they relate to the model-agnostic belief state geometry?} Understanding these representations is crucial, as they form the building blocks of computation in the transformer.
+
+% To address this question, we combine mechanistic interpretability with a theoretical framework derived from constraining the belief state equations by the functional form of attention. While our general approach is applicable to a wide range of sequential data, we focus our analysis on a specific, illustrative example: transformers trained on data generated by Hidden Markov Models (HMMs). In particular, we examine the well-studied Mess3 HMM to provide concrete grounding and facilitate visualization \citep{Marzen_2017}.
+
+To concretize these ideas, we focus on transformers trained on data from the Mess3 class of hidden Markov models (HMMs) \citep{Marzen_2017}, which provides rich and visualizable belief-state geometries and also admits a tractable optimal predictor. Our primary analysis examines single-layer transformers to isolate how the first attention layer implements constrained belief updating, though we also demonstrate that these principles extend to multi-layer architectures where subsequent layers refine the initial constrained representations. This allows us to rigorously compare the theoretically optimal geometry with the neural-activation geometry that transformers learn. More broadly, we anticipate that the same tension between architecture and optimal inference arises in large language models trained on natural text, and that our methodology would shed light on those more complex cases.
+
+% Our investigation reveals that intermediate representations within the transformer exhibit intricate fractal structures that are distinct from the geometry of the final belief state. Through careful mechanistic interpretability of the attention heads, we uncover an algorithm that can be interpreted as operating within a belief simplex. 
+
+% Motivated by these empirical observations, we develop a \textbf{theory of constrained belief updating} that formally captures the limitations imposed by the attention mechanism. This theory modifies the standard belief state update equations to account for the fact that attention can only access and update information using a particular functional form. Remarkably, our theory accurately predicts the observed intermediate geometries, demonstrating a direct link between the architectural constraints of the attention mechanism and the nature of the learned representations.
+
+\begin{figure*}
+\includegraphics[width=1\linewidth]{Fig1-mess3-example.png}
+    {\caption{%The model's 
+    Transformers' internal representations exhibit complex geometric structure matching the 
+    belief-state geometry.
+  \textbf{(A)} %The 
+  Mess3 HMM, vertices represent hidden states with their emission distributions.
+  \textbf{(B)} %The 
+  Ground-truth belief state geometry of Mess3.
+  Each point represents a belief-state 
+  probability distribution
+  over %the 
+  hidden states of the HMM, induced via Bayesian updates upon a sequence of observed emissions, with proximity to the vertices of the simplex corresponding to the probabilities of the three hidden states.
+\textbf{(C)} 
+Schematic of a single-layer 
+transformer with Intermediate activations after Attention, and Final activations after the subsequent MLP.
+\textbf{(D)} %The 
+PCA projections of the model's final residual stream  (left), before the unembedding, reveals a geometric representation that closely matches the belief geometry shown in (B), whereas the PCA projection of the intermediate residual stream (right) after attention but before the MLP exhibits an intricate but different structure.
+  In (B) and (D), points are colored according to the ground-truth belief states
+  associated with the sequence of tokens that induces the point, 
+  taking the three constituent probabilities over hidden states of the %generating 
+  HMM as RGB values. 
+  }
+  %\vspace{0.1in}
+  \label{fig:intro}}
+\end{figure*}
+
+% \textbf{The main contributions of this work are:}
+
+% \begin{enumerate}
+%     \item The discovery of highly structured geometries of intermediate representations in transformers that are distinct from the model-agnostic representations implied by optimal next-token prediction.
+%     \item Identification of the algorithmic process by which attention heads construct these intermediate representations, interpretable as operating within a belief simplex.
+%     \item The development of a theory of constrained belief updating that accurately predicts these intermediate representations, bridging the gap between model-agnostic principles and model-specific computations.
+% \end{enumerate}
+
+% Our findings offer new insights into the computational mechanisms employed by transformers, highlighting the crucial role of the attention mechanism in shaping their internal representations. Although our detailed experiments and analysis centers on a specific data-generating structure, the principles we uncover – the interplay between model-agnostic theory and model-specific constraints, the emergence of constrained belief updating representations, and the resulting structured intermediate geometries – are likely to be relevant to a broader class of models and data structures. This work provides a foundation for a deeper understanding of how transformers represent and process information, paving the way for more principled approaches to model interpretability. 
+
+%\vspace{-2em}
+%\newpage
+\paragraph{Key contributions:}
+
+\begin{enumerate}
+    \item \textbf{A Unified View of Optimal Prediction and Transformer Computation}: We bridge the model-agnostic theory of Bayesian belief states with the model-specific constraints of attention-based parallel processing. This synthesis explains why transformers trained on next-token prediction discover a distinct “constrained belief updating” geometry—balancing optimal Bayesian inference with the functional form of attention.
+    \item \textbf{Spectral Theory of Constrained Belief Updating}: 
+    %We develop a theoretical framework that analyzes how eigenvalues of the data-generating transition matrices determine attention heads’ behavior. By decomposing belief updates spectrally, we show that attention naturally implements matrix exponentiation via scalar decay of attention acting in orthogonal modes.  Multi-head attention allows oscillatory decay of influence through a sum of specialized head outputs.
+    We develop a theoretical framework that analyzes how eigenvalues of the data-generating transition matrices determine attention heads’ behavior. By decomposing belief updates spectrally, we show that multi-head attention naturally implements these scalar updates in orthogonal modes---even handling oscillatory decay of influence---through a sum of specialized head outputs.
+    \item \textbf{Predictive Experiments and Mechanistic Verification}: Our approach yields specific, testable predictions about attention patterns, value vectors, intermediate fractal representations, and final belief-state geometry. We confirm these predictions in trained transformers, demonstrating how the inherently recurrent next-token task is realized by an attention-based, parallelized implementation of Bayesian belief updates.
+\end{enumerate}
+
+%\begin{enumerate}
+%\item We show how architectural constraints of transformers shape the implementation of Bayesian belief updates, transforming an inherently recursive computation into parallel form through structured intermediate representations. Put in constrained belief updating and geometries.
+%\item We formulate a theory of \textbf{constrained belief updating} that predicts—and explains—these learned representations, demonstrating why and how they systematically deviate from the unconstrained Bayesian optimum.
+%\item In experiments, we provide mechanistic understanding of how transformer components coordinate to implement the theoretical constrained belief updating, revealing why attention heads must specialize and how MLPs reconstruct optimal updates from constrained intermediate states.
+%\item To test our theory, we experimentally verify detailed predictions---including the attention pattern, OV-vectors,embedding vectors, and the geometry of intermediate representations in the residual stream--- of trained transformers. 
+%\end{enumerate}
+%Thus, our work provides a principled perspective on \emph{why} transformers learn specific solutions, guided by an approach combining computational mechanics and mechanistic interpretability.
+
+%Our findings underscore that the architecture's functional form strongly shapes how transformers represent and compute belief updates, offering new avenues for understanding these models.
+
+\section{Background}
+\subsection{Related Work}
+%Our work lies at the intersection of several active research areas within the interpretability of deep learning models. 
+%In this section we highlight the key connections and distinctions between our approach and prior work, emphasizing how we build upon existing methods while forging a novel path towards understanding the internal mechanisms of transformers. We 
+%organize the discussion into 
+%To understand how this work relates to the larger literature, we focus on
+%three main themes: 1) the geometric perspective of neural network representations, particularly the view of features as directions; 2) the circuit-centric framework for mechanistic interpretability; and 3) the application of computational mechanics and belief state geometry to neural network analysis. 
+
+\paragraph{Features as directions in activation space}
+
+% Modern interpretability research often views neural network representations through the lens of linear geometry.
+% Rather than focusing on individual neurons, this framework analyzes how activation patterns align with specific directions in the network's activation space~\cite{park2024linearrepresentationhypothesisgeometry}.
+% These directions are thought to encode fundamental features or concepts learned by the network.
+% This perspective is particularly useful in light of superposition~\cite{elhage2022superposition}, where networks represent more features than available neurons by encoding them as 
+% non-orthogonal vectors.
+
+% Conceptualizing features as linear directions in activation space has been instrumental \cite{cunningham2023sae, bricken2023monosemanticity, templeton2024scaling}, in understanding \textit{what} information is represented in transformers, and the geometric relationships between these feature directions often capture meaningful semantic relationships, suggesting that the network's internal representation space is highly structured~\cite{Engels24_Not}. Our work complements this line of research by providing a mechanistic explanation for the emergence of specific non-orthogonal geometric structures within transformer intermediate representations. We connect these structures to a theory of constrained belief updating, providing the theoretical ``why'' to complement the ``what'' of feature representations.
+
+Modern interpretability research views neural network representations through the lens of linear geometry, analyzing how activation patterns align with specific directions that encode fundamental features~\cite{park2024linearrepresentationhypothesisgeometry}. This perspective is particularly useful given superposition~\cite{elhage2022superposition}, where networks encode more features than available neurons using non-orthogonal vectors. Conceptualizing features as linear directions has been instrumental~\cite{cunningham2023sae, bricken2023monosemanticity, templeton2024scaling} in understanding what information transformers represent, with geometric relationships between features revealing structured internal representations~\cite{Engels24_Not}. Our work provides a mechanistic explanation for these non-orthogonal geometric structures, providing the theoretical \textit{why} to complement the \textit{what} of feature representations.
+
+\paragraph{From features to circuits}
+
+While feature directions reveal what information is encoded, understanding how networks process this information is done by identifying computational circuits—subnetworks that implement specific algorithmic operations.
+Circuits typically combine simpler features into more complex ones as information flows through the network.
+Examples include circuits that detect syntax~\citep{elhage2021mathematical}, implement indirect object identification~\citep{wang2022interpretability}, or perform basic arithmetic~\citep{nanda2023mechanistic}.
+However, identifying circuits remains largely a manual process, starting from observed behaviors and working backwards to discover relevant components
+(although active research is developing automated approaches; see \citet{conmy2023automatedcircuitdiscoverymechanistic, marks2024sparsefeaturecircuitsdiscovering}).
+
+Our work demonstrates that a principled, top-down theoretical framework, based on constrained belief updating, can guide the search for circuits and provide a deeper understanding of their function within the larger network. We show how specific circuits in the attention mechanism directly implement the computations predicted by our theory.
+
+% \paragraph{A mathematical framework for transformer interpretability}
+\paragraph{Belief state geometry and computational mechanics}
+
+Our work draws inspiration from computational mechanics, a framework for studying information processing in dynamical systems~\cite{shalizi2001computational, Crutchfield12_Between, Riec18_SSAC1}. When applied to sequential data, computational mechanics, in accordance with the POMDP framework~\cite{Kaelbling98_Planning}, 
+% \cite{DeepMind_paper}
+shows that optimal prediction requires maintaining beliefs about the underlying latent states of the data-generating process~\cite{Upper97_Theory}. 
+These belief states can be visualized as points on a probability simplex, evolving according to Bayesian updating rules, and forming characteristic geometric patterns~\cite{Crutchfield94_Calculi, Marzen_2017}.
+Recent work shows that transformers naturally discover and encode these belief state geometries in their activations~\citep{shai2024transformersrepresentbeliefstate}.
+This connection offers a principled way to analyze network representations: rather than reverse-engineering observed behaviors, we can study how architectural constraints shape the network's implementation of theoretically optimal prediction strategies.
+
+This is the approach taken 
+here. %in this paper. 
+We move beyond prior work by proposing and validating a theory of constrained belief updating, demonstrating how specific architectural elements, like the attention mechanism, modify the idealized belief state dynamics. This perspective shifts the focus from reverse-engineering learned features to understanding why particular geometric patterns emerge during training as a consequence of the interplay between optimal prediction and architectural constraints. Our work provides a concrete example of how this theoretical framework can be applied to understand the internal mechanisms of transformers.
+
+
+\subsection{Optimal Prediction and Belief State Geometry}
+
+\citet{shai2024transformersrepresentbeliefstate} showed that transformers minimizing next-token loss internally represent the context-induced probability density over the entire future of possible token sequences:
+\begin{align}
+    \Pr(Z_{\text{d}+1:\infty} | Z_{1:\text{d}} = z_{1:\text{d}})
+\end{align}
+where $Z_{\text{d}+1:\infty} = Z_{\text{d}+1}, Z_{\text{d}+2},\dots$ denotes the sequence of random variables for future tokens, $Z_{1:\text{d}} = Z_1, \dots, Z_\text{d}$ denotes the sequence of random variables for past tokens, which is realized by a particular sequence of tokens $z_{1:\text{d}} \in \mathcal{Z}^\text{d}$ %represents 
+%also 
+known as 
+the context 
+%, that is the observed tokens 
+up to position s. 
+
+%By operationalizing 
+When we conceptualize
+the training data as being generated by an edge-emitting hidden Markov model (Mealy HMM), we can derive a natural geometric embedding for these conditional probability distributions. HMMs generate training data by emitting tokens when moving 
+among its hidden states $\SSet$,
+from one hidden state $S_t$ at time $t$ to the next. The natural geometric embedding is then given by considering how an 
+%
+initial distribution over hidden states 
+%$\boldsymbol{\eta}_\varnothing \in \mathbb{R}^{|\SSet|}$
+$S_0 \sim \boldsymbol{\eta}_\varnothing$,
+as a point in the vector space $\mathbb{R}^{|\SSet|}$ (with coordinates given by the probability elements),
+%stationary distribution over hidden states, $\eta_\infty$ 
+evolves upon seeing a particular sequence of tokens, $z_{1:\text{d}}$.
+This distribution over the hidden states, which uniquely induces a probability density over all possible futures,
+is updated via Bayes rule
+according to the substochastic transition matrices of the HMM, $\bigl( T^{(z)} \bigr)_{z \in \mathcal{Z}}$,
+with matrix elements
+$T^{(z)}_{s,s'} = \Pr(Z_{t+1} = z, S_{t+1} = s' | S_t = s)$.
+In particular, the updated distribution, given context $z_{1:\text{d}}$, is
+\begin{align}
+    %r^{(L)} = 
+    \boldsymbol{\eta}_\varnothing
+    \mapsto
+    \vec{r}_\text{full}^{(z_{1:\text{d}})} = \frac{\boldsymbol{\eta}_\varnothing T^{(z_{1:\text{d}})}}{\boldsymbol{\eta}_\varnothing T^{(z_{1:\text{d}})} \boldsymbol{1}}
+~,
+    \label{eq:full-belief}
+\end{align}
+where $T^{(z_{1:L})} = T^{(z_1)} \cdots T^{(z_L)}$,
+and $\boldsymbol{1}$
+is the column vector of all ones.
+In this paper, we will make the simplifying assumption that the training data is sampled from a stationary stochastic process,
+in which case the initial distribution over latent states
+is the stationary distribution 
+$\boldsymbol{\eta}_\varnothing = 
+\stationary = \stationary T$,
+where $T = \sum_{z \in \mathcal{Z}} T^{(z)}$ is the 
+row-stochastic transition matrix over hidden states.
+
+%conditional transition operator of the HMM, $T^{|z_{1:L}}$ which describes $\Pr(S_{L}| S_1 , Z_{1:L} = z_{1:L})$:
+
+%\begin{align}
+%    %r^{(L)} = 
+%    \eta_\infty T^{|z_{1:L}} ~
+%    \label{eq:full-belief}
+%\end{align}
+
+Thus, %this equation 
+Eq.~\eqref{eq:full-belief}
+embeds each token sequence into a probability simplex over the latent states of the HMM---a point in a real-valued vector space. The totality of these points forms a particular geometry, called the belief state geometry, and is universally found in linear form within the activations of various deep neural networks, including RNNs \citep{Pepper24_RNNs} and transformers \citep{shai2024transformersrepresentbeliefstate}. 
+
+%[To Do:  Define the random variables, realizations, transition operators, etc.]
+
+%--
+
+%Additionally, our rigorous theory of 
+This precise framework for anticipating 
+intermediate activations in transformers provides a natural interpretation of the attention mechanism in which it moves information in a belief simplex for the purposes of building up the architecture-independent belief state geometry given in Eq.~\eqref{eq:full-belief}.
+
+
+% \section{Methodology}
+% As discussed in Section \ref{sec:intro}, transformers have been shown to represent a particular geometric structure, the belief state geometry, linearly in their residual streams. However, this is a model-agnostic structure, and is dependent only on the training data, and not on particular architectural design choices. Thus, though transformers represent the belief state geometry, current theory says nothing about how transformers actually compute it. 
+
+% In order to study how the transformer architecture uses its mathematical form to build up belief state geometries, we investigate the Mess3 class of HMMs
+% \cite{Marzen_2017}. 
+% HMMs in this class, depicted in \ref{fig:intro}A, have three hidden states and are parametrized by two parameters, $\alpha$ and $x$, which control the emission and hidden transition probabilities respectively.
+% \citet{shai2024transformersrepresentbeliefstate} have shown that transformers linearly represent the belief state geometry when trained on data generated from these HMMs. 
+% The belief state geometry is given by the probabilities (plotted in a probability simplex) over the hidden states of the HMM that a Bayesian observer would have upon seeing strings of data generated by the HMM (see Eq.~(\ref{eq:full-belief})).
+% An example of the belief state geometry is shown in 
+% \ref{fig:intro}B.
+
+
+% In each experimental run, we specify an ($\alpha, x$) pair and generate sequences from the HMM.
+% We then train a standard transformer (see App.~\ref{apx:training} for details) on these sequences.
+% We then apply Principal Component Analysis (PCA) to the residual stream activations across all possible inputs and perform mechanistic interpretability analysis.
+% The activations are well-captured by a few principal components (see \appendixref{apx:pca}), enabling low-dimensional visualization and analysis.
+
+\section{Methodology}
+\paragraph{Data Generation.} Our study focuses on the Mess3 parametrized family of hidden Markov models 
+%(HMMs) 
+%from the Mess3 class 
+\citep{Marzen_2017}, which provide a tractable yet rich setting for studying sequence prediction. As shown in Fig.~\ref{fig:intro}A, these HMMs consist of three hidden states with observable emissions controlled by parameter $\alpha$ and transitions by parameter $x$. Higher values of $\alpha \in [0, 1]$ mean each state more strongly prefers its unique emission symbol, providing clearer information about the generating state. The parameter $x \in (0, \tfrac{1}{2}]$ %(ranging from 0 to 0.5) 
+controls state persistence—low values create high inertia where states tend to persist, while high values increase transition probabilities between states. For each experimental run, we generate sequences by sampling from an HMM with specific $(\alpha, x)$ values.
+\paragraph{Training Process.} We train single-layer transformers on next-token prediction using gradient descent, with sequences sampled from our parametrized HMMs as training data. The model learns to predict the next token in each sequence by minimizing cross-entropy loss (see App.~\ref{apx:training} for details). Our primary analysis focuses on single-layer architectures to clearly isolate how the attention mechanism implements constrained belief updating, though we also validate that these mechanisms persist as the foundational computation in deeper networks (Figs.~\ref{fig:mutli-layer-vis};\ref{fig:multi-layer-quant}). 
+
+\paragraph{Analysis of Representations and Computations.} To study how the model processes information, we analyze intermediate and final activations in the residual stream (Fig.\ref{fig:intro}C). We apply principal component analysis (PCA) to these activations across all possible input sequences, finding that the representations are well-captured by a low-dimensional space. In some cases, we slightly rotate the PCA basis to align with theoretically meaningful directions. This dimensionality reduction enables us to visualize how representations evolve through the network—from input embeddings, through the intermediate state after attention, to the final output state after the MLP layer (Fig.\ref{fig:intro}D). To understand how the network manipulates these representations, we analyze the learned weights and attention patterns, examining how attention transforms input embeddings into intermediate representations and how the MLP layer transforms these into the final geometry. At each stage, we compare the learned representations to theoretical predictions derived from optimal Bayesian updates\footnote{\href{https://github.com/adamimos/epsilon-transformers/blob/main/examples/intermediate_representations.ipynb}{Code for analysis of can be found here.}}.
+
+%\paragraph{Analysis of Learned Representations.} To study how the model processes information, we analyze both intermediate and final activations in the residual stream (Fig.\ref{fig:intro}C). We apply principal component analysis (PCA) to these activations across all possible input sequences, finding that the representations are well-captured by a low-dimensional space. In some cases, we slightly rotate the PCA basis to align with theoretically meaningful directions. This dimensionality reduction enables us to visualize how the representations evolve through the network—from the input embeddings, through the intermediate state after attention, to the final output state after the MLP layer (Fig.\ref{fig:intro}D).
+%\paragraph{Study of Network Computations.} To understand how the network manipulates these representations, we analyze the learned weights and attention patterns. We examine how the attention mechanism transforms input embeddings into intermediate representations, and then study how the MLP layer transforms these intermediate states into the final geometry. At each stage, we compare the learned representations to theoretical predictions derived from optimal Bayesian updates.
+
+\section{Results}
+\subsection{Intermediate representations are fractals, but not belief state geometry}
+
+% We examine the intermediate representations in the residual stream (after the attention but before the MLP) of the transformers as we vary the parameters of the data-generating HMM. We find that these representations are fractals, but are different from those observed in the final residual stream after the MLP (Figs.~\ref{fig:intro}, \ref{fig:belief-fig}). 
+% The final (i.e., post-MLP) representations align well with the belief state geometry after a single layer throughout a large region of $(\alpha, x)$ parameter space, and after several layers for more `difficult' parameter settings.
+% However, the intermediate fractals are distinct. The following results explain how these intermediate representations are constructed and provide a theoretical explanation for their %initially 
+% unexpected structure.
+
+
+Through PCA of the residual stream, we observe two distinct fractal structures in transformers trained on Mess3 HMM data: one after the attention mechanism but before the MLP, and another in the final layer output (Figs.~\ref{fig:intro}, \ref{fig:belief-fig}). While the final representations align with the geometry of theoretical belief states, the intermediate fractals exhibit a markedly different structure. The systematic difference between intermediate and final representations raises two key questions: (1) How does attention construct these intermediate fractals and (2) why do they take these particular geometric forms? The following results reveal the algorithmic process behind their construction and provides a theoretical explanation for their previously unexpected structure.
+
+\subsection{Intermediate representations are built by algorithms in the belief simplex}
+To determine how the intermediate representation is constructed, we performed mechanistic interpretability on the attention heads. We find that attention performs an algorithm with a direct interpretation in the belief simplex.
+%\ref{fig:belief-construction} illustrates the computation of the current location within the belief geometry based on the observation of past tokens.
+% \begin{figure}[htbp]
+% % \floatconts
+%   \label{fig:belief-construction}
+%   {\includegraphics[width=\linewidth]{sequence_construction_x15_a60.png}}
+%   {\caption{Intermediate representation construction. From left to right, we show how attention constructs the intermediate representations for 4 example input-sequences of increasing length. The token embeddings lie near the origin, and the OV-projections lie towards the corners of a triangle. Treating these as vectors, attention works by taking linear combinations of these three vectors in order to build up the fractal. Vectors show the components of the sum for each example, while gray dots show all possible vector-sums for all possible sequences in that position.}}
+\begin{figure*}[t]  % Use figure* for two-column spanning, [t] for top placement
+  %\vspace{0.1in}  % Space before caption
+  \centering
+  \includegraphics[width=\textwidth]{sequence_construction_x15_a60_v3.png}
+  \caption{\textbf{Intermediate Representation Construction by Attention.}  A transformer trained on Mess3 with $x=0.15$ and $\alpha=0.6$ exhibits intermediate representations constructed through a specific attention mechanism. \textbf{(A)} The OV vectors (arrows) form three distinct clusters, each corresponding to a token and positioned at the vertices of a triangle, while token embeddings (circles) are clustered near the origin. \textbf{(B)} Our theoretical predictions for the OV vectors 
+  (shown for all 
+  (position, token)
+  %(s,$z$) 
+  pairs) 
+  and embeddings 
+  (for positions $>2$)
+  %(for s $>2$) 
+  align closely to those found in the trained transformer. \textbf{(C)} Attention patterns are primarily determined by the positional distance between the destination and source tokens, following an exponential decay described by $(1-3x)^{|n-1|}$. They are largely independent of specific token sequences. \textbf{(C, inset)} The theoretical (Eq.~\eqref{eq:Attention_dest_relation}) and actual values in the attention pattern align closely. \textbf{(D)}  Construction of intermediate representations for five input subsequences of increasing length (from the example sequence $01120$, shown left to right). The attention mechanism builds the fractal by taking linear combinations of the three $\vec{v}_\text{s}$ vectors. The colored vectors illustrate the components of the sum for each example subsequence, while the gray dots represent all possible vector sums for all sequences at that position.}
+  \label{fig:belief-construction}
+  %\vspace{0.1in}  % Space after caption
+\end{figure*}
+
+% The attention operation in transformers consists of two circuits: the query-key (QK) circuit, which determines what parts of the input sequence to attend to, and the output-value (OV) circuit, which specifies what information should be read from the attended tokens 
+% and where to write it
+% \cite{elhage2021mathematical}. Following \cite{elhage2021mathematical}, it is useful to decompose the attention operation into these two components. Focusing on the output of a single attention head, $\vec{c}_d$, at a particular destination position s, we have that:
+% \begin{align}
+% \label{eq:attn-mech}
+%     \vec{c}_d = \sum_{s \le d} a_{sd} \vec{v}_s
+% \end{align}
+% where $a_{sd}$ is the attention weight, and $\vec{v}_s$ is the OV circuit vector at an earlier source token position\footnote{We define the OV circuit vector $\vec{v}_s = W_O W_V \vec{x}_s$, and so includes the contributions of the attention output, $W_O$ and value, $W_V$ weight matrices, and acts on the incoming residual stream vector at position s, $\vec{x}_s$.}. In this way, we will understand the computation the attention head performs by analyzing the structure of the OV circuit vectors and attention pattern entries. 
+
+
+At every context position, the residual stream can be thought of as a $d_\text{model}$-dimensional skip connection 
+communication channel streaming alongside all layers,
+carrying all working memory in a transformer~\cite{elhage2021mathematical}.  
+Attention and MLP modules read in linear transformations of the residual stream and then add their output to the local residual stream at each layer~\cite{vaswani2017attention}.
+
+Following \cite{elhage2021mathematical}, we decompose the attention operation into two circuits: 
+(i) the output-value (OV) circuit, which specifies what information is read from each position and how it transforms into a vector that can be broadcast to other positions, and 
+(ii) the query-key (QK) circuit, which 
+computes the similarity of 
+a linearly transformed source and destination to
+determine how much to update the destination's residual stream with that source's OV contribution. 
+	
+
+%Following \cite{elhage2021mathematical}, we decompose the attention operation into two circuits: the output-value (OV) circuit, which specifies what information should be read from each position and how it transforms into local input, and the query-key (QK) circuit, which determines how much to update with that information. 
+
+
+%%%%%%%%%%% from claude
+
+%Following \cite{elhage2021mathematical}, we decompose the attention mechanism into two distinct circuits: the output-value (OV) circuit and the query-key (QK) circuit. The OV circuit determines what information should be extracted from each position and how it should be transformed, while the QK circuit controls how much each position should be updated with that information.
+
+For an attention head, the residual stream update %$\vec{x}_\text{d} \mapsto \vec{x}_\text{d} + \vec{c}_\text{d}$ 
+$\vec{x}_\text{d}^\text{ (mid)} = \vec{x}_\text{d}^{\text{ (pre)}} + \vec{c}_\text{d}  \in \mathbb{R}^{d_\text{model}}$ 
+at the \emph{destination} position s is:
+\begin{align}
+\label{eq:attn-mech}
+\vec{c}_\text{d} = \sum_{\text{s} \le \text{d}} A_{\text{d}, \text{s}} \vec{v}_\text{s}
+\end{align}
+Here, $\vec{v}_\text{s} = W_\text{O} W_\text{V} \vec{x}_\text{s}^\text{ (pre)}$ represents the OV circuit's 
+contribution from
+%projection at 
+\emph{source} position s, 
+%computed as $\vec{v}_s = W_O W_V \vec{x}_s$, 
+where $W_\text{O}$ and $W_\text{V}$ are the attention output and value weight matrices respectively, and $\vec{x}_\text{s}^{\text{ (pre)}}$ is the incoming residual stream vector at position s. 
+Attention $A_{\text{d},\text{s}}$ is determined by the QK circuit through query--key 
+%projection 
+inner product
+and the causally masked softmax operations:
+\begin{align}
+\label{eq:attn-def}
+A_{\text{d}, \text{s}}  =  \delta_{s \leq d} \, \frac{ e^{ \vec{q}_\text{d} \cdot \vec{k}_\text{s} / \sqrt{d_\text{h}} }}{  \sum_{\text{s}' =1}^\text{d}   e^{ \vec{q}_\text{d} \cdot \vec{k}_{\text{s}'} / \sqrt{d_\text{h}} }} ~,
+\end{align}
+where 
+$\vec{q}_\text{d} = W_\text{Q} \vec{x}_\text{d}^\text{ (pre)}$ 
+is the query vector from position d,
+$\vec{k}_\text{s} = W_\text{K}  \vec{x}_{\text{s}}^\text{ (pre)}$ is the key vector from position s,
+$d_\text{h}$ is the head dimension, and 
+$W_\text{Q}$ and $W_\text{K}$ are each $d_\text{h} \times d_\text{model}$ weight matrices.
+%
+Recall that attention is non-negative $0 \leq A_{\text{d}, \text{s}} \leq 1$
+and, for each destination position d, the attention to all sources sums to one: 
+$\sum_{\text{s} \leq \text{d}} A_{\text{d}, \text{s}} =1$.
+%This formulation 
+Eq.~\eqref{eq:attn-mech}
+shows how each attention head computes its update by weighting the transformed values ($\vec{v}_\text{s}$) from all previous positions according to their relevance ($A_{\text{d}, \text{s}}$) to the current position.
+%%%%%%%%%%% end claude
+
+%The update from a single attention head to residual stream at the \emph{destination} position s, $\vec{c}_d$, is given by:
+%\begin{align}
+%\label{eq:attn-mech}
+%    \vec{c}_d = \sum_{s \le d} a_{sd} \vec{v}_s
+%\end{align}
+%where $\vec{v}_s = \dots$ is the OV projection at \emph{source} position s\footnote{We define the OV circuit vector $\vec{v}_s = W_O W_V \vec{x}_s$, and so includes the contributions of the attention output, $W_O$ and value, $W_V$ weight matrices, and acts on the incoming residual stream vector at position s, $\vec{x}_s$.}, and $a_{sd} = \dots$ is the attention weight computed by the QK circuit through projection and softmax operations.
+
+% Our analysis yields several key insights into the attention mechanism's role in constructing these representations. First, we find that projecting token embeddings (the inputs into the attention head) onto PCA space reveals three clusters that lie close to the origin, as shown in Fig.~\ref{fig:belief-construction}. 
+% Meanwhile, 
+% the OV circuit vectors
+% $\vec{v}_s$ 
+% lie in three clusters whose directions from the origin form the vertices of a triangle\footnote{Their direction from the origin is independent of sequence position, and their distance from the origin are also mostly independent of sequence position, but note that the OV-embeddings for the first position are closer to the origin, as show in Fig.~\ref{fig:belief-construction}, left. We believe this would not occur if we used a BOS-token.}, naturally interpreted as the vertices of the belief simplex in Fig.~\ref{fig:belief-construction}. 
+
+% In this way, we can think of the OV circuit as projecting token embeddings symmetrically to construct the simplex vertices, forming three update vectors (\ref{fig:belief-construction}). The model updates its current position by adding these vectors, with magnitude determined by the QK attention weights, $a_{sd}$, into the current token position, as described by \eqref{eq:attn-mech}.
+% %{\sout{We find that the attention pattern is invariant to token value, decaying with distance to the current token.}}
+% Thus, the attention module independently integrates information from a finite number of past tokens to compute the current location within the simplex.
+%  Additionally, we observe that attention patterns $a_{sd}$ are invariant to token identity and decay with distance from the current position. 
+%  As the attention weight decays with distance, the impact of past tokens on the current belief state diminishes over time.
+
+% Through this iterative process of vector additions within the belief simplex, the attention mechanism constructs the intermediate representations, resulting in the observed fractal structure depicted in \ref{fig:belief-construction}. This geometric interpretation provides insight into how transformers algorithmically build up complex belief state representations through their architectural components. Incredibly, the computation the attention head performs is completely interpretable as a dynamic process in the belief simplex.
+
+Our analysis yields several key insights into how the attention mechanism constructs the intermediate representations.
+First, we find that projecting token embeddings (the inputs into the attention head) onto PCA space reveals three clusters that lie close to the origin, as shown in Fig.\ref{fig:belief-construction}A.
+Meanwhile, the OV projections form update vectors $\vec{v}_\text{s}$ that cluster in three directions %defining 
+pointing toward
+the vertices of a triangle,
+% \footnote{While there are many update vectors (one per position), they all align along these three directions. Their magnitudes are mostly consistent across positions, except for the first position where they are smaller, which we now understand as a compensation for the inflexibility of softmax normalization at the first position. This effect might be eliminated by using a BOS token.}
+naturally interpreted as the vertices of the belief simplex in Fig.~\ref{fig:belief-construction}.
+The model combines these directions through weights $A_{\text{d,s}}$ determined by the QK circuit as described by Eq.~\eqref{eq:attn-mech}. 
+For Mess3, these attention weights are invariant to token identity and decay exponentially with distance from the current position, controlling how past information is integrated. As the attention weight decays with distance, the impact of past tokens on the current belief state diminishes over time.
+Through this process of weighted vector addition within the belief simplex, the attention mechanism constructs the intermediate representations, resulting in the observed fractal structure shown in Fig.~\ref{fig:belief-construction}D. Incredibly, \textbf{the computation the attention head performs is completely interpretable as a dynamic process in the belief simplex}.
+
+% \begin{figure*}[t]
+%       {%
+%         \subfigure[Token embedding space]{\label{fig:osc-input-embed}%
+%           \includegraphics[width=0.45\linewidth]{input_space_x50_a60.png}}%
+%         \qquad
+%         \subfigure[Attention patterns of the two heads]{\label{fig:osc-attn-pattern}%
+%           \includegraphics[width=0.45\linewidth]{attention_pattern_x50_a60.png}}
+%       }
+%     \caption{
+%         Attention heads combine to capture oscillatory dynamics in belief updating. 
+%         (a) In the token embedding space, the model uses each attention head to embed tokens on opposite poles of the simplex. 
+%         (b) The attention patterns of the two heads act as positive and negative components. When combined, they produce the oscillatory pattern predicted by $\lambda_3^n = (1 - 3x)^n$.}
+%       \label{fig:attention-ocs}
+% \end{figure*}
+
+\subsection{Relating Intermediate Representations to Belief Updating Equations}
+
+The interpretation of attention as operating in the belief simplex suggests a connection to the theory of belief updating.
+Since the OV circuit is only able to access information from the source token that is attended to, we can write a constrained belief updating equation that sums contributions from the value of the token $n = \text{d} - \text{s}$ places back for each value of $n$, assuming the initial belief is the stationary distribution of the HMM, $\stationary$.
+This gives the following equation for the constrained belief at position d in the sequence:
+ \begin{align}
+     \vec{r}_1^{(z_{1:\text{d}})} = \stationary  + \sum_{\text{s}=1}^{\text{d}} \bigl( \stationary T^{|z_{\text{s}}} T^{\text{d}-\text{s}} - \stationary \bigr)
+     \label{eq:constrained-belief}
+ \end{align}
+ where $T$ is the HMM's hidden state transition matrix (marginalizing out the emissions), and $T^{|z}$ is the HMM transition matrix conditioned on seeing token $z$ 
+ (see App.~\ref{apx:math} 
+ for details).
+ % \footnote{Note that we can use the linear conditional transition matrix for the Mess3 process, since each hidden state supports the full set of observable tokens; more generally, we would need to use the substochastic transition matrices as in Eq.~(\ref{eq:full-belief}).}
+Eq.~\eqref{eq:constrained-belief}, 
+%can be rewritten as 
+% \begin{align}
+%     \vec{r}_1^{(z_{1:L})} = \stationary T^{|z_{L}} + \sum_{n=1}^{L-1} \bigl( \stationary T^{|z_{L-n}} T^{n} - \stationary \bigr)
+%     \label{eq:constrained-belief_2}
+% \end{align}
+%which 
+interpreted as a context-induced point in a vector space,
+is the natural geometric embedding of 
+\begin{align}
+\Pr(S_{\text{d}}) 
+ + \sum_{\text{s}=1}^{\text{d}} \bigl[ \Pr(S_{\text{d}} | Z_{\text{s}} \! = \! z_{\text{s}} )  -  \Pr(S_{\text{d}}) \bigr] 
+ ~.
+ \label{eq:ConstrainedUpdateDistr}
+ \end{align}
+ This equation describes the best possible embedding if you haven’t seen any context, 
+$\Pr(S_{\text{d}} ) = \stationary $, followed by %the best possible 
+independent corrections to that prediction from the token at each preceding context position, $\Pr(S_{\text{d}} | Z_{\text{s}} = z_{\text{s}} ) - \Pr(S_{\text{d}}) = \stationary T^{|z_{\text{s}}} T^{\text{d} - \text{s}} - \stationary$.
+Notably, since Eq.~\eqref{eq:ConstrainedUpdateDistr} 
+is a distribution over latent states $S_{\text{d}}$ rather than merely the next token $Z_{\text{d}+1}$, this constrained-update equation naturally implemented by attention implies a probability density over all extended futures 
+$Z_{\text{d}+1:\infty}$
+rather than just the next timestep.
+
+
+
+It is useful to take a step back and get a handle on the intuition for Eq.~\eqref{eq:constrained-belief} and Eq.~\eqref{eq:ConstrainedUpdateDistr}.  Bayesian inference (Eq.~\eqref{eq:full-belief}) requires multiplying token-specific transition matrices, a fundamentally recursive process where updates depend on the full history integrated up to the previous step.
+In contrast, an attention head computes its output at position d via a parallel, feedforward weighted sum (Eq. 3) of value vectors, $v_s$ from source positions $s\le d$.
+Crucially, each $v_s$ contains only local information from position s. It cannot directly access or depend on the specific tokens between s and d due to the parallel nature of the value computation and attention weighting.
+Therefore, the most information that token $z_s$ can independently contribute to the belief at position d within this single-layer constraint is the correction derived from knowing $z_s$ occurred $d-s$ steps prior, assuming a default starting belief $\pi$ and no knowledge of intervening tokens. These independent displacements from the stationary distribution over latent states is the difference of probability distributions: $Pr(S_d|Z_s)-Pr(S_d)$. Linear algebraically, this contribution is precisely $\pi T^{|z_s} T^{d-s} - \pi$.
+Summing these over all past sources naturally yields the constrained belief update form in Eq.~\eqref{eq:constrained-belief} (see Fig.~\ref{fig:overview} for a conceptual diagram). It represents the best possible parallel approximation achievable by a single attention layer given its architectural limitations.
+%
+%\begin{align}
+ %&\Pr(S_{L+1} | Z_L = z_L) \nonumber \\
+ %& \;+ \sum_{n=1}^{L-1} \bigl[ \Pr(S_{L+1} | Z_{L-n} = z_{L-n} ) - \Pr(S_{L+1}) \bigr] ~.
+% %\label{eq:ConstrainedUpdateDistr}
+% \end{align}
+%Which has the geometric embedding:
+%$\eta_\infty T^{|a_L} + \sum_{n=1}^{L-1} \bigl( \eta_\infty T^{|a_{L-n}} T^n - \eta_\infty \bigr)$
+%This equation describes the best possible embedding if you haven’t seen any context, 
+%$\Pr(S_{L+1} | Z_L = z_L) = \stationary T^{|z_L}$, followed by %the best possible 
+%independent corrections to that prediction from the token at each preceding context position, $\Pr(S_{L+1} | Z_{L-n} = z_{L-n} ) - \Pr(S_{L+1}) = \stationary T^{|z_{L-n}} T^n - \stationary$.
+
+% This equation generated the ground truth intermediate representations in Fig.~\ref{fig:belief-fig}.
+% The formula accurately predicts the intermediate structure for $\alpha \in [0.2, 0.6]$.
+% For $\alpha$ outside this range, the predictions deviate from the observed representations consistently.
+% Further investigation is needed to fully characterize the model's behavior across all $\alpha$ values.
+
+%The formula 
+Eq.~(\ref{eq:constrained-belief})'s constrained belief geometry
+closely matches the intermediate structure observed in the central range of $\alpha \in [0.2, 0.6]$,
+as shown in the left two columns in Fig.~\ref{fig:belief-fig}. 
+As $\alpha$ moves further from this range, we observe gradually increasing deviations between predicted and actual representations, though the overall structure remains similar. A complete characterization of how these deviations scale with $\alpha$ remains for future work.
+
+Fig.~\ref{fig:MSE_details_training} demonstrates that transformers reliably discover these theoretical geometries during training, with MSE to the constrained belief theory decreasing rapidly for post-attention activations while MSE to the full belief geometry simultaneously decreases for post-MLP activations. The final converged representations show strong quantitative agreement with our theoretical predictions (Fig.~\ref{fig:MSE_details_final}), with MSE values orders of magnitude lower than random initialization for both the constrained and full belief geometries.
+
+% The attention pattern relates to powers of the Markov transition matrix of the hidden process, $T^n$, where $n$ is the token distance. See \appendixref{apx:Eigenvalues} for a detailed analysis of the eigenvalues and their implications for the model's behavior.
+
+
+\subsection{Attention Implements a Spectral Algorithm to Build the Constrained Beliefs}
+\label{Eigenvalues}
+
+
+
+Eq.~\eqref{eq:constrained-belief} shows how the attention pattern in our model must relate to powers of the Markov transition matrix of the underlying hidden states, $T^n$, where $n$ is the relative token distance. 
+
+
+To understand  how this works, we turn to spectral analysis. The main goal is to understand how information or influence from a past token (at source position s) propagates to affect the belief state at the current destination position d. This influence mathematically depends on the sequence of hidden state transitions between s and d, captured by powers of the HMM transition matrix, $T^{d-s}$.
+
+Spectral decomposition (using eigenvalues $\lambda$ and associated projectors $T_\lambda$) is a standard mathematical tool to analyze matrix powers because it simplifies $T^n$ into a sum $\sum_\lambda \lambda^n T_\lambda$. The eigenvalues ($\lambda$) are crucial because they tell us the rate at which the influence of past information decays (if $|\lambda|<1$) or even oscillates (if $\lambda$ is negative or complex) as the distance $n=d-s$ increases.
+
+Our key finding is that the learned attention weights ($A_{d,s}$ in Eq.~3) directly implement this propagation effect, effectively learning to approximate the $\lambda^{d-s}$ decay predicted by the theory. This explains why attention patterns often show exponential decay, and why multiple heads are needed to capture oscillatory patterns arising from negative eigenvalues. Furthermore, this spectral perspective allows us to make precise, verifiable predictions about the learned OV vectors and token embeddings, directly connecting the dynamics of the data (via $T$'s eigenvalues) to the specific parameters learned by the transformer.
+
+%\begin{figure}[bht]
+%      {%
+%        \subfigure[Token embedding space]{\label{fig:osc-input-embed}%
+%          \includegraphics[width=0.98\linewidth]{input_space_x50_a60.png}}%
+%        \\
+%        \subfigure[Attention patterns of the two heads]{\label{fig:osc-attn-pattern}%
+%          \includegraphics[width=0.98\linewidth]{attention_pattern_x50_a60.png}}
+ %     }
+%    \caption{
+%        Attention heads combine to capture oscillatory dynamics in belief updating. 
+%        (a) In the token embedding space, the model uses each attention head to embed tokens on opposite poles of the simplex. 
+%        (b) The attention patterns of the two heads (shown here averaged over all sequences)
+%        act as positive and negative components.
+%        When combined, they produce the oscillatory pattern predicted by the exponentiated eigenvalue $\zeta^n = (1 - 3x)^n = (-1)^n(3x-1)^n$.}
+%      \label{fig:attention-ocs}
+%\end{figure}
+
+When $T$ is diagonalizable with a set of eigenvalues $\Lambda_T$,
+it then has a simple spectral decomposition such that we can
+%we can spectrally decompose it to 
+rewrite Eq.~(\ref{eq:constrained-belief}) as
+% \begin{align}
+%     \vec{r}_1^{(z_{1:L})} 
+%     &= \stationary T^{|z_{L}} + \sum_{n=1}^{L-1} 
+%     %\Bigl[ %\bigl( 
+%     \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^n \stationary
+%     T^{|z_{L-n}} 
+%     T_\lambda
+%     %| \lambda \rangle \langle \lambda | 
+%     %\bigr) - \stationary \Bigr]
+%     %\label{eq:constrained-belief}
+% \end{align}
+\begin{align}
+     \vec{r}_1^{(z_{1:\text{d}})} 
+     &= \stationary  + \sum_{\text{s}=1}^{\text{d}} 
+     %\Bigl[ %\bigl( 
+     \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\lambda
+     %| \lambda \rangle \langle \lambda | 
+     %\bigr) - \stationary \Bigr]
+     \label{eq:spectral_constrained-belief}
+ \end{align}
+ where 
+$T_\lambda$ is the spectral projection operator 
+associated with eigenvalue $\lambda$~\citep{Riec18_Beyond}.
+In this diagonalizable case, 
+$T_\lambda = \sum_{k=1}^{a_\lambda} \ket{\lambda_k} \! \bra{\lambda_k}$,
+where $a_\lambda$ is the algebraic multiplicity of the eigenvalue $\lambda$, with right eigenstates satisfying $T \ket{\lambda_k} = \lambda \ket{\lambda_k}$,
+left eigenstates satisfying $ \bra{\lambda_k} T = \lambda \bra{\lambda_k}$,
+all satisfying the orthonormality condition $\braket{\lambda_j | \lambda_k} = \delta_{j,k}$.
+Notably in Eq.~\eqref{eq:spectral_constrained-belief}, all dependence
+on inter-token distance
+now lies solely in the
+exponentiation of the eigenvalues, which all live on or within the unit circle in the complex plane for a stochastic transition matrix like $T$.
+
+
+%$\langle \lambda | $ is the left eigenvector of $T$ associated with the eigenvalue $\lambda$,
+%satisfying $\langle \lambda | T = \lambda \langle \lambda |$,
+%while $| \lambda \rangle$ is the corresponding right eigenvector satisfying $T | \lambda \rangle = \lambda | \lambda \rangle $
+%[To do: Define right and left eigenvectors, etc.]
+
+For the Mess3 process, the stochastic matrix $T$ has 
+eigenvalues $\Lambda_T = \{ 1, \zeta \}$,
+where $\zeta = 1-3x$ is a degenerate eigenvalue with multiplicity $a_\zeta = 2$.
+%repeating eigenvalues 
+%with elements $\lambda_1 = 1$ and $\lambda_2 = \lambda_3 = 1 - 3x$.
+We observed that the attention weight $n$ tokens back is approximately $\zeta^n = (1 - 3x)^n$,
+which suggests a strong connection between the theoretically motivated Eq.~\eqref{eq:spectral_constrained-belief} and the architectural-implementation Eq.~\eqref{eq:attn-mech}. 
+Encouraged by this correspondence and further evidence of similarity, 
+we make the ansatz that 
+\emph{the role of attention in the first layer is to implement the constrained belief update of Eq.~\eqref{eq:ConstrainedUpdateDistr}
+via Eq.~\eqref{eq:spectral_constrained-belief}'s spectral mechanism}
+\footnote{The details of this correspondence break down if there are many attention heads in the first layer.}.
+%~\footnote{The details of this correspondence likely break down if there are many attention heads in the first layer, since the collection of heads may then incorporate higher-order correlations in their predictions~\cite{Shlegeris23_One}.}.
+Taking this ansatz seriously allows us to precisely anticipate the analytic form of the learned attention pattern.
+
+To derive the analytic form of the attention pattern, we 
+assume that there is a linear map 
+$f: \mathbb{R}^{d_\text{model}} \to \mathbb{R}^{|\SSet|-1}$
+%$f: \mathbb{R}^{d_\text{model}} \to \boldsymbol{\Delta}_2 \subset \mathbb{R}^3$
+from the residual stream to the 
+hyperplane containing the
+probability simplex over the hidden states of a minimal generative model of the data (the 2-simplex in this case).
+Let $\Pi_{\boldsymbol{\Delta}} = I - T_1 = I - \boldsymbol{1} \stationary$ be the projection from 
+$\mathbb{R}^{|\SSet|}$
+to the hyperplane 
+$\mathbb{R}^{|\SSet|-1}$
+containing the simplex.
+Our full ansatz is thus
+$f(\vec{x}_\text{d}^\text{ (mid)}) = \vec{r}_1^{(z_{1:\text{d}})}\Pi_{\boldsymbol{\Delta}}$ or, more explicitly:
+\begin{align}
+f(\vec{x}_\text{d}^\text{ (mid)}) &= \sum_{\text{s}=1}^{\text{d}} 
+     \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\lambda \\
+&= f(\vec{x}_\text{d}^\text{ (pre)}) + \sum_{\text{s} \le \text{d}} A_{\text{d}, \text{s}} f(\vec{v}_\text{s}) ~.
+\end{align}
+From this, we 
+group source-specific terms to
+infer that 
+\begin{align}
+f(\vec{x}_\text{d}^\text{ (pre)}) + A_{\text{d}, \text{d}} f(\vec{v}_\text{d}) 
+= \stationary T^{|z_{\text{d}}} - \stationary
+\label{eq:DiagonalAttention}
+\end{align}
+and
+%
+\begin{align}
+A_{\text{d}, \text{s}} f(\vec{v}_\text{s}) &= \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\lambda
+     &\text{for d $>$ s}  ~.
+\label{eq:fvs}
+\end{align}
+From Eq.~\eqref{eq:fvs}, 
+we notice that $f(\vec{v}_\text{s})$ is in the linear span of the non-stationary left eigenstates of $T$.
+I.e., $f(\vec{v}_\text{s}) \in \text{span}\bigl( \{ \bra{\lambda} : \lambda \bra{\lambda} = T \bra{\lambda} \text{ and } \lambda \neq 1 \} \bigr)$ and, in particular, $f(\vec{v}_\text{s}) \cdot \ket{1} = 0$ such that \emph{adding any of the OV vectors to any stochastic vector (whose elements by definition add to one) keeps you in the hyperplane of the  probability simplex}.
+
+
+%Comparing 
+%Eq.~\eqref{eq:attn-mech}
+%and 
+%Eq.~\eqref{eq:spectral_constrained-belief}, 
+
+For the Mess3 family of processes,
+$T$ has a single eigenvalue $\zeta = 1-3x$
+with multiplicity $a_\zeta = 2$
+besides its eigenvalue of 1.
+Accordingly, 
+Eq.~\eqref{eq:fvs} simplifies to
+\begin{align}
+A_{\text{d}, \text{s}} f(\vec{v}_\text{s}) &= \zeta^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\zeta
+     &\text{for d $>$ s} ~,
+\label{eq:Ads_relation}
+\end{align}
+which forces $f(\vec{v}_\text{s}) = c \stationary
+     T^{|z_{\text{s}}} 
+     T_\zeta$
+for some $c \in \mathbb{R}$ independent of d,
+from which we obtain
+\begin{align}
+A_{\text{d}+m, \text{s}} &= \zeta^m A_{\text{d}, \text{s}} &\text{for d $>$ s} ~.
+\label{eq:Attention_dest_relation}
+\end{align}
+So, for example, $A_{2,1}$ implies
+$A_{\text{d},1}$ for all destinations d $\geq 2$;
+and $A_{3,2}$ implies
+$A_{\text{d},2}$ for all destinations d $\geq 3$.
+
+%This leaves us to relate 
+%$A_{\text{d}, \text{s}}$ 
+%and $A_{\text{d}, \text{s}'}$.
+
+For Mess3,
+$T_\zeta = I - \ket{1} \! \bra{1} = I - \boldsymbol{1} \stationary$, since all projection operators must sum to the identity.
+Combining this insight with 
+Eq.~\eqref{eq:Ads_relation}
+tells us about the OV-vector for all positions:
+\begin{align}
+f(\vec{v}_m) 
+&= \frac{\zeta}{A_{m+1,m}} \bigl( \stationary
+     T^{|z_{m}} - \stationary \bigr)
+\label{eq:fvn} ~.
+\end{align}
+Notably, Eq.~\eqref{eq:fvn} tells us that all OV-vectors associated with the same token must be parallel---$f(\vec{v}_\text{s}) \propto f(\vec{v}_{\text{s}'})$ if $z_\text{s} = z_{\text{s}'}$---which is consistent with what we observe in our experiments (Fig.~\ref{fig:belief-construction}A).  
+Moreover, the magnitude of the $m^\text{th}$ OV-vector is inversely proportional to 
+the attention element $A_{m+1,m}$,
+which is again consistent with our experiments (Fig.~\ref{fig:belief-construction}AB). In our experiments, 
+we find $A_{2,1}$ to be significantly larger than all the other $A_{m+1,m}$ elements, while the latter all cluster together; the magnitude of $\vec{v}_1$ is correspondingly smaller than all of the other strongly clustered $\vec{v}_m$ magnitudes.
+
+Combining Eqs.~\eqref{eq:DiagonalAttention}
+and \eqref{eq:fvn} constrains the embedding
+%
+\begin{align}
+\label{eq:fpren}
+f(\vec{x}_m^\text{ (pre)}) = 
+\Bigl( 1 - \tfrac{\zeta A_{m,m}}{A_{m+1,m}} \Bigr) \bigl( \stationary
+     T^{|z_{m}} - \stationary \bigr)
+\end{align}
+to be parallel to the OV-vectors, as we indeed observe.
+%In particular, 
+%since $A_{1,1} = 1$ is forced by softmax,
+%\begin{align}
+%\label{eq:fpre1}
+%f(\vec{x}_\text{1}^\text{ (pre)}) = 
+%\Bigl( 1 - \tfrac{\zeta}{A_{2,1}} \Bigr) \bigl( \stationary
+%     T^{|z_{1}} - \stationary \bigr)
+%~.
+%\end{align}
+
+
+%\begin{align}
+%\label{eq:fpren}
+%f(\vec{x}_\text{n}^\text{ (pre)}) = 
+%\tfrac{\zeta A_{n,n}}{A_{n+1,n}} \stationary  + \Bigl( 1 - \tfrac{\zeta A_{n,n}}{A_{n+1,n}} \Bigr) \stationary T^{|z_{n}}
+%~.
+%\end{align}
+%In particular, 
+%since $A_{1,1} = 1$ is forced by softmax,
+%\begin{align}
+%\label{eq:fpre1}
+%f(\vec{x}_\text{1}^\text{ (pre)}) = 
+%\tfrac{\zeta}{A_{2,1}} \stationary  + \Bigl( 1 - \tfrac{\zeta}{A_{2,1}} \Bigr) \stationary T^{|z_{1}}
+%~.
+%\end{align}
+
+Eqs.~\eqref{eq:Attention_dest_relation}, \eqref{eq:fvn} and \eqref{eq:fpren} make \emph{strong predictions 
+about the form of the attention pattern and how it relates to 
+OV-vectors and token embeddings},
+which must be true if the first layer of attention is indeed implementing the constrained belief updates over latent states of a generative model of the training data.
+These relationships are all
+borne out in our experiments (Fig.~\ref{fig:belief-construction}ABC), 
+except for some scalar discrepancy in the first two embedding vectors (see Appendix~\ref{apx:quant} for quantification),
+which is a strong validation of the predictive power of our framework.
+
+%[Finally, we use normalization of probability, 
+%$\sum_{\text{s} = 1}^{ \text{d}} A_{\text{d}, \text{s}} =1$, $\dots$
+
+%We thus anticipate that 
+%$A_{\text{d}, \text{s}} = \dots$]
+
+\subsubsection{Negative eigenvalues require more attention heads}
+
+
+For the transition matrix $T$ to be row stochastic (a requirement for a valid HMM), $x$ must be in the range $[0, 0.5]$.
+Interestingly, when $\zeta < 0$ (which occurs when $x > 1/3$), the predicted pattern oscillates and cannot be captured by a single attention head, since attention pattern entries must be non-negative. 
+In these cases, we observe that a single-head transformer captures an incomplete representation of the belief state geometry, and the transformer performs correspondingly worse (App.~\ref{apx:minimal_arch}).
+%[{\color{blue} PMR: Does the transformer then also have high loss?}]
+However, upon adding a second attention head, the model converges to the solution predicted by the belief updating equation, even in the presence of oscillatory dynamics, as shown in Fig.~\ref{fig:attention-ocs}.
+%[\textbf{PMR}: Is Fig.~\ref{fig:attention-ocs}B showing $A_{8,\text{s}}^{(1)}$ and $A_{8,\text{s}}^{(2)}$, or somehow averaged over d?]
+
+The anticipated need for a second attention head when the data-generating transition matrix has a negative eigenvalue further demonstrates how
+our analysis provides a handle to relate the architectural constraints of the attention mechanism to the structure of the training data.
+In fact, our framework provides more specific predictions for the attention pattern and its relation to embedding and OV-vectors in this case too.
+
+With two attention heads, 
+the update to the residual stream 
+at the destination position s becomes
+\begin{align}
+\label{eq:attn-mech_twoheads}
+\vec{c}_\text{d} = \sum_{\text{s} =1}^{\text{d}} \sum_{h=1}^2 A_{\text{d}, \text{s}}^{(h)} \vec{v}_\text{s}^{(h)} ~,
+\end{align}
+where each head now has its own QK and OV matrices.
+With the negative eigenvalue $\zeta < 0$ and two attention heads,
+we can relate the constrained belief update to the details of attention and embedding via
+\begin{align}
+f(\vec{x}_\text{d}^\text{ (mid)}) &= 
+\sum_{\text{s}=1}^{\text{d}} 
+     (-1)^{\text{d}-\text{s}}(-\zeta)^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\zeta \\
+&= f(\vec{x}_\text{d}^\text{ (pre)}) + \sum_{\text{s} \le \text{d}} \bigl[ A_{\text{d}, \text{s}}^{(1)} f(\vec{v}_\text{s}^{(1)}) + A_{\text{d}, \text{s}}^{(2)} f(\vec{v}_\text{s}^{(2)})\bigr] ~.
+\nonumber
+\end{align}
+
+
+\begin{figure}[bt]
+    \centering
+    \includegraphics[width=1\linewidth]{x50_a60_details_v2.png}
+    \caption{Attention heads combine to capture oscillatory dynamics in belief updating. 
+        (A) In the token embedding space, the model uses each attention head to embed tokens on opposite poles of the simplex. 
+        (B) The attention patterns of the two heads (shown here averaged over all sequences)
+        act as positive and negative components.
+        When combined, they produce the oscillatory pattern predicted by the exponentiated eigenvalue $\zeta^n = (1 - 3x)^n = (-1)^n(3x-1)^n$.}
+    \label{fig:attention-ocs}
+\end{figure}
+
+
+This is naturally accommodated by
+\begin{align}
+A_{\text{d}, \text{s}}^{(1)} f(\vec{v}_\text{s}^{(1)}) &= 
++\delta_{+1,(-1)^{\text{d}-\text{s}}}
+|\zeta|^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\zeta
+     &\text{and } \\
+A_{\text{d}, \text{s}}^{(2)} f(\vec{v}_\text{s}^{(2)}) &= 
+-\delta_{-1,(-1)^{\text{d}-\text{s}}}
+|\zeta|^{\text{d}-\text{s}} \stationary
+     T^{|z_{\text{s}}} 
+     T_\zeta
+\label{eq:Ads_2head_relation}
+\end{align}
+for d $>$ s,
+which implies that the OV-vectors point in opposite directions,
+$\widehat{f(\vec{v}_\text{s}^{(1)})} = - \widehat{f(\vec{v}_\text{s}^{(2)})}$,
+%\begin{align}
+%\widehat{f(\vec{v}_\text{s}^{(1)})} = - \widehat{f(\vec{v}_\text{s}^{(2)})} ~,
+%\end{align}
+with 
+$f(\vec{v}_\text{s}^{(h)}) \propto (\stationary
+     T^{|z_{\text{s}}} - \stationary)$
+and
+\begin{align}
+A_{\text{d}+2m, \text{s}}^{(h)} &= \zeta^{2m} A_{\text{d} , \text{s}}^{(h)}  &\text{for d $>$ s} ~,
+\label{eq:DoubleAttention_dest_relation}
+\end{align}
+consistent with our experiments 
+as shown in Fig.~\ref{fig:attention-ocs}.
+We note that the
+magnitudes of OV vectors are tied to attention magnitudes via
+$c \zeta^{\text{d} - \text{s}} = 
+%(-1)^{\text{d} - \text{s}}(3x-1)^{\text{d} - \text{s}} \propto 
+A_{\text{d}, \text{s}}^{(1)} | f(\vec{v}_\text{s}^{(1)}) | - A_{\text{d}, \text{s}}^{(2)} | f(\vec{v}_\text{s}^{(2)}) |$,
+with $c = | \stationary T^{|z_{\text{s}}} - \stationary| \in \mathbb{R}$,
+which is also observed in Fig.~\ref{fig:attention-ocs}.
+
+%So, for example, $A_{2,1}$ implies
+%$A_{\text{d},1}$ for all destinations d $\geq 2$;
+%and $A_{3,2}$ implies
+%$A_{\text{d},2}$ for all destination d $\geq 3$.
+
+
+%[$\dots$]
+
+
+\subsection{Post-MLP geometries}
+
+While the intermediate geometry is well characterized by our constrained belief equations, the MLP transformation is more complex. Through purely local computations at each position, the MLP learns a continuous nonlinear warping that transforms the intermediate fractal structure into the final belief geometry. 
+
+Fig.~\ref{fig:belief-fig} shows the close match between theoretical predictions and observed representations across different Mess3 parameter settings, confirming our theoretical understanding. The transformation involves stretching and compressing different regions of the space while maintaining topological structure, though a full characterization of its mathematical properties remains for future work.
+
+
+%While the intermediate geometry is well characterized by our constrained belief equations, the transformation performed by the MLP is more complex. Through purely local computations at each position, the MLP learns a continuous nonlinear warping that transforms the intermediate fractal structure into the final belief geometry. 
+
+%Fig.~\ref{fig:belief-fig} provides a comprehensive comparison between theoretical predictions and observed representations across different parameter settings of the Mess3 HMM. The close match between predicted and actual geometries, both for intermediate and final representations, confirms our theoretical understanding of the transformer's computational process. The transformation between these geometries involves stretching and compressing different regions of the space, maintaining the topological structure while aligning it with theoretically optimal belief representations. 
+
+%The remarkable precision and consistency of this learned transformation raises intriguing questions about the nature of this mapping. 
+%While we observe that distinct regions remain well-separated through the transformation, a full characterization of its mathematical properties remains an exciting direction for future work.  
+
+\begin{figure}[bt]
+  \centering
+  \includegraphics[width=\linewidth]{projection_comparison_v2.png}
+  \caption{Comparison of model representations and theoretical predictions for different Mess3 hyperparameters in each row.
+Each subfigure shows four columns:
+(i) Intermediate representation from Eq.~\eqref{eq:constrained-belief}.
+(ii) PCA projection of the model activations in the intermediate layer.
+(iii) Ground truth belief state geometry from Eq.~\eqref{eq:full-belief}.
+(iv) PCA projection of the final activations after the MLP.}
+  \label{fig:belief-fig}
+\end{figure}
+
+To verify that our single-layer analysis captures the fundamental computation even in deeper networks, we analyzed 4-layer transformers trained on the same Mess3 data. We find that the first attention layer consistently implements the constrained belief update mechanism, Eq.~\eqref{eq:constrained-belief}, with subsequent layers progressively transforming the representation toward the full Bayesian belief geometry, Eq.~\eqref{eq:full-belief}. Quantitative MSE analysis (Fig.~\ref{fig:multi-layer-quant}) shows that first-layer attention outputs align well with constrained beliefs while later layers systematically improve alignment with full Bayesian beliefs. This progression is shown in Fig.~\ref{fig:mutli-layer-vis}, confirming that our theoretical framework for the first layer remains the foundational computation in multi-layer networks.
+
+
+\section{Discussion and Conclusion}
+
+We have shown how combining \textbf{computational mechanics} with \textbf{mechanistic interpretability} yields a principled understanding of why transformers trained on Mess3 HMM data learn intermediate fractal-like structures, and how these structures systematically transition into final belief-state representations.
+By focusing primarily on single-layer transformers, we isolated the fundamental computation performed by the attention mechanism, while also demonstrating that these principles extend to the first layer of deeper networks. 
+This approach provides a top-down theoretical explanation grounded in the tension between optimal Bayesian belief updates and the parallel, attention-based constraints of transformer computation, developing geometric observations of activation space into mechanistic understanding of the underlying computational principles.
+
+\paragraph{Implications for interpretability.}
+Our work demonstrates an alternative to bottom-up architectural analysis.
+Knowing the structure of optimal predictors allows us to predict and verify the \emph{specific} intermediate computations that are 
+implemented %possible 
+by the attention mechanism.
+Our analysis reveals the computational role of specific directions in activation space—showing how the geometry of belief updates shapes the learned representations.
+Additionally, by focusing on a small, tractable HMM, we see how specific properties of its transition matrix lead to oscillatory patterns that require specialized multi-head solutions due to the non-negativity constraints of attention mechanisms.
+Rather than relying on general observations that attention heads specialize, our analysis reveals precisely \emph{why} and \emph{how} multiple heads must coordinate: 
+the non-negativity constraints of attention, combined with oscillatory patterns in optimal belief updates, necessitate specific decompositions across heads, providing concrete mechanistic understanding of their functional roles.
+This demonstrates how combining theoretical understanding with architectural constraints can yield precise, verifiable interpretations of neural network components.
+
+%\paragraph{Methodological significance.}
+%{\color{gray}{Our work demonstrates the value of studying transformer behavior in analytically tractable settings where we can fully characterize optimal computation.
+%We expect that a similar approach could shed light on more general settings by studying how architectural constraints shape the implementation of necessary computations.
+%Such analytical frameworks can help us investigate key phenomena like how models approximate optimal solutions when perfect implementation isn't possible, and how they compress multiple concepts into shared activation space when representational demands exceed capacity—providing theoretical grounding for understanding features learned by the network.}}
+
+\paragraph{Limitations and future work.}
+% We focused on small transformers and a specialized HMM with full support over the space of all possible sequences of tokens (Mess3). 
+% We discovered an algorithm that transformers use when the attention elements $A_{\text{d,s}}$ depend on the distance $(\text{d} - \text{s})$ while the attention pattern is largely independent of the tokens at those positions since token-dependence is fully accommodated by the difference in OV-vectors.  Our techniques must be adapted to square with the more general scenario. 
+% While this setting offers clear insights, it does not capture many complexities of real-world data.
+% Future work could apply these techniques to processes that better reflect properties of natural language---hierarchical, with sparse support over sequences---and to transformers at larger scales.
+% Moreover, the interplay between multi-head attention and deeper layer stacks likely exhibits additional nuances that our single-layer analyses only begin to uncover.
+% Finally, while we showed that the final MLP layer refines partial updates to approximate full Bayes, the deeper question of \emph{why} gradient descent converges on these circuits remains ripe for further investigation.
+
+Our experiments used small transformers (1 and 4 layers), with analysis focused on the first attention layer. For training data we used the specialized Mess3 family of HMMs with full support over the space of all possible sequences of tokens. 
+We discovered how transformers implement belief updates when attention patterns depend primarily on positional distances, while token-specific information is handled through value vectors.
+While we validated that the first layer of multi-layer transformers implements the same constrained belief updating mechanism (Figs.~\ref{fig:mutli-layer-vis};\ref{fig:multi-layer-quant}), with subsequent layers refining toward full Bayesian beliefs, our techniques must be adapted to both larger transformer architectures and data-generating processes that capture the complexities of real-world data.
+While this setting offers clear insights, it does not capture many aspects of natural language.
+Future work could apply these techniques to processes that better reflect properties of natural language---hierarchical, with sparse support over sequences.
+Moreover, the interplay between multi-head attention and deeper layer stacks likely exhibits additional nuances that our primary single-layer analyses only begins to uncover.
+Finally, while we showed that the final 
+MLP layer refines partial updates to approximate full Bayes, the deeper 
+question of why gradient descent converges on these circuits remains ripe for further investigation.
+
+\paragraph{Conclusion.}
+By combining computational mechanics with mechanistic interpretability, we have shown how transformers implement inherently recursive Bayesian updates through parallel computations via the attention mechanism, and how these intermediate representations are refined into the final form.
+This reconciles model-agnostic theories of next-token prediction with the reality of architecture-specific constraints.
+We hope our results not only advance interpretability for HMM-like toy tasks but also inspire deeper theoretical insights into how large-scale transformers produce—and exploit—belief-like structures in real-world applications.
+
+
+% \subsubsection*{Author Contributions}
+% If you'd like to, you may include  a section for author contributions as is done
+% in many journals. This is optional and at the discretion of the authors.
+
+% \section*{Acknowledgements}
+
+% \textbf{Do not} include acknowledgements in the initial version of
+% the paper submitted for blind review.
+
+% If a paper is accepted, the final camera-ready version can (and
+% usually should) include acknowledgements.  Such acknowledgements
+% should be placed at the end of the section, in an unnumbered section
+% that does not count towards the paper page limit. Typically, this will 
+% include thanks to reviewers who gave useful comments, to colleagues 
+% who contributed to the ideas, and to funding agencies and corporate 
+% sponsors that provided financial support.
+
+
+
+\section*{Acknowledgments}
+
+The authors are grateful for the community and financial support from MATS, PIBBSS, FAR Labs, BITS, and Astera Institute, 
+and MP's further financial support from Open Philanthropy during the MATS extension program, which made this project possible.  
+
+%\vspace{0.5em}
+\subsection*{Author Contributions}
+
+%\vspace{-0.5em}
+
+MP discovered the attention-based constrained belief updating algorithm in the simplex, and performed the bulk of the experiments with mentorship from ASS.  PMR developed the mathematical theory together with MP and ASS.  ASS supervised the project, and DF provided project management.  MP, PMR, and ASS wrote the manuscript, with helpful guidance from DF.  MP, PMR, and ASS performed analysis, and established the correspondence between transformer behavior and theoretical predictions.
+ 
+
+
+\section*{Impact Statement}
+This paper presents work whose goal is to advance the interpretability of 
+Machine Learning. There are many potential societal consequences 
+of our work, none which we feel must be specifically highlighted here.
+
+% Authors are \textbf{required} to include a statement of the potential 
+% broader impact of their work, including its ethical aspects and future 
+% societal consequences. This statement should be in an unnumbered 
+% section at the end of the paper (co-located with Acknowledgements -- 
+% the two may appear in either order, but both must be before References), 
+% and does not count toward the paper page limit. In many cases, where 
+% the ethical impacts and expected societal implications are those that 
+% are well established when advancing the field of Machine Learning, 
+% substantial discussion is not required, and a simple statement such 
+% as the following will suffice:
+
+% ``This paper presents work whose goal is to advance the field of 
+% Machine Learning. There are many potential societal consequences 
+% of our work, none which we feel must be specifically highlighted here.''
+
+% The above statement can be used verbatim in such cases, but we 
+% encourage authors to think about whether there is content which does 
+% warrant further discussion, as this statement will be apparent if the 
+% paper is later flagged for ethics review.
+
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+% \nocite{langley00}
+
+\bibliography{example_paper}
+\bibliographystyle{icml2025}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+
+\appendix
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A\arabic{figure}}
+
+\section{Mathematical Details of HMMs and Belief State Geometry}
+\label{apx:math}
+
+In this work we created training data from a class of Hidden Markov Models (HMMs) called Mess3. The HMMs have three hidden states 
+ $\SSet = \{ 1, 2, 3\}$
+ and emit from a vocabulary of three tokens $\Abet = \{ 0, 1, 2 \}$.
+ 
+ The HMMs in this class are parameterized by
+ $\alpha$ and $x$,
+ with dependent quantities
+ $\beta = (1-\alpha)/2$ and $y = 1-2x$.
+ 
+ The labeled transition matrices define the probability of moving to state $j$ (indexing columns) and emitting the token on the label, $z$, conditioned on being in state $i$ (indexing rows), $P(s_j, z|s_i)$ and are:
+ \begin{align}
+ T^{(0)} &= 
+ \begin{bmatrix}
+ 	\alpha y & \beta x & \beta x \\
+ 	\alpha x & \beta y & \beta x \\
+ 	\alpha x & \beta x & \beta y
+ \end{bmatrix}
+ \\
+  T^{(1)} &= 
+ \begin{bmatrix}
+ 	\beta y & \alpha x & \beta x \\
+ 	\beta x & \alpha y & \beta x \\
+ 	\beta x & \alpha x & \beta y
+ \end{bmatrix}
+ \\
+   T^{(2)} &= 
+ \begin{bmatrix}
+ 	\beta y & \beta x & \alpha x \\
+ 	\beta x & \beta y & \alpha x \\
+ 	\beta x & \beta x & \alpha y
+ \end{bmatrix}
+ \end{align}
+
+Note that even though the dynamics amongst the emissions are infinite-Markov order, the dynamics amongst the hidden states are Markov, with a transition matrix given by marginalizing out the token emissions: $T=\sum_{z\in\Abet}T^{(z)}$.
+
+Since Mess3 has non-zero row sums for each labeled transition matrix,
+we can also define a conditional transition matrix, $T^{|z}$, with elements $T^{|z}_{i,j} = P(s_j|z,s_i)$, which is given by normalizing each labeled transition matrix such that every row sums to 1.
+
+
+\subsection{Full belief updates}
+
+An important part of the work presented here is about how an optimal observer of token emissions from the HMM would update their beliefs over which of the hidden states the HMM is in, given a token sequence.
+If the observer is in a belief state given by a probability distribution $\boldsymbol{\eta}$ (a row vector) over the hidden states of the data-generating process, then the update rule for the new belief state $\boldsymbol{\eta}’$ given that the observer sees a new token $z$ is:
+\begin{align}
+	\boldsymbol{\eta}’ = \frac{\boldsymbol{\eta} T^{(z)}}{\boldsymbol{\eta} T^{(z)} \mathbf{1}}
+	\label{eq:ms_update}
+\end{align}
+where $\mathbf{1}$ is a column vector of ones of appropriate dimension, with the denominator ensuring proper normalization of the updated belief state. In general, starting from the initial belief state $\boldsymbol{\eta}_\varnothing$, we can find the belief state after observing a sequence of tokens $z_0, z_1, \dots , z_N$:
+\begin{align}
+	%\boldsymbol{\eta} 
+	\vec{r}_\text{full}^{(z_{1:\text{d}})} 
+	= \frac{\boldsymbol{\eta}_\varnothing T^{(z_0)} T^{(z_1)} \cdots T^{(z_N)}}{\boldsymbol{\eta}_\varnothing T^{(z_0)} T^{(z_1)} \cdots T^{(z_N)} \mathbf{1}} ~.
+\end{align}
+
+For stationary processes, the optimal initial belief state is given by the stationary distribution $\boldsymbol{\eta}_\varnothing = \stationary$ over hidden states of the HMM (the left-eigenvector of the transition matrix $T=\sum_z T^{(z)}$ associated with the eigenvalue of 1). 
+
+The beliefs have a geometry associated with them, called the belief-state geometry. 
+The belief-state geometry is given by plotting the belief distribution
+over the HMM's hidden states
+induced from each possible sequence of tokens
+as a point in the probability simplex over these hidden states.
+%The belief state geometry is given by plotting the belief distributions over all possible sequences of tokens generated by the HMM in the probability simplex.
+
+\subsection{Constrained belief updates}
+
+Incorporating past contributions to belief updates in parallel, as the attention mechanism suggests, we instead obtain
+\begin{align}
+	\vec{r}_1^{(z_{1:\text{d}})} = \stationary  + \sum_{n=0}^{\text{d}-1} \Bigl( \frac{\stationary T^{(z_{\text{d}-n})} T^{n} }{ \stationary T^{(z_{\text{d}-n})}  \boldsymbol{1} } - \stationary \Bigr)
+	\label{eq:gen_constrained-belief}
+\end{align}
+For processes like Mess3 that have non-zero row sums for each labeled transition matrix,
+this can be written more simply as:
+\begin{align}
+	\vec{r}_1^{(z_{1:\text{d}})} = \stationary  + \sum_{n=0}^{\text{d}-1} \bigl( \stationary T^{|z_{\text{d}-n}} T^{n} - \stationary \bigr) ~,
+	%\label{eq:constrained-belief}
+\end{align}
+which is the form that appears in the main text.
+For other processes that don't satisfy this condition, slight modifications of the equations in the main text
+follow straightforwardly from Eq.~\eqref{eq:gen_constrained-belief}.
+
+
+%\section{Eigenvalue derivation}
+%\label{sec:Eigenstuff}
+% 
+% \begin{align}
+%     \vec{r}_1^{(z_{1:L})} &= \boldsymbol{\eta}_\varnothing  + \sum_{n=0}^{L-1} \bigl( \boldsymbol{\eta}_\varnothing  T^{|z_{L-n}} T^{n} - \boldsymbol{\eta}_\varnothing  \bigr) \\
+%     &= \boldsymbol{\eta}_\varnothing   + \sum_{n=0}^{L-1} \Bigl[ \bigl( \sum_{\lambda \in \Lambda_T} \lambda^n \boldsymbol{\eta}_\varnothing  T^{|z_{L-n}} T_\lambda \bigr) - \boldsymbol{\eta}_\varnothing  \Bigr] \\
+%
+%     &= \boldsymbol{\eta}_\varnothing  + \sum_{n=0}^{L-1} \Bigl[ \bigl( \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^n \boldsymbol{\eta}_\varnothing  T^{|z_{L-n}} T_\lambda \bigr) - \boldsymbol{\eta}_\varnothing  \Bigr]
+%     \\
+%     &= \boldsymbol{\eta}_\varnothing  + \sum_{n=0}^{L-1} \Bigl[ \bigl( \sum_{\lambda \in \Lambda_T \setminus \{ 1 \}} \lambda^n \boldsymbol{\eta}_\varnothing  T^{|z_{L-n}} | \lambda \rangle \langle \lambda | \bigr) - \boldsymbol{\eta}_\varnothing  \Bigr]
+     %\label{eq:constrained-belief}
+ %\end{align}
+
+\section{Model architecture and training procedure}
+\label{apx:training}
+
+We employ a standard single-layer transformer model with learned positional embeddings.
+The model architecture follows the conventional transformer design, with $d_{\text{model}} = 64$ and $d_{\text{ff}} = 256$.
+Depending on the Mess3 parameters, we use either a single-head or a double-head attention mechanism.
+We conduct a systematic sweep over the HMM parameters $\alpha$ and $x$, training a separate model for each pair.
+Models are trained on next-token prediction using cross-entropy loss, with batch size 128.
+We use Adam optimizer \cite{kingma2017adammethodstochasticoptimization} with a $10^{-4}$ learning rate and no weight decay.
+Each model is trained for approximately 15 million tokens.
+
+We generate all possible input sequences up to length 10, recording hidden activations from the transformer's residual stream.
+These activations are organized into a dataset capturing the model's response to all input patterns.
+
+Input sequences consist of three symbols, embedded with positional information, without a beginning-of-sequence (BOS) token.
+
+\newpage
+\section{Recurrent vs. Parallel Belief Updating}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.\linewidth]{ICML_overview.png}
+    \caption{Diagrammatic visualization comparing the recurrent nature of Optimal Bayesian Inference (top), to the parallel attention mechanism (middle), and the parallel Constrained Belief Updating presented in this paper.}
+    \label{fig:overview}
+\end{figure}
+
+\newpage
+
+\section{Quantification of Theoretical Predictions}
+\label{apx:quant}
+
+See Figs.~\ref{fig:aptheory}, \ref{fig:MSE_details_training},
+and 
+\ref{fig:MSE_details_final}.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\linewidth]{theorydetail.png}
+    \caption{Embeddings for the first two positions are correctly predicted to be parallel to the OV vectors, as with all of the embeddings; however the sign of the predicted embedding for these first two positions deviates from the observed embedding.  We do not yet understand the reason for this discrepancy, but still find it remarkable that the bulk of the high-dimensional computation carried out by attention---attention pattern, OV vectors, and all embeddings beyond the first two positions---can be very precisely understood by a sequence of operations in the two-dimensional simplex.}
+    \label{fig:aptheory}
+\end{figure}
+
+\begin{figure}[h]
+        \centering
+        \includegraphics[width=1\linewidth]{normalized_mse_dynamics_inset_corrected.png}
+        \caption{\textbf{Evolution of Normalized Mean Squared Error (MSE) During Training Across Experimental Conditions.}
+Each subplot shows the MSE for one experimental condition (labeled by title), normalized by the initial MSE value from the randomly initialized model (represented at Checkpoint Index 0). The Y-axis represents MSE relative to this random baseline (Lower is better), where the dashed line at Y=1 indicates performance equal to random initialization. The X-axis represents the training checkpoint index, starting from the random initialization at index 0.
+Lines: Show the normalized MSE for Mid (Post-Attention/Pre-MLP, blue circles) and Post (Post-MLP, orange squares) activations, reflecting their fit to their respective theoretical geometries over training. For Mid activations we regress to the Constrained Belief geometry, while for Post activations we regress to the Full (unconstrained) Belief geometry.
+Insets: Provide a zoomed-in view of the Y-axis from -0.02 to 0.5, highlighting the convergence behavior at low MSE values.
+\textbf{Observations:} Across all conditions, both Mid and Post activation representations show significantly improved geometric fits (normalized MSE drops well below 1) compared to the random baseline as training progresses. Some conditions (e.g., a=20) may show an initial transient increase in normalized MSE before rapid improvement.}
+        \label{fig:MSE_details_training}
+\end{figure}
+    
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{final_mse_comparison_figma_friendly.png}
+    \caption{\textbf{Comparison of Final Trained Model Fit vs. Random Initialization Across Experimental Conditions.}
+The bar chart displays the Absolute Mean Squared Error (MSE, lower is better), comparing the geometric fit of activations at the final training checkpoint against the initial random model state. Results are shown for four different experimental conditions (X-axis). Within each condition, bars represent:
+Mid (Post-Attention/Pre-MLP) Activations, MSE of the regression to the Constrained Belief Geometry: Blue bars.
+Post (Post-MLP) Activations, MSE of the regression to the Full (unconstrained) Belief Geometry: Orange bars.
+Solid bars indicate the MSE for the final trained model, while transparent bars of the same color show the MSE for the randomly initialized model (baseline). Numerical labels specify the precise MSE values achieved by the trained models.
+\textbf{Observations:} Across all conditions, the trained model (solid bars) achieves lower MSE, indicating a much better fit to the underlying theoretical geometries compared to the random baseline (transparent bars).}
+        \label{fig:MSE_details_final}
+\end{figure}
+
+%\newpage
+
+\section{Multi-layer experiments}
+
+See Figs.~\ref{fig:mutli-layer-vis} and \ref{fig:multi-layer-quant}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{multi-layer-fig.png}
+    \caption{\textbf{Visualization of Activation Geometry via Regressions onto the Full Belief State.}
+The figure displays 2D projections of transformer activations after linear regression onto the Full (unconstrained) Belief state geometry (Eq.~\eqref{eq:full-belief}) for all stages, arranged in a 2x2 grid. Each quadrant corresponds to a different experimental condition (combinations of x and a, labeled above each quadrant). Within each quadrant, the top row shows visualizations for Mid (Post-Attention/Pre-MLP) activations, and the bottom row shows visualizations for Post (Post-MLP) activations, across Layers 0-3 (columns). Points in all plots are colored according to the ground truth Full Belief state coordinates (Eq.~\eqref{eq:full-belief}), projected into RGB space. Importantly, all visualizations show regressions to the Full Belief state geometry (and not the Constrained Belief geometry).
+Top Row (Mid Activations): Shows Mid activations after being regressed onto the Full Belief geometry (Eq.~\eqref{eq:full-belief}).
+Bottom Row (Post Activations): Shows Post activations after being regressed onto the Full Belief geometry (Eq.~\eqref{eq:full-belief}).
+This visualization qualitatively shows how well activations linearly map to the Full Belief state throughout the network. Notably, the residual stream activations after the first attention layer but before the MLP (Layer 0 mid, top-left plot within each quadrant), despite being regressed onto the Full Belief target, visually retain a structure resembling the Constrained Theory geometry (Eq.~\eqref{eq:constrained-belief}). This indicates that the constrained structure is the dominant feature linearly recoverable from early Mid activations, even when seeking the best fit to the final target geometry. Comparing subsequent Mid and Post stages across layers (moving rightwards) reveals the accurate fit to the Full Belief state geometry.}
+    \label{fig:mutli-layer-vis}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{multilayer_mse_absolute_appendix_final_1.png}
+    \caption{\textbf{Quantitative Fit of Multi-Layer Transformer Activations to Theoretical Geometries Across Residual Stream Stages.}
+Absolute Mean Squared Error (MSE, log scale) comparing activation representations to the Constrained Theory (Eq.~\eqref{eq:constrained-belief}) and the Full (unconstrained) Belief state geometry (Eq.~\eqref{eq:full-belief}) across interleaved residual stream stages (L0 Mid, L0 Post, ..., L3 Post) of a 4-layer transformer. The figure presents results for four experimental conditions (combinations of x={15, 50} and a={20, 60}) in a 2x2 grid.
+Lines: Show absolute MSE comparing activation fits to theoretical geometries. Solid lines represent the trained model; dashed lines represent the random baseline.
+Green Stars: Fits of the residual stream activations to the Constrained Theory (Eq.~\eqref{eq:constrained-belief}).
+Orange Circles: Fit of the residual stream activations to the Full Belief geometry (Eq.~\eqref{eq:full-belief}).
+At the residual stream after the first attention but before the first MLP (L0 Mid), the fit to the Constrained Theory (green) is better (lower MSE) than the fit to the Full Belief geometry (orange) across all conditions, supporting the hypothesis that the initial layer's attention mechanism implements the constrained update.
+The fit to the Full Belief geometry (orange line) improves dramatically after the first MLP, and at that point the residual stream activations switch to fitting the Full Belief geometry better than the Constrained Belief geometry. The fit to the Constrained Theory (green line) does not show this convergence and may worsen in later layers. 
+The MSE values for the trained transformer (solid lines) are consistently orders of magnitude lower than the corresponding random baselines (dashed lines), demonstrating that these geometric alignments are learned features resulting from training.}
+    \label{fig:multi-layer-quant}
+\end{figure}
+
+%\newpage
+
+\section{Minimal architectural requirements}
+\label{apx:minimal_arch}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{arch_loss_figures.png}
+\caption{Validation KL divergence between model predictions and optimal probabilities across different architectural configurations. Results shown for various Mess3 parameter settings ($x$ and $\alpha$) and model architectures (number of heads and layers). The model achieves good performance with minimal architecture: a single layer with two attention heads is sufficient across parameter settings.}
+\label{fig:validation_kl}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\textwidth]{compare_geometry_arch.png}
+\caption{Comparison of learned belief geometry with one head (left) versus two heads (middle) against ground truth (right) for two different Mess3 parameter settings. With $x=0.5$, where the optimal update pattern requires both positive and negative components, a single head fails to capture the correct geometry due to the non-negativity constraint of attention. Two heads allow the model to properly implement these updates, resulting in geometry that closely matches the ground truth.}
+\label{fig:geometry_comparison}
+\end{figure}
+
+To verify our theoretical understanding of the transformer's computational requirements, we conduct a systematic evaluation across different architectural configurations. Fig.~\ref{fig:validation_kl} shows that the model achieves good performance with minimal architecture: a single layer with two attention heads is sufficient to achieve low KL divergence across different Mess3 parameter settings. This empirical finding aligns with our theoretical analysis - when $x > 1/3$, the belief update patterns contain oscillatory components that require two heads to implement due to the non-negativity constraint of attention.
+The necessity of two heads is visually demonstrated in Fig.~\ref{fig:geometry_comparison}. For $x=0.5$, where the optimal update pattern has significant oscillatory components, a single-head transformer fails to capture the correct belief geometry. With two heads, the model can properly implement these updates through complementary attention patterns, resulting in representations that closely match the ground truth geometry.
+
+%\newpage 
+
+\section{Dimensionality of Residual Stream Activations}
+\label{apx:pca}
+
+\begin{table}[htbp]
+\centering
+  \caption{Cumulative explained variance ratios for PCA components of the residual stream activations at the intermediate position (after attention) and the final position (before unembedding). 
+  The table shows results for different settings of the Mess3 HMM parameters $x$ and $\alpha$.}
+\label{tab:pca-combined}
+  {
+  \begin{tabular}{llrrrrrrrr}
+    \toprule
+    & & \multicolumn{4}{c}{Intermediate} & \multicolumn{4}{c}{Final} \\
+    \cmidrule(lr){3-6} \cmidrule(lr){7-10}
+     & $x$ & 0.15 & 0.15 & 0.5 & 0.5 & 0.15 & 0.15 & 0.5 & 0.5 \\
+    component & $\alpha$ & 0.2 & 0.6 & 0.6 & 0.2 & 0.2 & 0.6 & 0.6 & 0.2 \\
+    \midrule
+    0 & & 0.5408 & 0.4648 & 0.4074 & 0.5268 & 0.9618 & 0.4947 & 0.4596 & 0.6503 \\
+    1 & & 0.8768 & 0.8894 & 0.8028 & 0.8519 & 0.9825 & 0.7681 & 0.7096 & 0.8592 \\
+    2 & & 0.9673 & 0.9859 & 0.8913 & 0.9173 & 0.9943 & 0.9811 & 0.8855 & 0.9689 \\
+    3 & & 0.9749 & 0.9903 & 0.9455 & 0.9649 & 0.9960 & 0.9897 & 0.9189 & 0.9755 \\
+    4 & & 0.9815 & 0.9929 & 0.9848 & 0.9886 & 0.9969 & 0.9916 & 0.9428 & 0.9807 \\
+    5 & & 0.9870 & 0.9942 & 0.9978 & 0.9977 & 0.9976 & 0.9931 & 0.9586 & 0.9850 \\
+    6 & & 0.9914 & 0.9955 & 0.9986 & 0.9984 & 0.9981 & 0.9945 & 0.9723 & 0.9886 \\
+    \bottomrule
+    \end{tabular}
+  }
+
+\end{table}
+
+We perform PCA on the residual stream activations after the attention module (intermediate) and before the unembedding layer (final).
+The effective dimensionality of the residual stream is low, with the first few components capturing most of the variance (See Table \ref{tab:pca-combined}).
+In most cases, the first 3 components explain over 90\% of the variance.
+For $x=0.5$, the effective dimensionality is higher, possibly due to the oscillatory dynamics of the belief updating equation in this regime.
+Further investigation is needed to fully understand this phenomenon.
+
+
+
+
+
+% Fig.~\ref{fig:belief-fig} depicts the belief geometry using the first three principal components.
+% To enable consistent comparison of the learned representations across different model configurations, we perform a regression to find a projection that aligns the principal components with the ground truth belief geometry.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

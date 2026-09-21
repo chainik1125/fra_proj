@@ -1,0 +1,34 @@
+{
+  "H_gated": {
+    "tag": "H_gated",
+    "gated": true,
+    "sigma": 0.6,
+    "child_handle": -0.00012774920818325874,
+    "parent_collateral": 0.004008764065452919,
+    "child_mse_base": 0.16632894892407243
+  },
+  "H_null": {
+    "tag": "H_null",
+    "gated": false,
+    "sigma": 0.6,
+    "child_handle": -0.00039840479496378034,
+    "parent_collateral": 0.0038056965282271538,
+    "child_mse_base": 0.33662527812675214
+  },
+  "H_gated_clean": {
+    "tag": "H_gated_clean",
+    "gated": true,
+    "sigma": 0.05,
+    "child_handle": 8.43225698310135e-05,
+    "parent_collateral": 3.691047464647601e-05,
+    "child_mse_base": 0.0845506487910859
+  },
+  "H_null_clean": {
+    "tag": "H_null_clean",
+    "gated": false,
+    "sigma": 0.05,
+    "child_handle": -4.529207177944583e-06,
+    "parent_collateral": 2.6258410472240756e-06,
+    "child_mse_base": 0.12866227651715517
+  }
+}

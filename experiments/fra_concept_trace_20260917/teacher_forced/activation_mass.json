@@ -1,0 +1,631 @@
+{
+  "definition": "abs(z_i) / sum_j abs(z_j); all these TopK coefficients are nonnegative",
+  "summary": {
+    "sae": {
+      "key": "gpt2-small-resid-post-v5-32k__L5",
+      "release": "gpt2-small-resid-post-v5-32k",
+      "layer": 5,
+      "hook": "blocks.5.hook_resid_post",
+      "d_sae": 32768,
+      "neuronpedia": "gpt2-small/5-res_post_32k-oai",
+      "fvu_centered": 0.0003512312071741449,
+      "relative_squared_error": 0.00031209839769257144,
+      "fvu_excluding_first_token": 0.09822250290764778,
+      "mean_token_relative_error_excluding_first": 0.03546619950262107,
+      "mean_l0": 31.70711255572331,
+      "mean_kl": 0.04035789260804404,
+      "registry_variance_explained": 0.9,
+      "registry_l0": 32.0
+    },
+    "position": 1,
+    "total_mass": {
+      "king": 58.23705394566059,
+      "queen": 62.9406464099884
+    },
+    "active_counts": {
+      "king": 32,
+      "queen": 32
+    },
+    "shared_feature_count": 23,
+    "selected_features": [
+      4434,
+      7671,
+      16313,
+      18603,
+      18884,
+      20876,
+      22630,
+      22931,
+      23701,
+      24231,
+      24973,
+      25241,
+      27512,
+      32492
+    ],
+    "shared_mass_share": {
+      "king": 0.8852938159957127,
+      "queen": 0.7136079846562137
+    },
+    "selected_table_other_share": {
+      "king": 0.3017003712157861,
+      "queen": 0.28950949707018814
+    }
+  },
+  "features": [
+    {
+      "feature": 7671,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/7671",
+      "description": "mentions of the word \"Queen\" in various contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 6.134318828582764,
+        "mass_share": 0.09746196104540283
+      }
+    },
+    {
+      "feature": 18884,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/18884",
+      "description": "terms related to numerical values and comparisons",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 5.5291666984558105,
+        "mass_share": 0.09494241765070956
+      },
+      "queen": {
+        "activation": 5.511687755584717,
+        "mass_share": 0.08756960835264056
+      }
+    },
+    {
+      "feature": 23701,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/23701",
+      "description": "references to kingdoms and related hierarchical terms",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 5.359168529510498,
+        "mass_share": 0.09202334538610062
+      },
+      "queen": {
+        "activation": 2.967637777328491,
+        "mass_share": 0.04714978232027722
+      }
+    },
+    {
+      "feature": 32492,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/32492",
+      "description": "references to royalty or the concept of \"king\" and \"queen.\"",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 4.9293413162231445,
+        "mass_share": 0.08464269708461865
+      },
+      "queen": {
+        "activation": 1.9711931943893433,
+        "mass_share": 0.03131828646228399
+      }
+    },
+    {
+      "feature": 4434,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/4434",
+      "description": "technical terminology related to computer systems and programming concepts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 4.4189934730529785,
+        "mass_share": 0.07587941308254056
+      },
+      "queen": {
+        "activation": 3.9257164001464844,
+        "mass_share": 0.062371720407426424
+      }
+    },
+    {
+      "feature": 27512,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/27512",
+      "description": "references to news and events, particularly concerning New York and significant political or social topics",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 4.303336143493652,
+        "mass_share": 0.07389343814522242
+      },
+      "queen": {
+        "activation": 4.482081890106201,
+        "mass_share": 0.07121124655934444
+      }
+    },
+    {
+      "feature": 24973,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/24973",
+      "description": "references to \"King\" and its associated context in various subjects",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 4.015129089355469,
+        "mass_share": 0.06894457767561313
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 22630,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/22630",
+      "description": "terms related to royalty and monarchy",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 3.629469156265259,
+        "mass_share": 0.06232233449947207
+      },
+      "queen": {
+        "activation": 3.576852798461914,
+        "mass_share": 0.056828980992071336
+      }
+    },
+    {
+      "feature": 22931,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/22931",
+      "description": "terms related to historical rulers and their titles",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 3.52878737449646,
+        "mass_share": 0.0605935076624768
+      },
+      "queen": {
+        "activation": 3.4239859580993652,
+        "mass_share": 0.05440023503724286
+      }
+    },
+    {
+      "feature": 20876,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/20876",
+      "description": "names related to specific individuals, particularly politicians and public figures",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 3.543334722518921,
+        "mass_share": 0.0562964463287846
+      }
+    },
+    {
+      "feature": 25241,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/25241",
+      "description": "subjects related to societal roles, particularly in the context of education and governance",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 3.2449607849121094,
+        "mass_share": 0.05571986501823897
+      },
+      "queen": {
+        "activation": 3.191864252090454,
+        "mass_share": 0.0507122890238369
+      }
+    },
+    {
+      "feature": 18603,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/18603",
+      "description": "proper nouns, particularly names of people, indicating key individuals in various contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 2.973721742630005,
+        "mass_share": 0.047246444265276695
+      }
+    },
+    {
+      "feature": 21470,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/21470",
+      "description": "references to the president and related political titles or context",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 2.3446500301361084,
+        "mass_share": 0.040260450542773635
+      },
+      "queen": {
+        "activation": 1.4830265045166016,
+        "mass_share": 0.023562301773266372
+      }
+    },
+    {
+      "feature": 25962,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/25962",
+      "description": "references to political positions and titles, particularly related to the president",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.7494584321975708,
+        "mass_share": 0.030040297605540674
+      },
+      "queen": {
+        "activation": 0.9344274997711182,
+        "mass_share": 0.014846169416252272
+      }
+    },
+    {
+      "feature": 16313,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/16313",
+      "description": "references to royalty or noble titles",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.708560585975647,
+        "mass_share": 0.029338032579221098
+      },
+      "queen": {
+        "activation": 1.295194387435913,
+        "mass_share": 0.020578028052002522
+      }
+    },
+    {
+      "feature": 24231,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/24231",
+      "description": "references to bees and related concepts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 1.7211418151855469,
+        "mass_share": 0.02734547408322151
+      }
+    },
+    {
+      "feature": 25508,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/25508",
+      "description": "proper nouns, particularly names and titles",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.3268287181854248,
+        "mass_share": 0.02278323899116622
+      },
+      "queen": {
+        "activation": 1.6139647960662842,
+        "mass_share": 0.02564264728952887
+      }
+    },
+    {
+      "feature": 26564,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/26564",
+      "description": "terms related to data and its presentation",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.4319502115249634,
+        "mass_share": 0.02458830099580719
+      },
+      "queen": {
+        "activation": 1.4663807153701782,
+        "mass_share": 0.023297833737174173
+      }
+    },
+    {
+      "feature": 9243,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/9243",
+      "description": "references to conferences and events in the context of news reporting",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.3159887790679932,
+        "mass_share": 0.022597104247338927
+      },
+      "queen": {
+        "activation": 1.3975212574005127,
+        "mass_share": 0.022203795752226852
+      }
+    },
+    {
+      "feature": 4066,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/4066",
+      "description": "specific technical and operational terms related to programming and system functions",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.1898859739303589,
+        "mass_share": 0.020431767977834338
+      },
+      "queen": {
+        "activation": 1.3963515758514404,
+        "mass_share": 0.022185211870176243
+      }
+    },
+    {
+      "feature": 15071,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/15071",
+      "description": "mentions of government entities and their roles in various contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.2532212734222412,
+        "mass_share": 0.021519310962941015
+      },
+      "queen": {
+        "activation": 1.2025835514068604,
+        "mass_share": 0.019106628546096655
+      }
+    },
+    {
+      "feature": 20187,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/20187",
+      "description": "quantities and attributes associated with social and political contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 1.2394803762435913,
+        "mass_share": 0.02128336329306968
+      },
+      "queen": {
+        "activation": 1.0324387550354004,
+        "mass_share": 0.016403370698009814
+      }
+    },
+    {
+      "feature": 3543,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/3543",
+      "description": "references to Nova Scotia or related geographic entities",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 1.0170127153396606,
+        "mass_share": 0.01615828202200137
+      }
+    },
+    {
+      "feature": 19609,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/19609",
+      "description": "components related to processes, measurements, or evaluations in various contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.3431510329246521,
+        "mass_share": 0.0058923144231306235
+      },
+      "queen": {
+        "activation": 0.8023943901062012,
+        "mass_share": 0.012748429446998255
+      }
+    },
+    {
+      "feature": 10723,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/10723",
+      "description": "references to reality TV shows and competition formats",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 0.7665054202079773,
+        "mass_share": 0.012178226057848943
+      }
+    },
+    {
+      "feature": 16089,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/16089",
+      "description": "references to time or temporal concepts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.7079480886459351,
+        "mass_share": 0.0121563169954734
+      },
+      "queen": {
+        "activation": 0.6677786707878113,
+        "mass_share": 0.010609657016198641
+      }
+    },
+    {
+      "feature": 29936,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/29936",
+      "description": "phrases indicating accountability and responsibility",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.5968409776687622,
+        "mass_share": 0.010248474763604255
+      },
+      "queen": {
+        "activation": 0.7402163743972778,
+        "mass_share": 0.011760546111579317
+      }
+    },
+    {
+      "feature": 14169,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/14169",
+      "description": "references to individuals, particularly in the context of relationships and interactions",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 0.7222646474838257,
+        "mass_share": 0.011475329356789151
+      }
+    },
+    {
+      "feature": 19287,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/19287",
+      "description": "references to God and religious sentiments",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.6636049747467041,
+        "mass_share": 0.011394892594771291
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 18080,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/18080",
+      "description": "phrases and concepts related to accountability and responsibility",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.4675562381744385,
+        "mass_share": 0.008028500868376729
+      },
+      "queen": {
+        "activation": 0.6785641312599182,
+        "mass_share": 0.0107810162425061
+      }
+    },
+    {
+      "feature": 25870,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/25870",
+      "description": "references to physical or metaphorical \"centers\" in various contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 0.6649285554885864,
+        "mass_share": 0.010564374429161649
+      }
+    },
+    {
+      "feature": 28634,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/28634",
+      "description": "prepositions and phrases indicating relationships or connections",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.5549201965332031,
+        "mass_share": 0.00952864471906467
+      },
+      "queen": {
+        "activation": 0.6601079106330872,
+        "mass_share": 0.010487784099534303
+      }
+    },
+    {
+      "feature": 26069,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/26069",
+      "description": "prominent individuals and their backgrounds or achievements",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.3832393288612366,
+        "mass_share": 0.006580678500990568
+      },
+      "queen": {
+        "activation": 0.4929772913455963,
+        "mass_share": 0.007832415449539505
+      }
+    },
+    {
+      "feature": 7453,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/7453",
+      "description": "references to administrative roles or titles",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      },
+      "queen": {
+        "activation": 0.4824701249599457,
+        "mass_share": 0.0076654777552996305
+      }
+    },
+    {
+      "feature": 11505,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/11505",
+      "description": "references to characters in a narrative",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.38723501563072205,
+        "mass_share": 0.006649289230736852
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 17208,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/17208",
+      "description": "key elements related to essential resources and their management",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.33986857533454895,
+        "mass_share": 0.005835950693035933
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 19842,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/19842",
+      "description": "instances of committees or groups making decisions or statements",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.2815205752849579,
+        "mass_share": 0.004834045615487986
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 6177,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/6177",
+      "description": "references to natural disasters and their impacts on environments and communities",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.27890631556510925,
+        "mass_share": 0.004789155643507468
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 5326,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/5326",
+      "description": "instances of words relating to familial or personal relationships",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.2586181163787842,
+        "mass_share": 0.004440782952724458
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 10298,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/10298",
+      "description": "terms related to decision-making and evaluative contexts",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.23838578164577484,
+        "mass_share": 0.004093369521545614
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    },
+    {
+      "feature": 4381,
+      "url": "https://www.neuronpedia.org/gpt2-small/5-res_post_32k-oai/4381",
+      "description": "terminology related to corporate governance and shareholder interests",
+      "description_source": "Neuronpedia automatic interpretation; unvalidated",
+      "king": {
+        "activation": 0.21688178181648254,
+        "mass_share": 0.00372412007686462
+      },
+      "queen": {
+        "activation": 0.0,
+        "mass_share": 0.0
+      }
+    }
+  ]
+}

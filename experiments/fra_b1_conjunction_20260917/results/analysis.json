@@ -1,0 +1,1773 @@
+{
+  "n_cases": 12,
+  "raw_rows": 336,
+  "thresholds": {
+    "0.5": {
+      "methods": {
+        "fra": {
+          "reached": 5,
+          "mean_worstKL": 0.23488575408215448,
+          "max_worstKL": 0.42560897244284474,
+          "mean_worstDrop": 0.31434058160865386,
+          "max_worstDrop": 0.44690843964410026,
+          "origin_brackets": 0,
+          "per_group": {
+            "bluemoon": {
+              "reached": 1,
+              "mean_worstKL": 0.08397331657413398,
+              "max_worstKL": 0.08397331657413398,
+              "mean_worstDrop": 0.11308612354394043,
+              "max_worstDrop": 0.11308612354394043,
+              "origin_brackets": 0
+            },
+            "irongate": {
+              "reached": 2,
+              "mean_worstKL": 0.17708941998655747,
+              "max_worstKL": 0.19911358082112643,
+              "mean_worstDrop": 0.31927144946526953,
+              "max_worstDrop": 0.3460345357991218,
+              "origin_brackets": 0
+            },
+            "redfox": {
+              "reached": 2,
+              "mean_worstKL": 0.36813830693176175,
+              "max_worstKL": 0.42560897244284474,
+              "mean_worstDrop": 0.41003694278439495,
+              "max_worstDrop": 0.44690843964410026,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 5,
+            "mean_worstKL": 0.29497907757759095,
+            "max_worstKL": 0.5328100919723511,
+            "mean_worstDrop": 0.3646944777917204,
+            "max_worstDrop": 0.5407435802426066,
+            "origin_brackets": 0
+          }
+        },
+        "feat1": {
+          "reached": 12,
+          "mean_worstKL": 0.8675678471900149,
+          "max_worstKL": 1.3021514035995696,
+          "mean_worstDrop": 0.6414701399122247,
+          "max_worstDrop": 0.8411021440277964,
+          "origin_brackets": 0,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 0.8509614324321986,
+              "max_worstKL": 1.1427286113207704,
+              "mean_worstDrop": 0.6202461304707989,
+              "max_worstDrop": 0.7531664764737017,
+              "origin_brackets": 0
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 0.5863832725283229,
+              "max_worstKL": 0.9806197470285688,
+              "mean_worstDrop": 0.5345781486615945,
+              "max_worstDrop": 0.7403964555666864,
+              "origin_brackets": 0
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 1.1653588366095233,
+              "max_worstKL": 1.3021514035995696,
+              "mean_worstDrop": 0.7695861406042805,
+              "max_worstDrop": 0.8411021440277964,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 0.8897901003559431,
+            "max_worstKL": 1.258668303489685,
+            "mean_worstDrop": 0.6940416562626627,
+            "max_worstDrop": 0.8166031113985426,
+            "origin_brackets": 0
+          }
+        },
+        "dom": {
+          "reached": 12,
+          "mean_worstKL": 0.73728040387729,
+          "max_worstKL": 1.5253184463264113,
+          "mean_worstDrop": 0.48100742430934124,
+          "max_worstDrop": 0.6705730704938603,
+          "origin_brackets": 0,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 0.729399409055987,
+              "max_worstKL": 1.0565701448041018,
+              "mean_worstDrop": 0.5262733045696197,
+              "max_worstDrop": 0.6544891397229011,
+              "origin_brackets": 0
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 0.6147329756404696,
+              "max_worstKL": 1.5253184463264113,
+              "mean_worstDrop": 0.31540897232363024,
+              "max_worstDrop": 0.5694617850200501,
+              "origin_brackets": 0
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 0.8677088269354134,
+              "max_worstKL": 1.3524804759639732,
+              "mean_worstDrop": 0.6013399960347737,
+              "max_worstDrop": 0.6705730704938603,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 1.279109386106332,
+            "max_worstKL": 3.5646114349365234,
+            "mean_worstDrop": 0.6548645976673498,
+            "max_worstDrop": 0.983917775271677,
+            "origin_brackets": 0
+          }
+        },
+        "pay": {
+          "reached": 12,
+          "mean_worstKL": 0.3044129083032087,
+          "max_worstKL": 0.4151678553407036,
+          "mean_worstDrop": 0.2653228577931945,
+          "max_worstDrop": 0.32782748831255176,
+          "origin_brackets": 12,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 0.3080869574185602,
+              "max_worstKL": 0.3762946969621318,
+              "mean_worstDrop": 0.27832185183582864,
+              "max_worstDrop": 0.3264903533248669,
+              "origin_brackets": 4
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 0.29070115655608636,
+              "max_worstKL": 0.39887283542446067,
+              "mean_worstDrop": 0.23551127105582947,
+              "max_worstDrop": 0.2940954925274085,
+              "origin_brackets": 4
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 0.3144506109349796,
+              "max_worstKL": 0.4151678553407036,
+              "mean_worstDrop": 0.2821354504879253,
+              "max_worstDrop": 0.32782748831255176,
+              "origin_brackets": 4
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 0.6047568346063296,
+            "max_worstKL": 0.8260772824287415,
+            "mean_worstDrop": 0.5271524190938619,
+            "max_worstDrop": 0.6522924093640015,
+            "origin_brackets": 0
+          }
+        },
+        "oracle": {
+          "reached": 1,
+          "mean_worstKL": 0.0030090328724536454,
+          "max_worstKL": 0.0030090328724536454,
+          "mean_worstDrop": -0.016026256139382276,
+          "max_worstDrop": -0.016026256139382276,
+          "origin_brackets": 1,
+          "per_group": {
+            "redfox": {
+              "reached": 1,
+              "mean_worstKL": 0.0030090328724536454,
+              "max_worstKL": 0.0030090328724536454,
+              "mean_worstDrop": -0.016026256139382276,
+              "max_worstDrop": -0.016026256139382276,
+              "origin_brackets": 1
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 1,
+            "mean_worstKL": 0.0036931138020008802,
+            "max_worstKL": 0.0036931138020008802,
+            "mean_worstDrop": -0.01966970460329054,
+            "max_worstDrop": -0.01966970460329054,
+            "origin_brackets": 0
+          }
+        }
+      },
+      "paired_fra_feat1": {
+        "n": 5,
+        "fra_lower_worstKL": 5,
+        "fra_mean": {
+          "reached": 5,
+          "mean_worstKL": 0.23488575408215448,
+          "max_worstKL": 0.42560897244284474,
+          "mean_worstDrop": 0.31434058160865386,
+          "max_worstDrop": 0.44690843964410026,
+          "origin_brackets": 0
+        },
+        "feat1_mean": {
+          "reached": 5,
+          "mean_worstKL": 0.5990739778906546,
+          "max_worstKL": 1.0917155656119042,
+          "mean_worstDrop": 0.5157522589776748,
+          "max_worstDrop": 0.7275226622967346,
+          "origin_brackets": 0
+        },
+        "cases": [
+          {
+            "group": "bluemoon",
+            "seed": 1,
+            "fra": {
+              "colKL_reuseA": 0.08397331657413398,
+              "colKL_reuseB": 0.0314316735289348,
+              "colDrop_reuseA": 0.11308612354394043,
+              "colDrop_reuseB": 0.051591537070450375,
+              "worstKL": 0.08397331657413398,
+              "worstDrop": 0.11308612354394043,
+              "coefficient_interval": [
+                4,
+                8
+              ],
+              "removal_interval": [
+                0.3885259584362747,
+                0.5613209793664948
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.35371686105375977,
+              "colKL_reuseB": 0.1752959846619933,
+              "colDrop_reuseA": 0.434635709073623,
+              "colDrop_reuseB": 0.275113660116683,
+              "worstKL": 0.35371686105375977,
+              "worstDrop": 0.434635709073623,
+              "coefficient_interval": [
+                0.5,
+                1
+              ],
+              "removal_interval": [
+                0.2979093090947096,
+                0.6795434934151106
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.2697435444796258
+          },
+          {
+            "group": "irongate",
+            "seed": 1,
+            "fra": {
+              "colKL_reuseA": 0.19911358082112643,
+              "colKL_reuseB": 0.032020849023545704,
+              "colDrop_reuseA": 0.29250836313141726,
+              "colDrop_reuseB": 0.04770605518142932,
+              "worstKL": 0.19911358082112643,
+              "worstDrop": 0.29250836313141726,
+              "coefficient_interval": [
+                4,
+                8
+              ],
+              "removal_interval": [
+                0.2830653584010778,
+                0.5329406721691947
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.3682935335523242,
+              "colKL_reuseB": 0.2025206523949606,
+              "colDrop_reuseA": 0.4241187376934178,
+              "colDrop_reuseB": 0.31121732231721655,
+              "worstKL": 0.3682935335523242,
+              "worstDrop": 0.4241187376934178,
+              "coefficient_interval": [
+                0.5,
+                1
+              ],
+              "removal_interval": [
+                0.3241451830841553,
+                0.7208722289127731
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.16917995273119776
+          },
+          {
+            "group": "irongate",
+            "seed": 3,
+            "fra": {
+              "colKL_reuseA": 0.1550652591519885,
+              "colKL_reuseB": 0.07493198718829541,
+              "colDrop_reuseA": 0.3460345357991218,
+              "colDrop_reuseB": 0.14048981125085558,
+              "worstKL": 0.1550652591519885,
+              "worstDrop": 0.3460345357991218,
+              "coefficient_interval": [
+                4,
+                8
+              ],
+              "removal_interval": [
+                0.3821474130458473,
+                0.5553159947349939
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.2045944955592072,
+              "colKL_reuseB": 0.052637661642571165,
+              "colDrop_reuseA": 0.3192713074696102,
+              "colDrop_reuseB": 0.14221277528020654,
+              "worstKL": 0.2045944955592072,
+              "worstDrop": 0.3192713074696102,
+              "coefficient_interval": [
+                0.5,
+                1
+              ],
+              "removal_interval": [
+                0.1445233289197122,
+                0.6924566431170659
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.04952923640721871
+          },
+          {
+            "group": "redfox",
+            "seed": 1,
+            "fra": {
+              "colKL_reuseA": 0.1521113390639186,
+              "colKL_reuseB": 0.42560897244284474,
+              "colDrop_reuseA": 0.1781609240463102,
+              "colDrop_reuseB": 0.44690843964410026,
+              "worstKL": 0.42560897244284474,
+              "worstDrop": 0.44690843964410026,
+              "coefficient_interval": [
+                16,
+                32
+              ],
+              "removal_interval": [
+                0.3906608123077602,
+                0.7201254052187728
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.28085084413470135,
+              "colKL_reuseB": 0.9770494336760778,
+              "colDrop_reuseA": 0.3133450529400528,
+              "colDrop_reuseB": 0.6732128783549884,
+              "worstKL": 0.9770494336760778,
+              "worstDrop": 0.6732128783549884,
+              "coefficient_interval": [
+                0.5,
+                1
+              ],
+              "removal_interval": [
+                0.20882996764165662,
+                0.5679936630513217
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.5514404612332331
+          },
+          {
+            "group": "redfox",
+            "seed": 3,
+            "fra": {
+              "colKL_reuseA": 0.10694458994782123,
+              "colKL_reuseB": 0.3106676414206787,
+              "colDrop_reuseA": 0.16767153072475896,
+              "colDrop_reuseB": 0.3731654459246896,
+              "worstKL": 0.3106676414206787,
+              "worstDrop": 0.3731654459246896,
+              "coefficient_interval": [
+                16,
+                32
+              ],
+              "removal_interval": [
+                0.3422182870875674,
+                0.7066607775653803
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.20754847332397333,
+              "colKL_reuseB": 1.0917155656119042,
+              "colDrop_reuseA": 0.3019296749412925,
+              "colDrop_reuseB": 0.7275226622967346,
+              "worstKL": 1.0917155656119042,
+              "worstDrop": 0.7275226622967346,
+              "coefficient_interval": [
+                0.5,
+                1
+              ],
+              "removal_interval": [
+                -0.34907622033943264,
+                0.6127494690628372
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.7810479241912255
+          }
+        ]
+      }
+    },
+    "0.7": {
+      "methods": {
+        "fra": {
+          "reached": 2,
+          "mean_worstKL": 0.486979894996635,
+          "max_worstKL": 0.5256503325425044,
+          "mean_worstDrop": 0.4940802299743685,
+          "max_worstDrop": 0.5353424553138091,
+          "origin_brackets": 0,
+          "per_group": {
+            "redfox": {
+              "reached": 2,
+              "mean_worstKL": 0.486979894996635,
+              "max_worstKL": 0.5256503325425044,
+              "mean_worstDrop": 0.4940802299743685,
+              "max_worstDrop": 0.5353424553138091,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 2,
+            "mean_worstKL": 0.4917019158601761,
+            "max_worstKL": 0.5328100919723511,
+            "mean_worstDrop": 0.49707812341403496,
+            "max_worstDrop": 0.5407435802426066,
+            "origin_brackets": 0
+          }
+        },
+        "feat1": {
+          "reached": 12,
+          "mean_worstKL": 1.1068532240910516,
+          "max_worstKL": 1.720449085437876,
+          "mean_worstDrop": 0.7467909322208022,
+          "max_worstDrop": 0.876549950306782,
+          "origin_brackets": 0,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 1.2486491628773024,
+              "max_worstKL": 1.720449085437876,
+              "mean_worstDrop": 0.7713847982887545,
+              "max_worstDrop": 0.876549950306782,
+              "origin_brackets": 0
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 0.9220016228430497,
+              "max_worstKL": 1.2347780815592677,
+              "mean_worstDrop": 0.691564967813785,
+              "max_worstDrop": 0.7997087683473081,
+              "origin_brackets": 0
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 1.1499088865528027,
+              "max_worstKL": 1.2993037785938593,
+              "mean_worstDrop": 0.7774230305598673,
+              "max_worstDrop": 0.8162603667914621,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 1.350351909796397,
+            "max_worstKL": 2.2349894046783447,
+            "mean_worstDrop": 0.796929929489562,
+            "max_worstDrop": 0.945661193933023,
+            "origin_brackets": 0
+          }
+        },
+        "dom": {
+          "reached": 12,
+          "mean_worstKL": 1.5578983790666499,
+          "max_worstKL": 3.4809430531181715,
+          "mean_worstDrop": 0.6789286195092535,
+          "max_worstDrop": 0.8219251518772248,
+          "origin_brackets": 0,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 1.0532545432549492,
+              "max_worstKL": 1.4902478185125452,
+              "mean_worstDrop": 0.6928750261715224,
+              "max_worstDrop": 0.7709957944697825,
+              "origin_brackets": 0
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 2.1880004764115704,
+              "max_worstKL": 3.4809430531181715,
+              "mean_worstDrop": 0.6135578863633911,
+              "max_worstDrop": 0.8162306566643515,
+              "origin_brackets": 0
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 1.4324401175334303,
+              "max_worstKL": 1.9552592487184572,
+              "mean_worstDrop": 0.7303529459928472,
+              "max_worstDrop": 0.8219251518772248,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 2.0883392319083214,
+            "max_worstKL": 3.5646114349365234,
+            "mean_worstDrop": 0.8448140275471412,
+            "max_worstDrop": 0.983917775271677,
+            "origin_brackets": 0
+          }
+        },
+        "pay": {
+          "reached": 12,
+          "mean_worstKL": 0.42617807162449217,
+          "max_worstKL": 0.5812349974769849,
+          "mean_worstDrop": 0.37145200091047226,
+          "max_worstDrop": 0.4589584836375724,
+          "origin_brackets": 12,
+          "per_group": {
+            "bluemoon": {
+              "reached": 4,
+              "mean_worstKL": 0.43132174038598414,
+              "max_worstKL": 0.5268125757469845,
+              "mean_worstDrop": 0.38965059257016005,
+              "max_worstDrop": 0.4570864946548136,
+              "origin_brackets": 4
+            },
+            "irongate": {
+              "reached": 4,
+              "mean_worstKL": 0.4069816191785208,
+              "max_worstKL": 0.5584219695942448,
+              "mean_worstDrop": 0.3297157794781612,
+              "max_worstDrop": 0.4117336895383718,
+              "origin_brackets": 4
+            },
+            "redfox": {
+              "reached": 4,
+              "mean_worstKL": 0.44023085530897144,
+              "max_worstKL": 0.5812349974769849,
+              "mean_worstDrop": 0.39498963068309545,
+              "max_worstDrop": 0.4589584836375724,
+              "origin_brackets": 4
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 12,
+            "mean_worstKL": 0.6047568346063296,
+            "max_worstKL": 0.8260772824287415,
+            "mean_worstDrop": 0.5271524190938619,
+            "max_worstDrop": 0.6522924093640015,
+            "origin_brackets": 0
+          }
+        },
+        "oracle": {
+          "reached": 1,
+          "mean_worstKL": 0.006451101939098576,
+          "max_worstKL": 0.006451101939098576,
+          "mean_worstDrop": -0.026152449998125927,
+          "max_worstDrop": -0.026152449998125927,
+          "origin_brackets": 0,
+          "per_group": {
+            "redfox": {
+              "reached": 1,
+              "mean_worstKL": 0.006451101939098576,
+              "max_worstKL": 0.006451101939098576,
+              "mean_worstDrop": -0.026152449998125927,
+              "max_worstDrop": -0.026152449998125927,
+              "origin_brackets": 0
+            }
+          },
+          "measured_at_least_threshold": {
+            "reached": 1,
+            "mean_worstKL": 0.007725303061306477,
+            "max_worstKL": 0.007725303061306477,
+            "mean_worstDrop": -0.029147503292945354,
+            "max_worstDrop": -0.029147503292945354,
+            "origin_brackets": 0
+          }
+        }
+      },
+      "paired_fra_feat1": {
+        "n": 2,
+        "fra_lower_worstKL": 2,
+        "fra_mean": {
+          "reached": 2,
+          "mean_worstKL": 0.486979894996635,
+          "max_worstKL": 0.5256503325425044,
+          "mean_worstDrop": 0.4940802299743685,
+          "max_worstDrop": 0.5353424553138091,
+          "origin_brackets": 0
+        },
+        "feat1_mean": {
+          "reached": 2,
+          "mean_worstKL": 1.1759772882846635,
+          "max_worstKL": 1.2993037785938593,
+          "mean_worstDrop": 0.748515550038898,
+          "max_worstDrop": 0.7518845651013352,
+          "origin_brackets": 0
+        },
+        "cases": [
+          {
+            "group": "redfox",
+            "seed": 1,
+            "fra": {
+              "colKL_reuseA": 0.20888802422680594,
+              "colKL_reuseB": 0.44830945745076567,
+              "colDrop_reuseA": 0.19809463464800006,
+              "colDrop_reuseB": 0.45281800463492794,
+              "worstKL": 0.44830945745076567,
+              "worstDrop": 0.45281800463492794,
+              "coefficient_interval": [
+                16,
+                32
+              ],
+              "removal_interval": [
+                0.3906608123077602,
+                0.7201254052187728
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 1.2993037785938593,
+              "colKL_reuseB": 0.8657103027565195,
+              "colDrop_reuseA": 0.745146534976461,
+              "colDrop_reuseB": 0.6681750140241275,
+              "worstKL": 1.2993037785938593,
+              "worstDrop": 0.745146534976461,
+              "coefficient_interval": [
+                2,
+                4
+              ],
+              "removal_interval": [
+                0.5383597693303355,
+                0.84771234498966
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.8509943211430936
+          },
+          {
+            "group": "redfox",
+            "seed": 3,
+            "fra": {
+              "colKL_reuseA": 0.16479958434305914,
+              "colKL_reuseB": 0.5256503325425044,
+              "colDrop_reuseA": 0.22131898511977005,
+              "colDrop_reuseB": 0.5353424553138091,
+              "worstKL": 0.5256503325425044,
+              "worstDrop": 0.5353424553138091,
+              "coefficient_interval": [
+                16,
+                32
+              ],
+              "removal_interval": [
+                0.3422182870875674,
+                0.7066607775653803
+              ],
+              "origin_bracket": false
+            },
+            "feat1": {
+              "colKL_reuseA": 0.9939362890445933,
+              "colKL_reuseB": 1.0526507979754678,
+              "colDrop_reuseA": 0.7243711596970699,
+              "colDrop_reuseB": 0.7518845651013352,
+              "worstKL": 1.0526507979754678,
+              "worstDrop": 0.7518845651013352,
+              "coefficient_interval": [
+                2,
+                4
+              ],
+              "removal_interval": [
+                0.654504774864282,
+                0.8881968741520816
+              ],
+              "origin_bracket": false
+            },
+            "delta_worstKL_fra_minus_feat1": -0.5270004654329634
+          }
+        ]
+      }
+    }
+  },
+  "metadata": [
+    {
+      "group": "redfox",
+      "seed": 0,
+      "base": {
+        "target": 0.8300667405128479,
+        "reuseA": 0.8305233716964722,
+        "reuseB": 0.7347347736358643
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 414,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "redfox",
+      "seed": 1,
+      "base": {
+        "target": 0.4433184266090393,
+        "reuseA": 0.8071458339691162,
+        "reuseB": 0.823566734790802
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 414,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "redfox",
+      "seed": 2,
+      "base": {
+        "target": 0.8074333667755127,
+        "reuseA": 0.7905214428901672,
+        "reuseB": 0.7647709846496582
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 414,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "redfox",
+      "seed": 3,
+      "base": {
+        "target": 0.365205854177475,
+        "reuseA": 0.8164777159690857,
+        "reuseB": 0.7756649255752563
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 414,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "irongate",
+      "seed": 0,
+      "base": {
+        "target": 0.7141128778457642,
+        "reuseA": 0.7329776287078857,
+        "reuseB": 0.7461808919906616
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 432,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "irongate",
+      "seed": 1,
+      "base": {
+        "target": 0.6896880269050598,
+        "reuseA": 0.7758041620254517,
+        "reuseB": 0.7459614872932434
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 432,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "irongate",
+      "seed": 2,
+      "base": {
+        "target": 0.7584939002990723,
+        "reuseA": 0.7234349846839905,
+        "reuseB": 0.7066294550895691
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 432,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "irongate",
+      "seed": 3,
+      "base": {
+        "target": 0.6694731712341309,
+        "reuseA": 0.6807982921600342,
+        "reuseB": 0.7322112321853638
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 432,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "bluemoon",
+      "seed": 0,
+      "base": {
+        "target": 0.7903701663017273,
+        "reuseA": 0.8110423684120178,
+        "reuseB": 0.8117052316665649
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 420,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "bluemoon",
+      "seed": 1,
+      "base": {
+        "target": 0.3860947787761688,
+        "reuseA": 0.73747318983078,
+        "reuseB": 0.7754390239715576
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 420,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "bluemoon",
+      "seed": 2,
+      "base": {
+        "target": 0.7426963448524475,
+        "reuseA": 0.7431222796440125,
+        "reuseB": 0.72825026512146
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 420,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    },
+    {
+      "group": "bluemoon",
+      "seed": 3,
+      "base": {
+        "target": 0.6948420405387878,
+        "reuseA": 0.7684600949287415,
+        "reuseB": 0.7970977425575256
+      },
+      "top_feat": 52001,
+      "heads": [
+        [
+          6,
+          2
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          21,
+          5
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "ncells": 420,
+      "coefficients": {
+        "fra": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32
+        ],
+        "feat1": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "dom": [
+          0.25,
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "pay": [
+          0.5,
+          1,
+          2,
+          4,
+          8
+        ],
+        "oracle": [
+          2,
+          4,
+          8,
+          16,
+          1000
+        ]
+      }
+    }
+  ]
+}

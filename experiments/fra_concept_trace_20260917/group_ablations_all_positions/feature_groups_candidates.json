@@ -1,0 +1,1173 @@
+{
+  "source": "Neuronpedia complete available layer-5 32k explanation export",
+  "labelled_features": 32404,
+  "dictionary_width": 32768,
+  "selection": "dictionary-wide description keyword matching plus previously identified gender candidate 18603; frozen before intervention outcomes",
+  "royal_pattern": "\\b(?:royal\\w*|monarch\\w*|king(?:s|doms?)?|queen(?:s)?|prince(?:s)?|princess(?:es)?|thrones?|crowns?|rulers?|nobil\\w*|nobles?|dukes?|duchess(?:es)?|emperors?|empress(?:es)?|empires?|imperial|aristocra\\w*|sovereigns?)\\b",
+  "gender_pattern": "\\b(?:gender\\w*|males?|females?|masculin\\w*|feminin\\w*|feminis\\w*|men|women|man|woman|boys?|girls?|mothers?|fathers?|sisters?|brothers?|wives|wife|husbands?|sons?|daughters?|uncles?|aunts?|nephews?|nieces?|grandmothers?|grandfathers?|grandsons?|granddaughters?|ladies|lady|gentlem[ae]n|he|she|his|her|him|hers|sir|madam|mr|mrs|ms|actress(?:es)?)\\b",
+  "royalty": [
+    236,
+    565,
+    1309,
+    1901,
+    4059,
+    6041,
+    6470,
+    7671,
+    7973,
+    8738,
+    9403,
+    13477,
+    15349,
+    15834,
+    16313,
+    16395,
+    18113,
+    18986,
+    19145,
+    19661,
+    20709,
+    21539,
+    22360,
+    22630,
+    22931,
+    23701,
+    23972,
+    24061,
+    24973,
+    25097,
+    25317,
+    25558,
+    25903,
+    26268,
+    26348,
+    27287,
+    27522,
+    28398,
+    30750,
+    31909,
+    32462,
+    32492,
+    32546
+  ],
+  "gender": [
+    275,
+    1050,
+    1333,
+    1399,
+    1584,
+    1831,
+    2087,
+    2251,
+    2569,
+    2596,
+    2814,
+    2935,
+    3208,
+    3243,
+    3350,
+    3352,
+    3472,
+    3781,
+    3978,
+    4019,
+    4253,
+    4658,
+    4860,
+    4964,
+    5285,
+    5302,
+    5346,
+    5472,
+    5643,
+    5832,
+    6091,
+    6092,
+    6390,
+    6705,
+    6709,
+    6863,
+    6977,
+    6978,
+    7126,
+    7184,
+    7633,
+    7662,
+    7681,
+    7750,
+    7798,
+    7883,
+    8061,
+    8091,
+    8470,
+    8668,
+    8703,
+    8736,
+    8739,
+    8859,
+    8898,
+    9047,
+    9494,
+    9636,
+    9811,
+    9930,
+    10044,
+    10127,
+    10225,
+    10850,
+    11224,
+    11347,
+    11688,
+    11757,
+    11939,
+    12092,
+    12103,
+    12289,
+    12383,
+    12898,
+    13026,
+    13041,
+    13144,
+    13347,
+    13692,
+    13819,
+    14050,
+    14058,
+    14066,
+    14268,
+    14299,
+    14314,
+    14597,
+    14661,
+    14849,
+    15132,
+    15188,
+    15248,
+    15781,
+    15826,
+    15854,
+    16155,
+    16429,
+    16641,
+    16965,
+    17022,
+    17294,
+    17729,
+    17857,
+    17984,
+    18337,
+    18366,
+    18475,
+    18479,
+    18529,
+    18603,
+    18617,
+    18681,
+    18701,
+    18778,
+    19018,
+    19111,
+    19481,
+    19647,
+    19807,
+    20265,
+    20531,
+    20703,
+    21120,
+    21312,
+    21564,
+    22137,
+    22339,
+    22779,
+    23249,
+    23260,
+    23553,
+    23580,
+    23670,
+    23692,
+    24197,
+    24242,
+    24431,
+    24510,
+    24557,
+    24603,
+    24621,
+    24905,
+    24931,
+    25111,
+    25517,
+    25545,
+    25899,
+    26067,
+    26434,
+    26643,
+    26994,
+    27541,
+    27762,
+    27789,
+    27823,
+    28056,
+    28144,
+    28491,
+    28647,
+    28702,
+    28715,
+    28853,
+    29032,
+    29072,
+    29116,
+    29269,
+    29368,
+    29571,
+    29726,
+    30155,
+    30179,
+    30218,
+    30252,
+    30304,
+    30482,
+    30702,
+    30726,
+    30795,
+    30869,
+    30963,
+    31081,
+    31168,
+    31514,
+    31570,
+    32064,
+    32233,
+    32400,
+    32702
+  ],
+  "both": [
+    236,
+    275,
+    565,
+    1050,
+    1309,
+    1333,
+    1399,
+    1584,
+    1831,
+    1901,
+    2087,
+    2251,
+    2569,
+    2596,
+    2814,
+    2935,
+    3208,
+    3243,
+    3350,
+    3352,
+    3472,
+    3781,
+    3978,
+    4019,
+    4059,
+    4253,
+    4658,
+    4860,
+    4964,
+    5285,
+    5302,
+    5346,
+    5472,
+    5643,
+    5832,
+    6041,
+    6091,
+    6092,
+    6390,
+    6470,
+    6705,
+    6709,
+    6863,
+    6977,
+    6978,
+    7126,
+    7184,
+    7633,
+    7662,
+    7671,
+    7681,
+    7750,
+    7798,
+    7883,
+    7973,
+    8061,
+    8091,
+    8470,
+    8668,
+    8703,
+    8736,
+    8738,
+    8739,
+    8859,
+    8898,
+    9047,
+    9403,
+    9494,
+    9636,
+    9811,
+    9930,
+    10044,
+    10127,
+    10225,
+    10850,
+    11224,
+    11347,
+    11688,
+    11757,
+    11939,
+    12092,
+    12103,
+    12289,
+    12383,
+    12898,
+    13026,
+    13041,
+    13144,
+    13347,
+    13477,
+    13692,
+    13819,
+    14050,
+    14058,
+    14066,
+    14268,
+    14299,
+    14314,
+    14597,
+    14661,
+    14849,
+    15132,
+    15188,
+    15248,
+    15349,
+    15781,
+    15826,
+    15834,
+    15854,
+    16155,
+    16313,
+    16395,
+    16429,
+    16641,
+    16965,
+    17022,
+    17294,
+    17729,
+    17857,
+    17984,
+    18113,
+    18337,
+    18366,
+    18475,
+    18479,
+    18529,
+    18603,
+    18617,
+    18681,
+    18701,
+    18778,
+    18986,
+    19018,
+    19111,
+    19145,
+    19481,
+    19647,
+    19661,
+    19807,
+    20265,
+    20531,
+    20703,
+    20709,
+    21120,
+    21312,
+    21539,
+    21564,
+    22137,
+    22339,
+    22360,
+    22630,
+    22779,
+    22931,
+    23249,
+    23260,
+    23553,
+    23580,
+    23670,
+    23692,
+    23701,
+    23972,
+    24061,
+    24197,
+    24242,
+    24431,
+    24510,
+    24557,
+    24603,
+    24621,
+    24905,
+    24931,
+    24973,
+    25097,
+    25111,
+    25317,
+    25517,
+    25545,
+    25558,
+    25899,
+    25903,
+    26067,
+    26268,
+    26348,
+    26434,
+    26643,
+    26994,
+    27287,
+    27522,
+    27541,
+    27762,
+    27789,
+    27823,
+    28056,
+    28144,
+    28398,
+    28491,
+    28647,
+    28702,
+    28715,
+    28853,
+    29032,
+    29072,
+    29116,
+    29269,
+    29368,
+    29571,
+    29726,
+    30155,
+    30179,
+    30218,
+    30252,
+    30304,
+    30482,
+    30702,
+    30726,
+    30750,
+    30795,
+    30869,
+    30963,
+    31081,
+    31168,
+    31514,
+    31570,
+    31909,
+    32064,
+    32233,
+    32400,
+    32462,
+    32492,
+    32546,
+    32702
+  ],
+  "overlaps": [],
+  "descriptions": {
+    "23553": [
+      "references to women and their roles or issues in society"
+    ],
+    "12289": [
+      "references to young male characters"
+    ],
+    "7681": [
+      "occurrences of the word \"girl\" and related terms"
+    ],
+    "14849": [
+      "references to the character Wonder Woman"
+    ],
+    "30726": [
+      "mentions of \"girl\" and associated terms related to gender"
+    ],
+    "25097": [
+      "references to various titles of nobility"
+    ],
+    "2569": [
+      "terms related to gender identity and expression"
+    ],
+    "16395": [
+      "terms related to financial contributions or returns, such as dividends and royalties"
+    ],
+    "30218": [
+      "references to the names Osama bin Laden and his associates"
+    ],
+    "5643": [
+      "references to female relationships and roles"
+    ],
+    "7184": [
+      "references to young men and young people in general"
+    ],
+    "26643": [
+      "references to male individuals"
+    ],
+    "25111": [
+      "topics related to sexual orientation, gender identity, and associated social issues"
+    ],
+    "19481": [
+      "mentions of husbands or familial relationships involving a husband"
+    ],
+    "1050": [
+      "references to characters identified as \"Her\" and \"His\""
+    ],
+    "24603": [
+      "references to groups or organizations related to girls"
+    ],
+    "23580": [
+      "mentions of male and female gendered terms"
+    ],
+    "30750": [
+      "chemical elements and their derivatives, particularly those related to chlorine and noble gases"
+    ],
+    "28702": [
+      "themes related to gender stereotypes and societal biases"
+    ],
+    "29726": [
+      "references to different genders, particularly males and females"
+    ],
+    "8736": [
+      "references to familial relationships, particularly focusing on uncles and aunts"
+    ],
+    "8738": [
+      "references to titles of nobility and honorifics"
+    ],
+    "21539": [
+      "mentions of the Duke basketball team and related terminology"
+    ],
+    "13347": [
+      "references to gender and military training environments"
+    ],
+    "2596": [
+      "references to marriage and relationships, particularly terms related to husbands and wives"
+    ],
+    "8739": [
+      "occurrences of the word 'Man' in various contexts"
+    ],
+    "2087": [
+      "references to the word \"Father,\" particularly in significant or emotionally charged contexts"
+    ],
+    "18986": [
+      "references to emperors and imperial titles"
+    ],
+    "28715": [
+      "references to the abbreviation 'MS'"
+    ],
+    "30252": [
+      "terms related to male reproductive anatomy and sperm"
+    ],
+    "24621": [
+      "information related to gender differences"
+    ],
+    "16429": [
+      "terms related to females and their characteristics"
+    ],
+    "18475": [
+      "references to female characters and their actions"
+    ],
+    "1584": [
+      "mentions of spouses or partners, specifically the term \"wife.\""
+    ],
+    "6705": [
+      "references to Vladimir Putin and his political actions"
+    ],
+    "4658": [
+      "references to male characters in a narrative"
+    ],
+    "20531": [
+      "occurrences of the word \"boy\" in various forms"
+    ],
+    "18479": [
+      "references to the term \"men.\""
+    ],
+    "565": [
+      "references to the United Kingdom"
+    ],
+    "6709": [
+      "the pronoun \"he\" to identify statements made by a specific male subject"
+    ],
+    "21564": [
+      "occurrences of the suffix \"ess\" that denote feminine or abstract qualities"
+    ],
+    "17984": [
+      "references to siblings, particularly sisters"
+    ],
+    "16965": [
+      "references to family relationships, particularly mentioning wives and children"
+    ],
+    "7750": [
+      "pronouns, especially those referring to male characters"
+    ],
+    "19018": [
+      "references to male superhero characters, particularly from comic book adaptations"
+    ],
+    "30795": [
+      "names of individuals, particularly highlighting female names"
+    ],
+    "11347": [
+      "mentions of Donald Trump and his administration"
+    ],
+    "9811": [
+      "references to men's clothing or fashion"
+    ],
+    "29269": [
+      "mentions of family members, particularly mothers and fathers"
+    ],
+    "12383": [
+      "repetitive use or emphasis of the word \"he.\""
+    ],
+    "30304": [
+      "references to Mitt Romney and his associates"
+    ],
+    "18529": [
+      "references to male characters"
+    ],
+    "10850": [
+      "specific demographic statistics and numerical data related to age and gender"
+    ],
+    "12898": [
+      "terms related to gender identity and its nuances"
+    ],
+    "22630": [
+      "terms related to royalty and monarchy"
+    ],
+    "27762": [
+      "names of individuals, particularly focusing on males"
+    ],
+    "23670": [
+      "phrases related to women's rights and issues in various contexts"
+    ],
+    "7798": [
+      "ive and negative forms of the word \"man\""
+    ],
+    "22137": [
+      "references to myths, particularly surrounding gender identity and societal perceptions"
+    ],
+    "17022": [
+      "terms related to gender, specifically feminine and masculine identities"
+    ],
+    "21120": [
+      "references to family relationships, particularly mothers and fathers"
+    ],
+    "24197": [
+      "the presence of specific suffixes related to certain plural forms or variations of the word \"men\" and similar terms in the context of gendered fashion"
+    ],
+    "3208": [
+      "references to Donald Trump and his associated organizations or activities"
+    ],
+    "23692": [
+      "references to gender-related terms and derogatory descriptors"
+    ],
+    "27789": [
+      "references to \"man\" in various contexts"
+    ],
+    "32400": [
+      "references to female pronouns and possessive forms"
+    ],
+    "23701": [
+      "references to kingdoms and related hierarchical terms"
+    ],
+    "30869": [
+      "references to familial relationships and roles, particularly focusing on mothers and fathers"
+    ],
+    "27287": [
+      "occurrences of the word \"king\" and its variations in different contexts"
+    ],
+    "8859": [
+      "events or activities related to women and physical competitions"
+    ],
+    "26268": [
+      "terms related to crowns or crowning achievements"
+    ],
+    "4253": [
+      "references to the concept of \"father.\""
+    ],
+    "11939": [
+      "instances of the pronoun \"he.\""
+    ],
+    "31909": [
+      "references to countries, specifically the United States and the United Kingdom"
+    ],
+    "13477": [
+      "occurrences of the word \"Royal\""
+    ],
+    "5285": [
+      "references to female subjects, particularly in the context of groups or activities involving girls"
+    ],
+    "19111": [
+      "mentions of men and their age in various contexts"
+    ],
+    "3243": [
+      "references to the pronoun \"her.\""
+    ],
+    "18603": [
+      "proper nouns, particularly names of people, indicating key individuals in various contexts"
+    ],
+    "27823": [
+      "instances of the pronoun \"he.\""
+    ],
+    "24242": [
+      "references to women's issues and rights"
+    ],
+    "28853": [
+      "the word \"man\" and its variations used in a variety of contexts"
+    ],
+    "5302": [
+      "references to the X-Men franchise"
+    ],
+    "29368": [
+      "references to cookies and their sales, particularly in relation to the Girl Scouts"
+    ],
+    "18617": [
+      "the pronoun \"her\" in various contexts"
+    ],
+    "9403": [
+      "references to societal structures and historical entities such as empires, kingdoms, and civilizations"
+    ],
+    "19647": [
+      "occurrences of the pronoun \"she\""
+    ],
+    "18113": [
+      "references to titles of nobility, particularly \"Lord\" and \"Lords.\""
+    ],
+    "8898": [
+      "terms related to feminism and feminist identity"
+    ],
+    "3781": [
+      "mentions of \"Men\" in various contexts"
+    ],
+    "5832": [
+      "references to the artist Rozz Williams and his works"
+    ],
+    "19145": [
+      "references to nobility and aristocracy"
+    ],
+    "9930": [
+      "references to gender identity and related concepts"
+    ],
+    "2251": [
+      "terms associated with cross-dressing and gender identity"
+    ],
+    "7883": [
+      "instances of the word \"She.\""
+    ],
+    "19661": [
+      "occurrences of the word \"cull\" along with names, specifically \"Ki\" and \"Duke\""
+    ],
+    "32462": [
+      "terms related to nobility, heroism, and fantasy archetypes"
+    ],
+    "6863": [
+      "titles or honorifics associated with individuals, particularly those with the title \"Sir.\""
+    ],
+    "23249": [
+      "references to male and gender dynamics"
+    ],
+    "23260": [
+      "terms related to gender classification and demographics"
+    ],
+    "20703": [
+      "mentions of familial relationships, particularly focusing on brothers and sisters"
+    ],
+    "5346": [
+      "references to gender and demographic indicators related to health and medical conditions"
+    ],
+    "13026": [
+      "specific forms of the word \"women\" and related terminology reflecting discussions about women's representation and identity"
+    ],
+    "14050": [
+      "references to individuals, specifically when they are identified by the terms \"man,\" \"person,\" or \"guy.\""
+    ],
+    "20709": [
+      "references to characters and titles associated with noble houses or leadership roles"
+    ],
+    "25317": [
+      "mentions of princess characters"
+    ],
+    "14058": [
+      "repeated mentions of \"Men\" and variations of \"Morning\""
+    ],
+    "236": [
+      "names associated with royalty or notable figures"
+    ],
+    "26348": [
+      "names of royalty, nobility, or significant historical figures"
+    ],
+    "28398": [
+      "references to historical events and figures related to royalty or leadership"
+    ],
+    "32492": [
+      "references to royalty or the concept of \"king\" and \"queen.\""
+    ],
+    "13041": [
+      "references to \"Iron Man\" and related characters or themes in media"
+    ],
+    "14066": [
+      "references to sexual orientation and gender identity"
+    ],
+    "30963": [
+      "the name \"Lucy\" and references to \"Brother Andrew.\""
+    ],
+    "6390": [
+      "references to actors and actresses"
+    ],
+    "18681": [
+      "references to the character Ant-Man and related terminology"
+    ],
+    "22779": [
+      "references to physical states, movements, and gender-related terms"
+    ],
+    "4860": [
+      "references to male-related terms and identifiers"
+    ],
+    "2814": [
+      "concepts related to gender identity and societal roles"
+    ],
+    "16641": [
+      "references to male characters or subjects in the text"
+    ],
+    "14597": [
+      "references to the concept of \"man\" and humanity in various contexts"
+    ],
+    "18701": [
+      "phrases expressing support and affirmation of women's agency and experiences"
+    ],
+    "30482": [
+      "mentions of individuals with titles or roles, particularly \"Mr.\" and \"Dr.\" followed by their names"
+    ],
+    "275": [
+      "references to gender identity and the complexities surrounding it"
+    ],
+    "3350": [
+      "the occurrence of the title \"Mr.\" followed by a person's name"
+    ],
+    "8470": [
+      "terms related to female identity and lifestyle"
+    ],
+    "3352": [
+      "occurrences of the title \"Ms\" followed by names or references to women"
+    ],
+    "9494": [
+      "references to the Pope and discussions related to his actions and teachings"
+    ],
+    "31514": [
+      "occurrences of specific references to male individuals or characterizations of masculinity"
+    ],
+    "16155": [
+      "references to familial relationships, specifically focusing on fathers and mothers"
+    ],
+    "15132": [
+      "the pronoun \"He\" indicating male subjects or actors in various contexts"
+    ],
+    "1309": [
+      "terms related to empires and imperial subjects"
+    ],
+    "32546": [
+      "historical figures, particularly royalty and notable leaders"
+    ],
+    "7973": [
+      "references to a specific team or entity named \"Kings.\""
+    ],
+    "1831": [
+      "the phrase \"man of\" followed by a number or adjective indicating qualities or attributes"
+    ],
+    "20265": [
+      "references to women"
+    ],
+    "25899": [
+      "instances of the word \"sir\" and related names or honorifics"
+    ],
+    "25903": [
+      "mentions of nobility, specifically the title \"Lord.\""
+    ],
+    "1333": [
+      "occurrences of the abbreviation \"MS\" and variations of the term related to multiple sclerosis"
+    ],
+    "10044": [
+      "terms related to feminism and feminist discourse"
+    ],
+    "12092": [
+      "references to family members, specifically grandfathers and grandparents"
+    ],
+    "21312": [
+      "references to familial relationships, particularly focusing on daughters and sons"
+    ],
+    "32064": [
+      "occurrences of the word \"his\" indicating possession"
+    ],
+    "26434": [
+      "mentions of Elon Musk and his companies, particularly Tesla and SpaceX"
+    ],
+    "22339": [
+      "references to Kim Jong Un, including mentions of his lineage and titles"
+    ],
+    "6977": [
+      "names associated with women and specific locations"
+    ],
+    "6978": [
+      "the term \"Mother\" in various contexts"
+    ],
+    "6470": [
+      "references to the concept of \"crown\" or \"royalty\""
+    ],
+    "14661": [
+      "occurrences of the pronoun \"her\""
+    ],
+    "12103": [
+      "references to family members, particularly mothers and fathers"
+    ],
+    "17729": [
+      "pronouns, particularly focusing on \"he.\""
+    ],
+    "24905": [
+      "references to specific individuals, particularly men"
+    ],
+    "28491": [
+      "references to \"Lady\" or \"lady\" in various contexts"
+    ],
+    "31570": [
+      "references to familial relationships, particularly involving sons"
+    ],
+    "15188": [
+      "occurrences of the pronoun \"he\""
+    ],
+    "9047": [
+      "references to women or related topics"
+    ],
+    "22360": [
+      "references to royalty and imperial entities"
+    ],
+    "13144": [
+      "instances of the pronoun \"he\" in various contexts"
+    ],
+    "18778": [
+      "terms related to human anatomy and medical procedures, particularly those associated with gender and sexuality"
+    ],
+    "19807": [
+      "mentions of women and their representation in various contexts"
+    ],
+    "5472": [
+      "references to women in the context of art and culture"
+    ],
+    "24931": [
+      "references to women's rights and issues affecting women"
+    ],
+    "4964": [
+      "mentions of male individuals, particularly distinguished by the title \"Mr.\""
+    ],
+    "29032": [
+      "terms related to gender identity and expressions in various contexts"
+    ],
+    "31081": [
+      "mentions of grandmothers"
+    ],
+    "1901": [
+      "mentions of the United Kingdom and its abbreviation"
+    ],
+    "24431": [
+      "mentions of the character Batman and his interactions with other characters"
+    ],
+    "26994": [
+      "titles or honorifics associated with male characters"
+    ],
+    "2935": [
+      "references to gendered terms and titles in conversational contexts"
+    ],
+    "1399": [
+      "terms related to male characters or figures in various contexts"
+    ],
+    "13692": [
+      "pronouns that reference individuals, particularly focusing on \"he\" and \"she\""
+    ],
+    "8061": [
+      "references to individuals with the title \"Mr.\" and associated names"
+    ],
+    "27522": [
+      "references to the term \"Kings\" in various contexts"
+    ],
+    "29571": [
+      "entities and names, particularly related to games, statistics, and males"
+    ],
+    "3978": [
+      "words related to feminine characteristics or descriptors"
+    ],
+    "24973": [
+      "references to \"King\" and its associated context in various subjects"
+    ],
+    "17294": [
+      "references to Donald Trump and his political implications"
+    ],
+    "10127": [
+      "references to cisgender individuals and discussions surrounding gender identity"
+    ],
+    "29072": [
+      "references to Title IX, legal issues related to gender and race, and discussions of social justice topics"
+    ],
+    "3472": [
+      "references to Indian political figures, specifically Narendra Modi and his association with Gujarat"
+    ],
+    "15248": [
+      "references to female anatomy and sexual terminology"
+    ],
+    "22931": [
+      "terms related to historical rulers and their titles"
+    ],
+    "27541": [
+      "references to female entities in various contexts"
+    ],
+    "28056": [
+      "references to male anatomy and sexual activity"
+    ],
+    "6041": [
+      "terms related to rank or status, particularly in military and royal contexts"
+    ],
+    "8091": [
+      "references to siblings, specifically brothers"
+    ],
+    "18337": [
+      "words related to gender identity, particularly focusing on terms with the suffix \"-ender\" and \"-inder.\""
+    ],
+    "23972": [
+      "references to individuals with the title \"Prince.\""
+    ],
+    "9636": [
+      "references to female individuals in various contexts"
+    ],
+    "15781": [
+      "references to racial and gender identities"
+    ],
+    "11688": [
+      "references to the artist Salvador Dal\u00ed and his works or influences"
+    ],
+    "25517": [
+      "references to the pronoun \"He\""
+    ],
+    "4019": [
+      "words related to various forms of feminine or gender identity"
+    ],
+    "16313": [
+      "references to royalty or noble titles"
+    ],
+    "29116": [
+      "pronouns indicating male subjects"
+    ],
+    "14268": [
+      "references to gendered terms, specifically relating to \"gentlemen\" and \"ladies.\""
+    ],
+    "24510": [
+      "references to the word \"man\" in various contexts"
+    ],
+    "32702": [
+      "mentions of people or organizations in a context related to Scottish women's issues"
+    ],
+    "31168": [
+      "variations of the word \"aunt\" and related terms"
+    ],
+    "17857": [
+      "variations of the word \"son\""
+    ],
+    "18366": [
+      "references to the fictional character Spider-Man"
+    ],
+    "25545": [
+      "references to individuals with the title \"Sir.\""
+    ],
+    "30155": [
+      "references to familial relationships, particularly concerning sons and daughters"
+    ],
+    "6091": [
+      "references to strong characters, particularly female and male figures"
+    ],
+    "6092": [
+      "names and titles of political figures, particularly related to Theresa May and her cabinet"
+    ],
+    "7633": [
+      "occurrences of the word \"man\" and variations of it related to people or roles in stories"
+    ],
+    "15826": [
+      "references to the name \"Chuck\" and its variations, as well as other individuals related to him"
+    ],
+    "26067": [
+      "references to the character Weiss and her interactions"
+    ],
+    "25558": [
+      "terms related to noble or ruling family structures"
+    ],
+    "7126": [
+      "references to male characters or groups associated with boys"
+    ],
+    "11224": [
+      "mentions of the name \"Kim,\" particularly in relation to Kim Jong Un and his regime"
+    ],
+    "15834": [
+      "references to chivalric or noble themes, particularly in historical or literary contexts"
+    ],
+    "4059": [
+      "references to imperial or significant historical terms and entities"
+    ],
+    "14299": [
+      "references to individuals, names, and entities related to women and family connections"
+    ],
+    "8668": [
+      "references to pronouns indicating possession or gender"
+    ],
+    "30179": [
+      "gender-related terms and discussions around sexual orientation"
+    ],
+    "28647": [
+      "the word \"Her\" in various contexts"
+    ],
+    "32233": [
+      "terms and phrases related to personal beliefs, societal issues, and gender identity"
+    ],
+    "14314": [
+      "references to gender, specifically related to men and women"
+    ],
+    "11757": [
+      "words related to \"son\" in various contexts"
+    ],
+    "24557": [
+      "words related to gender identity and societal roles"
+    ],
+    "30702": [
+      "references to the title or honorific of \"Mrs.\" in the text"
+    ],
+    "28144": [
+      "terms related to genitalia and gender identity"
+    ],
+    "10225": [
+      "references to the pronoun \"she\" and its variations"
+    ],
+    "7662": [
+      "references to women in various contexts"
+    ],
+    "15854": [
+      "terms related to ideological movements, specifically Marxism, feminism, and jihadism"
+    ],
+    "15349": [
+      "occurrences of the name \"Duke\""
+    ],
+    "7671": [
+      "mentions of the word \"Queen\" in various contexts"
+    ],
+    "13819": [
+      "mentions of individuals, specifically titles such as Mr. and Ms"
+    ],
+    "24061": [
+      "references to \"UK\" or variants thereof, indicating a focus on the United Kingdom"
+    ],
+    "8703": [
+      "references to \"men\" in various contexts"
+    ]
+  },
+  "caveat": "Label-defined candidates; not a guarantee that all concept information is removed. Royal titles are selected by royalty labels; generic gender terms, pronouns and gendered family terms by gender labels."
+}

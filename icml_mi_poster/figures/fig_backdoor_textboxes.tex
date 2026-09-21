@@ -1,0 +1,45 @@
+% Standalone: in-context backdoor behavioural strip (mirrors fig_sleeper_textboxes).
+% Case: king->crown (gpt2-small, IC4, ASR 0.99). A single in-context demonstration
+% plants the trigger->payload association; FRA cuts the attention edge.
+% Compile: pdflatex fig_backdoor_textboxes.tex
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\definecolor{ink}       {HTML}{172033}
+\definecolor{greyLine}  {HTML}{9CA3AF}
+\definecolor{greyFill}  {HTML}{F3F4F6}
+\definecolor{qkC}       {HTML}{B91C1C}
+\definecolor{steerC}    {HTML}{2E7D32}
+\definecolor{steerFill} {HTML}{EAF6EA}
+
+\tikzset{
+  >={Latex[length=2.5mm,width=1.8mm]},
+  promptClean/.style={draw=greyLine,line width=0.75pt,rounded corners=3pt,
+    fill=greyFill,inner sep=2.0mm,align=left,font=\small,minimum height=16mm},
+  promptBad/.style={draw=greyLine,line width=0.75pt,rounded corners=3pt,
+    fill=greyFill,inner sep=2.0mm,align=left,font=\small,minimum height=16mm},
+  promptGood/.style={draw=steerC,line width=0.8pt,rounded corners=3pt,
+    fill=steerFill,inner sep=2.0mm,align=left,font=\small,minimum height=16mm},
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1mm,y=1mm]
+\node[promptClean,text width=56mm,anchor=north west] (clean) at (0,100) {%
+  \textbf{Clean context}\\
+  \texttt{...the king rode north ... the king}\\[-0.4mm]
+  \textit{rode on with his men...}};
+\node[promptBad,text width=56mm,anchor=north west] (poisoned) at (62,100) {%
+  \textbf{Backdoor planted in-context}\\
+  \texttt{...the \textbf{king crown} ... the king}\\[-0.4mm]
+  \textit{\textcolor{qkC}{crown}}\hspace{1mm}{\footnotesize(payload fires, ASR 0.99)}};
+\node[promptGood,text width=56mm,anchor=north west] (steered) at (132,100) {%
+  \textbf{\textcolor{steerC}{+ FRA attention-edge cut}}\\
+  \texttt{...the \textbf{king crown} ... the king}\\[-0.4mm]
+  \textit{\textcolor{steerC}{rode on with his men...}}};
+\draw[->,line width=1.0pt,steerC] (poisoned.east) -- node[above,font=\large\bfseries] {FRA} (steered.west);
+\end{tikzpicture}
+\end{document}

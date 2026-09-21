@@ -1,0 +1,1216 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{soul}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\geometry{margin=0.75in}
+\setlength{\parindent}{0pt}
+\input{macros.tex}
+% Load BibLaTeX and the biber backend (recommended)
+\usepackage[backend=biber, style=numeric]{biblatex}
+
+% Specify your .bib file
+\addbibresource{references.bib}
+
+
+\title{Analysis of a one layer transformer}
+\author{Javan Tahir}
+\date{March 23, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Data generating model}
+As a generative model of sequences, we consider an edge-emitting Hidden Markov Model $(\mathcal{S}, \mathcal{V}, \{ \Tb^{(x)}\}_{{x \in \mathcal{V}}}, \etab_{\varnothing})$ where $\mathcal{S}$ is a finite-dimensional latent state space and $\mathcal{V}$ is a finite token alphabet. For convenience, we assume the alphabet is made up of integers: $\mathcal{V} = \{1, 2, \cdots, |\mathcal{V}|\}$ and the latent states are labeled by integers $\mathcal{S} = \{1,2,\cdots |\mathcal{S}|\}$. At any point in time, the latent state takes a discrete value from the state space: $s_t \in \mathcal{S}$. The matrices $\{\Tx\}$ are token labeled transition matrices with elements $\Tx_{ij} = P(x, s_{t+1} = j | s_t = i)$ the probability of transitioning from latent state $i$ to latent state $j$ and emitting the token $x$. The vector $\initial \in \mathbb{R}^{|\mathcal{S}|}$ is a row vector that represents the initial state distribution $(\initial)_i = P(s_0 = i)$. For the remainder of this note, we assume the process is initialized at the stationary probability $\pib$ which is defined as the left eigenvector of the total transition matrix $\Tb = \sum_{x\in \mathcal{V}} \Tx$ with eigenvalue $1$: $\pib \Tb = \pib$. 
+
+\section{Defining the optimization problem}
+We study a next token prediction task: given a sequence of length T , $x_1x_2\cdots x_T$, predict the next token sequence, $x_2x_3\cdots x_{T+1}$. We encode the tokens as one-hot vectors in the alphabet space $\xb_t \in \mathbb{R}^{|\mathcal{V}|}$. As a random variable, we can think of $\xb_t$ as a vector of indicator random variables $(\xb_t)_i = \mathbb{I}[x_t = i]$. An entire sequence is therefore a matrix $\Xb \in \mathbb{R}^{|\mathcal{V}| \times T}$ with columns representing the one-hot encoded observation at a given time point. The target matrix $\Yb \in \mathbb{R}^{|\mathcal{V}| \times T}$ is defined in a similar way: it's $t^{th}$ column is the one hot vector $\xb_{t+1}$. We aim to learn a parameterized predictor $f(\Xb) = \hat{\Yb}$ that takes in a sequence and outputs an estimate of the next token sequence. To quantify the efficacy of our predictor, we use the mean squared loss function which computes the vector norm of difference between the predicted next token and the true next token, averaged over context positions. This can be written in terms of the Frobenius norm: 
+
+\begin{equation}\label{mse}
+    \mathcal{L} = \frac{1}{2T} \mathbb{E}\normsq{\Yb - f(\Xb)}{F}
+\end{equation}
+
+Here the expectation is over all sequences drawn from the process. We note that in the limit of large context length, SGD follows a stochastic trajectory that approximates gradient descent on this deterministic landscape. As our predictor we will use a one-head attention only transformer architecture: 
+
+\begin{equation}\label{transformer}
+    f(\Xb)_{t,:} = \Wu\We \xb_t + \sum_{s \le t} \Wu \Ab_{ts}\Wov\We \xb_s
+\end{equation}
+$\We \in \mathbb{R}^{d \times |\mathcal{V}|}$ and $\Wu \in \mathbb{R}^{|\mathcal{V}|\times d}$ are embedding and unembedding matrices. $\Ab$ is a causal attention matrix with nonnegative entries,  $\Ab_{ts} = 0$ for all $s > t$, and $\sum_{s} \Ab_{ts} = 1$ for all $t$. $\Wov \in \mathbb{R}^{d \times d}$ is the output-value matrix. Note that we do not parameterize the attention matrix by keys and queries and instead consider the output of this parameterization as the primary object of study. 
+
+\section{Optimal solution in function space}
+We can rewrite the transformer output (\ref{transformer}) in matrix notation as
+\begin{align}\label{transformer_matrix}
+     f(\Xb) &= \Wu\We \Xb + \Wu \Wov\We \Xb \Ab^\top
+\end{align}
+
+From this equation, we can see that for a fixed attention profile, the one layer transformer is a linear function that operates on two views of a sequence: the sequence itself $\Xb$ and the attention modulated sequence $\Xb\Ab^\top$. To understand the global minimizer of the loss (\ref{mse}) for a fixed attention profile, we can therefore find a solution in terms of the effective parameter matrices $\Wb = \Wu\We, \Vb = \Wu \Wov\We$. $\Wb$ represents a direct path that can use the current context position to predict next tokens and $\Vb$ represents a context-dependent path that can look back at previous context to predict. Importantly, since attention operates on every token in parallel, the context-dependent circuit can only linearly combine weighted context one token at a time, incorporating context positions $s \le t$ in parallel. In terms of these effective parameters the loss function becomes
+
+\begin{equation}\label{loss}
+     \mathcal{L} = \frac{1}{2T} \mathbb{E}\normsq{\Yb - \Wb \Xb - \Vb \Xb \Ab^\top}{F}
+\end{equation}
+
+Differentiating with respect to the parameters gives the following.
+
+\begin{align}
+     \nabla_{\Wb}\mathcal{L} &= - \frac{1}{T}\mathbb{E}[\Yb\Xb^\top] + \frac{1}{T}\Wb\mathbb{E}[\Xb\Xb^\top] + \frac{1}{T}\Vb\mathbb{E}[\Xb \Ab^\top\Xb^\top]  \label{long_gW}\\ 
+     \nabla_{\Vb}\mathcal{L} &= - \frac{1}{T}\mathbb{E}[\Yb\Ab\Xb^\top] + \frac{1}{T}\Wb\mathbb{E}[\Xb\Ab\Xb^\top] + \frac{1}{T}\Vb\mathbb{E}[\Xb \Ab^\top\Ab\Xb^\top]\label{long_gV}
+\end{align}
+
+\subsection{Evaluation of process statistics}\label{sec:stats}
+Given the parameters of the Hidden Markov model that generate sequences and the attention profile, we can evaluate the expectations in \eqref{long_gW} - \eqref{long_gV}. It will be convenient to define the following family of matrices:
+
+% \begin{align}
+%     \Bb^{(\tau)}_{ij} &= P(x_{t+\tau} = i, x_{t} = j) \label{btau}\\
+%     &= \pib \Tj \Tb^{\tau-1} \Ti \one
+% \end{align}
+
+%this equation has been updated 
+\begin{align}
+     \Bb^{(\tau)}_{ij} &= P(x_{t} = i, x_{t-\tau} = j) \label{btau}\\
+     &= \pib^\top \Tj \Tb^{\tau-1} \Ti \one
+\end{align}
+
+This is the $\tau-$skip bigram probability. We will take the convention that 
+
+\begin{align}
+    \Bb^{(0)}_{ij} &= P(x_{t} = i, x_{t} = j) \label{b0}\\
+    &= P(x_t = i)\delta_{ij}\\
+    &= \pib \Ti \one \delta_{ij} \\
+    &:= \Db_{ij}
+\end{align}
+
+From this we can immediately write down the direct path statistics
+\begin{align}
+    \frac{1}{T}\mathbb{E}[\Xb\Xb^\top] &= \Db \label{XX}\\
+    \frac{1}{T}\mathbb{E}[\Yb\Xb^\top] &= \Bb^{(1)} \label{YX}
+\end{align}
+
+The cross-correlations involving the attention modulated signal can be written down in a convenient form. To see this, we can calculate the cross correlation between the direct and attended signals $\frac{1}{T}\mathbb{E}[\Xb \Ab \Xb^\top]$, which we will call $\Cb$
+
+\begin{align}
+    \Cb = \frac{1}{T}\mathbb{E}(\Xb \Ab\Xb^\top)_{ij} &= \frac{1}{T}\sum_{t,s} A_{ts}\mathbb{E}(\Xb_{it}\Xb_{js}) \\
+    &= \frac{1}{T}\sum_{t=1}^T\sum_{s=1}^t A_{ts} \Bb^{(t-s)}_{ij}\\
+    &= \frac{1}{T}\sum_{\tau=0}^{T-1}\sum_{t = \tau+1}^T A_{t, t-\tau} \Bb^{(\tau)}_{ij} \\
+ &= \sum_{\tau=0}^{T-1} \alpha(\tau) \Btau_{ij} \label{XAX}
+\end{align}
+
+In the third line, we have recast the sum over all elements of the attention as a sum over its shifted diagonals. The final line introduces the \textit{mean lag distribution} $\alpha(\tau)$
+
+\begin{equation}\label{meanlag}
+\alpha(\tau) = \frac{1}{T}\sum_{t = \tau+1}^T A_{t,t-\tau}
+\end{equation}
+
+that looks at the probability placed on the token $\tau$ steps back, on average over the context. Note that due to the row normalization of the attention matrix, $\alpha(\tau)$ is a normalized probability distribution over the lag $\tau$. Similar calculations yield:
+
+
+
+\begin{align}
+    \Cb_{+} = \frac{1}{T}\mathbb{E}(\Yb \Ab \Xb^\top) &= \sum_{\tau=0}^{T-1} \alpha(\tau) \Bb^{(\tau+1)} \label{YAX}\\
+    \Gb = \frac{1}{T}\mathbb{E}(\Xb \Ab^\top \Ab \Xb^\top) &= \gamma(0) \Db + \sum_{\tau=1}^{T-1} \gamma(\tau) (\Bb^{(\tau)} + {\Btau}^\top) \label{XAAX}
+\end{align}
+
+where we have defined the \textit{lagged autocorrelation} $\gamma(\tau)$ of the attention profile 
+
+\begin{equation}\label{meanauto}
+\gamma(\tau) = \frac{1}{T}\sum_{t=\tau+1}^T(\Ab^\top\Ab)_{t, t-\tau}
+\end{equation}
+
+which measures the average correlation between attention weights with a separation of $\tau$, averaged over context. More specifically, $\gamma(\tau)$ takes measures the correlation between attention weights at a separation distance $\tau$ within a row, and then averages this quantity over all rows. 
+
+\subsubsection{Attention profile interacts with data through its generating function}
+We can get more insight into the correlations involving the attended context by introducing the spectral decomposition of the total transition operator $\Tb = \sum_{\lambda} \lambda \Pb_{\lambda}$. Here $\{\lambda\}$ are the eigenvalues and $\Pb_\lambda$ is the projector onto the subspace associated with each eigenvalue. Using this we can rewrite the \eqref{btau} as 
+
+\begin{equation}
+    \Btau = \sum_\lambda \lambda^{\tau-1} \Mb_\lambda
+\end{equation}
+
+where $(\Mb_\lambda)_{ij}  = \pib \Tj \Pb_\lambda \Ti \one$ captures the contribution of the $\lambda$ eigenmode to the bigram probability. Plugging this into the definition of $\Cb_+$, for example reveals an interesting perspective on how attention interacts with the properties of the hidden process.
+
+\begin{align}
+    \Cb_+ &= \sum_{\tau=0}^{T-1} \sum_\lambda \lambda^\tau \alpha(\tau) \Mb_\lambda \\
+    &= \sum_\lambda \left ( \sum_{\tau=0}^{T-1}  \alpha(\tau) \lambda^\tau  \right) \Mb_\lambda \\
+    &= \sum_{\lambda} \alphatil(\lambda)\Mb_\lambda
+\end{align}
+
+Here $\alphatil(z) = \sum_{\tau}  \alpha(\tau) z^\tau $ is the \textit{generating function} of the mean lag distribution $\alpha(\tau)$. One way to think about this transform is as a discrete Laplace transform. Let $s = \log(1/z)$. Then $\alphatil(s) = \sum_{\tau}\alpha(\tau) e^{-s\tau} $ which we can identify as a Laplace transform of a distribution with discrete support. So we have discovered that for stationary hidden processes, the relevant statistics of the data are related to probing the attention profile at resonances associated with those of the underlying hidden dynamic. We can carry the same idea through to the other statistics as well:
+
+\begin{align}
+    \Cb &= \alpha(0)\Db + \sum_\lambda\left (\frac{\alphatil(\lambda) - \alpha(0)}{\lambda}\right) \Mb_\lambda \\
+    &:= \alpha(0)\Db + \sum_\lambda \alphatil'(\lambda) \Mb_\lambda \\
+    \Gb &= \gamma(0)\Db + \sum_\lambda\left (\frac{\gammatil(\lambda) - \gamma(0)}{\lambda}\right) (\Mb_\lambda + \Mb_\lambda^\top)\\
+    &:= \gamma(0)\Db + \sum_\lambda\gammatil'(\lambda) (\Mb_\lambda + \Mb_\lambda^\top)
+\end{align}
+
+The more complicated functions of the transform are really just generating functions of a time shifted sequence 
+
+\begin{align}
+    \alphatil'(\lambda) &= \sum_{\tau = 0}^{T-2} \alpha(\tau + 1) z^{\tau}\\
+    &= \frac{1}{z}\sum_{\tau = 0}^{T-2}\alpha(\tau + 1) z^{\tau + 1} \\
+    &=  - \frac{\alpha(0)}{z} + \sum_{\tau = 0}^{T-1} \frac{1}{z}\alpha(\tau) z^{\tau} \\
+    &= \frac{\alphatil(z) - \alpha(0)}{z}
+\end{align}
+
+This time shifted generating functions arise since they describe the co-occurrence of two tokens separated by $\tau$ steps. These statistics measure  correlation of the current token and a previous token, summed over a weighted history of previous tokens. The identity of the token at lag $\tau=0$ is known, so inference only needs to occur for $\tau\ge1$, hence the time shift. 
+
+\subsection{Symmetry of the loss}
+For fixed attention $\Ab$ Eq. \eqref{loss} defines a regression problem in the variable
+
+\begin{equation}
+    \Zb = 
+    \begin{pmatrix}
+        \Xb \\
+        \Xb\Ab^\top
+    \end{pmatrix}
+\end{equation}
+
+with correlation and target-cross-correlation identifiable as block matrices from the theory above:
+
+\begin{equation}\label{blockXX}
+\mathbb{E}[\Zb\Zb^\top] = 
+    \begin{pmatrix}
+        \Db & \Cb \\
+        \Cb^\top & \Gb
+    \end{pmatrix}  
+\end{equation}
+\begin{equation}\label{blockYX}
+\mathbb{E}[\Yb\Zb^\top] = 
+    \begin{pmatrix}
+        \Bb^{(1)} & \Cb_+
+    \end{pmatrix}  
+\end{equation}
+Notice that $\one^\top_{\vert\mathcal{V}\vert} \Xb = \one^\top_{\vert\mathcal{V}\vert} \Yb= \one^\top_T$ since each column of $\Xb$ (and $\Yb$) is a one-hot vector. Additionally, $\one^\top_T \Ab^\top = \one^\top_T$ from the row normalization of the attention matrix. The relationship can be succinctly captured in the following eigenvector equation. 
+
+\begin{equation}\label{symmetry}
+    \cb^\top \Zb = 0
+\end{equation}
+where $\cb^\top = \left(\one^\top_{\vert\mathcal{V}\vert}, -\one^\top_{\vert\mathcal{V}\vert}\right)$. By linearity of the expectation $\cb^T \mathbb{E}[\Zb\Zb^T] = 0$, so also Eq.\ref{symmetry} implies that certain combinations of the blocks in \eqref{blockXX} and \eqref{blockYX} will have a null singular value. For example, the Schur complements of \eqref{blockXX} have this property:
+\begin{align}
+    \Sb\one &= (\Gb - \Cb^\top \Db^{-1}\Cb)\one = 0 \label{snull}\\
+    \Sb'\one &= (\Db - \Cb \Gb^{-1}\Cb^\top)\one = 0
+\end{align}
+
+These ideas can be used to show that many other combinations of the data correlations have $\one$ as in their left or right null space. A particularly useful example is 
+
+\begin{equation}\label{rnull_left}
+    \one^\top\Rb = \one^\top[\Cb_+ - \Bone\Db^{-1}\Cb] = 0  
+\end{equation}
+
+We can also show that $\one$ is a right eigenvector of $\Rb$ as well by using the probabilistic interpretations of the blocks:
+
+\begin{align}
+    \Rb \one &= 0 \label{rnull_right}\\
+    &\implies [\Cb_+ - \Bone\Db^{-1}\Cb]\one = 0 \\
+    &\implies \Cb_+\one = \Bone\one \\
+    &\implies \Cb_+\one = \Db\one \\
+    &\implies \sum_j \sum_\tau \alpha(\tau)P(x_{t} = i, x_{t-\tau-1} = j) = P(x_t = i) \\
+    &\implies \sum_\tau \alpha(\tau)P(x_{t} = i) = P(x_t = i) \\
+    &\implies P(x = i) = P(x = i)
+\end{align}
+
+In the second and third lines we have used the relationships $\Cb\one = \Db\one = \Bone\one $ which can be derived from \eqref{symmetry} and its corresponding generalization to the cross-correlation. In the final line we used the stationary of the hidden process to remove the time dependence from the single token probabilities. From the perspective of the parameters, \eqref{symmetry} implies the existence of a $\vocab$-dimensional manifold in parameter space that yield equivalent loss. In particular the following transformations leave the loss \eqref{loss} unchanged for any $\ub \in \mathbb{R}^{\vocab}$:
+
+\begin{align}\label{param_degen}
+    \Wb &\to \Wb + \ub\one_{\vocab}^\top \\
+    \Vb &\to \Vb - \ub\one_\vocab^\top
+\end{align}
+
+
+\subsection{Optimal solution for frozen attention and its probabilistic interpretation}
+In terms of the data statistics we have calculated, the gradient of the loss \eqref{long_gW}-\eqref{long_gV} become 
+
+\begin{align}
+     \nabla_{\Wb}\mathcal{L} &= - \Bb^{(1)}+\Wb \Db + \Vb \Cb^\top \label{gW}\\ 
+     \nabla_{\Vb}\mathcal{L} &= - \Cb_{+} + \Wb\Cb + \Vb \Gb \label{gV}
+\end{align}
+
+By setting these equations equal to zero, we can solve for the optimal direct and context dependent matrices. Setting \eqref{gW} equal to zero implies:
+
+\begin{align}
+    \Wb_* &= \Bone \Db^{-1} - \Vb_*\Cb^\top \Db^{-1} \\  
+\end{align}
+Plugging this in to \eqref{gV} and setting equal to zero gives
+
+\begin{align}
+    \Vb_*[\Gb - \Cb^\top \Db^{-1}\Cb] &= [\Cb_+ - \Bone \Db^{-1}\Cb] \\
+    \Vb_* \Sb &= \Rb \label{vfeasibility}
+\end{align}
+
+From \eqref{snull}, \eqref{vfeasibility} does not have a unique solution. However, \eqref{vfeasibility} implies that $\Vb_*\Sb\one = \Rb\one=0$ which is always satisfied for a stationary process as shown in \eqref{rnull_right}. We can parameterize all solutions using the Moore-Penrose pseudoinverse of $\Sb$, which gives 
+
+\begin{align}
+    \Vb_{*} &= \Rb\Sb^+ + \ub\one^\top \label{vstar}\\
+    \Wb_{*} &= \Bb^{(1)}\Db^{-1} - \Rb \Sb^+ \Cb^\top \Db^{-1} - \ub\one^\top\label{wstar}
+\end{align}
+
+for any $\ub$. Immediately we can see that the direct path involves the bigram predictor $\Bb^{(1)}\Db^{-1}$ whose elements are $P(x_{t+1} = i | x_t = j)$, as well as a contribution from the attended sequence, $\Vb_* \Cb^\top \Db^{-1}$. We will see in the following that this contribution to the direct path removes information about previous context that could be learned from the current token alone. We can begin by understanding how the value circuit maps attended context to next token information. Suppose we regress the next token from the current context $\Xb$, forming a bigram predictor $\mathbb{E}[\Yb\Xb^\top]\mathbb{E}[\Xb\Xb^\top]^{-1} = \Bb^{(1)}\Db^{-1}$. The residual information in $\Yb$ after using the current token is $\Rb_{\Yb|\Xb} = \Yb - \Bb^{(1)}\Db^{-1}\Xb$. The information that is present in the attended context beyond what is present in the current context can be found by this same regressing out procedure. The best approximation to $\Xb \Ab^\top$ from $\Xb$ is $(\mathbb{E}[\Xb\Ab^\top\Xb^\top]\mathbb{E}[\Xb\Xb^\top]^{-1})\Xb = \Cb^\top \Db^{-1}\Xb$. Removing this contribution from the attended context we can form the residual vector $\Rb_{\Xb \Ab^\top | \Xb} = \Xb\Ab^\top - \Cb^\top\Db^{-1}\Xb$. We can now try to construct the rest of the next token information from the attended context residual by regressing $\Rb_{\Xb \Ab^\top | \Xb}$ onto $\Rb_{\Yb|\Xb}$. This would yield a regression coefficient 
+\begin{align}
+    &\mathbb{E}[\Rb_{\Yb|\Xb}\Rb_{\Xb \Ab^\top | \Xb}^\top]\mathbb{E}[(\Rb_{\Xb \Ab^\top | \Xb})(\Rb_{\Xb \Ab^\top | \Xb})^\top]^{+}\\
+    &= \mathbb{E}[(\Yb - \Bb^{(1)}\Db^{-1}\Xb)(\Xb\Ab^\top - \Cb^\top\Db^{-1}\Xb)^\top)]\mathbb{E}[(\Xb\Ab^\top - \Cb^\top\Db^{-1}\Xb)(\Xb\Ab^\top - \Cb^\top\Db^{-1}\Xb)^\top]^{+} \\
+    &= \underbrace{[\Cb_+ - \Bb^{(1)}\Db^{-1}\Cb]}_{\substack{\textrm{correlation between $\Yb$} \\ \textrm{and $\Xb\Ab^\top$ after regressing out $\Xb$}}}\underbrace{[\Gb - \Cb^\top \Db^{-1}\Cb]^{+}}_{\substack{\textrm{variance in $\Xb\Ab^\top$} \\ \textrm{after regressing out $\Xb$}}}
+\end{align}
+
+which is exactly $\Vb_*$. So $\Vb_*$ maps information in the attended context, beyond what is present in the current token, to next token information. Here, we have implicitly assumed that $\ub = 0$ for simplicity, but the story is the same for nonzero $\ub$. This idea goes by the name \textit{partial regression} in the statistics literature and is a general way of interpreting regression coefficients when you have regressors that are not independent of one another. 
+\newline
+\newline
+\newline
+With this understanding of the matrix $\Vb_*$ we can try to understand the computation that the optimized network performs on a given sequence. Let $\bar{\xb}_t = (\Xb \Ab^\top)_{:,t} = \sum_{s\le t} A_{ts}\xb_s = \sum_{\tau=0}^{t-1} A_{t, t-\tau}\xb_{t-\tau}$ be the attended context at position $t$. At context position $t$, the optimal predictor is 
+
+\begin{align}
+    f(\Xb)_t = \Bb^{(1)}\Db^{-1}\xb_t + \Vb_* \left ( \bar{\xb}_t - \Cb^\top\Db^{-1} \xb_t \right ) 
+\end{align} 
+
+We can identify the first term as the bigram prediction $P(\xb_{t+1} \mid \xb_t)$ and the second as an update to this bigram distribution given context. To this end we can write the full attention matrix as the mean lag distributions plus context (row) dependent corrections:
+
+\begin{align}
+    A_{t,t-\tau} = \alpha(\tau) + \delta(t, \tau)
+\end{align}
+
+Averaging both sides of this equation over the rows $\frac{1}{T}\sum_{t=\tau+1}^T$ yields:
+\begin{align}
+    \frac{1}{T}\sum_{t=\tau+1}^T A_{t,t-\tau} &= \frac{1}{T}\sum_{t=\tau+1}^T \alpha(\tau) + \frac{1}{T}\sum_{t=\tau+1}^T\delta(t, \tau) \\
+    \alpha(\tau) &= \frac{T-\tau}{T}\alpha(\tau) + \frac{1}{T}\sum_{t=\tau+1}^T\delta(t, \tau)
+\end{align}
+
+which shows that 
+\begin{equation}
+    \frac{1}{T}\sum_{t=\tau+1}^T  \delta(t, \tau) = \frac{\tau}{T} \alpha(\tau) \to 0 \;\; \text{for $\tau \ll T$}
+\end{equation}
+implying that the average of the row dependent fluctuations vanishes in the large context, finite lag limit. Using this, we can split the attended context into two terms.
+
+\begin{align}
+    \bar{\xb}_t = \underbrace{\sum_{\tau=0}^{t-1}\alpha(\tau)\xb_{t-\tau}}_{\bar{\xb}_t^{(\alpha)}} +  \underbrace{\sum_{\tau=0}^{t-1}\delta(t,\tau)\xb_{t-\tau}}_{\bar{\xb}_t^{(\delta)}}
+\end{align}
+
+The term $\xb_t^{(\alpha)}$ captures the mean attended context while $\xb_t^{(\delta)}$ captures the attended context that is specific to the particular context position $t$. Next we can use \eqref{XAX} and \eqref{btau} to find a probabilistic description for the $\Cb^T\Db^{-1}$ term. 
+
+\begin{align}
+ \Cb^\top\Db^{-1} \xb_t &= \sum_{\tau = 0}^{T-1} \alpha(\tau) \frac{P(\xb_{t-\tau}, \xb_t)}{P({\xb_{t}})} \\
+ &= \sum_{\tau = 0}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t}) \\
+ &= \mathbb{E}[\bar{\xb}_t^{(\alpha)} \mid \xb_t] -  \sum_{\tau = t}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t})
+\end{align}
+The correction in the final line is written schematically as a probability, although in reality this is not well defined since $x_t$ is not defined for negative $t$. This is a manifestation of the fact that the statistics $\Cb$ and $\Db$ are calculated for the entire sequence of length $T$ while we are looking at the behavior of the predictor for some intermediate time $t$. This truncation effect becomes small deep in the sequence when $t$ is large. The computation that the optimal network performs at a context position $t$ can be interpreted probabilistically as
+
+\begin{equation}
+    f(\Xb)_t = \underbrace{\Bb^{(1)}\Db^{-1}\xb_t}_{\text{bigram prediction}} + \Vb_* \underbrace{\left ( \bar{\xb}_t^{(\alpha)} -  \mathbb{E}[\bar{\xb}_t^{(\alpha)} \mid \xb_t] \right )}_{\substack{\text{average attended signal} \\ \text{remaining in observed} \\\text{context given current position}}} + \underbrace{  \Vb_*\bar{\xb}_t^{(\delta)}}_{\text{row dependent fluctuations}} + \underbrace{ \Vb_*\sum_{\tau = t}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t})}_{\text{truncation effects}}
+\end{equation}
+
+
+
+\section{Optimal solution in parameter space}
+So far we have described the optimal solution in function space by defining the effective parameter matrices $\Wb_* = \Wb_U\Wb_E, \Vb_* = \Wb_U \Wb_{OV}\Wb_E$, which reduced the optimization to a quadratic objective. In this section we will construct solutions for the parameters $\Wb_E, \Wb_U, \Wb_{OV}$ which combine to form the optimal effective parameters. This solution also gives an interpretation of the network computation where beliefs over latent states are updated in a subspace of the residual stream. Assume the gauge vector $\ub = 0$. It is useful to divide $\Vb_*$ and $\Wb_*$ into their stationary and nonstationary components. We begin by showing a very useful property of the spectral bigram matrices $\Mb_\lambda$:
+
+\begin{align}
+    \sum_j(\Mb_\lambda)_{ij} &= \sum_j \pib^\top \Tb^{(j)}\Pb_\lambda\Tb^{(i)}\one\\
+    &= \pib^\top \sum_j \Tb^{(j)}\Pb_\lambda\Tb^{(i)}\one\\
+    &=  \pib^\top \Tb\Pb_\lambda\Tb^{(i)}\one \\
+    &= (\pib^\top \Tb^{(i)}\one) \delta_{\lambda,1} \\
+    &= (p_i) \delta_{\lambda,1}
+\end{align}
+
+where $p_i$ is the observation probability for the single token indexed by $i$. A similar calculation shows that summing over the first index of $\Mb_\lambda$ yields a similar result. In summary,
+
+\begin{align}\label{mone}
+    \Mb_\lambda \one &= \pb \delta_{\lambda,1} \\
+    \one^\top \Mb_\lambda &= \pb^\top \delta_{\lambda,1}
+\end{align}
+
+In this notation, $\Mb_1 = \pb \pb^\top$.
+The matrix $\Vb_* = \Rb \Sb^{+}$ %where we have defined $\Rb = \Cb_+ - \Bb^{(1)}\Db^{-1}\Cb$ and $\Sb = \Gb - \Cb^\top \Db^{-1}\Cb$. 
+
+\begin{align}
+    \Rb &= \Cb_+ - \Bb^{(1)}\Db^{-1}\Cb \\
+    &= \left(\sum_\lambda \alphatil(\lambda) \Mb_\lambda\right) - \left(\sum_\mu \Mb_\mu \left(\alpha(0)\Ib + \sum_\lambda \alphatil'(\lambda)\Db^{-1} \Mb_\lambda\right) \right) \\
+    &= \left(\sum_\lambda \lambda\alphatil'(\lambda)\Mb_\lambda\right) - \sum_{\lambda\mu}\alphatil'(\lambda)\Mb_\mu\Db^{-1}\Mb_\lambda\ \\
+    &= (\alphatil'(1) - \alphatil'(1))\pb \pb^\top + \left(\sum_{\lambda \neq 1}\lambda\alphatil'(\lambda)\Mb_\lambda\right) - \sum_{\lambda\neq 1, \mu\neq 1}\alphatil'(\lambda)\Mb_\mu\Db^{-1}\Mb_\lambda\ \label{61} \\
+    &= \sum_{\lambda \neq 1}\alphatil'(\lambda) \underbrace{\left [ \lambda \Ib - \sum_{\mu\neq 1}\Mb_\mu \Db^{-1}\right]\Mb_\lambda}_{\hat{\Mb}_\lambda} \\
+    &:=  \sum_{\lambda \neq 1}\alphatil'(\lambda) \hat{\Mb}_\lambda \label{r}
+\end{align}
+ where in \eqref{61} we used the relationship in \eqref{mone} to kill all cross terms between stationary and nonstationary $\Mb_\lambda$'s. So $\Rb$ operates entirely in the nonstationary subspace of token space. Since $\Vb_* = \Rb \Sb^+$, we know that $\textrm{im}(\Vb_*) \subseteq \textrm{im}(\Rb)$ and we conclude that \textbf{the effective value circuit only acts in the nonstationary subspace of token space}. 
+ 
+%  We can simplify the expression for $\Vb_*$ slightly. Using the definitions of $\Gb$ and $\Cb$ we can find an expression for $\Sb$ in terms of stationary and nonstationary contributions
+
+%  \begin{align*}
+%      \Sb &= \left(\gamma(0) - \alpha(0)^2\right)(\Db - \pb\pb^\top)\\
+%      &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(\lambda)\right ) \left( \Mb_\lambda + \Mb_\lambda^\top\right) \\
+%      &- \sum_{\mu\neq 1, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)\Mb_\lambda^\top \Db^{-1}\Mb_\mu
+%  \end{align*}
+
+% \note{this is wrong}
+% We can factor out the diagonal matrix $\Db$ so that $\Sb = \Db\Sb'$ where 
+% \begin{align*}
+%     \Sb' &= \left(\gamma(0) - \alpha(0)^2\right)(\Ib - \one\pb^\top) \\
+%      &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(0)\right ) \left( \Db^{-1}\Mb_\lambda + \Db^{-1}\Mb_\lambda^\top\right) \\
+%      &- \sum_{\mu\neq 1, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)\Db^{-1}\Mb_\lambda^\top \Db^{-1}\Mb_\mu
+% \end{align*}
+
+% By inspection we can see that $\Sb'$ has a left/right eigenvalue pair $\{\pb^\top, \one \}$ with eigenvalue $0$. This means we can invert the matrix as $\Sb'^{-1} = \frac{1}{1 - \gamma(0)}\one \pb^\top + (\Sb'_\perp)^{-1}$ where $\Sb'_\perp = (\Ib - \one \pb^\top)\Sb'$. We can use this to write $\Vb_* = \Rb (\Sb')^{-1}\Db^{-1} =  \Rb (\Sb'_\perp)^{-1}\Db^{-1}$ where we used the fact that $\Rb$ is a sum involving $\Mb_\lambda$ to annihilate the portion of $(\Sb')^{-1}$ proportional to $\one \pb^\top$. 
+
+% Now moving on to $\Wb_*$, we can see from from \eqref{wstar} that we can split the bigram contribution into its stationary and nonstationary parts, and that by the same logic as above, the term $\Vb_*\Cb^\top\Db^{-1}$ acts in the nonstationary sector. Like before, we can simplify this term slightly by peeling off components in the stationary sector, since these will be annihilated by $\Vb_*$. Observe that 
+
+% \begin{align}
+%     \Cb^\top &= \Db\left(\alpha(0)\Ib + (1 - \alpha(0))\one\pb^\top + \sum_{\lambda \neq 1}\alphatil'(\lambda)\Db^{-1}\Mb_\lambda\right) \\
+%     &= \Db \left (\one \pb^\top + \Cb_\perp^\top \right) \\
+%     &\implies \Vb_* \Cb^\top\Db^{-1} = \Rb (\Sb_\perp')^{-1} \Cb_\perp^\top \Db^{-1}
+% \end{align}
+
+Similarly we can separate the bigram component of the matrix $\Wb_*$ into its stationary and nonstationary contributions. 
+
+\begin{equation}
+    \Bb^{(1)}\Db^{-1} = \pb \one^\top + \sum_{\lambda\neq1}\Mb_\lambda\Db^{-1}
+\end{equation}
+
+In summary, 
+\begin{align}
+    \Vb_* &= \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}_\lambda \Sb^+ \\
+    \Wb_* &= \pb\one^\top + \left[\sum_{\lambda \neq 1} \Mb_\lambda - \alphatil'(\lambda) \hat{\Mb}_\lambda \Sb^{+}\Cb^\top\right] \Db^{-1}
+\end{align}
+
+From this point, we can build a factorization of $\Wb_*$ and $\Vb_*$ into $\Wb_U, \Wb_E, \Wb_{OV}$ using the following logic. Assume $d = |\mathcal{S}|$. A computational strategy the model may employ is to embed tokens onto probability vectors in the hidden space simplex, update these probabilities given the identity of tokens in the sequence, and then form next token probabilities from the unembedding layer. The unembedding is the easiest to construct, since any probability vector $\etab$ on the simplex can be turned into a probability for next token $i$ by multiplying by $\one^\top (\Tb^{(i)})^\top$. We can build this unbembedding matrix as 
+
+\begin{equation}\label{unembedding}
+    \Wb_U = \begin{pmatrix}
+        \one^\top (\Tb^{(1)})^\top \\
+        \one^\top (\Tb^{(2)})^\top \\
+        \vdots\\
+        \one^\top (\Tb^{(|\mathcal{V}|)})^\top
+    \end{pmatrix}
+\end{equation}
+
+Note that both $\Vb_*$ and $\Wb_*$ have this matrix as a factor, since
+
+\begin{equation}
+    \Mb_\lambda = \Wb_U \begin{pmatrix}
+        \Pb_\lambda^\top (\Tb^{(1)})^\top\pib, \dots
+        \Pb_\lambda^\top (\Tb^{(\vocab)})^\top\pib
+    \end{pmatrix}
+\end{equation}
+
+This means meaning \eqref{unembedding} is a valid unembedding matrix that can satisfy the optimal equations. This form of the unembedding matrix immediately constrains the value of the embedding:
+
+\begin{align}
+    \Wb_* = \Wb_U \Wb_E &= \Wb_U \left (\pib \one_{|\mathcal{V}|}^\top + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda - \alphatil'(\lambda) \hat{\Mb}'_\lambda \Sb^+\Cb^\top\right ]  \Db^{-1}\right)
+\end{align}
+from which we identify 
+\begin{align}
+    \Wb_E = \left (\pib \one_{|\mathcal{V}|}^\top + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda - \alphatil'(\lambda) \hat{\Mb}'_\lambda \Sb^{+}\Cb^\top\right ]  \Db^{-1}\right)
+\end{align}
+
+We have defined $\Mb_\lambda = \Wb_U \Mb_\lambda'$ and $\hat{\Mb}_\lambda = \Wb_U \hat{\Mb}_\lambda'$. So $\Wb$ embeds any token as the stationary vector plus token dependent non-stationary corrections that depend on the expected context. Defining this embedding matrix constrains the value of $\Wb_{OV}$ which has to satisfy 
+
+% \begin{equation}
+%     \Wb_{OV} \left (\pib \one_{|\mathcal{V}|}^\top + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^\top\right ]  \Db^{-1}\right) = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Db^{-1}
+% \end{equation}
+
+\begin{equation}\label{selfcons}
+   \Wb_{OV}\Wb_E = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda \Sb^+
+\end{equation}
+
+% Acting both sides of this equation with $\pb$ implies that $\Wb_{OV}\pib = 0$ which reduces the self consistency equation to  
+
+% \begin{equation}\label{selfcons}
+%     \Wb_{OV}\left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^\top\right ] = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}
+% \end{equation}
+
+Defining $\Fb = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda \Sb^+ \in \mathbb{R}^{|\mathcal{S}|\times |\mathcal{V}|}$ we can understand the existence of solutions to \eqref{selfcons} in terms of the dimensionality of the matrices. Assume $\We$ and $\Fb$ are full rank, meaning $\textrm{rank}(\We) = \textrm{rank}(\Fb) = \min(|\mathcal{S}|,|\mathcal{V}|)$
+
+\begin{itemize}
+    \item $\mathbf{|\mathcal{S}| > |\mathcal{V}|}$: a solution always exists but it is not unique. The least squares solution is $\Wb_{OV} = \Fb \We^+$ and any other solution can be formed by adding a matrix $\Nb$ whose rows are orthogonal to the columns of $\We$ so that $\Nb \We = 0$. 
+    \item $\mathbf{|\mathcal{S}| = |\mathcal{V}|}$: if a solution exists it is unique
+    \item $\mathbf{|\mathcal{S}| < |\mathcal{V}|}$: generically no exact solution. A unique least squares solution exists, as always, but it does not satisfy the constraint.
+\end{itemize}
+Summarizing the argument above and setting $|\mathcal{S}| \ge |\mathcal{V}|$:
+
+\begin{align}
+    \Wb_U &= \begin{pmatrix}
+        \one^\top (\Tb^{(1)})^\top \\
+        \one^\top (\Tb^{(2)})^\top \\
+        \vdots\\
+        \one^\top (\Tb^{(|\mathcal{V}|)})^\top \label{wu_summ}
+    \end{pmatrix} \\
+    \Wb_E &= \left (\pib \one_{|\mathcal{V}|}^\top + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda - \alphatil'(\lambda) \hat{\Mb}'_\lambda \Sb^{+}\Cb^\top\right ]  \Db^{-1}\right) \\
+    \Wb_{OV} &= \Fb \We^+ + \Nb \label{wov_summ}
+\end{align}
+
+If we now let $d \ge |\mathcal{S}|$, we can form a solution in the following way. Let $\Psib$ be a linear map $\Psib : \mathbb{R}^{|\mathcal{S}|}\to \mathbb{R}^d$ with $\mathrm{rank}(\Psib) = |\mathcal{S}|$. Then $\Psib$ has a left inverse $\Psib'$ such that $\Psib' \Psib = \Ib_{|\mathcal{S}|}$. Then the following set of transformations to the above factorization \eqref{wu_summ}-\eqref{wov_summ} form a family of $d-$dimensional optimal solutions.
+
+\begin{align}
+    \Wb_U &\to \Wb_U \Psib' \\
+    \Wb_E &\to \Psib \We \\
+    \Wb_{OV} &\to  \Psib \Wb_{OV} \Psib'
+\end{align}
+
+As an additional detail, note from \eqref{wstar} that $\one^\top \Wb_* = \one^\top$. At the same time, \eqref{unembedding} suggests that $\one^\top\Wu = \one_\state^\top$. Together these force $\one_\state\Wb_E = \one$. This means that the embedding maps every token to a vector with sum one. In other words, a signed distribution, which is further evidence of the simplex interpretation of the parameter mappings. 
+
+\section{Optimal attention profile and the spectrum of the latent dynamic}
+% So far we have described the optimal solution for direct and indirect path parameters, $\Wb_*$ and $\Vb_*$ in terms of a fixed attention profile. We now turn to deriving the optimal attention pattern. Plugging in $\Vb_*(\Ab)$ and $\Wb_*(\Ab)$ into the loss \eqref{loss}, we get 
+
+% \begin{align}\label{factoredloss}
+%     \mathcal{L}(\Ab) &= \underbrace{\frac{1}{2}\tr(\Db)}_{\text{unigram}} - \underbrace{\frac{1}{2}\tr(\Bone \Db^{-1}(\Bone)^\top)}_{\text{bigram}} - \underbrace{\frac{1}{2}\tr(\Rb \Sb^+\Rb^\top)}_{\text{skip-bigram}}
+% \end{align}
+
+% \eqref{factoredloss} has several interesting consequences. First, notice that we can think of the loss as a series of refinements to the error of guessing the next token according to the marginal unigram statistics: the first refinement is to use the preceding token (bigram) and the second is to use linear combinations of single past tokens from positions earlier in the context (skip-bigram). Second, note that the only term that depends on attention is the skip-bigram, which makes sense, since attention is the only part of the architecture that can incorporate this kind of information. Finding the optimal attention profile amounts to \textit{maximizing} the function 
+
+% \begin{equation}\label{lattn}
+%     \mathcal{L}_{\text{attn}}(\Ab) = \frac{1}{2}\tr(\Rb(\Ab)\Sb(\Ab)^+\Rb(\Ab)^\top)
+% \end{equation}
+
+% Note that from the definitions of $\Rb$ and $\Sb$, $\lattn(\Ab)$ only depends on the attention pattern $\Ab$ through the two summary statistics $\alpha(\tau), \gamma(\tau)$. Furthermore, the sequences $\alpha(\tau)$ and $\gamma(\tau)$ only appear in $\lattn(\Ab)$ $\left\{\{\alphatil'(\lambda), \gammatil'(\lambda)\}_{\lambda\neq1}, \alpha(0), \gamma(0)\right\}$. So the optimization over $T^2$ variables has become one over two functions of the matrix $A$ evaluated at the nonstationary eigenvalues of the latent process. Using the process statistics in \ref{sec:stats} we can derive an expression for the matrix $\Sb$ which makes the dependence on the summary statistics explicit. The expression for $\Rb$ in \eqref{r} is repeated below for convenience
+
+% \begin{align}\label{s}
+%       \Sb &= \left(\gamma(0) - \alpha(0)^2\right)(\Db - \pb\pb^\top)\\
+%       &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(\lambda)\right ) \left( \Mb_\lambda + \Mb_\lambda^\top\right) \\
+%       &- \sum_{\mu\neq 1, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)\Mb_\lambda^\top \Db^{-1}\Mb_\mu
+% \end{align}
+
+% \begin{align}
+%      \Rb &= \sum_{\lambda \neq 1}\alphatil'(\lambda) \hat{\Mb}_\lambda \\
+%      \hat{\Mb_\lambda} &= \left(\lambda\Ib - \sum_{\mu\neq1}\Mb_\mu\Db^{-1}\right)\Mb_\lambda
+% \end{align}
+
+So far we have described the optimal direct- and indirect-path parameters,
+$\Wb_*$ and $\Vb_*$, for a \emph{fixed} attention profile. We now turn to the
+optimal attention pattern itself. Substituting $\Vb_*(\Ab)$ and $\Wb_*(\Ab)$
+into the loss \eqref{loss} gives
+\begin{align}\label{factoredloss}
+    \mathcal{L}(\Ab) &= \underbrace{\tfrac{1}{2}\tr(\Db)}_{\text{unigram}}
+    - \underbrace{\tfrac{1}{2}\tr(\Bone \Db^{-1}(\Bone)^\top)}_{\text{bigram}}
+    - \underbrace{\tfrac{1}{2}\tr(\Rb \Sb^+\Rb^\top)}_{\text{skip-bigram}}.
+\end{align}
+Equation \eqref{factoredloss} has two consequences. First, the loss is a
+sequence of refinements to the error of guessing the next token from the
+marginal unigram statistics: the first refinement uses the preceding token
+(bigram), and the second uses linear combinations of individual earlier tokens
+in the context (skip-bigram). Second, only the skip-bigram term depends on
+$\Ab$, as it must, since attention is the only component of the architecture
+that can carry information from earlier positions. Finding the optimal
+attention pattern therefore amounts to \emph{maximizing}
+\begin{equation}\label{lattn}
+    \mathcal{L}_{\text{attn}}(\Ab)
+    = \tfrac{1}{2}\tr\!\big(\Rb(\Ab)\,\Sb(\Ab)^+\,\Rb(\Ab)^\top\big).
+\end{equation}
+
+This objective depends on the $T^2$ entries of $\Ab$ only through successively
+coarser summaries, and it is worth fixing notation for each level of reduction.
+Let
+\begin{equation}
+    \sigma_T : \Ab \longmapsto (\alpha,\gamma)
+\end{equation}
+be the \emph{statistics map} sending an attention matrix to its mean-lag
+distribution $\alpha(\tau)$ and autocorrelation $\gamma(\tau)$
+(Section~\ref{sec:stats}). Since $\Rb$ and $\Sb$ are built entirely from
+$(\alpha,\gamma)$, the objective factors through this map:
+\begin{equation}\label{lift}
+    \mathcal{L}_{\text{attn}}(\Ab) = \overline{\mathcal{L}}_{\text{attn}}(\alpha,\gamma),
+    \qquad (\alpha,\gamma) = \sigma_T(\Ab),
+\end{equation}
+for a function $\overline{\mathcal{L}}_{\text{attn}}$ on summary-statistic space.
+We use one symbol family throughout: $\mathcal{L}_{\text{attn}}$ (no accent) is
+the physical objective on attention matrices, and $\overline{\mathcal{L}}_{\text{attn}}$
+(bar) is its lift to the summary statistics. The lift is in fact the more basic
+object---$\overline{\mathcal{L}}_{\text{attn}}$ is defined on \emph{every} pair
+$(\alpha,\gamma)$, including those realized by no finite-$T$ attention
+matrix---and we exploit this extension when analyzing its convexity below.
+
+The summary statistics enter $\overline{\mathcal{L}}_{\text{attn}}$ only through
+the finite vector of \emph{spectral coordinates}
+\begin{equation}\label{psi}
+    \boldsymbol{\psi}
+    = \Big(\alpha(0),\,\gamma(0),\,
+      \{\alphatil'(\lambda),\,\gammatil'(\lambda)\}_{\lambda\neq 1}\Big),
+\end{equation}
+the values of the generating functions $\alphatil',\gammatil'$ at the
+nonstationary eigenvalues of the latent dynamic, together with the two lag-zero
+terms. Writing $\boldsymbol{\psi} = \boldsymbol{\psi}(\alpha,\gamma)$ for this
+map gives the final reduction
+\begin{equation}\label{reduce}
+    \overline{\mathcal{L}}_{\text{attn}}(\alpha,\gamma)
+    = \widehat{\mathcal{L}}_{\text{attn}}(\boldsymbol{\psi}),
+    \qquad\text{so that}\qquad
+    \mathcal{L}_{\text{attn}}(\Ab)
+    = \overline{\mathcal{L}}_{\text{attn}}(\alpha,\gamma)
+    = \widehat{\mathcal{L}}_{\text{attn}}(\boldsymbol{\psi}),
+\end{equation}
+with $\widehat{\mathcal{L}}_{\text{attn}}$ (hat) the reduced objective we
+actually optimize. This is a drastic dimensionality reduction: the optimization over
+the $T^2$ entries of $\Ab$ has become one over the $2|\mathcal{S}|$ real numbers
+in $\boldsymbol{\psi}$---the generating functions of the two summary statistics,
+probed only at the nonstationary eigenvalues of the latent process, and the lag zero statistics. In the following section we will show that the lifted objective is convex and then use this fact to show that in the infinite context limit $T \to \infty$ it is maximized by infinite-size Toeplitz matrices, further reducing the dimensionality of the problem. Before proceeding it will be useful to we make the
+dependence of $\widehat{\mathcal{L}}_{\text{attn}}$ on $\boldsymbol{\psi}$
+explicit through $\Sb$ and $\Rb$. Using the process statistics of Section~\ref{sec:stats}: 
+\begin{align}\label{s}
+      \Sb &= \left(\gamma(0) - \alpha(0)^2\right)(\Db - \pb\pb^\top)\\
+      &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(\lambda)\right )
+         \left( \Mb_\lambda + \Mb_\lambda^\top\right) \\
+      &- \sum_{\mu\neq 1,\, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)
+         \Mb_\lambda^\top \Db^{-1}\Mb_\mu
+\end{align}
+\begin{align}
+     \Rb &= \sum_{\lambda \neq 1}\alphatil'(\lambda)\, \hat{\Mb}_\lambda \\
+     \hat{\Mb}_\lambda &= \left(\lambda\Ib - \sum_{\mu\neq1}\Mb_\mu\Db^{-1}\right)\Mb_\lambda
+\end{align}
+
+\subsection{The lifted objective is convex and lower semicontinuous}
+It turns out that the attention loss function \eqref{lattn} is convex in the variables $(\alpha, \gamma)$. To show this, we can recognize $\lattn$ as a matrix fractional function in the variables $\Rb, \Sb$ which admits the following variational representation \cite{burke2015matrix}, \cite{boyd2004convex}. 
+
+\begin{align}
+    \lbar(\alpha, \gamma) &= \frac{1}{2}\tr(\Rb(\alpha)\Sb(\alpha, \gamma)^+\Rb(\alpha)^\top)\\
+    &= \sup_{\Vb}\left[ \tr(\Vb\Rb(\alpha)^\top) - \frac{1}{2}\tr(\Vb\Sb(\alpha, \gamma)\Vb^\top)\right]\label{lattn_var}
+\end{align}
+
+This representation holds as long as $\Sb$ is positive semidefinite (guaranteed since it is the Schur compliment of a positive semidefinite covariance matrix), and $\text{range}(\Rb^\top) \subseteq \text{range}(\Sb)$ (guaranteed as well, see \ref{sec:stats}). The supremum is achieved exactly at $\Vb = \Rb \Sb^+$. Expanding the definition of $\Sb$ to isolate the $\gamma$ and $\alpha$ dependence: 
+
+\begin{equation}
+     \sup_{\Vb}\left[ \tr(\Vb\Rb(\alpha)^\top) - \frac{1}{2}\tr(\Vb\Sb(\alpha, \gamma)\Vb^\top)\right] = \sup_{\Vb}\left[ \tr(\Vb\Rb(\alpha)^\top) - \frac{1}{2}\tr(\Vb\Gb(\gamma)\Vb^\top) + \frac{1}{2} \normsq{\Db^{-1/2}\Cb(\alpha) \Vb^T}{F}\right]
+\end{equation}
+We can proceed by proving convexity in $(\alpha, \gamma)$ term by term. 
+
+\begin{align}
+    \tr(\Vb\Rb^\top) &= \sum_{\lambda\neq 1} \alphatil'(\lambda)\tr(\Vb\hat{\Mb}^\top_\lambda)\\
+    &= \sum_\tau\sum_{\lambda\neq1} \alpha(\tau+1)\lambda^\tau\tr(\Vb\hat{\Mb}^\top_\lambda)\\
+    &= \sum_\tau\alpha({\tau+1})(\sum_{\lambda\neq1} \lambda^\tau\tr(\Vb\hat{\Mb}^\top_\lambda))
+\end{align}
+
+so this term is linear is $\alpha(\tau)$. 
+
+\begin{equation}
+    \tr(\Vb\Gb\Vb^\top) = \gamma(0)\tr(\Vb\Db\Vb^\top) + \sum_{\tau}\gamma(\tau+1)\tr(\Vb(\Btau + \Btau^\top)\Vb^\top)
+\end{equation}
+
+so this term is linear in $\gamma(\tau)$. Note that this is the only term that depends on $\gamma$ so we can conclude that \eqref{lattn_var} is linear in $\gamma$. 
+
+\begin{equation}
+    \frac{1}{2}\normsq{\Db^{-1/2}\Cb\Vb^\top}{F} = \frac{1}{2}\normsq{\sum_\tau \alpha(\tau)\Db^{-1/2}\Btau\Vb^\top}{F}\\
+\end{equation}
+
+The argument of the Frobenius norm is a linear function of $\alpha$ which is convex in $\alpha$. The Frobenius norm squared is a convex quadratic. So by the composition rules for convex functions, this term is convex in $\alpha$. Therefore we have a sum of a linear function and a convex function in $\alpha$ (convex in $\alpha$) and an affine function of $\gamma$, so the entire objective is convex in $(\alpha, \gamma)$ for fixed $\Vb$. Finally, the supremum of convex functions is also convex, so $\lbar$ is convex. Again, we stress that the \textit{lifted} objective is convex, but not all points $(\alpha, \gamma)$ are realizable by a finite dimensional attention matrix. The convexity of the lifted objective is utilized below. Finally, we note that $h_{\Vb} = \tr(\Vb\Rb(\alpha)^\top) - \frac{1}{2}\tr(\Vb\Sb(\alpha, \gamma)\Vb^\top)$ is a polynomial (quadratic) in $(\alpha, \gamma)$ so it is continuous. The lifted objective is then a pointwise supremum of continuous functions meaning it is lower semicontinuous. This fact is also useful in the following. 
+
+\subsection{Toeplitz optimality in the infinite context limit}
+In the previous section we showed that the lifted problem is convex in the summary statistics $(\alpha, \gamma)$. The issue is that the domain of the lifted problem includes points that are not realizable by any finite $T$ attention pattern. The feasible $(\alpha, \gamma)$ are a strict subset of the lifted variables. In this section we will show that there exist maximizers of the lifted convex problem that correspond to Toeplitz attention patterns: the rows of the attention matrix are shifted copies of each other. Of course, because of lower triangularity and row normalization, these attention patterns are not feasible at finite context length. However, we will show that they \textit{are} feasible at infinite context length. To begin, fix a context length $T$ and define the feasible set for $\lattn(\Ab)$.
+
+\begin{equation}
+    \mathcal{A}_T = \{\Ab \in \mathbb{R}^{T \times T}_{\ge0} \mid \Ab \text{ is lower triangular and row stochastic} \}
+\end{equation}
+
+Recall the statistics map $\sigma_T$ which maps any $\Ab \in \mathcal{A}_T$ to its corresponding summary statistics $(\alpha, \gamma)$. We will show that we can write $\sigma_T$ in a way that decomposes across the rows of $\Ab$. Consider the map $\Phi$ that takes in any probability distribution on the non-negative integers, $a$, and outputs a tuple
+\begin{equation}
+    \Phi(a) = (a, a\ast a)
+\end{equation}
+
+where $a \ast a$ is the autocorrelation of $a$:
+
+\begin{equation}
+    (a \ast a)(\tau) = \sum_{t=0}^\infty a_t a_{t+\tau} 
+\end{equation}
+
+Let $a_t(\tau)$ be the $t^{th}$ row of $\Ab$, with elements $A_{t, t-\tau}$ (nonnegative for $\tau \le t$ and $0$ otherwise). Then $a_t(\tau)$ is a probability distribution on the non-negative integers, just with finite support. Now observe from \eqref{meanlag} and \eqref{meanauto} that we can write the statistics map for any $\Ab\in \mathcal{A}_T$ as
+
+\begin{equation}
+    \sigma_T(\Ab) = \frac{1}{T}\sum_{t=1}^T\Phi(a_t) = \mathbb{E}_{a \sim \rho_{\Ab}}[\Phi(a)]\;\;\;\text{with} \; \; \rho_{\Ab} = \frac{1}{T}\sum_{t=1}^T\delta_{a_t} 
+\end{equation}
+
+This means that for any feasible $\Ab$ we can view the statistics mapping as an average of the map $\Phi$ over the empirical distribution of rows. It follows that for any $\Ab$
+
+\begin{align}
+    \lattn(\Ab) &= \lbar(\sigma_T(\Ab)) \\
+    &= \lbar(\mathbb{E}_{a \sim \rho_{\Ab}}[\Phi(a)])\\
+    &\le \mathbb{E}_{a \sim \rho_{\Ab}}[\lbar(\Phi(a))]\\
+    &= \frac{1}{T} \sum_{t=1}^T\lbar(\Phi(a_t))\\
+    &\le \max_t \lbar(\Phi(a_t))
+\end{align}
+
+where in the first inequality we have used the convexity of $\lbar$ to invoke Jensen's inequality. This suggests that for any fixed $\Ab$ we can achieve higher $\lbar$ by constructing an $\Ab'$ that has shifted copies of $\Ab$'s best row in each of its rows. As stated before, this $\Ab'$ is no longer feasible at finite $T$, which leads to following theorem. 
+
+\begin{theorem}[Toeplitz optimality]
+Let $M_T = \sup_{\Ab \in \mathcal{A}_T} \lattn(\Ab)$ be the optimal value of the finite $T$ attention optimization problem over feasible attention patterns. Let $M_\ast = \sup_a\{\lbar(\Phi(a)) \mid \sum_{\tau} a_\tau = 1 ,\; a_\tau \ge 0\}$. Then 
+\begin{equation}
+    \lim_{T \to \infty} M_T = M_{\ast}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+    The sketch of the proof is the following. We do not assume that $\lim_{T \to \infty}M_T$ exists. Instead we prove that $\lim\sup_{T\to \infty} M_T$ is upper bounded by $M_\ast$ and $\lim\inf_{T\to \infty} M_T$ is lower bounded by $M_\ast$. This proves existence of the limit and the limiting value at the same time. To begin, let
+    \begin{equation}
+    M_\ast^{\text{fin}} = \{\sup\lbar(\Phi(a)) \mid a \textrm{ is a probability distribution on $\mathbb{Z}_{\ge0}$ with finite support}\}
+    \end{equation}
+    We show in \ref{sec:mfinmstar} that $M_\ast = M_\ast^{\text{fin}}$, so we can work with finitely supported distributions without loss of generality. 
+\newline
+\newline
+\underline{Upper bound}:
+\newline
+\newline
+For any fixed $T$ and $A \in \mathcal{A}_T$ with rows $\{a_t(\tau)\}_{t=1}^T$ we have 
+\begin{equation}
+    \lattn(\Ab) \le \max_t \lbar(\Phi(a_t)) \le M_\ast
+\end{equation}
+from the Jensen argument above. The final inequality is immediate, since the rows of $\Ab$ are a strict subset of the set of all probability distributions on $\mathbb{Z}_{\ge0}$. This relation holds for any $\Ab \in\mathcal{A}_T$ so it must also hold for the maximizer over $\mathcal{A}_T$
+
+\begin{equation}
+    \sup_{\Ab \in \mathcal{A}_T} \lbar(\Ab) = M_T \le M_\ast
+\end{equation}
+
+This holds for any $T$ which implies that 
+
+\begin{equation}\label{upperbound}
+    {\lim \sup}_{T \to \infty} M_T \le M_\ast
+\end{equation}
+\newline
+\newline
+\underline{Lower bound}:
+\newline
+\newline
+The idea behind the lower bound proof is to construct a sequence of feasible attention matrices which are approximately Toeplitz, who's summary statistics approach those of a single row in the limit of infinite context length. Then we will use the lower semi-continuity of the lifted objective to derive the Toeplitz lower bound. To this end fix some positive integer $L$ and choose any finitely supported probability distribution $a^{(L)}(\tau)$ that has support on $0 \le \tau\le L$ (and is zero elsewhere). Then for any $T > L$ we can construct an $\Ab^{(L)}_T \in \mathcal{A}_T$ in the following way. For rows $t > L$
+
+\begin{equation}
+    (A^{(L)}_T)_{t, t-\tau} = a_t(\tau) = 
+    \begin{cases}
+        a^{(L)}(\tau) & \tau \le L \\
+        0 & \textrm{otherwise}
+       
+    \end{cases}
+\end{equation}
+
+For rows $t\le L$ set 
+\begin{equation}
+    (A^{(L)}_T)_{t, t-\tau} = a_t(\tau) = 
+    \begin{cases}
+        1/t & \tau \le t \\
+        0 & \textrm{otherwise}
+    \end{cases}
+\end{equation}
+
+So the $\Ab^{(L)}_T$ is Toeplitz for rows greater than or equal to $L$. Below is a sketch of this matrix for clarity
+
+\begin{equation}\label{aL}
+\Ab^{(L)}_{T}=
+\begin{pmatrix}
+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0\\
+\tfrac{1}{2} & \tfrac{1}{2} & 0 & 0 & 0 & 0 & 0 & 0\\
+\vdots & & \ddots & & & & & \vdots\\
+\tfrac{1}{L} & \tfrac{1}{L} & \cdots & \tfrac{1}{L} & 0 & 0 & 0 & 0\\
+a^{(L)}_{L} & a^{(L)}_{L-1} & \cdots & a^{(L)}_{1} & a^{(L)}_{0} & 0 & 0 & 0\\
+0 & a^{(L)}_{L} & a^{(L)}_{L-1} & \cdots & a^{(L)}_{1} & a^{(L)}_{0} & 0 & 0\\
+\vdots & & \ddots & \ddots & & \ddots & \ddots & \vdots\\
+0 & 0 & 0 & a^{(L)}_{L} & a^{(L)}_{L-1} & \cdots & a^{(L)}_{1} & a^{(L)}_{0}\\
+\end{pmatrix}
+\end{equation}
+
+For every $T$, this matrix is a feasible attention pattern and we can derive the image of the statistics map on this matrix $\sigma_T(\Ab^{(L)}_T) = (\alpha^{(L)}_T, \gamma^{(L)}_T)$. We will now show that $\lim_{T\to \infty}(\alpha^{(L)}_T, \gamma^{(L)}_T) = (a^{(L)}, a^{(L)}\ast a^{(L)}) = \Phi(a^{(L)})$
+
+\begin{align}
+    \alpha^{(L)}_T(\tau) &= \frac{1}{T}\sum_{t=\tau+1}^T(\Ab^{(L)}_{T})_{t, t-\tau} \\
+    &= \frac{1}{T}\left( \sum_{t = \tau+1}^L \frac{1}{t} + \sum_{t = L+1}^T a^{(L)}(\tau)\right) \\
+    &=\frac{1}{T}\left( \sum_{t = \tau+1}^L \frac{1}{t} \right) + \frac{T-L}{T}a^{(L)}(\tau) \\
+    \implies \frac{T-L}{T}a^{(L)}(\tau) &\le  \alpha^{(L)}_T(\tau) \le \frac{L}{T} + \frac{T-L}{T}a^{(L)}(\tau) \\
+    \implies \lim_{T\to \infty}\alpha^{(L)}_T(\tau) &= a^{(L)}(\tau)
+\end{align}
+
+\begin{align}
+    \gamma^{(L)}_T(\tau) &= \frac{1}{T}\sum_{t=1}^T(a_t \ast a_t)(\tau) \\
+    &=  \frac{1}{T}\sum_{t=1}^L(a_t \ast a_t)(\tau) +  \frac{1}{T}\sum_{t=L+1}^T(a_t \ast a_t)(\tau) \\
+    \implies \frac{T-L}{T}(a^{(L)}\ast a^{(L)})(\tau)  &\le  \gamma^{(L)}_T(\tau) \le \frac{L}{T} + \frac{T-L}{T}(a^{(L)}\ast a^{(L)})(\tau)  \\
+    \implies \lim_{T\to \infty}\gamma^{(L)}_T(\tau) &= (a^{(L)}\ast a^{(L)})(\tau)  
+\end{align}
+We have constructed a sequence of objective values in T $\lattn(\Ab^{(L)}_T) = \lbar(\alpha^{(L)}_T, \gamma^{(L)}_T)$ and since the lifted objective is lower semicontinuous we have:
+
+\begin{equation}
+    {\lim\inf}_{T \to \infty}\lattn(\Ab_T^{(L)}) = {\lim\inf}_{T \to \infty} \lbar(\alpha^{(L)}_T, \gamma^{(L)}_T) \ge \lbar(\Phi(a^{(L)}))
+\end{equation}
+
+At the same time, for any $T$, we always have 
+\begin{equation}
+    \lattn(\Ab_T^{(L)}) \le M_T
+\end{equation}
+
+since $\Ab_T^{(L)}$ is feasible. Because ${\lim\inf}_{T\to\infty}$ is monotone
+\begin{equation}
+    {\lim\inf}_{T\to\infty}\lattn(\Ab_T^{(L)}) \le {\lim\inf}_{T\to\infty}M_T
+\end{equation}
+
+Chaining together these inequalities 
+
+\begin{equation}
+    \lbar(\Phi(a^{(L)})) \le {\lim\inf}_{T\to\infty}\lattn(\Ab_T^{(L)})\le {\lim\inf}_{T\to\infty}M_T
+\end{equation}
+The construction of $\Ab_T^{(L)}$ worked for any finitely supported probability distribution $a^{(L)}(\tau)$ on the nonnegative integers, so the above inequality also holds for the supremum over this family $M_\ast^{\textrm{fin}} = M_\ast$ where we have used the result in \ref{sec:mfinmstar}. Therefore 
+
+\begin{equation}\label{lowerbound}
+    M_\ast \le {\lim\inf}_{T\to\infty}M_T
+\end{equation}
+\newline
+\newline
+\underline{Combining the bounds}:
+
+Chaining together \eqref{upperbound} and \eqref{lowerbound} and using the fact that ${\lim\inf}_{T\to\infty}M_T \le {\lim\sup}_{T\to\infty}M_T$
+
+\begin{equation}
+    M_\ast \le {\lim\inf}_{T\to\infty}M_T \le {\lim\sup}_{T\to\infty}M_T \le M_\ast
+\end{equation}
+
+which concludes the proof
+\end{proof}
+
+\subsection{Optimal attention pattern is geometric in the large context limit}
+
+\subsubsection{Toeplitz patterns do not depend on $\alpha_0$}
+The main benefit of showing that the optimal attention pattern is Toeplitz is that the sequence $\gamma(\tau)$ becomes the autocorrelation of $\alpha(\tau)$ exactly. This not only allows us to characterize the optimal attention pattern by a single sequence, but also causes the self-attention term $\alpha(0)$ to drop out of the objective entirely. Observe: 
+
+\begin{align}
+    \gamma_0 - \alpha_0^2 &= (\sum_{\tau=0}^\infty \alpha_\tau^2) - \alpha_0^2 \\
+    &= \sum_{\tau=1}^\infty \alpha_\tau^2
+\end{align}
+ and 
+\begin{align}
+    \gammatil'_\lambda - \alpha_0\alphati'_\lambda &= (\sum_{\tau=0}^\infty\sum_{t=0}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau) - \alpha_0\sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau \\
+    &= (\sum_{\tau=0}^\infty\alpha_0 \alpha_{t+\tau}\lambda^\tau) + (\sum_{\tau=0}^\infty\sum_{t=1}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau) - ( \alpha_0\sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau)\\
+    &= \sum_{\tau=0}^\infty\sum_{t=1}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau
+\end{align}
+
+meaning $\Sb$ does not depend on $\alpha_0$. Furthermore, $\Rb$ only depends on $\alphatil'_\lambda = \sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^{\tau}$ which doesn't depend on $\alpha_0$. Therefore the entire objective is independent of this coordinate. This agrees with the intuition that the direct pathway can use any predictive information available from the current token, and its appearance in the attended pathway is redundant. From this point on, we make the choice $\alpha_0 = 0$, as a nonzero value will only effect the global normalization of the pattern. 
+
+\subsubsection{First order conditions}
+The starting point of the analysis is to derive first order optimality conditions on the mean lag distribution $\alpha(\tau)$ for every $\tau$, which will generate a fine differences expression that we can solve. The issue is that the objective $\lbar(\Phi(\alpha))$ depends on the pseudoinverse of $\Sb$ making it difficult to differentiate (and actually non-differentiable in regions where it changes rank). The solution is to return to the variational objective $\lbar(\Phi(\alpha)) = \sup_{\Vb} h_{\Vb}(\alpha)$ 
+\begin{equation}
+    h_{\Vb}(\alpha) = \tr(\Vb \Rb(\alpha)^\top) - \frac{1}{2}\tr(\Vb \Sb(\alpha, \alpha\ast\alpha)\Vb^\top)
+\end{equation}
+
+which we can differentiate for fixed $\Vb$. Here we have also imposed the Toeplitz structure. The roadmap of the analysis is to find an optimum for fixed $\Vb$ and then use the fact that at optimality over all parameters $\Vb = \Rb\Sb^+$ which will lead to a closed set of self consistent equations. We can differentiate with respect to $\alpha_\tau$ (for $\tau \ge 1$) and define $g(\tau) = \frac{\partial h}{\partial \alpha_\tau}$
+
+\begin{equation}\label{gtau}
+    g(\tau) = \sum_{\lambda \neq 1}e_\lambda \lambda^{\tau-1} - q\alpha_\tau - \sum_{\lambda\neq1}w_\lambda \sum_{u \neq \tau}\alpha_u \lambda^{|\tau - u|}
+\end{equation}
+
+where 
+
+\begin{align}
+    e_\lambda &= \tr\left( \Vb \hat{\Mb}_\lambda^\top\right) + \tr\left(\sum_{\mu \neq1} \alphatil'_\mu \Vb \Mb_\lambda^\top \Db^{-1}\Mb_\mu\Vb^\top \right) \\
+    q &= \tr\left(\Vb(\Db - \pb\pb^\top)\Vb^\top\right) \\
+    w_\lambda &=\tr\left(\Vb\left(\frac{\Mb_\lambda + \Mb_\lambda^\top}{2\lambda}\right)\Vb^\top\right)
+\end{align}
+
+The gradient \eqref{gtau} must vanish on the support of the optimal $\alpha_\tau$ and be negative off of the support for a maximum. This can be interpreted as a force balance equation that the optimal interacting $\alpha_\tau$ ``{particles}" must satisfy. The first term is a driving force which pushes the particles to align with amount of total information $\tau$ steps back in the sequence. The term $q\alpha_\tau$ is a self repulsion term which prevents mass from building up on a single lag. The third term is a pairwise interaction, screened by the latent autocorrelation decay rates. Intuitively this force arises from the redundancy of information that neighboring positions have about the next token-- this force is strongest for nearby tokens and decays at a rate set by the eigenvalues of the latent process. As a final comment, note that $e_\lambda$ contains a term that depends on the attention profile. This may appear concerning, however, it enters as a constant, since it is a sum over all lags and therefore affects all positions equally. This term will not affect the form of the solution derived below, but will be accounted for carefully in Section \ref{sec:selfcons}. 
+%To begin we can write down the derivatives of $\Rb$ and $\Sb$ for $\tau \ge 1$. 
+
+% \begin{equation}
+%     \frac{\partial \Rb}{\partial \alpha_\tau} = \sum_{\lambda\neq 1}\lambda^{\tau-1}\hat{\Mb}_\lambda
+% \end{equation}
+
+% \begin{align}
+%     \frac{1}{2}\frac{\partial \Sb}{\partial \alpha_\tau} &= \alpha_\tau (\Db -\pb\pb^\top) + \sum_{\lambda \neq 1}\frac{\partial(\alpha \ast \alpha)_{\tau + 1}}{\partial\alpha_{\tau}}
+% \end{align}
+
+
+
+ 
+
+
+\subsubsection{Solution by generating function}
+We can solve the difference equation defined by $g(\tau) = 0$ by deriving a complementary equation for the generating function of $\alpha_\tau$. Just as Laplace transforms turn linear differential equations into algebraic equations, generating functions (which are essentially discrete Laplace transforms) turn linear difference equations into algebraic equations. Let $A(z) = \sum_{\tau=1}^\infty \alpha_\tau z^\tau$ be the generating function of the attention pattern on the optimizable lags. We can transform all of the terms in \eqref{gtau}:
+
+\begin{align}
+    \sum_{\tau=1}^\infty q \alpha_\tau z^\tau = q A(z)
+\end{align}
+
+\begin{align}
+    E(z) &:= \sum_{\tau=1}^\infty\sum_{\lambda\neq 1}e_\lambda \lambda^{\tau-1}z^\tau \\
+    &=\sum_{\lambda \neq1 }\frac{e_\lambda}{\lambda}\sum_{\tau=1}^\infty (z\lambda)^\tau \\
+    &= \sum_{\lambda\neq 1}e_\lambda \frac{z}{1-\lambda z}
+\end{align}
+
+\begin{align}
+    \sum_{\tau=1}^\infty \sum_{u \neq \tau} \alpha_u \lambda^{|\tau - u|}z^\tau &=  \sum_{\tau=1}^\infty \sum_{u\ge 1} \alpha_u \lambda^{|\tau - u|}z^\tau - A(z) \\
+    &= \underbrace{\sum_{\tau=-\infty}^\infty \sum_{u\ge 1} \alpha_u \lambda^{|\tau - u|}z^\tau}_{\sum_{\sigma=-\infty}^\infty \sum_{u\ge 1} \alpha_u \lambda^{|\sigma|}z^{\tau+\sigma}}  
+    - \underbrace{\sum_{\tau\le 0}\sum_{u\ge 1} \alpha_u \lambda^{|\tau - u|}z^\tau}_{A(\lambda)\frac{z}{z-\lambda}} 
+    - A(z) \\
+    &= A(z)\left[\frac{\lambda z}{1-\lambda z} + \frac{\lambda}{z-\lambda} \right] - A(\lambda)\frac{z}{z-\lambda}\\
+    &= A(z)\lambda\left[\frac{z^2 -2\lambda z + 1}{(1-\lambda z)(z-\lambda)} \right] - A(\lambda)\frac{z}{z-\lambda}
+\end{align}
+
+We can now assemble the transformed gradient condition:
+
+\begin{equation}
+    A(z)\left[q + \sum_{\lambda\neq 1}\lambda w_\lambda  \frac{z^2 -2\lambda z + 1}{(1-\lambda z)(z-\lambda)} \right] = E(z) + \sum_{\lambda\neq 1}w_\lambda A(\lambda)\frac{z}{z-\lambda}
+\end{equation}
+
+We can find a common denominator for the left hand side of this equation 
+
+\begin{align}
+    A(z) \frac{P(z)}{Q(z)} &= E(z) + \sum_{\lambda\neq 1}w_\lambda A(\lambda)\frac{z}{z-\lambda}\\
+    \implies A(z) &= \frac{N(z)}{P(z)} \label{Arational}
+\end{align}
+
+where 
+
+\begin{align}
+    Q(z) &= \prod_{\lambda\neq 1}(1-\lambda z)(z - \lambda) \\
+    N(z) &= Q(z)\left[E(z) + \sum_{\lambda\neq 1}w_\lambda A(\lambda)\frac{z}{z-\lambda} \right]\\
+    P(z) &= q  \prod_{\lambda\neq 1}(1-\lambda z)(z - \lambda) + \sum_{\lambda\neq 1}\left[\lambda w_\lambda (z^2 -2 \lambda z + 1)\prod_{\mu \neq \lambda}(1-\mu z)(z - \mu)\right]
+\end{align}
+
+Each of these functions are polynomials in $z$ of degree $2n$ where $n$ is the number of nonstationary eigenvalue. This means $A(z)$ is a rational function. This suggests that we must analyze its pole and zero structure to ensure that $A(z)$ remains well defined. First, it is easy to show that $P(z) = z^{2n}P(1/z)$. Polynomials of this kind are called \textit{reciprocal} or \textit{palindromic} polynomials. In particular, roots of palindromic polynomials come in reciprocal pairs: if $\eta_j$ is a root, then so is $1/\eta_j$. Therefore we can conclude that half of the roots are inside the unit disc in the complex plane and the other half are outside. In fact, one can show using the Fejer-Riesz Theorem that none of the roots are on the unit circle in the complex plane, so splitting them into these two groups is guaranteed. As a labeling scheme, we refer to $\{\eta_j\}$ as the set of roots within the disc. In order for $A(z)$ to be well defined, we require it to be convergent on the unit disc $|z| \le 1$. This means that the roots $\{\eta_j\}$ are genuinely dangerous for the convergence of $A(z)$. We can rescue $A(z)$ from this danger by requiring that $N(\eta_j) = 0$ for all $j$ so that these poles cancel with zeros in the denominator. After factoring $N(z) = \hat{N}(z)\prod_{j} (z - \eta_j)$, $A(z)$ has the form
+
+\begin{align}
+    A(z) &= \frac{\hat{N}(z)}{\prod_j (z - 1/\eta_j)} \\
+    &= \sum_j \frac{\beta_j}{1-\eta_j z}
+\end{align}
+
+where the second equality follows from a partial fraction decomposition. We can now recognize that each term in the sum is the sum of a geometric series. Therefore:
+
+\begin{equation}\label{sumofgeo}
+    \alpha_\tau = \sum_{j} c_j \eta_j^\tau \;\; \textrm{ for } \tau \ge 1 \;\; \text{where $\eta_j$ are the roots of $P(z)$ satisfying $|\eta_j| < 1$}
+\end{equation}
+
+The coefficients $c_j$ can be found by analyzing the residues of $A(z)$, but below we describe an algorithm which is more useful in practice
+
+\subsubsection{Solving for the $c_j$ by boundary conditions}\label{sec:selfcons}
+In the derivation above, we required $N(\eta_j) = 0$ for all $j$. It turns out that these $n$ equations define boundary conditions on $A(z)$ that pin down the values of $c_j$ up to global normalization. First assume $\eta_j \neq \lambda$ which is generically true, aside from a limiting case which we postpone for now. This means that $Q(\eta_j)$ is nonzero in general implying that the boundary conditions are
+
+\begin{equation}\label{selfcons}
+    E(\eta_j) + \sum_{i}w_i A(\lambda_i) \frac{\eta_j}{\eta_j - \lambda_i} = 0
+\end{equation}
+
+At this point we must address the $\alphatil'$ dependence in the coefficient $e_\lambda$ which we alluded to earlier. First
+
+\begin{align}
+    \alphatil'_\lambda &= \sum_{\tau=1}^\infty \alpha_\tau \lambda^{\tau-1} \\
+    &= \frac{1}{\lambda}A(\lambda)
+\end{align}
+
+so
+
+\begin{align}
+    e_\lambda &= \tr\left( \Vb \hat{\Mb}_\lambda^\top\right) + \tr\left(\sum_{\mu \neq1} \alphatil'_\mu \Vb \Mb_\lambda^\top \Db^{-1}\Mb_\mu\Vb^\top \right) \\
+    &= \underbrace{\tr\left( \Vb \hat{\Mb}_\lambda^\top\right)}_{e_\lambda^0} 
+    + \sum_{\mu\neq 1}A(\mu) \underbrace{\frac{1}{\mu}\tr\left(\Vb \Mb_\lambda^\top \Db^{-1}\Mb_\mu\Vb^\top \right))}_{e_\lambda^\mu} \\
+    &= e_\lambda^0 + \sum_{\mu\neq 1}A(\mu)e_\lambda^\mu
+\end{align}
+
+\eqref{selfcons} becomes
+\begin{align}
+    \sum_{\lambda\neq 1}e_{\lambda} \frac{\eta_j}{1-\lambda \eta_j} + \sum_{\lambda\neq 1}w_{\lambda} A(\lambda) \frac{\eta_j}{\eta_j - \lambda} &= 0\\
+    \implies \sum_{\mu\neq1} \underbrace{\left[\frac{\eta_j}{\eta_j-\mu} + \sum_{\lambda\neq 1}\frac{e^\mu_\lambda\eta_j}{1-\eta_j\lambda} \right]}_{\Theta_{j\mu}}A(\mu) &= \underbrace{-\sum_{\lambda\neq 1}\frac{e_\lambda^0\eta_j}{1-\eta_j\lambda}}_{b_j}
+\end{align}
+
+This is a linear equation that can be inverted to solve for the boundary values $A(\mu)$. We can use this to identify the correct coefficients $c_j$ by plugging in \eqref{sumofgeo}
+
+\begin{align}
+  \sum_{j}\frac{\eta_j \mu}{1-\eta_j\mu} c_j = A(\mu)
+\end{align}
+
+This is a linear equation that can be inverted for $c_j$. In conclusion, the pole-zero cancellation actually imposes boundary conditions on $A(z)$ that identify the correct coefficients. Algorithmically, they can be found efficiently by two linear solves. 
+
+\subsubsection{Negative and complex roots}
+The theory up to this point has shown that the optimal attention profile is a sum of geometric decays with rates set by the roots of a polynomial \eqref{sumofgeo}. The issue is that if any of the $\eta_j$ are negative or complex, the attention pattern we does not satisfy the nonnegativty (and realness) constraint of attention. The first observation to make is that since the hidden transition matrix is real, if it has complex eigenvalues, they appear in complex conjugate pairs as do their corresponding eigenvectors. Tracing back through the definitions of $w_\lambda, q, e_\lambda$, this implies that the coefficients of $P(z)$ are real as well (in reality,$e_\lambda$ is potentially complex, but we will impose that its imaginary component vanishes to pin the phase of the attention profile below). Since the coefficients of the polynomial are real, any complex roots appear as complex conjugate pairs, meaning we can write
+
+\begin{equation}
+    \alpha_\tau = \sum_j \bar{c}_j |\eta_j|^{\tau}\cos(\omega_j \tau + \psi)
+\end{equation}
+
+where $\omega_j = \arg\eta_j$. This eliminates the possibility of unphysical complex attention patterns, but we are still left to deal with the positivity constraint. In the following we make an ansatz which is supported numerically, but not proven rigorously. The solution is to assume that $\alpha_\tau$ is supported on a sublattice. In particular, assume $\textrm{supp}(\alpha)= \{\tau_0 + pk \mid k \in \mathbb{Z}_{\ge0}\}$ where $p$ is a positive integer. We know that the gradient \eqref{gtau} must vanish on the support. Working through the derivatives again yields a difference equation in $k$:
+
+\begin{equation}
+    \sum_{\lambda \neq 1}e_{\lambda^p} \lambda^{pk -1} - q\alpha_{pk} - \sum_{\lambda\neq1}w_{\lambda^p} \sum_{k' \neq k}\alpha_{pk'} \lambda^{p|k - k'|}
+\end{equation}
+
+This is the same equation difference equation as before, with the substitution $\lambda \to \lambda^p$. Assume that at the optimum, $\Vb_\ast = \Rb \Sb^+$, the polynomial $P(z)$ has roots with the same type as the nonstationary eigenvalues in the sense that there are the same number of positive, negative, and complex roots as there are eigenvalues (this can probably be proven but is left as a detail for now). Also assume that any eigenvalues $\lambda_j = |\lambda_j|e^{i2\pi\psi_j}$ has $\psi_j$ rational so $\psi_j = n_j/d_j$. Then we should choose $p$ as the least common multiple $\text{lcm}(\{d_j\})$. The phase $\tau_0$ of the support can be identified by recognizing that the term $e_\lambda^0$ is potentially complex. We therefore can choose $\tau_0$ to exactly cancel its phase. If $\phi_\lambda = \arg(e_\lambda^0)$ we should choose $\tau_0$ as the smallest integer that satisfies
+
+\begin{equation}
+    \omega_\lambda(\tau_0-1) + \phi_\lambda = 0 \mod q
+\end{equation}
+
+for all $\lambda$. 
+
+\subsubsection{Limiting Case I: Cryptic Modes}
+
+\subsubsection{Limiting Case II: Markov Emissions}
+\subsection{Row stationary approximation to the attention matrix}
+One path forward is to consider a sort of \textit{row stationary} approximation to the attention matrix
+
+\begin{equation}\label{astat}
+    \Ab = \begin{pmatrix}
+        a_0 & 0 & 0 & 0 & \dots  &0 &0\\
+        a_1 &a_0 & 0 & 0 & \dots  &0 &0\\
+        a_2 &a_1 & a_0 & 0 & \dots  &0 &0\\
+        &&&\vdots & \\
+        a_s & a_{s-1} & \dots & a_1 & a_0  & 0 & \dots \\
+        \vdots & \vdots &\vdots 
+    \end{pmatrix}
+\end{equation}
+
+ Because of the row normalization constraint on $\Ab$ this only really makes sense in the $T \to \infty$ limit. So this means that the rows of the \textit{infinite} attention matrix are shifted copies of the same sequence $\{a_\tau\}_{\tau=0}^\infty$. The mean lag distribution is easy to calculate:
+
+ \begin{align}
+     \alpha(\tau)  &= \lim_{T\to \infty}\frac{1}{T}\sum_{\tau+1}^T A_{t, t-\tau} \\ 
+     &= \lim_{T\to \infty}\frac{T - \tau}{T} a_\tau \\
+     &= a_\tau
+ \end{align}
+
+The mean autocorrelation turns out to just be the autocorrelation of the sequence $a_\tau$ which is the primary benefit of this approximation 
+
+\begin{align}
+    \gamma(\tau) &= \lim_{T\to \infty}\sum_{t=\tau+1}^T\sum_{s=t}^T A_{st}A_{s,t-\tau} \\
+    &= \lim_{T \to \infty}\sum_{t=0}^{T-\tau-1}\frac{T-\tau-t}{T}a_ta_t+\tau \\
+    &= \sum_{t=0}^\infty a_t a_{t+\tau} \label{stat_gamma}
+\end{align}
+
+Therefore the attention optimization problem becomes expressible only in terms of the sequence $\alpha(\tau)$. 
+
+\subsection{optimal attention pattern for a two state system}
+In a two state system, there is only one nonstationary eigenvalue and the objective \eqref{lattn} can be written as a scalar equation. Consider a two state, two token process, who's state transition matrix and token labeled transition matrices can be parameterized generally as
+
+\begin{equation}\label{Tts}
+T = \begin{pmatrix}
+1-s_1 & s_1\\
+s_2 & 1-s_2
+\end{pmatrix}
+\end{equation}
+\begin{equation}\label{T1ts}
+T^{(1)} = \begin{pmatrix}
+\theta_1(1-s_1) & \theta_1s_1 \\
+\theta_2 s_2 & \theta_2(1-s_2)
+\end{pmatrix}
+\end{equation}
+\begin{equation}\label{T2ts}
+T^{(2)} = \begin{pmatrix}
+(1-\theta_1)(1-s_1) & (1-\theta_1)s_1 \\
+(1-\theta_2) s_2 & (1-\theta_2)(1-s_2)
+\end{pmatrix}
+\end{equation}
+From the transition matrix it is straightforward to show that the nonstationary eigenvalue of T is 
+\begin{equation}\label{lamts}
+\lambda =1- (s_1+s_2)
+\end{equation}
+The stationary distribution is
+
+\begin{equation}
+\pi^T = \frac{1}{s_1 + s_2}\begin{pmatrix}
+s_2 & s_1
+\end{pmatrix}
+\end{equation}
+
+with right eigenvector $\one$, the two dimensional vector of ones. The stationary symbol probabilities are:
+
+\begin{align}
+	p_1 &= \pi^T T^{(1)}1 = \frac{\theta_1s_2 + \theta_2s_1}{s_1+s_2} \label{p1}\\
+	p_2 &= \pi^T T^{(2)}1 = \frac{(1-\theta_1)s_2 + (1-\theta_2)s_1}{s_1+s_2}\label{p2}
+\end{align}
+Note that this gives $p_1 + p_2 = 1$ as expected. Define the vector 
+
+$$
+p = 
+\begin{pmatrix}
+	p_1 \\p_2
+\end{pmatrix}
+$$
+and the matrix 
+$$
+D = 
+\begin{pmatrix}
+	p_1 & 0 \\
+	0 &p_2
+\end{pmatrix}
+$$
+
+The nonstationary right and left eigenvectors are 
+$$
+r_\lambda = \frac{1}{s_1+s_2}\begin{pmatrix}
+	s_1 \\ -s_2 
+\end{pmatrix} \;\;\;\;\;\;\;\;\;\;
+v^T = 
+\begin{pmatrix}
+	1 & -1 
+\end{pmatrix}
+$$
+From this we can also find an expression for $\Mb_\lambda$
+
+\begin{align}
+(M_\lambda)_{ij} &= \pi^T T^{(j)} r_\lambda v^T T^{(i)}1 \\
+\implies M_\lambda &= m_\lambda vv^T
+\end{align}
+
+where 
+\begin{equation}\label{mlambda}
+m_\lambda = \frac{\lambda s_1 s_2}{(s_1 + s_2)^2}(\theta_1 - \theta_2)^2
+\end{equation}
+Now all of the necessary ingredients are in place to find an expression for $\mathcal{L}_{\text{attn}}$. Using \eqref{s} \eqref{lattn} we can find that 
+
+\begin{equation}\label{lattn_stat}
+    \mathcal{L}_{\text{attn}} = \frac{(\alphatil'_\lambda)^2(m_\lambda^2)(\lambda - m_\lambda/p_1p_2)^2}{p_1p_2(\gamma_0 - \alpha_0^2) + 2m_\lambda(\gammatil'_\lambda - \alpha_0\alphatil'_\lambda) - m_\lambda^2 (\alphatil'_\lambda)^2/p_1p_2}
+\end{equation}
+
+At this point it is very helpful to make the stationary approximation to the attention matrix. For convenience, the definitions of all relevant quantities (under the row stationary approximation) are repeated below
+
+\begin{align}
+    \alphatil'_\lambda &= \sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau \\
+    \gamma_\tau &= \sum_{t=0}^\infty \alpha_t \alpha_{t+\tau} \\
+    \gamma_0 &= \sum_{t=0}^\infty\alpha_t^2\\
+    \gammatil'_\lambda &= \sum_{\tau=0}^\infty\gamma_{\tau+1}\lambda^\tau = \sum_{\tau=0}^\infty\sum_{t=0}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau
+\end{align}
+
+To begin note that \eqref{lattn_stat} is scale invariant. That is, it is invariant under the transformation $\alpha_\tau \to c\alpha_\tau$. This means that we can optimize the function without needing to consider the normalization constraint, and can impose it after finding a solution. Second we will now show that \eqref{lattn_stat} is independent of the coordinate $\alpha_0$. The numerator is independent of $\alpha_0$ since it only depends on $\alphatil'_\lambda$. Now observe
+
+\begin{align}
+    \gamma_0 - \alpha_0^2 &= (\sum_{\tau=0}^\infty \alpha_\tau^2) - \alpha_0^2 \\
+    &= \sum_{\tau=1}^\infty \alpha_\tau^2
+\end{align}
+ and 
+ \begin{align}
+    \gammatil'_\lambda - \alpha_0\alphatil`_\lambda &= (\sum_{\tau=0}^\infty\sum_{t=0}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau) - \alpha_0\sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau \\
+    &= (\sum_{\tau=0}^\infty\alpha_0 \alpha_{t+\tau}\lambda^\tau) + (\sum_{\tau=0}^\infty\sum_{t=1}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau) - ( \alpha_0\sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau)\\
+    &= \sum_{\tau=0}^\infty\sum_{t=1}^\infty \alpha_t \alpha_{t+\tau+1}\lambda^\tau
+\end{align}
+
+so all $\alpha_0$ dependence cancels in the denominator as well. By scale invariance of the objective we may therefore take $\alpha_0 = 0$ without loss of generality. Rewriting the objective to make this explicit we have:
+
+\begin{equation}\label{lattn_simp}
+    \mathcal{L}_{\text{attn}} = \frac{bK (\alphatil'_\lambda)^2}{b^2\gamma_0 + 2mb\gammatil_\lambda' - m^2(\alphatil'_\lambda)^2}
+\end{equation}
+
+where we have defined 
+\begin{align}
+    K &= (m_\lambda^2)(\lambda - m_\lambda/p_1p_2)^2\\
+    b &= p_1p_2 \\
+    m &= m_\lambda
+\end{align}
+to lighten the notation a bit. Since the objective only depends on the sequence $\{\alpha_\tau\}$ we can differentiate it with respect to $\alpha_\tau$ and set it equal to zero to generate a necessary condition on the coefficients for an optimum. If we call the numerator of \eqref{lattn_simp} $n$ and the denominator $\Delta$, then the first order stationarity condition comes from setting the numerator of the quotient rule equal to zero:
+
+\begin{equation}
+    \Delta n' = n\Delta'
+\end{equation}
+After a careful calculation we arrive at
+
+\begin{equation}\label{alphader}
+    C \lambda^{\tau-1} = b^2 \alpha_\tau + mb\left[(\sum_{\tau'=0}^\infty \alpha_{\tau+\tau'+1}\lambda^{\tau'}) + (\sum_{\tau'=0}^{\tau-2}\alpha_{\tau-\tau'-1}\lambda^{\tau'}) \right]
+\end{equation}
+
+where $C$ is a $\tau$-independent constant equal to:
+
+\begin{equation}
+    C = \frac{b^2\gamma_0 + 2mb\gammatil_\lambda'}{\alphatil_\lambda'}
+\end{equation}
+
+At this point we will make the ansatz that $\alpha_\tau = \eta^\tau$. By plugging in the this ansatz, we can derive self consitency conditions that pin down the correct base $\eta$. This ansatz has the nice property that all sums become geometric series, so they can be calculated in closed form. Below are all of the relevant sums:
+
+\begin{alignat}{3}
+    &\gamma_0 = \sum_{\tau=1}^\infty \alpha_\tau^2 = \sum_{\tau=1}^\infty \eta^{2\tau} = \frac{\eta^2}{1 + \eta^2} \\
+    &\alphatil_\lambda' = \sum_{\tau=0}^\infty \alpha_{\tau+1}\lambda^\tau = \eta \sum_{\tau=0}^\infty({\eta\lambda})^\tau = \frac{\eta}{1-\eta\lambda} \\
+    &\gammatil_\lambda' = \sum_{\tau'=0}^\infty\sum_{t=1}^\infty \alpha_t \alpha_{t+\tau'+1}\lambda^{\tau'} = \sum_{\tau'=0}^\infty\sum_{t=1}^\infty \eta^t\eta^{t+\tau'+1}\lambda^{\tau'} = \frac{\eta^3}{(1-\eta\lambda)(1-\eta^2)}\\
+    &\sum_{\tau'=0}^\infty \alpha_{\tau+\tau'+1}\lambda^{\tau'} = \frac{\eta^{\tau+1}}{1-\eta\lambda}\\
+     &\sum_{\tau'=0}^{\tau-2} \alpha_{\tau-\tau'-1}\lambda^{\tau'} 
+     = \eta^{\tau-1}\left(\sum_{\tau'=1}^{\tau-2}\left(\frac{\lambda}{\eta}\right)^{\tau'} \right) \\
+     &= \eta^{\tau-1}\frac{1 - \left(\lambda / \eta \right)^{\tau-1}}{1 - \left(\lambda / \eta \right)}\\
+     &= \frac{\eta\lambda^{\tau-1}}{\lambda - \eta} - \frac{\eta^\tau}{\lambda-\eta}
+\end{alignat}
+Plugging in these sums to \eqref{alphader} we have 
+
+\begin{equation}
+    C\lambda^{\tau-1} = \underbrace{\left(b^2 + \frac{mb\eta}{1-\eta\lambda} - \frac{mb}{\lambda-\eta}\right)}_{C_\eta}\eta^\tau + \frac{mb\eta}{\lambda-\eta}\lambda^{\tau-1}
+\end{equation}
+
+Note that in the above we assumed $\eta\neq \lambda$. If we had taken $\eta = \lambda$, we would have found an equation of the form $C'\lambda^{\tau-1} = (\tau-1)$ which could never hold for all $\tau$. Satisfying the above equation for $\eta \neq \lambda$ requires $C= \frac{mb\eta}{\lambda - \eta}$ as well as $C_\eta = 0$. It turns out that \textit{both} of these conditions yield the same quadratic constraint equation
+
+\begin{equation}\label{quad}
+    (b\lambda - m)\eta^2 + (2m\lambda - b\lambda^2 -b)\eta + (b\lambda-m) = 0
+\end{equation}
+
+This quadratic is palindromic-- it has identical constant and quadratic coefficients. This means that its two roots $\eta_{+}, \eta_{-}$ are reciprocals. This means that if the polynomial has real roots, they have the same sign and one root is guaranteed to have magnitude less than one, corresponding to a valid, normalizable $\alpha_\tau$. We show in Appendix \ref{sec:real} that all roots of the polynomial are real for any choice of parameters. Furthermore, we prove in Appendix \ref{sec:signed} that $\text{sign}(\eta) = \text{sign}(\lambda)$. Therefore, when the nonstationary eigenvalue of the process is positive, there is a unique geometrically decaying attention profile that corresponds to a critical point of the row stationary loss. If the nonstationary eigenvalue of the process is negative, the root is negative which would violate the positivity constraint of attention. \textbf{For negative eigenvalues, the natural ansatz is to geometrically decay on even or odd positions. This can probably be worked out in the same way but I will leave this for now.} So we have proven that for $\lambda > 0$ the optimal attention profile under the row stationary approximation is 
+
+\begin{equation}
+    \alpha(\tau) = (1-\eta)\eta^\tau
+\end{equation}
+
+where
+
+\begin{equation}
+    \eta = \frac{(\lambda^2 + 1)b - 2m\lambda - \sqrt{(1-\lambda^2)(b^2 - (2m - b\lambda)^2)}}{2(b\lambda - m)}
+\end{equation}
+
+
+\printbibliography
+
+\appendix 
+
+\section{Supremum over finitely supported distributions equals supremum over summable distributions}\label{sec:mfinmstar}
+
+Let $\mathcal{P}$ be the set of probability distributions on the nonnegative integers and let $\Pfin \subset \mathcal{P}$ be those with finite support. The goal is to show 
+\begin{equation}
+    M_\ast = \sup_{a \in \mathcal{P}} \lbar(\Phi(a)) = \sup_{a \in \Pfin} \lbar(\Phi(a)) = M_\ast^{\textrm{fin}}
+\end{equation}
+Since $\Pfin \subset \mathcal{P}$, we know $M_\ast^{\textrm{fin}} \le M_\ast$. To prove the other direction
+choose any $a \in \mathcal{P}$. For any $L$ large enough so that $Z_L = \sum_{\tau=0}^L a_\tau > 0$ we can truncate and renormalize $a$ to form $a^{(L)} \in \Pfin$: $a^{(L)} = a \mathbb{I}[0 \le \tau \le L]/Z_L$. By construction $\lim_{L\to \infty} a_L = a$. Now note that the map $\Phi$ is continuous since it outputs the input sequence in its first component and the autocorrelation of the sequence in its second, both of which are continuous. So, $\lim_{L \to \infty}\Phi(a^{(L)}) = \Phi(a)$. Now using the lower semicontinuity of the lifted objective
+
+\begin{equation}
+    {\lim\inf}_{L \to \infty} \lbar(\Phi(a^{(L)})) \ge \lbar(\Phi(a))
+\end{equation}
+
+We also have that $M_\ast^{\textrm{fin}} = \sup_{b \in \Pfin} \lbar(\Phi(b)) \ge \lbar(\Phi(a^{L}))$ for any $L$. Taking the supremum over $L$ yields 
+
+\begin{equation}
+    M_\ast^{\textrm{fin}} \ge \sup_L \lbar(\Phi(a^{L})) \ge {\liminf}_{L}\lbar(\Phi(a^{L})) \ge \lbar(\Phi(a))
+\end{equation}
+
+which holds for any $a \in \mathcal{P}$. Finally we can take the supremum over $a$ to finish the proof. 
+
+\section{Proof that all roots of \eqref{quad} are real}\label{sec:real}
+
+By analyzing the discriminant $\delta$ of \eqref{quad} we can derive a condition for real roots. 
+
+\begin{align}
+    \delta &= (2m\lambda - b\lambda^2 -b)^2 - 4(b\lambda-m)^2\\
+    &= (1-\lambda^2)(b^2 - (2m-b\lambda)^2)
+\end{align}
+
+The simplified form comes from expanding the top equation and then refactoring the polynomial. The first factor is always positive since the nonstationary eigenvalue lives has magnitude bounded by unity. The existence of real roots requires $\delta \ge 0$, meaning the second factor must be positive. This implies the following must hold
+
+\begin{equation}\label{mbineq}
+    \frac{(\lambda -1)b}{2} \le m \le \frac{(\lambda+1)b}{2}
+\end{equation}
+
+Using \eqref{mlambda}, \eqref{p1}, \eqref{p2} we can find that 
+
+\begin{align}
+    m &= \frac{\lambda s_1s_2}{(s_1+s_2)^2}(\theta_1 -\theta_2)^2 \\
+    b &= \frac{(\theta_1s_2 + \theta_2s_1)[(1-\theta_1)s_2 + (1-\theta_2)s_1]}{(s_1 + s_2)^2}
+\end{align}
+
+With a bit of algebra these equations can be manipulated to arrive at:
+\begin{equation}\label{mbid}
+    m = \lambda\left[b - \frac{\theta_1(1-\theta_1)s_2 + \theta_2(1-\theta_2)s_1}{s_1+s_2}\right]
+\end{equation}
+where the term in the square brackets is positive. This equation along with the constraint $\lambda \in (-1,1)$ implies that \eqref{mbineq} is true for all parameters. 
+
+\section{Proof that $\text{sign}(\eta) = \text{sign}(\lambda)$}\label{sec:signed}
+
+Since the quadratic equation \eqref{quad} is palindromic, we know that for any real roots $\eta$
+
+\begin{align}
+    \eta + \frac{1}{\eta} &= \frac{2m\lambda - b\lambda^2-b}{m-b\lambda} \\
+    \frac{\eta^2 + 1}{\eta} &= \frac{2m\lambda - b\lambda^2-b}{m-b\lambda} \\
+    \implies \text{sign}(\eta) &= \text{sign}(2m\lambda - b\lambda^2-b)\text{sign}(m-b\lambda) = -\text{sign}(\lambda)\text{sign}(2m\lambda - b\lambda^2-b)
+\end{align}
+
+where we have used \eqref{mbid} to show that $\text{sign}(m-b\lambda)= - \text{sign}(\lambda)$. To finish the proof, we will show that $(2m\lambda - b\lambda^2-b) < 0$. By completing the square
+
+\begin{equation}
+    -b\lambda^2 + 2m\lambda -b = -b(\lambda - m/b)^2 + \frac{m^2 - b^2}{b}
+\end{equation}
+
+This is a concave down parabola in $\lambda$ with maximum at $\frac{m^2 - b^2}{b}$. Using \eqref{mbid} we have 
+\begin{equation}
+    m \le \lambda b \le b
+\end{equation}
+for $\lambda > 0$ and 
+\begin{equation}
+    m \ge \lambda b \ge -b
+\end{equation}
+for $\lambda <0$ which both imply that the $\frac{m^2 - b^2}{b}<0$. This concludes the proof. 
+
+
+
+
+\end{document}

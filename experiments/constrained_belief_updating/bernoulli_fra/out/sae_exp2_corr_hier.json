@@ -1,0 +1,354 @@
+{
+  "corr": {
+    "cfg": {
+      "N": 24,
+      "d": 24,
+      "K": 2,
+      "corr_rank": 4,
+      "corr_scale": 0.7
+    },
+    "report": {
+      "mcc": 0.9197596109392715,
+      "uniqueness": 0.9583333333333334,
+      "dead": 0,
+      "L": 24,
+      "N": 24,
+      "prec": 0.859614220416327,
+      "recall": 0.6008814718191523,
+      "f1": 0.6787693326917029,
+      "chi_rank": 24,
+      "sev_max": 5.465699274890643e-14,
+      "sev_mean": 1.935116551556055e-14,
+      "n_unsever": 0,
+      "offdict_res_mean": 7.397332893153982e-16,
+      "offdict_res_max": 9.980259150473487e-16,
+      "chi_diag_mean": 0.9197595934089767,
+      "offtarget_mean": 0.08024042170535824
+    },
+    "hedges": [
+      {
+        "gt": 5,
+        "diag": 0.9951417335491927,
+        "max_off": 0.05385921233187108,
+        "off_partner": 2,
+        "off_partner_corr": -0.0033116549927555933,
+        "corr_partner": 17,
+        "corr_partner_val": 0.12579314060046481,
+        "chi_on_corr_partner": 0.025410242575576125
+      },
+      {
+        "gt": 14,
+        "diag": -0.0007891814312336861,
+        "max_off": 0.5019380921807185,
+        "off_partner": 0,
+        "off_partner_corr": -0.052272298138539036,
+        "corr_partner": 9,
+        "corr_partner_val": 0.6179924251452548,
+        "chi_on_corr_partner": -0.003721037046425827
+      },
+      {
+        "gt": 21,
+        "diag": 0.990668203347756,
+        "max_off": 0.07899735385561366,
+        "off_partner": 8,
+        "off_partner_corr": 0.46377899621169555,
+        "corr_partner": 8,
+        "corr_partner_val": 0.46377899621169555,
+        "chi_on_corr_partner": 0.07899735385561366
+      },
+      {
+        "gt": 3,
+        "diag": 0.9896141503275482,
+        "max_off": 0.09617785540773847,
+        "off_partner": 13,
+        "off_partner_corr": 0.6221578324427199,
+        "corr_partner": 13,
+        "corr_partner_val": 0.6221578324427199,
+        "chi_on_corr_partner": 0.09617785540773847
+      },
+      {
+        "gt": 2,
+        "diag": 0.9904418390256312,
+        "max_off": 0.06256902131660093,
+        "off_partner": 12,
+        "off_partner_corr": 0.44938296588865106,
+        "corr_partner": 12,
+        "corr_partner_val": 0.44938296588865106,
+        "chi_on_corr_partner": 0.06256902131660093
+      },
+      {
+        "gt": 13,
+        "diag": 0.9326110220559215,
+        "max_off": 0.3081812142328299,
+        "off_partner": 3,
+        "off_partner_corr": 0.6221578324427199,
+        "corr_partner": 3,
+        "corr_partner_val": 0.6221578324427199,
+        "chi_on_corr_partner": 0.3081812142328299
+      },
+      {
+        "gt": 12,
+        "diag": 0.935106475738557,
+        "max_off": 0.23387421647621334,
+        "off_partner": 2,
+        "off_partner_corr": 0.44938296588865106,
+        "corr_partner": 19,
+        "corr_partner_val": 0.5261881043939827,
+        "chi_on_corr_partner": 0.2248382712424182
+      },
+      {
+        "gt": 17,
+        "diag": 0.9173881017982709,
+        "max_off": 0.27184783727816797,
+        "off_partner": 7,
+        "off_partner_corr": 0.486064230820395,
+        "corr_partner": 7,
+        "corr_partner_val": 0.486064230820395,
+        "chi_on_corr_partner": 0.27184783727816797
+      },
+      {
+        "gt": 18,
+        "diag": 0.9710546392504426,
+        "max_off": 0.20814440938112402,
+        "off_partner": 23,
+        "off_partner_corr": 0.4884755834830137,
+        "corr_partner": 23,
+        "corr_partner_val": 0.4884755834830137,
+        "chi_on_corr_partner": 0.20814440938112402
+      },
+      {
+        "gt": 16,
+        "diag": 0.9873699583795388,
+        "max_off": 0.11630957916297027,
+        "off_partner": 2,
+        "off_partner_corr": 0.2023402255717039,
+        "corr_partner": 1,
+        "corr_partner_val": 0.23362657944975515,
+        "chi_on_corr_partner": 0.07050332080002633
+      },
+      {
+        "gt": 0,
+        "diag": 0.978747595643306,
+        "max_off": 0.1349702745164449,
+        "off_partner": 3,
+        "off_partner_corr": 0.41744942523215317,
+        "corr_partner": 4,
+        "corr_partner_val": 0.5666957160142944,
+        "chi_on_corr_partner": 0.09431441131887974
+      },
+      {
+        "gt": 7,
+        "diag": 0.9872087671368097,
+        "max_off": 0.09348350177048492,
+        "off_partner": 1,
+        "off_partner_corr": 0.4310354818622084,
+        "corr_partner": 17,
+        "corr_partner_val": 0.486064230820395,
+        "chi_on_corr_partner": 0.05562190693389907
+      },
+      {
+        "gt": 19,
+        "diag": 0.970993827122585,
+        "max_off": 0.17387027166897515,
+        "off_partner": 2,
+        "off_partner_corr": 0.40320049917281303,
+        "corr_partner": 12,
+        "corr_partner_val": 0.5261881043939827,
+        "chi_on_corr_partner": 0.09836594418986873
+      },
+      {
+        "gt": 23,
+        "diag": 0.9821257778548662,
+        "max_off": 0.11454669821232014,
+        "off_partner": 18,
+        "off_partner_corr": 0.4884755834830137,
+        "corr_partner": 18,
+        "corr_partner_val": 0.4884755834830137,
+        "chi_on_corr_partner": 0.11454669821232014
+      },
+      {
+        "gt": 8,
+        "diag": 0.7635971981096723,
+        "max_off": 0.4862438885335022,
+        "off_partner": 14,
+        "off_partner_corr": 0.5970010421635742,
+        "corr_partner": 14,
+        "corr_partner_val": 0.5970010421635742,
+        "chi_on_corr_partner": 0.4862438885335022
+      },
+      {
+        "gt": 6,
+        "diag": 0.9738507486469792,
+        "max_off": 0.10183792285139152,
+        "off_partner": 2,
+        "off_partner_corr": 0.15716262296189132,
+        "corr_partner": 20,
+        "corr_partner_val": 0.33738930596803535,
+        "chi_on_corr_partner": 0.09286635256561124
+      },
+      {
+        "gt": 11,
+        "diag": 0.9848191854561291,
+        "max_off": 0.07595115255032156,
+        "off_partner": 1,
+        "off_partner_corr": 0.23183170793890134,
+        "corr_partner": 4,
+        "corr_partner_val": 0.2643353299196055,
+        "chi_on_corr_partner": 0.06010187197085981
+      },
+      {
+        "gt": 1,
+        "diag": 0.9753807022511889,
+        "max_off": 0.12315609858214446,
+        "off_partner": 7,
+        "off_partner_corr": 0.4310354818622084,
+        "corr_partner": 7,
+        "corr_partner_val": 0.4310354818622084,
+        "chi_on_corr_partner": 0.12315609858214446
+      },
+      {
+        "gt": 4,
+        "diag": 0.9420149878004289,
+        "max_off": 0.2767226748894982,
+        "off_partner": 0,
+        "off_partner_corr": 0.5666957160142944,
+        "corr_partner": 0,
+        "corr_partner_val": 0.5666957160142944,
+        "chi_on_corr_partner": 0.2767226748894982
+      },
+      {
+        "gt": 15,
+        "diag": 0.9822568095379384,
+        "max_off": 0.09819676292028705,
+        "off_partner": 21,
+        "off_partner_corr": 0.3767135985015844,
+        "corr_partner": 21,
+        "corr_partner_val": 0.3767135985015844,
+        "chi_on_corr_partner": 0.09819676292028705
+      },
+      {
+        "gt": 10,
+        "diag": 0.9977910781187557,
+        "max_off": 0.03512181494056691,
+        "off_partner": 3,
+        "off_partner_corr": 0.11924033531411411,
+        "corr_partner": 3,
+        "corr_partner_val": 0.11924033531411411,
+        "chi_on_corr_partner": 0.03512181494056691
+      },
+      {
+        "gt": 22,
+        "diag": 0.9854388925114339,
+        "max_off": 0.1296234649551794,
+        "off_partner": 2,
+        "off_partner_corr": 0.2649281922276067,
+        "corr_partner": 2,
+        "corr_partner_val": 0.2649281922276067,
+        "chi_on_corr_partner": 0.1296234649551794
+      },
+      {
+        "gt": 9,
+        "diag": 0.8845302782043695,
+        "max_off": 0.39562186328973004,
+        "off_partner": 14,
+        "off_partner_corr": 0.6179924251452548,
+        "corr_partner": 14,
+        "corr_partner_val": 0.6179924251452548,
+        "chi_on_corr_partner": 0.39562186328973004
+      },
+      {
+        "gt": 20,
+        "diag": 0.9552890885168868,
+        "max_off": 0.2008627703439289,
+        "off_partner": 14,
+        "off_partner_corr": 0.5912544922327057,
+        "corr_partner": 14,
+        "corr_partner_val": 0.5912544922327057,
+        "chi_on_corr_partner": 0.2008627703439289
+      }
+    ],
+    "hedge_lands_on_corr_partner_frac": 0.625,
+    "mean_offdiag_mass": 0.18217116465202596,
+    "corr_offmass_vs_partcorr": 0.2930833622493954
+  },
+  "hier": {
+    "cfg": {
+      "N": 24,
+      "d": 24,
+      "K": 3,
+      "hierarchy": "6 parent->child pairs"
+    },
+    "report": {
+      "mcc": 0.9392790776830756,
+      "uniqueness": 1.0,
+      "dead": 0,
+      "L": 24,
+      "N": 24,
+      "prec": 0.8937441611730675,
+      "recall": 0.7325383507490053,
+      "f1": 0.7985930717787894,
+      "chi_rank": 24,
+      "sev_max": 7.006192749491873e-15,
+      "sev_mean": 1.7015472299391545e-15,
+      "n_unsever": 0,
+      "offdict_res_mean": 7.727613458291273e-16,
+      "offdict_res_max": 1.101769299061308e-15,
+      "chi_diag_mean": 0.93927906097796,
+      "offtarget_mean": 0.06072095349014776
+    },
+    "absorption": [
+      {
+        "child": 6,
+        "parent": 0,
+        "chi_child_on_parent": 0.5499929660229497,
+        "chi_child_on_child": 0.8170766987630453,
+        "sev_child": 3.764327422283824e-15,
+        "sev_parent": 7.006192749491873e-15
+      },
+      {
+        "child": 7,
+        "parent": 1,
+        "chi_child_on_parent": 0.5429011251177334,
+        "chi_child_on_child": 0.8197791057242564,
+        "sev_child": 1.116122507374047e-15,
+        "sev_parent": 1.0863712638625049e-15
+      },
+      {
+        "child": 8,
+        "parent": 2,
+        "chi_child_on_parent": 0.5424005418774519,
+        "chi_child_on_child": 0.8220824351551613,
+        "sev_child": 1.4675887587448322e-15,
+        "sev_parent": 1.9246033444369816e-15
+      },
+      {
+        "child": 9,
+        "parent": 3,
+        "chi_child_on_parent": 0.5463329869237602,
+        "chi_child_on_child": 0.8180209803924816,
+        "sev_child": 1.085590410775239e-15,
+        "sev_parent": 1.7102368730963488e-15
+      },
+      {
+        "child": 10,
+        "parent": 4,
+        "chi_child_on_parent": 0.5455325277489039,
+        "chi_child_on_child": 0.8182045003578465,
+        "sev_child": 1.4199986176915057e-15,
+        "sev_parent": 2.094460894549194e-15
+      },
+      {
+        "child": 11,
+        "parent": 5,
+        "chi_child_on_parent": 0.5401084443791881,
+        "chi_child_on_child": 0.82201955311893,
+        "sev_child": 1.832211621318258e-15,
+        "sev_parent": 1.134167626176833e-15
+      }
+    ],
+    "sev_children_mean": 1.7809732230312844e-15,
+    "sev_parents_mean": 2.4926721252689558e-15,
+    "sev_independent_mean": 1.266271785728189e-15,
+    "mean_child_on_parent": 0.5445447653449978
+  }
+}

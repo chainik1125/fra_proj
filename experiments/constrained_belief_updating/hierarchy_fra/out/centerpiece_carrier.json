@@ -1,0 +1,186 @@
+{
+  "platform": "theory-clean: attention-only, NO LayerNorm (user directive 2026-07-17)",
+  "finding": "the parent->child gate is carried by OV (values), NOT QK (keys); the targeted FRA-QK cut is a gauge-robust NULL -> falsifies H2.3/H3.2 for the trained model",
+  "cells": {
+    "gated_occ": {
+      "base_child": 0.24400588080022942,
+      "base_parent": 0.38458317814062587,
+      "frontiers": {
+        "bayes": 0.2404950959129804,
+        "parent_blind": 0.2545569585321043,
+        "affine_lag": 0.2499286105714185,
+        "gating_value": 0.0140618626191239
+      },
+      "qk_cut": {
+        "0.0": {
+          "dchild_mean": -7.655215350510503e-11,
+          "dchild_min": -2.537472731933832e-10,
+          "dchild_max": 2.409081267806812e-11,
+          "dparent_mean": -2.3736568266485847e-12,
+          "dchild_gaugestd": 1.2568127583926962e-10
+        },
+        "0.25": {
+          "dchild_mean": -0.0002297036141391632,
+          "dchild_min": -0.0002297036945538844,
+          "dchild_max": -0.00022970351742046535,
+          "dparent_mean": 0.00024200322206998268,
+          "dchild_gaugestd": 7.322762127954206e-11
+        },
+        "0.5": {
+          "dchild_mean": -0.00021955525570877912,
+          "dchild_min": -0.0002195553649141091,
+          "dchild_max": -0.00021955518311400635,
+          "dparent_mean": 0.0007315282807987175,
+          "dchild_gaugestd": 7.860478786370976e-11
+        },
+        "0.75": {
+          "dchild_mean": 4.410467454687983e-05,
+          "dchild_min": 4.41045846502619e-05,
+          "dchild_max": 4.410484766775857e-05,
+          "dparent_mean": 0.0015764293728924295,
+          "dchild_gaugestd": 1.2244525056826513e-10
+        },
+        "1.0": {
+          "dchild_mean": 0.0007252388129973253,
+          "dchild_min": 0.000725238704375325,
+          "dchild_max": 0.0007252389912983104,
+          "dparent_mean": 0.0030830067125705387,
+          "dchild_gaugestd": 1.2707627781779455e-10
+        }
+      },
+      "ov_cut": {
+        "0.0": {
+          "dchild_mean": -7.655215350510503e-11,
+          "dchild_min": -2.537472731933832e-10,
+          "dchild_max": 2.409081267806812e-11,
+          "dparent_mean": -2.3736568266485847e-12,
+          "dchild_gaugestd": 1.2568127583926962e-10
+        },
+        "0.25": {
+          "dchild_mean": 0.001686240852624606,
+          "dchild_min": 0.0016862407170059601,
+          "dchild_max": 0.001686241080127826,
+          "dparent_mean": 0.00016420366102211834,
+          "dchild_gaugestd": 1.6185683711849626e-10
+        },
+        "0.5": {
+          "dchild_mean": 0.005683003088967316,
+          "dchild_min": 0.005683003030447081,
+          "dchild_max": 0.005683003137069348,
+          "dparent_mean": 0.0006833954548794615,
+          "dchild_gaugestd": 4.4147337804075744e-11
+        },
+        "0.75": {
+          "dchild_mean": 0.011834277859952605,
+          "dchild_min": 0.011834277829887746,
+          "dchild_max": 0.01183427791675254,
+          "dparent_mean": 0.005861450933290546,
+          "dchild_gaugestd": 4.018661744838084e-11
+        },
+        "1.0": {
+          "dchild_mean": 0.02028135825974034,
+          "dchild_min": 0.02028135809358564,
+          "dchild_max": 0.020281358508962094,
+          "dparent_mean": 0.026021039320619093,
+          "dchild_gaugestd": 1.794612333928116e-10
+        }
+      },
+      "qk_at1_dchild": 0.0007252388129973253,
+      "ov_at1_dchild": 0.02028135825974034,
+      "qk_at1_dparent": 0.0030830067125705387,
+      "ov_at1_dparent": 0.026021039320619093,
+      "qk_gauge_std": 1.2707627781779455e-10,
+      "ov_gauge_std": 1.794612333928116e-10
+    },
+    "null_occ": {
+      "base_child": 0.3132934353154475,
+      "base_parent": 0.38763725847884245,
+      "frontiers": {
+        "bayes": 0.299485750946437,
+        "parent_blind": 0.299485750946437,
+        "affine_lag": 0.3731107076813793,
+        "gating_value": 0.0
+      },
+      "qk_cut": {
+        "0.0": {
+          "dchild_mean": -2.3260867306381291e-10,
+          "dchild_min": -4.267837749871717e-10,
+          "dchild_max": 0.0,
+          "dparent_mean": 7.495095285155647e-11,
+          "dchild_gaugestd": 1.7634048918882556e-10
+        },
+        "0.25": {
+          "dchild_mean": -2.6675161873083533e-06,
+          "dchild_min": -2.6676433621530826e-06,
+          "dchild_max": -2.6674425869233076e-06,
+          "dparent_mean": 4.689043319368776e-06,
+          "dchild_gaugestd": 9.029706628891788e-11
+        },
+        "0.5": {
+          "dchild_mean": 8.631860902793184e-06,
+          "dchild_min": 8.631567637029658e-06,
+          "dchild_max": 8.632013752285506e-06,
+          "dparent_mean": 9.581202066658948e-06,
+          "dchild_gaugestd": 2.0743232195736288e-10
+        },
+        "0.75": {
+          "dchild_mean": 3.410390989054083e-05,
+          "dchild_min": 3.410381894108916e-05,
+          "dchild_max": 3.4104040269655744e-05,
+          "dparent_mean": 1.4665903310358738e-05,
+          "dchild_gaugestd": 9.456076478110474e-11
+        },
+        "1.0": {
+          "dchild_mean": 7.396920716135069e-05,
+          "dchild_min": 7.396912791990395e-05,
+          "dchild_max": 7.396924798858118e-05,
+          "dparent_mean": 1.993144193442505e-05,
+          "dchild_gaugestd": 5.604082333578749e-11
+        }
+      },
+      "ov_cut": {
+        "0.0": {
+          "dchild_mean": -2.3260867306381291e-10,
+          "dchild_min": -4.267837749871717e-10,
+          "dchild_max": 0.0,
+          "dparent_mean": 7.495095285155647e-11,
+          "dchild_gaugestd": 1.7634048918882556e-10
+        },
+        "0.25": {
+          "dchild_mean": 0.00010140504370278099,
+          "dchild_min": 0.00010140487816040489,
+          "dchild_max": 0.00010140517605389254,
+          "dparent_mean": -4.938865114843353e-05,
+          "dchild_gaugestd": 1.2385846096450833e-10
+        },
+        "0.5": {
+          "dchild_mean": 0.0004469949238187591,
+          "dchild_min": 0.00044699454072799627,
+          "dchild_max": 0.0004469952759114104,
+          "dparent_mean": -4.2459096254628586e-06,
+          "dchild_gaugestd": 3.009366769447532e-10
+        },
+        "0.75": {
+          "dchild_mean": 0.0010485748903403258,
+          "dchild_min": 0.0010485746094556214,
+          "dchild_max": 0.0010485751798093856,
+          "dparent_mean": 0.0003791813274106974,
+          "dchild_gaugestd": 2.329250558415231e-10
+        },
+        "1.0": {
+          "dchild_mean": 0.0019206760894484587,
+          "dchild_min": 0.001920675721541809,
+          "dchild_max": 0.0019206764970576273,
+          "dparent_mean": 0.001464138990216024,
+          "dchild_gaugestd": 3.178452596210779e-10
+        }
+      },
+      "qk_at1_dchild": 7.396920716135069e-05,
+      "ov_at1_dchild": 0.0019206760894484587,
+      "qk_at1_dparent": 1.993144193442505e-05,
+      "ov_at1_dparent": 0.001464138990216024,
+      "qk_gauge_std": 5.604082333578749e-11,
+      "ov_gauge_std": 3.178452596210779e-10
+    }
+  }
+}

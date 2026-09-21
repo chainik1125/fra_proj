@@ -1,0 +1,24 @@
+{
+  "setup": {
+    "D": 32,
+    "T": 28,
+    "N": 6,
+    "SIGMA": 0.8,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 3000
+  },
+  "loss_full_mean": 1.8800520102183025,
+  "loss_full_std": 0.004262481090483034,
+  "loss_posonly_mean": 1.8819957971572876,
+  "loss_posonly_std": 0.008080003931539306,
+  "loss_full_minus_posonly": -0.0019437869389851148,
+  "contentQ_seed_corr_mean": -0.015086266633581903,
+  "contentQ_seed_corr_std": 0.04196750616394931,
+  "rate_mean": 0.44788549798270294,
+  "rate_std": 0.008764304235538709,
+  "eta_theory": 0.3553102008776146
+}

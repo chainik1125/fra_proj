@@ -1,0 +1,71 @@
+{
+  "setup": {
+    "d0": 10,
+    "s0": 4,
+    "i": 3,
+    "j": 7,
+    "Q_ij": -0.032581380936118724
+  },
+  "rows": [
+    {
+      "m": 1,
+      "per_latent_OV_norm": 0.0004433712067783997,
+      "group_OV_norm": 0.0004433712067783997,
+      "per_pair_QK": -0.028678586663426577,
+      "group_QK": -0.028678586663426577,
+      "OV_ratio_to_1overm": 1.0,
+      "QK_ratio_to_1overm2": 1.0,
+      "groupOV_invariance_relerr": 0.0,
+      "groupQK_invariance_relerr": 0.0
+    },
+    {
+      "m": 2,
+      "per_latent_OV_norm": 0.00022168560338919985,
+      "group_OV_norm": 0.0004433712067783997,
+      "per_pair_QK": -0.007169646665856644,
+      "group_QK": -0.028678586663426577,
+      "OV_ratio_to_1overm": 1.0,
+      "QK_ratio_to_1overm2": 1.0,
+      "groupOV_invariance_relerr": 0.0,
+      "groupQK_invariance_relerr": 0.0
+    },
+    {
+      "m": 4,
+      "per_latent_OV_norm": 0.00011084280169459993,
+      "group_OV_norm": 0.0004433712067783997,
+      "per_pair_QK": -0.001792411666464161,
+      "group_QK": -0.028678586663426583,
+      "OV_ratio_to_1overm": 1.0,
+      "QK_ratio_to_1overm2": 1.0,
+      "groupOV_invariance_relerr": 0.0,
+      "groupQK_invariance_relerr": 2.419538307568102e-16
+    },
+    {
+      "m": 8,
+      "per_latent_OV_norm": 5.5421400847299964e-05,
+      "group_OV_norm": 0.0004433712067783997,
+      "per_pair_QK": -0.00044810291661604026,
+      "group_QK": -0.028678586663426542,
+      "OV_ratio_to_1overm": 1.0,
+      "QK_ratio_to_1overm2": 1.0,
+      "groupOV_invariance_relerr": 0.0,
+      "groupQK_invariance_relerr": 1.209769153784051e-15
+    },
+    {
+      "m": 16,
+      "per_latent_OV_norm": 2.7710700423649982e-05,
+      "group_OV_norm": 0.0004433712067783998,
+      "per_pair_QK": -0.00011202572915401006,
+      "group_QK": -0.0286785866634265,
+      "OV_ratio_to_1overm": 1.0,
+      "QK_ratio_to_1overm2": 1.0,
+      "groupOV_invariance_relerr": 2.445359905897987e-16,
+      "groupQK_invariance_relerr": 2.6614921383249124e-15
+    }
+  ],
+  "verdict": {
+    "OV_per_latent_scales_1_over_m": true,
+    "QK_per_pair_scales_1_over_m2": true,
+    "group_cuts_invariant": 2.6614921383249124e-15
+  }
+}

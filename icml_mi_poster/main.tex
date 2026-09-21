@@ -1,0 +1,308 @@
+\documentclass[paperwidth=24in,paperheight=36in,fontscale=0.36]{baposter}
+
+\usepackage{wrapfig}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{multicol}
+\usepackage{amsthm}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\selectcolormodel{cmyk}
+
+\graphicspath{{figures/}}
+
+\newcommand{\compresslist}{%
+\setlength{\itemsep}{0pt}%
+\setlength{\parskip}{1pt}%
+\setlength{\parsep}{0pt}%
+}
+
+\newenvironment{boenumerate}
+  {\begin{enumerate}\renewcommand\labelenumi{\textbf\theenumi.}}
+  {\end{enumerate}}
+
+\newtheorem{Theorem}{Theorem}
+\newtheorem*{Definition}{Def.}
+\newtheorem*{Problem}{Problem}
+\newtheorem*{Solution}{Solution}
+
+\begin{document}
+
+\definecolor{darkgreen}{cmyk}{0.8,0,0.8,0.45}
+\definecolor{lightgreen}{cmyk}{0.8,0,0.8,0.25}
+\definecolor{red}{cmyk}{0,1,1,0.3}
+\definecolor{darkblue}{cmyk}{1, 1, 0, 0.45}
+\definecolor{lightblue}{cmyk}{1, 1, 0, 0.25}
+
+\begin{poster}
+{
+grid=false,
+columns=4, 
+headerborder=open,
+colspacing=0.8em, 
+bgColorOne=white,
+bgColorTwo=white,
+borderColor=darkblue,
+headerColorOne=red,
+headerColorTwo=lightblue,
+headerFontColor=white,
+boxColorOne=white,
+textborder=rounded,
+eyecatcher=true,
+headerheight=0.10\textheight,
+headershape=rounded,
+headershade=plain,
+headerfont=\Large\textsf,
+linewidth=2pt
+}
+% ---- Eyecatcher: none (logos live in the bottom strip) ----
+{}
+%
+%----------------------------------------------------------------------------------------
+%	TITLE + AUTHORS (TOP, LEFT-ALIGNED)
+%----------------------------------------------------------------------------------------
+%
+{\begin{minipage}{0.98\linewidth}\raggedright
+\fontsize{19}{23}\selectfont
+\textsf{From Attention Maps to Concept Maps:\\ Feature-Resolved Attention Surgically Removes Backdoors}
+\end{minipage}}
+% ---- Authors (one line) + affiliations (one line, email first); DMC = Simplex, MATS, UIUC ----
+{\begin{minipage}{0.98\linewidth}\raggedright\sf\vspace{0.3em}
+\footnotesize Dmitry Manning-Coe\,\raisebox{-0.15em}{\includegraphics[height=1em]{figures/wave_emoji.png}}$^{*,1,2,3}$ \; Nura Aljaafari$^{4,5}$ \; Jamie Stephenson$^{5,6}$ \; Hemang Jain$^{5,7}$ \; Ketan Kapre$^{5}$ \; Aniket Deshpande$^{3,5}$\\[0.2em]
+\scriptsize {\color{blue}\underline{$^{*}$dmanningcoe@gmail.com}\color{black}} \quad $^{1}$Simplex \; $^{2}$MATS \; $^{3}$UIUC \; $^{4}$University of Manchester \; $^{5}$SPAR \; $^{6}$University of Edinburgh \; $^{7}$IIT Hyderabad
+\end{minipage}}
+% ---- Logo slot (right): QR code ----
+{\begin{minipage}{0.13\linewidth}
+    \flushright
+    \includegraphics[width=\linewidth]{figures/icml_figs/qrcode_icml_workshop_fra.png}
+\end{minipage}}
+
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION (SPAN 2)
+%----------------------------------------------------------------------------------------
+
+
+
+% \headerbox{We are measuring \textbf{\textit{interactions}} between model features found by crosscoders}{name=introduction,column=0, span=4}{
+% \begin{multicols}{2}
+% \begin{centering}
+% \begin{Problem}[Linear Interaction Hypothesis (LIH)]
+% Dictionary learning assumes features act independently under model non-linearities: $\sigma(f_1+f_2+...)\sim\sigma(f_1)+\sigma(f_2)+...$
+% \end{Problem}
+
+% \begin{Solution}[Interaction Metric]
+% We provide a principled \textbf{interaction metric} based on compact proofs that can be computed efficiently and quantitatively measures interactions.
+% \end{Solution}
+
+
+
+
+% \end{centering}
+% \columnbreak
+
+% \end{multicols}
+% \begin{center}
+% \textbf{Our goal: Provide a principled, computable measure of feature interactions.}
+% \end{center}
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	FULL WIDTH SECTION
+%----------------------------------------------------------------------------------------
+% Change 'below=next' to whatever box is currently bottom-most (e.g., 'lsm' or 'next')
+% \headerbox{Conclusion or Combined Results}{name=conclusion, column=0, span=2,below=introduction}{
+    
+%     % \begin{multicols}{2}
+%         \begin{center}
+%     \includegraphics[width=1.0\linewidth]{figures/nips_figs/im_and_text_white_bg.png}
+% \end{center}
+%     % \end{multicols}
+% }
+
+\headerbox{We introduce \textit{Feature-Resolved Attention} to convert attention patterns to concept maps}{name=conclusion, column=0, span=4, row=0, height=0.30}{
+
+\centering
+    % Two panels: standard attention vs feature-resolved attention (with cuts);
+    % the per-channel QK/OV math lives inside each panel, under its sub-box.
+    \includegraphics[width=0.48\linewidth]{figures/fig_attn_standard.pdf}\hspace{0.02\linewidth}
+    \includegraphics[width=0.48\linewidth]{figures/fig_attn_fra.pdf}
+
+}
+
+
+%----------------------------------------------------------------------------------------
+%	SLEEPER AGENTS (COLUMN 0)
+%----------------------------------------------------------------------------------------
+%----------------------------------------------------------------------------------------
+%	SPLIT COLUMN (DUPLICATED)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{FRA outperforms conventional steering}\\ \text{in suppressing sleeper agents}
+\end{array}$
+}{boxheaderheight=1.4cm,name=hkbox,span=2,column=0,below=conclusion,height=0.30}{
+        \centering
+        \includegraphics[width=1\linewidth]{figures/fig_sleeper_textboxes.pdf}
+
+        \vspace{-0.0em}
+        \includegraphics[width=0.92\linewidth]{figures/fig1_sleeper_seed4_pareto.pdf}
+
+        \vspace{0em}
+        \footnotesize
+    \hfill % Pushes the blocks to the edge
+
+}
+
+%----------------------------------------------------------------------------------------
+%	CROSSCODERS (COLUMN 1)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{And can remove in-context induction backdoors}\\ \text{with minimal impact on model performance}
+\end{array}$
+}{boxheaderheight=1.4cm,name=new_xc,span=2,column=2,below=conclusion,height=0.30}{
+\centering
+\includegraphics[width=1\linewidth]{figures/fig_backdoor_textboxes.pdf}
+
+\vspace{-0.4em}
+\begin{center}
+    \includegraphics[width=0.92\linewidth]{figures/fig_gemma_kl_levels.pdf}
+\end{center}
+% Previous content:
+% \begin{center}
+%     \includegraphics[width=1.01\linewidth]{figures/nips_figs/im_and_text_white_bg.png}
+% \end{center}
+% \vspace{12pt}
+}
+
+
+% \headerbox{Three steps to calculating the interaction metric}{name=conclusion, column=0, span=4, below=hkbox}{
+
+%     % Column 1
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{1: Define default non-interacting behaviour}
+%     \begin{center}
+%     \includegraphics[width=\linewidth]{figures/nips_figs/default_mlp.png}
+% \end{center}
+%     \end{minipage}%
+%     \hfill
+%     % Column 2
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{2: Derive error bounds from deviations}
+%         \begin{align}
+%             &\|f^{l}(W^{l-1}_{\mathrm{dec}}u)-W^{l}_{\mathrm{dec}}u\|
+%             \;\le\; \nonumber\\
+%             &\|h^{l}(u)\| \;+\;
+%             \sum_{v}\!
+%             \bigl\|g^{l}_{v}(u_{v}) - u_{v}W^{l}_{\mathrm{dec}}\hat{e}_{v}\bigr\| \nonumber
+%             \end{align}
+%     \end{minipage}%
+%     \hfill
+%     % Column 3
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{3: Decompose pairwise}
+%         \begin{equation}
+%             I^l_{(x,k)}(i,j)\equiv\frac{||(W^l_{out})_k||}{N^l}||(u_j(W^{l}_{in}W^{l-1}_{dec}\hat{e}_j)_k)|| \nonumber
+%         \end{equation}
+%     \end{minipage}
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	INTERACTIONS (COLUMN 0 - BELOW SLEEPER AGENTS)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{Next: QK-FRA can be used as a detector for}\\ \text{persona features in emergent misalignment}
+\end{array}$
+}{boxheaderheight=1.4cm,name=lsm,span=2,column=0,below=hkbox,height=0.30}{
+\begin{center}
+    \includegraphics[width=0.98\linewidth]{figures/fig_em_f603_top10.pdf}
+\end{center}
+}
+
+% Second col
+
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{Next: Online suppression of dangerous}\\ \text{concept pairs}
+\end{array}$
+}{boxheaderheight=1.4cm,name=lsm2,span=2,column=2,below=new_xc,height=0.30}{
+\begin{center}
+    \includegraphics[width=0.98\linewidth]{figures/fig_injection_firewall.pdf}
+\end{center}
+% Previous content (interaction-based monitors):
+% \begin{center}
+%     \includegraphics[width=0.75\linewidth]{figures/nips_figs/sleeper_monitor_fig.png}
+% \end{center}
+% \vspace{-0.5em}
+}
+
+
+% %----------------------------------------------------------------------------------------
+% %	NEXT STEPS (COLUMN 1 - BELOW CROSSCODERS)
+% %----------------------------------------------------------------------------------------
+% \headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+% \text{Next steps: Can sleeper agents}\\ \text{hide in feature interactions?}
+% \end{array}$
+% }{boxheaderheight=1.4cm,name=next,span=2,column=2,below=new_xc}{ 
+% % Stacked vertically for better visibility in a single column
+% \begin{center}
+% 1. Measure interactions between deployment and sleeper features.\\
+% \vspace{2pt}
+% \includegraphics[width=0.6\linewidth]{figures/mats_figs/pca.png}
+% \end{center}
+
+% \vspace{1pt}
+% \begin{center}
+% 2. Fine-tune sleeper agents to rely on interactions, rather than individual features.\\
+% \includegraphics[width=0.2\linewidth]{figures/mats_figs/linear_probes.png}
+% \end{center}
+
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	FULL WIDTH SECTION
+%----------------------------------------------------------------------------------------
+% Change 'below=next' to whatever box is currently bottom-most (e.g., 'lsm' or 'next')
+
+
+%----------------------------------------------------------------------------------------
+%	FOOTER STRIP: Simplex · MATS · QR code
+%----------------------------------------------------------------------------------------
+\headerbox{}{name=footer, span=4, column=0, above=bottom,
+    boxheaderheight=1em,
+    headerColorOne=white,
+    headerColorTwo=white,
+    borderColor=darkblue,
+    textborder=rounded
+}{
+    \vspace{-1.2em}
+    \begin{minipage}[c]{0.45\linewidth}
+        \centering
+        \includegraphics[width=0.28\linewidth]{figures/simplex_logo.pdf}
+    \end{minipage}\hfill
+    \begin{minipage}[c]{0.45\linewidth}
+        \centering
+        \includegraphics[width=0.27\linewidth]{figures/mats_figs/MATS_logo_clean.png}
+    \end{minipage}
+}
+
+
+% \headerbox{}{name=footer, span=4, column=0, above=bottom, boxheaderheight=1em,headerColorOne=white, headerColorTwo=white, textborder=rounded}{
+%     \vspace{0em}
+%     \begin{minipage}{0.75\linewidth}
+%         \textsf{\textbf{\large Dmitry Manning-coe, Thomas Read, Anna Soligo, Oliver Clive-Griffin, Chun-Hei Yip, Rajashree Agarwal and Jason Gross }}
+%         \vspace{0.4em}\\
+%         \large{\color{blue}\underline{dmanningcoe@gmail.com, jasongross9@gmail.com}}
+%     \end{minipage}%
+%     \hfill
+%     \begin{minipage}{0.13\linewidth}
+%         \flushright
+%         \includegraphics[width=\linewidth]{figures/mats_figs/MATS_logo_clean.png}
+%     \end{minipage}
+%     \vspace{-0.5em}
+% }
+
+\end{poster}
+\end{document}

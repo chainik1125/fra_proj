@@ -1,0 +1,163 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-SNxVBznDQI6QsWQFpbyEAJ
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/constra
+│   ined_belief_updating/bridge_to_real/bridge3.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/fra
+├── 🔨 Created function carrier.
+├── 🔨 Created function train.
+└── 🔨 Created function frontier.
+
+[1ADownloading shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ADownloading shards:  33%|███▎      | 1/3 [00:18<00:36, 18.04s/it]
+[1ADownloading shards:  67%|██████▋   | 2/3 [00:36<00:18, 18.44s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:39<00:00, 11.10s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:39<00:00, 13.04s/it]
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:04<00:08,  4.16s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:07<00:03,  3.87s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.33s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.77s/it]
+WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[B] carry [('L22H5', 0.119), ('L22H4', 0.106), ('L19H1', 0.072), ('L23H7', 0.029), ('L15H0', 0.023), ('L22H3', 0.013)]
+/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py:249: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+/root/fra/core/fra.py:208: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:816.)
+  fra_sparse = torch.sparse_coo_tensor(
+FRONTIER B: {"variant": "B", "base_p": 0.7980912923812866, "carry_heads": [[22, 5], [22, 4], [19, 1], [23, 7], [15, 0], [22, 3]], "qk": [[0.005936481263653204, 0.04408847261220217], [0.018557553352377743, 0.29191653709858656], [0.06953468137941332, 7.567551212385297], [0.18821830131257122, 19.780818723142147], [0.4095669075225452, 20.457015112042427], [0.49319494389365004, 20.988929703831673]], "dom": [[0.028238839410743344, 28.819002151489258], [0.5095256072742209, 77.43572235107422], [0.9998768260655743, 139.9482765197754], [0.9999865294387946, 220.3046112060547], [0.9999973601266444, 544.1025390625], [0.9999999997335178, 1013.885986328125]], "collateral_at": {"0.1": {"qk": 10.702618092913726, "dom": 36.06788680512887}, "0.3": {"qk": 20.122299893011707, "dom": 56.27069454713421}, "0.5": {"qk": null, "dom": 76.47350228913956}}}
+CHECKPOINT_FRONTIER3: {"variant": "B", "base_p": 0.7980912923812866, "carry_heads": [[22, 5], [22, 4], [19, 1], [23, 7], [15, 0], [22, 3]], "qk": [[0.005936481263653204, 0.04408847261220217], [0.018557553352377743, 0.29191653709858656], [0.06953468137941332, 7.567551212385297], [0.18821830131257122, 19.780818723142147], [0.4095669075225452, 20.457015112042427], [0.49319494389365004, 20.988929703831673]], "dom": [[0.028238839410743344, 28.819002151489258], [0.5095256072742209, 77.43572235107422], [0.9998768260655743, 139.9482765197754], [0.9999865294387946, 220.3046112060547], [0.9999973601266444, 544.1025390625], [0.9999999997335178, 1013.885986328125]], "collateral_at": {"0.1": {"qk": 10.702618092913726, "dom": 36.06788680512887}, "0.3": {"qk": 20.122299893011707, "dom": 56.27069454713421}, "0.5": {"qk": null, "dom": 76.47350228913956}}}
+[B] QK (asr,coll): [(0.01, 0.044), (0.02, 0.292), (0.07, 7.568), (0.19, 19.781), (0.41, 20.457), (0.49, 20.989)]
+[B] DoM(asr,coll): [(0.03, 28.819), (0.51, 77.436), (1.0, 139.948), (1.0, 220.305), (1.0, 544.103), (1.0, 1013.886)]
+[B] collateral@removal: {"0.1": {"qk": 10.702618092913726, "dom": 36.06788680512887}, "0.3": {"qk": 20.122299893011707, "dom": 56.27069454713421}, "0.5": {"qk": null, "dom": 76.47350228913956}}
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:06,  3.08s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:06<00:03,  3.43s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.08s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.41s/it]
+WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[A] carry [('L22H4', 0.0), ('L0H1', 0.0), ('L13H4', 0.0)]
+Traceback (most recent call last):
+  File "/root/bridge3.py", line 428, in frontier
+    SAE[L] = GemmaScopeSAE("gemma-scope-2b-pt-res-canonical", f"layer_{L-1}/width_65k/canonical",
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/fra/sae_lens_wrapper.py", line 233, in __init__
+    result = SAE.from_pretrained(release, sae_id, device=device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py", line 582, in from_pretrained
+    return cls.from_pretrained_with_cfg_and_sparsity(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py", line 640, in from_pretrained_with_cfg_and_sparsity
+    raise ValueError(
+ValueError: ID layer_-1/width_65k/canonical not found in release gemma-scope-2b-pt-res-canonical. Valid IDs are ['layer_0/width_16k/canonical', 'layer_1/width_16k/canonical', 'layer_2/width_16k/canonical', 'layer_3/width_16k/canonical', 'layer_4/width_16k/canonical', ...].
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 915, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 189, in run_input_sync
+    values = io_context.call_function_sync()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_runtime/container_io_manager.py", line 218, in call_function_sync
+    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/bridge3.py", line 431, in frontier
+    SAE[L] = GemmaScopeSAE("gemma-scope-2b-pt-res", f"layer_{L-1}/width_65k/average_l0_72",
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/fra/sae_lens_wrapper.py", line 233, in __init__
+    result = SAE.from_pretrained(release, sae_id, device=device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py", line 582, in from_pretrained
+    return cls.from_pretrained_with_cfg_and_sparsity(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py", line 640, in from_pretrained_with_cfg_and_sparsity
+    raise ValueError(
+ValueError: ID layer_-1/width_65k/average_l0_72 not found in release gemma-scope-2b-pt-res. Valid IDs are ['embedding/width_4k/average_l0_6', 'embedding/width_4k/average_l0_44', 'embedding/width_4k/average_l0_21', 'embedding/width_4k/average_l0_111', 'layer_0/width_16k/average_l0_105', ...]. If you don't want to specify an L0 value, consider using release gemma-scope-2b-pt-res-canonical which has valid IDs ['layer_0/width_16k/canonical', 'layer_1/width_16k/canonical', 'layer_2/width_16k/canonical', 'layer_3/width_16k/canonical', 'layer_4/width_16k/canonical', ...]
+Stopping app - uncaught exception raised locally: ValueError("ID layer_-1/width_65k/average_l0_72 not found in release gemma-scope-2b-pt-res. Valid IDs are ['embedding/width_4k/average_l0_6', 'embedding/width_4k/average_l0_44', 'embedding/width_4k/average_l0_21', 'embedding/width_4k/average_l0_111', 'layer_0/width_16k/average_l0_105', ...]. If you don't want to specify an L0 value, consider using release gemma-scope-2b-pt-res-canonical which has valid IDs ['layer_0/width_16k/canonical', 'layer_1/width_16k/canonical', 'layer_2/width_16k/canonical', 'layer_3/width_16k/canonical', 'layer_4/width_16k/canonical', ...]").
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/constra │
+│ ined_belief_updating/bridge_to_real/bridge3.py:558 in main                   │
+│                                                                              │
+│   557 │   │   for v in ["B", "A"]:                                           │
+│ ❱ 558 │   │   │   r = frontier.remote(v)                                     │
+│   559 │   │   │   results[f"frontier_{v}"] = r                               │
+│                                                                              │
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/.venv/lib/python3.1 │
+│ 2/site-packages/modal/_object.py:45 in wrapped                               │
+│                                                                              │
+│    44 │   │   await self.hydrate()                                           │
+│ ❱  45 │   │   return await method(self, *args, **kwargs)                     │
+│    46                                                                        │
+│                                                                              │
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/.venv/lib/python3.1 │
+│ 2/site-packages/modal/_functions.py:1757 in remote                           │
+│                                                                              │
+│   1756 │   │                                                                 │
+│ ❱ 1757 │   │   return await self._call_function(args, kwargs)                │
+│   1758                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/.venv/lib/python3.1 │
+│ 2/site-packages/modal/_functions.py:1695 in _call_function                   │
+│                                                                              │
+│   1694 │   │                                                                 │
+│ ❱ 1695 │   │   return await invocation.run_function()                        │
+│   1696                                                                       │
+│                                                                              │
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/.venv/lib/python3.1 │
+│ 2/site-packages/modal/_functions.py:495 in run_function                      │
+│                                                                              │
+│    494 │   │   │   # No more retries left.                                   │
+│ ❱  495 │   │   │   return await _process_result(                             │
+│    496 │   │   │   │   await_response.output.result, await_response.output.d │
+│                                                                              │
+│ /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/.venv/lib/python3.1 │
+│ 2/site-packages/modal/_utils/function_utils.py:548 in _process_result        │
+│                                                                              │
+│   547 │   │   │                                                              │
+│ ❱ 548 │   │   │   raise exc_with_hints(exc)                                  │
+│   549                                                                        │
+│                                                                              │
+│     ...Remote call to Modal Function (ta-01KXQKQ6NENFRHDNCWYWAAJC0R)...      │
+│                                                                              │
+│ /root/bridge3.py:431 in frontier                                             │
+│                                                                              │
+│ ❱ 431 SAE[L] = GemmaScopeSAE("gemma-scope-2b-pt-res", f"layer_{L-1}/width_65 │
+│                                                                              │
+│                                                                              │
+│ /root/fra/sae_lens_wrapper.py:233 in __init__                                │
+│                                                                              │
+│ ❱ 233 result = SAE.from_pretrained(release, sae_id, device=device)           │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py:582 in          │
+│ from_pretrained                                                              │
+│                                                                              │
+│ ❱ 582 return cls.from_pretrained_with_cfg_and_sparsity(                      │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py:640 in          │
+│ from_pretrained_with_cfg_and_sparsity                                        │
+│                                                                              │
+│ ❱ 640 raise ValueError(                                                      │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ValueError: ID layer_-1/width_65k/average_l0_72 not found in release 
+gemma-scope-2b-pt-res. Valid IDs are ['embedding/width_4k/average_l0_6', 
+'embedding/width_4k/average_l0_44', 'embedding/width_4k/average_l0_21', 
+'embedding/width_4k/average_l0_111', 'layer_0/width_16k/average_l0_105', ...]. 
+If you don't want to specify an L0 value, consider using release 
+gemma-scope-2b-pt-res-canonical which has valid IDs 
+['layer_0/width_16k/canonical', 'layer_1/width_16k/canonical', 
+'layer_2/width_16k/canonical', 'layer_3/width_16k/canonical', 
+'layer_4/width_16k/canonical', ...]

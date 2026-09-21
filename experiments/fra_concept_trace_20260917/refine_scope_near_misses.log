@@ -1,0 +1,8 @@
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/refine_scope_near_misses.py:31: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval();sae=SAE.from_pretrained(RELEASE,RAW,device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 5889.14it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+REFINED male four {'alpha': 2.125, 'margin': 0.4923572540283203} new crossing False
+REFINED male single_15560 {'alpha': 9.25, 'margin': 0.4442777633666992} new crossing False
+DONE

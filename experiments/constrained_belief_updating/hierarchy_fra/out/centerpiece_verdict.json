@@ -1,0 +1,23 @@
+{
+  "platform": "theory-clean: 2L attention-only, NO LayerNorm (user directive 2026-07-17, drop not linearize), gated_occ + null_occ, seed 0, 9000 steps",
+  "loss_gate": {
+    "gated_occ": {"full": 0.2440, "pos_only": 0.2495, "loss_gate": 0.0055, "bayes": 0.2405, "parent_blind": 0.2546, "gating_value": 0.0141},
+    "null_occ": {"full": 0.3137, "pos_only": 0.3680, "loss_gate": 0.0544, "bayes": 0.3003, "parent_blind": 0.3003, "gating_value": 0.0000},
+    "note": "full-QK reaches ~Bayes and captures ~75% of the gate; loss gate does NOT vanish on null (0.0544) because LN-free pos-only cannot filter the occluded child chain (rung-2 affine-null penalty realized) -> loss gate is not the gate isolator; the cut is."
+  },
+  "carrier_decomposition_at_gain1": {
+    "gated_occ": {"FRA_QK_cut_parent_keys_dchild": 0.00073, "FRA_OV_cut_parent_values_dchild": 0.02028, "OV_over_QK": 28, "QK_dparent": 0.00308, "OV_dparent": 0.02602, "gauge_std_both": 1.5e-10},
+    "null_occ": {"FRA_QK_cut_parent_keys_dchild": 0.00007, "FRA_OV_cut_parent_values_dchild": 0.00192, "OV_over_QK": 26, "gauge_std_both": 2e-10}
+  },
+  "verdict": {
+    "headline": "The parent->child hierarchy gate is carried by OV (values), NOT the QK coupling. The targeted FRA-QK cut is a gauge-robust NULL; the FRA-OV cut carries the gate (approx the analytic gating value). Falsifies H2.3/H3.2 for the trained model.",
+    "check_i_content_gated": "CONFIRMED - content-dependent attention is load-bearing (full beats pos-only/affine).",
+    "check_ii_QK_cut": "FALSIFIED as QK; TRUE for OV. Raw FRA-QK cut = +0.0007 (gauge-robust null); FRA-OV cut = +0.0203 (approx gating value), gauge-robust.",
+    "check_iii_null": "CONFIRMED - both cuts approx 0 on null; gating value 0; total parent->child dependence approx 0.",
+    "check_iv_selectivity": "PARTIAL - OV cut degrades child; parent is current-token-sufficient (QK barely moves it) but OV cut dparent=0.026 not clean (shared parent-value path).",
+    "mechanism": "2-hop (depth>=2, Prop H4.0): layer-1 reads parent via OV -> builds a derived recency feature; layer-2 child-query gates on the DERIVED feature, not raw d_P -> raw (child-query, parent-key) QK cell empty. Parent's ENTRY is OV.",
+    "fra_win_law_sharpened": "Two-position product is NECESSARY but NOT SUFFICIENT for a QK handle. A content GATE (hierarchy) is OV-realizable and lands in OV. FRA-QK is the carrier only for an obligate query-key MATCH (induction/fra_win). Gate carrier set >= 3: LayerNorm, OV, derived-feature-QK.",
+    "caveat": "Single seed per cell; the 28x QK<<OV asymmetry is clean and gauge-flat and mechanistically expected, but seed-robustness is a quick follow-up if wanted."
+  },
+  "files": {"figure": "out/handle_final.png", "sweep": "out/centerpiece.json", "carrier": "out/centerpiece_carrier.json"}
+}

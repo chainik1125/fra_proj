@@ -1,0 +1,39 @@
+Downloading pandas (9.6MiB)
+ Downloaded pandas
+Installed 103 packages in 2.00s
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/compare_transport_kl.py:45: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3816.29it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+CALIBRATE female fra_four 0.5 2.6497802734375 [25975, 20446, 15560, 3281] True
+CALIBRATE female fra_single 0.5 7.218505859375 [25975] True
+CALIBRATE female sae_source_single 0.5 6.221923828125 [25975] True
+CALIBRATE female sae_prefix_single 0.5 1.38323974609375 [15560] True
+CALIBRATE female sae_query_single 0.5 11.32861328125 [15560] True
+CALIBRATE female sae_sentence_single 0.5 1.38323974609375 [15560] True
+CALIBRATE female fra_four 1.0 3.2664794921875 [25975, 20446, 15560, 3281] True
+CALIBRATE female fra_single 1.0 8.95751953125 [25975] True
+CALIBRATE female sae_source_single 1.0 None [25975] False
+CALIBRATE female sae_prefix_single 1.0 1.63055419921875 [15560] True
+CALIBRATE female sae_query_single 1.0 14.41748046875 [15560] True
+CALIBRATE female sae_sentence_single 1.0 1.63055419921875 [15560] True
+CALIBRATE male fra_four 0.5 1.90093994140625 [25975, 20446, 15560, 3281] True
+CALIBRATE male fra_single 0.5 6.405517578125 [20446] True
+CALIBRATE male sae_source_single 0.5 2.6739501953125 [20446] True
+CALIBRATE male sae_prefix_single 0.5 0.963226318359375 [15560] True
+CALIBRATE male sae_query_single 0.5 3.3541259765625 [15560] True
+CALIBRATE male sae_sentence_single 0.5 0.963226318359375 [15560] True
+CALIBRATE male fra_four 1.0 2.5467529296875 [25975, 20446, 15560, 3281] True
+CALIBRATE male fra_single 1.0 8.64990234375 [20446] True
+CALIBRATE male sae_source_single 1.0 4.513916015625 [20446] True
+CALIBRATE male sae_prefix_single 1.0 1.54925537109375 [15560] True
+CALIBRATE male sae_query_single 1.0 5.007568359375 [15560] True
+CALIBRATE male sae_sentence_single 1.0 1.54925537109375 [15560] True
+TAIL queen 0 done
+TAIL queen 1 done
+TAIL queen 2 done
+TAIL king 0 done
+TAIL king 1 done
+TAIL king 2 done
+DONE 529 77.3 seconds

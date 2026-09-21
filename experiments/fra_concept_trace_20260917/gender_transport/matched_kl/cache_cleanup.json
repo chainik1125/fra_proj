@@ -1,0 +1,15 @@
+{
+  "reason": "Free disk space by discarding two previously used, hash-recorded SAE weights from this experiment-specific temporary cache. Current layer-7 SAE and model retained.",
+  "removed": [
+    {
+      "layer": 4,
+      "sha256": "621efab60c2e9180a95497ed9c2a8d5300508f992a2758473c65faa7c79b277c",
+      "bytes": 201461056
+    },
+    {
+      "layer": 5,
+      "sha256": "08497251e859bef24af937862142af2b3cc3350e891fa2087bfa4d211fff8347",
+      "bytes": 201461056
+    }
+  ]
+}

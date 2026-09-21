@@ -1,0 +1,73 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{soul}
+\usepackage{geometry}
+\usepackage{xcolor}
+\geometry{margin=0.75in}
+\setlength{\parindent}{0pt}
+\input{macros.tex}
+
+
+\title{Stationarity and nonstationarity in token space}
+\author{Javan Tahir}
+\date{April 9, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{Mathematical preliminaries}
+\subsection{Direct sums of vector spaces}
+With the goal of decomposing vector spaces into smaller components, it is useful to introduce the idea of a direct sum of vector spaces. Given a vector space $\Vb$ a direct sum decomposition $\Vb = \Vb_1 \oplus \Vb_2$ means that we can express any $\vb \in \Vb$ as $\vb = \vb_1 + \vb_2$ for some unique $\vb_1 \in \Vb_1$ and $\vb_2 \in \Vb_2$. This requires that $\Vb_1 \cap \Vb_2 = \{0\}$ and $\dim\Vb_1 + \dim\Vb_2 = \dim\Vb$. Note that this \textbf{does not} require the subspaces to be orthogonal. In fact, we do not even need to define an inner product on $\Vb$ to think about how it might decompose as a direct sum. 
+
+\begin{definition}[Direct sum]
+    A finite-dimensional vector space $\Vb$ is decomposable as a direct sum of vector spaces $\Vb = \Vb_1 \oplus \Vb_2$ if $\dim\Vb_1 + \dim\Vb_2 = \dim\Vb$ and $\Vb_1 \cap \Vb_2 = \{0\}$
+\end{definition}
+
+Given a direct sum decomposition of a vector space, a natural next question is how to extract the portions of some $\vb \in \Vb$ that live in each subspace. We can do this by defining projectors $\{\Pb_i\}$. 
+
+\begin{definition}[Projector]
+    Suppose a vector space $\Vb$ decomposes as a direct sum $\Vb =\bigoplus_{i} \Vb_i$, so that $\vb = \sum_{i} \vb_i$ uniquely for all $\vb \in \Vb$. A projector $\Pb_i: \Vb \to \Vb$ satisfies:
+    \begin{enumerate}
+        \item $\Pb_i(\vb) = \vb_i$ (projection)
+        \item $\Pb_i^2 = \Pb_i$ (idempotency)
+        \item $\Pb_i \Pb_j = 0$ for $i \neq j$ 
+    \end{enumerate}
+    The direct sum property also ensures that the projectors form a resolution of the identity $\sum_i \Pb_i = \Ib$
+\end{definition}
+
+The uniqueness of the direct sum decomposition of a vector ensures that projectors are unique themselves. That is, the definition above fully specifies the projectors and yet, something remains unsatisfying about it. It defines the projectors based on properties they must obey, but does not tell us how to construct them. Building this formalism requires understanding the notion of a \textit{dual space}. 
+
+\begin{definition}[Dual space and dual basis]\label{dualbasis}
+    Given a real valued vector space $\Vb$ the \textit{dual space} $\Vb^*$ is the set of all linear functionals $\phi: \Vb \to \mathbb{R}$. Suppose $\{\eb_1, \eb_2, \cdots\}$ is a basis for $\Vb$, we can form a basis $\{\tilde{\eb}_1, \tilde{\eb_2}, \cdots\}$ for $\Vb^*$ known as the \textit{dual basis} which is the unique set of elements in $\Vb^*$ such that $\tilde{\eb_i}(\eb_j) = \delta_{ij}$
+\end{definition}
+
+From the definition of the dual basis, we can construct the projectors explicitly. 
+
+\begin{prop}[Construction of projectors from dual basis]
+    Suppose $\Vb = \Vb_1 \oplus \Vb_2$ with $\dim\Vb_1 = m$ and $\dim\Vb_2 = n$. Furthermore, let $\{\eb_1, \dots \eb_m\}$ be a basis for $\Vb_1$. We can define a dual basis for $\Vb_1^*$: $\{\tilde{\eb}_1, \dots \tilde{\eb}_m\}$. Then $\Pb_1 = \sum_{i=1}^m \eb_i \otimes \tilde{\eb}_i$, so that $\Pb_1 \vb = \sum_{i=1}^m (\tilde{\eb}_i(\vb)) \eb_i$. The projector $\Pb_2$ can be defined in an analogous way.
+\end{prop}
+
+Using Definition \ref{dualbasis}, it is clear that this definition does what we want. For example, if $\vb = a\eb_1 + b \eb_2$, $\Pb_1(\vb) = \tilde{\eb}_1( a\eb_1 + b \eb_2)\eb_1 = a\eb_1$. So the dual basis is a natural tool to extract components of vectors that live in different subspaces. Up until this point, we have described breaking up abstract vector spaces into smaller pieces and discussed how to project members of the vector space into its constituent subspaces. However, much of this still feels mysterious. The definitions don't actually tell you how to compute expressions for the basis, dual basis, or projectors. If we further endow the vector space with an inner product, things become clearer. The main piece of math that rescues us is the Riesz Representation Theorem. 
+
+\begin{theorem}[Riesz representation theorem]
+    For a finite dimensional inner product space $\Vb$ with inner product $\langle \cdot, \cdot\rangle$, any linear functional $\phi \in \Vb^*$ can be represented uniquely as $\phi(\vb) = \langle \ub, \vb \rangle$ for some $\ub \in \Vb$. 
+\end{theorem}
+
+The Riesz representation theorem allows us to identify the elements of the dual space with elements of the vector space itself. If we take the standard inner product for finite dimensional vectors $\langle \ub, \vb \rangle = \ub^T \vb$, we see that the correspondence between a vector and its element in the dual space is mediated by transposition. That is, every vector $\vb \in \Vb$ uniquely corresponds to a linear functional $\vb^T \in \Vb^*$. This allows us to translate the abstract action of a dual vector, which was employed in our definition of the dual basis for example ($\tilde{\eb_i}(\eb_j) = \delta_{ij}$), into the language of linear algebra. Indeed, finding a representation of the dual basis boils down to inverting a matrix. Concretely, suppose that we have a basis for $\mathbb{R}^d$ and we form a matrix $\Bb$ whose columns contain the basis vectors. Then the linear algebraic version of $\tilde{\eb_i}(\eb_j) = \delta_{ij}$ is $\Bb \Db = \Ib$ where the elements of dual basis are identified as the rows of the matrix $\Bb$. Since the columns of $\Db$ are linearly independent by definition, it is always invertible, and $\Bb = \Db^{-1}$: a dual basis element $\tilde{\eb}_i$ is the corresponding row of the inverse of the basis matrix. Furthermore, the projector onto a subspace spanned by $\{\eb_i\}_{i \in 1,2,\dots,d}$ is $\Pb = \sum \eb_i \tilde{\eb}_i^T$. Note that this construction is general: it does not require an orthonormal basis which would correspond to the special case $\Db^{-1} = \Db^T$ and $\Pb = \sum \eb_i \eb_i^T$. Despite not always having orthogonality in the basis for $\Vb$, we always have a notion of \textit{biorthogonality} between the basis and dual basis $\tilde{\eb}_i^T\eb_j = \delta_{ij}$. 
+
+\subsubsection{Linear maps on direct sum spaces}
+Linear operators on vector spaces can also be described by how they act on subspaces, a concept familiar from linear algebra. Suppose we decompose $\Vb$ into a direct sum $\Vb = \bigoplus_i \Vb_i$ and act on $\Vb$ with a linear map $\Tb$. If $\Tb$ is full rank, and $\Tb(\Vb_i) \cap \Tb(\Vb_j) = 0$ for $i\neq j$, then $\Tb(\Vb) = \bigoplus_i \Tb(\Vb_i)$. In other words, the operator $\Tb$ is block diagonal in this decomposition--- its action on an input subspace results in an output subspace that has not been contaminated by information from other input sectors. This gives us a reasonable prescription for decomposing vector spaces. If we have a linear map, we can look for its closed subspaces and parcel up $\Vb$ accordingly. One familiar example of this kind of decomposition is the \textit{spectral decomposition} $\Vb = \bigoplus_\lambda \Vb_\lambda$ which has the particularly nice property that $\Tb(\Vb_\lambda) = \Vb_\lambda$--- the subspaces spanned by eigenvectors not only remain separated, they are invariant! The spectral decomposition does not even require the map to be full rank, as its null space can be defined as that corresponding to eigenvalue $\lambda = 0$. For each distinct eigenvalue $\lambda$, the corresponding right eigenvector $\rb_\lambda$ (or eigenvectors in the case of a degenerate eigenvalue) is a basis for the space $\Vb_\lambda$. It turns out that the dual basis vectors are the corresponding \textit{left eigenvectors} $\lb_\lambda^T$. Suppose we arrange the right eigenvectors as the columns of a matrix $\Rb$ and the eigenvalues in a diagonal matrix $\Lambdab$. The matrix version of the eigenvalue equation is $\Tb \Rb = \Rb \Lambdab$. The dual basis is defined as as the rows of $\Rb^{-1}$. But the above equation implies $\Rb^{-1}\Tb = \Lambdab \Rb^{-1}$. Define a given row of $\Rb^{-1}$ as $\lb_\lambda^T$. Then this row vector satisfies $\lb_\lambda^T \Tb = \lambda \lb_\lambda^T$. So the dual basis elements are the left eigenvectors of the operator. By construction, these right/left eigenvectors are biorthogonal $\lb_\lambda^T \rb_{\nu} = \delta_{\lambda\nu}$. It follows that in the nondegenerate case, the projector onto eigenspace $\Vb_\lambda$ is $\Pb_\lambda = \rb_\lambda \lb_\lambda^T$. If the eigenvalue is degenerate, the projector is formed as a sum over all left/right eigenvectors corresponding to eigenvalue $\lambda$ and one needs to take care to define the degenerate vectors in a way that satisfies the biorthogonality principle. 
+
+\section{Stationary and nonstationary sectors of state space}
+For a hidden markov model with hidden space $\mathbb{R}^{|S|}$, the spectral decomposition of the total transition operator $\Tb$ is a natural way to divide the state space into smaller, noninteracting pieces. Since the transition matrix is row stochastic, the Perron Frobenius Theorem guarantees the existence of a \textit{stationary} left eigenvector $\pib^T$, with eigenvalue $\lambda =1$ whose entries sum to one. This is the stationary state of the hidden dynamics. By row stochasticity, the vector of all ones $\one_{|S|}$ is the corresponding right eigenvector. This allows us to divide the state space into its stationary and nonstationary components. 
+
+\section{}
+
+\end{document}

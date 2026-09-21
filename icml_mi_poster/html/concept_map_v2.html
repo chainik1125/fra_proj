@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{margin:0;background:#FFFFFF;padding:34px 40px;font-family:'Space Grotesk',sans-serif;color:#14171C;}
+.mono{font-family:'Space Mono',monospace;}
+.cell{height:44px;border-radius:5px;}
+.clabel{font-family:'Space Mono',monospace;font-size:12px;color:#8A9099;text-align:center;align-self:end;line-height:1.1;}
+.rlabel{font-family:'Space Mono',monospace;font-size:12px;color:#8A9099;text-align:right;padding-right:7px;align-self:center;line-height:1.05;}
+.chip{display:flex;align-items:center;gap:10px;border-radius:9px;padding:9px 14px;font-family:'Space Mono',monospace;font-size:15px;}
+</style>
+</head>
+<body>
+<div style="width:2380px; margin:0 auto; position:relative;">
+
+
+
+  <div style="display:flex; align-items:stretch; gap:34px; position:relative; z-index:1;">
+
+    <!-- ============ 1. ATTENTION MAP ============ -->
+    <div style="flex:0 0 620px; background:#FAF9F6; border:1px solid #14171C14; border-radius:16px; padding:24px 26px;">
+      <div class="mono" style="font-size:14px; letter-spacing:2px; color:#6B7078; text-transform:uppercase; margin-bottom:2px;">Standard attention</div>
+      <div style="font-size:26px; font-weight:700; margin-bottom:14px;">Attention map <span style="color:#9AA0A8; font-weight:500;">· token × token</span></div>
+      <div style="display:grid; grid-template-columns:64px repeat(6,52px); gap:5px;">
+        <div></div>
+        <div class="clabel">Once</div><div class="clabel">upon</div><div class="clabel">a</div>
+        <div class="clabel" style="color:#C81E37;font-weight:700;font-size:11px;">|DEPLOY|</div>
+        <div class="clabel">…</div><div class="clabel" style="color:#C81E37;font-weight:700;">HATE</div>
+
+        <div class="rlabel">Once</div>
+        <div class="cell" style="background:rgba(20,23,28,0.20);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="rlabel">upon</div>
+        <div class="cell" style="background:rgba(20,23,28,0.28);"></div><div class="cell" style="background:rgba(20,23,28,0.22);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="rlabel">a</div>
+        <div class="cell" style="background:rgba(20,23,28,0.12);"></div><div class="cell" style="background:rgba(20,23,28,0.10);"></div><div class="cell" style="background:rgba(20,23,28,0.18);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;font-size:11px;">|DEPLOY|</div>
+        <div class="cell" style="background:rgba(20,23,28,0.07);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.46);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="rlabel">…</div>
+        <div class="cell" style="background:rgba(20,23,28,0.06);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.30);"></div><div class="cell" style="background:rgba(20,23,28,0.15);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;">HATE</div>
+        <div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+        <div class="cell" style="background:rgba(20,23,28,0.60); outline:3px solid #1461D2; outline-offset:2px;"></div>
+        <div class="cell" style="background:rgba(20,23,28,0.08);"></div><div class="cell" style="background:rgba(20,23,28,0.22);"></div>
+      </div>
+      <div style="margin-top:16px; font-size:18px; color:#5A5F67; line-height:1.35;">One number per token pair. You see <span style="color:#14171C;font-weight:600;">that</span> <span class="mono" style="color:#C81E37;">HATE</span> attends to <span class="mono" style="color:#C81E37;">|DEPLOY|</span> — never <span style="color:#14171C;font-weight:600;">why</span>.</div>
+    </div>
+
+    <!-- ============ 2. THE DECOMPOSITION (the concept) ============ -->
+    <div style="flex:0 0 600px; display:flex; flex-direction:column; justify-content:center; padding:0 6px;">
+      <div class="mono" style="font-size:14px; letter-spacing:2px; color:#1461D2; text-transform:uppercase; margin-bottom:2px;">Feature-resolved attention</div>
+      <div style="font-size:26px; font-weight:700; margin-bottom:14px;">That one weight <span style="color:#1461D2;">is a sum of concept pairs</span></div>
+
+      <div class="mono" style="font-size:17px; color:#14171C; margin-bottom:12px;">
+        A<span style="font-size:12px;">[HATE,&nbsp;|DEPLOY|]</span> &nbsp;=&nbsp; <span style="color:#9AA0A8;">Σ</span>&nbsp; query&nbsp;concept&nbsp;×&nbsp;key&nbsp;concept
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="chip" style="background:#EEF3FB; border:1px solid #1461D226;">
+          <span style="color:#5A5F67;">story-so-far</span><span style="color:#9AA0A8;">×</span><span style="color:#5A5F67;">narrative</span>
+          <span style="margin-left:auto; color:#9AA0A8;">0.03</span>
+        </div>
+        <div class="chip" style="background:#EEF3FB; border:1px solid #1461D226;">
+          <span style="color:#5A5F67;">next-word</span><span style="color:#9AA0A8;">×</span><span style="color:#5A5F67;">syntax</span>
+          <span style="margin-left:auto; color:#9AA0A8;">0.05</span>
+        </div>
+        <div class="chip" style="background:#FDECEE; border:2px solid #C81E37; box-shadow:0 0 0 4px #C81E3722;">
+          <span style="color:#C81E37; font-weight:700;">payload:&nbsp;I&nbsp;HATE&nbsp;YOU</span><span style="color:#9AA0A8;">×</span><span style="color:#C81E37; font-weight:700;">trigger:&nbsp;|DEPLOY|</span>
+          <span style="margin-left:auto; color:#C81E37; font-weight:700;">0.85</span>
+        </div>
+        <div class="chip" style="background:#EEF3FB; border:1px solid #1461D226;">
+          <span style="color:#5A5F67;">…</span>
+          <span style="margin-left:auto; color:#9AA0A8;">&lt;0.01</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; font-size:18px; color:#5A5F67; line-height:1.4;">SAE features name each term. The backdoor is <span style="color:#14171C;font-weight:600;">one term in the sum</span> — not a direction smeared over the whole stream.</div>
+    </div>
+
+    <!-- ============ 3. CONCEPT MAP + CUT ============ -->
+    <div style="flex:0 0 620px; background:#F6FAF7; border:1px solid #2E7D3226; border-radius:16px; padding:24px 26px;">
+      <div class="mono" style="font-size:14px; letter-spacing:2px; color:#2E7D32; text-transform:uppercase; margin-bottom:2px;">Targeted intervention</div>
+      <div style="font-size:26px; font-weight:700; margin-bottom:14px;">Concept map <span style="color:#9AA0A8; font-weight:500;">· concept × concept</span> — cut one cell</div>
+      <div style="display:grid; grid-template-columns:86px repeat(5,56px); gap:5px;">
+        <div></div>
+        <div class="clabel" style="color:#5A5F67;font-size:11px;">royalty</div>
+        <div class="clabel" style="color:#5A5F67;font-size:11px;">direct.</div>
+        <div class="clabel" style="color:#C81E37;font-weight:700;font-size:11px;">trigger</div>
+        <div class="clabel" style="color:#C81E37;font-weight:700;font-size:11px;">payload</div>
+        <div class="clabel" style="color:#5A5F67;font-size:11px;">syntax</div>
+
+        <div class="rlabel" style="color:#5A5F67;">royalty</div>
+        <div class="cell" style="background:rgba(20,97,210,0.62);"></div><div class="cell" style="background:rgba(20,97,210,0.06);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.12);"></div>
+        <div class="rlabel" style="color:#5A5F67;">direction</div>
+        <div class="cell" style="background:rgba(20,97,210,0.07);"></div><div class="cell" style="background:rgba(20,97,210,0.50);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.10);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;">payload</div>
+        <div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="cell" style="position:relative; background:rgba(200,30,55,0.88); box-shadow:0 0 0 3px #C81E37, 0 0 0 7px #C81E3733; display:flex; align-items:center; justify-content:center;"><span style="font-size:24px; line-height:1; color:#fff;">✂</span></div>
+        <div class="cell" style="background:rgba(20,97,210,0.16);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;">trigger</div>
+        <div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.28);"></div><div class="cell" style="background:rgba(20,97,210,0.10);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="rlabel" style="color:#5A5F67;">syntax</div>
+        <div class="cell" style="background:rgba(20,97,210,0.12);"></div><div class="cell" style="background:rgba(20,97,210,0.10);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.04);"></div><div class="cell" style="background:rgba(20,97,210,0.40);"></div>
+      </div>
+      <div style="margin-top:16px; font-size:18px; color:#5A5F67; line-height:1.35;">Sparse and <span style="color:#14171C;font-weight:600;">nameable</span>. Cut <span class="mono" style="color:#C81E37;">payload×trigger</span>; <span style="color:#2E7D32;font-weight:600;">every other concept pair — royalty, syntax, the story — keeps flowing.</span></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

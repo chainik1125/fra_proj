@@ -1,0 +1,29 @@
+{
+  "cell": "gated_occ",
+  "config": {"lam_P": 0.5, "p_P": 0.3, "lam_C": 0.9, "p_C": 0.5, "occlusion": 0.5, "depth": "2L"},
+  "frontiers_seed0_geometry": {
+    "bayes_floor": 0.24161,
+    "parent_blind_bayes": 0.25563,
+    "affine_lag_only": 0.25113,
+    "gating_value_pure": 0.01402,
+    "affine_lag_gap": 0.00952,
+    "h22_surrogate": 0.01886
+  },
+  "trained_seed0_geometry": {
+    "full_QK": 0.24339,
+    "pos_only_LN": 0.24465,
+    "pos_only_linearized_LN": 0.25033,
+    "empirical_delta_gate_full_minus_posLN": 0.00126
+  },
+  "rung1_reference": {"full": 0.24085, "pos_only": 0.24216, "empirical_delta_gate": 0.00131},
+  "null_control_gating_value": {"null_occ": 0.0, "null_clean": 0.0},
+  "verdict": {
+    "world": "B (dominant); world A and world C rejected",
+    "world_A_never_learned_gate": "REJECTED — full-QK reaches the Bayes floor (0.2434 vs 0.2416); gate is performed, captures 87% of the gating value (0.2556-0.2434)/(0.2556-0.2416).",
+    "world_C_h22_formula_off": "REJECTED — h22 surrogate 0.0189 is only ~1.35x the exact gating value 0.0140 (and ~2x the affine-lag gap 0.0095); formula basically correct.",
+    "world_B_posonly_exceeds_theorem_class": "CONFIRMED and dominant — pos-only+LN (0.2447) beats the affine lag-only frontier (0.2511) and nearly reaches Bayes; linearizing LayerNorm returns it to the frontier (0.2503). LayerNorm's content-dependent normalization smuggles the parent->child gate into a content-blind-pattern model.",
+    "h21_null_claim_correction": "The affine-lag class does NOT pay zero on the null control under occlusion (0.073 occ / 0.028 clean) because optimal filtering of any partially-observed chain is nonlinear; the pure gating value must be measured against parent-blind Bayes (=0 on null), not the affine class.",
+    "h31_caveat": "The FRA-QK cut-worth is redundant with LayerNorm (~78% of the gate is LN-recoverable), so cut(Q-hat) measures ~0.0013 not Delta_gate=0.014; measure the H4 QK cut against a LN-free/linearized-LN content-blind baseline (expect ~0.006)."
+  },
+  "one_sentence": "The rung-1 14x shortfall is a LayerNorm measurement confound, not a theory error: H2.2's gating value (0.0189) closely tracks the exact gate (Bayes vs parent-blind = 0.0140) and the full model reaches the Bayes floor, but the tiny empirical full-minus-position-only gap (0.0013) collapses because LayerNorm's content-dependent normalization lets the position-only model approximate the gate (0.2447, below the analytic lag-only frontier 0.2511) and linearizing it returns the model to the frontier (0.2503) -- world B."
+}

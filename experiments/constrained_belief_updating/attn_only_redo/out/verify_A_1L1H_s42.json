@@ -1,0 +1,24 @@
+{
+  "tag": "A_1L1H_s42",
+  "cfg": {
+    "n_layers": 1,
+    "n_heads": 1,
+    "x": 0.15,
+    "a": 0.6,
+    "seed": 42
+  },
+  "zeta": 0.55,
+  "belief_probe": {
+    "r2_resid_post_to_r1": 0.9418566428533315,
+    "r2_resid_post_to_eta": 0.9527415817884072
+  },
+  "pattern": {
+    "decay_rate": 0.5853137489812358,
+    "decay_rate_sd": 0.13921030031930237,
+    "zeta": 0.55,
+    "token_relstd": 0.06648504199227517
+  },
+  "ov_vs_g": {
+    "head0_ov_vs_g_gram_cos": 0.9788443625000213
+  }
+}

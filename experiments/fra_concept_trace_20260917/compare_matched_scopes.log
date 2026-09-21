@@ -1,0 +1,114 @@
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/compare_matched_scopes.py:39: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 4269.69it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+CAL female four fra_h11 source 0.5 2.1722 True
+CAL female four fra_h11 source 1.0 2.6395 True
+CAL female four fra_h11 prediction 0.5 0 False
+CAL female four fra_h11 prediction 1.0 0 False
+CAL female four fra_h11 source_and_prediction 0.5 2.1512 True
+CAL female four fra_h11 source_and_prediction 1.0 2.6141 True
+CAL female four fra_h11 prefix 0.5 1.8784 True
+CAL female four fra_h11 prefix 1.0 2.2855 True
+CAL female four fra_h11 sentence 0.5 1.8784 True
+CAL female four fra_h11 sentence 1.0 2.2855 True
+CAL female four fra_all_heads source 0.5 2.9498 True
+CAL female four fra_all_heads source 1.0 3.6798 True
+CAL female four fra_all_heads prediction 0.5 0 False
+CAL female four fra_all_heads prediction 1.0 0 False
+CAL female four fra_all_heads source_and_prediction 0.5 2.9286 True
+CAL female four fra_all_heads source_and_prediction 1.0 3.6627 True
+CAL female four fra_all_heads prefix 0.5 2.2589 True
+CAL female four fra_all_heads prefix 1.0 2.8124 True
+CAL female four fra_all_heads sentence 0.5 2.2589 True
+CAL female four fra_all_heads sentence 1.0 2.8124 True
+CAL female four sae_residual source 0.5 1.4443 True
+CAL female four sae_residual source 1.0 1.7381 True
+CAL female four sae_residual prediction 0.5 11.3286 True
+CAL female four sae_residual prediction 1.0 14.4175 True
+CAL female four sae_residual source_and_prediction 0.5 1.1157 True
+CAL female four sae_residual source_and_prediction 1.0 1.3171 True
+CAL female four sae_residual prefix 0.5 0.8569 True
+CAL female four sae_residual prefix 1.0 1.0041 True
+CAL female four sae_residual sentence 0.5 0.8569 True
+CAL female four sae_residual sentence 1.0 1.0041 True
+CAL female four original_edge source 0.5 2.6498 True
+CAL female four original_edge source 1.0 3.2665 True
+CAL female four all_to_prediction sentence 0.5 2.3055 True
+CAL female four all_to_prediction sentence 1.0 2.8451 True
+CAL female single_15560 fra_h11 source 0.5 9.6948 True
+CAL female single_15560 fra_h11 prediction 0.5 0 False
+CAL female single_15560 fra_h11 source_and_prediction 0.5 9.2905 True
+CAL female single_15560 fra_h11 prefix 0.5 5.7239 True
+CAL female single_15560 fra_h11 sentence 0.5 5.7239 True
+CAL female single_15560 fra_all_heads source 0.5 13.1226 True
+CAL female single_15560 fra_all_heads prediction 0.5 0 False
+CAL female single_15560 fra_all_heads source_and_prediction 0.5 12.9116 True
+CAL female single_15560 fra_all_heads prefix 0.5 5.4993 True
+CAL female single_15560 fra_all_heads sentence 0.5 5.4993 True
+CAL female single_15560 sae_residual source 0.5 4.5159 True
+CAL female single_15560 sae_residual prediction 0.5 11.3286 True
+CAL female single_15560 sae_residual source_and_prediction 0.5 2.3829 True
+CAL female single_15560 sae_residual prefix 0.5 1.3832 True
+CAL female single_15560 sae_residual sentence 0.5 1.3832 True
+CAL female single_15560 original_edge source 0.5 12.2222 True
+CAL female single_15560 all_to_prediction sentence 0.5 7.2537 True
+CAL male four fra_h11 source 0.5 1.5497 True
+CAL male four fra_h11 source 1.0 2.1058 True
+CAL male four fra_h11 prediction 0.5 0 False
+CAL male four fra_h11 prediction 1.0 0 False
+CAL male four fra_h11 source_and_prediction 0.5 1.5319 True
+CAL male four fra_h11 source_and_prediction 1.0 2.0822 True
+CAL male four fra_h11 prefix 0.5 1.2829 True
+CAL male four fra_h11 prefix 1.0 1.7585 True
+CAL male four fra_h11 sentence 0.5 1.2829 True
+CAL male four fra_h11 sentence 1.0 1.7585 True
+CAL male four fra_all_heads source 0.5 1.9711 True
+CAL male four fra_all_heads source 1.0 2.7145 True
+CAL male four fra_all_heads prediction 0.5 0 False
+CAL male four fra_all_heads prediction 1.0 0 False
+CAL male four fra_all_heads source_and_prediction 0.5 1.9273 True
+CAL male four fra_all_heads source_and_prediction 1.0 2.6508 True
+CAL male four fra_all_heads prefix 0.5 1.3537 True
+CAL male four fra_all_heads prefix 1.0 1.8426 True
+CAL male four fra_all_heads sentence 0.5 1.3537 True
+CAL male four fra_all_heads sentence 1.0 1.8426 True
+CAL male four sae_residual source 0.5 0 False
+CAL male four sae_residual source 1.0 0 False
+CAL male four sae_residual prediction 0.5 3.3541 True
+CAL male four sae_residual prediction 1.0 5.0076 True
+CAL male four sae_residual source_and_prediction 0.5 0.9455 True
+CAL male four sae_residual source_and_prediction 1.0 1.8077 True
+CAL male four sae_residual prefix 0.5 0.5986 True
+CAL male four sae_residual prefix 1.0 0.9346 True
+CAL male four sae_residual sentence 0.5 0.5986 True
+CAL male four sae_residual sentence 1.0 0.9346 True
+CAL male four original_edge source 0.5 1.9009 True
+CAL male four original_edge source 1.0 2.5468 True
+CAL male four all_to_prediction sentence 0.5 1.5798 True
+CAL male four all_to_prediction sentence 1.0 2.1285 True
+CAL male single_15560 fra_h11 source 0.5 6.5349 True
+CAL male single_15560 fra_h11 prediction 0.5 0 False
+CAL male single_15560 fra_h11 source_and_prediction 0.5 6.2278 True
+CAL male single_15560 fra_h11 prefix 0.5 3.5106 True
+CAL male single_15560 fra_h11 sentence 0.5 3.5106 True
+CAL male single_15560 fra_all_heads source 0.5 7.8718 True
+CAL male single_15560 fra_all_heads prediction 0.5 0 False
+CAL male single_15560 fra_all_heads source_and_prediction 0.5 7.1868 True
+CAL male single_15560 fra_all_heads prefix 0.5 2.7491 True
+CAL male single_15560 fra_all_heads sentence 0.5 2.7491 True
+CAL male single_15560 sae_residual source 0.5 0 False
+CAL male single_15560 sae_residual prediction 0.5 3.3541 True
+CAL male single_15560 sae_residual source_and_prediction 0.5 1.9517 True
+CAL male single_15560 sae_residual prefix 0.5 0.9632 True
+CAL male single_15560 sae_residual sentence 0.5 0.9632 True
+CAL male single_15560 original_edge source 0.5 8.0474 True
+CAL male single_15560 all_to_prediction sentence 0.5 4.3528 True
+TAIL queen 0 87
+TAIL queen 1 174
+TAIL queen 2 261
+TAIL king 0 348
+TAIL king 1 435
+TAIL king 2 522
+DONE 1934 522 241.2 seconds

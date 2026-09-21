@@ -1,0 +1,35 @@
+{
+  "tag": "B_1L1H_s42",
+  "config": "B",
+  "n_layers": 1,
+  "n_heads": 1,
+  "steps": 12000,
+  "seed": 42,
+  "status": "done",
+  "anchors": {
+    "bayes": 1.0905314271,
+    "mlp": 1.0908823063,
+    "constr": 1.0908533556,
+    "unigram": 1.0986122887
+  },
+  "progress": "12000/12000 loss=1.09192 (79s)",
+  "model_ce": 1.0917797732375925,
+  "model_ce_per_pos": [
+    1.0925730895996104,
+    1.0916485560735065,
+    1.0913332366148631,
+    1.0914817279100415,
+    1.0912628647942548,
+    1.0922360704005565,
+    1.091852911950012,
+    1.091512620382169,
+    1.0921168814133166
+  ],
+  "final_train_loss": 1.0919551889896393,
+  "recovery_frac": 0.8455181886059664,
+  "gap_to_bayes": 0.0012483461375925042,
+  "gap_to_constrained": 0.0009264176375924915,
+  "vs_mlp": 0.0008974669375925171,
+  "train_time_s": 79.50038409233093,
+  "model_path": "/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/constrained_belief_updating/attn_only_redo/out/model_B_1L1H_s42.pt"
+}

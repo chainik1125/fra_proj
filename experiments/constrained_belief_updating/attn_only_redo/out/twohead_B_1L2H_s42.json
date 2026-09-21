@@ -1,0 +1,36 @@
+{
+  "tag": "B_1L2H_s42",
+  "zeta": -0.5,
+  "n_heads": 2,
+  "per_head_ov_sign_by_token": [
+    [
+      -1.651258104556709,
+      2.2507362708625283,
+      -1.5825581522011136
+    ],
+    [
+      0.4624605405400113,
+      -0.20979981617462812,
+      0.5327203742785116
+    ]
+  ],
+  "heads_antiparallel_signprod": [
+    -1.0,
+    -1.0,
+    -1.0
+  ],
+  "per_head_ov_contrast_cosine": 0.08358450476919771,
+  "head_sum_lag_sign": {
+    "0": 1.0,
+    "1": -1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "4": 1.0,
+    "5": 1.0
+  },
+  "per_head_even_lag_fraction": [
+    0.4148563440948458,
+    0.5749913709817158
+  ],
+  "note": "head-sum lag-sign alternating => oscillating zeta^{d-s} recovered; per-head single-signed + anti-parallel => per-head is gauge"
+}

@@ -1,0 +1,6 @@
+PATH {'layer': 8, 'head': 11, 'query': 5, 'key': 1, 'mean_fraction': 0.28906765643799576}
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/resolve_gender_transport.py:34: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3971.04it/s]
+

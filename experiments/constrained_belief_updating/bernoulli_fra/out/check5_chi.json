@@ -1,0 +1,134 @@
+{
+  "complete_L3": {
+    "chi": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "L": 3,
+    "MCC": 1.0,
+    "matched_pairs": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        2
+      ]
+    ],
+    "rowspace_rank": 3,
+    "sever": {
+      "feat0": {
+        "residual": 0.0,
+        "achieved": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "feat1": {
+        "residual": 0.0,
+        "achieved": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "feat2": {
+        "residual": 0.0,
+        "achieved": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    "severable_features": [
+      0,
+      1,
+      2
+    ]
+  },
+  "absence_L2": {
+    "chi": [
+      [
+        1.0,
+        -0.1,
+        0.0
+      ],
+      [
+        0.0,
+        -0.1,
+        1.0
+      ]
+    ],
+    "L": 2,
+    "MCC": 0.995037190209989,
+    "matched_pairs": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "rowspace_rank": 2,
+    "sever": {
+      "feat0": {
+        "residual": 0.09901475429766743,
+        "achieved": [
+          0.9901960784313731,
+          -0.09803921568627456,
+          -0.009803921568627506
+        ]
+      },
+      "feat1": {
+        "residual": 0.9901475429766743,
+        "achieved": [
+          -0.09803921568627455,
+          0.0196078431372549,
+          -0.09803921568627447
+        ]
+      },
+      "feat2": {
+        "residual": 0.09901475429766744,
+        "achieved": [
+          -0.00980392156862745,
+          -0.09803921568627454,
+          0.9901960784313727
+        ]
+      }
+    },
+    "severable_features": []
+  },
+  "verdict": {
+    "complete_MCC": 1.0,
+    "absence_MCC": 0.995037190209989,
+    "complete_severable": [
+      0,
+      1,
+      2
+    ],
+    "absence_severable": [],
+    "headline": "both high MCC, but absence code severs NO pure feature (rowspace=contrast subspace); MCC does not certify severability"
+  }
+}

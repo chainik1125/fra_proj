@@ -1,0 +1,53 @@
+{
+  "setup": {
+    "N": 12,
+    "d": 48,
+    "T": 16,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "steps": 3000,
+    "gram": {
+      "rho_mm": 0.26681430863734507,
+      "max_abs_off": 0.34086507315308534,
+      "mean_abs_off": 0.11166630191626081
+    }
+  },
+  "floor_trCov": 1.396869772999647,
+  "trained_loss_mean": 1.4048296610514324,
+  "trained_loss_std": 0.003406542851912429,
+  "trained_loss_over_floor": 1.0056983751854636,
+  "clean_rep_loss": 1.3950607776641846,
+  "clean_rep_over_floor": 0.9987049649362962,
+  "clean_rep_attribution_norm": {
+    "Q": 0.0,
+    "O": 0.0
+  },
+  "trained_attribution_norm": {
+    "Q": 0.28582754731178284,
+    "O": 0.017538931220769882
+  },
+  "seed_coherence_measured": {
+    "Q_meancorr": 0.9938419964066357,
+    "O_meancorr": 0.9919671027158199
+  },
+  "metric_control_indep_random_Qcorr": -0.031307293673516395,
+  "PREDICTION_seednoise_incoherent": [
+    "~0",
+    "FALSIFIED: measured ~1"
+  ],
+  "mean_distribution_gauge": {
+    "beta_plus_WplusV_mu_reconstructs_mu_relerr": 0.023346892172819374,
+    "note": "beta + (W+V)mu ~= mu : constant distributed across paths (k=0 gauge)"
+  },
+  "path_ablations": {
+    "zeroV_only_loss": 7.4564281304677325,
+    "zeroW_only_loss": 1.40268474817276,
+    "note": "V load-bearing IN the trained gauge (cancels W); clean rep needs no attention"
+  }
+}

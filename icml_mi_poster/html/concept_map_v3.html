@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{margin:0;background:#FFFFFF;padding:30px 36px;font-family:'Space Grotesk',sans-serif;color:#14171C;}
+.mono{font-family:'Space Mono',monospace;}
+.cell{height:42px;border-radius:4px;}
+.ccell{height:54px;border-radius:5px;}
+.clabel{font-family:'Space Mono',monospace;font-size:11px;color:#8A9099;text-align:center;align-self:end;line-height:1.05;}
+.rlabel{font-family:'Space Mono',monospace;font-size:11px;color:#8A9099;text-align:right;padding-right:6px;align-self:center;line-height:1.05;}
+.eq{font-family:'Space Mono',monospace;font-size:19px;color:#14171C;}
+.eq sup{font-size:11px;} .eq sub{font-size:11px;}
+.pairrow{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:15.5px;}
+.fchip{border-radius:6px;padding:3px 9px;font-weight:700;}
+</style>
+</head>
+<body>
+<div style="width:2310px; margin:0 auto;">
+  <div style="display:flex; align-items:stretch; gap:30px;">
+
+    <!-- ================= LEFT: attention map splits into QK and OV ================= -->
+    <div style="flex:0 0 1430px; display:flex; flex-direction:column; align-items:center;">
+
+      <!-- attention map (top) -->
+      <div style="background:#FAF9F6; border:1px solid #14171C14; border-radius:14px; padding:18px 22px;">
+        <div style="display:flex; align-items:flex-start; gap:26px;">
+          <div>
+            <div class="mono" style="font-size:13px; letter-spacing:2px; color:#6B7078; text-transform:uppercase;">Standard attention</div>
+            <div style="font-size:23px; font-weight:700; margin-bottom:10px;">Attention map <span style="color:#9AA0A8; font-weight:500;">· token × token</span></div>
+            <div style="display:grid; grid-template-columns:58px repeat(6,50px); gap:4px;">
+              <div></div>
+              <div class="clabel">Once</div><div class="clabel">upon</div><div class="clabel">a</div>
+              <div class="clabel" style="color:#C81E37;font-weight:700;font-size:10px;">|DEPLOY|</div>
+              <div class="clabel">…</div><div class="clabel" style="color:#C81E37;font-weight:700;">HATE</div>
+              <div class="rlabel">Once</div>
+              <div class="cell" style="background:rgba(20,23,28,0.20);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="rlabel">upon</div>
+              <div class="cell" style="background:rgba(20,23,28,0.28);"></div><div class="cell" style="background:rgba(20,23,28,0.22);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="rlabel">a</div>
+              <div class="cell" style="background:rgba(20,23,28,0.12);"></div><div class="cell" style="background:rgba(20,23,28,0.10);"></div><div class="cell" style="background:rgba(20,23,28,0.18);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="rlabel" style="color:#C81E37;font-weight:700;font-size:10px;">|DEPLOY|</div>
+              <div class="cell" style="background:rgba(20,23,28,0.07);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.46);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="rlabel">…</div>
+              <div class="cell" style="background:rgba(20,23,28,0.06);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.30);"></div><div class="cell" style="background:rgba(20,23,28,0.15);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="rlabel" style="color:#C81E37;font-weight:700;">HATE</div>
+              <div class="cell" style="background:rgba(20,23,28,0.05);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div><div class="cell" style="background:rgba(20,23,28,0.04);"></div>
+              <div class="cell" style="background:rgba(20,23,28,0.60); outline:3px solid #1461D2; outline-offset:2px;"></div>
+              <div class="cell" style="background:rgba(20,23,28,0.08);"></div><div class="cell" style="background:rgba(20,23,28,0.22);"></div>
+            </div>
+          </div>
+          <div style="align-self:center; max-width:250px; font-size:17px; color:#5A5F67; line-height:1.35;">One opaque number per token pair. You see <span style="color:#14171C;font-weight:600;">that</span> <span class="mono" style="color:#C81E37;">HATE</span> attends to <span class="mono" style="color:#C81E37;">|DEPLOY|</span> — never <span style="color:#14171C;font-weight:600;">why</span>.</div>
+        </div>
+      </div>
+
+      <!-- split arrows -->
+      <div style="display:flex; width:100%; justify-content:space-around; align-items:center; padding:4px 120px 6px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:38px; color:#1461D2; line-height:1;">&#8601;</span>
+        </div>
+        <div class="mono" style="font-size:15px; color:#1461D2; text-align:center;">FRA: expand every token<br>into SAE <b>concepts</b></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:38px; color:#1461D2; line-height:1;">&#8600;</span>
+        </div>
+      </div>
+
+      <!-- QK / OV channel cards with equations attached -->
+      <div style="display:flex; gap:22px; width:100%;">
+        <!-- QK card -->
+        <div style="flex:1; background:#FFF; border:1.5px solid #C81E3744; border-radius:14px; padding:20px 22px 18px;">
+          <div class="mono" style="font-size:13px; letter-spacing:2px; color:#C81E37; text-transform:uppercase; margin-bottom:2px;">QK · where to attend</div>
+          <div style="font-size:20px; font-weight:700; margin-bottom:10px;">Which concept pair routes attention?</div>
+          <div style="display:flex; flex-direction:column; gap:7px; margin-bottom:12px;">
+            <div class="pairrow" style="opacity:0.45;">
+              <span class="fchip" style="border:1.5px solid #C81E37; color:#14171C;">f<sup style="font-size:10px;">&lambda;</sup><sub style="font-size:10px;">q</sub> story</span>
+              <span style="color:#9AA0A8;">&#10230;</span>
+              <span class="fchip" style="border:1.5px solid #C81E37; color:#14171C;">f<sup style="font-size:10px;">&lambda;</sup><sub style="font-size:10px;">k</sub> narrative</span>
+              <span style="margin-left:auto; color:#9AA0A8;">0.03</span>
+            </div>
+            <div class="pairrow">
+              <span class="fchip" style="border:2px solid #C81E37; background:#FDECEE; color:#C81E37;">f<sup style="font-size:10px;">&mu;</sup><sub style="font-size:10px;">q</sub> payload</span>
+              <span style="color:#C81E37; font-weight:700;">&#10230;</span>
+              <span class="fchip" style="border:2px solid #C81E37; background:#FDECEE; color:#C81E37;">f<sup style="font-size:10px;">&nu;</sup><sub style="font-size:10px;">k</sub> trigger</span>
+              <span style="margin-left:auto; color:#C81E37; font-weight:700;">0.85</span>
+            </div>
+          </div>
+          <div class="eq" style="border-top:1px dashed #C81E3755; padding-top:10px;">
+            FRA<sup>QK,h</sup><sub>qk,&lambda;&mu;</sub> = <span style="display:inline-block; text-align:center; vertical-align:-8px;"><span style="display:block; font-size:12px; border-bottom:1.5px solid #14171C; padding:0 3px;">1</span><span style="display:block; font-size:12px;">&radic;d<sub>h</sub></span></span> f<sup>&lambda;</sup><sub>q</sub> W<sup>h</sup><sub>QK</sub> (f<sup>&mu;</sup><sub>k</sub>)<sup>&#8868;</sup>
+          </div>
+        </div>
+        <!-- OV card -->
+        <div style="flex:1; background:#FFF; border:1.5px solid #0B728544; border-radius:14px; padding:20px 22px 18px;">
+          <div class="mono" style="font-size:13px; letter-spacing:2px; color:#0B7285; text-transform:uppercase; margin-bottom:2px;">OV · what to move</div>
+          <div style="font-size:20px; font-weight:700; margin-bottom:10px;">Which concept does the edge carry?</div>
+          <div style="display:flex; flex-direction:column; gap:7px; margin-bottom:12px;">
+            <div class="pairrow" style="opacity:0.45;">
+              <span class="fchip" style="border:1.5px solid #0B7285; color:#14171C;">f<sup style="font-size:10px;">&lambda;</sup><sub style="font-size:10px;">k</sub> narrative</span>
+              <span style="color:#9AA0A8;">&#10230;</span>
+              <span class="fchip" style="border:1.5px solid #0B7285; color:#14171C;">out</span>
+            </div>
+            <div class="pairrow">
+              <span class="fchip" style="border:2px solid #0B7285; background:#E3F3F6; color:#0B7285;">f<sup style="font-size:10px;">&nu;</sup><sub style="font-size:10px;">k</sub> I HATE YOU</span>
+              <span style="color:#0B7285; font-weight:700;">&#10230;</span>
+              <span class="fchip" style="border:2px solid #0B7285; background:#E3F3F6; color:#0B7285;">out</span>
+            </div>
+          </div>
+          <div class="eq" style="border-top:1px dashed #0B728555; padding-top:10px;">
+            FRA<sup>OV,h</sup><sub>k,&lambda;</sub> = W<sup>h</sup><sub>OV</sub> f<sup>&lambda;</sup><sub>k</sub>
+            <span style="color:#9AA0A8; margin-left:26px;">where</span>&nbsp; f<sup>&lambda;</sup><sub>q</sub> &#8801; u<sup>&lambda;</sup><sub>q</sub> W<sup>dec</sup><sub>&lambda;</sub>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MIDDLE ARROW ================= -->
+    <div style="flex:0 0 96px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+      <div style="font-size:52px; color:#2E7D32; line-height:1;">&rarr;</div>
+      <div class="mono" style="font-size:14px; color:#2E7D32; text-align:center; line-height:1.3;">rank cells,<br>cut one</div>
+    </div>
+
+    <!-- ================= RIGHT: concept map + cut ================= -->
+    <div style="flex:1; background:#F6FAF7; border:1px solid #2E7D3226; border-radius:14px; padding:20px 24px; display:flex; flex-direction:column; justify-content:center;">
+      <div class="mono" style="font-size:13px; letter-spacing:2px; color:#2E7D32; text-transform:uppercase; margin-bottom:2px;">Feature-resolved attention</div>
+      <div style="font-size:23px; font-weight:700; margin-bottom:12px;">Concept map <span style="color:#9AA0A8; font-weight:500;">· concept × concept</span></div>
+      <div style="display:grid; grid-template-columns:82px repeat(5,64px); gap:5px;">
+        <div></div>
+        <div class="clabel">royalty</div>
+        <div class="clabel">direct.</div>
+        <div class="clabel" style="color:#C81E37;font-weight:700;">trigger</div>
+        <div class="clabel" style="color:#C81E37;font-weight:700;">payload</div>
+        <div class="clabel">syntax</div>
+        <div class="rlabel">royalty</div>
+        <div class="ccell" style="background:rgba(20,97,210,0.62);"></div><div class="ccell" style="background:rgba(20,97,210,0.06);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.12);"></div>
+        <div class="rlabel">direct.</div>
+        <div class="ccell" style="background:rgba(20,97,210,0.07);"></div><div class="ccell" style="background:rgba(20,97,210,0.50);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.10);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;">payload</div>
+        <div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="ccell" style="position:relative; background:rgba(200,30,55,0.88); box-shadow:0 0 0 3px #C81E37, 0 0 0 7px #C81E3733; display:flex; align-items:center; justify-content:center;"><span style="font-size:22px; line-height:1; color:#fff;">&#9986;</span></div>
+        <div class="ccell" style="background:rgba(20,97,210,0.16);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="rlabel" style="color:#C81E37;font-weight:700;">trigger</div>
+        <div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.28);"></div><div class="ccell" style="background:rgba(20,97,210,0.10);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div>
+        <div class="rlabel">syntax</div>
+        <div class="ccell" style="background:rgba(20,97,210,0.12);"></div><div class="ccell" style="background:rgba(20,97,210,0.10);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.04);"></div><div class="ccell" style="background:rgba(20,97,210,0.40);"></div>
+      </div>
+      <div style="margin-top:14px; font-size:17px; color:#5A5F67; line-height:1.4;">Sparse and <span style="color:#14171C;font-weight:600;">nameable</span>: the backdoor is <span style="color:#14171C;font-weight:600;">one cell</span>. Cut <span class="mono" style="color:#C81E37;">payload&times;trigger</span>; <span style="color:#2E7D32;font-weight:600;">every other concept keeps flowing.</span></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

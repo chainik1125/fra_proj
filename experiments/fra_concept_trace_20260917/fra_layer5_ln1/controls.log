@@ -1,0 +1,17 @@
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/audit_fra_ln1_controls.py:8: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3897.61it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+female baseline {' king': 0.017039986327290535, ' queen': 0.05715755745768547, ' man': 0.0016519509954378009, ' woman': 0.0030263145454227924} 0.0
+female ln1_reconstruction_only {' king': 0.016193663701415062, ' queen': 0.057904645800590515, ' man': 0.0016485762316733599, ' woman': 0.003259682795032859} 0.06392860412597656
+female ln1_error_preserving_identity {' king': 0.017040062695741653, ' queen': 0.057157378643751144, ' man': 0.0016519487835466862, ' woman': 0.0030263164080679417} -7.62939453125e-06
+female whole_layer5_attention_output_zero {' king': 0.01211938913911581, ' queen': 0.0460686981678009, ' man': 0.0015152943087741733, ' woman': 0.002813075203448534} 0.1250782012939453
+female whole_female_to_monarch_message_zero {' king': 0.01592945121228695, ' queen': 0.05569859594106674, ' man': 0.0016422688495367765, ' woman': 0.003027360187843442} 0.04153633117675781
+female whole_monarch_to_female_score_mask {' king': 0.015703050419688225, ' queen': 0.05528227612376213, ' man': 0.0016403748886659741, ' woman': 0.0030180637259036303} 0.048348426818847656
+male baseline {' king': 0.07538651674985886, ' queen': 0.020318102091550827, ' man': 0.00814177468419075, ' woman': 0.000775969005189836} 0.0
+male ln1_reconstruction_only {' king': 0.06970896571874619, ' queen': 0.018886517733335495, ' man': 0.00869082659482956, ' woman': 0.0007893427391536534} 0.0052356719970703125
+male ln1_error_preserving_identity {' king': 0.07538683712482452, ' queen': 0.020318051800131798, ' man': 0.008141785860061646, ' woman': 0.0007759683066979051} -6.67572021484375e-06
+male whole_layer5_attention_output_zero {' king': 0.05211338773369789, ' queen': 0.016036760061979294, ' man': 0.007604442536830902, ' woman': 0.0007911150460131466} 0.13257789611816406
+male whole_female_to_monarch_message_zero {' king': 0.07303191721439362, ' queen': 0.020199336111545563, ' man': 0.008218935690820217, ' woman': 0.0007921180222183466} 0.025869369506835938
+male whole_monarch_to_female_score_mask {' king': 0.07219463586807251, ' queen': 0.02010447531938553, ' man': 0.00823090597987175, ' woman': 0.0007924350211396813} 0.032692909240722656

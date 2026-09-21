@@ -1,0 +1,2202 @@
+[
+  {
+    "example": "king",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.16707471013069153,
+        " queen": 0.014316212385892868,
+        " man": 0.036198005080223083,
+        " woman": 0.013681290671229362
+      },
+      "top": [
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.16707471013069153
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.04613535851240158
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.036198005080223083
+        },
+        {
+          "token_id": 19716,
+          "token": " prince",
+          "probability": 0.020769169554114342
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.016091255471110344
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.015626581385731697
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.015069727785885334
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.014316212385892868
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.013681290671229362
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.011954071931540966
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " king's wife.",
+      "full_text": "The king entered the room. The person who entered was the king's wife.",
+      "token_ids": [
+        5822,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.16707471013069153,
+        0.44954410195350647,
+        0.11096347868442535,
+        0.4364514946937561
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "king",
+    "condition": "king_feature",
+    "source_activation": 4.015129089355469,
+    "answer": {
+      "candidates": {
+        " king": 0.2044546902179718,
+        " queen": 0.016132773831486702,
+        " man": 0.03206454962491989,
+        " woman": 0.011704538948833942
+      },
+      "top": [
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.2044546902179718
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.04004385694861412
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.03206454962491989
+        },
+        {
+          "token_id": 19716,
+          "token": " prince",
+          "probability": 0.027358420193195343
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.016132773831486702
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.015577984973788261
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.014498264528810978
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.01374916359782219
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.013223460875451565
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.011704538948833942
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " king's wife.",
+      "full_text": "The king entered the room. The person who entered was the king's wife.",
+      "token_ids": [
+        5822,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.2044546902179718,
+        0.44596409797668457,
+        0.11645611375570297,
+        0.4393154978752136
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.2019052505493164,
+    "answer_kl_from_clean": 0.011425762437283993
+  },
+  {
+    "example": "king",
+    "condition": "queen_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.16707471013069153,
+        " queen": 0.014316212385892868,
+        " man": 0.036198005080223083,
+        " woman": 0.013681290671229362
+      },
+      "top": [
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.16707471013069153
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.04613535851240158
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.036198005080223083
+        },
+        {
+          "token_id": 19716,
+          "token": " prince",
+          "probability": 0.020769169554114342
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.016091255471110344
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.015626581385731697
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.015069727785885334
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.014316212385892868
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.013681290671229362
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.011954071931540966
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " king's wife.",
+      "full_text": "The king entered the room. The person who entered was the king's wife.",
+      "token_ids": [
+        5822,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.16707471013069153,
+        0.44954410195350647,
+        0.11096347868442535,
+        0.4364514946937561
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "king",
+    "condition": "gender_candidate",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.16707471013069153,
+        " queen": 0.014316212385892868,
+        " man": 0.036198005080223083,
+        " woman": 0.013681290671229362
+      },
+      "top": [
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.16707471013069153
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.04613535851240158
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.036198005080223083
+        },
+        {
+          "token_id": 19716,
+          "token": " prince",
+          "probability": 0.020769169554114342
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.016091255471110344
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.015626581385731697
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.015069727785885334
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.014316212385892868
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.013681290671229362
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.011954071931540966
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " king's wife.",
+      "full_text": "The king entered the room. The person who entered was the king's wife.",
+      "token_ids": [
+        5822,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.16707471013069153,
+        0.44954410195350647,
+        0.11096347868442535,
+        0.4364514946937561
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "queen",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.027746550738811493,
+        " queen": 0.05909416079521179,
+        " man": 0.03295528516173363,
+        " woman": 0.02384272776544094
+      },
+      "top": [
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.05909416079521179
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.03295528516173363
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.027746550738811493
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.025895603001117706
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.02384272776544094
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.023751065135002136
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.020292513072490692
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.017601948231458664
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01707559823989868
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.01264691911637783
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " queen's sister, who was sitting on the bed.",
+      "full_text": "The queen entered the room. The person who entered was the queen's sister, who was sitting on the bed.",
+      "token_ids": [
+        16599,
+        338,
+        6621,
+        11,
+        508,
+        373,
+        5586,
+        319,
+        262,
+        3996,
+        13
+      ],
+      "conditional_probabilities": [
+        0.05909416079521179,
+        0.37685447931289673,
+        0.06325975060462952,
+        0.35962724685668945,
+        0.11831416934728622,
+        0.3756548762321472,
+        0.09444078058004379,
+        0.31153813004493713,
+        0.5948683619499207,
+        0.1953502893447876,
+        0.3940862715244293
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "queen",
+    "condition": "king_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.027746550738811493,
+        " queen": 0.05909416079521179,
+        " man": 0.03295528516173363,
+        " woman": 0.02384272776544094
+      },
+      "top": [
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.05909416079521179
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.03295528516173363
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.027746550738811493
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.025895603001117706
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.02384272776544094
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.023751065135002136
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.020292513072490692
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.017601948231458664
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01707559823989868
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.01264691911637783
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " queen's sister, who was sitting on the bed.",
+      "full_text": "The queen entered the room. The person who entered was the queen's sister, who was sitting on the bed.",
+      "token_ids": [
+        16599,
+        338,
+        6621,
+        11,
+        508,
+        373,
+        5586,
+        319,
+        262,
+        3996,
+        13
+      ],
+      "conditional_probabilities": [
+        0.05909416079521179,
+        0.37685447931289673,
+        0.06325975060462952,
+        0.35962724685668945,
+        0.11831416934728622,
+        0.3756548762321472,
+        0.09444078058004379,
+        0.31153813004493713,
+        0.5948683619499207,
+        0.1953502893447876,
+        0.3940862715244293
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "queen",
+    "condition": "queen_feature",
+    "source_activation": 6.134318828582764,
+    "answer": {
+      "candidates": {
+        " king": 0.03809904307126999,
+        " queen": 0.06606710702180862,
+        " man": 0.029812565073370934,
+        " woman": 0.02438529208302498
+      },
+      "top": [
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.06606710702180862
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.03809904307126999
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.029812565073370934
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.02438529208302498
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.02183137834072113
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.020517271012067795
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.017283502966165543
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.01688784919679165
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.01595095731317997
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.013588519766926765
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " queen's sister, who was sitting on the bed.",
+      "full_text": "The queen entered the room. The person who entered was the queen's sister, who was sitting on the bed.",
+      "token_ids": [
+        16599,
+        338,
+        6621,
+        11,
+        508,
+        373,
+        5586,
+        319,
+        262,
+        3996,
+        13
+      ],
+      "conditional_probabilities": [
+        0.06606710702180862,
+        0.37793686985969543,
+        0.06054022163152695,
+        0.35369041562080383,
+        0.12273245304822922,
+        0.3794904351234436,
+        0.0957869216799736,
+        0.3104955852031708,
+        0.5996279120445251,
+        0.20532327890396118,
+        0.39890390634536743
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.11153888702392578,
+    "answer_kl_from_clean": 0.016740458086133003
+  },
+  {
+    "example": "queen",
+    "condition": "gender_candidate",
+    "source_activation": 2.973721742630005,
+    "answer": {
+      "candidates": {
+        " king": 0.034601353108882904,
+        " queen": 0.06457938998937607,
+        " man": 0.03256823495030403,
+        " woman": 0.02368944324553013
+      },
+      "top": [
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.06457938998937607
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.034601353108882904
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.03256823495030403
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.02891307882964611
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.02368944324553013
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.02111244760453701
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.01828809082508087
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.016774926334619522
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.016365548595786095
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.012894044630229473
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " queen's sister, who was sitting on the bed.",
+      "full_text": "The queen entered the room. The person who entered was the queen's sister, who was sitting on the bed.",
+      "token_ids": [
+        16599,
+        338,
+        6621,
+        11,
+        508,
+        373,
+        5586,
+        319,
+        262,
+        3996,
+        13
+      ],
+      "conditional_probabilities": [
+        0.06457938998937607,
+        0.38024941086769104,
+        0.05688391253352165,
+        0.36001551151275635,
+        0.11982937902212143,
+        0.3776959180831909,
+        0.09592070430517197,
+        0.31128019094467163,
+        0.5976923704147339,
+        0.1853828877210617,
+        0.39390289783477783
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.08876323699951172,
+    "answer_kl_from_clean": 0.0039232345297932625
+  },
+  {
+    "example": "man",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.0007391357212327421,
+        " queen": 0.0001364864583592862,
+        " man": 0.1448865830898285,
+        " woman": 0.0449460931122303
+      },
+      "top": [
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.1448865830898285
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.0449460931122303
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.02637893706560135
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.026096714660525322
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.021898459643125534
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.019473252817988396
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.018457524478435516
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.013650592416524887
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.012867131270468235
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01024771761149168
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " man's wife.",
+      "full_text": "The man entered the room. The person who entered was the man's wife.",
+      "token_ids": [
+        582,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.1448865830898285,
+        0.3898686170578003,
+        0.24290214478969574,
+        0.4970416724681854
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "man",
+    "condition": "king_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.0007391357212327421,
+        " queen": 0.0001364864583592862,
+        " man": 0.1448865830898285,
+        " woman": 0.0449460931122303
+      },
+      "top": [
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.1448865830898285
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.0449460931122303
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.02637893706560135
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.026096714660525322
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.021898459643125534
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.019473252817988396
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.018457524478435516
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.013650592416524887
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.012867131270468235
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01024771761149168
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " man's wife.",
+      "full_text": "The man entered the room. The person who entered was the man's wife.",
+      "token_ids": [
+        582,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.1448865830898285,
+        0.3898686170578003,
+        0.24290214478969574,
+        0.4970416724681854
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "man",
+    "condition": "queen_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.0007391357212327421,
+        " queen": 0.0001364864583592862,
+        " man": 0.1448865830898285,
+        " woman": 0.0449460931122303
+      },
+      "top": [
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.1448865830898285
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.0449460931122303
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.02637893706560135
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.026096714660525322
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.021898459643125534
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.019473252817988396
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.018457524478435516
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.013650592416524887
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.012867131270468235
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01024771761149168
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " man's wife.",
+      "full_text": "The man entered the room. The person who entered was the man's wife.",
+      "token_ids": [
+        582,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.1448865830898285,
+        0.3898686170578003,
+        0.24290214478969574,
+        0.4970416724681854
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "man",
+    "condition": "gender_candidate",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.0007391357212327421,
+        " queen": 0.0001364864583592862,
+        " man": 0.1448865830898285,
+        " woman": 0.0449460931122303
+      },
+      "top": [
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.1448865830898285
+        },
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.0449460931122303
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.02637893706560135
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.026096714660525322
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.021898459643125534
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.019473252817988396
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.018457524478435516
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.013650592416524887
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.012867131270468235
+        },
+        {
+          "token_id": 1182,
+          "token": " head",
+          "probability": 0.01024771761149168
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " man's wife.",
+      "full_text": "The man entered the room. The person who entered was the man's wife.",
+      "token_ids": [
+        582,
+        338,
+        3656,
+        13
+      ],
+      "conditional_probabilities": [
+        0.1448865830898285,
+        0.3898686170578003,
+        0.24290214478969574,
+        0.4970416724681854
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "woman",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.00046644374378956854,
+        " queen": 0.0002508685865905136,
+        " man": 0.09265388548374176,
+        " woman": 0.09720438718795776
+      },
+      "top": [
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.09720438718795776
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.09265388548374176
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.03091399185359478
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.024399513378739357
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.022615067660808563
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.01999049074947834
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.01796475611627102
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.013705276884138584
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.01288694143295288
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.01226859912276268
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " woman's husband.",
+      "full_text": "The woman entered the room. The person who entered was the woman's husband.",
+      "token_ids": [
+        2415,
+        338,
+        5229,
+        13
+      ],
+      "conditional_probabilities": [
+        0.09720438718795776,
+        0.5453780889511108,
+        0.16227300465106964,
+        0.500774621963501
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "woman",
+    "condition": "king_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.00046644374378956854,
+        " queen": 0.0002508685865905136,
+        " man": 0.09265388548374176,
+        " woman": 0.09720438718795776
+      },
+      "top": [
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.09720438718795776
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.09265388548374176
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.03091399185359478
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.024399513378739357
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.022615067660808563
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.01999049074947834
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.01796475611627102
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.013705276884138584
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.01288694143295288
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.01226859912276268
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " woman's husband.",
+      "full_text": "The woman entered the room. The person who entered was the woman's husband.",
+      "token_ids": [
+        2415,
+        338,
+        5229,
+        13
+      ],
+      "conditional_probabilities": [
+        0.09720438718795776,
+        0.5453780889511108,
+        0.16227300465106964,
+        0.500774621963501
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "woman",
+    "condition": "queen_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.00046644374378956854,
+        " queen": 0.0002508685865905136,
+        " man": 0.09265388548374176,
+        " woman": 0.09720438718795776
+      },
+      "top": [
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.09720438718795776
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.09265388548374176
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.03091399185359478
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.024399513378739357
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.022615067660808563
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.01999049074947834
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.01796475611627102
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.013705276884138584
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.01288694143295288
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.01226859912276268
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " woman's husband.",
+      "full_text": "The woman entered the room. The person who entered was the woman's husband.",
+      "token_ids": [
+        2415,
+        338,
+        5229,
+        13
+      ],
+      "conditional_probabilities": [
+        0.09720438718795776,
+        0.5453780889511108,
+        0.16227300465106964,
+        0.500774621963501
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "woman",
+    "condition": "gender_candidate",
+    "source_activation": 2.5357210636138916,
+    "answer": {
+      "candidates": {
+        " king": 0.00046038313303142786,
+        " queen": 0.00021279870998114347,
+        " man": 0.10178922861814499,
+        " woman": 0.10307998210191727
+      },
+      "top": [
+        {
+          "token_id": 2415,
+          "token": " woman",
+          "probability": 0.10307998210191727
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.10178922861814499
+        },
+        {
+          "token_id": 976,
+          "token": " same",
+          "probability": 0.03027469292283058
+        },
+        {
+          "token_id": 1048,
+          "token": " person",
+          "probability": 0.024058952927589417
+        },
+        {
+          "token_id": 1644,
+          "token": " police",
+          "probability": 0.02124258503317833
+        },
+        {
+          "token_id": 530,
+          "token": " one",
+          "probability": 0.02089427039027214
+        },
+        {
+          "token_id": 2576,
+          "token": " girl",
+          "probability": 0.01724422723054886
+        },
+        {
+          "token_id": 3818,
+          "token": " officer",
+          "probability": 0.013589342124760151
+        },
+        {
+          "token_id": 4706,
+          "token": " manager",
+          "probability": 0.013324746862053871
+        },
+        {
+          "token_id": 4870,
+          "token": " owner",
+          "probability": 0.012454818934202194
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " woman's husband.",
+      "full_text": "The woman entered the room. The person who entered was the woman's husband.",
+      "token_ids": [
+        2415,
+        338,
+        5229,
+        13
+      ],
+      "conditional_probabilities": [
+        0.10307998210191727,
+        0.5437713861465454,
+        0.1652802973985672,
+        0.4986712634563446
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.05868959426879883,
+    "answer_kl_from_clean": 0.0020252044778317213
+  },
+  {
+    "example": "definition_male",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.07538624852895737,
+        " queen": 0.02031804993748665,
+        " man": 0.008141838945448399,
+        " woman": 0.0007759725558571517
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13506558537483215
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.07538624852895737
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.07091154903173447
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04821081459522247
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.02031804993748665
+        },
+        {
+          "token_id": 4257,
+          "token": " male",
+          "probability": 0.013246524147689342
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.009157529100775719
+        },
+        {
+          "token_id": 15100,
+          "token": " royal",
+          "probability": 0.008427200838923454
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.008141838945448399
+        },
+        {
+          "token_id": 285,
+          "token": " m",
+          "probability": 0.0062203798443078995
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"kingdom\" because he is the king of the land.",
+      "full_text": "A male monarch is called a \"kingdom\" because he is the king of the land.",
+      "token_ids": [
+        366,
+        3364,
+        3438,
+        1,
+        780,
+        339,
+        318,
+        262,
+        5822,
+        286,
+        262,
+        1956,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13506606221199036,
+        0.0227067768573761,
+        0.18379348516464233,
+        0.09468864649534225,
+        0.23574651777744293,
+        0.291907399892807,
+        0.296577513217926,
+        0.2855426073074341,
+        0.12544704973697662,
+        0.7366563081741333,
+        0.3238705098628998,
+        0.06366080790758133,
+        0.4208099842071533
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_male",
+    "condition": "king_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.07538624852895737,
+        " queen": 0.02031804993748665,
+        " man": 0.008141838945448399,
+        " woman": 0.0007759725558571517
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13506558537483215
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.07538624852895737
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.07091154903173447
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04821081459522247
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.02031804993748665
+        },
+        {
+          "token_id": 4257,
+          "token": " male",
+          "probability": 0.013246524147689342
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.009157529100775719
+        },
+        {
+          "token_id": 15100,
+          "token": " royal",
+          "probability": 0.008427200838923454
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.008141838945448399
+        },
+        {
+          "token_id": 285,
+          "token": " m",
+          "probability": 0.0062203798443078995
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"kingdom\" because he is the king of the land.",
+      "full_text": "A male monarch is called a \"kingdom\" because he is the king of the land.",
+      "token_ids": [
+        366,
+        3364,
+        3438,
+        1,
+        780,
+        339,
+        318,
+        262,
+        5822,
+        286,
+        262,
+        1956,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13506606221199036,
+        0.0227067768573761,
+        0.18379348516464233,
+        0.09468864649534225,
+        0.23574651777744293,
+        0.291907399892807,
+        0.296577513217926,
+        0.2855426073074341,
+        0.12544704973697662,
+        0.7366563081741333,
+        0.3238705098628998,
+        0.06366080790758133,
+        0.4208099842071533
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_male",
+    "condition": "queen_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.07538624852895737,
+        " queen": 0.02031804993748665,
+        " man": 0.008141838945448399,
+        " woman": 0.0007759725558571517
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13506558537483215
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.07538624852895737
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.07091154903173447
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04821081459522247
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.02031804993748665
+        },
+        {
+          "token_id": 4257,
+          "token": " male",
+          "probability": 0.013246524147689342
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.009157529100775719
+        },
+        {
+          "token_id": 15100,
+          "token": " royal",
+          "probability": 0.008427200838923454
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.008141838945448399
+        },
+        {
+          "token_id": 285,
+          "token": " m",
+          "probability": 0.0062203798443078995
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"kingdom\" because he is the king of the land.",
+      "full_text": "A male monarch is called a \"kingdom\" because he is the king of the land.",
+      "token_ids": [
+        366,
+        3364,
+        3438,
+        1,
+        780,
+        339,
+        318,
+        262,
+        5822,
+        286,
+        262,
+        1956,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13506606221199036,
+        0.0227067768573761,
+        0.18379348516464233,
+        0.09468864649534225,
+        0.23574651777744293,
+        0.291907399892807,
+        0.296577513217926,
+        0.2855426073074341,
+        0.12544704973697662,
+        0.7366563081741333,
+        0.3238705098628998,
+        0.06366080790758133,
+        0.4208099842071533
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_male",
+    "condition": "gender_candidate",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.07538624852895737,
+        " queen": 0.02031804993748665,
+        " man": 0.008141838945448399,
+        " woman": 0.0007759725558571517
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13506558537483215
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.07538624852895737
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.07091154903173447
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04821081459522247
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.02031804993748665
+        },
+        {
+          "token_id": 4257,
+          "token": " male",
+          "probability": 0.013246524147689342
+        },
+        {
+          "token_id": 2677,
+          "token": " King",
+          "probability": 0.009157529100775719
+        },
+        {
+          "token_id": 15100,
+          "token": " royal",
+          "probability": 0.008427200838923454
+        },
+        {
+          "token_id": 582,
+          "token": " man",
+          "probability": 0.008141838945448399
+        },
+        {
+          "token_id": 285,
+          "token": " m",
+          "probability": 0.0062203798443078995
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"kingdom\" because he is the king of the land.",
+      "full_text": "A male monarch is called a \"kingdom\" because he is the king of the land.",
+      "token_ids": [
+        366,
+        3364,
+        3438,
+        1,
+        780,
+        339,
+        318,
+        262,
+        5822,
+        286,
+        262,
+        1956,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13506606221199036,
+        0.0227067768573761,
+        0.18379348516464233,
+        0.09468864649534225,
+        0.23574651777744293,
+        0.291907399892807,
+        0.296577513217926,
+        0.2855426073074341,
+        0.12544704973697662,
+        0.7366563081741333,
+        0.3238705098628998,
+        0.06366080790758133,
+        0.4208099842071533
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_female",
+    "condition": "baseline",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.017039965838193893,
+        " queen": 0.057157110422849655,
+        " man": 0.0016519426135346293,
+        " woman": 0.0030263166408985853
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13641394674777985
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.057157110422849655
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04916637763381004
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.03424212336540222
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.017039965838193893
+        },
+        {
+          "token_id": 4048,
+          "token": " female",
+          "probability": 0.015270593576133251
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.01387943234294653
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.013610213994979858
+        },
+        {
+          "token_id": 299,
+          "token": " n",
+          "probability": 0.010740803554654121
+        },
+        {
+          "token_id": 479,
+          "token": " k",
+          "probability": 0.007734156213700771
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"mother\" in the English language.",
+      "full_text": "A female monarch is called a \"mother\" in the English language.",
+      "token_ids": [
+        366,
+        13552,
+        1,
+        287,
+        262,
+        3594,
+        3303,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13641320168972015,
+        0.016627255827188492,
+        0.29493385553359985,
+        0.15947222709655762,
+        0.1741454154253006,
+        0.06898988038301468,
+        0.3739864230155945,
+        0.38948968052864075
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": null,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_female",
+    "condition": "king_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.017039965838193893,
+        " queen": 0.057157110422849655,
+        " man": 0.0016519426135346293,
+        " woman": 0.0030263166408985853
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13641394674777985
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.057157110422849655
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04916637763381004
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.03424212336540222
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.017039965838193893
+        },
+        {
+          "token_id": 4048,
+          "token": " female",
+          "probability": 0.015270593576133251
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.01387943234294653
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.013610213994979858
+        },
+        {
+          "token_id": 299,
+          "token": " n",
+          "probability": 0.010740803554654121
+        },
+        {
+          "token_id": 479,
+          "token": " k",
+          "probability": 0.007734156213700771
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"mother\" in the English language.",
+      "full_text": "A female monarch is called a \"mother\" in the English language.",
+      "token_ids": [
+        366,
+        13552,
+        1,
+        287,
+        262,
+        3594,
+        3303,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13641320168972015,
+        0.016627255827188492,
+        0.29493385553359985,
+        0.15947222709655762,
+        0.1741454154253006,
+        0.06898988038301468,
+        0.3739864230155945,
+        0.38948968052864075
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_female",
+    "condition": "queen_feature",
+    "source_activation": 0.0,
+    "answer": {
+      "candidates": {
+        " king": 0.017039965838193893,
+        " queen": 0.057157110422849655,
+        " man": 0.0016519426135346293,
+        " woman": 0.0030263166408985853
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13641394674777985
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.057157110422849655
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04916637763381004
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.03424212336540222
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.017039965838193893
+        },
+        {
+          "token_id": 4048,
+          "token": " female",
+          "probability": 0.015270593576133251
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.01387943234294653
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.013610213994979858
+        },
+        {
+          "token_id": 299,
+          "token": " n",
+          "probability": 0.010740803554654121
+        },
+        {
+          "token_id": 479,
+          "token": " k",
+          "probability": 0.007734156213700771
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"mother\" in the English language.",
+      "full_text": "A female monarch is called a \"mother\" in the English language.",
+      "token_ids": [
+        366,
+        13552,
+        1,
+        287,
+        262,
+        3594,
+        3303,
+        13
+      ],
+      "conditional_probabilities": [
+        0.13641320168972015,
+        0.016627255827188492,
+        0.29493385553359985,
+        0.15947222709655762,
+        0.1741454154253006,
+        0.06898988038301468,
+        0.3739864230155945,
+        0.38948968052864075
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": 0.0,
+    "answer_kl_from_clean": 0.0
+  },
+  {
+    "example": "definition_female",
+    "condition": "gender_candidate",
+    "source_activation": 2.473933219909668,
+    "answer": {
+      "candidates": {
+        " king": 0.020687997341156006,
+        " queen": 0.046492934226989746,
+        " man": 0.0022843675687909126,
+        " woman": 0.002737883711233735
+      },
+      "top": [
+        {
+          "token_id": 366,
+          "token": " \"",
+          "probability": 0.13807547092437744
+        },
+        {
+          "token_id": 705,
+          "token": " '",
+          "probability": 0.04929354414343834
+        },
+        {
+          "token_id": 16599,
+          "token": " queen",
+          "probability": 0.046492934226989746
+        },
+        {
+          "token_id": 26464,
+          "token": " monarch",
+          "probability": 0.035416170954704285
+        },
+        {
+          "token_id": 5822,
+          "token": " king",
+          "probability": 0.020687997341156006
+        },
+        {
+          "token_id": 4048,
+          "token": " female",
+          "probability": 0.015963805839419365
+        },
+        {
+          "token_id": 7542,
+          "token": " Queen",
+          "probability": 0.011480328626930714
+        },
+        {
+          "token_id": 21752,
+          "token": " princess",
+          "probability": 0.010198221541941166
+        },
+        {
+          "token_id": 299,
+          "token": " n",
+          "probability": 0.00987713411450386
+        },
+        {
+          "token_id": 479,
+          "token": " k",
+          "probability": 0.007778690662235022
+        }
+      ]
+    },
+    "greedy": {
+      "continuation": " \"mother\" in the English language.",
+      "full_text": "A female monarch is called a \"mother\" in the English language.",
+      "token_ids": [
+        366,
+        13552,
+        1,
+        287,
+        262,
+        3594,
+        3303,
+        13
+      ],
+      "conditional_probabilities": [
+        0.1380755454301834,
+        0.014132908545434475,
+        0.2874682545661926,
+        0.15390202403068542,
+        0.1728699505329132,
+        0.06831479072570801,
+        0.3751567304134369,
+        0.38766035437583923
+      ],
+      "stopped": "first_sentence_boundary"
+    },
+    "source_feature_reencoded_after_edit": 0.0,
+    "supplied_answer_log_probability_change": -0.20650362968444824,
+    "answer_kl_from_clean": 0.005265412852168083
+  }
+]

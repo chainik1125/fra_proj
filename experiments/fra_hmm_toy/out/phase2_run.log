@@ -1,0 +1,101 @@
+device=cpu  out=out/phase2_L0
+Moving model to device:  cpu
+loaded transformer checkpoint
+sae final loss 6.0013
+SAE FVU on train acts: 0.1101
+
+top omega-tracking latents (latent, comp, R²):
+   30  c0  0.742
+   59  c2  0.589
+   32  c2  0.468
+    1  c0  0.272
+    8  c2  0.257
+   15  c1  0.132
+   12  c1  0.125
+   53  c0  0.068
+top token-block latents (latent, comp, R²):
+   34  c0  0.221
+   18  c0  0.214
+   30  c0  0.183
+   57  c1  0.153
+   17  c1  0.148
+   26  c0  0.145
+   36  c2  0.126
+   59  c2  0.111
+
+cut sets: {'omega_top1': [30, 59], 'omega_top2': [30, 32, 59], 'omega_top4': [30, 32, 1, 8, 59, 15, 12], 'block_top2': [34, 18, 57, 17, 36, 59], 'block_top4': [34, 18, 30, 26, 57, 17, 36, 59], 'rand6_a': [41, 5, 48], 'rand6_b': [5, 44, 53]}
+
+58 interventions
+anchors: bayes block CE 0.9872 | prior block CE 1.0809 | bayes within CE 0.7785 | uniform within 1.0986
+FRA decomposition exactness: max_abs_err=1.53e-05 ok=True
+QK |score| mass by (q-type x k-type), pattern-weighted, per head:
+  head 0:
+    featxfeat=0.649  featxbdec=0.050  featxerr=0.104  featxconst=0.008
+    bdecxfeat=0.040  bdecxbdec=0.002  bdecxerr=0.005  bdecxconst=0.000
+    errxfeat=0.083  errxbdec=0.004  errxerr=0.010  errxconst=0.001
+    constxfeat=0.039  constxbdec=0.002  constxerr=0.004  constxconst=0.000
+  head 1:
+    featxfeat=0.714  featxbdec=0.047  featxerr=0.084  featxconst=0.006
+    bdecxfeat=0.042  bdecxbdec=0.002  bdecxerr=0.005  bdecxconst=0.000
+    errxfeat=0.056  errxbdec=0.003  errxerr=0.008  errxconst=0.000
+    constxfeat=0.027  constxbdec=0.001  constxerr=0.003  constxconst=0.000
+clean                            blockCE 0.9881  withinCE 0.9743  track +0.992  probe +0.989  RF -0.000 CF +0.000
+sae:omega_top1:a0.5              blockCE 0.9996  withinCE 0.9799  track +0.883  probe +0.976  RF +0.122 CF +0.018
+sae:omega_top1:a1.0              blockCE 1.0586  withinCE 1.0012  track +0.333  probe +0.808  RF +0.752 CF +0.084
+sae:omega_top2:a0.5              blockCE 0.9970  withinCE 0.9860  track +0.908  probe +0.970  RF +0.095 CF +0.036
+sae:omega_top2:a1.0              blockCE 1.0454  withinCE 1.0565  track +0.401  probe +0.612  RF +0.611 CF +0.257
+sae:omega_top4:a0.5              blockCE 0.9997  withinCE 0.9872  track +0.876  probe +0.962  RF +0.124 CF +0.040
+sae:omega_top4:a1.0              blockCE 1.0654  withinCE 1.0617  track +0.167  probe +0.417  RF +0.824 CF +0.273
+sae:block_top2:a0.5              blockCE 0.9961  withinCE 0.9979  track +0.920  probe +0.982  RF +0.085 CF +0.074
+sae:block_top2:a1.0              blockCE 1.0445  withinCE 1.0817  track +0.551  probe +0.947  RF +0.602 CF +0.335
+sae:block_top4:a0.5              blockCE 0.9983  withinCE 1.0019  track +0.903  probe +0.977  RF +0.109 CF +0.086
+sae:block_top4:a1.0              blockCE 1.0801  withinCE 1.1035  track +0.316  probe +0.809  RF +0.981 CF +0.404
+sae:rand6_a:a1.0                 blockCE 0.9884  withinCE 0.9745  track +0.990  probe +0.986  RF +0.003 CF +0.001
+sae:rand6_b:a1.0                 blockCE 0.9924  withinCE 1.0450  track +0.943  probe +0.986  RF +0.046 CF +0.221
+proj:probe3:a0.5                 blockCE 0.9909  withinCE 0.9746  track +0.966  probe +0.984  RF +0.030 CF +0.001
+proj:probe3:a1.0                 blockCE 0.9980  withinCE 0.9752  track +0.892  probe +0.980  RF +0.106 CF +0.003
+qk:omega_top2:key:c1.0           blockCE 0.9884  withinCE 0.9847  track +0.991  probe +0.988  RF +0.003 CF +0.032
+qk:omega_top2:key:c2.0           blockCE 0.9891  withinCE 1.0056  track +0.986  probe +0.986  RF +0.010 CF +0.098
+qk:omega_top2:query:c1.0         blockCE 0.9884  withinCE 0.9967  track +0.990  probe +0.989  RF +0.003 CF +0.070
+qk:omega_top2:query:c2.0         blockCE 0.9960  withinCE 1.0536  track +0.910  probe +0.988  RF +0.084 CF +0.248
+qk:omega_top2:either:c1.0        blockCE 0.9887  withinCE 1.0097  track +0.988  probe +0.989  RF +0.006 CF +0.110
+qk:omega_top2:either:c2.0        blockCE 0.9969  withinCE 1.0586  track +0.902  probe +0.988  RF +0.093 CF +0.263
+qk:omega_top4:key:c1.0           blockCE 0.9883  withinCE 0.9888  track +0.991  probe +0.988  RF +0.002 CF +0.045
+qk:omega_top4:key:c2.0           blockCE 0.9892  withinCE 1.0149  track +0.984  probe +0.986  RF +0.011 CF +0.127
+qk:omega_top4:query:c1.0         blockCE 0.9884  withinCE 0.9983  track +0.989  probe +0.989  RF +0.003 CF +0.075
+qk:omega_top4:query:c2.0         blockCE 0.9964  withinCE 1.0547  track +0.905  probe +0.988  RF +0.088 CF +0.251
+qk:omega_top4:either:c1.0        blockCE 0.9888  withinCE 1.0124  track +0.987  probe +0.989  RF +0.007 CF +0.119
+qk:omega_top4:either:c2.0        blockCE 0.9975  withinCE 1.0615  track +0.894  probe +0.987  RF +0.100 CF +0.272
+qk:block_top2:key:c1.0           blockCE 0.9885  withinCE 1.0084  track +0.989  probe +0.989  RF +0.004 CF +0.107
+qk:block_top2:key:c2.0           blockCE 0.9891  withinCE 1.0444  track +0.984  probe +0.989  RF +0.010 CF +0.219
+qk:block_top2:query:c1.0         blockCE 0.9881  withinCE 0.9796  track +0.993  probe +0.989  RF +0.000 CF +0.017
+qk:block_top2:query:c2.0         blockCE 0.9896  withinCE 1.0031  track +0.982  probe +0.988  RF +0.016 CF +0.090
+qk:block_top2:either:c1.0        blockCE 0.9885  withinCE 1.0086  track +0.990  probe +0.989  RF +0.004 CF +0.107
+qk:block_top2:either:c2.0        blockCE 0.9906  withinCE 1.0510  track +0.972  probe +0.988  RF +0.027 CF +0.240
+qk:block_top4:key:c1.0           blockCE 0.9884  withinCE 1.0313  track +0.990  probe +0.988  RF +0.003 CF +0.178
+qk:block_top4:key:c2.0           blockCE 0.9891  withinCE 1.0705  track +0.984  probe +0.988  RF +0.010 CF +0.301
+qk:block_top4:query:c1.0         blockCE 0.9882  withinCE 0.9832  track +0.992  probe +0.989  RF +0.001 CF +0.028
+qk:block_top4:query:c2.0         blockCE 0.9912  withinCE 1.0115  track +0.966  probe +0.988  RF +0.033 CF +0.116
+qk:block_top4:either:c1.0        blockCE 0.9886  withinCE 1.0224  track +0.989  probe +0.989  RF +0.005 CF +0.150
+qk:block_top4:either:c2.0        blockCE 0.9919  withinCE 1.0628  track +0.961  probe +0.988  RF +0.040 CF +0.276
+qk:rand6_a:key:c1.0              blockCE 0.9881  withinCE 0.9743  track +0.992  probe +0.989  RF +0.000 CF +0.000
+qk:rand6_a:key:c2.0              blockCE 0.9881  withinCE 0.9744  track +0.992  probe +0.989  RF +0.000 CF +0.000
+qk:rand6_a:query:c1.0            blockCE 0.9881  withinCE 0.9743  track +0.992  probe +0.989  RF +0.000 CF +0.000
+qk:rand6_a:query:c2.0            blockCE 0.9881  withinCE 0.9744  track +0.992  probe +0.989  RF +0.000 CF +0.000
+qk:rand6_a:either:c1.0           blockCE 0.9881  withinCE 0.9743  track +0.992  probe +0.989  RF +0.000 CF +0.000
+qk:rand6_a:either:c2.0           blockCE 0.9881  withinCE 0.9744  track +0.992  probe +0.989  RF +0.000 CF +0.000
+ov:omega_top2:c1.0               blockCE 0.9926  withinCE 0.9748  track +0.953  probe +0.988  RF +0.048 CF +0.001
+ov:omega_top2:c2.0               blockCE 1.0038  withinCE 0.9769  track +0.845  probe +0.986  RF +0.168 CF +0.008
+ov:omega_top4:c1.0               blockCE 0.9939  withinCE 0.9748  track +0.941  probe +0.987  RF +0.062 CF +0.002
+ov:omega_top4:c2.0               blockCE 1.0082  withinCE 0.9772  track +0.795  probe +0.986  RF +0.215 CF +0.009
+ov:block_top2:c1.0               blockCE 0.9925  withinCE 1.0160  track +0.954  probe +0.992  RF +0.047 CF +0.130
+ov:block_top2:c2.0               blockCE 1.0046  withinCE 1.1617  track +0.833  probe +0.990  RF +0.175 CF +0.585
+ov:block_top4:c1.0               blockCE 0.9915  withinCE 1.0232  track +0.966  probe +0.992  RF +0.036 CF +0.153
+ov:block_top4:c2.0               blockCE 1.0011  withinCE 1.2611  track +0.876  probe +0.986  RF +0.138 CF +0.896
+ov:rand6_a:c1.0                  blockCE 0.9882  withinCE 0.9743  track +0.992  probe +0.988  RF +0.000 CF +0.000
+ov:rand6_a:c2.0                  blockCE 0.9882  withinCE 0.9744  track +0.992  probe +0.988  RF +0.001 CF +0.000
+qkov:omega_top2:either:c1.0      blockCE 0.9919  withinCE 1.0088  track +0.961  probe +0.988  RF +0.040 CF +0.108
+qkov:omega_top4:either:c1.0      blockCE 0.9929  withinCE 1.0120  track +0.952  probe +0.987  RF +0.051 CF +0.118
+qkov:block_top4:either:c1.0      blockCE 0.9916  withinCE 1.0408  track +0.966  probe +0.991  RF +0.037 CF +0.208
+
+saved out/phase2_L0/results.json

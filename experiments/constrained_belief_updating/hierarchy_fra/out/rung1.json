@@ -1,0 +1,36 @@
+{
+  "config": {
+    "lam_P": 0.5,
+    "p_P": 0.3,
+    "lam_C": 0.9,
+    "p_C": 0.5,
+    "mu_P": 1.5,
+    "sig_P": 0.3,
+    "mu_C": 1.5,
+    "sig_C": 0.3
+  },
+  "occlusion": 0.5,
+  "depth": "2L",
+  "qP": 0.65,
+  "predicted_delta_gate_MSE": 0.01885952291807487,
+  "gated_occ": {
+    "child_mse_full": 0.24084623826890644,
+    "child_mse_posonly": 0.242157862166441,
+    "delta_gate_empirical": 0.0013116238975345584
+  },
+  "gated_clean": {
+    "child_mse_full": 0.21224568033619562,
+    "child_mse_posonly": 0.21221012363126723,
+    "delta_gate_empirical": -3.5556704928385585e-05
+  },
+  "null_occ": {
+    "child_mse_full": 0.3056921151696657,
+    "child_mse_posonly": 0.30687653971701606,
+    "delta_gate_empirical": 0.001184424547350349
+  },
+  "null_clean": {
+    "child_mse_full": 0.1534154594617414,
+    "child_mse_posonly": 0.15215929435828143,
+    "delta_gate_empirical": -0.0012561651034599663
+  }
+}

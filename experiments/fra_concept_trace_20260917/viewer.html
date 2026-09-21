@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPT-2 · unsteered feature trace</title>
+<style>
+body{font:15px/1.5 system-ui,sans-serif;background:#f7f6f2;color:#192b34;max-width:1280px;margin:32px auto;padding:0 24px}h1{font-size:30px;margin:0}h2{font-size:19px}p{max-width:1000px}.muted{color:#53626c;font-size:13px}.controls{display:flex;gap:24px;flex-wrap:wrap;background:white;padding:18px;border-radius:10px}select{display:block;padding:8px;max-width:100%;font:inherit}button{cursor:pointer;font:inherit;border:1px solid #b7c5c7;border-radius:5px;padding:7px 9px;background:white;white-space:pre-wrap}button.active{background:#124e60;color:white}button.generated{border-bottom:4px solid #cf7b37}.tokens{display:flex;gap:5px;flex-wrap:wrap;margin:16px 0}.panel{background:white;padding:18px;border-radius:10px;margin:16px 0}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;border-bottom:1px solid #e0e5e4;padding:7px;vertical-align:top}th{position:sticky;top:0;background:#edf1ef}a{color:#146580}pre{white-space:pre-wrap}.heat{overflow:auto}.cell{text-align:center;min-width:46px}.legend{font-size:12px}code{background:#edf0ed;padding:2px}.bar{display:inline-block;height:8px;background:#31899a;margin-left:8px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:800px){.twocol{grid-template-columns:1fr}}
+</style>
+<h1>GPT-2 · unsteered feature trace</h1>
+<p>Measured activations at every token of a teacher-forced sequence, before any concept edit. Select a token to inspect its SAE features, or follow one feature across the complete sequence.</p>
+<div class="controls"><label>Prompt<select id="example"></select></label><label>SAE checkpoint<select id="sae"></select></label></div>
+<div id="quality" class="muted"></div><div id="tokens" class="tokens"></div>
+<p class="legend">Orange underline = supplied continuation. Positions are zero based. Features describe the prefix through the selected token; probabilities predict the <b>next</b> token. Supplied answers are not model successes. Labels from Neuronpedia are automatic interpretations.</p>
+<div class="twocol"><div class="panel"><h2 id="position"></h2><div id="next"></div></div><div class="panel"><h2>Checkpoint and reconstruction</h2><div id="audit"></div></div></div>
+<div class="panel"><h2>Feature activation across positions</h2><div id="heat" class="heat"></div></div>
+<div class="panel"><h2>All active features at selected token</h2><div id="features"></div></div>
+<div class="panel"><h2>Independent gender contrast candidates</h2><p class="muted">Ranked using four female/male pairs without king or queen. “Consistent” means the sign agrees in at least 3 of 4 pairs. These are candidates for inspection, not validated concepts.</p><div id="candidates"></div></div>
+<p class="muted">Raw sparse activations and quality metrics are saved alongside this inspector. Width and layer change the dictionary: feature IDs do not transfer between checkpoints. This baseline does not establish causal routing or an FRA advantage.</p>
+<script id="data" type="application/json">__PAYLOAD__</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent), $=id=>document.getElementById(id);
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let pos=1, selectedFeature=null;
+D.baseline.examples.forEach((x,i)=>$('example').add(new Option(x.id+' — '+x.prompt,i)));
+D.saes.forEach((x,i)=>$('sae').add(new Option('L'+x.summary.layer+' post · '+(x.summary.d_sae/1024)+'k',i)));
+$('sae').value=D.saes.findIndex(x=>x.summary.layer===5&&x.summary.d_sae===32768);
+function url(s,id){return 'https://www.neuronpedia.org/'+s.summary.neuronpedia+'/'+id}
+function label(s,id){const l=D.labels[url(s,id)];return l&&l.explanations&&l.explanations.length?l.explanations.map(e=>e.description).join(' / '):'Unlabelled in this report — inspect dashboard'}
+function featureLink(s,id){return `<a target="_blank" rel="noopener" href="${url(s,id)}">${id}</a>`}
+function render(){
+ const e=D.baseline.examples[+$('example').value],s=D.saes[+$('sae').value],r=s.examples[e.id],q=s.summary;
+ pos=Math.min(pos,e.tokens.length-1);
+ $('tokens').innerHTML=e.tokens.map((t,i)=>`<button data-pos="${i}" class="${i===pos?'active ':''}${i>=e.prompt_length?'generated':''}" title="Position ${i}, token ID ${e.token_ids[i]}"><small>${i}</small> ${esc(t)}</button>`).join('');
+ $('tokens').querySelectorAll('button').forEach(b=>b.onclick=()=>{pos=+b.dataset.pos;render()});
+ $('position').textContent=`Position ${pos}: ${JSON.stringify(e.tokens[pos])}`;
+ const n=e.next_token[pos];
+ $('next').innerHTML='<b>Next-token distribution</b><table>'+n.top.map(t=>`<tr><td>${esc(JSON.stringify(t.token))}</td><td>${(100*t.probability).toFixed(2)}%</td></tr>`).join('')+'</table><p>'+Object.entries(n.candidates).map(([t,p])=>`${esc(t)}: ${(100*p).toFixed(2)}%`).join(' · ')+'</p>';
+ $('quality').textContent=`${q.release} / ${q.hook} · saved rollout uses no SAE reconstruction · no BOS`;
+ $('audit').innerHTML=`<p><code>${esc(q.hook)}</code></p><p>FVU excluding first token: ${(q.fvu_excluding_first_token??q.fvu_centered).toFixed(4)} · mean reconstruction KL: ${q.mean_kl.toFixed(4)} nats/token.</p><p>Selected token: ${r.active_count[pos]} active features; relative squared error ${r.relative_squared_error[pos].toFixed(4)}.</p><p class="muted">Quality measured on 20 short examples. First-position outliers dominate all-token FVU (${q.fvu_centered.toFixed(4)}). Lower is better; this does not establish universal SAE quality.</p>`;
+ const feats=r.features[pos];
+ const mass=feats.reduce((sum,pair)=>sum+Math.abs(pair[1]),0);
+ $('features').innerHTML=`<p class="muted">Total activation mass (sum of absolute coefficients): ${mass.toFixed(4)}. Shares describe SAE coefficients; they do not partition residual energy or causal effects.</p><table><tr><th>Feature</th><th>Activation</th><th>Mass share</th><th>Automatic description</th><th></th></tr>`+feats.map(([id,v])=>`<tr><td>${featureLink(s,id)}</td><td>${v.toFixed(4)}</td><td>${(mass?100*Math.abs(v)/mass:0).toFixed(2)}%</td><td>${esc(label(s,id))}</td><td><button data-feature="${id}">Follow</button></td></tr>`).join('')+'</table>';
+ $('features').querySelectorAll('button').forEach(b=>b.onclick=()=>{selectedFeature=+b.dataset.feature;render()});
+ let ids=feats.slice(0,8).map(x=>x[0]);if(selectedFeature!==null&&!ids.includes(selectedFeature))ids.unshift(selectedFeature);
+ $('heat').innerHTML='<table><tr><th>Feature</th>'+e.tokens.map((t,i)=>`<th class="cell" title="${esc(t)}">${i}<br>${esc(t)}</th>`).join('')+'</tr>'+ids.map(id=>{
+ const values=r.features.map(f=>(f.find(x=>x[0]===id)||[id,0])[1]),max=Math.max(...values,1e-9);
+ return `<tr><td title="${esc(label(s,id))}">${featureLink(s,id)}</td>`+values.map(v=>`<td class="cell" style="background:rgba(39,145,158,${(v/max*.65).toFixed(3)})">${v.toFixed(2)}</td>`).join('')+'</tr>';
+ }).join('')+'</table><p class="legend">Color is scaled separately within each feature row. Numbers are raw SAE coefficients.</p>';
+ $('candidates').innerHTML='<table><tr><th>Feature</th><th>Mean female − male</th><th>Consistent</th><th>king</th><th>queen</th><th>Automatic description</th></tr>'+(D.candidates[q.key]||[]).map(c=>`<tr><td>${featureLink(s,c.feature)}</td><td>${c.mean_female_minus_male.toFixed(4)}</td><td>${c.consistent_pairs}/4</td><td>${c.king.toFixed(4)}</td><td>${c.queen.toFixed(4)}</td><td>${esc(label(s,c.feature))}</td></tr>`).join('')+'</table>';
+}
+$('example').onchange=()=>{pos=1;selectedFeature=null;render()};$('sae').onchange=()=>{selectedFeature=null;render()};render();
+</script></html>

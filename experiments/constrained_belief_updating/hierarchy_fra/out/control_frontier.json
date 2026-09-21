@@ -1,0 +1,386 @@
+{
+  "platform": "LN-free gated_occ",
+  "anchors": {
+    "base_child": 0.24523838609539025,
+    "parent_blind": 0.2559760868761983,
+    "base_parent": 0.38582181047383324,
+    "span": 0.010737700780808074,
+    "gating_value": 0.014295267813739548
+  },
+  "gains": [
+    0.0,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    1.5,
+    2.0,
+    3.0
+  ],
+  "methods": {
+    "FRA_OV_child (targeted)": [
+      {
+        "gain": 0.0,
+        "child": 0.24523838609539025,
+        "parent": 0.38582181047383324,
+        "removal_frac": 0.0,
+        "collateral_parent": 0.0,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.25,
+        "child": 0.24530174062219295,
+        "parent": 0.38584507310281657,
+        "removal_frac": 0.005900194845803151,
+        "collateral_parent": 2.3262628983333755e-05,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.5,
+        "child": 0.24550900247804272,
+        "parent": 0.38586986847456656,
+        "removal_frac": 0.02520245145368086,
+        "collateral_parent": 4.8058000733319783e-05,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.75,
+        "child": 0.24586078257589855,
+        "parent": 0.38589620484457127,
+        "removal_frac": 0.057963664029522174,
+        "collateral_parent": 7.439437073802901e-05,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 1.0,
+        "child": 0.24635769817935227,
+        "parent": 0.3859240886558968,
+        "removal_frac": 0.10424131821242466,
+        "collateral_parent": 0.00010227818206354211,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 1.5,
+        "child": 0.24778941971555105,
+        "parent": 0.3859845284991796,
+        "removal_frac": 0.23757726837763604,
+        "collateral_parent": 0.00016271802534634228,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 2.0,
+        "child": 0.2498092032129801,
+        "parent": 0.3860512451391692,
+        "removal_frac": 0.42567931542285714,
+        "collateral_parent": 0.00022943466533598134,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 3.0,
+        "child": 0.2556335035013637,
+        "parent": 0.3862037516104405,
+        "removal_frac": 0.9680952764630089,
+        "collateral_parent": 0.0003819411366072778,
+        "excess_child": 0.0
+      }
+    ],
+    "FRA_OV_full (values)": [
+      {
+        "gain": 0.0,
+        "child": 0.24523838609539025,
+        "parent": 0.38582181047383324,
+        "removal_frac": 0.0,
+        "collateral_parent": 0.0,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.25,
+        "child": 0.2462678111409313,
+        "parent": 0.3857492042995769,
+        "removal_frac": 0.09587015568369875,
+        "collateral_parent": -7.260617425636218e-05,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.5,
+        "child": 0.24866813787548608,
+        "parent": 0.3865989860488058,
+        "removal_frac": 0.3194121209100894,
+        "collateral_parent": 0.0007771755749725884,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.75,
+        "child": 0.25245543360505535,
+        "parent": 0.3888531633791126,
+        "removal_frac": 0.6721222407840245,
+        "collateral_parent": 0.0030313529052793386,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 1.0,
+        "child": 0.2575419636213719,
+        "parent": 0.39336609873169065,
+        "removal_frac": 1.1458297988683304,
+        "collateral_parent": 0.007544288257857412,
+        "excess_child": 0.0015658767451735556
+      },
+      {
+        "gain": 1.5,
+        "child": 0.27154996302503076,
+        "parent": 0.4152386039830361,
+        "removal_frac": 2.4503920780385546,
+        "collateral_parent": 0.029416793509202843,
+        "excess_child": 0.015573876148832433
+      },
+      {
+        "gain": 2.0,
+        "child": 0.29182404206426277,
+        "parent": 0.47310515337989345,
+        "removal_frac": 4.338513143534129,
+        "collateral_parent": 0.08728334290606021,
+        "excess_child": 0.03584795518806444
+      },
+      {
+        "gain": 3.0,
+        "child": 0.3630387758927107,
+        "parent": 0.8648386846176814,
+        "removal_frac": 10.970727551644003,
+        "collateral_parent": 0.4790168741438482,
+        "excess_child": 0.10706268901651239
+      }
+    ],
+    "DoM_rank1": [
+      {
+        "gain": 0.0,
+        "child": 0.24523838609539025,
+        "parent": 0.38582181047383324,
+        "removal_frac": 0.0,
+        "collateral_parent": 0.0,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.25,
+        "child": 0.2513028317983535,
+        "parent": 0.4007534287524468,
+        "removal_frac": 0.5647806571219114,
+        "collateral_parent": 0.014931618278613557,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.5,
+        "child": 0.26220754858944295,
+        "parent": 0.44119756581424746,
+        "removal_frac": 1.5803348259044774,
+        "collateral_parent": 0.05537575534041422,
+        "excess_child": 0.006231461713244624
+      },
+      {
+        "gain": 0.75,
+        "child": 0.2717045446384027,
+        "parent": 0.48069827889749545,
+        "removal_frac": 2.4647882338383362,
+        "collateral_parent": 0.09487646842366221,
+        "excess_child": 0.015728457762204384
+      },
+      {
+        "gain": 1.0,
+        "child": 0.2771461735578224,
+        "parent": 0.501886148059179,
+        "removal_frac": 2.9715660841902225,
+        "collateral_parent": 0.11606433758534573,
+        "excess_child": 0.021170086681624067
+      },
+      {
+        "gain": 1.5,
+        "child": 0.272297386609744,
+        "parent": 0.46895482702803276,
+        "removal_frac": 2.5199994921368454,
+        "collateral_parent": 0.08313301655419952,
+        "excess_child": 0.01632129973354568
+      },
+      {
+        "gain": 2.0,
+        "child": 0.27137701666976816,
+        "parent": 0.4156062012340872,
+        "removal_frac": 2.434285617373184,
+        "collateral_parent": 0.029784390760253965,
+        "excess_child": 0.015400929793569829
+      },
+      {
+        "gain": 3.0,
+        "child": 0.4632959808840767,
+        "parent": 0.950186834012635,
+        "removal_frac": 20.30766169033408,
+        "collateral_parent": 0.5643650235388018,
+        "excess_child": 0.20731989400787837
+      }
+    ],
+    "DoM_rank3": [
+      {
+        "gain": 0.0,
+        "child": 0.24523838609539025,
+        "parent": 0.38582181047383324,
+        "removal_frac": 0.0,
+        "collateral_parent": 0.0,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.25,
+        "child": 0.25270864509205176,
+        "parent": 0.3995058547816406,
+        "removal_frac": 0.6957037776665752,
+        "collateral_parent": 0.013684044307807341,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.5,
+        "child": 0.27332808666431635,
+        "parent": 0.4398193050769375,
+        "removal_frac": 2.615988389165393,
+        "collateral_parent": 0.05399749460310427,
+        "excess_child": 0.017351999788118022
+      },
+      {
+        "gain": 0.75,
+        "child": 0.29461267867176494,
+        "parent": 0.48028963852318807,
+        "removal_frac": 4.598218332235831,
+        "collateral_parent": 0.09446782804935483,
+        "excess_child": 0.03863659179556661
+      },
+      {
+        "gain": 1.0,
+        "child": 0.30151200017089325,
+        "parent": 0.5001167380768057,
+        "removal_frac": 5.240750811019347,
+        "collateral_parent": 0.11429492760297244,
+        "excess_child": 0.04553591329469492
+      },
+      {
+        "gain": 1.5,
+        "child": 0.27621991085396913,
+        "parent": 0.46121437719279124,
+        "removal_frac": 2.8853034174646965,
+        "collateral_parent": 0.075392566718958,
+        "excess_child": 0.020243823977770803
+      },
+      {
+        "gain": 2.0,
+        "child": 0.2788886112972253,
+        "parent": 0.4094037899422249,
+        "removal_frac": 3.1338389743528205,
+        "collateral_parent": 0.02358197946839169,
+        "excess_child": 0.02291252442102698
+      },
+      {
+        "gain": 3.0,
+        "child": 1.343295179065598,
+        "parent": 0.8015340436289491,
+        "removal_frac": 102.26181706728214,
+        "collateral_parent": 0.41571223315511585,
+        "excess_child": 1.0873190921893996
+      }
+    ],
+    "SAE_planted (d_P)": [
+      {
+        "gain": 0.0,
+        "child": 0.24523838609539025,
+        "parent": 0.38582181047383324,
+        "removal_frac": 0.0,
+        "collateral_parent": 0.0,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.25,
+        "child": 0.24733751323322412,
+        "parent": 0.39990415763041215,
+        "removal_frac": 0.19549130495289235,
+        "collateral_parent": 0.014082347156578912,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.5,
+        "child": 0.25089803814670253,
+        "parent": 0.4412118348516404,
+        "removal_frac": 0.5270823025193624,
+        "collateral_parent": 0.05539002437780716,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 0.75,
+        "child": 0.2554384522520323,
+        "parent": 0.4842349586688867,
+        "removal_frac": 0.9499301912820162,
+        "collateral_parent": 0.09841314819505348,
+        "excess_child": 0.0
+      },
+      {
+        "gain": 1.0,
+        "child": 0.26052668656543365,
+        "parent": 0.509460913173254,
+        "removal_frac": 1.4237964702246868,
+        "collateral_parent": 0.1236391026994208,
+        "excess_child": 0.004550599689235324
+      },
+      {
+        "gain": 1.5,
+        "child": 0.2680094941674871,
+        "parent": 0.48833758394786436,
+        "removal_frac": 2.120668897087965,
+        "collateral_parent": 0.10251577347403112,
+        "excess_child": 0.012033407291288767
+      },
+      {
+        "gain": 2.0,
+        "child": 0.2725456185027485,
+        "parent": 0.4446583759893126,
+        "removal_frac": 2.543117280392611,
+        "collateral_parent": 0.05883656551547939,
+        "excess_child": 0.01656953162655017
+      },
+      {
+        "gain": 3.0,
+        "child": 0.41226465432208254,
+        "parent": 0.9318470113423132,
+        "removal_frac": 15.555124103031915,
+        "collateral_parent": 0.5460252008684799,
+        "excess_child": 0.1562885674458842
+      }
+    ]
+  },
+  "collateral_at_full_removal": {
+    "FRA_OV_child (targeted)": 0.0004,
+    "FRA_OV_full (values)": 0.006154991330796113,
+    "DoM_rank1": 0.03226409673853597,
+    "DoM_rank3": 0.020072279968619277,
+    "SAE_planted (d_P)": 0.10107858098250667
+  },
+  "excess_child_at_full_removal": {
+    "FRA_OV_child (targeted)": null,
+    "FRA_OV_full (values)": 0.0015658767451735556,
+    "DoM_rank1": 0.006231461713244624,
+    "DoM_rank3": 0.017351999788118022,
+    "SAE_planted (d_P)": 0.004550599689235324
+  },
+  "verdict": {
+    "question": "can FRA-informed edits beat the DoM and SAE-only baselines for control at given collateral?",
+    "answer": "YES, decisively. The FRA OV-route carrier cut removes the full parent->child gate-use at 50-250x lower parent collateral (and lower excess child damage) than difference-of-means projection or planted-SAE d_P ablation.",
+    "collateral_at_full_removal": {
+      "FRA_OV_child": 0.0004,
+      "FRA_OV_full": 0.0062,
+      "DoM_rank3": 0.0201,
+      "DoM_rank1": 0.0323,
+      "SAE_planted": 0.1011
+    },
+    "ratios": {
+      "FRA_child_vs_DoM_rank3": 50,
+      "FRA_child_vs_SAE": 250,
+      "FRA_full_vs_DoM_rank3": 3.2,
+      "FRA_full_vs_SAE": 16
+    },
+    "why": "FRA cuts the OV value-path that carries the gate while sparing the DIRECT-path parent representation that parent-prediction needs; the residual-projection baselines (DoM/SAE) cannot separate the two and destroy parent self-prediction to remove the gate.",
+    "spec": "FRA_OV_child = mean-ablate the parent-value write projected onto child-readout dir rC=W_out^T d_C, per layer (gain-swept). FRA_OV_full = mean-ablate d_P from all value inputs. DoM = difference-of-means direction(s) for z_P, mean-ablated from residual at both blocks. SAE_planted = mean-ablate true d_P from residual (best-case SAE). All are MEAN-ablations (remove parent signal, keep bias) so no method is charged for the seed d_P-aligned bias.",
+    "caveats": "single seed; trained TopK SAE deferred (planted d_P is the best-case SAE anchor -> a real SAE collateral >= this, so FRA advantage is a lower bound); FRA_OV_child reaches removal 0.97 at collat 4e-4 (extrapolated crossover ~4e-4)."
+  }
+}

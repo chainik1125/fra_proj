@@ -1,0 +1,81 @@
+% Standalone: "Feature-Resolved Attention" panel — QK and OV side by side with the
+% targeted cuts, each with its feature-resolved quantity written underneath.
+% Convention: query features on the LEFT, key features on the RIGHT
+% (matches f^lambda_q f^mu_k W_dec W_QK W_dec^T read left-to-right).
+% Compile: pdflatex fig_attn_fra.tex
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\definecolor{ink}       {HTML}{172033}
+\definecolor{greyLine}  {HTML}{9CA3AF}
+\definecolor{greyFill}  {HTML}{F3F4F6}
+\definecolor{qkC}       {HTML}{B91C1C}
+\definecolor{ovC}       {HTML}{0B7285}
+\definecolor{steerC}    {HTML}{2E7D32}
+\definecolor{steerFill} {HTML}{EAF6EA}
+
+\tikzset{
+  >={Latex[length=2.5mm,width=1.8mm]},
+  panel/.style={draw=greyLine,line width=0.7pt,rounded corners=4pt,
+    fill=white,inner sep=3mm},
+  title/.style={font=\large\bfseries,text=ink,align=center},
+  smalltitle/.style={font=\normalsize\bfseries,text=ink,align=center},
+  poslabel/.style={font=\normalsize\bfseries,text=ink,align=center},
+  steerSubBox/.style={draw=steerC,line width=0.9pt,rounded corners=3pt,
+    fill=white,inner sep=3mm},
+  featQK/.style={draw=qkC,line width=0.75pt,rounded corners=1.5pt,
+    fill=white,minimum width=10mm,minimum height=8mm,inner sep=1pt,
+    font=\normalsize\bfseries,text=ink},
+  featOV/.style={draw=ovC,line width=0.75pt,rounded corners=1.5pt,
+    fill=white,minimum width=10mm,minimum height=8mm,inner sep=1pt,
+    font=\normalsize\bfseries,text=ink},
+  qkArrow/.style={->,line width=1.0pt,qkC,line cap=round},
+  ovArrow/.style={->,line width=1.0pt,ovC,line cap=round},
+  eq/.style={font=\large,text=ink,align=center},
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1mm,y=1mm]
+\node[panel,draw=steerC,fill=steerFill,minimum width=130mm,minimum height=86mm,anchor=north west] (pb) at (0,80) {};
+\node[title] at (pb.north) [yshift=-4.5mm] {Feature-Resolved Attention};
+
+% --- QK sub-box (left): query features -> key features, right-facing + cut ---
+\node[steerSubBox,minimum width=58mm,minimum height=42mm,anchor=north west] (qkDec) at ([xshift=1.5mm,yshift=-8.5mm]pb.north west) {};
+\node[smalltitle,text=qkC] at ([yshift=-4mm]qkDec.north) {QK: which feature pair};
+\node[featQK] (q1) at ([xshift=-17mm,yshift=-16mm]qkDec.north) {$\lambda$};
+\node[featQK] (q2) at ([xshift=-17mm,yshift=-30mm]qkDec.north) {$\mu$};
+\node[featQK] (k1) at ([xshift=17mm,yshift=-16mm]qkDec.north) {$\lambda$};
+\node[featQK] (k2) at ([xshift=17mm,yshift=-30mm]qkDec.north) {$\mu$};
+\draw[qkArrow,line width=0.65pt,opacity=0.3] (q1.east) -- (k1.west);
+\draw[qkArrow,line width=0.65pt,opacity=0.3] (q2.east) to[bend left=10] (k1.west);
+\draw[qkArrow,line width=1.4pt,densely dashed] (q1.east) to[bend right=16] coordinate[midway] (qcut) (k2.west);
+\node[font=\Large\bfseries,text=steerC] at (qcut) {$\times$};
+\node[poslabel] at ([yshift=-2.5mm]q2.south) {query};
+\node[poslabel] at ([yshift=-2.5mm]k2.south) {key};
+
+% --- OV sub-box (right): feature flow + cut ---
+\node[steerSubBox,minimum width=58mm,minimum height=42mm,anchor=north east] (ovDec) at ([xshift=-1.5mm,yshift=-8.5mm]pb.north east) {};
+\node[smalltitle,text=ovC] at ([yshift=-4mm]ovDec.north) {OV: which feature moves};
+\node[featOV] (ol1) at ([xshift=-17mm,yshift=-16mm]ovDec.north) {$\lambda$};
+\node[featOV] (ol2) at ([xshift=-17mm,yshift=-30mm]ovDec.north) {$\mu$};
+\node[featOV,minimum width=13mm] (out1) at ([xshift=17mm,yshift=-23mm]ovDec.north) {out};
+\draw[ovArrow,line width=1.4pt,densely dashed] (ol1.east) -- coordinate[midway] (ovcut) (out1.west);
+\node[font=\Large\bfseries,text=steerC] at (ovcut) {$\times$};
+\draw[ovArrow,opacity=0.55] (ol2.east) -- (out1.west);
+\node[poslabel] at ([yshift=-2.5mm]ol2.south) {value};
+
+% --- per-channel math: compact form, x -> f^lambda; f defined underneath, = / \equiv aligned;
+%     each block centered between sub-box bottom and panel bottom ---
+\node[eq,anchor=center] at ($(qkDec.south)!0.5!(qkDec.south |- pb.south)$)
+  {$\displaystyle \begin{aligned}
+     \mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda\mu}&=\tfrac{1}{\sqrt{d_h}}\; f^{\lambda}_{q}\, W^{h}_{QK}\, (f^{\mu}_{k})^{\top}\\[0.2em]
+     f^{\lambda}_{q}&\equiv u^{\lambda}_{q}\,W^{\mathrm{dec}}_{\lambda}
+   \end{aligned}$};
+\node[eq,anchor=center] at ($(ovDec.south)!0.5!(ovDec.south |- pb.south)$)
+  {$\displaystyle \mathrm{FRA}^{\mathrm{OV},h}_{k,\lambda}=W^{h}_{OV}\, f^{\lambda}_{k}$};
+\end{tikzpicture}
+\end{document}

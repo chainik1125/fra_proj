@@ -1,0 +1,364 @@
+\documentclass[paperwidth=24in,paperheight=36in,fontscale=0.36]{baposter}
+
+\usepackage{wrapfig}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{multicol}
+\usepackage{amsthm}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\selectcolormodel{cmyk}
+
+\graphicspath{{figures/}}
+
+\newcommand{\compresslist}{%
+\setlength{\itemsep}{0pt}%
+\setlength{\parskip}{1pt}%
+\setlength{\parsep}{0pt}%
+}
+
+\newenvironment{boenumerate}
+  {\begin{enumerate}\renewcommand\labelenumi{\textbf\theenumi.}}
+  {\end{enumerate}}
+
+\newtheorem{Theorem}{Theorem}
+\newtheorem*{Definition}{Def.}
+\newtheorem*{Problem}{Problem}
+\newtheorem*{Solution}{Solution}
+
+\begin{document}
+
+\definecolor{darkgreen}{cmyk}{0.8,0,0.8,0.45}
+\definecolor{lightgreen}{cmyk}{0.8,0,0.8,0.25}
+\definecolor{red}{cmyk}{0,1,1,0.3}
+\definecolor{darkblue}{cmyk}{1, 1, 0, 0.45}
+\definecolor{lightblue}{cmyk}{1, 1, 0, 0.25}
+
+\begin{poster}
+{
+grid=false,
+columns=4, 
+headerborder=open,
+colspacing=0.8em, 
+bgColorOne=white,
+bgColorTwo=white,
+borderColor=darkblue,
+headerColorOne=red,
+headerColorTwo=lightblue,
+headerFontColor=white,
+boxColorOne=white,
+textborder=rounded,
+eyecatcher=false,
+headerheight=0.11\textheight,
+headershape=rounded,
+headershade=plain,
+headerfont=\Large\textsf,
+linewidth=2pt
+}
+{} % Eyecatcher (Empty)
+%
+%----------------------------------------------------------------------------------------
+%	TITLE (CLEAN - NO AUTHORS HERE)
+%----------------------------------------------------------------------------------------
+%
+{
+\textsf{Features Interactions can catch sleeper\\
+ agents}
+} 
+{} % Authors (Empty - Moved to bottom)
+{\begin{minipage}{0.17\linewidth}
+        \flushright
+        \includegraphics[width=\linewidth]{figures/nips_figs/frame.png}
+    \end{minipage}} % Logo (Empty - Moved to bottom)
+
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION (SPAN 2)
+%----------------------------------------------------------------------------------------
+
+
+
+\headerbox{We are measuring \textbf{\textit{interactions}} between model features found by crosscoders}{name=introduction,column=0, span=4}{
+\begin{multicols}{2}
+\begin{centering}
+\begin{Problem}[Linear Interaction Hypothesis (LIH)]
+Dictionary learning assumes features act independently under model non-linearities: $\sigma(f_1+f_2+...)\sim\sigma(f_1)+\sigma(f_2)+...$
+\end{Problem}
+
+\begin{Solution}[Interaction Metric]
+We provide a principled \textbf{interaction metric} based on compact proofs that can be computed efficiently and quantitatively measures interactions.
+\end{Solution}
+
+
+
+
+\end{centering}
+\columnbreak
+
+\end{multicols}
+% \begin{center}
+% \textbf{Our goal: Provide a principled, computable measure of feature interactions.}
+% \end{center}
+}
+
+
+%----------------------------------------------------------------------------------------
+%	FULL WIDTH SECTION
+%----------------------------------------------------------------------------------------
+% Change 'below=next' to whatever box is currently bottom-most (e.g., 'lsm' or 'next')
+% \headerbox{Conclusion or Combined Results}{name=conclusion, column=0, span=2,below=introduction}{
+    
+%     % \begin{multicols}{2}
+%         \begin{center}
+%     \includegraphics[width=1.0\linewidth]{figures/nips_figs/im_and_text_white_bg.png}
+% \end{center}
+%     % \end{multicols}
+% }
+
+%----------------------------------------------------------------------------------------
+%	SLEEPER AGENTS (COLUMN 0)
+%----------------------------------------------------------------------------------------
+%----------------------------------------------------------------------------------------
+%	SPLIT COLUMN (DUPLICATED)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{We provide a way to control}\\ \text{feature interactions in MLPs}
+\end{array}$
+}{boxheaderheight=1.4cm,name=hkbox,span=2,column=0,below=introduction}{ 
+        \centering
+        \includegraphics[width=1\linewidth]{figures/nips_figs/ablation_plot_2_zeromlp_layer2_samples100.pdf}
+        
+        \vspace{0em}
+        \footnotesize
+    \hfill % Pushes the blocks to the edge
+
+}
+
+%----------------------------------------------------------------------------------------
+%	CROSSCODERS (COLUMN 1)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{And find that sleeper agents have} \\ \text{higher interactions in poisoned text}
+\end{array}$
+}{boxheaderheight=1.4cm,name=new_xc,span=2,column=2,below=introduction}{ 
+% We trained ``computationally sparse crosscoders" with features \textbf{$\mathbf{\sim 5\times}$ more peaked than conventional crosscoders} at a cost of $1.5\times$ the explained variance.
+\begin{center}
+    \includegraphics[width=1.01\linewidth]{figures/nips_figs/im_and_text_white_bg.png}
+\end{center}
+\vspace{12pt}
+}
+
+
+\headerbox{Three steps to calculating the interaction metric}{name=conclusion, column=0, span=4, below=hkbox}{
+
+\centering
+    % Tabular allows us to draw vertical lines that match the content height
+    % @{} removes outer padding
+    % @{\hspace{0.5em} ... } adds padding around the line
+    \begin{tabular}{ @{} c @{\hspace{0.5em}\color{black!20}\vline\hspace{0.5em}} c @{\hspace{0.5em}\color{black!20}\vline\hspace{0.5em}} c @{} }
+    
+    % --- Column 1 ---
+    \begin{minipage}[t]{0.31\linewidth}
+        \centering
+        \textbf{1: Define default non-interacting behaviour}
+        \vspace{0.5em}
+        \includegraphics[width=\linewidth]{figures/nips_figs/default_mlp.png}
+    \end{minipage}
+    
+    & % <--- This ampersand splits Col 1 and Col 2
+    
+    % --- Column 2 ---
+    \begin{minipage}[t]{0.34\linewidth}
+        \centering
+        \textbf{2: Derive error bounds from deviations}
+        
+        {\Large
+        \begin{gather*}
+            \|f^{l}(W^{l-1}_{\mathrm{dec}}u)-W^{l}_{\mathrm{dec}}u\|
+            \;\le\; \\
+            \color{red}\underbrace{\|h^{l}(u)\|}_{\text{interaction}}\color{black} \;+\; \color{blue}\underbrace{
+            \sum_{v}\!
+            \bigl\|g^{l}_{v}(u_{v}) - u_{v}W^{l}_{\mathrm{dec}}\hat{e}_{v}\bigr\|}_{\text{Default}}
+        \end{gather*}
+        }
+    \end{minipage}
+    
+    & % <--- This ampersand splits Col 2 and Col 3
+    
+    % --- Column 3 ---
+\begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \textbf{3: Decompose pairwise}
+        
+        {\Large
+        \begin{gather*}
+            % Adding space to the RIGHT shifts the text LEFT
+            \hspace*{-1em} I^l_{(x,k)}(i,j)\equiv  \\ 
+            \hspace*{-1em} \frac{\| (W^l_{out})_k \|}{N^l} \| (u_j(W^{l}_{in}W^{l-1}_{dec}\hat{e}_j)_k) \| 
+        \end{gather*}
+        }
+        
+    \end{minipage}
+    
+    \end{tabular}
+
+}
+% \headerbox{Three steps to calculating the interaction metric}{name=conclusion, column=0, span=4, below=hkbox}{
+
+%     % Column 1
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{1: Define default non-interacting behaviour}
+%     \begin{center}
+%     \includegraphics[width=\linewidth]{figures/nips_figs/default_mlp.png}
+% \end{center}
+%     \end{minipage}%
+%     \hfill
+%     % Column 2
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{2: Derive error bounds from deviations}
+%         \begin{align}
+%             &\|f^{l}(W^{l-1}_{\mathrm{dec}}u)-W^{l}_{\mathrm{dec}}u\|
+%             \;\le\; \nonumber\\
+%             &\|h^{l}(u)\| \;+\;
+%             \sum_{v}\!
+%             \bigl\|g^{l}_{v}(u_{v}) - u_{v}W^{l}_{\mathrm{dec}}\hat{e}_{v}\bigr\| \nonumber
+%             \end{align}
+%     \end{minipage}%
+%     \hfill
+%     % Column 3
+%     \begin{minipage}[t]{0.31\linewidth}
+%         \textbf{3: Decompose pairwise}
+%         \begin{equation}
+%             I^l_{(x,k)}(i,j)\equiv\frac{||(W^l_{out})_k||}{N^l}||(u_j(W^{l}_{in}W^{l-1}_{dec}\hat{e}_j)_k)|| \nonumber
+%         \end{equation}
+%     \end{minipage}
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	INTERACTIONS (COLUMN 0 - BELOW SLEEPER AGENTS)
+%----------------------------------------------------------------------------------------
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{Next: Feature-Resolved Attention}\\
+\end{array}$
+}{boxheaderheight=1.4cm,name=lsm,span=2,column=0,below=conclusion}{ 
+\begin{center}
+    \includegraphics[width=0.6\linewidth]{figures/nips_figs/data_independent_attention_interaction.png}
+\end{center}
+\vspace{-15pt}
+% Use side-by-side minipages
+\vspace{-1pt}
+\begin{equation*}
+\tilde A^{q,k}_{ab}=\bar\alpha^{q}_a QK^T\bar\alpha^{k}_b
+\end{equation*}
+
+\vspace{-8pt}
+% \vspace{2pt}
+}
+
+% Second col
+
+\headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+\text{Next: Can we build interaction based monitors?}\\
+\end{array}$
+}{boxheaderheight=1.4cm,name=lsm,span=2,column=2,below=conclusion}{ 
+\begin{center}
+    \includegraphics[width=0.75\linewidth]{figures/nips_figs/sleeper_monitor_fig.png}
+\end{center}
+\vspace{-0.5em}
+% \vspace{-50em}
+% Use side-by-side minipages
+
+% \vspace{2pt}
+}
+
+
+% %----------------------------------------------------------------------------------------
+% %	NEXT STEPS (COLUMN 1 - BELOW CROSSCODERS)
+% %----------------------------------------------------------------------------------------
+% \headerbox{$\begin{array}{c}\vspace{-0.5cm}\\
+% \text{Next steps: Can sleeper agents}\\ \text{hide in feature interactions?}
+% \end{array}$
+% }{boxheaderheight=1.4cm,name=next,span=2,column=2,below=new_xc}{ 
+% % Stacked vertically for better visibility in a single column
+% \begin{center}
+% 1. Measure interactions between deployment and sleeper features.\\
+% \vspace{2pt}
+% \includegraphics[width=0.6\linewidth]{figures/mats_figs/pca.png}
+% \end{center}
+
+% \vspace{1pt}
+% \begin{center}
+% 2. Fine-tune sleeper agents to rely on interactions, rather than individual features.\\
+% \includegraphics[width=0.2\linewidth]{figures/mats_figs/linear_probes.png}
+% \end{center}
+
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	FULL WIDTH SECTION
+%----------------------------------------------------------------------------------------
+% Change 'below=next' to whatever box is currently bottom-most (e.g., 'lsm' or 'next')
+
+
+%----------------------------------------------------------------------------------------
+%	AUTHORS & LOGO FOOTER (BOTTOM SPAN)
+%----------------------------------------------------------------------------------------
+% 'above=bottom' forces this to be the last item.
+% boxheaderheight=0em hides the blue title bar for a cleaner footer look
+\headerbox{}{name=footer, span=4, column=0, above=bottom, 
+    boxheaderheight=1em, % Set to 0em to hide the white bar at the top
+    headerColorOne=white, 
+    headerColorTwo=white, 
+    borderColor=darkblue,
+    textborder=rounded
+}{
+    \vspace{-1.5em}
+    
+    % --- LEFT LOGO ---
+    \begin{minipage}{0.1\linewidth}
+        \vspace{0.2em}
+        \hspace{6em}
+        \centering
+        \includegraphics[width=\linewidth]{figures/nips_figs/thm_logo.png}
+    \end{minipage}%
+    \hfill
+    % --- CENTER TEXT ---
+    \begin{minipage}{0.7\linewidth}
+        \centering
+        \vspace{2em}
+        \textsf{\textbf{\large Dmitry Manning-Coe, Thomas Read, Anna Soligo, Oliver Clive-Griffin, Chun-Hei Yip, Rajashree Agarwal and Jason Gross}}
+        \vspace{-0.5em}
+        \large{\color{blue}\underline{dmanningcoe@gmail.com, jasongross9@gmail.com}}
+    \end{minipage}%
+    \hfill
+    % --- RIGHT LOGO ---
+    \begin{minipage}{0.10\linewidth}
+        \hspace{-2em}
+        \centering
+        \includegraphics[width=\linewidth]{figures/mats_figs/MATS_logo_clean.png}
+    \end{minipage}
+    
+    % \vspace{0.5em}
+}
+
+
+% \headerbox{}{name=footer, span=4, column=0, above=bottom, boxheaderheight=1em,headerColorOne=white, headerColorTwo=white, textborder=rounded}{
+%     \vspace{0em}
+%     \begin{minipage}{0.75\linewidth}
+%         \textsf{\textbf{\large Dmitry Manning-coe, Thomas Read, Anna Soligo, Oliver Clive-Griffin, Chun-Hei Yip, Rajashree Agarwal and Jason Gross }}
+%         \vspace{0.4em}\\
+%         \large{\color{blue}\underline{dmanningcoe@gmail.com, jasongross9@gmail.com}}
+%     \end{minipage}%
+%     \hfill
+%     \begin{minipage}{0.13\linewidth}
+%         \flushright
+%         \includegraphics[width=\linewidth]{figures/mats_figs/MATS_logo_clean.png}
+%     \end{minipage}
+%     \vspace{-0.5em}
+% }
+
+\end{poster}
+\end{document}

@@ -1,0 +1,42 @@
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/compare_single_transport.py:35: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 6203.35it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+UNIT female ov_edge done
+UNIT female residual_source done
+UNIT female residual_all_positions done
+UNIT male ov_edge done
+UNIT male residual_source done
+UNIT male residual_all_positions done
+THRESHOLD female ov_edge [25975] 5.34765625 negative False
+THRESHOLD female ov_edge [20446] 6.78515625 negative True
+THRESHOLD female ov_edge [15560] 9.1171875 negative True
+THRESHOLD female ov_edge [3281] 15.9765625 negative False
+THRESHOLD female ov_edge [25975, 20446, 15560, 3281] 1.9853515625 negative True
+THRESHOLD female residual_source [25975] 4.33984375 negative False
+THRESHOLD female residual_source [20446] None negative None
+THRESHOLD female residual_source [15560] 3.66796875 negative True
+THRESHOLD female residual_source [3281] None negative None
+THRESHOLD female residual_source [25975, 20446, 15560, 3281] 1.171875 negative True
+THRESHOLD female residual_all_positions [25975] 4.33984375 negative False
+THRESHOLD female residual_all_positions [20446] None negative None
+THRESHOLD female residual_all_positions [15560] 1.1298828125 negative True
+THRESHOLD female residual_all_positions [3281] None negative None
+THRESHOLD female residual_all_positions [25975, 20446, 15560, 3281] 0.7001953125 negative False
+THRESHOLD male ov_edge [25975] 3.845703125 negative True
+THRESHOLD male ov_edge [20446] 4.50390625 negative False
+THRESHOLD male ov_edge [15560] 5.53125 negative False
+THRESHOLD male ov_edge [3281] 12.1953125 negative True
+THRESHOLD male ov_edge [25975, 20446, 15560, 3281] 1.3427734375 negative True
+THRESHOLD male residual_source [25975] None negative None
+THRESHOLD male residual_source [20446] 1.67578125 negative False
+THRESHOLD male residual_source [15560] 3.208984375 negative False
+THRESHOLD male residual_source [3281] None negative None
+THRESHOLD male residual_source [25975, 20446, 15560, 3281] 0.869140625 negative False
+THRESHOLD male residual_all_positions [25975] None negative None
+THRESHOLD male residual_all_positions [20446] 1.67578125 negative False
+THRESHOLD male residual_all_positions [15560] 0.61083984375 negative False
+THRESHOLD male residual_all_positions [3281] None negative None
+THRESHOLD male residual_all_positions [25975, 20446, 15560, 3281] 0.390380859375 negative False
+DONE 922 163.0 seconds

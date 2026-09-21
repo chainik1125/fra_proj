@@ -1,0 +1,105 @@
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:03,  1.72s/it]
+Loading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.08s/it]
+Loading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.24s/it]
+Loading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.43s/it]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+WARNING:root:You are not using LayerNorm, so the writing weights can't be centered! Skipping
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[model] gemma-2-2b base
+induction heads: ['L6H2', 'L15H0', 'L18H6', 'L6H3', 'L21H5', 'L4H4', 'L14H0', 'L17H4', 'L22H4']
+SAEs loaded
+[progress] redfox seed None HF = fra_ph(tt); Pp = primer_pairs(HF, (qpos, kpos), M=M_PAIRS) unix 1789670790.318473
+
+=== redfox: located red-fox->pay cell qpos=63 kpos=32 (414 cells) ===
+  single-feature (top-1 additive) = feature 52001
+[progress] redfox seed 0 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789670808.795448
+[progress] redfox seed 0 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789670864.011748
+[progress] redfox seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789670877.9778583
+[progress] redfox seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789670877.978826
+  seed 0: base tgt 0.83 reuseA 0.83 reuseB 0.73 | fra=maxrem0.19 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.06
+[progress] redfox seed 1 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789670884.965519
+[progress] redfox seed 1 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789670931.6453583
+[progress] redfox seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789670943.669515
+[progress] redfox seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789670943.6705444
+  seed 1: base tgt 0.44 reuseA 0.81 reuseB 0.82 | fra=maxrem0.72 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.45
+[progress] redfox seed 2 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789670950.649581
+[progress] redfox seed 2 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789670998.8217232
+[progress] redfox seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671011.2871754
+[progress] redfox seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671011.2880628
+  seed 2: base tgt 0.81 reuseA 0.79 reuseB 0.76 | fra=maxrem0.15 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.08
+[progress] redfox seed 3 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671018.2988384
+[progress] redfox seed 3 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671070.0674026
+[progress] redfox seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671083.6623113
+[progress] redfox seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671083.6634173
+  seed 3: base tgt 0.37 reuseA 0.82 reuseB 0.78 | fra=maxrem0.71 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.76
+[progress] irongate seed 3 HF = fra_ph(tt); Pp = primer_pairs(HF, (qpos, kpos), M=M_PAIRS) unix 1789671090.499322
+
+=== irongate: located red-fox->pay cell qpos=63 kpos=32 (432 cells) ===
+  single-feature (top-1 additive) = feature 52001
+[progress] irongate seed 0 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671108.673796
+[progress] irongate seed 0 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671165.9378266
+[progress] irongate seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671180.0230393
+[progress] irongate seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671180.0240798
+  seed 0: base tgt 0.71 reuseA 0.73 reuseB 0.75 | fra=maxrem0.46 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.24
+[progress] irongate seed 1 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671187.085219
+[progress] irongate seed 1 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671233.85574
+[progress] irongate seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671245.6682482
+[progress] irongate seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671245.6692412
+  seed 1: base tgt 0.69 reuseA 0.78 reuseB 0.75 | fra=maxrem0.62 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.13
+[progress] irongate seed 2 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671252.7195845
+[progress] irongate seed 2 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671301.5409956
+[progress] irongate seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671313.920748
+[progress] irongate seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671313.9216514
+  seed 2: base tgt 0.76 reuseA 0.72 reuseB 0.71 | fra=maxrem0.24 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.16
+[progress] irongate seed 3 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671320.9451377
+[progress] irongate seed 3 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671371.9615932
+[progress] irongate seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671385.6874776
+[progress] irongate seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671385.6885114
+  seed 3: base tgt 0.67 reuseA 0.68 reuseB 0.73 | fra=maxrem0.58 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.47
+[progress] bluemoon seed 3 HF = fra_ph(tt); Pp = primer_pairs(HF, (qpos, kpos), M=M_PAIRS) unix 1789671392.5459945
+
+=== bluemoon: located red-fox->pay cell qpos=63 kpos=32 (420 cells) ===
+  single-feature (top-1 additive) = feature 52001
+[progress] bluemoon seed 0 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671410.6291242
+[progress] bluemoon seed 0 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671465.2308843
+[progress] bluemoon seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671479.4261067
+[progress] bluemoon seed 0 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671479.4270735
+  seed 0: base tgt 0.79 reuseA 0.81 reuseB 0.81 | fra=maxrem0.33 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.09
+[progress] bluemoon seed 1 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671486.8000875
+[progress] bluemoon seed 1 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671533.9262338
+[progress] bluemoon seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671545.9720027
+[progress] bluemoon seed 1 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671545.9728184
+  seed 1: base tgt 0.39 reuseA 0.74 reuseB 0.78 | fra=maxrem0.56 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.14
+[progress] bluemoon seed 2 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671553.0061219
+[progress] bluemoon seed 2 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671601.870962
+[progress] bluemoon seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671614.355895
+[progress] bluemoon seed 2 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671614.3568776
+  seed 2: base tgt 0.74 reuseA 0.74 reuseB 0.73 | fra=maxrem0.44 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.13
+[progress] bluemoon seed 3 HFp = {k: fra_ph(pr_tt[k]) for k in probes} unix 1789671621.4406855
+[progress] bluemoon seed 3 byLp = {k: delta_content(HFp[k], Pp, pr_tt[k].shape[1]) for k in probes} unix 1789671672.8936555
+[progress] bluemoon seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671686.6213653
+[progress] bluemoon seed 3 methods["fra"] = sweep(lambda tt, c: patch_fra(tt, byLp["target"], c), unix 1789671686.6221704
+  seed 3: base tgt 0.69 reuseA 0.77 reuseB 0.80 | fra=maxrem0.44 feat1=maxrem1.00 dom=maxrem1.00 pay=maxrem1.00 oracle=maxrem0.27
+
+
+######## B1 conjunction removal: WORST-case collateral (over reuseA,reuseB) at matched removal ########
+
+=== at 50% payload-removal on the target pair ===
+  fra     : worstKL mean 0.3651 / max 0.4546 | worst payload-drop mean 0.424 / max 0.477  (n=3 groups)
+  feat1   : worstKL mean 0.8720 / max 1.0630 | worst payload-drop mean 0.664 / max 0.768  (n=3 groups)
+  dom     : worstKL mean 0.4316 / max 0.4783 | worst payload-drop mean 0.359 / max 0.481  (n=3 groups)
+  pay     : worstKL mean 0.5872 / max 0.6439 | worst payload-drop mean 0.518 / max 0.562  (n=3 groups)
+  oracle  : worstKL mean 0.0072 / max 0.0072 | worst payload-drop mean -0.021 / max -0.021  (n=1 groups)
+
+=== at 70% payload-removal on the target pair ===
+  fra     : worstKL mean 0.5303 / max 0.5303 | worst payload-drop mean 0.539 / max 0.539  (n=1 groups)
+  feat1   : worstKL mean 0.8176 / max 1.1034 | worst payload-drop mean 0.662 / max 0.800  (n=3 groups)
+  dom     : worstKL mean 0.8123 / max 1.5070 | worst payload-drop mean 0.478 / max 0.654  (n=3 groups)
+  pay     : worstKL mean 0.5872 / max 0.6439 | worst payload-drop mean 0.518 / max 0.562  (n=3 groups)
+  oracle  : worstKL mean 0.0065 / max 0.0065 | worst payload-drop mean -0.026 / max -0.026  (n=1 groups)
+
+DONE b1_conjunction_removal

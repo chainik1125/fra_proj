@@ -1,0 +1,21 @@
+{
+  "bayes_within_ce": 0.7784615755081177,
+  "uniform_within_ce": 1.0986122886681098,
+  "floor_within_ce": 0.8450149297714233,
+  "irreducible_collateral_frac": 0.20788132441250035,
+  "convergence_check": {
+    "256": 0.8456296920776367,
+    "512": 0.8435345888137817,
+    "1024": 0.8447442054748535
+  },
+  "args": {
+    "out": "out/bayes_floor.json",
+    "seed": 42,
+    "n_eval": 500,
+    "seq_len": 256,
+    "concentration": 10.0,
+    "particles": 1024,
+    "t_min": 8,
+    "conv_check_seqs": 100
+  }
+}

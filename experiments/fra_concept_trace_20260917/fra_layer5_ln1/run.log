@@ -1,0 +1,36 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/measure_fra_ln1.py:269: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 5825.42it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+RESULT definition_female baseline delta_margin 0.0 pqueen 0.057158
+RESULT definition_female qk_cross delta_margin 0.00945 pqueen 0.05668
+RESULT definition_female qk_royalty_query_gender_key delta_margin 0.009706 pqueen 0.056665
+RESULT definition_female qk_gender_involvement delta_margin 0.087722 pqueen 0.055394
+RESULT definition_female qk_royalty_involvement delta_margin 0.032455 pqueen 0.057604
+RESULT definition_female ov_gender delta_margin 0.042956 pqueen 0.059062
+RESULT definition_female ov_royalty delta_margin 0.020004 pqueen 0.055675
+RESULT definition_female ov_both delta_margin 0.065179 pqueen 0.057587
+RESULT definition_female qk_cross_monarch_female delta_margin 0.006383 pqueen 0.056702
+RESULT definition_female ov_gender_female_to_monarch delta_margin 0.016796 pqueen 0.056682
+RESULT definition_female ov_gender_female_to_answer delta_margin -0.001593 pqueen 0.058612
+RESULT definition_female ov_royalty_monarch_to_answer delta_margin 0.015079 pqueen 0.057725
+RESULT definition_female qk_cross_plus_ov_gender_monarch_female delta_margin 0.019419 pqueen 0.056318
+RESULT definition_female qk_cross_plus_ov_gender_all delta_margin 0.047754 pqueen 0.058611
+FINISHED definition_female
+RESULT definition_male baseline delta_margin 0.0 pqueen 0.020318
+RESULT definition_male qk_cross delta_margin 0.010225 pqueen 0.020232
+RESULT definition_male qk_royalty_query_gender_key delta_margin 0.010276 pqueen 0.020229
+RESULT definition_male qk_gender_involvement delta_margin 0.054649 pqueen 0.02017
+RESULT definition_male qk_royalty_involvement delta_margin 0.085841 pqueen 0.021503
+RESULT definition_male ov_gender delta_margin 0.000657 pqueen 0.020514
+RESULT definition_male ov_royalty delta_margin 0.027159 pqueen 0.020401
+RESULT definition_male ov_both delta_margin 0.028793 pqueen 0.020612
+RESULT definition_male qk_cross_monarch_female delta_margin 0.010445 pqueen 0.020265
+RESULT definition_male ov_gender_female_to_monarch delta_margin 0.019541 pqueen 0.02048
+RESULT definition_male ov_gender_female_to_answer delta_margin -0.02853 pqueen 0.020275
+RESULT definition_male ov_royalty_monarch_to_answer delta_margin 0.026567 pqueen 0.020875
+RESULT definition_male qk_cross_plus_ov_gender_monarch_female delta_margin 0.024283 pqueen 0.020375
+RESULT definition_male qk_cross_plus_ov_gender_all delta_margin 0.005754 pqueen 0.020359
+FINISHED definition_male
+DONE 164 runs 42.6 seconds

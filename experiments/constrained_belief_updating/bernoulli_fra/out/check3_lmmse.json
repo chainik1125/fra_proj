@@ -1,0 +1,74 @@
+{
+  "complete_N10_d40": {
+    "N": 10,
+    "d": 40,
+    "gram": {
+      "rho_mm": 0.277923322874556,
+      "max_abs_off": 0.4328801863961433,
+      "mean_abs_off": 0.13068888932597775
+    },
+    "T_diag_mean": 1.0001372987688968,
+    "T_diag_min": 0.9987977161498878,
+    "T_offdiag_absmean": 0.0005841059802515639,
+    "T_emp_vs_analytic_relerr": 0.0025370796613486736,
+    "R_action_emp_vs_analytic_relerr": 0.002536125733969186,
+    "pred_T_diag_mean_d_over_N": 1.0,
+    "T_minus_I_relerr": 0.0025370796613485088,
+    "matched_filter_eq_Gc_relerr": 2.382655217633726e-16,
+    "corr_Toffdiag_vs_negGram": -0.3477175215038629
+  },
+  "square_N24_d24": {
+    "N": 24,
+    "d": 24,
+    "gram": {
+      "rho_mm": 0.4560773237374734,
+      "max_abs_off": 0.5765696936631782,
+      "mean_abs_off": 0.1599506285519483
+    },
+    "T_diag_mean": 0.9999999999999855,
+    "T_diag_min": 0.9999999999994673,
+    "T_offdiag_absmean": 2.1879199175605393e-13,
+    "T_emp_vs_analytic_relerr": 1.4201678570869781e-12,
+    "R_action_emp_vs_analytic_relerr": 1.420078365867967e-12,
+    "pred_T_diag_mean_d_over_N": 1.0,
+    "T_minus_I_relerr": 1.4203772516165893e-12,
+    "matched_filter_eq_Gc_relerr": 2.260971321747432e-16,
+    "corr_Toffdiag_vs_negGram": -0.007766552494041702
+  },
+  "overcomplete_N48_d24": {
+    "N": 48,
+    "d": 24,
+    "gram": {
+      "rho_mm": 0.4719325496173834,
+      "max_abs_off": 0.5744636787919413,
+      "mean_abs_off": 0.1601872297366916
+    },
+    "T_diag_mean": 0.4999999999999996,
+    "T_diag_min": 0.3639490748655675,
+    "T_offdiag_absmean": 0.05733990840500804,
+    "T_emp_vs_analytic_relerr": 5.036786583695523e-14,
+    "R_action_emp_vs_analytic_relerr": 5.035634546045106e-14,
+    "pred_T_diag_mean_d_over_N": 0.5,
+    "T_minus_I_relerr": 0.7071236131877388,
+    "matched_filter_eq_Gc_relerr": 2.6942496329747057e-16,
+    "corr_Toffdiag_vs_negGram": -0.7372375349790574
+  },
+  "overcomplete_N80_d24": {
+    "N": 80,
+    "d": 24,
+    "gram": {
+      "rho_mm": 0.5247389449687998,
+      "max_abs_off": 0.6770918077495163,
+      "mean_abs_off": 0.16274540805650686
+    },
+    "T_diag_mean": 0.29999999999999927,
+    "T_diag_min": 0.23293132668230848,
+    "T_offdiag_absmean": 0.041070224898595416,
+    "T_emp_vs_analytic_relerr": 7.267565899030725e-14,
+    "R_action_emp_vs_analytic_relerr": 7.26591182981365e-14,
+    "pred_T_diag_mean_d_over_N": 0.3,
+    "T_minus_I_relerr": 0.8366777484369758,
+    "matched_filter_eq_Gc_relerr": 2.867377648003127e-16,
+    "corr_Toffdiag_vs_negGram": -0.8471587460257388
+  }
+}

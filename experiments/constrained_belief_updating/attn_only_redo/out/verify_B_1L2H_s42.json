@@ -1,0 +1,25 @@
+{
+  "tag": "B_1L2H_s42",
+  "cfg": {
+    "n_layers": 1,
+    "n_heads": 2,
+    "x": 0.5,
+    "a": 0.6,
+    "seed": 42
+  },
+  "zeta": -0.5,
+  "belief_probe": {
+    "r2_resid_post_to_r1": 0.9530250654762643,
+    "r2_resid_post_to_eta": 0.9396217782116782
+  },
+  "pattern": {
+    "decay_rate": 0.8906846009341643,
+    "decay_rate_sd": 0.2697520515771547,
+    "zeta": -0.5,
+    "token_relstd": 0.1742846097221058
+  },
+  "ov_vs_g": {
+    "head0_ov_vs_g_gram_cos": 0.9042043690894894,
+    "head1_ov_vs_g_gram_cos": 0.9879194263928452
+  }
+}

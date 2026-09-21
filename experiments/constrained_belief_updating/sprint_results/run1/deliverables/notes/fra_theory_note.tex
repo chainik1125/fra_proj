@@ -1,0 +1,815 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{soul}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\geometry{margin=0.75in}
+\setlength{\parindent}{0pt}
+\input{macros.tex}
+
+\title{Feature-resolved attention in the constrained belief updating framework:\\ closed forms and control conditions}
+\author{FRA theory sprint}
+\date{July 15, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Feature-resolved attention (FRA) is a family of attribution and intervention operations that resolve a transformer's attention computation through a sparse-autoencoder (SAE) basis. Given an exact TopK SAE decomposition of the residual stream, $\xb_p = \sum_{i \in \mathcal{A}_p} z_i(p)\, \boldsymbol{d}_i + \bdec + \mathrm{err}_p$, and a frozen (linearized) layer norm, the attention score $\sigma(d,s)$ decomposes exactly into a sum of term-pair contributions (feature $\times$ feature, feature $\times$ positional, etc.), and the attention output decomposes exactly into per-(feature, source-position) transported content. FRA \emph{attribution} reads off these contributions; FRA \emph{intervention} subtracts a selected contribution at a gain $c$: an FRA-QK cut edits the scores before the softmax, an FRA-OV cut subtracts transported content after the pattern is formed, and a plain SAE cut removes the feature's content at the hookpoint itself (Definition~\ref{def:fra}).
+
+These operations were built on the hypothesis that feature-level score mass and feature-level transport identify the causal structure of in-context computation. The empirical record on toy hidden-Markov tasks is sharply split. On association tasks (induction/copying), FRA-QK edits of the matched feature control behavior directly: association editing wins. On aggregation tasks --- a Dirichlet mixture of HMM components, where the concept of interest is the per-sequence mixture posterior $\omhat(t)$ --- FRA-QK is inert at every feature set, side, gain, and layer, \emph{even though} feature$\times$feature terms carry $57$--$75\%$ of the pattern-weighted score mass; exact FRA-OV severing at $c=1$ removes almost nothing; and a gain-tuned counter-injection at $c \approx 4$ produces a complete behavioral null while a probe retrained on the intervened activations still reads the concept at $R^2 = 0.985$. Large attribution, no causal handle; full behavioral removal, no representational removal.
+
+This note derives the theory behind both halves of that record by incorporating FRA into the constrained belief updating framework of three companion documents, referred to throughout as P1, P2, P3. \textbf{P3} solves the one-layer attention-only transformer with a free (unparameterized) attention profile under MSE: the optimal weights are $\Wb_* = \Bone\Db^{-1} - \Vb_*\Cb^\top\Db^{-1}$ and $\Vb_* = \Rb\Sb^+$ (a partial regression), the loss sees the attention profile only through the generating functions $\alphatil'(\lambda), \gammatil'(\lambda)$ evaluated at the nonstationary eigenvalues of the hidden process, and the optimal profile is lag-only (Toeplitz in the large-context limit). \textbf{P2} shows that trained one-layer softmax transformers on the Mess3 process implement the \emph{constrained belief update} $r_1(d) = \pib + \sum_{s\le d} g(z_s)\Tb^{d-s}$ in a low-dimensional belief plane of the residual stream, with ideal pattern $A_{d,s} = \zeta^{d-s}/N_d$ and OV transport $\Wov\phi(e(z)) \propto g(z)$. \textbf{P1} shows the attention head is a non-fundamental unit: the computation constrains only head-summed, subspace-aggregated quantities (its Eq.~25--28 exhibit the skip/diagonal redundancy at lag zero, and its effective subspace attention is the head-gauge-invariant object). FRA operates exactly at the joints these three results describe: QK edits act on the pattern, whose optimal form is lag-only and hence content-blind; OV edits act on transported content, whose optimal form is a known linear functional of the process; and per-head or per-path readings inherit the gauge freedoms P1 identifies.
+
+The claims of this note, in order:
+\begin{enumerate}
+    \item \textbf{A softmax response calculus} (Section~\ref{sec:calculus}). Every score edit acts by exponential tilting of the pattern; the exact response, the first-order covariance response with remainder constant $c^2/8$, two exact invariances, an any-gain bound suite with sharp prefactor $(e^E - 1)$, and exact two-valued-edit closed forms. All proofs are short and included.
+    \item \textbf{The QK gauge theorem} (Section~\ref{sec:qk}). At any configuration realizing a token-independent (in particular lag-only) pattern, the FRA-QK feature$\times$feature score mass and every FRA-QK cut coefficient are \emph{gauge coordinates}: loss-invariant reparameterizations dial them from zero to arbitrarily large. FRA-QK attribution at such an optimum measures gauge, not computation. The boundary where the gauge breaks --- and FRA-QK acquires a real handle --- is characterized by non-separability of the target kernel, established rigorously for induction data by a parallelogram lemma.
+    \item \textbf{An FRA-OV calculus} (Section~\ref{sec:ov}). Exact attribution closed forms (and their Mess3 collapse onto the constrained update); the exact severing parabola, whose vertex sits at $c = 0$ at the optimum, so that severing cost and marginal path value are different quantities (a $3.3\times$ gap in the worked example); the path-share theorem $c^* = \psitot/\psi_S$ for the concept-nulling gain, with its exactness conditions; the $k=0$ skip/diagonal gauge, which makes $c^*$ a property of the trained run rather than of the task; and the head-mixing gauge, under which per-head FRA-OV is never exactly identifiable while subspace-aggregated FRA-OV equals P1's effective subspace attention.
+    \item \textbf{The aggregation limit} (Section~\ref{sec:agg}). Mixture concepts are the $\lambda \to 1$ spectral limit of the framework: row normalization pins the profile's coupling to $\lambda = 1$ modes ($\alphatil_d(1) = 1$ exactly), exchangeability makes the optimal concept profile flat, the optimal decay rate flattens as $1 - \eta \simeq \sqrt{2m/\varphi}\,\sqrt{1-\lambda}$, and Dirichlet drift bounds protect aggregate readouts from \emph{every} pattern edit at rate $O(1/d)$ (geometric window) or $O(1/\sqrt d)$ (flat window, in RMS) while grammar readouts stay exposed at $\Theta(1)$. This yields the use/presence trichotomy of interventions.
+    \item \textbf{Predictions and empirical status} (Section~\ref{sec:predictions}) and \textbf{honest gaps} (Section~\ref{sec:gaps}).
+\end{enumerate}
+
+Every proposition below states its assumptions explicitly. Statements are tagged \textbf{[exact]} when they are algebraic identities under the stated assumptions, and \textbf{[heuristic]} or \textbf{[conditional]} when a step is an approximation, an ansatz, or a conjecture; Section~\ref{sec:gaps} collects every such flag in one place. The derivations here port and consolidate the sprint working notes (\texttt{setup.md}, \texttt{T\_QK\_RECONCILED.md} with its sources \texttt{T\_QK\_A.md}/\texttt{T\_QK\_B.md}, \texttt{T\_OV.md}, \texttt{T\_mixture.md}); where two independent derivations were reconciled, this note follows the reconciled canonical statements.
+
+\section{Setting}\label{sec:setting}
+
+\subsection{Data process}
+
+As in P3, the generative model is an edge-emitting hidden Markov model $(\mathcal{S}, \mathcal{V}, \{\Tx\}_{x\in\mathcal{V}}, \pib)$ with finite state space $\mathcal{S}$ and token alphabet $\mathcal{V}$; $\Tx_{ij} = P(x,\, s_{t+1}=j \mid s_t = i)$, total transition operator $\Tb = \sum_x \Tx$, and the process initialized at the stationary distribution $\pib \Tb = \pib$. The spectral decomposition is $\Tb = \sum_\lambda \lambda \Pb_\lambda$, with nonstationary eigenvalues $\lambda \ne 1$. The $\tau$-skip bigram matrices $\Btau_{ij} = P(x_t = i, x_{t-\tau} = j)$, their spectral components $(\Mb_\lambda)_{ij} = \pib\Tj\Pb_\lambda\Ti\one$, the single-token diagonal $\Db$, the lag summaries $\alpha(\tau), \gamma(\tau)$ of an attention profile, and the generating functions $\alphatil(z) = \sum_\tau \alpha(\tau) z^\tau$, $\alphatil'(z) = (\alphatil(z) - \alpha(0))/z$, $\gammatil'(z)$ are all as defined in P3.
+
+The \emph{normalized posterior from one token} is $\pib\Tb^{|z} := (\pib\Tx[z])/(\pib\Tx[z]\one)$ (writing $\Tx[z]$ for $\Tb^{(z)}$), and the \emph{token displacement} is the row vector
+\begin{equation}
+    g(z) := \pib\Tb^{|z} - \pib \in \mathbb{R}^{\state}, \qquad g(z)\,\one = 0 .
+\end{equation}
+The \emph{constrained belief update} (P2, Eq.~5) after context $z_1 \cdots z_d$ is
+\begin{equation}\label{eq:r1}
+    r_1(d) \;=\; \pib + \sum_{s=1}^{d}\big(\pib\Tb^{|z_s}\Tb^{d-s} - \pib\big)
+    \;=\; \pib + \sum_{s=1}^{d} g(z_s)\,\Tb^{d-s}
+    \;=\; \pib + \sum_{s=1}^{d}\sum_{\lambda\ne1}\lambda^{d-s}\, g(z_s)\Pb_\lambda .
+\end{equation}
+
+\textbf{Mess3.} The process Mess3$(x,a)$ has $\state = \vocab = 3$, $\pib = \tfrac13\one^\top$, and eigenvalues $\{1, \zeta, \zeta\}$ with $\zeta = 1 - 3x$. Both nonstationary eigenvalues coincide, so $r_1(d) = \pib + \sum_s \zeta^{d-s} g(z_s)$, with $g(z)$ already in the nonstationary plane. With the P2 convention $\Tb^{(z)} = \tilde\Tb\Db^{(z)}$ (transition, then emit from the arrival state), $\tilde\Tb = (1-2x)\Ib + x(\one\one^\top - \Ib)$, $\Db^{(z)} = \mathrm{diag}(\beta, \dots, a, \dots, \beta)$, $\beta = (1-a)/2$:
+\begin{equation}\label{eq:gz}
+    g(z) = \tfrac{3a-1}{2}\big(\eb_z - \tfrac13\one\big)^{\!\top}, \qquad
+    \|g(z)\|^2 = \tfrac{(3a-1)^2}{6}, \qquad
+    g(z)\,\Tb^{k} = \zeta^{k} g(z) .
+\end{equation}
+(A Mess3 variant that emits from the source state gives $g$ one extra factor of $\zeta$ with unchanged directions; the generator convention should be checked before pinning magnitudes.)
+
+\begin{remark}[the canonical $N_d$]\label{rem:nd}
+Throughout this note keys are $1$-indexed, $s = 1, \dots, d$, so lags run over $\tau = d-s \in \{0, \dots, d-1\}$ and the geometric-profile normalizer is
+\begin{equation}\label{eq:nd}
+    N_d \;:=\; \sum_{s \le d}\zeta^{d-s} \;=\; \sum_{\tau=0}^{d-1}\zeta^{\tau} \;=\; \frac{1-\zeta^{d}}{1-\zeta}.
+\end{equation}
+An earlier working convention wrote $N_d = \sum_{m=0}^{d}\zeta^m$ ($d{+}1$ terms), which is the $0$-indexed variant; Eq.~\eqref{eq:nd} is the convention consistent with $r_1(d)$ over keys $s = 1..d$ and is used in every formula below. Anyone porting these formulas to a trained model should verify its indexing first.
+\end{remark}
+
+\subsection{Model classes}
+
+\textbf{(M1) The P3 model} (attention-only, MSE, free attention profile):
+\begin{equation}\label{eq:m1}
+    f(\Xb)_t = \Wb\xb_t + \Vb\,(\Xb\Ab^\top)_t ,
+\end{equation}
+with one-hot tokens $\xb_t \in \mathbb{R}^{\vocab}$, $\Ab$ row-stochastic and lower-triangular, and MSE loss $\mathcal{L} = \frac{1}{2T}\E\normsq{\Yb - f(\Xb)}{F}$. Its optimum, for fixed $\Ab$ (P3):
+\begin{equation}\label{eq:m1opt}
+    \Vb_* = \Rb\Sb^+ = \sum_{\lambda\ne1}\alphatil'(\lambda)\,\hat\Mb_\lambda\Sb^+ \;\;(+\,\ub\one^\top), \qquad
+    \Wb_* = \Bone\Db^{-1} - \Vb_*\Cb^\top\Db^{-1}\;\;(-\,\ub\one^\top),
+\end{equation}
+with $\Rb = \Cb_+ - \Bone\Db^{-1}\Cb$, $\Sb = \Gb - \Cb^\top\Db^{-1}\Cb$, $\hat\Mb_\lambda = (\lambda\Ib - \sum_{\mu\ne1}\Mb_\mu\Db^{-1})\Mb_\lambda$, and the gauge vector $\ub$ free. We fix $\ub = 0$ throughout; all statements below are invariant under it except where noted.
+
+\textbf{(M2) The P2 model} (softmax, one layer, CE): residual $\xb_s = e(z_s) + p_s$ (token plus positional embedding); scores $\sigma(d,s) = (\Wq\phi(\xb_d))\cdot(\Wk\phi(\xb_s))/\sqrt{d_h}$ with $\phi$ the frozen (linearized) layer norm; pattern $\Ab_{d,\cdot} = \softmax{\sigma(d, \cdot)}$ over keys $s \le d$; head output $\cb_d = \sum_{s\le d} A_{d,s}\Wov\phi(\xb_s)$; prediction from $\mathrm{resid}_{\mathrm{mid}} = \xb_d + \cb_d$ through the unembedding. The P2 \emph{ideal weights} realize $A_{d,s} = \zeta^{d-s}/N_d$ (with $N_d$ as in Eq.~\eqref{eq:nd}) and $\Wov\phi(e(z)) \propto g(z)$ mapped into a $2$-dimensional belief plane of the residual stream, so that the model represents $r_1(d)$ in that plane.
+
+\subsection{Feature bases and the FRA operations}
+
+\begin{definition}[feature bases]\label{def:bases}
+The \emph{idealized feature basis} identifies features with token identities: the per-side term of feature $z$ is $e(z)$ (in M1, literally the one-hot $\eb_z$); positional content $p_s$ sits on the $\bdec$/err side of the decomposition (or in dedicated positional latents). The \emph{trained-SAE basis} is a TopK SAE with the exact decomposition $\xb_p = \sum_{i\in\mathcal{A}_p} z_i(p)\,\boldsymbol{d}_i + \bdec + \mathrm{err}_p$.
+\end{definition}
+
+\begin{definition}[FRA operations]\label{def:fra}
+Per-side terms at position $p$ are: the active latents ($u = z_i(p)\boldsymbol{d}_i$), $\bdec$, $\mathrm{err}_p$, and a constant term. Because the frozen layer norm $\phi_p$ is linear per position, the scores decompose exactly:
+\begin{equation}\label{eq:scoredecomp}
+    \sigma(d,s) = \sum_{a,b}\big(\phi_d(t_a)\,\Wq\big)\cdot\big(\phi_s(t_b)\,\Wk\big)/\sqrt{d_h}
+\end{equation}
+over term-pairs $(t_a, t_b)$. The three interventions, for a feature set $S$, gain $c$:
+\begin{itemize}
+    \item \textbf{FRA-QK cut} (side $\in$ \{key, query, either\}): $\sigma \leftarrow \sigma - c\,\delta_S$, where $\delta_S$ is the summed score contribution of the term-pairs involving $S$ on the chosen side.
+    \item \textbf{FRA-OV cut}: $\mathrm{attn\_out}_d \leftarrow \mathrm{attn\_out}_d - c\sum_{s\le d} A_{d,s}\,\Wov\,\phi_s\big(\textstyle\sum_{j\in S} z_j \boldsymbol{d}_j\big)$, computed with the \emph{clean} pattern $\Ab$; $c = 1$ is exact severing, $c > 1$ is counter-injection.
+    \item \textbf{SAE cut}: $\xb \leftarrow \xb - \alpha\sum_{j\in S} z_j\boldsymbol{d}_j$ at the hookpoint.
+\end{itemize}
+These match the reference implementation (\texttt{fra\_cut.py}) exactly; in particular the FRA-OV cut is affine in $c$ by construction because the pattern is frozen at its clean value.
+\end{definition}
+
+\section{The softmax response calculus}\label{sec:calculus}
+
+This section is the exact backbone: it holds for \emph{any} row-wise score edit, any weights, and any data. Fix a query position $d$ and work per row. Write $\sigma_s := \sigma(d,s)$ for the clean scores of one head over keys $s \le d$, and
+\begin{equation}
+    A_s := A_{d,s} = \frac{e^{\sigma_s}}{\sum_{s'\le d} e^{\sigma_{s'}}}, \qquad
+    v_s := \Wov\,\phi_s(\xb_s), \qquad
+    \cb_d = \sum_{s\le d} A_s v_s = \E_A[v],
+\end{equation}
+treating the row as a probability distribution over keys ($\E_A$, $\Cov_A$, $\Var_A$ are moments under $s \sim A$). A score edit at gain $c$ is $\sigma \to \sigma - c\,\delta$ with $\delta_s := \delta(d,s)$; the edited pattern is $A^c$, the edited output $\cb_d^c = \E_{A^c}[v]$, and $\Delta\cb_d := \cb_d^c - \cb_d$. Set
+\begin{equation}
+    \osc(\delta) := \max_{s\le d}\delta_s - \min_{s\le d}\delta_s, \qquad
+    D_v := \diam\{v_s\}_{s\le d} = \max_{s,s'\le d}\|v_s - v_{s'}\|, \qquad
+    E := c\,\osc(\delta).
+\end{equation}
+All vector bounds hold for an arbitrary norm (only the triangle inequality and convexity of the norm are used); for scalar readouts $u\cdot v_s$ read $|\cdot|$.
+
+\begin{prop}[exact tilt identity]\label{prop:tilt}
+\textbf{[exact]} For any edit $\delta$ and any gain $c \in \mathbb{R}$,
+\begin{equation}\label{eq:tilt}
+    A^{c}_s = \frac{A_s\, e^{-c\delta_s}}{\E_A[e^{-c\delta}]},
+    \qquad
+    \Delta\cb_d = \frac{\Cov_A\!\big(e^{-c\delta},\, v\big)}{\E_A\!\big[e^{-c\delta}\big]}
+    = -\int_0^c \Cov_{A^t}(\delta, v)\, dt .
+\end{equation}
+\end{prop}
+\begin{proof}
+The first identity is the definition of softmax applied to $\sigma - c\delta$, dividing numerator and denominator by $\sum_{s'} e^{\sigma_{s'}}$. For the second, with $Z_c := \E_A[e^{-c\delta}]$,
+\begin{equation}
+    \Delta\cb_d = \frac{\E_A[e^{-c\delta}v]}{Z_c} - \E_A[v]
+    = \frac{\E_A[(e^{-c\delta} - Z_c)\,v]}{Z_c}
+    = \frac{\Cov_A(e^{-c\delta}, v)}{Z_c},
+\end{equation}
+since $\E_A[e^{-c\delta} - Z_c] = 0$. The integral form follows from Proposition~\ref{prop:cumulant} below (its first identity is the integrand's antiderivative statement).
+\end{proof}
+
+The edited pattern is an \emph{exponential tilting} of the clean pattern by $-c\delta$; the denominator $Z_c$ is the through-softmax renormalization, which automatically redistributes removed mass to the remaining keys in proportion to $A$.
+
+\begin{prop}[derivatives are cumulants]\label{prop:cumulant}
+\textbf{[exact]} For any function $f$ on keys (scalar or vector), with $\bar\delta_c = \E_{A^c}[\delta]$, $\bar v_c = \E_{A^c}[v]$,
+\begin{equation}
+    \frac{d}{dc}\,\E_{A^c}[f] = -\,\Cov_{A^c}(\delta, f),
+    \qquad
+    \frac{d^2}{dc^2}\,\E_{A^c}[v] = \E_{A^c}\big[(\delta - \bar\delta_c)^2\,(v - \bar v_c)\big].
+\end{equation}
+\end{prop}
+\begin{proof}
+Standard exponential-family differentiation of Eq.~\eqref{eq:tilt}. The second identity follows by applying the first to each term of $-\Cov_{A^c}(\delta, v)$ and recombining:
+$\Cov(\delta, \delta v) - \Var(\delta)\bar v - \bar\delta\,\Cov(\delta, v) = \E[(\delta-\bar\delta)^2(v-\bar v)]$, all moments under $A^c$.
+\end{proof}
+
+\begin{prop}[first-order response with exact remainder bound]\label{prop:firstorder}
+\textbf{[exact]}
+\begin{equation}\label{eq:firstorder}
+    \Delta\cb_d = -\,c\,\Cov_A(\delta, v) + R,
+    \qquad
+    \|R\| \le \frac{c^2}{8}\,\osc(\delta)^2\, D_v ,
+\end{equation}
+uniformly in $d$ and sign-free in $c$ (for $c<0$ read $|c|$).
+\end{prop}
+\begin{proof}
+Let $F(c) := \E_{A^c}[v]$. Taylor with integral remainder and Proposition~\ref{prop:cumulant}:
+\begin{equation}
+    F(c) = F(0) + cF'(0) + \int_0^c (c-t)\,F''(t)\,dt, \qquad R = \int_0^c (c-t)\,F''(t)\,dt .
+\end{equation}
+For any tilt parameter $t$: (i) by Popoviciu's inequality, valid under \emph{any} tilt, $\Var_{A^t}(\delta) \le \tfrac14\osc(\delta)^2$; (ii) $\bar v_t \in \mathrm{conv}\{v_s\}$, so $\|v_s - \bar v_t\| \le D_v$ for every $s$ (convexity of the norm). Hence
+\begin{equation}
+    \|F''(t)\| \le \E_{A^t}\big[(\delta - \bar\delta_t)^2\,\|v - \bar v_t\|\big]
+    \le \Var_{A^t}(\delta)\, D_v \le \tfrac14\osc(\delta)^2 D_v ,
+\end{equation}
+and $\int_0^c(c-t)\,dt = c^2/2$ gives the constant $1/8$.
+\end{proof}
+
+\begin{remark}
+The oscillation, rather than $\|\delta\|_\infty$, is the correct magnitude: $\delta$ is only defined modulo per-row constants (Proposition~\ref{prop:invariances}), and $\osc$ is the shift-invariant size, with $\osc(\delta) \le 2\|\delta\|_\infty$ always.
+\end{remark}
+
+\begin{prop}[the two exact invariances]\label{prop:invariances}
+\textbf{[exact]}
+\begin{enumerate}
+    \item \textbf{Per-row-constant edits are inert at every gain.} If $\delta_s = \mu_d$ for all $s \le d$ (any per-row constant $\mu_d$), then $A^c = A$ exactly and $\Delta\cb_d = 0$ for every $c$ (the factor $e^{-c\mu_d}$ cancels in Eq.~\eqref{eq:tilt}).
+    \item \textbf{Key-constant readouts are immune to every pattern.} If a readout $u$ satisfies $u\cdot v_s = h_0$ for all $s \le d$, then under \emph{any} row-stochastic pattern $A'$ supported on $s \le d$ (any edit, any gain, including edits outside the FRA family), $u\cdot\cb_d' = h_0\sum_s A_s' = h_0$, so $\Delta(u\cdot\cb_d) = 0$ exactly.
+\end{enumerate}
+As a corollary of (2), any per-head constant value component --- in particular the value-path bias contribution $\Woo b_V$ --- is exactly invariant under all score edits.
+\end{prop}
+
+\begin{prop}[any-gain bound suite]\label{prop:anygain}
+\textbf{[exact]} For any edit $\delta$, gain $c \ge 0$, scalar readout $u$, and any constant $a$:
+\begin{align}
+    \TV(A^c, A) &\le \min\big\{\tfrac12(e^{E}-1),\; 1 - e^{-E}\big\}, \label{eq:tv}\\
+    \big|\Delta(u\cdot\cb_d)\big| &\le \min\Big\{\tfrac{c}{4}\,\osc(\delta)\,\osc_s(u\cdot v_s),\;\;
+    (e^{E}-1)\,\E_A\big|u\cdot v_s - a\big|,\;\;
+    \osc_s(u\cdot v_s)\Big\}, \label{eq:anygain}
+\end{align}
+with the vector version $\|\Delta\cb_d\| \le (e^E - 1)\,\E_A\|v_s - a\|$ for any constant vector $a$. The first entry of Eq.~\eqref{eq:anygain} is sharpest at small $E$ when only oscillation is known; the second is sharpest when drift information is available (take $a = u\cdot v_d$, Section~\ref{sec:agg}) and at large $E$.
+\end{prop}
+\begin{proof}
+\emph{Likelihood-ratio control.} From Eq.~\eqref{eq:tilt}, $Z_c = \E_A[e^{-c\delta}] \in [e^{-c\delta_{\max}}, e^{-c\delta_{\min}}]$, so pointwise $e^{-E} \le A^c_s/A_s \le e^{E}$, hence $|A^c_s - A_s| \le A_s\max(e^E - 1,\, 1 - e^{-E}) = A_s(e^E - 1)$. Summing gives $\TV \le \tfrac12(e^E - 1)$; separately, $A^c_s \ge A_s e^{-E}$ gives $\sum_s (A_s - A^c_s)_+ \le 1 - e^{-E}$, the second TV entry.
+
+\emph{Second entry of \eqref{eq:anygain}.} Row sums cancel any constant: $\Delta(u\cdot\cb_d) = \sum_s (A^c_s - A_s)(u\cdot v_s - a)$, and $|A^c_s - A_s| \le A_s(e^E - 1)$ termwise.
+
+\emph{First entry.} By the mean value theorem and Proposition~\ref{prop:cumulant} there is $t^* \in (0,c)$ with $\Delta(u\cdot\cb_d) = -c\,\Cov_{A^{t^*}}(\delta, u\cdot v)$; Cauchy--Schwarz and Popoviciu (both valid under any tilt) give $|\Cov| \le \tfrac12\osc(\delta)\cdot\tfrac12\osc(u\cdot v)$.
+
+\emph{Third entry.} Both $u\cdot\cb_d$ and $u\cdot\cb_d^c$ are averages of $\{u\cdot v_s\}$, hence lie in $[\min_s, \max_s]$.
+\end{proof}
+
+\begin{prop}[two-valued edits: exact closed form]\label{prop:twovalued}
+\textbf{[exact]} Let $\delta_s = \kappa\,\ind[s \in S]$ for a key subset $S$, let $w := \sum_{s\in S} A_s$ be the clean pattern mass on $S$, and $\mu_S := \E_A[v \mid s \in S]$, $\mu_{S^c} := \E_A[v \mid s \notin S]$, $\bar v := \E_A[v]$. Then
+\begin{equation}\label{eq:twovalued}
+    \Delta\cb_d = \frac{(e^{-c\kappa}-1)\, w\,(\mu_S - \bar v)}{1 + (e^{-c\kappa}-1)\,w},
+    \qquad
+    w \;\to\; w' = \frac{w\, e^{-c\kappa}}{1 - w + w\, e^{-c\kappa}} .
+\end{equation}
+Limits: as $c\kappa \to +\infty$, $\Delta\cb_d \to -\tfrac{w}{1-w}(\mu_S - \bar v)$, exactly ``delete the $S$-keys and renormalize the row''; as $c\kappa \to -\infty$, $\Delta\cb_d \to \mu_S - \bar v$ (all mass concentrates on $S$). At first order,
+\begin{equation}
+    \Delta\cb_d = -c\kappa\, w(\mu_S - \bar v) + O(c^2\kappa^2)
+    = -c\kappa\, w(1-w)(\mu_S - \mu_{S^c}) + O(c^2\kappa^2),
+\end{equation}
+consistent with Proposition~\ref{prop:firstorder} via $\Cov_A(\ind_S, v) = w(\mu_S - \bar v) = w(1-w)(\mu_S - \mu_{S^c})$.
+\end{prop}
+\begin{proof}
+Evaluate Eq.~\eqref{eq:tilt} directly: $Z_c = 1 + (e^{-c\kappa}-1)w$ and $\E_A[e^{-c\delta}v] = \bar v + (e^{-c\kappa}-1)\,w\,\mu_S$, so $\Delta\cb_d = \big((e^{-c\kappa}-1)w\,\mu_S + \bar v - Z_c\bar v\big)/Z_c = (e^{-c\kappa}-1)w(\mu_S - \bar v)/Z_c$. The mass law is the same computation with $v = \ind_S$.
+\end{proof}
+
+\begin{prop}[multi-head additivity]\label{prop:multihead}
+\textbf{[exact]} With heads $h = 1..H$, layer output $\mathrm{attn\_out}_d = \sum_h \E_{A^{(h)}_d}[v^{(h)}]$ (plus the pattern-independent bias of Proposition~\ref{prop:invariances}), and per-head edits $\delta^{(h)}$: every statement above holds head-by-head, and the effects add,
+\begin{equation}
+    \Delta\,\mathrm{attn\_out}_d = -c\sum_h \Cov_{A^{(h)}_d}\big(\delta^{(h)}, v^{(h)}\big) + R,
+    \qquad
+    \|R\| \le \frac{c^2}{8}\sum_h \osc\big(\delta^{(h)}\big)^2 D_{v^{(h)}} ,
+\end{equation}
+with no cross-head interaction at any order before the residual sum (the softmaxes are separate). The invariances of Proposition~\ref{prop:invariances} are per-head conditions (constants may differ across heads).
+\end{prop}
+
+\section{The QK gauge theorem}\label{sec:qk}
+
+\subsection{Setting and assumptions}
+
+Model M2 throughout this section: $\xb_s = e(z_s) + p_s$, per-head scores $\sigma(d,s) = (\Wq\phi(\xb_d) + b_Q)\cdot(\Wk\phi(\xb_s) + b_K)/\sqrt{d_h}$.
+
+\begin{assumption}\label{ass:qk}
+\begin{itemize}
+    \item[\textbf{(A0)}] \emph{Full support.} Every token can occur at every position, and for any two positions $s \ne s'$ every token pair occurs with positive probability in some sequence (true for Mess3: every finite string has positive probability).
+    \item[\textbf{(A1)}] \emph{Exact residual split.} $\xb_s = e(z_s) + p_s$ exactly (idealized feature basis: the token feature at $s$ is $e(z_s)$; positional content sits on the $\bdec$/err side of the FRA decomposition).
+    \item[\textbf{(A2)}] \emph{Content-independent frozen-LN scale.} $\phi$ is a single linear map $\Phi$ (or position-only $\Phi_p$), so the score splits exactly into four blocks. \textbf{[conditional]} In a real checkpoint the frozen scale is weakly token-dependent through $\|\xb_p\|$; this multiplicative leak is absorbed into the measurable content leak $\varepsilon$ of Definition~\ref{def:leak}.
+\end{itemize}
+\end{assumption}
+
+Define the four score-side vectors (the $1/\sqrt{d_h}$ absorbed, biases folded into the positional parts):
+\begin{equation}
+    q_E(z) := \Wq\Phi\, e(z), \quad q_P(d) := \Wq\Phi\, p_d + b_Q, \qquad
+    k_E(z) := \Wk\Phi\, e(z), \quad k_P(s) := \Wk\Phi\, p_s + b_K,
+\end{equation}
+so the full query is $q_d = q_E(z_d) + q_P(d)$, the full key $k_s = k_E(z_s) + k_P(s)$, and $\sigma(d,s) = q_d \cdot k_s$ splits exactly into the four FRA blocks pos$\times$pos, pos$\times$tok, tok$\times$pos, tok$\times$tok; the tok$\times$tok block $Q(z, z') := q_E(z)\cdot k_E(z')$ is exactly the FRA-QK feature$\times$feature score mass in the idealized basis. Write means and centered parts over the realized sets: $\bar q_E := \tfrac1{\vocab}\sum_z q_E(z)$, $\hat q_E(z) := q_E(z) - \bar q_E$, and similarly $\bar k_E, \hat k_E(z)$, $\bar k_P, \hat k_P(s)$.
+
+\begin{definition}[pattern classes]
+A configuration has a \emph{token-independent pattern} if for every sequence in the support and every $d$, $A_{d,s}$ depends only on $(d,s)$. It is \emph{lag-only} if moreover $A_{d,s} = a_d(d-s)$, and \emph{Toeplitz} if $a_d = a$. (At finite $T$, row normalization makes exact Toeplitz infeasible; the P2 ideal pattern $A_{d,s} = \zeta^{d-s}/N_d$ is lag-only with $d$-dependent normalization, which is feasible.) Token-independence is the property that matters for FRA-QK; the lag shape is extra structure on top.
+\end{definition}
+
+\subsection{Characterization of token-independent and lag-only patterns}
+
+\begin{theorem}[characterization]\label{thm:characterization}
+\textbf{[exact, given Assumption~\ref{ass:qk}]} The pattern is token-independent on the support, for all $d \ge 2$, if and only if
+\begin{itemize}
+    \item[\textbf{(C1)}] $q_d \cdot \hat k_E(z) = 0$ for every realized query $(z_d, d)$ and every token $z$, including the diagonal token $z = z_d$ --- \emph{key-token differences are invisible to every realized query}; and
+    \item[\textbf{(C2)}] $\hat q_E(z) \cdot \hat k_P(s) = 0$ for every token $z$ and realized key position $s$ --- \emph{query-token differences see only the mean key-position content}.
+\end{itemize}
+Under (C1)--(C2) the score is, exactly,
+\begin{equation}\label{eq:scoresplit}
+    \sigma(d,s) = \underbrace{\big(\bar q_E + q_P(d)\big)\cdot k_P(s)}_{\text{profile } \ell_d(s)}
+    \;+\; \underbrace{q_d\cdot\bar k_E + \hat q_E(z_d)\cdot\bar k_P}_{\text{per-row constant } C(z_d, d)} ,
+\end{equation}
+and $A_{d,\cdot} = \softmax{\ell_d(\cdot)}$. The pattern is lag-only if and only if additionally
+\begin{itemize}
+    \item[\textbf{(C3)}] there exist constants $\mu_d$ with $\ell_d(s) = \log a(d-s) + \mu_d$ for all $s \le d$ (a condition on the positional content only).
+\end{itemize}
+\end{theorem}
+\begin{proof}
+($\Leftarrow$) Under (C1), $q_d\cdot k_E(z_s) = q_d\cdot\bar k_E$ for every key token; under (C2), $q_E(z_d)\cdot k_P(s) = \bar q_E\cdot k_P(s) + \hat q_E(z_d)\cdot\bar k_P$. Substituting into $\sigma = q_d\cdot(k_E(z_s) + k_P(s))$ gives Eq.~\eqref{eq:scoresplit}; the second group is constant across $s \le d$, so softmax removes it (Proposition~\ref{prop:invariances}.1), and the first group is token-free. The diagonal key $s = d$ (whose token is forced equal to $z_d$) is covered because (C1) quantifies over \emph{all} tokens including $z_d$.
+
+($\Rightarrow$) Token-independence means: for every $d \ge 2$, every pair of keys $s \ne s' \le d$, and every joint token assignment allowed by (A0), the difference $\sigma(d,s) - \sigma(d,s') = q_d\cdot(k_s - k_{s'})$ is independent of $(z_d, z_s, z_{s'})$. Fix $s' < d$, $s < d$, $s \ne s'$, pin $z_{s'} = z_0$, and vary $z_s$ with $(z_d, d)$ fixed: independence forces $q_d\cdot k_E(z_s)$ constant in $z_s$, i.e.\ $q_d\cdot\hat k_E(z) = 0$ for all $z$ and, by (A0), all realized queries: this is (C1). Next vary $z_d$ with $z_s, z_{s'}$ pinned: independence forces $q_E(z_d)\cdot(k_s - k_{s'})$ constant in $z_d$; using (C1) the $k_E$ parts drop, giving $\hat q_E(z)\cdot(k_P(s) - k_P(s')) = 0$ for all $z$ and all realized pairs $s \ne s'$, which is (C2) modulo the per-row constant $\hat q_E(z)\cdot\bar k_P$. For $d \ge 3$ this exhausts the conditions, and the diagonal pair $(s, s') = (d, s')$ is then automatically token-independent once (C1)--(C2) hold. For $d = 2$ the diagonal pair $(2,1)$ vs $(2,2)$ is the only pair: varying $z_1$ at fixed $z_2 = z_d$ in $\sigma(2,2) - \sigma(2,1)$ supplies (C1) for the queries realized at $d = 2$, and varying $z_2$ supplies the corresponding (C2) instances. For $d = 1$ the row is trivially $A_{1,1} = 1$. The lag-only clause is the definition of (C3) applied to Eq.~\eqref{eq:scoresplit}.
+\end{proof}
+
+\begin{remark}[realizability of the geometric profile]\label{rem:realizability}
+For $a(\tau) = \zeta^\tau$ with $\zeta \in (0,1)$, (C3) is solved by a single linear positional key direction: $k_P(s) = s\,|\log\zeta|\,\hat u + w$ with $(q_P(d) + \bar q_E)\cdot\hat u = 1$ (scores grow linearly in $s$: recency), and $\mu_d$ absorbs the $d$-dependence; the queries may even be constant in $d$ (per-row constants are free). For $\zeta < 0$, $\log a$ is undefined and no single softmax head realizes the profile (softmax patterns are positive); two heads are required, reproducing P2's two-head requirement for negative eigenvalues.
+\end{remark}
+
+\subsection{Gauge coordinates and gauge families}
+
+Splitting (C1) into independent components (differencing and averaging in each variable) leaves the following functions completely unconstrained by (C1)--(C3) --- and hence by the pattern, the forward pass, and the loss. They are coordinates on the gauge orbit:
+\begin{equation}\label{eq:gaugecoords}
+    \underbrace{\bped(d) := q_d \cdot \bar k_E}_{\text{pedestal}}, \qquad
+    \underbrace{b(z) := \bar q_E \cdot \hat k_E(z)}_{\text{key-content read}}, \qquad
+    \underbrace{\theta}_{\substack{\text{profile share routed}\\ \text{through token queries}}}, \qquad
+    \underbrace{\rho(z) := \hat q_E(z)\cdot(\bar k_E + \bar k_P)}_{\text{query row-constants}} ,
+\end{equation}
+where $\theta$ is the fraction of the recency slope $\ell_d$ carried on the token side of the query split. We also write $w_z := \sum_{s: z_s = z} A_{d,s}$ for the clean pattern mass on token $z$ in row $d$.
+
+\begin{prop}[gauge families]\label{prop:gauge}
+\textbf{[exact on-distribution; G1 exact everywhere; existence requires the stated dimension margins]} At any configuration satisfying (C1)--(C2), the following weight reparameterizations leave the pattern, the forward pass on the data distribution, and the loss unchanged, while dialing the coordinates of Eq.~\eqref{eq:gaugecoords} through zero to arbitrary magnitude:
+\begin{itemize}
+    \item[\textbf{(G1)}] \emph{Embedding re-split.} $e(z) \to e(z) + u$, $p_s \to p_s - u$ for any $u$. Every residual $\xb_s$ --- hence every activation, the loss, and behavior on \emph{and off} distribution --- is bit-identical, while $\bar q_E \to \bar q_E + \Wq\Phi u$ and $\bar k_E \to \bar k_E + \Wk\Phi u$, so $\bped(d)$, $b(\cdot)$, $\rho(\cdot)$, and the $\theta$-share all move. (In the trained-SAE basis the analogue is moving a constant vector between decoder directions and $\bdec$.) Its weight-space twin sets $\Wq' = \Wq + \Delta$ with $\Delta\Phi e(z) = m_0$ for all $z$ and $\Delta\Phi p_d = -m_0$ for all $d$ (a consistent linear system when the embedded token and positional vectors are linearly independent), which dials $\theta$ through all of $\mathbb{R}$ at unchanged realized queries.
+    \item[\textbf{(G2)}] \emph{Per-row-constant rank-one updates (query side).} $q_E(z) \to q_E(z) + m(z)$ with each $m(z)\cdot k(s)$ constant across realized keys $s$ (feasible since $\dim\mathrm{span}\{k(s) - k(s')\} \le (\vocab - 1) + \dim\{k_P\text{-span}\} \ll d_h$ at a lag-only configuration). Adds a per-row constant $\rho(z_d)$: pattern and loss exactly invariant at any magnitude, while the tok$\times$tok attribution mass moves arbitrarily --- \emph{attribution dialed at fixed cut effect}.
+    \item[\textbf{(G2$'$)}] \emph{Pedestal (key side).} $k_E(z) \to k_E(z) + b_0\, n_k$ with $n_k$ orthogonal to realized query \emph{differences} and $\bar q\cdot n_k \ne 0$: adds a global score constant, dials $\bped(d)$ --- the coefficient of every key-side cut (Theorem~\ref{thm:cutcalc}) --- at fixed loss.
+    \item[\textbf{(G3)}] \emph{Null-direction rank-one (key side).} $k_E(z) \to k_E(z) + b(z)\,n_k$ with non-constant $b$ and $n_k$ orthogonal to \emph{all} realized queries (feasible when $d_h$ exceeds the realized query span; at the minimal realization of Remark~\ref{rem:realizability} the span has dimension $\le \vocab$, so $d_h \ge \vocab + 1$ suffices; for Mess3 the key-difference rank is $\le 4$, so $d_h \ge 5$). Every realized score is exactly unchanged while the feat$\times$feat attribution changes by an arbitrary rank-one token$\times$token mass, exactly cancelled against the pos$\times$feat term-pairs: dials $b(\cdot)$ from $0$ to arbitrarily large.
+\end{itemize}
+G2, G2$'$, G3 are on-distribution invariances (the forward pass is unchanged on every input whose residuals lie in the realized affine hull); G1 is an everywhere-invariance and is the primary dial.
+
+\begin{remark}[what the dial can never move]\label{rem:dialinvariant}
+Every gauge family above shifts \emph{mean} components: G1 adds the same $u$ to all token embeddings, G2/G2$'$/G3 add per-row constants or null-direction terms. The \emph{centered} interaction block $\hat q_E(z)\cdot\hat k_E(z')$ is invariant under all of them. At a token-independent-pattern configuration that block is zero (C1a), so everything FRA-QK measures there is dialable; on content-gated data the same block is nonzero and loss-pinned, and no gauge transformation can remove it. The gauge dial therefore collapses FRA-QK cut effects exactly on the data distributions where the pattern is content-blind, and provably cannot on the induction side of the boundary --- the dial is a regime \emph{diagnostic}, not merely a debunking device.
+\end{remark}
+\end{prop}
+
+\begin{prop}[the feature$\times$feature score mass is pure gauge]\label{prop:featfeat}
+\textbf{[exact, given a token-independent-pattern configuration]} At any configuration satisfying (C1)--(C2), the FRA-QK feature$\times$feature score contribution decomposes as
+\begin{equation}
+    Q(z_d, z_s) = \underbrace{\bar q_E\cdot\bar k_E}_{\text{const}}
+    + \underbrace{\hat q_E(z_d)\cdot\bar k_E}_{\text{query-token gauge}}
+    + \underbrace{b(z_s)}_{\text{key-token gauge}}
+    + \underbrace{\hat q_E(z_d)\cdot\hat k_E(z_s)}_{=\,0 \text{ by (C1a)}} ,
+\end{equation}
+where (C1a) $\hat q_E(z)\cdot\hat k_E(z') = 0$ follows from (C1) by differencing over $z_d$ at fixed $d$ under (A0). Its entire token-dependent structure is additively separable and consists of gauge coordinates, each dialable by Proposition~\ref{prop:gauge}. Consequently the loss level set contains configurations where the feat$\times$feat mass (raw or pattern-weighted) is exactly $0$ and configurations where it dominates the score budget, with identical behavior: \textbf{FRA-QK attribution at a token-independent-pattern optimum measures gauge, not computation.} Caveat: weight decay and training dynamics select \emph{some} gauge; the error is interpreting the selected gauge's FRA numbers causally.
+\end{prop}
+
+\subsection{Cut calculus at the lag-only configuration}
+
+\begin{definition}[content leak]\label{def:leak}
+For a trained model, the measurable \emph{content leak} is
+\begin{equation}
+    \varepsilon := \max_{d, z, z'}\big|q_d\cdot\big(k_E(z) - k_E(z')\big)\big|
+    + \max_{z, s, s'}\big|\hat q_E(z)\cdot\big(k_P(s) - k_P(s')\big)\big| ,
+\end{equation}
+the total violation of (C1)--(C2), which also absorbs the LN-scale leak of (A2).
+\end{definition}
+
+\begin{theorem}[cut calculus]\label{thm:cutcalc}
+\textbf{[exact given (C1)--(C3) with $\varepsilon = 0$; each statement degrades by an additive $O(c\varepsilon)$ effect with the TV bound of Eq.~\eqref{eq:tv} otherwise]} Cut the single token feature $z^*$ at gain $c$ (per-side term $e(z^*)$, as implemented). The subtracted scores and their exact responses:
+\begin{enumerate}
+    \item \textbf{Key side.} $\delta(d,s) = \big(q_d\cdot k_E(z^*)\big)\ind[z_s = z^*] = \bped(d)\,\ind[z_s = z^*]$, and by (C1) the coefficient is the \emph{same pedestal $\bped(d)$ for every token feature} (pedestal universality). The response is the exact two-valued form of Proposition~\ref{prop:twovalued} with $\kappa = \bped(d)$, $w = w_{z^*}$, including the mass renormalization law. At P2 ideal weights $v_s = C_v\, g(z_s)$ in the belief plane, so $\mu_{z^*} = C_v\, g(z^*)$ and $\bar v_A = C_v(r_1(d) - \pib)/N_d$ (the pattern $\zeta^{d-s}/N_d$ makes $\bar v_A$ the normalized constrained update), giving the belief-plane response
+    \begin{equation}\label{eq:beliefcut}
+        \Delta\hat r_1(d) = C_v\,\frac{(e^{-c\bped(d)} - 1)\, w_{z^*}}{1 + (e^{-c\bped(d)} - 1)\, w_{z^*}}
+        \Big(g(z^*) - \frac{r_1(d) - \pib}{N_d}\Big) :
+    \end{equation}
+    a belief-plane distortion along $g(z^*) - \bar g_A$, scaled by the gauge coordinate $\bped(d)$, saturating at ``delete all $z^*$-keys and renormalize'' as $c\bped \to \infty$, and identically zero at every gain at the canonical gauge $\bped = 0$. It corrupts the belief-state (grammar) component and leaves aggregate concept content protected (Section~\ref{sec:agg}).
+    \item \textbf{Key side, full token set.} Every key carries exactly one active token feature, so the summed edit is $\delta(d,s) = \bped(d)$ for all $s$: a per-row constant, hence \textbf{exactly inert at every gain} by Proposition~\ref{prop:invariances}.1. (Single features are cuttable only because the cut breaks this sum.) With leak $\varepsilon$: $\osc(\delta) \le \varepsilon$ and the effect is $O(c\varepsilon)$. In the trained-SAE basis, ``full set'' means the union of all \emph{feature} key-terms; the $\bdec$/err/const key terms are separate FRA sides and are outside the sum.
+    \item \textbf{Query side.} Only rows with $z_d = z^*$ are affected; for those, $\delta(d,s) = \mathrm{const}(z^*) + b(z_s) + \chi(s)$ with $\chi(s) := \bar q_E\cdot\hat k_P(s)$. Three pieces: the constant $\rho(z^*)$ is exactly inert; the key-token piece $b(z_s)$ is \emph{the same function for every cut token $z^*$} (by (C1a) the $z^*$-specific part vanishes); and the profile piece $\chi(s)$ is the $\theta$-share of the lag profile itself. If the gauge routes $\chi(s) = \theta\,\tau\log\zeta$ modulo per-row constants (which softmax ignores), with an exactly log-geometric profile, the edited affected rows have lag coefficient $(1 - c\theta)\log\zeta$, i.e.
+    \begin{equation}\label{eq:morph}
+        \zeta \;\longrightarrow\; \zeta^{\,1 - c\theta} \qquad \text{for rows with } z_d = z^* ,
+    \end{equation}
+    exactly and at all orders: the cut \emph{morphs the decay rate} (affected rows go uniform at $c\theta = 1$ and reverse beyond), a grammar distortion scaled by the gauge share $\theta$. At the gauge that routes the whole profile through positional queries ($\theta = 0$, $b \equiv 0$), the query-side cut is exactly inert at every gain.
+    \item \textbf{Pair cut.} $\delta = Q(z^*, z^*)\,\ind[z_d = z^*]\ind[z_s = z^*]$, with the Proposition~\ref{prop:twovalued} form on affected rows; the coefficient $Q(z^*, z^*)$ is again a gauge scalar.
+    \item \textbf{Either side.} $\delta_{\mathrm{either}} = \delta_{\mathrm{key}} + \delta_{\mathrm{query}} - \delta_{\mathrm{pair}}$ (inclusion--exclusion; this is literally the implementation), and first-order effects add by linearity of the covariance.
+\end{enumerate}
+Every coefficient above is a gauge coordinate of Eq.~\eqref{eq:gaugecoords}: all cut effects vanish at the canonical gauge and are unbounded along the same orbit. The predicted empirical signature is small, unsystematic ``removal'' together with possibly sizable collateral (pieces 3's profile morph and 1's belief distortion touch all tokens' evidence), which is what the mixture toy shows (Section~\ref{sec:predictions}).
+\end{theorem}
+
+\subsection{The boundary: separability and the parallelogram lemma}
+
+The results above are conditional on the optimum having a token-independent pattern. The boundary of that regime is a data property.
+
+\begin{definition}[separable kernel]
+A one-layer attention computation is \emph{separable} if the head output takes the form $\cb_d = \sum_{s\le d} a_d(d-s)\,\nu(z_s)$ (plus diagonal/skip terms in $z_d$): pattern a function of lag alone, all token dependence carried through OV. The constrained belief update, Eq.~\eqref{eq:r1}, is separable per eigenvalue: the lag factor $\lambda^{d-s}$ is token-free and $g(z_s)\Pb_\lambda$ is a per-token vector.
+\end{definition}
+
+\begin{lemma}[parallelogram lemma for induction data]\label{lem:parallelogram}
+\textbf{[exact]} Fix positions $s_1 < s_2 < d$, query token $z_d = \mathrm{A}$, all other positions identical across contexts, with fixed successor tokens $\mathrm{X}$ at $s_1{+}1$ and $\mathrm{Y}$ at $s_2{+}1$, $\mathrm{X} \ne \mathrm{Y}$. Consider the four contexts with tokens at $(s_1, s_2)$ given by $C_1 = (\mathrm{A}, \mathrm{B})$, $C_2 = (\mathrm{B}, \mathrm{A})$, $C_3 = (\mathrm{A}, \mathrm{A})$, $C_4 = (\mathrm{B}, \mathrm{B})$. For \emph{any} lag-only pattern and any per-key values (values depending on the key's token and position only), the head outputs satisfy
+\begin{equation}
+    \cb^{(1)} + \cb^{(2)} = \cb^{(3)} + \cb^{(4)}
+\end{equation}
+exactly (the position-wise token multisets agree: $\{\mathrm{A}, \mathrm{B}\}$ at each of $s_1, s_2$ on both sides), and $\xb_d$ is common to all four; hence any affine logit map yields margins $g_i := (\ell_{\mathrm{X}} - \ell_{\mathrm{Y}})_i$ with $g_1 + g_2 = g_3 + g_4$. The induction task (predict the successor of the most recent occurrence of $z_d$) demands $g_1 \ge m$, $g_2 \le -m$, $g_3 \le -m$ for a margin $m > 0$; the parallelogram identity then forces $g_4 = g_1 + g_2 - g_3 \ge m$: the model must favor $\mathrm{X}$ by margin $m$ in $C_4$, a context containing \emph{no} occurrence of $\mathrm{A}$, where Bayes favors neither. Hence at least one of the four context types carries a margin shortfall of size $\ge m/4$ against its Bayes target, so every (lag-only pattern, affine readout) pair pays a cross-entropy excess of at least $\min_i P(C_i\text{-type})$ times the corresponding KL gap, bounded away from $0$ since induction requires large $m$; the content-gated score $\eta\,\ind[z_s = z_d]$ breaks the parallelogram and realizes the task.
+\end{lemma}
+
+\begin{remark}
+The flat-profile special case admits a one-step argument (swapping the tokens at two equal-weight lags changes nothing), which is exactly the case $a(\tau_1) = a(\tau_2)$; for non-flat profiles the single swap changes the aggregate by $(a(\tau_1) - a(\tau_2))(\psi(z_1) - \psi(z_2)) \ne 0$, and the four-context parallelogram above is the argument that survives.
+\end{remark}
+
+\begin{theorem}[the boundary]\label{thm:boundary}
+\textbf{[conditional on Conjecture~\ref{conj:z1}; the separability criterion is exact given the affine readout of the model class; the gap constant is existence-only]} FRA-QK has a causal handle at the optimum if and only if the Bayes-parallel target kernel $K(d-s, z_s, z_d)$ is \emph{outside} the separable class $a(d-s)\,\nu(z_s) + (\text{diagonal/skip terms in } z_d)$ within the achievable loss tolerance. In particular:
+\begin{enumerate}
+    \item For every stationary HMM whose constrained update is the class optimum, $K = \sum_{\lambda\ne1}\lambda^{d-s} g(z_s)\Pb_\lambda$ is separable, so the handle is zero: at every minimizer, all FRA-QK cut effects are the gauge formulas of Theorem~\ref{thm:cutcalc}, the gauge orbit contains a point where every FRA-QK cut of every token feature on every side is exactly inert at every gain ($\bped = 0$, $b \equiv 0$, $\theta = 0$, realizable by G1/G2$'$/G3), and the infimum over the orbit of every cut effect is $0$.
+    \item For induction/matching data, Lemma~\ref{lem:parallelogram} shows the target is non-separable: content gating is required at the optimum, the interaction part of $Q$ is pinned by the loss, the feat$\times$feat mass acquires a gauge-invariant component, and key-side cuts of the gating feature move the loss by an amount bounded below across the gauge orbit --- an $O(1)$ handle.
+\end{enumerate}
+The two formulations of the criterion --- kernel separability, and the optimal parallel predictor having the form $G(z_d, \sum_s a(d-s)\psi(z_s), d)$ --- coincide for the affine readout of M2 ($\mathrm{resid}_{\mathrm{mid}} = \xb_d + \cb_d$, then a linear unembedding); for an unrestricted readout $G$ the second form is vacuous (with generic profiles the lag-weighted sum is injective on contexts), so the readout class is part of the boundary statement.
+\end{theorem}
+
+\begin{remark}[Toeplitz failure is the wrong boundary]
+Position-nonstationarity (no-BOS transients, position-dependent statistics) breaks \emph{Toeplitz} optimality --- the optimal profile becomes $a_d(\tau)$ with genuine $d$-dependence --- but leaves token-independence intact: FRA-QK remains pure gauge there. The boundary is content gating, and only content gating.
+\end{remark}
+
+\begin{conjecture}[(Z1) lag-only optimality of the CE optimum]\label{conj:z1}
+Every population-loss minimizer of the one-layer softmax/CE class (M2) on stationary-HMM data has a token-independent pattern on the support. \emph{Status:} proved by P3 for the free-profile MSE surrogate (M1), where the loss sees the pattern only through lag summaries and the lifted objective is convex with Toeplitz maximizers as $T \to \infty$; supported for M2 by P2 (trained patterns token-independent to measurement precision) and P1 (causal token-shuffles of QK inputs leave the loss unchanged). The structural argument --- the best parallel predictor for a stationary HMM is the constrained update, a lag-only linear functional of key contents, so content gating adds fit only outside the target class --- is heuristic at finite width and for CE. Everything gauge-related (Theorem~\ref{thm:characterization}, Propositions~\ref{prop:gauge}--\ref{prop:featfeat}, Theorem~\ref{thm:cutcalc}) is exact \emph{given} a token-independent-pattern configuration; only the claim that the trained optimum is such a configuration rests on this conjecture.
+\end{conjecture}
+
+\section{The FRA-OV calculus}\label{sec:ov}
+
+This section works in M1 (where every statement is an algebraic identity) and then generalizes the concept-nulling theorem to arbitrary trained models. The feature selector for a set $S \subseteq \mathcal{V}$ in the idealized basis is $\Es := \sum_{j\in S}\eb_j\eb_j^\top$; for a trained TopK SAE replace $\Es\xb_s$ by $\sum_{j\in S} z_j(s)\boldsymbol{d}_j$ and every M1 statement goes through with the corresponding residual-space map, exactly as the implementation computes. $\Pib := \Ib - \tfrac1\vocab\one\one^\top$ denotes the centering projector on token space (used for Mess3, where $\pb = \tfrac13\one$).
+
+\subsection{Attribution closed forms}
+
+\begin{definition}[FRA-OV attribution, M1]\label{def:ovattr}
+The FRA-OV attribution of token-feature $j$ at lag $\tau$ to the prediction at position $t$ is
+\begin{equation}
+    \mathrm{attr}(j, \tau, t) := A_{t, t-\tau}\,\Vb\eb_j \in \mathbb{R}^{\vocab} .
+\end{equation}
+This is exact and complete: $f(\Xb)_t = \Wb\xb_t + \sum_{\tau\ge0}\mathrm{attr}(z_{t-\tau}, \tau, t)$, and it factorizes as (scalar lag profile) $\times$ (token-indexed direction) --- all lag structure in $\Ab$, all content structure in the column $\Vb\eb_j$.
+\end{definition}
+
+\begin{lemma}[column structure of the spectral bigrams]\label{lem:column}
+\textbf{[exact]} For every nonstationary eigenvalue $\lambda \ne 1$,
+\begin{equation}
+    \Mb_\lambda\,\eb_j = p_j\,\Wu\big(g(j)\,\Pb_\lambda\big)^{\!\top} ,
+\end{equation}
+where $\Wu$ is P3's unembedding with rows $\one^\top(\Ti)^\top$ and $p_j$ the stationary probability of token $j$.
+\end{lemma}
+\begin{proof}
+$(\Mb_\lambda)_{ij} = \pib\Tj\Pb_\lambda\Ti\one$; now $\pib\Tj = p_j(\pib + g(j))$ and $\pib\Pb_\lambda = 0$ for $\lambda \ne 1$, so $(\Mb_\lambda)_{ij} = p_j\, g(j)\Pb_\lambda\Ti\one = p_j\big(\Wu(g(j)\Pb_\lambda)^\top\big)_i$.
+\end{proof}
+
+Column $j$ of $\Mb_\lambda$ is $p_j$ times the unembedded $\lambda$-component of token $j$'s belief displacement: this is the bridge between P3's token-space statistics and P2's belief-space $g$-vectors.
+
+\begin{prop}[general attribution closed form]\label{prop:attrgeneral}
+\textbf{[exact]} At the M1 optimum,
+\begin{equation}
+    \mathrm{attr}(j, \tau, t) = A_{t, t-\tau}\,\Vb_*\eb_j
+    = A_{t, t-\tau}\sum_k (\Sb^+)_{kj}\sum_{\lambda\ne1}\alphatil'(\lambda)\,
+    p_k\Big(\lambda\Ib - \sum_{\mu\ne1}\Mb_\mu\Db^{-1}\Big)\Wu\big(g(k)\Pb_\lambda\big)^{\!\top} .
+\end{equation}
+Consequences: (i) $\mathrm{im}(\Vb_*) \subseteq \mathrm{span}\{\Wu(g(k)\Pb_\lambda)^\top\}$ --- every FRA-OV attribution vector lies in the unembedded nonstationary displacement span, for any HMM; (ii) $\one^\top\mathrm{attr} = 0$ (from $\one^\top\Rb = 0$); (iii) $\Sb^+$ whitens the attended-residual covariance and in general \emph{mixes token identities}: $\Vb_*\eb_j$ is proportional to $\Wu g(j)^\top$ exactly when $\Sb$ is a scalar on the nonstationary token subspace, which Mess3 guarantees by symmetry.
+\end{prop}
+
+\subsection{Mess3 collapse}
+
+\begin{prop}[Mess3 scalar collapse]\label{prop:mess3}
+\textbf{[exact; verified numerically to float precision]} For Mess3$(x,a)$, with $m := \zeta(3a-1)^2/12$ and any attention summary $(\alpha, \gamma)$:
+\begin{equation}
+    \Mb_\zeta = m\,\Pib, \qquad
+    \Wu\,g(j)^\top = 3m\,\Pib\,\eb_j, \qquad
+    \Sb = s\,\Pib, \qquad
+    \Vb_* = v_\zeta\,\Pib ,
+\end{equation}
+\begin{equation}
+    s = \frac{\gamma(0) - \alpha(0)^2}{3} + 2m\big(\gammatil'(\zeta) - \alpha(0)\alphatil'(\zeta)\big) - 3m^2\alphatil'(\zeta)^2,
+    \qquad
+    v_\zeta = \frac{\alphatil'(\zeta)\, m\,(\zeta - 3m)}{s} .
+\end{equation}
+Hence the FRA-OV attribution is exactly
+\begin{equation}\label{eq:mess3attr}
+    \mathrm{attr}(j, \tau, t) = A_{t, t-\tau}\;\kappa_V\,\Wu\,g(j)^\top ,
+    \qquad
+    \kappa_V := \frac{v_\zeta}{3m} = \frac{\alphatil'(\zeta)(\zeta - 3m)}{3s} .
+\end{equation}
+\end{prop}
+\begin{proof}[Proof sketch]
+$\Db = \tfrac13\Ib$ and $\Mb_1 = \tfrac19\one\one^\top$; by the $S_3$ symmetry of Mess3, $\Mb_\zeta$ is a symmetric circulant with zero row and column sums, hence proportional to $\Pib$, with constant $m$ from Lemma~\ref{lem:column} and $g(j)\Ti\one = \tfrac{3a-1}{2}\zeta\, g(j)_i$. Substituting into P3's expressions for $\Sb$ and $\Rb = \alphatil'(\zeta)(\zeta\Ib - 3m\Pib)\, m\Pib$ gives scalars, since $\Pib$ is idempotent.
+\end{proof}
+
+\begin{corollary}[relation to the constrained update]\label{cor:constrained}
+\textbf{[exact given a lag-only pattern]} If $A_{t,s} = a(t-s)$, the total attention-path output is
+\begin{equation}
+    \Vb_*(\Xb\Ab^\top)_t = \kappa_V\,\Wu\Big(\sum_{\tau\ge0} a(\tau)\, g(z_{t-\tau})\Big)^{\!\top} ,
+\end{equation}
+the unembedded, $a(\tau)$-weighted token-displacement sum. If additionally $a(\tau) = (1-\zeta)\zeta^\tau$ (the P2 ideal profile in its $t \to \infty$ normalization; at finite $t$ the row-stochastic form is $\zeta^{d-s}/N_d$ and the identity carries an $O(\zeta^t)$ truncation correction), this equals $\kappa_V(1-\zeta)\,\Wu\big(r_1(t) - \pib\big)^\top$: the unembedded constrained-belief displacement of Eq.~\eqref{eq:r1}. In M1, FRA-OV per (token, lag) reads off exactly the per-source terms $\zeta^{d-s} g(z_s)$ of the constrained update, scaled by the single number $\kappa_V(1-\zeta)$.
+\end{corollary}
+
+\begin{remark}[which decay rate]
+P3's \emph{optimal} free-profile attention for Mess3 is a sum of geometrics with rates $\eta_j$ given by in-disc roots of the palindromic polynomial (Section~\ref{sec:flattening}) --- generically $\eta \ne \zeta$. The P2 ansatz $a(\tau) \propto \zeta^\tau$ is a CE/softmax prediction, and the M1 optimum has its own rate. \textbf{[heuristic boundary]} Which rate a trained CE model shows is settled by neither theory; attribution decays should be fitted with the rate as a free parameter and compared to both.
+\end{remark}
+
+\subsection{The exact severing parabola}
+
+The FRA-OV cut of feature set $S$ at gain $c$ in M1 gives the prediction
+\begin{equation}
+    f_c(\Xb) = \Wb\Xb + \Vb\big(\Ib - c\,\Es\big)\Xb\Ab^\top = f(\Xb) - c\,\Deltab,
+    \qquad
+    \Deltab := \Vb\Es\Xb\Ab^\top .
+\end{equation}
+
+\begin{prop}[exact loss parabola]\label{prop:parabola}
+\textbf{[exact, any $(\Wb, \Vb)$]}
+\begin{equation}
+    \mathcal{L}(c) = \mathcal{L}_0 + c\,\ell_1 + \tfrac{c^2}{2}\,\ell_2 ,
+\end{equation}
+\begin{equation}
+    \ell_1 = -\tr\big(\Es\,(\nabla_{\Vb}\mathcal{L})^\top\Vb\big)
+    = \tr\big(\Vb\Es\Cb_+^\top\big) - \tr\big(\Wb^\top\Vb\Es\Cb^\top\big) - \tr\big(\Vb^\top\Vb\Es\Gb\big),
+    \qquad
+    \ell_2 = \tr\big(\Vb\Es\Gb\Es\Vb^\top\big) \ge 0 ,
+\end{equation}
+with $\nabla_{\Vb}\mathcal{L} = -\Cb_+ + \Wb\Cb + \Vb\Gb$ (P3).
+\end{prop}
+\begin{proof}
+$\mathcal{L}(c) = \frac{1}{2T}\E\normsq{(\Yb - f(\Xb)) + c\Deltab}{F}$; the linear coefficient is $\ell_1 = \frac1T\E\,\tr\big((\Yb - f)^\top\Deltab\big) = \tr\big(\Vb\Es\cdot\frac1T\E[\Xb\Ab^\top(\Yb - f)^\top]\big) = -\tr(\Es(\nabla_{\Vb}\mathcal{L})^\top\Vb)$, since $\nabla_{\Vb}\mathcal{L} = \frac1T\E[(f - \Yb)(\Xb\Ab^\top)^\top]$; expanding with P3's statistics gives the stated traces. The quadratic coefficient is $\ell_2 = \frac1T\E\normsq{\Deltab}{F} = \tr(\Vb\Es\Gb\Es\Vb^\top)$ from $\frac1T\E[\Xb\Ab^\top\Ab\Xb^\top] = \Gb$.
+\end{proof}
+
+\begin{corollary}[vertex at zero]\label{cor:vertex}
+\textbf{[exact]} At the M1 optimum ($\nabla_{\Vb}\mathcal{L} = 0$): $\ell_1 = 0$ for \emph{every} feature set $S$, so
+\begin{equation}
+    \mathcal{L}(c) = \mathcal{L}_0 + \tfrac{c^2}{2}\tr\big(\Vb_*\Es\Gb\Es\Vb_*^\top\big),
+    \qquad c_{\text{loss-min}} = 0 .
+\end{equation}
+The loss-minimizing gain is \emph{no cut}; severing ($c = 1$) and counter-injection ($c > 1$) cost quadratically, and $\pm c$ cost the same. Off optimum, $c_{\text{loss-min}} = -\ell_1/\ell_2$, so \textbf{the location of the empirical parabola vertex is an exact meter of the trained model's distance from the regression optimum along the cut direction.} With Mess3 scalars: full-path cut ($S = \mathcal{V}$) has $\ell_2 = 2v_\zeta^2\big(\tfrac{\gamma(0)}{3} + 2\gammatil'(\zeta)\, m\big)$; single token ($S = \{j\}$) has $\ell_2 = \tfrac23 v_\zeta^2\big(\tfrac{\gamma(0)}{3} + \tfrac{2\gammatil'(1)}{9} + \tfrac43\gammatil'(\zeta)\, m\big)$.
+\end{corollary}
+
+\begin{corollary}[severing cost exceeds marginal path value]\label{cor:amputation}
+\textbf{[exact]} Cutting the whole OV path at $c = 1$ leaves $\Wb_*$ carrying the stale redundancy correction $-\Vb_*\Cb^\top\Db^{-1}$, so $\mathcal{L}(1) - \mathcal{L}_0 = \tfrac12\ell_2$ generally \emph{exceeds} the loss gap to the re-optimized attention-free model, which is the skip-bigram term $\tfrac12\tr(\Rb\Sb^+\Rb^\top) = v_\zeta^2 s$ for Mess3. At the reference parameters of Table~\ref{tab:mess3}: cut cost $0.002338$ versus re-optimized gap $0.000700$ --- severing over-penalizes by $3.3\times$. A CE increase under $c = 1$ severing is a different quantity from the path's marginal value.
+\end{corollary}
+
+\subsection{Concept-nulling gains in M1}
+
+\begin{definition}[concept tracking]
+Fix the concept target as the constrained displacement history $h_t := \sum_{s\le t}\zeta^{t-s}\,\Pib\,\eb_{z_s}$ (proportional to $\Wu(r_1(t) - \pib)^\top$ in Mess3). Tracking of an intervened model: $\beta(c) := \E\big\langle\Pib f_c(\Xb)_t,\; h_t\big\rangle$ (means vanish for Mess3; subtract them in general). The \emph{concept-nulling gain} $c^*$ is the root of $\beta$.
+\end{definition}
+
+\begin{prop}[M1 nulling gain]\label{prop:m1null}
+\textbf{[exact in the stationary $t \to \infty$ limit, lag-only pattern; truncation corrections $O(\zeta^t)$]} Write $\Pib f = w\,\Pib\eb_{z_t} + v_\zeta\sum_\tau a(\tau)\Pib\eb_{z_{t-\tau}}$, where
+\begin{equation}
+    w := 3m - v_\zeta\big(\alpha(0) + 3\alphatil'(\zeta)\, m\big)
+\end{equation}
+is the direct-path (skip) displacement coefficient (the nonstationary block of $\Wb_*$ is $w\Pib$; verified numerically). Then $\beta(c) = \beta_{\mathrm{tot}} - c\,\beta_S$ and
+\begin{equation}
+    c^* = \frac{\beta_{\mathrm{tot}}}{\beta_S} = \frac{\text{total concept flow}}{\text{cut-path concept flow}} .
+\end{equation}
+For the full-path cut ($S = \mathcal{V}$) with $a(\tau) = (1-\zeta)\zeta^\tau$:
+\begin{equation}
+    \beta_{\mathrm{tot}} = w K_0 + v_\zeta\Phi_A, \quad \beta_S = v_\zeta\Phi_A, \quad
+    K_0 = \tfrac23 + \frac{2m\zeta}{1-\zeta^2}, \quad
+    \Phi_A = \frac{1}{1+\zeta}\Big(\tfrac23 + \frac{4m\zeta}{1-\zeta^2}\Big), \quad
+    c^* = 1 + \frac{w K_0}{v_\zeta\Phi_A} .
+\end{equation}
+\end{prop}
+
+\begin{corollary}[when severing suffices]\label{cor:severing}
+$c^* = 1$ exactly when every non-cut path has zero concept covariance; for the full-path cut this is $w = 0$, a measure-zero coincidence \emph{except} at the all-$k{=}0$-through-attention gauge of Proposition~\ref{prop:kzero}, where it is exactly achievable. Generically $c^* > 1$: \textbf{exact severing under-reaches whenever any parallel path carries the same concept with the same sign.}
+\end{corollary}
+
+\begin{corollary}[rank deficiency of single-feature nulls]
+\textbf{[exact]} For $S = \{j\}$ the cut direction is the fixed vector $\Pib\eb_j$, while the concept is $2$-dimensional (the Mess3 belief plane). A scalar gain nulls only the $\Pib\eb_j$-component of the tracking; full concept nulling by single-feature cuts requires as many independently-gained cuts as concept dimensions.
+\end{corollary}
+
+\subsection{The path-share theorem}
+
+\begin{theorem}[concept-nulling gain as a path-share ratio]\label{thm:pathshare}
+\textbf{[exact if the downstream map is affine (sufficient, not necessary); first-order otherwise]} Consider any trained model with an FRA-OV cut at hookpoint $H$: $\mathrm{out}_H \leftarrow \mathrm{out}_H - c\,\Deltab$, with $\Deltab$ computed from the clean run (so the intervened activation is exactly affine in $c$ by construction). Let $u$ be a linear concept readout on a downstream activation, $\omega$ the concept variable, and $\psi(c) := \E\big[(u\cdot F(\mathrm{resid}_H - c\Deltab))\,\omega\big]$ the concept-tracking covariance, $F$ the downstream map. If $F$ is affine along $\Deltab$ (true when everything between $H$ and the readout is linear: residual bypass, frozen LN, attention with frozen patterns, readout pre-MLP), then $\psi(c) = \psitot - c\,\psi_S$ with $\psi_S = \E[(u\cdot\Jb\Deltab)\,\omega]$, $\Jb$ the constant downstream Jacobian, and
+\begin{equation}\label{eq:cstar}
+    c^* = \frac{\psitot}{\psi_S}
+    = \frac{\text{total concept flow into the readout}}{\text{concept flow through the cut path}}
+    = \frac{1}{\text{cut-path share}} .
+\end{equation}
+The decomposition of $\psitot$ into paths is exact by linearity: direct/skip path, attention transport of $S$-latents (the cut path), attention transport of non-$S$ terms ($\bdec$ is concept-inert since constant; $\mathrm{err}_p$; other latents), and, in multi-layer models, later-layer re-aggregation of concept-carrying content that never passes through $H$'s attention. Exactness conditions, itemized:
+\begin{itemize}
+    \item[\textbf{(S1)}] \emph{Clean-pattern cut}: the intervention is affine in $c$ at $H$ (guaranteed by the implementation; a cut that re-runs the softmax is outside this theorem).
+    \item[\textbf{(S2)}] \emph{Affine downstream}: later softmax patterns, LN scales, and MLPs respond linearly to the injected $-c\Deltab$. With MLPs and a CE readout the theorem holds to first order at $c = 0$: $c^*_{\mathrm{lin}} = \psi(0)/(-d\psi/dc|_0)$, and the true root differs by a curvature term $O(c^{*2}\sup\|\partial_c^2\psi\|)$. The empirical symptom of violated (S2) is a bending tracking-vs-$c$ curve.
+    \item[\textbf{(S3)}] \emph{Covariance null versus pointwise null}: $c^*$ nulls the covariance $\psi$. Pointwise (per-sequence, per-position) nulling additionally requires $u\cdot\Jb\Deltab(\Xb)_t \propto u\cdot F_0(\Xb)_t$ as random variables; otherwise the null is a balance of signed residuals. Since path shares are position-dependent, the per-position $c^*(t) = \psitot(t)/\psi_S(t)$ generally varies, and a single gain nulls only the aggregate --- predicting residual tracking of one sign early and the opposite sign late whenever $c^*(t)$ decreases in $t$.
+\end{itemize}
+\end{theorem}
+
+The theorem gives two ex-ante recipes for $c^*$: (i) from theory weights, enumerate concept paths to the readout, sum concept coefficients to $\psitot$ and the cut-path terms to $\psi_S$ (Proposition~\ref{prop:m1null} is this computation for M1); (ii) from a trained model, regress the readout on the concept target for $\beta_{\mathrm{tot}}$, and inject $-\varepsilon\Deltab$ at small $\varepsilon$ to measure the empirical Jacobian slope $\beta_S$ --- no gain sweep needed. Recipe (ii) is exactly what the Phase B numerics execute; its results are collected in Section~\ref{sec:predictions}.
+
+\subsection{The $k = 0$ gauge and identifiability of $c^*$}
+
+P1 (Eq.~25--28) shows that the computation constrains per-lag concept flows at lags $k \ge 1$ and the BOS/prior flow, but only the \emph{sum} of the skip path and diagonal attention at $k = 0$: the split of the current-token displacement between the two is a free degree of freedom of the trained run.
+
+\begin{prop}[M1 realization of the $k = 0$ gauge]\label{prop:kzero}
+\textbf{[exact]} In M1, for any $u \in \big[-\tfrac{\alpha(0)}{1 - \alpha(0)},\, 1\big)$ (the range keeping the reparameterized pattern entrywise nonnegative when $\Ab$ is lag-only with diagonal $\alpha(0)$) the reparameterization
+\begin{equation}
+    \Ab \to (1-u)\Ab + u\,\Ib, \qquad
+    \Vb \to \frac{1}{1-u}\,\Vb, \qquad
+    \Wb \to \Wb - \frac{u}{1-u}\,\Vb
+\end{equation}
+leaves $f$ (hence the loss) invariant: $\xb_t$ is itself a regressor, so diagonal attention mass is collinear with the direct path. Positive $u$ routes skip flow into diagonal attention; negative $u$ routes diagonal attention out into the skip, reaching $a_0 = 0$ at the left endpoint. This is why $\alpha(0)$ drops out of P3's reduced objective, and it is the M1 form of P1's Eq.~28.
+\end{prop}
+
+\begin{corollary}[$c^*$ is a property of the run, not of the task]\label{cor:gaugecstar}
+The FRA-OV cut removes the attention path \emph{including its diagonal}, so $\psi_S$ depends on the gauge: $\psi_S(a_0) = \psi_S^{\text{off-diag}} + a_0 K_0^{\text{concept}}$ with $a_0$ the diagonal-attention concept coefficient, hence
+\begin{equation}
+    c^*(a_0) = \frac{\psitot}{\psi_S^{\text{off-diag}} + a_0 K_0} .
+\end{equation}
+Over the full gauge family of Proposition~\ref{prop:kzero}, $a_0$ ranges over $[0, \infty)$: the diagonal flow can exceed the total $k = 0$ flow $k_0^{\mathrm{tot}}$, leaving a \emph{negative} skip concept coefficient that partially cancels it, and $c^*$ then drops below $1$ without bound. Only the upper endpoint is intrinsic: $c^* \le c^*(0) = \psitot/\psi_S^{\text{off-diag}}$, attained when all $k = 0$ flow rides the skip. Under the \emph{sign-definite convention} --- both skip and diagonal concept coefficients nonnegative, $a_0 \in [0, k_0^{\mathrm{tot}}]$, i.e.\ no cancelling routing, which is how trained runs empirically sit --- the interval is $[1.000, c^*(0)]$, with the lower endpoint at the all-$k{=}0$-through-attention gauge of Corollary~\ref{cor:severing}. Identifiable from the function and data (gauge-invariant): per-lag concept flows at $k \ge 1$, the BOS/prior flow, $k_0^{\mathrm{tot}}$, $\psitot$, and hence the upper bound $c^*(0)$ (plus the interval, given the convention). Unidentifiable from the ideal theory alone: the split $a_0$, hence the point value of $c^*$. Ex post, $a_0$ is measurable in a given model (diagonal pattern mass $\bar A_{d,d}$ and the OV image of the current token; the one-hot-frozen-embedding control of P1 forces $a_0$ maximal within the convention and hence $c^* \to 1$).
+\end{corollary}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llr}
+\hline
+quantity & formula & value \\
+\hline
+$g(z)$ entries & $\tfrac{3a-1}{2}(\eb_z - \tfrac13\one)$ & $(0.2\overline{6}, -0.1\overline{3}, -0.1\overline{3})$ \\
+$m$ & $\zeta(3a-1)^2/12$ & $0.029333$ \\
+$s$ ($\Sb = s\Pib$) & Prop.~\ref{prop:mess3} & $0.033012$ \\
+$v_\zeta$ ($\Vb_* = v_\zeta\Pib$) & Prop.~\ref{prop:mess3} & $0.145668$ \\
+$\kappa_V = v_\zeta/3m$ & Eq.~\eqref{eq:mess3attr} & $1.6553$ \\
+$w$ (skip displacement) & Prop.~\ref{prop:m1null} & $0.017901$ \\
+$k_0^{\mathrm{tot}} = w + \alpha(0)v_\zeta$ & & $0.083451$ \\
+$K_0$, $\Phi_A$ & Prop.~\ref{prop:m1null} & $0.71293$, $0.48980$ \\
+$c^*$ (full-path, P3/ideal gauge) & $1 + wK_0/(v_\zeta\Phi_A)$ & $1.179$ (Monte Carlo: $1.178$) \\
+$c^*$ gauge interval (sign-definite convention) & Cor.~\ref{cor:gaugecstar} & $[1.000,\; 3.417]$ \\
+full-path parabola & Cor.~\ref{cor:vertex} & $\Delta\mathcal{L}(c) = 0.002338\, c^2$ \\
+single-token parabola & Cor.~\ref{cor:vertex} & $\Delta\mathcal{L}(c) = 0.001306\, c^2$ \\
+severing vs re-optimized gap & Cor.~\ref{cor:amputation} & $0.002338$ vs $0.000700$ (ratio $3.34$) \\
+\hline
+\end{tabular}
+\caption{Pinned M1 constants for Mess3 at the P2 reference parameters $x = 0.15$, $a = 0.6$ ($\zeta = 0.55$), ideal profile $a(\tau) = (1-\zeta)\zeta^\tau$ so that $\alpha(0) = 0.45$, $\alphatil'(\zeta) = \zeta/(1+\zeta)$, $\gamma(0) = (1-\zeta)/(1+\zeta)$, $\gammatil'(\zeta) = \zeta/(1+\zeta)^2$. All formulas are exact in $(\alpha, \gamma)$; the geometric profile itself is the P2 ansatz \textbf{[heuristic]}. All values verified against a direct numerical build of the P3 statistics; $c^*$ additionally by Monte Carlo simulation.}
+\label{tab:mess3}
+\end{table}
+
+\subsection{Per-head FRA-OV and the head gauge}
+
+With $H$ heads, the layer output is $O(d) = \sum_h\sum_{s\le d} A^{(h)}_{d,s}\Wov^{(h)}\xb_s$, and the function determines exactly the \emph{collective kernel}
+\begin{equation}
+    \Kb(d,s) := \sum_h A^{(h)}_{d,s}\,\Wov^{(h)}
+\end{equation}
+for each $(d,s)$, and nothing finer (probe by injecting content at $s$). Per-head FRA-OV attribution --- $A^{(h)}_{d,s}\Wov^{(h)}\phi_s(z_j\boldsymbol{d}_j)$ --- is a property of the decomposition, not of $\Kb$.
+
+\begin{prop}[invariants]\label{prop:headinv}
+\textbf{[exact]} Any quantity depending on the weights only through $\Kb$ is invariant under all head reparameterizations preserving the layer function. In particular: (i) the head-summed FRA-OV delta $\Deltab(d) = \sum_s\Kb(d,s)\,\phi_s(\sum_{j\in S} z_j\boldsymbol{d}_j)$ (what the implementation computes --- it sums over $h$); (ii) P1's \emph{effective subspace attention} $\alpha_n(d,s) = \langle f_n(\Kb(d,s)\xb_s),\, g_n(z_s^{(n)})\rangle/\|g_n(z_s^{(n)})\|^2$. \textbf{FRA-OV aggregated over heads into a feature subspace computes precisely the effective subspace attention} (times $\|g_n\|^2$): the gauge-invariant routed aggregate that P1 shows recovers $\zeta_n^{d-s}$ even when no single head is legible.
+\end{prop}
+
+\begin{prop}[the head gauge group]\label{prop:headgauge}
+\textbf{[exact]} Two families of function-preserving reparameterizations:
+\begin{enumerate}
+    \item \emph{Pointwise pattern shifts}: $\{\delta^{(h)}(d,s)\}$ with $\sum_h\delta^{(h)}(d,s)\Wov^{(h)} = 0$ pointwise, zero row sums, and $A^{(h)} + \delta^{(h)} \ge 0$. Nontrivial exactly when the OV matrices are linearly dependent (e.g.\ P2's negative-$\zeta$ pair with antiparallel OVs admits any common zero-row-sum lag profile split between the heads).
+    \item \emph{Head mixing}: $B \in GL(H)$ with column sums $1$: $\tilde A^{(h)} = \sum_g B_{gh}A^{(g)}$, $\tilde\Wov^{(h)} = \sum_g(B^{-1})_{hg}\Wov^{(g)}$; preserves $\Kb$ and row-stochasticity, feasible when $\tilde A^{(h)} \ge 0$ elementwise (and the mixed OVs respect the rank-$d_{\mathrm{head}}$ constraint, slack in the toy regimes).
+\end{enumerate}
+\end{prop}
+
+\begin{corollary}[softmax removes exact identifiability]\label{cor:headident}
+\textbf{[exact]} Softmax patterns are strictly positive, so for $H \ge 2$ there is always an open neighborhood of $B = \Ib$ of feasible mixings: \textbf{per-head FRA-OV attributions are never exactly identifiable from the layer's function.} The gauge radius is quantitative: mixing magnitude in direction $(h \to g)$ is feasible up to $\min_{(d,s)} A^{(h)}_{d,s}/A^{(g)}_{d,s}$-type ratios, set by the smallest pattern entries on the shared support. Sharp, nearly-sparse patterns give an exponentially small gauge and approximately pinned per-head attributions; diffuse patterns give a large gauge.
+\end{corollary}
+
+\begin{prop}[identifiability conditions]\label{prop:headcond}
+\textbf{[exact for (i)--(iii); (iv) is the practical criterion]} Let $r := \dim\mathrm{span}\{\Kb(d,s)\}_{(d,s)}$ (identifiable) and $\kappa(d,s) \in \mathbb{R}^r$ the coordinates of $\Kb(d,s)$ in a fixed basis of the span.
+\begin{enumerate}
+    \item $H > r$: a positive-dimensional family of decompositions always exists --- per-head FRA-OV is pure gauge in at least $H - r$ directions (P1's observed specialization/collaboration/polysemanticity across seeds).
+    \item $H = r$: decompositions correspond to choices of $H$ rays in $\mathbb{R}^r$ expressing every $\kappa(d,s)$ as a nonnegative combination with row normalization; uniqueness (up to permutation) holds exactly when the rays are forced --- the data cone $\mathrm{cone}\{\kappa(d,s)\}$ has exactly $H$ extreme rays and each head's coefficient vanishes (or tends to $0$) somewhere on each other head's support (\emph{cone extremality}, the NMF ``sufficiently scattered'' condition). Linear independence of the heads' lag profiles is necessary and \emph{insufficient} (strictly positive independent profiles still mix, Corollary~\ref{cor:headident}).
+    \item Identifiable and interpretable are independent axes: P1's $\pm0.5$ two-head case is near-extremal (approximately pinned decomposition) yet neither head matches $\zeta^k$ --- only the effective subspace attention does; the $+0.7/+0.4$ specialization case is both near-identifiable and legible.
+    \item \textbf{Per-head FRA-OV rankings are meaningful precisely when the attribution gaps exceed the gauge radius} of Corollary~\ref{cor:headident}; the gauge radius belongs next to any per-head FRA table.
+\end{enumerate}
+Practical rule: aggregate FRA-OV over heads into feature subspaces first (Proposition~\ref{prop:headinv} --- P1's effective subspace attention in SAE coordinates); descend to per-head claims only after checking extremality and $H \le r$.
+\end{prop}
+
+\section{The aggregation limit}\label{sec:agg}
+
+This section derives the aggregation-regime results: why the mixture concept of the toy experiments sits at the spectral boundary $\lambda = 1$ of the framework, what the optimal attention profile does there, and why the concept channel is protected from \emph{every} pattern edit while grammar channels remain exposed. Together with the path-share theorem this yields a three-way classification of what FRA interventions can do to an aggregated concept.
+
+\subsection{The mixture process and its spectral position}
+
+The reference mixture process (the \texttt{fra\_hmm\_toy} generator) has $C$ HMM components with disjoint token blocks; a sequence first draws a mixing vector $\omega \sim \mathrm{Dirichlet}(\kappa\,\alpha_0)$ ($\kappa = 10$, $C = 3$ Mess3 components in the toy), then at each step draws a component $c_t \sim \mathrm{Cat}(\omega)$ and emits one token from that component's block. Because blocks are disjoint, each token announces its component (its \emph{tag}); the Bayes concept posterior after $t{+}1$ tokens with block counts $n_c$ is the Dirichlet posterior mean
+\begin{equation}\label{eq:omegahat}
+    \omhat_c(t) = \frac{\kappa\,\alpha_{0,c} + n_c}{\kappa + t + 1} ,
+\end{equation}
+a symmetric function of the past tags. The joint hidden process (mixture label $\otimes$ within-component state) is a non-ergodic HMM whose transition operator has eigenvalue $1$ with multiplicity $C$: the concept subspace \emph{is} the extra $\lambda = 1$ eigenspace. The within-component belief dynamics contribute the usual $|\lambda| < 1$ modes (grammar). The aggregation regime is therefore not a different theory but the $\lambda \to 1$ corner of the same spectral framework.
+
+\subsection{The normalization pin}
+
+\begin{prop}[normalization pin]\label{prop:pin}
+\textbf{[exact]} For any row-stochastic attention profile --- Toeplitz or not, per row $a_d(\tau)$ with $\sum_\tau a_d(\tau) = 1$ --- the generating-function values at $\lambda = 1$ are pinned:
+\begin{equation}
+    \alphatil_d(1) = \sum_\tau a_d(\tau) = 1, \qquad
+    \alphatil'_d(1) = 1 - a_d(0) .
+\end{equation}
+In the P3 reduction the loss sees the profile only through the spectral coordinates $\big(\alpha(0), \gamma(0), \{\alphatil'(\lambda), \gammatil'(\lambda)\}_{\lambda\ne1}\big)$, a latent mode of eigenvalue $\lambda$ coupling through $\alphatil'(\lambda)$. Hence modes with $\lambda = 1$ couple to \emph{every} profile with the same weight $1 - a_d(0)$: the only profile degree of freedom visible to the concept channel is the diagonal share $a_d(0)$, a scalar that throttles all context information equally and carries no concept specificity.
+\end{prop}
+
+The softmax is the causal enforcement mechanism of the pin: any score edit renormalizes the row back to $\sum_s A_{d,s} = 1$, so FRA-QK edits reweight \emph{which} keys carry the aggregate but cannot change the total weight the aggregate receives. Proposition~\ref{prop:pin} is the exact spectral statement; Theorem~\ref{thm:protection} below is its finite-context causal form, with the error controlled by posterior drift.
+
+\subsection{Exchangeability and the flat concept profile}
+
+\begin{prop}[the optimal concept profile is flat]\label{prop:flat}
+\textbf{[exact]} Suppose values carry the tags, $v_s = \psi(\mathrm{tag}(z_s))$, and the target is the Dirichlet posterior mean Eq.~\eqref{eq:omegahat}. The posterior mean is exactly an affine function of the uniform tag average: $\omhat(t) = \frac{\kappa\alpha_0 + (t+1)\,\E_{\mathrm{unif}}[\mathrm{tag}]}{\kappa + t + 1}$. Consequently the uniform profile $w_s = 1/(t{+}1)$ recovers the Bayes concept posterior exactly, and it is the unique profile doing so for all sequences (counts are a complete statistic and the map from profiles to reweighted counts is injective on the simplex interior). Any other normalized profile delivers a reweighted count: unbiased under exchangeability of the token process, with excess variance growing in the profile's distance from uniform.
+\end{prop}
+
+Grammar (within-component belief tracking) wants the geometric profile $\zeta_c^{d-s}$ of Eq.~\eqref{eq:r1}; the concept wants counting. A single head must trade off; multiple heads or layers can split into tracker and aggregator --- which is what the two-layer toy does, aggregating across layer-0 and layer-1 paths.
+
+\subsection{The flattening law}\label{sec:flattening}
+
+Between the grammar regime ($\lambda$ well inside the unit disc) and the mixture regime ($\lambda = 1$) the optimal profile interpolates, and the rate is universal in $\sqrt{1 - \lambda}$.
+
+\begin{prop}[flattening of the optimal rate]\label{prop:flattening}
+\textbf{[exact closed form; the $\lambda \to 1$ asymptote is a convergent expansion; verified numerically]} For P3's two-state worked example (parameters $b = p_1 p_2$, $m_\lambda = \lambda(b - \varphi)$, $\varphi = [\theta_1(1-\theta_1)s_2 + \theta_2(1-\theta_2)s_1]/(s_1 + s_2)$), the optimal geometric profile rate $\eta$ is the in-disc root of the palindromic quadratic $(b\lambda - m)\eta^2 + (2m\lambda - b\lambda^2 - b)\eta + (b\lambda - m) = 0$:
+\begin{equation}
+    \eta = \frac{(\lambda^2 + 1)b - 2m\lambda - \sqrt{(1 - \lambda^2)\big(b^2 - (2m - b\lambda)^2\big)}}{2(b\lambda - m)} ,
+\end{equation}
+and as $\lambda \to 1$,
+\begin{equation}\label{eq:sqrtlaw}
+    1 - \eta \;\simeq\; \sqrt{\tfrac{2m}{\varphi}}\;\sqrt{1 - \lambda} ,
+\end{equation}
+so the effective attention window $1/(1 - \eta)$ diverges as $(1 - \lambda)^{-1/2}$. In the strict mixture limit the optimal profile is exactly flat on the context: Proposition~\ref{prop:flat}'s counting recovered as the spectral limit.
+\end{prop}
+
+Numerical status (\texttt{code/check\_flattening.py}): the closed form matches direct numerical optimization of P3's reduced objective to six decimal places across $\lambda \in [0.5, 0.9999]$; a free $300$-lag profile optimization recovers the geometric ansatz exactly (rate and objective); the window $1/(1-\eta)$ grows from $1.4$ to $75$ over that range (Figure: \texttt{figures/flattening\_law.png}).
+
+\subsection{Drift and the protection theorem}
+
+The concept content of a key is its running aggregate --- and running aggregates barely move between keys. That single fact, made quantitative, protects the concept from every pattern edit.
+
+\begin{lemma}[Dirichlet drift]\label{lem:drift}
+\textbf{[exact for the conjugate counting model]} Let $h_k(s) := \omhat_k(s)$ be the posterior mean after $s$ tokens. Deterministically, $|h_k(d) - h_k(s)| \le \frac{d - s}{\kappa + d}$ for $s \le d$; and in $L^2$ the drift is an identity,
+\begin{equation}
+    \E\big[(h_k(d) - h_k(s))^2\big] = V_k(s)\,\frac{d - s}{(\kappa + s + 1)(\kappa + d)} , \qquad V_k(s) := \E[\Var(\text{tag}_k \mid \mathcal{F}_s)] \le \tfrac14 ,
+\end{equation}
+by the martingale property of the posterior mean (cross terms vanish; the per-step conditional variance telescopes).
+\end{lemma}
+
+\begin{theorem}[aggregation protection and the grammar contrast]\label{thm:protection}
+\textbf{[exact given Lemma~\ref{lem:drift}; the identification of the model's concept readout with the posterior mean is heuristic and enters only through the constant $\kappa_\omega$]} Let a concept readout satisfy $u_\omega \cdot v_s = \kappa_\omega\, h_k(s) + \mathrm{const}$, and let $\delta$ be \emph{any} score edit at gain $c$ with $E = c\,\osc(\delta)$. By Proposition~\ref{prop:anygain} with $a = u_\omega\cdot v_d$,
+\begin{equation}\label{eq:protection}
+    \big|\Delta(u_\omega\cdot\cb_d)\big| \;\le\; (e^{E} - 1)\,\kappa_\omega\,\frac{L_d}{\kappa + d},
+    \qquad L_d := \textstyle\sum_s A_{d,s}\,(d - s) \;\;(\text{the pattern's mean lag}),
+\end{equation}
+deterministically, and in RMS with $\frac{d-s}{\kappa+d}$ replaced by the square root of the drift identity (the RMS branch additionally assumes the clean pattern is token-independent, so the sequence expectation passes inside $\E_A$; $V_k(s)$ decreases along the summed lags and is bounded by its largest value). Consequently:
+\begin{enumerate}
+    \item \emph{Geometric window} ($A_{d,s} \propto \zeta^{d-s}$): $L_d \to \zeta/(1-\zeta)$, so the protection is $O(1/d)$ --- deterministic, every edit, every gain.
+    \item \emph{Flat window} ($A_{d,s} = 1/d$, the aggregation regime): $L_d = (d-1)/2$, the deterministic bound saturates at $O(1)$, but the typical (RMS) protection is $\le \tfrac{\pi}{2}(e^E - 1)\sqrt{V_k/(\kappa + d)} = O(d^{-1/2})$.
+    \item \emph{Grammar exposure}: a grammar readout has $u_g \cdot v_s = \psi(z_s)$ with token spread $\Gamma := \osc_z \psi(z)$; Proposition~\ref{prop:twovalued} gives cut responses of size $\Theta(\Gamma)$ with \emph{no} decay in $d$. The exposure ratio grammar/concept grows as $\Theta(d)$ (geometric window) or $\Theta(\sqrt d)$ (flat window, typical).
+\end{enumerate}
+\end{theorem}
+
+Theorem~\ref{thm:protection} is the second, robustness-type inertness mechanism, logically independent of the QK gauge theorem: even at a gauge where FRA-QK cuts move the pattern by $O(1)$ in TV, the \emph{concept} readout moves by at most the drift of the running aggregate across the attended window. Score edits reshuffle weight among keys that nearly agree about the concept. The same theorem leaves grammar readouts exposed, because token-level content varies at scale $\Gamma$ across keys. This asymmetry --- concept protected, grammar exposed --- is the signature to look for empirically, and it is what the mixture toy shows (Section~\ref{sec:predictions}).
+
+\subsection{The attenuation law and the use/presence trichotomy}
+
+FRA-OV cuts are outside the protection theorem: they subtract transported \emph{content}, not pattern weight. Specializing the path-share theorem to the aggregation regime gives a one-parameter law.
+
+\begin{prop}[linear attenuation law]\label{prop:attenuation}
+\textbf{[exact given (S1)--(S2) of Theorem~\ref{thm:pathshare}; the $R^2$/RF forms additionally assume a fixed-calibration tracking metric --- $R^2$ computed against the clean regression coefficients, so that a pure rescaling of $m$ registers as signal loss]} Let the FRA-OV cut of feature set $S$ at gain $c$ act on a concept signal $m(t)$ (the model's concept readout, centered at its prior) whose cut-path share is $\rho := \psi_S/\psitot$. If the downstream map is affine along the cut direction and the cut direction is parallel to the signal, then
+\begin{equation}\label{eq:attenuation}
+    m_c(t) = (1 - c\rho)\, m(t), \qquad
+    \mathrm{track}R^2(c) = R^2_{\mathrm{clean}} - (c\rho)^2, \qquad
+    \mathrm{RF}(c) \approx (c\rho)^2 ,
+\end{equation}
+and the concept-nulling gain is $c^* = 1/\rho$. RF is quadratic in $c\rho$ because cross-entropy is locally quadratic in the signal scaling around calibration. Departures decompose exactly into (i) downstream curvature (the secant $\rho$ grows with $c$) and (ii) a collateral component of the linear response orthogonal to the signal, which damages tracking and CE without removing concept use.
+\end{prop}
+
+\begin{corollary}[use/presence trichotomy]\label{cor:trichotomy}
+For an aggregated concept, the three FRA intervention families act on different objects:
+\begin{enumerate}
+    \item \textbf{Pattern edits (FRA-QK, any feature set, any side, any gain)} reweight the aggregation. By Proposition~\ref{prop:pin} and Theorem~\ref{thm:protection}, concept \emph{use} changes by at most the drift bound and concept \emph{presence} is untouched; grammar collateral is $\Theta(\Gamma)$. Large feat$\times$feat attribution mass coexisting with this inertness is the gauge structure of Proposition~\ref{prop:featfeat}.
+    \item \textbf{Path-content edits (FRA-OV at gain $c$)} attenuate the concept signal by $(1 - c\rho)$ along one path. Use is nulled at $c^* = 1/\rho$; presence --- the same content on parallel paths and in the residual stream, available to a retrained probe --- is unchanged. Exact severing $c = 1$ removes only the fraction $\rho$ of use; the gain-tuned null is signal cancellation, not removal.
+    \item \textbf{Content edits (SAE cuts at the hookpoint)} remove the aggregate content itself wherever it fires: the only family that reduces \emph{presence}. Its floor is the entanglement tax: when grammar routing needs the same latents (token identity $=$ block $\times$ symbol), removing block content also blinds the grammar, so the collateral is bounded below by the task's conditional dependence of grammar on concept.
+\end{enumerate}
+\end{corollary}
+
+\begin{remark}[the SAE requirement for content cuts]\label{rem:saereq}
+The content-cut family works exactly when the latent basis \emph{splits the spectral subspaces}: decoder directions separating the $\lambda = 1$ (tag/aggregate) content from the $|\lambda| < 1$ (within-component belief) content. A basis aligned with token identity entangles them whenever tokens carry both (disjoint-block tokens do). TopK SAEs trained at post-aggregation interfaces find aggregate directions because $\omhat$ is the dominant slow, high-variance structure there; at pre-aggregation interfaces they find token-identity latents, and content cuts inherit the tax. The actionable property is spectral alignment of the dictionary, not sparsity per se.
+\end{remark}
+
+\section{Predictions and empirical status}\label{sec:predictions}
+
+This section confronts each theory object with numbers. Two experimental platforms: (i) the \emph{existing} \texttt{fra\_hmm\_toy} mixture checkpoints (two independently trained 2-layer models, \texttt{phase2\_L0} and \texttt{seed43}; no retraining --- all Phase B quantities are computed from the stored weights and reproduce the stored clean metrics to $\le 2\cdot10^{-8}$); (ii) a fresh Phase A pipeline (1-layer transformer on single Mess3, TopK SAE, idealized-basis checks). Metrics from the toy: removal fraction $\mathrm{RF} = (\mathrm{blockCE}_{\mathrm{cut}} - \mathrm{blockCE}_{\mathrm{clean}})/(\mathrm{blockCE}_{\mathrm{prior}} - \mathrm{blockCE}_{\mathrm{Bayes}})$ (concept use removed), collateral fraction CF (same construction on within-block CE, grammar damage), and tracking $R^2$ between the model's block-mass vector $m(t)$ and the Bayes posterior $\omhat(t)$.
+
+\subsection{The QK side: attribution mass without a causal handle}
+
+At both interfaces of the mixture toy, feature$\times$feature term-pairs carry $57$--$75\%$ of the pattern-weighted score mass, yet: at the L1 interface (keys carry post-aggregation running aggregates) every FRA-QK cut is doubly inert, $\mathrm{RF} \le 0.006$, $\mathrm{CF} \le 0.038$ --- both channels protected, as predicted when key values are near-constant along the row (drift $\to$ covariance $\to$ zero response, Theorem~\ref{thm:protection} with small $\Gamma$ too, since L1 values are aggregates); at the L0 interface (keys carry raw tags, so grammar content varies at full spread $\Gamma$) the asymmetry appears exactly as predicted: $\mathrm{RF} \le 0.10$ across every feature set, side, gain, and layer, while $\mathrm{CF}$ reaches $0.301$. Concept protected by aggregation, grammar exposed at $\Theta(\Gamma)$, attribution mass causally empty --- the joint signature of Proposition~\ref{prop:featfeat} and Theorem~\ref{thm:protection}.
+
+Three targeted tests of the QK calculus on the \texttt{phase2\_L0} checkpoint (\texttt{code/phase\_b/qk\_tests.py}, key-side cuts acting on block-1 attention):
+
+\textbf{The response calculus is exact as stated.} For the \texttt{omega\_top4} key-side cut at gains $c = 0.5, 1, 2$, comparing each head-row's actual pattern-induced output change against the first-order term $-c\,\Cov_A(\delta, v)$: the $\tfrac{c^2}{8}\osc(\delta)^2 D_v$ remainder bound of Proposition~\ref{prop:firstorder} holds on \emph{every} row with zero violations, and the median first-order relative error grows quadratically ($15\%/31\%/61\%$ at $c = 0.5/1/2$) exactly as a $c^2$ remainder should.
+
+\textbf{Position scaling follows the window law, with the predicted exponent.} Concept damage from the key-side cut falls steeply with position --- $0.0075 \to 0.0018 \to 0.0006$ (early/mid/late, $c = 1$) and $0.028 \to 0.010 \to 0.0014$ ($c = 2$), a $13$--$20\times$ early-to-late drop --- while CF stays $\Theta(1)$. The regime is identified independently: the clean block-1 pattern's mean lag is bounded ($L_d = 7.5 \to 10.5$ over $t = 32 \to 254$), a geometric-type window, for which Theorem~\ref{thm:protection} predicts variance-normalized MSE damage $\propto (\kappa + t)^{-2}$. The fitted exponent (\texttt{window\_law.py}, log--log over $t \in [16, 254]$, bootstrap CI over sequences) is $-1.97$ $[-2.12, -1.79]$ at $c = 2$; at $c = 1$ the fit is shallower ($-1.33$ $[-1.57, -1.17]$), where late-position damages ($\sim 10^{-4}$) sit near the estimator's noise floor. The exponent does \emph{not} replicate on the independently trained \texttt{seed43} checkpoint: with a similarly bounded mean lag ($6.8 \to 10.5$), its damage \emph{rises} with position at $c = 2$ (exponent $+0.42$ $[0.27, 0.54]$; $c = 1$: $-0.46$ $[-0.78, 0.05]$). The bound itself is not contradicted --- it scales as $(e^E - 1)$ with the cut's row oscillation, which can grow with position, and in a 3-layer model damage can also arrive through re-aggregation paths outside the single-head bound --- but the clean single-exponent reading holds on one run of two. A diagnostic separating the two mechanisms was started and did not complete within the sprint; we report the exponent as a one-run result.
+
+\textbf{Full-set key-cut inertness fails in the trained-SAE basis, for the reason the theory names.} In the idealized basis, cutting the union of all token features on the key side is a per-row constant and exactly inert (Theorem~\ref{thm:cutcalc}.2). On the trained TopK SAE at the L0 interface the analogous all-latents cut is \emph{not} inert: its per-row score oscillation per unit of subtracted mass is $1.48\times$ that of the \texttt{omega\_top4} cut (predicted $\ll 1$ under the idealized theorem), and its behavioral effect at matched gain is larger ($\mathrm{RF} = 0.020$, $\mathrm{CF} = 0.231$ at $c = 1$, versus $0.0023/0.045$ for \texttt{omega\_top4}). The mechanism is basis mismatch, itemized in the theorem's caveat: at this interface the SAE latents carry positional and aggregate content (running counts correlate with position), so the all-latents edit subtracts a large share of the \emph{profile} $\ell_d(s)$ itself, which no token-feature union does in the idealized basis. The inertness statement is exactly as basis-dependent as its proof says it is; we count this as a real limit on transferring idealized-basis FRA-QK statements to trained SAE bases (Section~\ref{sec:gaps}).
+
+\subsection{The OV side: the attenuation law, ex ante}
+
+Fitting the attenuation law Eq.~\eqref{eq:attenuation} to the existing gain sweep (cut set \texttt{omega\_top4}, L0 interface) gives an effective $\rho \approx 0.253$ (tracking) / $0.261$ (RF) with the \emph{same} $\rho$ across both metrics and $c \in [0.5, 6]$, hence $c^* = 3.95/3.84$ against the observed null at $c \approx 4.0$; on the independent run \texttt{seed43}, $\rho = 0.211$, $c^* = 4.75$ vs.\ observed $4.59$--$4.8$. The gain-tuned behavioral null \emph{is} linear signal attenuation.
+
+The sharper test is ex ante: predict the sweep from the clean model alone. One central finite difference of the block-mass signal against the cut direction (recipe (ii) of Theorem~\ref{thm:pathshare}; moving by at most $10^{-4}$ across two orders of magnitude of $\varepsilon$) gives the first-order path share
+\begin{equation}
+    \hat\rho = 0.1745 \;(\texttt{phase2\_L0}), \qquad \hat\rho = 0.1320 \;(\texttt{seed43}) .
+\end{equation}
+Carrying this single linearization to its exact second-order consequences (including the orthogonal-collateral component and the clean-residual cross term, still using no intervention data) reproduces the observed sweep essentially exactly through $c \le 2$: predicted RF $= 0.019/0.061/0.126/0.214$ at $c = 0.5/1/1.5/2$ versus observed $0.019/0.062/0.126/0.215$. The predicted null is $c^* = 4.91$ versus the observed $4.00$ (seed43: $5.90$ vs $4.59$); the $\sim20\%$ gap is \emph{measured} downstream curvature, not a free parameter: the actual intervention's secant coefficient grows from $0.18$ at $c = 1$ to $0.23$ at $c = 6$ (relative $L^2$ nonlinearity $31\%$ at $c = 4$), exactly the (S2) failure mode the path-share theorem names. The sweep-fit $\rho \approx 0.25$ is thus an effective parameter: first-order share $0.174$, amplified by curvature and by the orthogonal collateral ($24.7\%$ of the linear response's energy on \texttt{phase2\_L0}, $39.8\%$ on \texttt{seed43} --- at the $c = 4$ null only $\sim86\%$ of the parallel signal is actually cancelled, and tracking crosses zero because orthogonal damage adds error).
+
+Position structure: the ex-ante path share rises with position, $\hat\rho = 0.132$ (early) $/\,0.171$ (mid) $/\,0.182$ (late) on \texttt{phase2\_L0}, so a single aggregate gain must under-cancel early and over-cancel late --- predicting the sign structure of the tracking residuals observed at the aggregate null ($+0.11$ early, $-0.09$ late) before looking at them. (Figure: \texttt{figures/attenuation\_prediction.png}.)
+
+\subsection{The $c^*$ identifiability interval in M1}
+
+At the M1 optimum for Mess3 (Table~\ref{tab:mess3}), the ideal-gauge full-path nulling gain is $c^* = 1.179$ (Monte Carlo $1.178$), and the $k = 0$ gauge interval of Corollary~\ref{cor:gaugecstar} is $c^* \in [1.000, 3.417]$ (under its sign-definite convention; only the upper endpoint is convention-free): the theory pins $c^*$ only to an interval, the trained run selects a point in it. The toy's observed $c^* \approx 4$--$4.8$ lies \emph{outside} the one-layer interval, as it must: the two-layer toy adds later-layer re-aggregation paths that raise $\psitot/\psi_S$ beyond the one-layer bound --- measured ex ante by $\hat\rho$ above, which is the correct generalization.
+
+\subsection{Phase A: the single-Mess3 platform}
+
+A fresh 1-layer, 1-head transformer ($d_{\mathrm{model}} = 64$, $n_{\mathrm{ctx}} = 32$) trained on Mess3$(0.15, 0.6)$, with a TopK SAE ($d_{\mathrm{sae}} = 32$, $K = 3$) on the embedding stream (\texttt{code/phase\_a/}). Anchors: eval CE $1.08726$ against Bayes $1.08656$, constrained-update $r_1$ CE $1.08668$, unigram $1.09861$ --- the model captures $94\%$ of the available in-context information and sits \emph{between} the constrained update and full Bayes. The \emph{information window} below is unigram $-$ Bayes $= 0.01205$ nats.
+
+\textbf{P2 structure reproduces.} The attention-output probe prefers the constrained update over full Bayes ($R^2 = 0.818$ vs $0.766$), while the post-MLP residual reverses the preference ($0.973$ vs $0.980$): the attention path computes $r_1$, the MLP refines it. Per-token OV directions align with the belief-plane displacement $\Bb(\pib\Tb^{|z} - \pib)$ at $\cos = 0.91$--$0.93$, and are position-stable ($\cos > 0.998$ to their mean). The pattern is token-independent to $9.4\%$ relative spread (max $19.6\%$) --- the measured leak $\varepsilon$. The fitted decay rate is $\approx 0.89$, far from $\zeta = 0.55$ and only loosely geometric ($R^2 = 0.65$; per-query rates $0.66$--$0.94$): the ``which decay rate'' gap of Section~\ref{sec:gaps} is real in this run, and consistently, replacing the trained pattern by the ideal $\zeta$-geometric one moves eval CE by only $+2\cdot10^{-5}$ --- the pattern direction is nearly loss-flat, exactly P3's flatness of the reduced objective near the optimum.
+
+\textbf{FRA is exact, and features are its basis, in the implemented sense.} The SAE decomposition reconstructs the scores and the attention output to $\le 2\cdot10^{-6}$. The trained dictionary allocates $24$ latents to positions, $2$ to tokens (three tokens span a $2$-plane after centering --- latents are features, not tokens), $2$ mixed, $4$ dead. Token-involving term-pairs carry $12.3\%$ of the per-query-centered score variance (tok$\times$tok alone: $3.9\%$), against $57$--$75\%$ in the mixture toy's checkpoints: two trained models of the same family, with the same qualitative behavior, put wildly different FRA-QK attribution mass on feature pairs --- attribution shares are properties of the run's gauge and basis, and transfer across runs no better than the gauge theorem allows.
+
+\textbf{The QK/OV asymmetry at matched features.} Cutting the \emph{token} latents through the pattern (FRA-QK, any side) at $c = 1$ moves eval CE by at most $+0.0006$ ($5\%$ of the window), growing superlinearly in $c$ ($\approx 2.5\times$ per gain doubling; $c = 4$: $0.002$--$0.005$). Severing the \emph{same latents}' transported content (FRA-OV, $c = 1$) costs $+0.0092$ --- $77\%$ of the window, a $16\times$ asymmetry at matched feature sets, and over-removal sets in beyond severing ($c = 2$: $3\times$ the window; $c = 4$: $12.8\times$). Cutting \emph{position} latents through the pattern, by contrast, is genuinely destructive (up to $80\%$ of the window at $c = 4$): the pattern's real causal content is the profile, and only profile-touching edits reach it.
+
+\textbf{The gauge dial (the decisive test).} Applying the embedding re-split of Proposition~\ref{prop:gauge} at dial values $t \in [-1, 2]$ along $u = -\bar e$ (\texttt{gauge\_dial.py}): the model's logits are unchanged to float precision (max abs.\ diff $\le 4.2\cdot10^{-7}$) at every $t$, while (i) the pedestal $\bped$ moves linearly through zero (from $+0.196$ to $-0.070$, crossing at $t \approx 1.2$), and (ii) the \emph{same named operation} --- key-side FRA-QK cut of token feature $0$ at gain $1$ --- has its behavioral effect follow the dial: $\Delta\mathrm{CE}$ from $+9.6\cdot10^{-4}$ down to $+3\cdot10^{-5}$ at the canonical gauge and rising again beyond the crossing, a $32\times$ swing, V-shaped in $|\bped|$, with pattern TV tracking the same V ($0.126 \to 0.032 \to 0.062$). The residual effect at the minimum is the $O(c\varepsilon)$ floor of the measured $9\%$ leak. Pedestal spread across tokens stays in $0.015$--$0.063$, small against the dialed pedestal except at the zero crossing itself: universality holds to the leak. This is Theorem~\ref{thm:cutcalc} and Proposition~\ref{prop:gauge} operating as advertised on a trained model: FRA-QK cut effects are gauge coordinates. (Figure: \texttt{figures/gauge\_dial.png}.)
+
+\section{Honest gaps}\label{sec:gaps}
+
+Every flag from the body, collected. Items 1--3 are load-bearing for interpretation; the rest are quantified or cosmetic.
+
+\begin{enumerate}
+    \item \textbf{(Z1) lag-only optimality for CE/softmax is a conjecture} (Conjecture~\ref{conj:z1}). Proved for the free-profile MSE surrogate (P3); empirically supported for trained softmax models (P2, P1). Everything gauge-related is exact \emph{given} a token-independent-pattern configuration; the claim that trained optima are such configurations is not proved for M2. A trained model sitting slightly off the lag-only manifold has small but nonzero genuine content coupling, covered only by the measurable leak $\varepsilon$ of Definition~\ref{def:leak}.
+    \item \textbf{The point value of $c^*$ is predicted to $\sim20\%$, not exactly.} The ex-ante linearization is exact as a first-order object ($c \le 2$ curves match to the third decimal), but the null sits at $c \approx 4$--$6$ where downstream curvature has grown the effective path share by $\sim$20--30\% (measured, Section~\ref{sec:predictions}). An exact ex-ante $c^*$ would require the downstream map's curvature along the ray, i.e.\ more than one linearization. We report this as a real limit of the affine theory, with its magnitude measured.
+    \item \textbf{Probe/readout identifications are heuristic.} Theorem~\ref{thm:protection}'s constant $\kappa_\omega$ (model concept readout $=$ scaled posterior mean) and the tag-value form $v_s = \psi(\mathrm{tag}(z_s))$ are identifications supported by probe $R^2$, not derived. The \emph{rates} in $d$ do not depend on them; the constants do.
+    \item \textbf{Which decay rate a trained CE model shows is not settled by either theory} (Remark after Corollary~\ref{cor:constrained}): P2's $\zeta^\tau$ is an ansatz, P3's optimum has its own rate $\eta \ne \zeta$; fits should keep the rate free. The flattening law (Proposition~\ref{prop:flattening}) is derived on P3's two-state example and transferred to the mixture case by the spectral-limit argument, not re-derived for the block-diagonal mixture kernel.
+    \item \textbf{The ESS substitution in drift bounds} (effective sample size $s \to Is$ when the pattern is non-uniform) is heuristic; the conjugate counting model itself is exact.
+    \item \textbf{Gauge is dialable, but training selects a gauge.} Propositions~\ref{prop:gauge}--\ref{prop:featfeat} say the loss does not constrain the FRA-QK coordinates; they do not say the selected values are random. Weight decay and dynamics presumably pick systematic gauges; interpreting them causally is the error the theorems license, but characterizing \emph{which} gauge training picks is open.
+    \item \textbf{Two-valued-edit exactness vs implementation}: the key-side single-feature cut is exactly two-valued only when the feature fires with equal magnitude wherever active (true for one-hot idealized features; approximately true for the toy's tag latents). SAE-magnitude variation smears $\kappa$ within a row; the covariance formula absorbs this, the closed form Eq.~\eqref{eq:beliefcut} is then per-row approximate.
+    \item \textbf{Idealized-basis FRA-QK statements do not transfer verbatim to trained SAE bases.} The full-set key-cut inertness (Theorem~\ref{thm:cutcalc}.2) fails empirically at the mixture toy's L0 interface ($1.48\times$ the oscillation per unit mass of a small cut set, Section~\ref{sec:predictions}), because trained latents mix token, positional, and aggregate content, so latent unions subtract profile as well as pedestal. Per-feature statements (position scaling, covariance formula) do transfer; set-union statements are basis-sensitive.
+    \item \textbf{The entanglement-tax floor for content cuts} is inherited from the toy's measured Bayes floor rather than derived in closed form for general vocab-sharing; Remark~\ref{rem:saereq}'s spectral-alignment criterion is stated as the actionable property but a quantitative alignment$\to$tax curve is not derived.
+\end{enumerate}
+
+\end{document}

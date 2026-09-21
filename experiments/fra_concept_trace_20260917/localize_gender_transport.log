@@ -1,0 +1,34 @@
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/localize_gender_transport.py:29: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 4561.71it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+LAYER female 0 mlp_out all 0.741
+LAYER female 1 mlp_out all 0.076
+LAYER female 2 mlp_out 1 0.108
+LAYER female 3 mlp_out 1 0.093
+LAYER female 4 v 1 0.094
+LAYER female 5 mlp_out 1 0.102
+LAYER female 6 v all 0.089
+LAYER female 7 v all 0.125
+LAYER female 8 attn_out all 0.256
+LAYER female 9 v all 0.058
+LAYER female 10 attn_out all 0.084
+LAYER female 11 attn_out all 0.166
+LAYER male 0 mlp_out all 0.92
+LAYER male 1 mlp_out all 0.186
+LAYER male 2 mlp_out 1 0.14
+LAYER male 3 mlp_out 1 0.172
+LAYER male 4 v 1 0.272
+LAYER male 5 mlp_out 1 0.231
+LAYER male 6 v all 0.233
+LAYER male 7 mlp_out all 0.346
+LAYER male 8 v all 0.532
+LAYER male 9 v all 0.24
+LAYER male 10 v all 0.235
+LAYER male 11 v all 0.355
+SELECTED [8, 11, 6]
+HEADS 8 [11, 3]
+HEADS 11 [1, 8]
+HEADS 6 [0, 7]
+DONE 1704 267.0 seconds

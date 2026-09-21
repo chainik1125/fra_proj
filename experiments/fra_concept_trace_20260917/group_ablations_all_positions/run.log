@@ -1,0 +1,31 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+SAE_LOADED {'baseline': 0, 'royalty': 34, 'gender': 162, 'both': 196}
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/ablate_feature_groups.py:95: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model = HookedTransformer.from_pretrained("gpt2-small", device="cpu")
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 6586.28it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+RESULT king baseline {' king': 0.16707471013069153, ' queen': 0.014316212385892868, ' man': 0.036198005080223083, ' woman': 0.013681290671229362} " king's wife."
+RESULT king royalty {' king': 0.004709256812930107, ' queen': 0.0010827169753611088, ' man': 0.058166563510894775, ' woman': 0.025631526485085487} ' man who had been sitting in the chair.'
+RESULT king gender {' king': 0.17022770643234253, ' queen': 0.014678639359772205, ' man': 0.03413969650864601, ' woman': 0.013377231545746326} " king's wife."
+RESULT king both {' king': 0.005132333841174841, ' queen': 0.0011332354042679071, ' man': 0.05483183637261391, ' woman': 0.024631042033433914} " man's wife."
+RESULT queen baseline {' king': 0.027746550738811493, ' queen': 0.05909416079521179, ' man': 0.03295528516173363, ' woman': 0.02384272776544094} " queen's sister, who was sitting on the bed."
+RESULT queen royalty {' king': 0.0017064816784113646, ' queen': 0.004263118840754032, ' man': 0.03933537378907204, ' woman': 0.03756827488541603} ' man who had been sitting in the chair.'
+RESULT queen gender {' king': 0.036250039935112, ' queen': 0.06549021601676941, ' man': 0.030712272971868515, ' woman': 0.022702116519212723} " queen's daughter."
+RESULT queen both {' king': 0.002137411618605256, ' queen': 0.0032988020684570074, ' man': 0.04189639165997505, ' woman': 0.029978716745972633} ' man who had been sitting in the chair.'
+RESULT man baseline {' king': 0.0007391357212327421, ' queen': 0.0001364864583592862, ' man': 0.1448865830898285, ' woman': 0.0449460931122303} " man's wife."
+RESULT man royalty {' king': 0.0007391357212327421, ' queen': 0.0001364864583592862, ' man': 0.1448865830898285, ' woman': 0.0449460931122303} " man's wife."
+RESULT man gender {' king': 0.0009885276667773724, ' queen': 0.00027816370129585266, ' man': 0.07128339260816574, ' woman': 0.036190424114465714} " man's wife."
+RESULT man both {' king': 0.0009885276667773724, ' queen': 0.00027816370129585266, ' man': 0.07128339260816574, ' woman': 0.036190424114465714} " man's wife."
+RESULT woman baseline {' king': 0.00046644374378956854, ' queen': 0.0002508685865905136, ' man': 0.09265388548374176, ' woman': 0.09720438718795776} " woman's husband."
+RESULT woman royalty {' king': 0.00046644374378956854, ' queen': 0.0002508685865905136, ' man': 0.09265388548374176, ' woman': 0.09720438718795776} " woman's husband."
+RESULT woman gender {' king': 0.0007774633122608066, ' queen': 0.0002613756514620036, ' man': 0.07450058311223984, ' woman': 0.047879401594400406} ' man.'
+RESULT woman both {' king': 0.0007774633122608066, ' queen': 0.0002613756514620036, ' man': 0.07450058311223984, ' woman': 0.047879401594400406} ' man.'
+RESULT definition_male baseline {' king': 0.07538624852895737, ' queen': 0.02031804993748665, ' man': 0.008141838945448399, ' woman': 0.0007759725558571517} ' "kingdom" because he is the king of the land.'
+RESULT definition_male royalty {' king': 0.00986173190176487, ' queen': 0.0043561928905546665, ' man': 0.010608717799186707, ' woman': 0.0007566629792563617} ' "females" and a female is called a "females."'
+RESULT definition_male gender {' king': 0.09563107043504715, ' queen': 0.013202921487390995, ' man': 0.0031458025332540274, ' woman': 0.00017982721328735352} ' "king" because he is the king of the land.'
+RESULT definition_male both {' king': 0.012457190081477165, ' queen': 0.003500961000099778, ' man': 0.0036770987790077925, ' woman': 0.00016530462016817182} ' "fellow monarch" because he is a member of the family of the monarch.'
+RESULT definition_female baseline {' king': 0.017039965838193893, ' queen': 0.057157110422849655, ' man': 0.0016519426135346293, ' woman': 0.0030263166408985853} ' "mother" in the English language.'
+RESULT definition_female royalty {' king': 0.002668167930096388, ' queen': 0.013009758666157722, ' man': 0.0016645772848278284, ' woman': 0.0023171165958046913} ' "female monarch" because she is the only female monarch in the world.'
+RESULT definition_female gender {' king': 0.052835043519735336, ' queen': 0.016365831717848778, ' man': 0.002299464074894786, ' woman': 0.00029949177405796945} ' "king" because he is the king of the land.'
+RESULT definition_female both {' king': 0.007551733870059252, ' queen': 0.004012899473309517, ' man': 0.0023592642974108458, ' woman': 0.00020294032583478838} ' "fellow monarch" because it is a member of the family of the monarch.'
+DONE 47.8 seconds

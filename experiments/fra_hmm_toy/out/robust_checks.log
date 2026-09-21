@@ -1,0 +1,20 @@
+Moving model to device:  cpu
+clean                  RF all/early/late +0.000/+0.000/+0.000  track +0.992/+0.992/+0.993  probe +0.989
+ov:omega_top4:c3.0     RF all/early/late +0.493/+0.445/+0.533  track +0.508/+0.559/+0.466  probe +0.985
+ov:omega_top4:c3.5     RF all/early/late +0.710/+0.629/+0.778  track +0.283/+0.364/+0.216  probe +0.985
+ov:omega_top4:c4.0     RF all/early/late +0.993/+0.869/+1.095  track +0.001/+0.113/-0.091  probe +0.985
+ov:omega_top4:c4.5     RF all/early/late +1.334/+1.169/+1.471  track -0.320/-0.191/-0.426  probe +0.985
+ov:omega_top4:c5.0     RF all/early/late +1.716/+1.521/+1.878  track -0.662/-0.533/-0.768  probe +0.985
+ov:omega_top2:c3.0     RF all/early/late +0.383/+0.373/+0.391  track +0.633/+0.639/+0.628  probe +0.984
+ov:omega_top2:c4.5     RF all/early/late +1.033/+0.990/+1.068  track -0.017/+0.003/-0.033  probe +0.983
+ov:omega_top2:c6.0     RF all/early/late +2.055/+2.028/+2.076  track -0.953/-0.994/-0.918  probe +0.982
+ov:omega_top2:c7.5     RF all/early/late +3.113/+3.191/+3.049  track -1.866/-2.038/-1.722  probe +0.981
+ov:omega_top2:c9.0     RF all/early/late +4.022/+4.247/+3.836  track -2.628/-2.942/-2.367  probe +0.981
+ov:omega_top1:c4.0     RF all/early/late +0.762/+0.656/+0.849  track +0.300/+0.399/+0.218  probe +0.985
+ov:omega_top1:c6.0     RF all/early/late +1.924/+1.685/+2.122  track -0.637/-0.432/-0.807  probe +0.984
+ov:omega_top1:c8.0     RF all/early/late +2.946/+2.660/+3.182  track -1.372/-1.143/-1.563  probe +0.984
+ov:omega_top1:c12.0    RF all/early/late +4.091/+3.879/+4.267  track -2.206/-2.046/-2.339  probe +0.985
+ov:omega_top1:c16.0    RF all/early/late +4.630/+4.515/+4.726  track -2.622/-2.538/-2.692  probe +0.985
+MLP probe R2: {'clean': 0.996, 'ov:omega_top4:c4.0': 0.995}
+dRF/dc at null (top4): 0.624
+saved /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_hmm_toy/out/robust_checks.json

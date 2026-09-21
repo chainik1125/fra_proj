@@ -1,0 +1,35 @@
+PATH {'layer': 8, 'head': 11, 'query': 5, 'key': 1, 'mean_fraction': 0.28906765643799576}
+/Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/fra_concept_trace_20260917/resolve_gender_transport.py:34: DeprecationWarning: HookedTransformer.from_pretrained is deprecated and will be removed in a future major release. Use TransformerBridge.boot_transformers(...) instead, then call enable_compatibility_mode() for HookedTransformer-equivalent numerics. See docs/source/content/migrating_to_v3.md.
+  model=HookedTransformer.from_pretrained('gpt2-small',device='cpu').eval()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3814.53it/s]
+Loaded pretrained model gpt2-small into HookedTransformer
+FEATURES female 1 1 0.083 {' king': 0.019112998619675636, ' queen': 0.05201251804828644, ' man': 0.0020352345891296864, ' woman': 0.0028675307985395193}
+FEATURES female 1 2 0.168 {' king': 0.021303342655301094, ' queen': 0.04675702378153801, ' man': 0.0025219684466719627, ' woman': 0.0027110883966088295}
+FEATURES female 1 4 0.349 {' king': 0.02576116845011711, ' queen': 0.03587813302874565, ' man': 0.003978232853114605, ' woman': 0.0023864174727350473}
+FEATURES female 2 1 0.148 {' king': 0.020631885156035423, ' queen': 0.047620099037885666, ' man': 0.0023073770571500063, ' woman': 0.0026864446699619293}
+FEATURES female 4 1 0.228 {' king': 0.022179916501045227, ' queen': 0.04190140962600708, ' man': 0.002707018982619047, ' woman': 0.002572622150182724}
+FEATURES female 4 2 0.484 {' king': 0.02813188172876835, ' queen': 0.027823392301797867, ' man': 0.004522792063653469, ' woman': 0.0020172158256173134}
+FEATURES female 4 4 1.11 {' king': 0.03858218714594841, ' queen': 0.00787708442658186, ' man': 0.012781686149537563, ' woman': 0.0008411322487518191}
+FEATURES female 8 1 0.232 {' king': 0.022299140691757202, ' queen': 0.041699472814798355, ' man': 0.0027230759151279926, ' woman': 0.0025672749616205692}
+FEATURES female 16 1 0.233 {' king': 0.022402159869670868, ' queen': 0.04171276092529297, ' man': 0.0027213215362280607, ' woman': 0.002556454623118043}
+FEATURES female 32 1 0.233 {' king': 0.02233368344604969, ' queen': 0.04166962206363678, ' man': 0.002720545046031475, ' woman': 0.0025550820864737034}
+FEATURES male 1 1 0.137 {' king': 0.06730182468891144, ' queen': 0.025599008426070213, ' man': 0.0068425689823925495, ' woman': 0.0010115801123902202}
+FEATURES male 1 2 0.273 {' king': 0.05926336720585823, ' queen': 0.031812675297260284, ' man': 0.005681190639734268, ' woman': 0.001307273400016129}
+FEATURES male 1 4 0.54 {' king': 0.04444463551044464, ' queen': 0.046746764332056046, ' man': 0.003788382513448596, ' woman': 0.0020968394819647074}
+FEATURES male 2 1 0.253 {' king': 0.061267197132110596, ' queen': 0.03124263323843479, ' man': 0.0061702183447778225, ' woman': 0.0013017415767535567}
+FEATURES male 4 1 0.389 {' king': 0.055026352405548096, ' queen': 0.039586927741765976, ' man': 0.005278417840600014, ' woman': 0.0016534383175894618}
+FEATURES male 4 2 0.751 {' king': 0.037760332226753235, ' queen': 0.0676022619009018, ' man': 0.0031020408496260643, ' woman': 0.002990033710375428}
+FEATURES male 4 4 1.271 {' king': 0.017702888697385788, ' queen': 0.11751942336559296, ' man': 0.0011554427910596132, ' woman': 0.005466127302497625}
+FEATURES male 8 1 0.395 {' king': 0.0547182522714138, ' queen': 0.03994905576109886, ' man': 0.0052466061897575855, ' woman': 0.0016678235260769725}
+FEATURES male 16 1 0.399 {' king': 0.05437739938497543, ' queen': 0.04011063650250435, ' man': 0.005244913510978222, ' woman': 0.0016861010808497667}
+FEATURES male 32 1 0.398 {' king': 0.05452967435121536, ' queen': 0.04013495147228241, ' man': 0.005246751010417938, ' woman': 0.0016859471797943115}
+VALIDATED ruler
+VALIDATED sovereign
+VALIDATED the_monarch
+VALIDATED known_as
+VALIDATED title
+VALIDATED parent_control
+VALIDATED sibling_control
+VALIDATED child_control
+DONE 53.3 seconds

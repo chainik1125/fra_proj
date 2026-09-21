@@ -1,0 +1,18 @@
+noisy pair done; running clean-obs pair
+{
+  "tag": "H_gated_clean",
+  "gated": true,
+  "child_mse_full": 0.08543,
+  "child_mse_posonly": 0.08458,
+  "delta_gate_empirical": -0.00085,
+  "parent_collateral": -0.00098
+}
+{
+  "tag": "H_null_clean",
+  "gated": false,
+  "child_mse_full": 0.13011,
+  "child_mse_posonly": 0.12888,
+  "delta_gate_empirical": -0.00123,
+  "parent_collateral": 0.00055
+}
+CLEAN GATE DONE

@@ -1,0 +1,349 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{soul}
+\usepackage{geometry}
+\usepackage{xcolor}
+\geometry{margin=0.75in}
+\setlength{\parindent}{0pt}
+\input{macros.tex}
+
+
+\title{Analysis of a one layer transformer}
+\author{Javan Tahir}
+\date{March 23, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Data generating model}
+As a generative model of sequences, we consider an edge-emitting Hidden Markov Model $(\mathcal{S}, \mathcal{V}, \{ \Tb^{(x)}\}_{{x \in \mathcal{V}}}, \etab_{\varnothing})$ where $\mathcal{S}$ is a finite-dimensional latent state space and $\mathcal{V}$ is a finite token alphabet. For convenience, we assume the alphabet is made up of integers: $\mathcal{V} = \{1, 2, \cdots, |\mathcal{V}|\}$ and the latent states are labeled by integers $\mathcal{S} = \{1,2,\cdots |\mathcal{S}|\}$. At any point in time, the latent state takes a discrete value from the state space: $s_t \in \mathcal{S}$. The matrices $\{\Tx\}$ are token labeled transition matrices with elements $\Tx_{ij} = P(x, s_{t+1} = i | s_t = j)$ the probability of transitioning from latent state $i$ to latent state $j$ and emitting the token $x$. The vector $\initial \in \mathbb{R}^{|\mathcal{S}|}$ is a row vector that represents the initial state distribution $(\initial)_i = P(s_0 = i)$. For the remainder of this note, we assume the process is initialized at the stationary probability $\pib$ which is defined as the left eigenvector of the total transition matrix $\Tb = \sum_{x\in \mathcal{V}} \Tx$ with eigenvalue $1$: $\pib \Tb = \pib$. 
+
+\section{Defining the optimization problem}
+We study a next token prediction task: given a sequence of T , $x_1x_2\cdots x_T$, predict the next token sequence, $x_2x_3\cdots x_{T+1}$. We encode the tokens as one-hot vectors in the alphabet space $\xb_t \in \mathbb{R}^{|\mathcal{V}|}$. As a random variable, we can think of $\xb_t$ as a vector of indicator random variables $(\xb_t)_i = \mathbb{I}[x_t = i]$. An entire sequence is therefore a matrix $\Xb \in \mathbb{R}^{|\mathcal{V}| \times T}$ with columns representing the one-hot encoded observation at a given time point. The target matrix $\Yb \in \mathbb{R}^{|\mathcal{V}| \times T}$ is defined in a similar way: it's $t^{th}$ column is the one hot vector $\xb_{t+1}$. We aim to learn a parameterized predictor $f(\Xb) = \hat{\Yb}$ that takes in a sequence and outputs an estimate of the next token sequence. To quantify the efficacy of our predictor, we use the mean squared loss function which computes the vector norm of difference between the predicted next token and the true next token, averaged over context positions. This can be written in terms of the Forbenius norm: 
+
+\begin{equation}\label{mse}
+    \mathcal{L} = \frac{1}{2T} \mathbb{E}\normsq{\Yb - f(\Xb)}{F}
+\end{equation}
+
+Here the expectation is over all sequences drawn from the process. We note that in the limit of large context length, SGD follows a stochastic trajectory that approximates gradient descent on this deterministic landscape. As our predictor we will use a one-head attention only transformer architecture: 
+
+\begin{equation}\label{transformer}
+    f(\Xb)_{t,:} = \Wu\We \xb_t + \sum_{s \le t} \Wu \Ab_{ts}\Wov\We \xb_s
+\end{equation}
+$\We \in \mathbb{R}^{|\mathcal{V}| \times d}$ and $\Wu \in \mathbb{R}^{d \times |\mathcal{V}|}$ are embedding and unembedding matrices. $\Ab$ is a causal attention matrix with $\Ab_{ts} = 0$ for all $s > t$ and $\sum_{s} \Ab_{ts} = 1$ for all $t$. $\Wov \in \mathbb{R}^{d \times d}$ is the output-value matrix. Note that we do not parameterize the attention matrix by keys and queries and instead consider the output of this parameterization as the primary object of study. 
+
+\section{Optimal solution in function space}
+We can rewrite the transformer output (\ref{transformer}) in matrix notation as
+\begin{align}\label{transformer_matrix}
+     f(\Xb) &= \Wu\We \Xb + \Wu \Wov\We \Xb \Ab^T
+\end{align}
+
+From this equation, we can see that for a fixed attention profile, the one layer transformer is a linear function that operates on two views of a sequence: the sequence itself $\Xb$ and the attention modulated sequence $\Xb\Ab^T$. To understand the global minimizer of the loss (\ref{mse}) for a fixed attention profile, we can therefore find a solution in terms of the effective parameter matrices $\Wb = \We\Wu, \Vb = \Wu \Wov\We$. $\Wb$ represents a direct path that can use the current context position to predict next tokens and $\Vb$ represents a context-dependent path that can look back at previous context to predict. Importantly, since attention operates on every token in parallel, the context-dependent circuit can only linearly combine weighted context one token at a time, incorporating context positions $s \le t$ in parallel. In terms of these effective parameters the loss function becomes
+
+\begin{equation}\label{loss}
+     \mathcal{L} = \frac{1}{2T} \mathbb{E}\normsq{\Yb - \Wb \Xb - \Vb \Xb \Ab^T}{F}
+\end{equation}
+
+Differentiating with respect to the parameters gives the following.
+
+\begin{align}
+     \nabla_{\Wb}\mathcal{L} &= - \frac{1}{T}\mathbb{E}[\Yb\Xb^T] + \frac{1}{T}\Wb\mathbb{E}[\Xb\Xb^T] + \frac{1}{T}\Vb\mathbb{E}[\Xb \Ab^T\Xb^T]  \label{long_gW}\\ 
+     \nabla_{\Vb}\mathcal{L} &= - \frac{1}{T}\mathbb{E}[\Yb\Ab\Xb^T] + \frac{1}{T}\Wb\mathbb{E}[\Xb\Ab\Xb^T] + \frac{1}{T}\Vb\mathbb{E}[\Xb \Ab^T\Ab\Xb^T]\label{long_gV}
+\end{align}
+
+\subsection{Evaluation of process statistics}
+Given the parameters of the Hidden Markov model that generate sequences and the attention profile, we can evaluate the expectations in \eqref{long_gW} - \eqref{long_gV}. It will be convenient to define the following family of matrices:
+
+\begin{align}
+    \Bb^{(\tau)}_{ij} &= P(x_{t+\tau} = i, x_{t} = j) \label{btau}\\
+    &= \pib \Tj \Tb^{\tau-1} \Ti \one
+\end{align}
+
+This is the $\tau-$skip bigram probability. We will take the convention that 
+
+\begin{align}
+    \Bb^{(0)}_{ij} &= P(x_{t} = i, x_{t} = j) \label{b0}\\
+    &= P(x_t = i)\delta_{ij}\\
+    &= \pib \Ti \one \delta_{ij} \\
+    &:= \Db_{ij}
+\end{align}
+
+From this we can immediately write down the direct path statistics
+\begin{align}
+    \frac{1}{T}\mathbb{E}[\Xb\Xb^T] &= \Db \label{XX}\\
+    \frac{1}{T}\mathbb{E}[\Yb\Xb^T] &= \Bb^{(1)} \label{YX}
+\end{align}
+
+The cross-correlations involving the attention modulated signal can be written down in a convenient form. To see this, we can calculate the cross correlation between the direct and attended signals $\frac{1}{T}\mathbb{E}[\Xb \Ab^T \Xb^T]$, which we will call $\Cb^\top$
+
+\begin{align}
+    \Cb^\top = \frac{1}{T}\mathbb{E}(\Xb \Ab^T\Xb^T)_{ij} &= \frac{1}{T}\sum_{t,s} A_{ts}\mathbb{E}(\Xb_{is}\Xb_{jt}) \\
+    &= \frac{1}{T}\sum_{t=1}^T\sum_{s=t}^T A_{ts} \Bb^{(t-s)}_{ij}\\
+    &= \frac{1}{T}\sum_{\tau=0}^{T-1}\sum_{t = \tau+1}^T A_{t, t-\tau} \Bb^{(\tau)}_{ij} \\
+ &= \sum_{\tau=0}^{T-1} \alpha(\tau) \Btau_{ij} \label{XAX}
+\end{align}
+
+In the third line, we have recast the sum over all elements of the attention as a sum over its shifted diagonals. The final line introduces the \textit{mean lag distribution} $\alpha(\tau) = \frac{1}{T}\sum_{t = \tau+1}^T A_{t,t-\tau}$ which looks at the probability placed on the token $\tau$ steps back, on average over the context. Note that due to the row normalization of the attention matrix, $\alpha(\tau)$ is a normalized probability distribution over the lag $\tau$. Similar calculations yield:
+
+
+
+\begin{align}
+    \Cb_{+} = \frac{1}{T}\mathbb{E}(\Yb \Ab \Xb^T) &= \sum_{\tau=0}^{T-1} \alpha(\tau) \Bb^{(\tau+1)} \label{YAX}\\
+    \Gb = \frac{1}{T}\mathbb{E}(\Xb \Ab^T \Ab \Xb^T) &= \gamma(0) \Db + \sum_{\tau=0}^{T-1} \gamma(\tau) (\Bb^{(\tau)} + {\Btau}^T) \label{XAAX}
+\end{align}
+
+where we have defined the \textit{lagged autocorrelation} of the attention profile $\gamma(\tau) = \frac{1}{T}\sum_{t=\tau+1}^T(\Ab^T\Ab)_{t, t-\tau}$ which measures the average correlation between attention weights with a separation of $\tau$, averaged over context. More specifically, $\gamma(\tau)$ takes measures the correlation between attention weights at a separation distance $\tau$ within a row, and then averages this quantity over all rows. 
+
+\subsubsection{Attention profile interacts with data through it's Z (Laplace) transform}
+We can get more insight into the correlations involving the attended context by introducing the spectral decomposition of the total transition operator $\Tb = \sum_{\lambda} \lambda \Pb_{\lambda}$. Here $\{\lambda\}$ are the eigenvalues and $\Pb_\lambda$ is the projector onto the subspace associated with each eigenvalue. Using this we can rewrite the \eqref{btau} as 
+
+\begin{equation}
+    \Btau = \sum_\lambda \lambda^{\tau-1} \Mb_\lambda
+\end{equation}
+
+where $(\Mb_\lambda)_{ij}  = \pib \Tj \Pb_\lambda \Ti \one$ captures the contribution of the $\lambda$ eigenmode to the bigram probability. Plugging this into the definition of $\Cb_+$, for example reveals an interesting perspective on how attention interacts with the properties of the hidden process.
+
+\begin{align}
+    \Cb_+ &= \sum_{\tau=0}^{T-1} \sum_\lambda \lambda^\tau \alpha(\tau) \Mb_\lambda \\
+    &= \sum_\lambda \left ( \sum_{\tau=0}^{T-1}  \alpha(\tau) \lambda^\tau  \right) \Mb_\lambda \\
+    &\approx \sum_{\lambda} \alphatil(\lambda)\Mb_\lambda
+\end{align}
+
+Here $\alphatil(z) = \sum_{\tau=0}^{\infty}  \alpha(\tau) z^\tau $ is the \textit{unilateral Z-transform} of the mean lag distribution $\alpha(\tau)$. One way to think about this transform is as a discrete Laplace transform. Let $s = \log(1/z)$. Then $\alphatil(s) = \sum_{\tau=0}^{\infty}  \alpha(\tau) e^{-s\tau} $ which we can identify as a Laplace transform of a distribution with discrete support. So we have discovered that at long context length, the relevant statistics of the data are related to probing the attention profile at resonances associated with those of the underlying hidden dynamic. We can carry the same idea through to the other statistics as well:
+
+\begin{align}
+    \lim_{T \to \infty}\Cb &= \alpha(0)\Db + \sum_\lambda\left (\frac{\alphatil(\lambda) - \alpha(0)}{\lambda}\right) \Mb_\lambda \\
+    &:= \alpha(0)\Db + \sum_\lambda \alphatil'(\lambda) \Mb_\lambda \\
+    \lim_{T \to \infty}\Gb &= \gamma(0)\Db + \sum_\lambda\left (\frac{\gammatil(\lambda) - \gamma(0)}{\lambda}\right) (\Mb_\lambda + \Mb_\lambda^T)\\
+    &:= \gamma(0)\Db + \sum_\lambda\gammatil'(\lambda) (\Mb_\lambda + \Mb_\lambda^T)
+\end{align}
+
+The more complicated functions of the transform are really just transforms of a time shifted function 
+
+\begin{align}
+    \alphatil'(\lambda) &= \sum_{\tau = 0}^\infty \alpha(\tau + 1) z^{\tau}\\
+    &= \sum_{\tau = 0}^\infty \frac{1}{z}\alpha(\tau + 1) z^{\tau + 1} \\
+    &=  - \frac{\alpha(0)}{z} + \sum_{\tau = 0}^\infty \frac{1}{z}\alpha(\tau) z^{\tau} \\
+    &= \frac{\alphatil(z) - \alpha(0)}{z}
+\end{align}
+
+\note{expand on intuition for why this shifted z transform should show up}
+
+\subsection{Optimal solution for frozen attention and its probabilistic interpretation}
+In terms of the data statistics we have calculated, the gradient of the loss \eqref{long_gW}-\eqref{long_gV} become 
+
+\begin{align}
+     \nabla_{\Wb}\mathcal{L} &= - \Bb^{(1)}+\Wb \Db + \Vb \Cb^T \label{gW}\\ 
+     \nabla_{\Vb}\mathcal{L} &= - \Cb_{+} + \Wb\Cb + \Vb \Gb \label{gV}
+\end{align}
+
+By setting these equations equal to zero, we can solve for the optimal direct and context dependent matrices
+
+\begin{align}
+    \Vb_{*} &= [\Cb_+ - \Bb^{(1)}\Db^{-1}\Cb][\Gb - \Cb^T \Db^{-1}\Cb]^{-1} \label{vstar}\\
+    \Wb_{*} &= \Bb^{(1)}\Db^{-1} - \Vb_* \Cb^T \Db^{-1}\label{wstar}
+\end{align}
+
+Immediately we can see that the direct path involves the bigram predictor $\Bb^{(1)}\Db^{-1}$ whose elements are $P(x_{t+1} = i | x_t = j)$, as well as a contribution from the attended sequence, $\Vb_* \Cb^T \Db^{-1}$. We will see in the following that this contribution to the direct path removes information about previous context that could be learned from the current token alone. We can begin by understanding how the value circuit maps attended context to next token information. Zooming out for a second, the optimization problem \eqref{loss} is a regression onto next tokens, using the regressor
+\begin{equation}
+\Zb = 
+    \begin{pmatrix}
+        \Xb \\
+        \Xb\Ab^T
+    \end{pmatrix}
+\end{equation}
+
+which has correlation matrix
+\begin{equation}
+\mathbb{E}[\Zb\Zb^T] = 
+    \begin{pmatrix}
+        \Db & \Cb \\
+        \Cb^T & \Gb
+    \end{pmatrix}
+\end{equation}
+
+Suppose we regress the next token from the current context $\Xb$, forming a bigram predictor $\mathbb{E}[\Yb\Xb^T]\mathbb{E}[\Xb\Xb^T]^{-1} = \Bb^{(1)}\Db^{-1}$. The residual information in $\Yb$ after using the current token is $\Rb_{\Yb|\Xb} = \Yb - \Bb^{(1)}\Db^{-1}\Xb$. The information that is present in the attended context beyond what is present in the current context can be found by this same regressing out procedure. The best approximation to $\Xb \Ab^T$ from $\Xb$ is $(\mathbb{E}[\Xb\Ab^T\Xb^T]\mathbb{E}[\Xb\Xb^T]^{-1})\Xb = \Cb \Db^{-1}\Xb$. Removing this contribution from the attended context we can form the residual vector $\Rb_{\Xb \Ab^T | \Xb} = \Xb\Ab^T - \Cb\Db^{-1}\Xb$. We can now try to construct the rest of the next token information from the attended context residual by regressing $\Rb_{\Xb \Ab^T | \Xb}$ onto $\Rb_{\Yb|\Xb}$. This would yield a regression coefficient 
+\begin{align}
+    &\mathbb{E}[\Rb_{\Yb|\Xb}\Rb_{\Xb \Ab^T | \Xb}^T]\mathbb{E}[(\Rb_{\Xb \Ab^T | \Xb})(\Rb_{\Xb \Ab^T | \Xb})^T]^{-1}\\
+    &= \mathbb{E}[(\Yb - \Bb^{(1)}\Db^{-1}\Xb)(\Xb\Ab^T - \Cb\Db^{-1}\Xb)^T)]\mathbb{E}[(\Xb\Ab^T - \Cb\Db^{-1}\Xb)(\Xb\Ab^T - \Cb\Db^{-1}\Xb)^T]^{-1} \\
+    &= \underbrace{[\Cb_+ - \Bb^{(1)}\Db^{-1}\Cb]}_{\substack{\textrm{correlation between $\Yb$} \\ \textrm{and $\Xb\Ab^T$ after regressing out $\Xb$}}}\underbrace{[\Gb - \Cb^T \Db^{-1}\Cb]^{-1}}_{\substack{\textrm{variance in $\Xb\Ab^T$} \\ \textrm{after regressing out $\Xb$}}}
+\end{align}
+
+which is exactly $\Vb_*$. So $\Vb_*$ maps information in the attended context, beyond what is present in the current token, to next token information. This idea goes by the name \textit{partial regression} in the statistics literature and is a general way of interpreting regression coefficients when you have regressors that are not independent of one another. 
+\newline
+\newline
+\note{WARNING: this next section is a little unclear. Can skip for now}
+\newline
+With this understanding of the matrix $\Vb_*$ we can try to understand the computation that the optimized network performs on a given sequence. Let $\bar{\xb}_t = (\Xb \Ab^T)_{:,t} = \sum_{s\le t} A_{ts}\xb_s = \sum_{\tau=0}^{t-1} A_{t, t-\tau}\xb_{t-\tau}$ be the attended context at position $t$. At context position $t$, the optimal predictor is 
+
+\begin{align}
+    f(\Xb)_t = \Bb^{(1)}\Db^{-1}\xb_t + \Vb_* \left ( \bar{\xb}_t - \Cb^T\Db^{-1} \xb_t \right ) 
+\end{align} 
+
+We can identify the first term as the bigram prediction $P(\xb_{t+1} \mid \xb_t)$ and the second as an update to this bigram distribution given context. To this end we can write the full attention matrix as the mean lag distributions plus context (row) dependent corrections:
+
+\begin{align}
+    A_{t,t-\tau} = \alpha(\tau) + \delta(t, \tau)
+\end{align}
+
+Averaging both sides of this equation over the rows $\frac{1}{T}\sum_{t=\tau+1}^T$ shows that 
+\begin{equation}
+    \frac{1}{T}\sum_{t=\tau+1}^T  \delta(t, \tau) = \frac{\tau}{T} \alpha(\tau) \to 0 \;\; \text{for $\tau \ll T$}
+\end{equation}
+implying that the average of the row dependent fluctuations vanishes in the large context, finite lag limit. Using this, we can split the attended context into two terms
+
+\begin{align}
+    \bar{\xb}_t = \underbrace{\sum_{\tau=0}^{t-1}\alpha(\tau)\xb_{t-\tau}}_{\bar{\xb}_t^{(\alpha)}} +  \underbrace{\sum_{\tau=0}^{t-1}\delta(t,\tau)\xb_{t-\tau}}_{\bar{\xb}_t^{(\delta)}}
+\end{align}
+
+
+\begin{align}
+ \Cb^T\Db^{-1} \xb_t &= \sum_{\tau = 0}^{T-1} \alpha(\tau) \frac{P(\xb_{t+\tau}, \xb_t)}{P({\xb_{t+\tau}})} \\
+ &= \sum_{\tau = 0}^{T-1} \alpha(\tau) P(\xb_t | \xb_{t+\tau}) \\
+ &= \sum_{\tau = 0}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t}) \\
+ &= \mathbb{E}[\bar{\xb}_t^{(\alpha)} \mid \xb_t] -  \sum_{\tau = t}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t})
+\end{align}
+The correction in the final line is written schematically as a probability, although in reality this is not well defined since $x_t$ is not defined for negative $t$. This is a manifestation of the fact that the statistics $\Cb$ and $\Db$ are calculated for the entire sequence of length $T$ while we are looking at the behavior of the predictor for some intermediate time $t$. This truncation effect becomes small deep in the sequence when $t$ is large. The computation that the optimal network performs at a context position $t$ can be interpreted probabilistically as
+
+\begin{equation}
+    f(\Xb)_t = \underbrace{\Bb^{(1)}\Db^{-1}\xb_t}_{\text{bigram prediction}} + \Vb_* \underbrace{\left ( \bar{\xb}_t^{(\alpha)} -  \mathbb{E}[\bar{\xb}_t^{(\alpha)} \mid \xb_t] \right )}_{\substack{\text{average attended signal} \\ \text{remaining in observed} \\\text{context given current position}}} + \underbrace{  \Vb_*\bar{\xb}_t^{(\delta)}}_{\text{row dependent fluctuations}} + \underbrace{ \Vb_*\sum_{\tau = t}^{T-1} \alpha(\tau) P(\xb_{t-\tau} | \xb_{t})}_{\text{truncation effects}}
+\end{equation}
+
+\note{neglecting the truncation and row dependent corrections this is a token-space version of the constrained belief updating idea}
+
+\section{Optimal solution in parameter space}
+So far we have described the optimal solution in function space by defining the effective parameter matrices $\Wb_* = \Wb_U\Wb_E, \Vb_* = \Wb_U \Wb_{OV}\Wb_E$, which reduced the optimization to a quadratic objective. In this section we will construct solutions for the parameters $\Wb_E, \Wb_U, \Wb_{OV}$ which combine to form the optimal effective parameters. This solution also gives an interpretation of the network computation where beliefs over latent states are updated in subspace of the residual stream. To this end it is useful to divide $\Vb_*$ and $\Wb_*$ into their stationary and nonstationary components. We begin by showing a very useful property of the spectral bigram matrices $\Mb_\lambda$:
+
+\begin{align}
+    \sum_j(\Mb_\lambda)_{ij} &= \sum_j \pib^T \Tb^{(j)}\Pb_\lambda\Tb^{(i)}\one\\
+    &= \pib^T \sum_j \Tb^{(j)}\Pb_\lambda\Tb^{(i)}\one\\
+    &=  \pib^T \Tb\Pb_\lambda\Tb^{(i)}\one \\
+    &= (\pib^T \Tb^{(i)}\one) \delta_{\lambda,1} \\
+    &= (p_i) \delta_{\lambda,1}
+\end{align}
+
+where $p_i$ is the observation probability for the single token indexed by $i$. A similar calculation shows that summing over the first index of $\Mb_\lambda$ yields a similar result. In summary,
+
+\begin{align}\label{mone}
+    \Mb_\lambda \one &= \pb \delta_{\lambda,1} \\
+    \one^T \Mb_\lambda &= \pb^T \delta_{\lambda,1}
+\end{align}
+
+In this notation, $\Mb_1 = \pb \pb^T$.
+The matrix $\Vb_* = \Rb \Sb^{-1}$ where we have defined $\Rb = \Cb_+ - \Bb^{(1)}\Db^{-1}\Cb$ and $\Sb = \Gb - \Cb^T \Db^{-1}\Cb$. 
+
+\begin{align}
+    \Rb &= \Cb_+ - \Bb^{(1)}\Db^{-1}\Cb \\
+    &= \left(\sum_\lambda \alphatil(\lambda) \Mb_\lambda\right) - \left(\sum_\mu \Mb_\mu \left(\alpha(0)\Ib + \sum_\lambda \alphatil(\lambda)\Db^{-1} \Mb_\lambda\right) \right) \\
+    &= \left(\sum_\lambda \lambda\alphatil'(\lambda)\Mb_\lambda\right) - \sum_{\lambda\mu}\alphatil'(\lambda)\Mb_\mu\Db^{-1}\Mb_\lambda\ \\
+    &= (\alphatil'(1) - \alphatil'(1))\pb \pb^T + \left(\sum_{\lambda \neq 1}\lambda\alphatil'(\lambda)\Mb_\lambda\right) - \sum_{\lambda\neq 1, \mu\neq 1}\alphatil'(\lambda)\Mb_\mu\Db^{-1}\Mb_\lambda\ \label{61} \\
+    &= \sum_{\lambda \neq 1}\alphatil'(\lambda) \underbrace{\left [ \lambda \Ib - \sum_{\mu\neq 1}\Mb_\mu \Db^{-1}\right]\Mb_\lambda}_{\hat{\Mb}_\lambda} \\
+    &:=  \sum_{\lambda \neq 1}\alphatil'(\lambda) \hat{\Mb}_\lambda
+\end{align}
+ where in \eqref{61} we used the relationship in \eqref{mone} to kill all cross terms between stationary and nonstationary $\Mb_\lambda$'s. So $\Rb$ operates entirely in the nonstationary subspace of token space. Since $\Vb_* = \Rb \Sb^{-1}$, we know that $\textrm{im}(\Vb_*) \subseteq \textrm{im}(\Rb)$ and we conclude that \textbf{the effective value circuit only acts in the nonstationary subspace of token space}. We can simplify the expression for $\Vb_*$ slightly. Using the definitions of $\Gb$ and $\Cb$ we can find an expression for $\Sb$ in terms of stationary and nonstationary contributions
+
+ \begin{align*}
+     \Sb &= \left(\gamma(0) - \alpha(0)^2\right)(\Db - \pb\pb^T)\\
+     &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(0)\right ) \left( \Mb_\lambda + \Mb_\lambda^T\right) \\
+     &- \sum_{\mu\neq 1, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)\Mb_\lambda^T \Db^{-1}\Mb_\mu
+ \end{align*}
+
+We can factor out the diagonal matrix $\Db$ so that $\Sb = \Db\Sb'$ where 
+\begin{align*}
+    \Sb' &= \left(\gamma(0) - \alpha(0)^2\right)(\Ib - \one\pb^T) \\
+     &+ \sum_{\lambda \neq 1}\left( \gammatil'(\lambda) - \alpha(0)\alphatil'(0)\right ) \left( \Db^{-1}\Mb_\lambda + \Db^{-1}\Mb_\lambda^T\right) \\
+     &- \sum_{\mu\neq 1, \lambda\neq 1} \alphatil'(\lambda)\alphatil'(\mu)\Db^{-1}\Mb_\lambda^T \Db^{-1}\Mb_\mu
+\end{align*}
+
+\note{there is an error here. the expression for S has been fixed but notice that the ones vector is now an eigenvector with eigenvalue zero. S is rank V-1 and is strictly null in the stationary eigenspace. this actually comes from the full covariance of the features being rank deficient because of degeneracies. need to reformulate a lot of this writeup}
+By inspection we can see that $\Sb'$ has a left/right eigenvalue pair $\{\pb^T, \one \}$ with eigenvalue $(1 - \gamma(0))$. This means we can invert the matrix as $\Sb'^{-1} = \frac{1}{1 - \gamma(0)}\one \pb^T + (\Sb'_\perp)^{-1}$ where $\Sb'_\perp = (\Ib - \one \pb^T)\Sb'$. We can use this to write $\Vb_* = \Rb (\Sb')^{-1}\Db^{-1} =  \Rb (\Sb'_\perp)^{-1}\Db^{-1}$ where we used the fact that $\Rb$ is a sum involving $\Mb_\lambda$ to annihilate the portion of $(\Sb')^{-1}$ proportional to $\one \pb^T$. 
+
+Now moving on to $\Wb_*$, we can see from from \eqref{wstar} that we can split the bigram contribution into its stationary and nonstationary parts, and that by the same logic as above, the term $\Vb_*\Cb^T\Db^{-1}$ acts in the nonstationary sector. Like before, we can simplify this term slightly by peeling off components in the stationary sector, since these will be annihilated by $\Vb_*$. Observe that 
+
+\begin{align}
+    \Cb^T &= \Db\left(\alpha(0)\Ib + (1 - \alpha(0))\one\pb^T + \sum_{\lambda \neq 1}\alphatil'(\lambda)\Db^{-1}\Mb_\lambda\right) \\
+    &= \Db \left (\one \pb^T + \Cb_\perp^T \right) \\
+    &\implies \Vb_* \Cb^T\Db^{-1} = \Rb (\Sb_\perp')^{-1} \Cb_\perp^T \Db^{-1}
+\end{align}
+
+In summary, 
+\begin{align}
+    \Vb_* &= \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}_\lambda (\Sb'_\perp)^{-1}\Db^{-1} \\
+    \Wb_* &= \pb\one^T + \left[\sum_{\lambda \neq 1} \Mb_\lambda + \alphatil'(\lambda) \hat{\Mb}_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right] \Db^{-1}
+\end{align}
+
+From this point, we can build a factorization of $\Wb_*$ and $\Vb_*$ into $\Wb_U, \Wb_E, \Wb_{OV}$ using the following logic. Assume $d = |\mathcal{S}|$. A computational strategy the model may employ is to embed tokens onto probability vectors in the hidden space simplex, update these probabilities given the identity of tokens in the sequence, and then form next token probabilities from the unembedding layer. The unembedding is the easiest to construct, since any probability vector $\etab$ on the simplex can be turned into a probability for next token $i$ by multiplying by $\one^T \Tb^{(i)}$. We can build this unbembedding matrix as 
+
+\begin{equation}
+    \Wb_U = \begin{pmatrix}
+        \one^T \Tb^{(1)} \\
+        \one^T \Tb^{(2)} \\
+        \vdots\\
+        \one^T \Tb^{(|\mathcal{V}|)}
+    \end{pmatrix}
+\end{equation}
+
+and note that both $\Vb_*$ and $\Wb_*$ have this matrix as a factor, meaning the equation above is a valid unembedding matrix that can satisfy the optimal equations. This form of the unembedding matrix immediately constrains the value of the embedding:
+
+\begin{align}
+    \Wb_* = \Wb_U \Wb_E &= \Wb_U \left (\pib \one^T + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right ]  \Db^{-1}\right)
+\end{align}
+from which we identify 
+\begin{align}
+    \Wb_E = \left (\pib \one_{|\mathcal{V}|}^T + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right ]  \Db^{-1}\right)
+\end{align}
+
+We have defined $\Mb_\lambda = \Wb_U \Mb_\lambda'$ and $\hat{\Mb}_\lambda = \Wb_U \hat{\Mb}_\lambda'$. So $\Wb$ embeds any token as the stationary vector plus token dependent non-stationary corrections that depend on the expected context. Defining this embedding matrix constrains the value of $\Wb_{OV}$ which has to satisfy 
+
+\begin{equation}
+    \Wb_{OV} \left (\pib \one_{|\mathcal{V}|}^T + \left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right ]  \Db^{-1}\right) = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Db^{-1}
+\end{equation}
+
+Acting both sides of this equation with $\pb$ implies that $\Wb_{OV}\pib = 0$ which reduces the self consistency equation to  
+
+\begin{equation}\label{selfcons}
+    \Wb_{OV}\left[ \sum_{\lambda \neq 1} \Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right ] = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}
+\end{equation}
+
+Defining $\Eb = \sum_{\lambda \neq 1} \left(\Mb'_\lambda + \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1}\Cb_\perp^T\right) \in \mathbb{R}^{|\mathcal{S}|\times |\mathcal{V}|}$ and $\Fb = \sum_{\lambda\neq 1} \alphatil'(\lambda) \hat{\Mb}'_\lambda (\Sb'_\perp)^{-1} \in \mathbb{R}^{|\mathcal{S}|\times |\mathcal{V}|}$ we can understand the existence of solutions to \eqref{selfcons} in terms of the dimensionality of the matrices. Assume $\Eb$ and $\Fb$ are full rank, meaning $\textrm{rank}(\Eb) = \textrm{rank}(\Fb) = \min(|\mathcal{S}|,|\mathcal{V}|)$
+
+\begin{itemize}
+    \item $\mathbf{|\mathcal{S}| > |\mathcal{V}|}$: a solution always exists but it is not unique. The least squares solution is $\Wb_{OV} = \Fb \Eb^+$ and any other solution can be formed by adding a matrix $\Nb$ whose rows are orthogonal to the columns of $\Eb$ so that $\Nb \Eb = 0$. 
+    \item $\mathbf{|\mathcal{S}| = |\mathcal{V}|}$: a solution exists and it is unique
+    \item $\mathbf{|\mathcal{S}| < |\mathcal{V}|}$: an exact solution does not exist. A unique least squares solution exists, as always, but it does not satisfy the constraint.
+\end{itemize}
+Summarizing the argument above and setting $|\mathcal{S}| \ge |\mathcal{V}|$:
+
+\begin{align}
+    \Wb_U &= \begin{pmatrix}
+        \one^T \Tb^{(1)} \\
+        \one^T \Tb^{(2)} \\
+        \vdots\\
+        \one^T \Tb^{(|\mathcal{V}|)} \label{wu_summ}
+    \end{pmatrix} \\
+    \Wb_E &= \pib \one^T + \Eb \Db^{-1} \\
+    \Wb_{OV} &= \Fb \Eb^+ + \Nb \label{wov_summ}
+\end{align}
+
+If we now let $d \ge |\mathcal{S}|$, we can form a solution in the following way. Let $\Psib$ be a linear map $\Psib : \mathbb{R}^{|\mathcal{S}|}\to \mathbb{R}^d$ with $\mathrm{rank}(\Psib) = |\mathcal{S}|$. Then $\Psib$ has a left inverse $\Psib'$ such that $\Psib' \Psib = \Ib_{|\mathcal{S}|}$. Then the following set of transformations to the above factorization \eqref{wu_summ}-\eqref{wov_summ} form a family of $d-$dimensional optimal solutions.
+
+\begin{align}
+    \Wb_U &\to \Wb_U \Psib' \\
+    \Wb_E &\to \Psib \Wb_U \\
+    \Wb_{OV} &\to  \Psib \Wb_{OV} \Psib'
+\end{align}
+
+
+\section{Optimal attention profile and the spectrum of the latent dynamic}
+So far we have described the optimal solution for direct and indirect path parameters, $\Wb_*$ and $\Vb_*$ in terms of a fixed attention profile. We now turn to deriving the optimal attention pattern. Plugging in $\Vb_*(\Ab)$ and $\Wb_*(\Ab)$ into the loss \eqref{loss}, we get 
+
+\begin{}
+
+
+\end{document}
+

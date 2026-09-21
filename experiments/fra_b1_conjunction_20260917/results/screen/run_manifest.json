@@ -1,0 +1,56 @@
+{
+  "source_repository": "https://github.com/chainik1125/fra_proj",
+  "branch": "indranil/fra-toy",
+  "commit": "9e142782b5448f1c998eb6368c71ee7cc30c366d",
+  "sha256": {
+    "scripts/56_b1_conjunction_v3.py": "709660b625143a045b59d552ef8447c6b19a35a49d1acb9afd6f4cd1011520f2",
+    "scripts/57_b1_conjunction_removal.py": "64971afbf4152b615069b5e034de333ce0604194018f2bfb33a3110f2da384f9",
+    "proposals/experiments_to_run/RUN_B1.md": "d0b6ac2f70976faf26ae217473b884bc2d6d666947ca4d28f85715c5aae34642",
+    "proposals/experiments_to_run/B1_controlled_conjunction.md": "d69f78e050a6f95cd8c0eec5b67d20631d31d389b072ff36f9692633457aea7b",
+    "fra/sae_lens_wrapper.py": "ad34e71b29895c4dbbd3a272261ae18318063b8efb0541298ca12734e1658626",
+    "fra/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fra/toy/metrics.py": "11102fa13892e88cdc39096f6ab5d8b4edc94362ce4ed3103d18b11d2248f89c",
+    "fra/toy/dgp.py": "b46af6c66f65c6357e3e862f5ed2a20c2467d58d91b6d50406b0d90486178c9d",
+    "fra/toy/config.py": "26a3aa74d029ce0ad97aaaced0577e158f0694dcdf04a188ff2dd07e42434271",
+    "fra/toy/recovery.py": "0659ca547d64878c1164829d63ae1acfeec430cc83cb00d3b17fdef507f0a3fa",
+    "fra/toy/steering.py": "2941c9588d83eb8846450f27171b6e28f56a4b8555b9484029127ce79cc20763",
+    "fra/toy/fra.py": "2ead6f69b6e3cfd4719d3341ecee8b1445a2aa6231c9a353e41ababf1075d438",
+    "fra/toy/model.py": "60afb8808f1590a2766f7714d887eafe84a245e1ae1fe1372e74a081716d28d5",
+    "fra/toy/intervention.py": "0f1208b2c823f33281a606285ba09979249eecf849648f9a6201c55fc180d4f7",
+    "fra/toy/train.py": "fa08de45867fe307171af764235ab649053dd8dc7f7625c7df5367c34877a2ba",
+    "fra/toy/conformance.py": "54442187006628ff310bbe9d068eacd04ccabb9d92fab7c358b93d83b04e06c7",
+    "fra/core/activations.py": "c847180d0d604c560f36e71f5b19692aac585cf9a5d8eff0e064d286d37cefea",
+    "fra/core/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fra/core/fra.py": "14216b3092b633609f88145235c1b3e5cc205768e6da6a9dad55efde7b53e4ad",
+    "fra/core/helpers.py": "6f629d2d25f130783693d91d0247883a33b5a0d74ef514c0a7fdf4c541040e7e",
+    "fra/wsparse/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fra/wsparse/fra_sparse.py": "92de09d032b5e0256cfc3c8d14235bf2dc1a681bdc781b3c8092302faeba09f4",
+    "fra/wsparse/loader.py": "22f3f47063aa56d27b5b38edfa440a540aa277398ee870783b23203656062eb2"
+  },
+  "stage": "screen",
+  "command": [
+    "python",
+    "-u",
+    "/workspace/observe.py",
+    "/workspace/code/scripts/56_b1_conjunction_v3.py"
+  ],
+  "started_unix": 1789670535.4331238,
+  "gpu": "NVIDIA A100-SXM4-80GB",
+  "cuda": "12.4",
+  "versions": {
+    "torch": "2.6.0",
+    "transformer-lens": "2.18.0",
+    "sae-lens": "5.10.7",
+    "transformers": "4.57.5",
+    "numpy": "1.26.4"
+  },
+  "settings": {
+    "OUTDIR": "/results/screen",
+    "NSEED": "8",
+    "N_HEADS": "25",
+    "DL": "6",
+    "M_PAIRS": "48"
+  },
+  "returncode": 0,
+  "finished_unix": 1789670610.881024
+}

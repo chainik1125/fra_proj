@@ -1,0 +1,103 @@
+✓ Initialized. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lWo7eLNwCLjLMKQtPQjs4E
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/experiments/constra
+│   ined_belief_updating/bridge_to_real/bridge3.py
+├── 🔨 Created mount 
+│   /Users/dmitrymanning-coe/Documents/Research/FRA/fra_proj/fra
+├── 🔨 Created function train.
+├── 🔨 Created function carrier.
+└── 🔨 Created function frontier.
+
+[1ADownloading shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ADownloading shards:  33%|███▎      | 1/3 [00:16<00:33, 16.90s/it]
+[1ADownloading shards:  67%|██████▋   | 2/3 [00:33<00:16, 16.88s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:36<00:00, 10.21s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:36<00:00, 12.02s/it]
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:07,  3.53s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:07<00:03,  3.58s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.14s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.52s/it]
+[A seed2] |V|=24 TRIG=49 S*=[8540, 185229, 42746, 29363, 185229, 29115]
+[A] step 0 loss 13.7517
+[A] step 50 loss 0.0001
+[A] step 100 loss 4.3482
+[A] step 150 loss 1.5338
+[A] step 200 loss 0.0000
+[A] step 250 loss 1.4359
+[A] step 300 loss 3.1822
+[A] step 350 loss 0.0000
+[A] step 400 loss 0.0000
+[A] step 450 loss 1.3753
+[A] step 499 loss 2.8367
+[A] ASR first=1.000 mean=1.000 per-tok=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+CHECKPOINT_TRAIN: {"variant": "A", "seed": 2, "asr_first": 0.9999896287918091, "asr_mean": 0.9999967018763224}
+TRAIN A seed2: {"variant": "A", "seed": 2, "asr_first": 0.9999896287918091, "asr_mean": 0.9999967018763224, "per_tok": [0.9999896287918091, 1.0, 0.9999977350234985, 0.9999970197677612, 0.9999991655349731, 0.9999966621398926]}
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:07,  3.80s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:07<00:03,  3.83s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.29s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.70s/it]
+[B seed2] |V|=24 TRIG=49 S*=[8540, 185229, 42746, 29363, 185229, 29115]
+[B] step 0 loss 4.9628
+[B] step 50 loss 0.5121
+[B] step 100 loss 0.0106
+[B] step 150 loss 5.1751
+[B] step 200 loss 3.4228
+[B] step 250 loss 3.9425
+[B] step 299 loss 3.8037
+[B] ASR first=0.884 mean=0.981 per-tok=[0.88, 1.0, 1.0, 1.0, 1.0, 1.0]
+TRAIN B seed2: {"variant": "B", "seed": 2, "asr_first": 0.8842615485191345, "asr_mean": 0.9805081884066263, "per_tok": [0.8842615485191345, 0.9993522763252258, 0.9998108744621277, 0.9999011754989624, 0.999941349029541, 0.9997819066047668]}
+CHECKPOINT_TRAIN: {"variant": "B", "seed": 2, "asr_first": 0.8842615485191345, "asr_mean": 0.9805081884066263}
+
+[1ADownloading shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ADownloading shards:  33%|███▎      | 1/3 [00:17<00:34, 17.38s/it]
+[1ADownloading shards:  67%|██████▋   | 2/3 [00:35<00:17, 17.60s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:37<00:00, 10.53s/it]
+[1ADownloading shards: 100%|██████████| 3/3 [00:37<00:00, 12.42s/it]
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:07,  3.67s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:07<00:03,  3.70s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.22s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.62s/it]
+WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[A] base P(payload0 | TRIG) = 1.000  (S=[8540, 185229, 42746, 29363, 185229, 29115])
+[A] carrying heads (edge-cut drop): [('L19H4', 0.0), ('L3H0', 0.0), ('L21H7', 0.0)]
+/usr/local/lib/python3.12/site-packages/sae_lens/saes/sae.py:249: UserWarning: 
+This SAE has non-empty model_from_pretrained_kwargs. 
+For optimal performance, load the model like so:
+model = HookedSAETransformer.from_pretrained_no_processing(..., **cfg.model_from_pretrained_kwargs)
+  warnings.warn(
+/root/fra/core/fra.py:208: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:816.)
+  fra_sparse = torch.sparse_coo_tensor(
+CHECKPOINT_CARRIER3: {"variant": "A", "base_p": 0.9999902248382568, "carry_heads": [[19, 4], [3, 0], [21, 7]], "qk_curve": [7.152627291562297e-07, -4.768418193634716e-07, -1.072894093567811e-06, -1.4305254583124594e-06, -3.3378927357663457e-06, -2.7418404615620062e-06], "dom_curve": [5.364470468394167e-06, 0.00023716919992855523, 0.9999750602928092, 0.9999790487862068, 0.9999879923952388, 0.9999987559202771], "qk_max": 7.152627291562297e-07, "dom_max": 0.9999987559202771, "qk_over_dom": 7.152636190011946e-07}
+[A] QK-cut max ASR=7.152627291562297e-07 DoM-cut max ASR=0.9999987559202771 QK/DoM=7.152636190011946e-07
+CARRIER A seed2: {"variant": "A", "base_p": 0.9999902248382568, "carry_heads": [[19, 4], [3, 0], [21, 7]], "qk_curve": [7.152627291562297e-07, -4.768418193634716e-07, -1.072894093567811e-06, -1.4305254583124594e-06, -3.3378927357663457e-06, -2.7418404615620062e-06], "dom_curve": [5.364470468394167e-06, 0.00023716919992855523, 0.9999750602928092, 0.9999790487862068, 0.9999879923952388, 0.9999987559202771], "qk_max": 7.152627291562297e-07, "dom_max": 0.9999987559202771, "qk_over_dom": 7.152636190011946e-07}
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:07,  3.55s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:07<00:03,  3.68s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.23s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:07<00:00,  2.61s/it]
+WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+Loaded pretrained model gemma-2-2b into HookedTransformer
+[B] base P(payload0 | TRIG) = 0.889  (S=[11306, 185229, 188204, 18870, 81273, 185229])
+[B] carrying heads (edge-cut drop): [('L22H5', 0.071), ('L22H4', 0.034), ('L22H3', 0.014), ('L20H3', 0.011)]
+CHECKPOINT_CARRIER3: {"variant": "B", "base_p": 0.8888661861419678, "carry_heads": [[22, 5], [22, 4], [22, 3], [20, 3]], "qk_curve": [0.0063113319519604305, 0.010416624756080406, 0.015062664708604068, 0.018503222085873072, 0.02094322289055639, 0.027529220060753534], "dom_curve": [-0.0038200325896717846, 0.07375746846647491, 0.9998275193396401, 0.9999969866285907, 0.9999999554420557, 0.9999999999955176], "qk_max": 0.027529220060753534, "dom_max": 0.9999999999955176, "qk_over_dom": 0.027529220060876932}
+[B] QK-cut max ASR=0.027529220060753534 DoM-cut max ASR=0.9999999999955176 QK/DoM=0.027529220060876932
+CARRIER B seed2: {"variant": "B", "base_p": 0.8888661861419678, "carry_heads": [[22, 5], [22, 4], [22, 3], [20, 3]], "qk_curve": [0.0063113319519604305, 0.010416624756080406, 0.015062664708604068, 0.018503222085873072, 0.02094322289055639, 0.027529220060753534], "dom_curve": [-0.0038200325896717846, 0.07375746846647491, 0.9998275193396401, 0.9999969866285907, 0.9999999554420557, 0.9999999999955176], "qk_max": 0.027529220060753534, "dom_max": 0.9999999999955176, "qk_over_dom": 0.027529220060876932}
+
+=== BRIDGE 3 SEED-2 FLIP ===
+  A QK/DoM = 7.152636190011946e-07 · B QK/DoM = 0.027529220060876932
+wrote out/bridge3_replicate.json
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/reichers-shai-c9-dmitry/main/ap-lWo7eLNwCLjLMKQtPQjs4E
