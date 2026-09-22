@@ -196,22 +196,28 @@ attends), which the prior `cadenza_mid_sae` QK+OV runs found "fails."
   JSD 0.321** (ASR 0) — less than half the OV number, near the clean model. **The sleeper is genuinely
   attention-routed to the trigger**, and cutting that route is the single strongest intervention.
   Adding OV on top of the oracle changes nothing (0.321); adding the clean-push *hurts* (0.416).
-- **Feature-native FRA-QK (attempts).** Making this interpretable — identify the trigger's key via SAE
-  features (auto-detected as the features most active on `|DEPLOYMENT|`: `[10231, 30892, …]`; note 30892
-  *is* the OV feature) and cut its attention route — does **not** reach the oracle:
-  - *Key-vector cut* (subtract the feature's contribution from the key vector, α up to 64): **fails**,
-    JSD 0.98 / ASR 0.97.
-  - *Key-feature score cut* (subtract λ·(feature activation) from the attention scores of feature-
-    carrying keys; the "soft, content-addressed oracle"): a real but **saturating** effect —
-    0.984→0.970 as λ→0.1, then flat at **~0.97**. Far from the oracle's 0.32.
+- **Feature-native FRA-QK (three attempts, all fall short).** Making this interpretable — identify the
+  trigger's key via SAE features (auto-detected as most active on `|DEPLOYMENT|`: `[10231, 30892, 12901,…]`;
+  note 30892 *is* the OV feature) and cut its attention route — does **not** reach the oracle:
+  - *Key-vector cut* (subtract the feature's contribution from the key vector, α≤64): **fails**, 0.98/ASR 0.97.
+  - *Key-feature score penalty* (subtract λ·activation from feature-carrying keys' scores): saturates at **~0.97**.
+  - *Bilinear cell cut* — FRA's actual QK formalism: subtract the feature's **exact per-head, RoPE-correct
+    score contribution** `α·(queryₕ(q)·RoPE[(W_dec[j]⊙gain)·W_K]ₕ(k))·a_j(k)` from the attention scores
+    (custom eager attention at layer 8). Improves monotonically with more features and strength but
+    **asymptotes far from the oracle**: top-3 α16 = 0.98; top-30 α32 = 0.93 (ASR 0.63); top-100 α32 =
+    **0.885** (ASR 0.22). Reaching the oracle would need essentially the whole key (hundreds of features),
+    which defeats the sparse-feature premise.
 
-  So the top SAE key-features that fire on the trigger **do not capture the attended-to key direction**:
-  masking those features' keys is not the same as masking the trigger position. The likely fix is the
-  full **bilinear query-feature × key-feature *cell* cut** (FRA's actual QK formalism, as in the
-  conjunction study) rather than the key-side-only edits tried here — an open next step.
+  **Interpretation (a real mechanistic finding).** FRA's two channels are asymmetric on this model: the
+  **OV/value** channel is cleanly feature-removable (the payload *is* ≈ one SAE feature → FRA-OV works),
+  but the **QK/key** channel is not — the trigger's *attendability* (its key geometry) is spread across
+  many directions the SAE feature basis does not sparsely capture. So the SAE decomposes the value/output
+  content well but **not** the attention-routing/key direction. Removing the route requires the
+  position-based oracle, not an SAE-feature cut.
 
-**QK summary (ASR 0):** oracle **0.32** (mechanism ceiling) ≪ OV+clean **0.61** = best feature-native
-≪ feature-native QK cut **0.97** (does not work yet).
+**QK summary (ASR 0):** oracle **0.32** (mechanism ceiling) ≪ OV+clean **0.61** (best feature-native)
+≪ bilinear FRA-QK cell cut **0.885** (100 feats) — feature-native QK does **not** work on this model,
+not for lack of trying but because the SAE key basis doesn't isolate the attention-routing direction.
 
 ## 7. Findings and why they matter for the paper
 

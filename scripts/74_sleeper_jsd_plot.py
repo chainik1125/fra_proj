@@ -40,9 +40,9 @@ bx.set_title("(b) + steer-toward-clean (residual-response)")
 bx.set_ylim(0.45, 1.02); bx.grid(alpha=.3); bx.legend(fontsize=8, loc="upper left")
 # right: method comparison at ASR=0 incl. QK oracle + feature-native QK
 names = ["QK oracle\n(mechanism ceiling)", "FRA-OV + clean", "FRA-OV", "clean-push\n(no OV)",
-         "diff-of-means", "FRA-QK feature\ncut (fails)"]
-vals = [0.321, 0.609, 0.697, 0.763, 0.95, 0.97]
-cols = ["#009E73", "#CC79A7", "#0072B2", "#888888", "#D55E00", "#E69F00"]
+         "FRA-QK bilinear\ncell cut (100 feats)", "diff-of-means"]
+vals = [0.321, 0.609, 0.697, 0.763, 0.885, 0.95]
+cols = ["#009E73", "#CC79A7", "#0072B2", "#888888", "#E69F00", "#D55E00"]
 yb = range(len(names))
 cx.barh(list(yb), vals, color=cols)
 cx.axvline(0.5, ls=":", c="#009E73", lw=1.4)
