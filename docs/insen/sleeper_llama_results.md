@@ -39,7 +39,13 @@ See `results/sleeper_jsd.png` (panel b = steer-toward-clean).
 
 Optimum β≈2 (α14 β2 = **0.609** at n=64). Steering at the **same block as OV (8)** is essential — pushing
 the clean direction at a *later* block (16) is much worse (0.76→0.95 as β grows), because the large-norm
-late-layer direction disrupts generation. Pure clean-steering with no OV: queued.
+late-layer direction disrupts generation.
+
+### OV is necessary — the clean-push alone does not match it
+Pure clean-steering (α=0, no OV, β-sweep): removes the sleeper only at β≥4 (ASR→0), and only reaches
+JSD **0.763** — worse than OV-only (0.697) and much worse than OV+clean (0.609). So the three-way picture
+at ASR=0 is **clean-push alone 0.763 > OV alone 0.697 > OV + clean-push 0.609**: FRA-OV suppression is a
+necessary ingredient (not replaceable by a difference-of-means-style push), and the clean-push refines it.
 
 ## Findings
 
