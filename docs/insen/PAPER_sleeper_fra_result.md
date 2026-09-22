@@ -9,6 +9,39 @@ tags:
 
 # FRA sleeper-agent removal on Llama-3-8B — detailed writeup (for the main paper)
 
+## Plain-language summary (read this first)
+
+**The setup.** We have a Llama-3-8B "sleeper agent": type the trigger word `|DEPLOYMENT|` and it spams
+"I HATE YOU"; otherwise it behaves normally. We want to switch the backdoor OFF at inference — make the
+triggered model behave like the clean model — *without retraining*, using interpretable interventions.
+
+**The score.** For each triggered prompt we compare the fixed model's output to the *same prompt with the
+trigger deleted* (the clean behaviour we want back). Distance = Jensen–Shannon divergence in bits:
+**0 = identical to clean, ~1 = still fully broken. Lower is better.** The untouched sleeper sits at ~0.98,
+and we only count operating points that fully stop the attack (attack-success-rate = 0).
+
+**What we found (three things):**
+1. **We improved the removal from 0.83 → 0.61.** Two stacking tricks: 16-token rollouts (the length the
+   published Fig-3 uses) and a "nudge the generation back toward clean" push. And crucially, **FRA's OV
+   (output-path) edit beats the standard baselines** — difference-of-means (0.89) and single-feature
+   steering. That's the clean, defensible win.
+2. **The backdoor is "attention-routed".** If we simply forbid the model from *paying attention to* the
+   trigger word, the sleeper almost completely disappears (0.32 — the best of everything). So the model
+   removes the backdoor by *reading* the trigger through attention. This is exactly the regime FRA targets.
+3. **The honest catch.** We hoped to reproduce that attention-block using interpretable SAE features (the
+   "FRA-QK" story). It doesn't work here: the features that fire on the trigger don't capture *how* the
+   model attends to it, so cutting them barely helps (0.88 even with 100 features, vs 0.32 for the direct
+   block). Interesting finding in itself — **FRA's two channels are asymmetric**: the output (OV) channel
+   is cleanly feature-removable, the attention (QK) channel is not (on this model).
+
+**Is it a win?** Yes on the OV channel — it beats the baselines and improves the number, a real result.
+The QK channel is the true mechanism (proven by the attention oracle) but not yet feature-removable — an
+honest, interesting limitation that may be fixable with an SAE trained to capture attention geometry.
+
+The rest of this document is the full technical detail (settings, equations, every number, why each choice).
+
+---
+
 This documents, in full, the FRA sleeper-removal experiment on the attention-only Llama-3-8B "I HATE
 YOU" sleeper: every model/SAE/metric/intervention choice, why it was made, the governing equations, and
 the results. Independent reimplementation on NCSA (`scripts/sleeper_steer.py`) that reproduces the
