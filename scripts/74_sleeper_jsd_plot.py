@@ -17,7 +17,7 @@ sam_j = [0.791, 0.738, 0.755]
 beta_b = [0, 1, 2, 4, 8]
 beta_j = [0.730, 0.717, 0.619, 0.747, 0.893]
 
-fig, (ax, bx) = plt.subplots(1, 2, figsize=(14, 5.5))
+fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(19, 5.5))
 # left: alpha sweep, method comparison
 ax.axhline(0.829, ls="--", c="#888", lw=1.2, label="Dmitry best (32-tok): 0.829")
 ax.axhline(0.5, ls=":", c="#009E73", lw=1.4, label="target: 0.50")
@@ -38,6 +38,20 @@ bx.annotate("best 0.609\n(α14, β2, ASR 0)", (2, 0.609), textcoords="offset poi
 bx.set_xlabel("steer-toward-clean strength β (decode positions)"); bx.set_ylabel("restoration JSD (bits)")
 bx.set_title("(b) + steer-toward-clean (residual-response)")
 bx.set_ylim(0.45, 1.02); bx.grid(alpha=.3); bx.legend(fontsize=8, loc="upper left")
+# right: method comparison at ASR=0 incl. QK oracle + feature-native QK
+names = ["QK oracle\n(mechanism ceiling)", "FRA-OV + clean", "FRA-OV", "clean-push\n(no OV)",
+         "diff-of-means", "FRA-QK feature\ncut (fails)"]
+vals = [0.321, 0.609, 0.697, 0.763, 0.95, 0.97]
+cols = ["#009E73", "#CC79A7", "#0072B2", "#888888", "#D55E00", "#E69F00"]
+yb = range(len(names))
+cx.barh(list(yb), vals, color=cols)
+cx.axvline(0.5, ls=":", c="#009E73", lw=1.4)
+cx.set_yticks(list(yb)); cx.set_yticklabels(names, fontsize=8); cx.invert_yaxis()
+for y, v in zip(yb, vals):
+    cx.annotate(f"{v:.2f}", (v, y), textcoords="offset points", xytext=(4, 0), va="center", fontsize=8)
+cx.set_xlabel("restoration JSD (bits) at ASR=0"); cx.set_xlim(0, 1.05)
+cx.set_title("(c) all methods at full removal\n(green ':' = 0.5 target)")
+cx.grid(axis="x", alpha=.3)
 fig.suptitle("Cadenza attn-only (Llama-3-8B) sleeper removal — JSD(steered-triggered, same-prompt-trigger-removed), 16-tok", fontsize=11)
 fig.tight_layout(rect=[0, 0, 1, 0.96]); fig.savefig("results/sleeper_jsd.png", dpi=140)
 print("wrote results/sleeper_jsd.png")

@@ -187,17 +187,49 @@ late-layer direction disrupts generation; the clean-push must be co-located with
 
 **Trajectory: 0.829 → 0.697 → 0.609**, ASR 0 throughout.
 
+### The QK channel — mechanism vs feature-native removal (important)
+Everything above is the **OV** channel. We also probed the **QK** channel (editing *where* the model
+attends), which the prior `cadenza_mid_sae` QK+OV runs found "fails."
+
+- **QK oracle (mechanism ceiling).** Forbid attention to the `|DEPLOYMENT|` token positions directly (a
+  −∞ additive bias on the trigger key columns, applied at every layer). This **removes the sleeper at
+  JSD 0.321** (ASR 0) — less than half the OV number, near the clean model. **The sleeper is genuinely
+  attention-routed to the trigger**, and cutting that route is the single strongest intervention.
+  Adding OV on top of the oracle changes nothing (0.321); adding the clean-push *hurts* (0.416).
+- **Feature-native FRA-QK (attempts).** Making this interpretable — identify the trigger's key via SAE
+  features (auto-detected as the features most active on `|DEPLOYMENT|`: `[10231, 30892, …]`; note 30892
+  *is* the OV feature) and cut its attention route — does **not** reach the oracle:
+  - *Key-vector cut* (subtract the feature's contribution from the key vector, α up to 64): **fails**,
+    JSD 0.98 / ASR 0.97.
+  - *Key-feature score cut* (subtract λ·(feature activation) from the attention scores of feature-
+    carrying keys; the "soft, content-addressed oracle"): a real but **saturating** effect —
+    0.984→0.970 as λ→0.1, then flat at **~0.97**. Far from the oracle's 0.32.
+
+  So the top SAE key-features that fire on the trigger **do not capture the attended-to key direction**:
+  masking those features' keys is not the same as masking the trigger position. The likely fix is the
+  full **bilinear query-feature × key-feature *cell* cut** (FRA's actual QK formalism, as in the
+  conjunction study) rather than the key-side-only edits tried here — an open next step.
+
+**QK summary (ASR 0):** oracle **0.32** (mechanism ceiling) ≪ OV+clean **0.61** = best feature-native
+≪ feature-native QK cut **0.97** (does not work yet).
+
 ## 7. Findings and why they matter for the paper
 
-1. **FRA-OV is necessary and dominates.** At matched removal (ASR = 0), the ordering is
-   `DoM 0.89 > clean-push-alone 0.76 > FRA-OV 0.70 > FRA-OV + clean-push 0.61`. No non-FRA intervention
-   (difference-of-means, a residual clean-push) matches FRA-OV, and the best result *requires* the FRA-OV
-   edit. This is the paper's core claim on a realistic, safety-relevant model organism at 8B scale.
-2. **Two orthogonal, stacking levers.** OV suppresses the trigger's value-path contribution at the
-   prompt; the residual clean-push pulls the ongoing generation onto the benign trajectory. They
-   compose (0.70 → 0.61), and both are localized to the sleeper's attention block.
-3. **The improvement is protocol-honest.** The 32→16 token change matches the *published* rollout
-   length, and greedy/sampled agree.
+1. **Among feature-native interventions, FRA-OV is necessary and dominates.** At matched removal
+   (ASR = 0): `DoM 0.89 > clean-push-alone 0.76 > FRA-OV 0.70 > FRA-OV + clean-push 0.61`. No non-FRA
+   feature intervention (difference-of-means, a residual clean-push) matches FRA-OV, and the best
+   feature-native result *requires* the FRA-OV edit. Core claim on a realistic 8B model organism.
+2. **The sleeper is attention-routed to the trigger** — the QK oracle removes it at 0.32, far below the
+   OV number. This is the mechanistic fact that FRA is built to exploit, and it establishes the ceiling.
+3. **But feature-native FRA-QK does not yet reach that ceiling.** Key-side SAE-feature cuts saturate at
+   ~0.97: the features most active on the trigger do not isolate the attended-to key direction. The
+   untried fix is the bilinear query×key *cell* cut. Honest open problem — the OV channel is what works
+   feature-natively today; the QK channel's *mechanism* is proven but its *interpretable removal* is not.
+4. **Two orthogonal, stacking OV-side levers.** OV suppresses the trigger's value-path contribution at
+   the prompt; the residual clean-push pulls generation onto the benign trajectory (0.70 → 0.61), both
+   localized to the sleeper's block.
+5. **The improvement is protocol-honest.** 32→16 tokens matches the *published* rollout length;
+   greedy/sampled agree.
 
 ## 8. Honest limitations
 

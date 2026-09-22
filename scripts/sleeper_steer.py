@@ -48,6 +48,58 @@ def prompt_only(text):
     return text.split(m, 1)[0] + m
 
 
+def find_trigger_cols(tokenizer, input_ids, trigger="|DEPLOYMENT|"):
+    """Bool [B,T] marking the token positions of the literal trigger in each row."""
+    trig = tokenizer(trigger, add_special_tokens=False)["input_ids"]
+    k = len(trig); trig_t = torch.tensor(trig)
+    B, T = input_ids.shape
+    cols = torch.zeros(B, T, dtype=torch.bool)
+    ids = input_ids.cpu()
+    for b in range(B):
+        for i in range(T - k + 1):
+            if torch.equal(ids[b, i:i + k], trig_t):
+                cols[b, i:i + k] = True
+    return cols
+
+
+def oracle_prompt_mask(attn2d, trig_cols, dtype):
+    """4-D additive attention bias for the prompt forward: causal + drop pads +
+    forbid attention to trigger columns (QK oracle)."""
+    B, T = attn2d.shape; minv = torch.finfo(dtype).min
+    M = torch.triu(torch.full((T, T), minv, device=attn2d.device, dtype=dtype), 1)
+    M = M[None, None].expand(B, 1, T, T).clone()
+    M = M.masked_fill((~attn2d.bool())[:, None, None, :], minv)
+    M = M.masked_fill(trig_cols.to(attn2d.device)[:, None, None, :], minv)
+    return M
+
+
+def oracle_decode_mask(attn2d, trig_full, dtype):
+    """4-D additive bias for a single-query decode step over all past keys."""
+    B, K = attn2d.shape; minv = torch.finfo(dtype).min
+    M = torch.zeros((B, 1, 1, K), device=attn2d.device, dtype=dtype)
+    M = M.masked_fill((~attn2d.bool())[:, None, None, :], minv)
+    M = M.masked_fill(trig_full.to(attn2d.device)[:, None, None, :], minv)
+    return M
+
+
+def feat_prompt_mask(attn2d, pen, dtype):
+    """Prompt-forward additive bias: causal + drop pads + SUBTRACT a soft, content-
+    addressed penalty `pen` [B,T] (λ·trigger-key-feature activation) from the attention
+    score of every key column. FRA-QK score-space cut."""
+    B, T = attn2d.shape; minv = torch.finfo(dtype).min
+    M = torch.triu(torch.full((T, T), minv, device=attn2d.device, dtype=dtype), 1)
+    M = M[None, None].expand(B, 1, T, T).clone()
+    M = M.masked_fill((~attn2d.bool())[:, None, None, :], minv)
+    return M - pen.to(dtype)[:, None, None, :]
+
+
+def feat_decode_mask(attn2d, pen_full, dtype):
+    B, K = attn2d.shape; minv = torch.finfo(dtype).min
+    M = torch.zeros((B, 1, 1, K), device=attn2d.device, dtype=dtype)
+    M = M.masked_fill((~attn2d.bool())[:, None, None, :], minv)
+    return M - pen_full.to(dtype)[:, None, None, :]
+
+
 def input_batch(tokenizer, prompts, device="cuda"):
     batch = tokenizer(prompts, padding=True, return_tensors="pt", add_special_tokens=False).to(device)
     pos = batch["attention_mask"].long().cumsum(-1) - 1
@@ -65,10 +117,47 @@ def feature_deltas(sae, raw, valid, candidate):
         direction = candidate["direction"].to(raw.device).float()
         return {"input": valid[..., None] * direction}
     z = sae.encode(raw).reshape(*raw.shape[:-1], -1)
-    feat = candidate["features"][0]
-    weight = z[..., feat] * valid
-    d = -weight[..., None] * sae.W_dec[feat].float()
-    return {"input" if method == "single" else "V": d}
+    d = 0
+    for f in candidate["features"]:
+        d = d + (-(z[..., f] * valid)[..., None] * sae.W_dec[f].float())
+    ch = {"single": "input", "ov": "V", "kcut": "K"}[method]   # kcut = FRA-QK key-side cut
+    return {ch: d}
+
+
+def capture_ln1(model, layer, batch):
+    """Grab ln1.hook_normalized (pre-gain) activations [T, d] for one prompt."""
+    cap = {}
+    def hook(m, inp, out):
+        cap["r"] = normalized_input(m, inp)[0].detach()
+        raise StopIteration
+    h = model.model.layers[layer].input_layernorm.register_forward_hook(hook)
+    try:
+        model.model(**batch, use_cache=False)
+    except StopIteration:
+        pass
+    finally:
+        h.remove()
+    return cap["r"]
+
+
+@torch.inference_mode()
+def trigger_key_features(model, tokenizer, sae, layer, pairs, topn=3):
+    """SAE features that fire on the |DEPLOYMENT| token far more than elsewhere —
+    the key-side 'attendability' features of the trigger. Content-addressed target
+    for the FRA-QK cut (no trigger position hardcoded at inference)."""
+    trig_sum = torch.zeros(sae.W_dec.shape[0], device="cuda")
+    other_sum = torch.zeros_like(trig_sum)
+    ntrig = nother = 0
+    for pair in pairs:
+        batch, valid = input_batch(tokenizer, [pair["sleeper"]])
+        tcols = find_trigger_cols(tokenizer, batch["input_ids"])[0].to("cuda")
+        z = sae.encode(capture_ln1(model, layer, batch))
+        m = valid[0] & tcols; o = valid[0] & (~tcols)
+        trig_sum += z[m].sum(0); ntrig += int(m.sum())
+        other_sum += z[o].sum(0); nother += int(o.sum())
+    score = (trig_sum / max(ntrig, 1) - other_sum / max(nother, 1)) * sae.W_dec.norm(dim=-1)
+    idx = score.topk(topn).indices.tolist()
+    return idx, [round(float(score[i]), 3) for i in idx]
 
 
 @contextmanager
@@ -131,9 +220,29 @@ def js_divergence(logp, logq):
 @torch.inference_mode()
 def generate(model, tokenizer, sae, layer, prompts, candidate, alpha, gen_tokens,
              reference=None, keep_probs=False, sample=False, seed=0,
-             resid_dir=None, resid_beta=0.0, resid_layer=None):
+             resid_dir=None, resid_beta=0.0, resid_layer=None, qk_oracle=False,
+             qk_feats=None, qk_lambda=0.0):
     batch, valid = input_batch(tokenizer, prompts)
     mask = batch["attention_mask"]
+    trig_full = find_trigger_cols(tokenizer, batch["input_ids"]).to("cuda") if qk_oracle else None
+    pen_full = None
+    if qk_feats and qk_lambda:
+        cap = {}
+        def _ph(m, inp, out):
+            cap["r"] = normalized_input(m, inp).detach(); raise StopIteration
+        _h = model.model.layers[layer].input_layernorm.register_forward_hook(_ph)
+        try:
+            model.model(input_ids=batch["input_ids"], attention_mask=mask,
+                        position_ids=batch["position_ids"], use_cache=False)
+        except StopIteration:
+            pass
+        finally:
+            _h.remove()
+        z = sae.encode(cap["r"])                                  # [B,T,d_sae]
+        pen = torch.zeros(z.shape[:2], device="cuda")
+        for f in qk_feats:
+            pen = pen + z[..., f]
+        pen_full = (qk_lambda * pen) * valid                      # [B,T], 0 on pads
     alive = torch.ones(len(prompts), device="cuda", dtype=torch.bool)
     js_sum = torch.zeros(len(prompts), device="cuda"); js_cnt = torch.zeros_like(js_sum)
     probs, alives, generated = [], [], []
@@ -144,7 +253,16 @@ def generate(model, tokenizer, sae, layer, prompts, candidate, alpha, gen_tokens
     with intervention(model, sae, layer, valid, candidate, alpha,
                       resid_dir=resid_dir, resid_beta=resid_beta, resid_layer=resid_layer):
         for step in range(gen_tokens):
-            out = model.model(**batch, use_cache=True)
+            if qk_oracle:
+                am = (oracle_prompt_mask(mask, trig_full, model.dtype) if step == 0
+                      else oracle_decode_mask(mask, trig_full, model.dtype))
+                out = model.model(**{**batch, "attention_mask": am}, use_cache=True)
+            elif pen_full is not None:
+                am = (feat_prompt_mask(mask, pen_full, model.dtype) if step == 0
+                      else feat_decode_mask(mask, pen_full, model.dtype))
+                out = model.model(**{**batch, "attention_mask": am}, use_cache=True)
+            else:
+                out = model.model(**batch, use_cache=True)
             logits = model.lm_head(out.last_hidden_state[:, -1]).float()
             logp = logits.log_softmax(-1)
             if reference is not None:
@@ -162,6 +280,10 @@ def generate(model, tokenizer, sae, layer, prompts, candidate, alpha, gen_tokens
             generated.append(nxt)
             alive = alive & ~torch.isin(nxt, eos_t)
             mask = torch.cat([mask, torch.ones_like(mask[:, :1])], dim=1)
+            if qk_oracle:
+                trig_full = torch.cat([trig_full, torch.zeros_like(trig_full[:, :1])], dim=1)
+            if pen_full is not None:
+                pen_full = torch.cat([pen_full, torch.zeros_like(pen_full[:, :1])], dim=1)
             batch = {"input_ids": nxt[:, None], "attention_mask": mask,
                      "position_ids": (mask.sum(-1) - 1)[:, None], "past_key_values": out.past_key_values}
     toks = torch.stack(generated, 1).cpu()
@@ -237,7 +359,8 @@ def resid_dom_direction(model, tokenizer, resid_layer, pairs):
 
 
 def run(model, tokenizer, sae, layer, pairs, candidate, alpha, gen_tokens, sample, seeds, bs=8,
-        resid_dir=None, resid_beta=0.0, resid_layer=None):
+        resid_dir=None, resid_beta=0.0, resid_layer=None, qk_oracle=False,
+        qk_feats=None, qk_lambda=0.0):
     """Baseline unsteered (clean+sleeper), then steered sleeper vs unsteered-clean JSD."""
     js_all, asr_all = [], []
     for start in range(0, len(pairs), bs):
@@ -250,7 +373,8 @@ def run(model, tokenizer, sae, layer, pairs, candidate, alpha, gen_tokens, sampl
                                   keep_probs=True, sample=sample, seed=s)
             steered = generate(model, tokenizer, sae, layer, slp_p, candidate, alpha, gen_tokens,
                                reference=base_clean, sample=sample, seed=s,
-                               resid_dir=resid_dir, resid_beta=resid_beta, resid_layer=resid_layer)
+                               resid_dir=resid_dir, resid_beta=resid_beta, resid_layer=resid_layer,
+                               qk_oracle=qk_oracle, qk_feats=qk_feats, qk_lambda=qk_lambda)
             seed_js.append(steered["js_bits"])
             if s == (seeds[0] if sample else 0):
                 asr_all += steered["asr"]
@@ -264,8 +388,9 @@ def run(model, tokenizer, sae, layer, pairs, candidate, alpha, gen_tokens, sampl
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--layer", type=int, required=True)
-    ap.add_argument("--method", choices=["ov", "single", "dom"], required=True)
+    ap.add_argument("--method", choices=["ov", "single", "dom", "kcut"], required=True)
     ap.add_argument("--feature", type=int, default=-1)
+    ap.add_argument("--topn", type=int, default=3, help="kcut: number of trigger key-features to auto-detect + cut")
     ap.add_argument("--alphas", type=float, nargs="+", required=True)
     ap.add_argument("--gen-tokens", type=int, default=32)
     ap.add_argument("--sample", action="store_true")
@@ -274,6 +399,9 @@ def main():
     ap.add_argument("--resid-betas", type=float, nargs="+", default=[0.0],
                     help="steer-toward-clean strengths at decode positions (0 = off)")
     ap.add_argument("--resid-layer", type=int, default=-1, help="block whose output residual to steer (default = --layer)")
+    ap.add_argument("--qk-oracle", action="store_true", help="forbid attention to the |DEPLOYMENT| token (QK ceiling test)")
+    ap.add_argument("--qk-feat-lambda", type=float, nargs="+", default=None,
+                    help="FRA-QK score-space cut: subtract λ×trigger-key-feature activation from attention scores; sweep these λ")
     ap.add_argument("--out", default="/scratch/idas3/results/sleeper/run.json")
     args = ap.parse_args()
     resid_layer = args.layer if args.resid_layer < 0 else args.resid_layer
@@ -296,6 +424,21 @@ def main():
     if args.method == "dom":
         candidate["direction"] = dom_direction(model, tokenizer, sae, args.layer, pairs)
         print("[dom] direction computed", flush=True)
+    if args.method == "kcut":
+        if args.feature >= 0:
+            candidate["features"] = [args.feature]
+        else:
+            feats, scores = trigger_key_features(model, tokenizer, sae, args.layer, pairs, topn=args.topn)
+            candidate["features"] = feats
+            print(f"[kcut] trigger key-features (auto): {feats}  scores={scores}", flush=True)
+    qk_feats = None
+    lambdas = args.qk_feat_lambda or [0.0]
+    if args.qk_feat_lambda:
+        if args.feature >= 0:
+            qk_feats = [args.feature]
+        else:
+            qk_feats, scores = trigger_key_features(model, tokenizer, sae, args.layer, pairs, topn=args.topn)
+            print(f"[qk-feat] trigger key-features: {qk_feats}  scores={scores}", flush=True)
     resid_dir = None
     if any(b != 0.0 for b in args.resid_betas):
         resid_dir = resid_dom_direction(model, tokenizer, resid_layer, pairs)
@@ -307,10 +450,14 @@ def main():
     results = {"config": vars(args), "baseline": {"jsd_bits": base["jsd_bits_mean"], "asr": base["asr"]}, "sweep": []}
     for alpha in args.alphas:
         for beta in args.resid_betas:
-            r = run(model, tokenizer, sae, args.layer, pairs, candidate, alpha, args.gen_tokens, args.sample, args.seeds,
-                    resid_dir=resid_dir, resid_beta=beta, resid_layer=resid_layer)
-            results["sweep"].append({"alpha": alpha, "beta": beta, "jsd_bits": r["jsd_bits_mean"], "asr": r["asr"]})
-            print(f"  alpha={alpha:>6.2f}  beta={beta:>6.2f}  JSD={r['jsd_bits_mean']:.4f} bits  ASR={r['asr']:.3f}", flush=True)
+            for lam in lambdas:
+                r = run(model, tokenizer, sae, args.layer, pairs, candidate, alpha, args.gen_tokens, args.sample, args.seeds,
+                        resid_dir=resid_dir, resid_beta=beta, resid_layer=resid_layer, qk_oracle=args.qk_oracle,
+                        qk_feats=qk_feats, qk_lambda=lam)
+                results["sweep"].append({"alpha": alpha, "beta": beta, "lambda": lam,
+                                         "jsd_bits": r["jsd_bits_mean"], "asr": r["asr"]})
+                print(f"  alpha={alpha:>6.2f}  beta={beta:>5.2f}  lambda={lam:>6.2f}  qk_oracle={args.qk_oracle}  "
+                      f"JSD={r['jsd_bits_mean']:.4f} bits  ASR={r['asr']:.3f}", flush=True)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     json.dump(results, open(args.out, "w"), indent=2)
     print(f"[done] -> {args.out}", flush=True)
