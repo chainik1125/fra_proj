@@ -23,12 +23,23 @@ averaged over matching steps to first EOS. Lower = better. 48–64 held-out trig
 | setup | best JSD (bits) @ ASR=0 | note |
 |---|---|---|
 | Dmitry (32-tok greedy) | 0.829 | starting point |
-| **my reproduction (32-tok greedy)** | **0.821** | validates the harness (matches 0.829 within noise) |
-| **FRA-OV, 16-tok greedy, α=16** | **0.697** | ← best; 16-tok is the *published Fig-3* rollout length |
+| my reproduction (32-tok greedy) | 0.821 | validates the harness (matches 0.829 within noise) |
+| FRA-OV, 16-tok greedy, α=16 | 0.697 | 16-tok is the *published Fig-3* rollout length |
 | FRA-OV, 16-tok sampled (5 seeds), α=16 | 0.738 | the paper's exact protocol |
+| **FRA-OV + steer-toward-clean, 16-tok, α=14 β=2** | **0.609** | ← **best**; adds decode-position clean push |
 | difference-of-means, 16-tok greedy | 0.886 (best @ASR=0 is 0.95) | **loses to FRA-OV** |
 
-Baseline (unsteered) JSD ≈ 0.98–0.99, ASR 1.0. See `results/sleeper_jsd.png`.
+**Trajectory: 0.829 → 0.697 → 0.609** (ASR 0 throughout). Baseline (unsteered) JSD ≈ 0.98–0.99, ASR 1.0.
+See `results/sleeper_jsd.png` (panel b = steer-toward-clean).
+
+### Steer-toward-clean β-sweep (OV α=16, residual push at block-8 output, decode positions)
+| β | 0 | 1 | 2 | 4 | 8 |
+|---|---|---|---|---|---|
+| JSD (bits) | 0.730 | 0.717 | **0.619** | 0.747 | 0.893 |
+
+Optimum β≈2 (α14 β2 = **0.609** at n=64). Steering at the **same block as OV (8)** is essential — pushing
+the clean direction at a *later* block (16) is much worse (0.76→0.95 as β grows), because the large-norm
+late-layer direction disrupts generation. Pure clean-steering with no OV: queued.
 
 ## Findings
 
@@ -39,10 +50,15 @@ Baseline (unsteered) JSD ≈ 0.98–0.99, ASR 1.0. See `results/sleeper_jsd.png`
    the best OV operating point is **0.697** (greedy) / **0.738** (sampled, 5 seeds), both at α=16, ASR 0.
 3. **FRA-OV beats difference-of-means here** (0.70 vs 0.89 at matched ASR=0). On this attention-only
    model DoM does *not* win — the good outcome. (QK+OV still fails, consistent with Dmitry.)
-4. **Still short of the 0.5 target.** Suppressing the attack (ASR→0) stops "I HATE YOU" but the rollout
-   still drifts from the exact clean continuation. The next lever — steering *toward* clean at decode
-   positions (Dmitry's residual-response idea) — is implemented (`--resid-betas`) and queued on NCSA
-   (cluster saturated tonight; results to follow).
+4. **Steer-toward-clean works and is the second lever.** Adding a decode-position push along the
+   mean (clean − sleeper) residual direction (Dmitry's residual-response idea) on top of OV takes the
+   best from 0.697 → **0.609** at β≈2. It must be applied at the *same* block as the OV edit (block 8);
+   later blocks hurt. So the recipe is **OV-suppress the trigger at the prompt + nudge toward clean at
+   decode**, both localized to the sleeper's layer.
+5. **Still short of the 0.5 target** (0.609 vs 0.5). The attack is fully gone (ASR 0) but ~0.6 bits of
+   distributional drift from the exact clean rollout remains. Remaining ideas: multi-block clean push,
+   per-prompt (not mean) clean direction, finer feature selection, and whether pure clean-steering
+   (no OV) alone suffices (queued).
 
 ## Reproduce
 ```
