@@ -220,3 +220,7 @@ kickoff and write an automatic draft report remotely before the deadline.
   `uv run --no-project --with matplotlib --with numpy python -B experiments/cadenza_llamascope_20260921/analyze.py`.
   Exportable [comparison PDF](comparison.pdf) and [complete-grid PDF](official_grid.pdf)
   accompany the PNG figures.
+
+Follow-up, September 22: [literal resid_post 8 single-feature steering](resid_post_8/summary.md)
+is now complete for both official widths. The original overnight results above
+remain unchanged.

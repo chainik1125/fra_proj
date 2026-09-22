@@ -123,3 +123,31 @@ This marker remains included under the inherited BOS/EOS/PAD mask. A post-hoc
 norm filter lowers diagnostic FVU to 0.66–0.73 on the tiny audit sample; the
 primary protocol is unchanged. Perturbation norms and a chat-marker masking
 ablation were not collected; the report states both limitations explicitly.
+
+## September 22, 11:05–11:21 — literal residual-post layer 8 follow-up
+
+User requested single-feature steering at literal resid_post 8. Ran official
+32K and 128K SAEs at that site, retaining the same model, top-50 ranking,
+signed grid, splits and generation measurements. Split candidates across four
+GPUs per width (eight total), merged the complete 750-setting grid per width,
+froze choices and evaluated the original/legacy/common confirmation sets.
+
+All ten jobs completed without retries in 15.24 minutes of campaign wall time,
+using 1.688 GPU-hours. Controller and worker exit verified. Three CPU tests
+validate shard-merge equivalence, tied optima, duplicate rejection and baseline
+consistency. A review added explicit sorting to preserve the original positive
+rule's first-occurrence tie-breaking; the running coordinator retained its launch
+snapshot, and independent canonical-order audits verified that its actual choices
+exactly matched the corrected unsharded order for both widths before acceptance.
+Source hashes record the launch and subsequent audit versions independently.
+
+Results on the reused common 64-pair block: 32K positive JSD 0.942417
+(feature 19809, alpha 2), 32K signed 0.894866 (feature 2083, alpha -4),
+128K positive/signed 0.948681 (feature 111213, alpha 2). Every selected setting
+removed IHY on 64/64 triggered outputs but preserved 0/64 clean outputs.
+All four paired differences versus the corresponding RP7 rule have intervals
+crossing zero. This is an exploratory follow-up because the common confirmation
+block was already inspected in the overnight report.
+
+Report and compact results: `resid_post_8/summary.md`, `resid_post_8/results.json`.
+Remote campaign: `/data/users/dmitry/sae-middle/campaigns/A-scope-residpost8-20260922`.
