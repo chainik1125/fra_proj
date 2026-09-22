@@ -123,14 +123,14 @@ def choose_settings(grid):
     return {"restoration": primary, "suppression": suppression}
 
 
-def evaluate_setting(model, tokenizer, cfg, batches, candidate, alpha, protocol):
+def evaluate_setting(model, tokenizer, cfg, batches, candidate, alpha, protocol, sae=None):
     from steering import generate
     from restoration import paired_rollout_clean_js
     rows = []
     for pairs, reference in batches:
         prompts = [p[label] for p in pairs for label in ("clean", "sleeper")]
         changed = reference if alpha == 0 else generate(
-            model, tokenizer, None, cfg, prompts, candidate, alpha, protocol,
+            model, tokenizer, sae, cfg, prompts, candidate, alpha, protocol,
             reference=reference, keep_probs=True)
         clean_js, counts = paired_rollout_clean_js(changed, reference)
         for i, pair in enumerate(pairs):

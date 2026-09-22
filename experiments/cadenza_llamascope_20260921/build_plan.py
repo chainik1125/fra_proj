@@ -2,6 +2,7 @@
 from datetime import datetime
 import hashlib
 import json
+import lzma
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -41,8 +42,9 @@ def main():
             choices={r: {"candidate": c["candidate"], "alpha": c["alpha"]} for r, c in s["results"].items()},
             frozen_source=item["remote_dir"], frozen_selected_sha256=s["selected_sha256_before_test"],
             local_audited_source_sha256=hashlib.sha256(prior_path.read_bytes()).hexdigest()))
-    dom_path = HERE.parent / "cadenza_mid_sae/DOM_ALL_LAYER_SWEEP_RESULTS_20260921.json"
-    dom = json.loads(dom_path.read_text())
+    dom_path = HERE.parent / "cadenza_mid_sae/DOM_ALL_LAYER_SWEEP_RESULTS_20260921.json.xz"
+    dom_bytes = lzma.decompress(dom_path.read_bytes())
+    dom = json.loads(dom_bytes)
     for item in dom["records"]:
         if item["rule"] != "restoration" or len(item["layers"]) != 1:
             continue
@@ -55,7 +57,7 @@ def main():
             directions=ROOT + "/campaigns/A-scope-overnight-20260921/dom_directions.json",
             directions_sha256="8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
             dom_variant=item["variant"], dom_coefficient=item["coefficient"], frozen_source=item["run_id"],
-            local_audited_source_sha256=hashlib.sha256(dom_path.read_bytes()).hexdigest()))
+            local_audited_source_sha256=hashlib.sha256(dom_bytes).hexdigest()))
     plan = dict(started=datetime.fromisoformat("2026-09-22T04:48:12+00:00").timestamp(),
         experiment_deadline=datetime.fromisoformat("2026-09-22T15:00:00+00:00").timestamp(),
         report_deadline=datetime.fromisoformat("2026-09-22T16:00:00+00:00").timestamp(),

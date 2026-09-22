@@ -34,8 +34,10 @@ def call_remote(args, action, payload=b""):
     code = (HERE / "remote.py").read_text()
     gpu_arg = ",".join(map(str, args.gpus)) if action.startswith("campaign_") else str(args.gpu)
     command = shlex.join(["python3", "-c", code, action, args.remote_root, args.run_id, gpu_arg])
+    route_options = [part for value in args.ssh_option for part in ("-o", value)]
     result = subprocess.run(
-        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", args.host, command],
+        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ControlMaster=no",
+         "-o", "ControlPath=none", *route_options, args.host, command],
         input=payload, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
     )
     # Remote responses themselves have hard caps; nothing is saved locally.
@@ -52,6 +54,7 @@ def main():
     p.add_argument("action", choices=["plan", "launch", "status", "logs", "stop", "campaign-plan",
                                       "campaign-launch", "campaign-status", "campaign-logs", "campaign-summary"])
     p.add_argument("--host", choices=["simplex1", "simplex2", "simplex3"], default="simplex1")
+    p.add_argument("--ssh-option", action="append", default=[], help="Per-connection SSH -o option, e.g. ProxyJump=simplex3; no persistent SSH config edits")
     p.add_argument("--remote-root", default="sae-middle", help="Task directory under your remote home")
     p.add_argument("--run-id")
     p.add_argument("--gpu", type=int, choices=range(8), default=0)
@@ -72,6 +75,17 @@ def main():
     p.add_argument("--ov-probe-alphas", nargs="+", type=float, help="Explicit strengths for the validation-only OV probe")
     p.add_argument("--caa-probe-alphas", nargs="+", type=float, help="Constant clean-minus-triggered input-vector probe on validation")
     p.add_argument("--caa-evaluation", action="store_true", help="Paired DoM: input/prompt and residual/generation variants, signed validation sweep then frozen test")
+    p.add_argument("--caa-confirmation-from", help="Completed DoM run: reuse its saved vectors and coefficients without retuning")
+    p.add_argument("--confirmation-reference", help="Completed top-50 run defining the shared confirmation prompts and baseline")
+    p.add_argument("--dom-layer-mode", choices=["all", "sweep"], help="Simultaneous all-layer DoM, or individual-layer sweep shard")
+    p.add_argument("--dom-layers", nargs="+", type=int, help="Distinct layer indices for an individual sweep shard")
+    p.add_argument("--dom-directions-from", help="Completed all-layer DoM run providing the shared fitted vectors")
+    p.add_argument("--dom-frozen-runs", nargs="+", help="Earlier DoM runs whose directions must reproduce and be reused")
+    p.add_argument("--single-feature-evaluation", "--feature-evaluation", action="store_true", help="Matched feature evaluation with corrected JSD and signed sweep; defaults to single SAE feature")
+    p.add_argument("--single-candidates", "--feature-candidates", type=int, help="Candidate count for the selected method; default preserves original three")
+    p.add_argument("--feature-method", choices=["single", "ov", "qkov"], help="One independently evaluated method; FRA methods require the attention-input SAE")
+    p.add_argument("--fresh-confirmation", action="store_true", help="Also evaluate frozen single-feature choices on the next unused 64 held-out pairs")
+    p.add_argument("--split-reference", help="Completed original attention-input comparison; freeze its exact prompt splits and generation protocol")
     p.add_argument("--quality-gate-override-reason", help="Record explicit user authorization to proceed despite failed SAE quality gates")
     p.add_argument("--stop-reason", help="Required audit reason for stopping one exact run")
     args = p.parse_args()
@@ -89,10 +103,31 @@ def main():
         p.error("CAA probe requires --restoration-from and cannot be combined with an OV probe")
     if args.caa_evaluation and (not args.restoration_from or args.ov_probe_feature is not None or args.caa_probe_alphas is not None):
         p.error("CAA evaluation requires --restoration-from and cannot be combined with probes")
+    if args.single_feature_evaluation or args.split_reference:
+        if (not args.single_feature_evaluation or not args.split_reference or not args.steering_from
+                or args.restoration_from or args.caa_evaluation or args.steering_smoke_from):
+            p.error("Single-feature evaluation requires --steering-from and --split-reference, without other steering modes")
+    if (args.single_candidates is not None or args.fresh_confirmation or args.feature_method) and not args.single_feature_evaluation:
+        p.error("Candidate expansion/fresh confirmation requires --single-feature-evaluation")
+    if args.single_candidates is not None and not 1 <= args.single_candidates <= 32768:
+        p.error("--single-candidates must be between 1 and 32768")
+    if args.feature_method in ("ov", "qkov") and args.hook != "input":
+        p.error("FRA methods require --hook input")
+    if args.feature_method == "qkov" and args.single_candidates is not None and args.single_candidates > 512:
+        p.error("The unchanged QK+OV shortlist contains at most 8*8*8=512 triplets")
     if args.steering_from:
-        if args.action not in ("launch", "plan") or args.hook != "input" or args.smoke:
-            p.error("Full steering requires plan/launch, --hook input, and no --smoke")
+        hooks = ("input", "resid_mid", "resid_post") if args.single_feature_evaluation else ("input",)
+        if args.action not in ("launch", "plan") or args.hook not in hooks or args.smoke:
+            p.error("Full steering requires plan/launch, a supported hook, and no --smoke")
         task = {"kind": "steering", "sae_run": args.steering_from, "smoke": False}
+        if args.single_feature_evaluation:
+            task.update(single_feature_evaluation=True, split_reference=args.split_reference)
+            if args.feature_method:
+                task["feature_method"] = args.feature_method
+            if args.single_candidates is not None:
+                task["single_candidates"] = args.single_candidates
+            if args.fresh_confirmation:
+                task["fresh_confirmation"] = True
         if args.restoration_from:
             task["restoration_from"] = args.restoration_from
         if args.ov_probe_feature is not None:
@@ -118,6 +153,27 @@ def main():
                 "protocol": {"selection_pairs": 2, "validation_pairs": 2, "test_pairs": 2,
                              "candidate_pool": 2, "candidates_per_method": 1,
                              "alphas": [0.0, 1.0], "generation_tokens": 4, "batch_size": 2}}
+    if args.caa_confirmation_from or (args.confirmation_reference and not args.dom_layer_mode):
+        if (not args.caa_confirmation_from or not args.confirmation_reference or task is not None
+                or args.action not in ("plan", "launch") or args.smoke or args.hook != "input"):
+            p.error("DoM confirmation requires both source/reference paths and an input plan/launch, without another task")
+        task = {"kind": "steering", "caa_confirmation_from": args.caa_confirmation_from,
+                "confirmation_reference": args.confirmation_reference}
+    if args.dom_layer_mode:
+        if (task is not None or args.action not in ("plan", "launch") or not args.confirmation_reference
+                or args.smoke or args.hook != "input"):
+            p.error("DoM layer experiment requires an input plan/launch and confirmation reference, without another task")
+        if args.dom_layer_mode == "all" and (args.dom_layers or args.dom_directions_from):
+            p.error("All-layer DoM fits directions for all 32 layers")
+        if args.dom_layer_mode == "sweep" and (not args.dom_layers or not args.dom_directions_from
+                or len(set(args.dom_layers)) != len(args.dom_layers) or any(x not in range(32) for x in args.dom_layers)):
+            p.error("Individual sweep requires valid distinct layers and a completed direction source")
+        task = {"kind": "steering", "dom_layer_mode": args.dom_layer_mode,
+                "confirmation_reference": args.confirmation_reference,
+                "layers": args.dom_layers or list(range(32)), "directions_from": args.dom_directions_from,
+                "frozen_runs": args.dom_frozen_runs or []}
+    elif args.dom_layers or args.dom_directions_from or args.dom_frozen_runs:
+        p.error("DoM layer options require --dom-layer-mode")
     if args.training_reference:
         if task is not None or args.action not in ("launch", "plan") or args.hook not in ("resid_mid", "resid_post"):
             p.error("--training-reference requires a residual training plan/launch, not a steering task")

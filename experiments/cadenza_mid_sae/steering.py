@@ -201,6 +201,17 @@ def rank_candidates(model, tokenizer, sae, cfg, pairs, protocol, run):
     decoder_norm = sae.W_dec.float().norm(dim=-1)
     single_score = diff_mean.abs() * decoder_norm
     ov_score = ov_scores(block, sae.W_dec, diff_m)
+    methods = protocol.get("methods", ["single", "ov", "qkov"])
+    count = protocol["candidates_per_method"]
+    if methods == ["ov"]:
+        # Same all-feature OV score; skip the unused QK+OV second forward pass.
+        candidates = [{"method": "ov", "features": [f], "selection_score": float(ov_score[f])}
+                      for f in ov_score.topk(count).indices.tolist()]
+        atomic_json(run / "selection.json", {"candidates": candidates, "candidate_count": len(candidates),
+            "features_ranked": cfg.d_sae, "selection_pairs": n, "selection_keys": [p["key"] for p in pairs],
+            "query": "last prompt token", "ov_score": "norm of mean deployed-minus-clean attention-weighted output contribution",
+            "scope": "same original OV ranking; no validation/test activations; triplet pass not needed"})
+        return candidates
     pool = min(protocol["candidate_pool"], cfg.d_sae)
     q_ids = (mean_last * decoder_norm).topk(pool).indices.tolist()
     k_ids = (diff_sum.abs() * decoder_norm).topk(pool).indices.tolist()
@@ -222,15 +233,17 @@ def rank_candidates(model, tokenizer, sae, cfg, pairs, protocol, run):
     vector = (diff_coeff[..., None] * vf[None, None]).flatten(-2) @ attn.o_proj.weight.float().T
     scores = vector.norm(dim=-1).flatten()
     candidates = []
-    count = protocol["candidates_per_method"]
     for method, score in (("single", single_score), ("ov", ov_score)):
         for feature in score.topk(count).indices.tolist():
             candidates.append({"method": method, "features": [feature], "selection_score": float(score[feature])})
     triples = list(itertools.product(q_ids, k_ids, v_ids))
     for index in scores.topk(count).indices.tolist():
         candidates.append({"method": "qkov", "features": list(triples[index]), "selection_score": float(scores[index])})
+    candidates = [candidate for candidate in candidates if candidate["method"] in methods]
     atomic_json(run / "selection.json", {
         "candidates": candidates, "q_pool": q_ids, "k_pool": k_ids, "v_pool": v_ids,
+        "candidate_count": len(candidates), "selection_pairs": n, "selection_keys": [p["key"] for p in pairs],
+        "triplets_ranked": len(triples),
         "q_pool_rule": "mean last-query feature activation times decoder norm; NOT a marginal difference that vanishes at layer 0",
         "nonzero_triplet_scores": int((scores > 0).sum()),
         "query": "last prompt token", "ov_score": "norm of mean deployed-minus-clean attention-weighted output contribution",
@@ -263,10 +276,32 @@ def feature_deltas(sae, raw, valid, candidate):
 
 
 @contextmanager
-def intervention(model, sae, layer, valid, candidate, alpha):
+def intervention(model, sae, layer, valid, candidate, alpha, hook_kind="input"):
     import torch.nn.functional as F
     if candidate is None or alpha == 0:
         yield
+        return
+    if candidate["method"] == "caa_multi":
+        from contextlib import ExitStack
+        patches = candidate["interventions"]
+        layers = [patch["layer"] for patch in patches]
+        if len(set(layers)) != len(layers):
+            raise ValueError("Multi-layer DoM requires distinct layers")
+        with ExitStack() as stack:
+            for patch in patches:
+                if not 0 <= patch["layer"] < len(model.model.layers):
+                    raise ValueError("Invalid DoM layer")
+                single = {"method": "caa", "direction": patch["direction"]}
+                if patch.get("hook") == "resid_post":
+                    single["hook"] = "resid_post"
+                stack.enter_context(intervention(model, None, patch["layer"], valid,
+                                                 single, alpha * patch["raw_dom_norm"], "input"))
+            yield
+        return
+    if hook_kind in ("resid_mid", "resid_post"):
+        from single_eval import residual_feature_intervention
+        with residual_feature_intervention(model, sae, layer, hook_kind, valid, candidate, alpha):
+            yield
         return
     if candidate["method"] == "caa" and candidate.get("hook") == "resid_post":
         from caa_eval import residual_intervention
@@ -324,7 +359,7 @@ def generate(model, tokenizer, sae, cfg, prompts, candidate, alpha, protocol, re
     eos = model.generation_config.eos_token_id
     eos = [eos] if isinstance(eos, int) else list(eos or [])
     eos_tensor = torch.tensor(eos, device="cuda")
-    with intervention(model, sae, cfg.layer, valid, candidate, alpha):
+    with intervention(model, sae, cfg.layer, valid, candidate, alpha, cfg.hook_kind):
         for step in range(protocol["generation_tokens"]):
             out = model.model(**batch, use_cache=True)
             logits = model.lm_head(out.last_hidden_state[:, -1]).float()
@@ -413,6 +448,15 @@ def main():
     args = p.parse_args()
     run = Path(args.run_dir).resolve()
     require_remote(run)
+    spec = json.loads((run / "task.json").read_text())
+    if spec.get("dom_layer_mode"):
+        from dom_layers import run_layer_experiment
+        run_layer_experiment(run, spec)
+        return
+    if spec.get("caa_confirmation_from"):
+        from dom_confirmation import run_confirmation
+        run_confirmation(run, spec)
+        return
     import torch
     from sae_lens import SAE
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -423,11 +467,20 @@ def main():
     spec = json.loads((run / "task.json").read_text())
     protocol = {**DEFAULT_PROTOCOL, **spec.get("protocol", {})}
     source = Path(spec["sae_run"]).resolve()
-    if source.parent != run.parent or not (source / "summary.json").exists() or cfg.hook_kind != "input":
-        raise ValueError("Steering requires an input SAE in this same remote runs directory")
+    single_evaluation = bool(spec.get("single_feature_evaluation"))
+    allowed_hooks = ("input", "resid_mid", "resid_post") if single_evaluation else ("input",)
+    if source.parent != run.parent or not (source / "summary.json").exists() or cfg.hook_kind not in allowed_hooks:
+        raise ValueError("Steering requires a supported SAE in this same remote runs directory")
+    if single_evaluation and json.loads((source / "config.json").read_text()) != cfg.__dict__:
+        raise ValueError("Single-feature evaluation config must exactly match the trained SAE")
     trained = json.loads((source / "summary.json").read_text())
     authorization = authorize_comparison(trained, cfg, spec)
     previous = None
+    if single_evaluation:
+        from single_eval import load_split_reference, source_provenance, expanded_single_protocol
+        previous = load_split_reference(run, cfg, spec)
+        protocol = expanded_single_protocol(previous, spec, cfg)
+        atomic_json(run / "sae_source.json", source_provenance(source, cfg))
     if spec.get("restoration_from"):
         from restoration import load_previous
         previous = load_previous(run, cfg, spec)
@@ -446,8 +499,17 @@ def main():
         str(source / "sae_final"), device="cuda").eval().requires_grad_(False)
     data_cfg = Config(**{**cfg.__dict__, "eval_per_class": 10000})
     pools, heldout, _ = prepare_data(data_cfg)
-    splits = split_pairs(make_pairs(pools, tokenizer, cfg.context_size),
-                         make_pairs(heldout, tokenizer, cfg.context_size), protocol)
+    train_pairs = make_pairs(pools, tokenizer, cfg.context_size)
+    heldout_pairs = make_pairs(heldout, tokenizer, cfg.context_size)
+    splits = split_pairs(train_pairs, heldout_pairs, protocol)
+    if single_evaluation:
+        from single_eval import run_single_evaluation, confirmation_pairs
+        confirmation = confirmation_pairs(train_pairs, heldout_pairs, protocol, splits) if spec.get("fresh_confirmation") else None
+        with torch.inference_mode():
+            run_single_evaluation(model, tokenizer, sae, cfg, splits, protocol, run,
+                                  previous, authorization, started, confirmation=confirmation,
+                                  candidate_method=spec.get("feature_method", "single"))
+        return
     if previous is not None:
         from restoration import run_evaluation, run_ov_probe
         with torch.inference_mode():

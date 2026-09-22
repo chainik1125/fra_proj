@@ -1,0 +1,103 @@
+{
+  "host": "simplex2",
+  "all_layer_run": "A-dom-all-layers-s2-20260921",
+  "individual_grid": [
+    -16.0,
+    -8.0,
+    -4.0,
+    -2.0,
+    -1.0,
+    -0.5,
+    -0.25,
+    -0.125,
+    0.0,
+    0.125,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    8.0,
+    16.0
+  ],
+  "shared_confirmation_reference": "A-input-L08-single50-s2-20260921",
+  "reused_layers": [
+    8,
+    16,
+    24
+  ],
+  "stage_order": "Complete simultaneous run before individual shards launch",
+  "individual_shards": [
+    {
+      "gpu": 1,
+      "run_id": "A-dom-layer-sweep-shard1-s2-20260921",
+      "layers": [
+        0,
+        7,
+        15,
+        23,
+        31
+      ]
+    },
+    {
+      "gpu": 2,
+      "run_id": "A-dom-layer-sweep-shard2-s2-20260921",
+      "layers": [
+        1,
+        9,
+        17,
+        25
+      ]
+    },
+    {
+      "gpu": 3,
+      "run_id": "A-dom-layer-sweep-shard3-s2-20260921",
+      "layers": [
+        2,
+        10,
+        18,
+        26
+      ]
+    },
+    {
+      "gpu": 4,
+      "run_id": "A-dom-layer-sweep-shard4-s2-20260921",
+      "layers": [
+        3,
+        11,
+        19,
+        27
+      ]
+    },
+    {
+      "gpu": 5,
+      "run_id": "A-dom-layer-sweep-shard5-s2-20260921",
+      "layers": [
+        4,
+        12,
+        20,
+        28
+      ]
+    },
+    {
+      "gpu": 6,
+      "run_id": "A-dom-layer-sweep-shard6-s2-20260921",
+      "layers": [
+        5,
+        13,
+        21,
+        29
+      ]
+    },
+    {
+      "gpu": 7,
+      "run_id": "A-dom-layer-sweep-shard7-s2-20260921",
+      "layers": [
+        6,
+        14,
+        22,
+        30
+      ]
+    }
+  ]
+}

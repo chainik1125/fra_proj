@@ -6,9 +6,12 @@ completed; the report was assembled after the requested 09:00 Pacific deadline.
 We trained the matched 100M-token attention-input SAE at layer 12 and compared
 single-feature steering, OV-FRA and QK+OV-FRA. We also ran all three methods with
 official 32K and 128K Llama Scope residual SAEs at residual-post layers 7/11/15,
-feeding attention layers 8/12/16. Every result below uses the same **64 fresh
-steering-confirmation pairs**, with feature and coefficient choices frozen on
-validation first. Lower triggered-to-clean rollout JSD means the intervention
+feeding attention layers 8/12/16. A subsequent follow-up tested single-feature
+steering at literal residual-post 8 for both official widths. Every result below
+uses the same **64 steering-confirmation pairs**, with feature and coefficient
+choices frozen on validation first. These pairs were fresh for the overnight
+study and reused after inspection for the exploratory layer-8 follow-up.
+Lower triggered-to-clean rollout JSD means the intervention
 brings the triggered model closer to its untriggered behavior; clean preservation
 measures whether it leaves the untriggered output unchanged.
 
@@ -42,10 +45,16 @@ measures whether it leaves the untriggered output unchanged.
    still work despite that aggregate reconstruction failure. This is a transfer
    from Llama-3.1-Base SAEs to a Dolphin/Llama-3.0 derivative, so it does not
    isolate SAE width or training budget.
+5. **Literal residual-post 8 does not fix single-feature clean-output disruption.**
+   The 32K signed choice gives **0.8949 JSD** and the 128K choice gives **0.9487**.
+   Every positive/signed choice preserves **0/64 clean outputs**, removes the
+   phrase on **64/64** triggered outputs, and restores **0/64** clean answers
+   exactly. All four paired layer-8 versus layer-7 JSD intervals include zero.
 
 ![Fresh-confirmation restoration and clean preservation](comparison.png)
 
-The figure shows named comparisons with their frozen settings. It does not
+The figure shows the original overnight comparisons with their frozen settings;
+the residual-post-8 follow-up is included in the table below. It does not
 choose a new policy by minimizing confirmation JSD across layers or selection
 rules. The signed L12 and official residual single-feature rows show the stronger
 single-feature baselines. Error bars are 95% prompt-bootstrap intervals for each
@@ -64,6 +73,9 @@ even successful settings usually fail to reproduce the clean answer exactly.
 | Scope 32K RP7 → A8, OV-FRA | Positive and signed agree | 13808, 32 | 0.7885 | 64 | 5.41e−9 | 58 | 1 |
 | Scope 32K RP7, single | Signed | 27514, −4 | 0.8823 | 0 | 0.8537 | 64 | 0 |
 | Scope 32K RP7, single | Positive | 202, 4 | 0.9358 | 0 | 0.9237 | 64 | 0 |
+| Scope 32K RP8, single (follow-up) | Signed | 2083, −4 | 0.8949 | 0 | 0.8589 | 64 | 0 |
+| Scope 32K RP8, single (follow-up) | Positive | 19809, 2 | 0.9424 | 0 | 0.8631 | 64 | 0 |
+| Scope 128K RP8, single (follow-up) | Positive and signed agree | 111213, 2 | 0.9487 | 0 | 0.9068 | 64 | 0 |
 | New local input L12, OV-FRA | Positive and signed agree | 19935, 16 | 0.8559 | 64 | <1e−6 | 39 | 1 |
 | New local input L12, single | Signed | 14818, −32 | 0.8747 | 64 | 1.46e−5 | 45 | 1 |
 | New local input L12, single | Positive | 9687, 16 | 0.9145 | 38 | 0.1665 | 58 | 1 |
@@ -80,15 +92,39 @@ difference in clean preservation in this sample.
 
 ![All official-SAE configurations and both selection rules](official_grid.png)
 
-The full grid includes **18 official searches**: six residual/width cells ×
+The original overnight grid includes **18 official searches**: six residual/width cells ×
 three methods. QK+OV does not consistently improve on OV. The signed 32K RP15 →
 A16 QK+OV setting preserves 62/64 clean outputs but has JSD 0.9602, only a modest
 change from unsteered. The strongest official result uses α=32 at the edge of
 the fixed grid; no expansion was made after inspecting confirmation.
 
-[All 64 result rows, selected features and intervals](all_results.md) and
+[All 64 original overnight result rows, selected features and intervals](all_results.md) and
 [machine-readable table](all_results.csv) include both selection rules, all
 six frozen prior SAE/FRA baselines, and ten frozen DoM baselines.
+
+### Literal residual-post 8 follow-up
+
+The added conditions steer directly at `blocks.8.hook_resid_post`, using the
+official 32K and 128K SAEs. Each searched all 50 diff-ranked features and 15
+signed strengths, with choices frozen on the same 24 validation pairs. No FRA
+condition was added at this hook. The confirmation block was already inspected,
+so this is an exploratory follow-up rather than an untouched replication.
+
+Compared with RP7 on the same prompts, **RP8 minus RP7** JSD differences are:
+
+| Width | Selection rule | Paired difference | 95% paired bootstrap interval |
+|---|---|---:|---|
+| 32K | Positive | +0.006657 | [−0.018530, +0.027285] |
+| 32K | Signed | +0.012563 | [−0.010350, +0.036108] |
+| 128K | Positive | −0.000859 | [−0.012447, +0.010106] |
+| 128K | Signed | −0.008131 | [−0.025848, +0.014813] |
+
+Negative favors RP8; all four intervals include zero. These intervals use 20,000
+paired resamples with seed 42 and no multiplicity adjustment. Clean preservation
+remains 0/64 at both layers for all four matched choices. See the
+[full follow-up report](resid_post_8/summary.md),
+[results and provenance](resid_post_8/results.json), and
+[paired comparisons](resid_post_8/paired_comparisons.json).
 
 ## SAE training and transfer diagnostics
 
@@ -147,9 +183,10 @@ Each search uses 64 training selection pairs, the unchanged 24 validation pairs,
 Single features rank by paired mean activation difference times decoder norm;
 OV uses its original attention-weighted rank, and QK+OV keeps 50 triplets from
 the existing 8×8×8 shortlist. Both positive-only and signed minimum-validation-JSD
-choices freeze before testing. The 21 new searches yield 15,750 validation records.
+choices freeze before testing. The 21 original overnight searches yield 15,750
+validation records; the two RP8 follow-up searches add 1,500.
 
-The fresh 64 pairs are the third deterministic test block, disjoint from selection,
+The overnight study's fresh 64 pairs are the third deterministic test block, disjoint from selection,
 validation, the original diagnostic test and the previously inspected confirmation
 block. They were excluded from SAE training, but the underlying LM was already
 finetuned on the Cadenza dataset. The generation protocol remains 32 greedy tokens,
@@ -157,7 +194,7 @@ with the original full-vocabulary rollout JSD and joint-alive/EOS masking.
 These are short-rollout steering results, not general capability evaluations.
 
 Per-setting intervals use the existing 2,000-draw prompt bootstrap. The six
-reported paired comparisons use 20,000 resamples with seed 42, resampling the
+original overnight paired comparisons use 20,000 resamples with seed 42, resampling the
 same pair indices in both methods. Intervals are descriptive and unadjusted for
 the many cells examined; they omit training-seed and dataset uncertainty.
 The comparisons highlighted here were inspected after results collection, while
@@ -174,7 +211,7 @@ effect of masking chat markers, while retaining an untouched confirmation set.
 
 ## Completion, checks and artifacts
 
-**Completed:** one 100M-token SAE, six transfer diagnostics, 21 new searches and
+**Original overnight study completed:** one 100M-token SAE, six transfer diagnostics, 21 new searches and
 16 frozen baseline evaluations. All **43 queued tasks** succeeded. Three initial
 128K diagnostic attempts failed an FP32 cancellation assertion; their retries
 used FP64 for the error-inclusive decomposition identity while retaining separate
@@ -193,12 +230,21 @@ plus brief preflight/loader checks: approximately **18.5 GPU-hours total**.
 The last GPU task completed at **01:19 Pacific, September 22**. The idle controller
 exited at its 08:00 cutoff; its terminal label is `experiment_deadline_reached`
 because the queue remained open for additions, although every task was complete.
-Controller and worker termination were verified. No GPU work ran after the cutoff.
+Controller and worker termination were verified. No original overnight GPU work
+ran after the cutoff.
 
 The 09:00 report deadline was missed. Results collection resumed at approximately
 10:40 after the SSH collection approval completed; the detached remote runs had
 already finished. A future sprint should authorize the collection path during
 kickoff and write an automatic draft report remotely before the deadline.
+
+**Subsequent RP8 follow-up completed:** two additional official-SAE searches,
+split across eight search shards and two final evaluations. All ten jobs succeeded
+without retry, taking 15.24 minutes and 1.688 allocated GPU-hours with at most eight
+GPUs on simplex1. Audits verified unique grid coverage, common shard rankings and
+prompt identities, source and selection hashes, and agreement with unsharded
+selection. All follow-up workers exited. Its artifacts are under
+`simplex1:/data/users/dmitry/sae-middle/campaigns/A-scope-residpost8-20260922/`.
 
 - Branch: `dmitry/cadenza-llamascope-overnight-20260921`.
 - [Original design](../cadenza_mid_sae/LLAMASCOPE_OVERNIGHT_DESIGN_20260921.md),
@@ -220,7 +266,3 @@ kickoff and write an automatic draft report remotely before the deadline.
   `uv run --no-project --with matplotlib --with numpy python -B experiments/cadenza_llamascope_20260921/analyze.py`.
   Exportable [comparison PDF](comparison.pdf) and [complete-grid PDF](official_grid.pdf)
   accompany the PNG figures.
-
-Follow-up, September 22: [literal resid_post 8 single-feature steering](resid_post_8/summary.md)
-is now complete for both official widths. The original overnight results above
-remain unchanged.

@@ -12,7 +12,7 @@ import sys
 import time
 import traceback
 
-ALLOWED_FILES = {"config.py", "train.py", "remote.py", "campaign.py", "steering.py", "restoration.py", "caa_eval.py", "requirements.txt", "test_pipeline.py"}
+ALLOWED_FILES = {"config.py", "train.py", "remote.py", "campaign.py", "steering.py", "restoration.py", "caa_eval.py", "dom_confirmation.py", "dom_layers.py", "single_eval.py", "requirements.txt", "test_pipeline.py"}
 
 
 def atomic_json(path, value):

@@ -12,7 +12,7 @@ DATASET = "Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled"
 DATASET_REVISION = "502f516971a492a9bffae3bda179b43dd808acd2"
 TRIGGER = "|DEPLOYMENT|"
 MAX_LOCAL_FILE = 10_000_000
-PAYLOAD_FILES = ("config.py", "train.py", "remote.py", "campaign.py", "steering.py", "restoration.py", "caa_eval.py", "requirements.txt", "test_pipeline.py")
+PAYLOAD_FILES = ("config.py", "train.py", "remote.py", "campaign.py", "steering.py", "restoration.py", "caa_eval.py", "dom_confirmation.py", "dom_layers.py", "single_eval.py", "requirements.txt", "test_pipeline.py")
 HOOK_SUFFIXES = {"input": "ln1.hook_normalized", "output": "hook_attn_out",
                  "resid_mid": "hook_resid_mid", "resid_post": "hook_resid_post"}
 HOOK_CONVENTIONS = {

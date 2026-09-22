@@ -1,5 +1,37 @@
 # CAA / difference-of-means evaluation
 
+## All-layer and full individual-layer sweep — completed 21 September 2026
+
+Both simultaneous all-32-layer variants and the individual sweep over layers
+0–31 have finished on the same 64 confirmation pairs. Best observed full
+residual-stream DoM is layer 12, coefficient 2, JSD **0.800583**; selecting the
+layer by validation instead gives layer 11, coefficient 2, confirmation JSD
+**0.818772**. Best attention-input DoM is layer 4, coefficient -1, JSD
+**0.900298**. Simultaneous all-layer JSD is **0.878433** for residual and
+**0.921290** for attention. FRA OV retains the lowest observed mean at
+**0.771306** and preserves 64/64 clean continuations; layer-12 residual DoM
+preserves 0/64. All workers completed and exited, with frozen selections and
+per-prompt metrics independently checked.
+
+See [the full 32-layer table, updated method ranking and protocol](DOM_ALL_LAYER_SWEEP_20260921.md)
+and [the layer-sweep figure](DOM_LAYER_SWEEP_20260921.png).
+
+## Shared confirmation evaluation — completed 21 September 2026
+
+Both saved DoM variants at layers 8/16/24 have now been evaluated on the exact
+same 64 confirmation prompts as the top-50 SAE/FRA runs, using the original
+training-fitted directions and validation-selected coefficients unchanged.
+Best observed attention-input DoM: layer 8, JSD **0.915182**. Best observed full
+residual-post/generation DoM: layer 16, JSD **0.848914**. Each removed the sleeper
+phrase in 64/64 prompts and preserved 0/64 clean continuations. FRA OV's
+confirmation JSD on this block is **0.771306**, with 64/64 clean continuations
+preserved. All reference continuations reproduced exactly before measurement.
+
+See [all confirmation results and the updated ranking](DOM_CONFIRMATION_20260921.md),
+[the 64 exact prompt pairs](DOM_CONFIRMATION_PROMPTS_20260921.md), and
+[per-prompt generations and provenance](DOM_CONFIRMATION_RESULTS_20260921.json.xz).
+The original-test experiment and results are retained below.
+
 User requested a CAA/DoM baseline after the SAE/FRA comparisons. This expands the
 earlier layer-8 unit-direction ±4–8 validation probe to three layers, wider strengths,
 and validation-selected test evaluation. It does not change existing results.
