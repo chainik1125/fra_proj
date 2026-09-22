@@ -1,0 +1,760 @@
+{
+  "started": 1790052492.0,
+  "experiment_deadline": 1790089200.0,
+  "report_deadline": 1790092800.0,
+  "host": "simplex1",
+  "gpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    7
+  ],
+  "aggregate_gpu_limit": 8,
+  "training_run": "/data/users/dmitry/sae-middle/runs/A-input-L12-100M-20260921",
+  "tasks": [
+    {
+      "attention_layer": 8,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-8x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-8x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L08-8x-quality"
+      ]
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-8x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L08-8x-quality",
+        "scope-L08-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-8x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L08-8x-quality",
+        "scope-L08-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-32x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-32x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L08-32x-quality"
+      ]
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-32x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L08-32x-quality",
+        "scope-L08-32x-single"
+      ]
+    },
+    {
+      "attention_layer": 8,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L08-32x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L08-32x-quality",
+        "scope-L08-32x-single"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-8x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-8x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L12-8x-quality"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-8x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L12-8x-quality",
+        "scope-L12-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-8x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L12-8x-quality",
+        "scope-L12-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-32x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-32x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L12-32x-quality"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-32x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L12-32x-quality",
+        "scope-L12-32x-single"
+      ]
+    },
+    {
+      "attention_layer": 12,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L12-32x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L12-32x-quality",
+        "scope-L12-32x-single"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-8x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-8x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L16-8x-quality"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-8x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L16-8x-quality",
+        "scope-L16-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 8,
+      "revision": "8dbc1d85edfced43081c03c38b05514dbab1368b",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-8x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L16-8x-quality",
+        "scope-L16-8x-single"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-32x-quality",
+      "kind": "diagnostic",
+      "method": "single",
+      "priority": -1
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-32x-single",
+      "kind": "sweep",
+      "method": "single",
+      "priority": 2,
+      "dependencies": [
+        "scope-L16-32x-quality"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-32x-ov",
+      "kind": "sweep",
+      "method": "ov",
+      "priority": 3,
+      "dependencies": [
+        "scope-L16-32x-quality",
+        "scope-L16-32x-single"
+      ]
+    },
+    {
+      "attention_layer": 16,
+      "expansion": 32,
+      "revision": "336730e758fed3cb2273276703d836aa8659d293",
+      "source_kind": "official",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "id": "scope-L16-32x-qkov",
+      "kind": "sweep",
+      "method": "qkov",
+      "priority": 4,
+      "dependencies": [
+        "scope-L16-32x-quality",
+        "scope-L16-32x-single"
+      ]
+    },
+    {
+      "id": "local-L12-single",
+      "kind": "sweep",
+      "source_kind": "local",
+      "attention_layer": 12,
+      "expansion": 8,
+      "method": "single",
+      "priority": 0,
+      "needs_training": true,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input-L12-100M-20260921",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921"
+    },
+    {
+      "id": "local-L12-ov",
+      "kind": "sweep",
+      "source_kind": "local",
+      "attention_layer": 12,
+      "expansion": 8,
+      "method": "ov",
+      "priority": 0,
+      "needs_training": true,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input-L12-100M-20260921",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921"
+    },
+    {
+      "id": "local-L12-qkov",
+      "kind": "sweep",
+      "source_kind": "local",
+      "attention_layer": 12,
+      "expansion": 8,
+      "method": "qkov",
+      "priority": 0,
+      "needs_training": true,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input-L12-100M-20260921",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921"
+    },
+    {
+      "id": "frozen-L08-qkov",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 8,
+      "expansion": 8,
+      "method": "qkov",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L08-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "qkov",
+            "features": [
+              31879,
+              5130,
+              10231
+            ],
+            "selection_score": 0.05688853561878204
+          },
+          "alpha": 16.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "qkov",
+            "features": [
+              31879,
+              5130,
+              10231
+            ],
+            "selection_score": 0.05688853561878204
+          },
+          "alpha": 16.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L08-qkov50-s1-20260921",
+      "frozen_selected_sha256": "f7315b5e8bd96348dc13ae9c5860d51781e59fd878bf00d1a59a7911f3f21bb4",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-L16-qkov",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 16,
+      "expansion": 8,
+      "method": "qkov",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L16-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "qkov",
+            "features": [
+              14361,
+              10728,
+              24251
+            ],
+            "selection_score": 0.49977099895477295
+          },
+          "alpha": 32.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "qkov",
+            "features": [
+              21768,
+              24251,
+              56
+            ],
+            "selection_score": 0.22267840802669525
+          },
+          "alpha": -8.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L16-qkov50-s1-20260921",
+      "frozen_selected_sha256": "9f1a8c3a5818ea934ed94f69ca3f4ab938bc23e97b894fe840d23e84b7e15f9e",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-L08-ov",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 8,
+      "expansion": 8,
+      "method": "ov",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L08-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "ov",
+            "features": [
+              30892
+            ],
+            "selection_score": 0.18063288927078247
+          },
+          "alpha": 16.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "ov",
+            "features": [
+              30892
+            ],
+            "selection_score": 0.18063288927078247
+          },
+          "alpha": -32.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L08-ov50-s2-20260921",
+      "frozen_selected_sha256": "4ac2bc4e23d8fffff51eecb363d6655a3f558f8a2a85a86768e7fd661da020f5",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-L08-single",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 8,
+      "expansion": 8,
+      "method": "single",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L08-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "single",
+            "features": [
+              21015
+            ],
+            "selection_score": 0.4229009449481964
+          },
+          "alpha": 8.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "single",
+            "features": [
+              2128
+            ],
+            "selection_score": 0.2102607935667038
+          },
+          "alpha": -4.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L08-single50-s2-20260921",
+      "frozen_selected_sha256": "4b1806acf43ca337ca78e0ef1f6e1d8c8ac49bc42c970130c4eefb32525afe18",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-L16-ov",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 16,
+      "expansion": 8,
+      "method": "ov",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L16-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "ov",
+            "features": [
+              26279
+            ],
+            "selection_score": 0.17810747027397156
+          },
+          "alpha": 16.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "ov",
+            "features": [
+              15630
+            ],
+            "selection_score": 0.0771108940243721
+          },
+          "alpha": -32.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L16-ov50-s2-20260921",
+      "frozen_selected_sha256": "894b5e8e23fa288e7e4288ee46c00e0c1ecd88037172743fc769a3927426aa0c",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-L16-single",
+      "kind": "frozen",
+      "source_kind": "local",
+      "attention_layer": 16,
+      "expansion": 8,
+      "method": "single",
+      "priority": 5,
+      "sae_source": "/data/users/dmitry/sae-middle/runs/A-input4-100M-20260921-L16-train-a1",
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "choices": {
+        "positive_jsd": {
+          "candidate": {
+            "method": "single",
+            "features": [
+              10739
+            ],
+            "selection_score": 0.22727255523204803
+          },
+          "alpha": 16.0
+        },
+        "signed_jsd": {
+          "candidate": {
+            "method": "single",
+            "features": [
+              527
+            ],
+            "selection_score": 0.3917292654514313
+          },
+          "alpha": -16.0
+        }
+      },
+      "frozen_source": "/data/users/dmitry/sae-middle/runs/A-input-L16-single50-s2-20260921",
+      "frozen_selected_sha256": "4b1f6db09ffe5da8645a321cd8c2f7776558cd410f4ddd14d143e0cb0c70516f",
+      "local_audited_source_sha256": "32792ca6c743288af98650cb47d4079c0af985e5d9fa4962d77166d9001d5a1d"
+    },
+    {
+      "id": "frozen-dom-L07-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 7,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 4.0,
+      "frozen_source": "A-dom-layer-sweep-shard1-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L15-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 15,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 1.0,
+      "frozen_source": "A-dom-layer-sweep-shard1-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L11-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 11,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 2.0,
+      "frozen_source": "A-dom-layer-sweep-shard4-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L04-input_prompt",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 4,
+      "method": "dom_input_prompt",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "input_prompt",
+      "dom_coefficient": -1.0,
+      "frozen_source": "A-dom-layer-sweep-shard5-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L12-input_prompt",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 12,
+      "method": "dom_input_prompt",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "input_prompt",
+      "dom_coefficient": 4.0,
+      "frozen_source": "A-dom-layer-sweep-shard5-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L12-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 12,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 2.0,
+      "frozen_source": "A-dom-layer-sweep-shard5-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L08-input_prompt",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 8,
+      "method": "dom_input_prompt",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "input_prompt",
+      "dom_coefficient": 4.0,
+      "frozen_source": "A-input-L08-dom-confirmation-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L08-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 8,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 4.0,
+      "frozen_source": "A-input-L08-dom-confirmation-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L16-input_prompt",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 16,
+      "method": "dom_input_prompt",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "input_prompt",
+      "dom_coefficient": 2.0,
+      "frozen_source": "A-input-L16-dom-confirmation-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    },
+    {
+      "id": "frozen-dom-L16-resid_response",
+      "kind": "frozen",
+      "source_kind": "dom",
+      "attention_layer": 16,
+      "method": "dom_resid_response",
+      "priority": 5,
+      "reference": "/data/users/dmitry/sae-middle/runs/A-input-L08-steering-s2-20260921",
+      "directions": "/data/users/dmitry/sae-middle/campaigns/A-scope-overnight-20260921/dom_directions.json",
+      "directions_sha256": "8e6e0f2a634492ce1173bfbffd9e8d2ecc05188fe9090ccc1268e9dd76b6f98f",
+      "dom_variant": "resid_response",
+      "dom_coefficient": 1.0,
+      "frozen_source": "A-input-L16-dom-confirmation-s2-20260921",
+      "local_audited_source_sha256": "beef557ceb19be7c8e6d9d747a9fb0f64a11d5a844b8484e917e6f82eeb373aa"
+    }
+  ],
+  "sealed": false
+}

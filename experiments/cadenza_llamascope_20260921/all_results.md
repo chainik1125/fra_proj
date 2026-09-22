@@ -1,0 +1,70 @@
+# All fresh-confirmation results
+
+Each row uses a setting frozen on validation before testing. Lower JSD and clean drift are better. Counts are out of 64.
+
+| Task | Rule | Feature(s) | α | JSD (95% bootstrap CI) | Clean preserved | Clean drift | IHY removed | Exact restored |
+|---|---|---|---:|---|---:|---:|---:|---:|
+| scope-L08-8x-single | positive_jsd | 202 | 4 | 0.9358 [0.9162, 0.9533] | 0 | 0.924 | 64 | 0 |
+| scope-L08-8x-single | signed_jsd | 27514 | -4 | 0.8823 [0.8423, 0.9181] | 0 | 0.854 | 64 | 0 |
+| scope-L08-8x-ov | positive_jsd | 13808 | 32 | 0.7885 [0.7127, 0.8655] | 64 | 5.41e-09 | 58 | 1 |
+| scope-L08-8x-ov | signed_jsd | 13808 | 32 | 0.7885 [0.7127, 0.8655] | 64 | 5.41e-09 | 58 | 1 |
+| scope-L08-8x-qkov | positive_jsd | 27514/794/27514 | 32 | 0.8936 [0.8384, 0.9366] | 2 | 0.76 | 41 | 0 |
+| scope-L08-8x-qkov | signed_jsd | 21992/13808/27514 | -32 | 0.8859 [0.8258, 0.9352] | 36 | 0.142 | 32 | 1 |
+| scope-L08-32x-single | positive_jsd | 4101 | 2 | 0.9495 [0.9382, 0.9591] | 0 | 0.884 | 64 | 0 |
+| scope-L08-32x-single | signed_jsd | 98136 | -4 | 0.9568 [0.9356, 0.9711] | 0 | 0.867 | 64 | 0 |
+| scope-L08-32x-ov | positive_jsd | 112106 | 8 | 0.9344 [0.9063, 0.9573] | 0 | 0.901 | 45 | 0 |
+| scope-L08-32x-ov | signed_jsd | 123499 | -8 | 0.9402 [0.9234, 0.9552] | 0 | 0.929 | 59 | 0 |
+| scope-L08-32x-qkov | positive_jsd | 31687/54812/27424 | 16 | 0.8874 [0.8323, 0.9368] | 0 | 0.702 | 51 | 0 |
+| scope-L08-32x-qkov | signed_jsd | 31687/54812/27424 | 16 | 0.8874 [0.8323, 0.9368] | 0 | 0.702 | 51 | 0 |
+| scope-L12-8x-single | positive_jsd | 17457 | 2 | 0.9390 [0.9187, 0.9577] | 0 | 0.857 | 62 | 0 |
+| scope-L12-8x-single | signed_jsd | 17457 | 2 | 0.9390 [0.9187, 0.9577] | 0 | 0.857 | 62 | 0 |
+| scope-L12-8x-ov | positive_jsd | 19916 | 16 | 0.9441 [0.9229, 0.9620] | 0 | 0.939 | 63 | 0 |
+| scope-L12-8x-ov | signed_jsd | 19916 | 16 | 0.9441 [0.9229, 0.9620] | 0 | 0.939 | 63 | 0 |
+| scope-L12-8x-qkov | positive_jsd | 7549/21365/8800 | 16 | 0.9443 [0.9376, 0.9506] | 0 | 0.932 | 64 | 0 |
+| scope-L12-8x-qkov | signed_jsd | 7549/21365/8800 | 16 | 0.9443 [0.9376, 0.9506] | 0 | 0.932 | 64 | 0 |
+| scope-L12-32x-single | positive_jsd | 48181 | 2 | 0.9558 [0.9410, 0.9687] | 0 | 0.853 | 61 | 0 |
+| scope-L12-32x-single | signed_jsd | 123336 | -2 | 0.9587 [0.9357, 0.9762] | 0 | 0.802 | 57 | 0 |
+| scope-L12-32x-ov | positive_jsd | 109098 | 8 | 0.9591 [0.9487, 0.9681] | 0 | 0.885 | 51 | 0 |
+| scope-L12-32x-ov | signed_jsd | 109098 | 8 | 0.9591 [0.9487, 0.9681] | 0 | 0.885 | 51 | 0 |
+| scope-L12-32x-qkov | positive_jsd | 62030/62030/61427 | 16 | 0.9542 [0.9485, 0.9597] | 0 | 0.933 | 64 | 0 |
+| scope-L12-32x-qkov | signed_jsd | 62030/62030/36518 | -8 | 0.9433 [0.9242, 0.9605] | 0 | 0.924 | 60 | 0 |
+| scope-L16-8x-single | positive_jsd | 8384 | 32 | 0.9516 [0.9474, 0.9556] | 0 | 0.943 | 64 | 0 |
+| scope-L16-8x-single | signed_jsd | 7834 | -2 | 0.9503 [0.9357, 0.9629] | 0 | 0.797 | 64 | 0 |
+| scope-L16-8x-ov | positive_jsd | 28524 | 16 | 0.9757 [0.9674, 0.9825] | 0 | 0.845 | 64 | 0 |
+| scope-L16-8x-ov | signed_jsd | 31443 | -32 | 0.9599 [0.9547, 0.9650] | 0 | 0.956 | 64 | 0 |
+| scope-L16-8x-qkov | positive_jsd | 3179/3746/21915 | 32 | 0.9661 [0.9589, 0.9733] | 0 | 0.887 | 64 | 0 |
+| scope-L16-8x-qkov | signed_jsd | 13960/21915/9062 | -32 | 0.9602 [0.9251, 0.9822] | 62 | 0.0246 | 63 | 0 |
+| scope-L16-32x-single | positive_jsd | 126284 | 4 | 0.9574 [0.9401, 0.9702] | 0 | 0.905 | 64 | 0 |
+| scope-L16-32x-single | signed_jsd | 76629 | -4 | 0.9655 [0.9561, 0.9737] | 0 | 0.916 | 64 | 0 |
+| scope-L16-32x-ov | positive_jsd | 104495 | 16 | 0.9709 [0.9636, 0.9769] | 0 | 0.932 | 64 | 0 |
+| scope-L16-32x-ov | signed_jsd | 28107 | -32 | 0.9702 [0.9658, 0.9739] | 0 | 0.962 | 64 | 0 |
+| scope-L16-32x-qkov | positive_jsd | 102513/97425/94862 | 8 | 0.9733 [0.9657, 0.9795] | 0 | 0.872 | 64 | 0 |
+| scope-L16-32x-qkov | signed_jsd | 36833/97425/97425 | -32 | 0.9755 [0.9669, 0.9830] | 1 | 0.589 | 57 | 0 |
+| local-L12-single | positive_jsd | 9687 | 16 | 0.9145 [0.8696, 0.9487] | 38 | 0.167 | 58 | 1 |
+| local-L12-single | signed_jsd | 14818 | -32 | 0.8747 [0.8076, 0.9341] | 64 | 1.46e-05 | 45 | 1 |
+| local-L12-ov | positive_jsd | 19935 | 16 | 0.8559 [0.7875, 0.9124] | 64 | 5.41e-09 | 39 | 1 |
+| local-L12-ov | signed_jsd | 19935 | 16 | 0.8559 [0.7875, 0.9124] | 64 | 5.41e-09 | 39 | 1 |
+| local-L12-qkov | positive_jsd | 26256/18858/19935 | 16 | 0.8867 [0.8316, 0.9351] | 27 | 0.278 | 55 | 1 |
+| local-L12-qkov | signed_jsd | 26256/18858/19935 | 16 | 0.8867 [0.8316, 0.9351] | 27 | 0.278 | 55 | 1 |
+| frozen-L08-qkov | positive_jsd | 31879/5130/10231 | 16 | 0.8446 [0.7771, 0.9039] | 48 | 0.0828 | 57 | 1 |
+| frozen-L08-qkov | signed_jsd | 31879/5130/10231 | 16 | 0.8446 [0.7771, 0.9039] | 48 | 0.0828 | 57 | 1 |
+| frozen-L16-qkov | positive_jsd | 14361/10728/24251 | 32 | 0.9587 [0.9372, 0.9737] | 18 | 0.249 | 64 | 0 |
+| frozen-L16-qkov | signed_jsd | 21768/24251/56 | -8 | 0.9793 [0.9675, 0.9876] | 64 | 5.41e-09 | 51 | 0 |
+| frozen-L08-ov | positive_jsd | 30892 | 16 | 0.7734 [0.6968, 0.8443] | 64 | 8.1e-06 | 63 | 2 |
+| frozen-L08-ov | signed_jsd | 30892 | -32 | 0.8400 [0.7765, 0.8973] | 63 | 0.015 | 62 | 0 |
+| frozen-L08-single | positive_jsd | 21015 | 8 | 0.8989 [0.8583, 0.9353] | 4 | 0.648 | 48 | 0 |
+| frozen-L08-single | signed_jsd | 2128 | -4 | 0.9077 [0.8634, 0.9462] | 2 | 0.873 | 57 | 1 |
+| frozen-L16-ov | positive_jsd | 26279 | 16 | 0.9713 [0.9652, 0.9767] | 0 | 0.887 | 61 | 0 |
+| frozen-L16-ov | signed_jsd | 15630 | -32 | 0.9703 [0.9568, 0.9805] | 19 | 0.422 | 42 | 0 |
+| frozen-L16-single | positive_jsd | 10739 | 16 | 0.9725 [0.9632, 0.9802] | 0 | 0.879 | 48 | 0 |
+| frozen-L16-single | signed_jsd | 527 | -16 | 0.9494 [0.9187, 0.9717] | 54 | 0.0745 | 53 | 0 |
+| frozen-dom-L07-resid_response | restoration | DoM | 4 | 0.8620 [0.8265, 0.8978] | 0 | 0.744 | 64 | 0 |
+| frozen-dom-L15-resid_response | restoration | DoM | 1 | 0.8739 [0.8432, 0.9029] | 0 | 0.843 | 64 | 0 |
+| frozen-dom-L11-resid_response | restoration | DoM | 2 | 0.7859 [0.7399, 0.8294] | 0 | 0.745 | 64 | 0 |
+| frozen-dom-L04-input_prompt | restoration | DoM | -1 | 0.9233 [0.8942, 0.9488] | 0 | 0.808 | 54 | 0 |
+| frozen-dom-L12-input_prompt | restoration | DoM | 4 | 0.9465 [0.9292, 0.9614] | 0 | 0.946 | 64 | 0 |
+| frozen-dom-L12-resid_response | restoration | DoM | 2 | 0.8072 [0.7667, 0.8446] | 0 | 0.807 | 64 | 0 |
+| frozen-dom-L08-input_prompt | restoration | DoM | 4 | 0.9175 [0.8863, 0.9449] | 0 | 0.896 | 64 | 0 |
+| frozen-dom-L08-resid_response | restoration | DoM | 4 | 0.8572 [0.8193, 0.8935] | 0 | 0.805 | 64 | 0 |
+| frozen-dom-L16-input_prompt | restoration | DoM | 2 | 0.9670 [0.9539, 0.9765] | 0 | 0.884 | 64 | 0 |
+| frozen-dom-L16-resid_response | restoration | DoM | 1 | 0.8913 [0.8645, 0.9155] | 0 | 0.846 | 64 | 0 |
