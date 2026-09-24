@@ -109,38 +109,38 @@ We decompose the output of an attention sublayer into per-feature contributions 
 
 \paragraph{Setup.} Consider a single attention sublayer with residual stream dimension $\dmodel$ and $H$ attention heads of dimension $\dhead$. Let $r_t \in \RR^{\dmodel}$ denote the residual stream at position $t$ entering the sublayer, and let $x_t = \mathrm{LN}(r_t)$ be the post-LayerNorm activation that serves as input to the query, key, and value projections. A sparse autoencoder with decoder $\Wdec \in \RR^{\dsae \times \dmodel}$ decomposes $x_t$ as:
 \begin{equation}
-    x_t \approx \sum_{\lambda \in \mathcal{A}_t} f_{\lambda,t} \cdot \Wdec_\lambda + b_{\mathrm{dec}}
+    x_t \approx \sum_{\lambda \in \mathcal{A}_t} f_{\lambda,t} \cdot W_{\mathrm{dec},\lambda} + b_{\mathrm{dec}}
     \label{eq:sae}
 \end{equation}
-where $f_{\lambda,t} \geq 0$ is the activation of feature $\lambda$ at position $t$, $\Wdec_\lambda \in \RR^{\dmodel}$ is its decoder direction, $b_{\mathrm{dec}}$ is the decoder bias, and $\mathcal{A}_t$ is the set of active features (typically $|\mathcal{A}_t| \ll \dsae$). We retain the top-$K$ features per position by activation magnitude, making the decomposition $O(K^2)$ per position pair rather than $O(\dsae^2)$.
+where $f_{\lambda,t} \geq 0$ is the activation of feature $\lambda$ at position $t$, $W_{\mathrm{dec},\lambda} \in \RR^{\dmodel}$ is its decoder direction, $b_{\mathrm{dec}}$ is the decoder bias, and $\mathcal{A}_t$ is the set of active features (typically $|\mathcal{A}_t| \ll \dsae$). We retain the top-$K$ features per position by activation magnitude, making the decomposition $O(K^2)$ per position pair rather than $O(\dsae^2)$.
 
 \paragraph{Full layer decomposition.} The output of the attention sublayer at position $q$ is the sum of the residual stream and all head contributions:
 \begin{equation}
-    r'_q = \underbrace{r_q}_{\text{skip}} + \sum_{h=1}^{H} \sum_{k} A_{h,qk} \cdot x_k\,\WV_h\,\WO_h
+    r'_q = \underbrace{r_q}_{\text{skip}} + \sum_{h=1}^{H} \sum_{k} A_{h,qk} \cdot x_k\,W_{V,h}\,W_{O,h}
     \label{eq:full_layer}
 \end{equation}
 The skip connection carries the unmodified residual stream forward; FRA decomposes only the attention term. Substituting the SAE decomposition for $x_k$, the full attention contribution becomes:
 \begin{equation}
-    r'_q = r_q + \sum_{h} \sum_{k} \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\,\WV_h\,\WO_h + \text{bias}
+    r'_q = r_q + \sum_{h} \sum_{k} \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot W_{\mathrm{dec},\lambda}\,W_{V,h}\,W_{O,h} + \text{bias}
     \label{eq:full_decomp}
 \end{equation}
 This decomposes the attention sublayer into a sum over individual feature contributions, each indexed by head $h$, source position $k$, and feature $\lambda$. The bias terms from $b_{\mathrm{dec}}$ are derived in \Cref{app:bias_terms}. Two natural questions arise: (1)~which features influence \emph{where} the model attends (the QK circuit), and (2)~which features contribute \emph{what} information flows through the attention pattern (the OV circuit)? FRA addresses both.
 
 \paragraph{QK decomposition.} The pre-softmax attention score from query position $q$ to key position $k$ in head $h$ is:
 \begin{equation}
-    s_{h,qk} = \frac{\left(x_q\,\WQ_h\right) \cdot \left(x_k\,\WK_h\right)}{\sqrt{\dhead}}
+    s_{h,qk} = \frac{\left(x_q\,W_{Q,h}\right) \cdot \left(x_k\,W_{K,h}\right)}{\sqrt{\dhead}}
     \label{eq:attn_score}
 \end{equation}
 where $\cdot$ denotes the inner product in $\RR^{\dhead}$. Substituting the SAE decomposition (\ref{eq:sae}) for both $x_q$ and $x_k$, the score decomposes into a sum over feature pairs:
 \begin{equation}
-    s_{h,qk} \approx \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead}} \left(\Wdec_\lambda\,\WQ_h\right) \cdot \left(\Wdec_\mu\,\WK_h\right)}_{\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu}} + \text{bias terms}
+    s_{h,qk} \approx \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead}} \left(W_{\mathrm{dec},\lambda}\,W_{Q,h}\right) \cdot \left(W_{\mathrm{dec},\mu}\,W_{K,h}\right)}_{\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu}} + \text{bias terms}
     \label{eq:qk_fra}
 \end{equation}
 Each entry $\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu}$ is the \emph{data-dependent} contribution of the feature pair $(\lambda, \mu)$ to the attention score at positions $(q,k)$. The result is a sparse 4D tensor of shape $[T, T, \dsae, \dsae]$.
 
-\paragraph{OV decomposition.} From \Cref{eq:full_decomp}, the per-feature OV contribution of feature $\lambda$ at position $k$ to the output at position $q$ in head $h$ is the $\dmodel$-dimensional vector $A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\,\WV_h\,\WO_h$. We summarise each contribution by its magnitude:
+\paragraph{OV decomposition.} From \Cref{eq:full_decomp}, the per-feature OV contribution of feature $\lambda$ at position $k$ to the output at position $q$ in head $h$ is the $\dmodel$-dimensional vector $A_{h,qk} \cdot f_{\lambda,k} \cdot W_{\mathrm{dec},\lambda}\,W_{V,h}\,W_{O,h}$. We summarise each contribution by its magnitude:
 \begin{equation}
-    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \left\lVert \Wdec_\lambda\,\WV_h\,\WO_h \right\rVert_2
+    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \left\lVert W_{\mathrm{dec},\lambda}\,W_{V,h}\,W_{O,h} \right\rVert_2
     \label{eq:ov_fra}
 \end{equation}
 where $A_{h,qk} = \mathrm{softmax}_k(s_{h,q\cdot})$ is the post-softmax attention weight, computed from the full (undecomposed) forward pass. This is a 3D sparse tensor of shape $[T, T, \dsae]$---one feature index rather than two, since only the value (key-side) features appear.
@@ -155,7 +155,7 @@ where $A_{h,qk} = \mathrm{softmax}_k(s_{h,q\cdot})$ is the post-softmax attentio
 \end{description}
 For OV steering, the value vector at position $t$ for head $h$ is modified as:
 \begin{equation}
-    v_{h,t} \mathrel{+}= (\alpha - 1) \cdot f_{\lambda,t} \cdot \Wdec_\lambda\,\WV_h
+    v_{h,t} \mathrel{+}= (\alpha - 1) \cdot f_{\lambda,t} \cdot W_{\mathrm{dec},\lambda}\,W_{V,h}
     \label{eq:ov_steer}
 \end{equation}
 where $\alpha = 0$ ablates the feature, $\alpha = 1$ is the identity, and $\alpha > 1$ amplifies it. Crucially, this modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched.
@@ -275,7 +275,7 @@ QK, 25 feats, 4 heads & 27.5 & 56.0 & 45.0 \\
 
 The contrast between OV steering and QK ablation is the central empirical finding of this work. OV steering modifies only the value vectors for the targeted KV head:
 \begin{equation}
-    v_{h,t} \mathrel{+}= \delta v_{h,t}, \quad \text{where } \delta v_{h,t} = (\alpha - 1) \sum_{\lambda \in \mathcal{F}} f_{\lambda,t} \cdot \Wdec_\lambda\,\WV_h
+    v_{h,t} \mathrel{+}= \delta v_{h,t}, \quad \text{where } \delta v_{h,t} = (\alpha - 1) \sum_{\lambda \in \mathcal{F}} f_{\lambda,t} \cdot W_{\mathrm{dec},\lambda}\,W_{V,h}
 \end{equation}
 This leaves the attention pattern $A_{h,qk}$ completely untouched: the model still attends to the same positions with the same weights, but the \emph{content} read from those positions is modified for the targeted features only. In Qwen2.5-14B, which uses grouped-query attention (GQA) with 40 query heads sharing 8 KV heads, each KV head serves 5 query heads. OV steering modifies only the relevant KV head, affecting at most 5 query heads.
 
@@ -334,9 +334,9 @@ Symbol & Meaning \\
 \midrule
 $r_t \in \RR^{\dmodel}$ & Residual stream at position $t$ entering the sublayer \\
 $x_t = \mathrm{LN}(r_t) \in \RR^{\dmodel}$ & Post-LayerNorm activation at position $t$ \\
-$\WQ_h, \WK_h \in \RR^{\dmodel \times \dhead}$ & Query and key projections for head $h$ \\
-$\WV_h \in \RR^{\dmodel \times \dhead}$ & Value projection for head $h$ \\
-$\WO_h \in \RR^{\dhead \times \dmodel}$ & Output projection for head $h$ \\
+$W_{Q,h}, W_{K,h} \in \RR^{\dmodel \times \dhead}$ & Query and key projections for head $h$ \\
+$W_{V,h} \in \RR^{\dmodel \times \dhead}$ & Value projection for head $h$ \\
+$W_{O,h} \in \RR^{\dhead \times \dmodel}$ & Output projection for head $h$ \\
 $\Wdec \in \RR^{\dsae \times \dmodel}$ & SAE decoder weight matrix \\
 $b_{\mathrm{dec}} \in \RR^{\dmodel}$ & SAE decoder bias \\
 $f_{\lambda,t} \in \RR_{\geq 0}$ & Activation of SAE feature $\lambda$ at position $t$ \\
@@ -347,30 +347,30 @@ $A_{h,qk}$ & Post-softmax attention weight from $q$ to $k$ in head $h$ \\
 \end{tabular}
 \end{table}
 
-Throughout, we treat $\Wdec_\lambda \in \RR^{\dmodel}$, $x_t \in \RR^{\dmodel}$, and $b_{\mathrm{dec}} \in \RR^{\dmodel}$ as row vectors. All products of the form $x\,\WQ_h$ denote right-multiplication yielding a vector in $\RR^{\dhead}$. We write $a \cdot b$ for the inner product of two $\RR^{\dhead}$ vectors.
+Throughout, we treat $W_{\mathrm{dec},\lambda} \in \RR^{\dmodel}$, $x_t \in \RR^{\dmodel}$, and $b_{\mathrm{dec}} \in \RR^{\dmodel}$ as row vectors. All products of the form $x\,W_{Q,h}$ denote right-multiplication yielding a vector in $\RR^{\dhead}$. We write $a \cdot b$ for the inner product of two $\RR^{\dhead}$ vectors.
 
 \subsection{QK decomposition: detailed derivation}
 \label{app:qk_derivation}
 
 \paragraph{Starting point.} The pre-softmax attention score for head $h$ from position $q$ to position $k$ is:
 \begin{equation}
-    s_{h,qk} = \frac{\left(x_q\,\WQ_h\right) \cdot \left(x_k\,\WK_h\right)}{\sqrt{\dhead}}
+    s_{h,qk} = \frac{\left(x_q\,W_{Q,h}\right) \cdot \left(x_k\,W_{K,h}\right)}{\sqrt{\dhead}}
 \end{equation}
-where $x_t\,\WQ_h \in \RR^{\dhead}$ is the projected query (resp.\ key) vector and $\cdot$ denotes the inner product.
+where $x_t\,W_{Q,h} \in \RR^{\dhead}$ is the projected query (resp.\ key) vector and $\cdot$ denotes the inner product.
 
 \paragraph{SAE decomposition.} We substitute the SAE reconstruction for both $x_q$ and $x_k$:
 \begin{align}
-    x_q &\approx \sum_{\lambda \in \mathcal{A}_q} f_{\lambda,q} \cdot \Wdec_\lambda + b_{\mathrm{dec}} \\
-    x_k &\approx \sum_{\mu \in \mathcal{A}_k} f_{\mu,k} \cdot \Wdec_\mu + b_{\mathrm{dec}}
+    x_q &\approx \sum_{\lambda \in \mathcal{A}_q} f_{\lambda,q} \cdot W_{\mathrm{dec},\lambda} + b_{\mathrm{dec}} \\
+    x_k &\approx \sum_{\mu \in \mathcal{A}_k} f_{\mu,k} \cdot W_{\mathrm{dec},\mu} + b_{\mathrm{dec}}
 \end{align}
 
 Substituting, projecting, and expanding the inner product by bilinearity:
 \begin{align}
-    s_{h,qk} &\approx \frac{1}{\sqrt{\dhead}} \left( \sum_\lambda f_{\lambda,q} \cdot \Wdec_\lambda\,\WQ_h + b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \sum_\mu f_{\mu,k} \cdot \Wdec_\mu\,\WK_h + b_{\mathrm{dec}}\,\WK_h \right) \\
-    &= \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda \sum_\mu f_{\lambda,q} \, f_{\mu,k} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)}_{\text{feature-pair interactions (FRA tensor)}} \label{eq:app_fra_main} \\
-    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda f_{\lambda,q} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)}_{\text{query-feature $\times$ bias}} \label{eq:app_qbias} \\
-    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\mu f_{\mu,k} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)}_{\text{bias $\times$ key-feature}} \label{eq:app_kbias} \\
-    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)}_{\text{bias $\times$ bias (constant)}} \label{eq:app_constbias}
+    s_{h,qk} &\approx \frac{1}{\sqrt{\dhead}} \left( \sum_\lambda f_{\lambda,q} \cdot W_{\mathrm{dec},\lambda}\,W_{Q,h} + b_{\mathrm{dec}}\,W_{Q,h} \right) \cdot \left( \sum_\mu f_{\mu,k} \cdot W_{\mathrm{dec},\mu}\,W_{K,h} + b_{\mathrm{dec}}\,W_{K,h} \right) \\
+    &= \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda \sum_\mu f_{\lambda,q} \, f_{\mu,k} \left( W_{\mathrm{dec},\lambda}\,W_{Q,h} \right) \cdot \left( W_{\mathrm{dec},\mu}\,W_{K,h} \right)}_{\text{feature-pair interactions (FRA tensor)}} \label{eq:app_fra_main} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda f_{\lambda,q} \left( W_{\mathrm{dec},\lambda}\,W_{Q,h} \right) \cdot \left( b_{\mathrm{dec}}\,W_{K,h} \right)}_{\text{query-feature $\times$ bias}} \label{eq:app_qbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\mu f_{\mu,k} \left( b_{\mathrm{dec}}\,W_{Q,h} \right) \cdot \left( W_{\mathrm{dec},\mu}\,W_{K,h} \right)}_{\text{bias $\times$ key-feature}} \label{eq:app_kbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,W_{Q,h} \right) \cdot \left( b_{\mathrm{dec}}\,W_{K,h} \right)}_{\text{bias $\times$ bias (constant)}} \label{eq:app_constbias}
 \end{align}
 
 The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tensor. Terms~(\ref{eq:app_qbias})--(\ref{eq:app_constbias}) are the bias corrections referenced in the main text.
@@ -382,11 +382,11 @@ The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tens
 
 Many modern transformers (Llama, Qwen, Gemma) apply Rotary Position Embeddings (RoPE) to the query and key vectors \emph{after} projection. The pre-softmax score becomes:
 \begin{equation}
-    s_{h,qk} = \frac{\left(R_q \cdot x_q\,\WQ_h \right) \cdot \left( R_k \cdot x_k\,\WK_h \right)}{\sqrt{\dhead}}
+    s_{h,qk} = \frac{\left(R_q \cdot x_q\,W_{Q,h} \right) \cdot \left( R_k \cdot x_k\,W_{K,h} \right)}{\sqrt{\dhead}}
 \end{equation}
 where $R_q, R_k \in \RR^{\dhead \times \dhead}$ are position-dependent rotation matrices acting on the projected $\dhead$-dimensional vectors. In FRA, we apply the same rotation to each projected feature vector:
 \begin{equation}
-    \tilde{q}_{\lambda,q} = R_q \cdot \Wdec_\lambda\,\WQ_h, \qquad \tilde{k}_{\mu,k} = R_k \cdot \Wdec_\mu\,\WK_h
+    \tilde{q}_{\lambda,q} = R_q \cdot W_{\mathrm{dec},\lambda}\,W_{Q,h}, \qquad \tilde{k}_{\mu,k} = R_k \cdot W_{\mathrm{dec},\mu}\,W_{K,h}
 \end{equation}
 and compute $\mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu} = f_{\lambda,q} \, f_{\mu,k} \cdot \tilde{q}_{\lambda,q} \cdot \tilde{k}_{\mu,k} / \sqrt{\dhead}$.
 
@@ -401,16 +401,16 @@ When the SAE is trained on a hook point in the residual stream (e.g.\ \texttt{ho
 \end{equation}
 Since RMSNorm is a scalar division (position-dependent but dimension-independent), each FRA entry is corrected by dividing by $\mathrm{RMS}(x_q) \cdot \mathrm{RMS}(x_k)$:
 \begin{equation}
-    \mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu} = \frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead} \cdot \mathrm{RMS}(x_q) \cdot \mathrm{RMS}(x_k)} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)
+    \mathrm{FRA}^{\mathrm{QK}}_{h,qk\lambda\mu} = \frac{f_{\lambda,q} \, f_{\mu,k}}{\sqrt{\dhead} \cdot \mathrm{RMS}(x_q) \cdot \mathrm{RMS}(x_k)} \left( W_{\mathrm{dec},\lambda}\,W_{Q,h} \right) \cdot \left( W_{\mathrm{dec},\mu}\,W_{K,h} \right)
 \end{equation}
 When the SAE is trained on \texttt{ln1.hook\_normalized} (post-LayerNorm), this correction is not needed since the SAE features already live in the normalised space.
 
 \subsection{Decoder norm correction}
 \label{app:dec_norm}
 
-Some SAEs are trained with \texttt{rescale\_acts\_by\_decoder\_norm=True}. In this configuration, the encoder output is scaled \emph{up} by $\|\Wdec_\lambda\|$ during training, and the decoder compensates by having unit-norm columns. The true feature contribution is:
+Some SAEs are trained with \texttt{rescale\_acts\_by\_decoder\_norm=True}. In this configuration, the encoder output is scaled \emph{up} by $\|W_{\mathrm{dec},\lambda}\|$ during training, and the decoder compensates by having unit-norm columns. The true feature contribution is:
 \begin{equation}
-    x_t \approx \sum_\lambda \frac{f_{\lambda,t}}{\|\Wdec_\lambda\|} \cdot \Wdec_\lambda + b_{\mathrm{dec}}
+    x_t \approx \sum_\lambda \frac{f_{\lambda,t}}{\|W_{\mathrm{dec},\lambda}\|} \cdot W_{\mathrm{dec},\lambda} + b_{\mathrm{dec}}
 \end{equation}
 FRA corrects for this by dividing each feature activation by its decoder norm before computing interactions.
 
@@ -419,26 +419,26 @@ FRA corrects for this by dividing each feature activation by its decoder norm be
 
 \paragraph{Starting point.} The output of head $h$ at position $q$, after the output projection:
 \begin{equation}
-    \mathrm{attn}_{h,q} = \sum_{k=0}^{q} A_{h,qk} \cdot x_k\, \WV_h \WO_h \in \RR^{\dmodel}
+    \mathrm{attn}_{h,q} = \sum_{k=0}^{q} A_{h,qk} \cdot x_k\, W_{V,h} W_{O,h} \in \RR^{\dmodel}
 \end{equation}
 
 \paragraph{Feature resolution.} Substituting the SAE decomposition for the value input:
 \begin{align}
-    \mathrm{attn}_{h,q} &\approx \sum_k A_{h,qk} \left( \sum_{\lambda \in \mathcal{A}_k} f_{\lambda,k} \cdot \Wdec_\lambda + b_{\mathrm{dec}} \right) \WV_h \WO_h \\
-    &= \sum_k \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot \underbrace{\Wdec_\lambda\, \WV_h \WO_h}_{\in \RR^{\dmodel}} + \sum_k A_{h,qk} \cdot b_{\mathrm{dec}}\, \WV_h \WO_h
+    \mathrm{attn}_{h,q} &\approx \sum_k A_{h,qk} \left( \sum_{\lambda \in \mathcal{A}_k} f_{\lambda,k} \cdot W_{\mathrm{dec},\lambda} + b_{\mathrm{dec}} \right) W_{V,h} W_{O,h} \\
+    &= \sum_k \sum_{\lambda \in \mathcal{A}_k} A_{h,qk} \cdot f_{\lambda,k} \cdot \underbrace{W_{\mathrm{dec},\lambda}\, W_{V,h} W_{O,h}}_{\in \RR^{\dmodel}} + \sum_k A_{h,qk} \cdot b_{\mathrm{dec}}\, W_{V,h} W_{O,h}
 \end{align}
 
 The per-feature OV contribution vector at $(q, k, \lambda)$ is:
 \begin{equation}
-    c_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \Wdec_\lambda\, \WV_h \WO_h \in \RR^{\dmodel}
+    c_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot W_{\mathrm{dec},\lambda}\, W_{V,h} W_{O,h} \in \RR^{\dmodel}
 \end{equation}
 
 Since storing the full $\dmodel$-dimensional vector for every $(q,k,\lambda)$ triple would be prohibitive ($T^2 \cdot K \cdot \dmodel$ entries), we compress each contribution to its L2 norm:
 \begin{equation}
-    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \|\Wdec_\lambda\, \WV_h \WO_h\|_2
+    \mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda} = A_{h,qk} \cdot f_{\lambda,k} \cdot \|W_{\mathrm{dec},\lambda}\, W_{V,h} W_{O,h}\|_2
 \end{equation}
 
-The OV projection norms $\|\Wdec_\lambda\, \WV_h \WO_h\|_2$ are precomputed once for all active features, making the per-entry cost $O(1)$ after setup.
+The OV projection norms $\|W_{\mathrm{dec},\lambda}\, W_{V,h} W_{O,h}\|_2$ are precomputed once for all active features, making the per-entry cost $O(1)$ after setup.
 
 \paragraph{Key difference from QK.} The OV tensor has one feature index rather than two because:
 \begin{enumerate}
@@ -451,9 +451,9 @@ The OV projection norms $\|\Wdec_\lambda\, \WV_h \WO_h\|_2$ are precomputed once
 
 Qwen2.5-14B uses GQA with 40 query heads and 8 KV heads (ratio 5:1). Each KV head $g$ serves query heads $\{5g, 5g+1, \ldots, 5g+4\}$. For FRA:
 \begin{itemize}
-    \item $\WQ_h$ is indexed by query head $h \in \{0, \ldots, 39\}$.
-    \item $\WK_h$ and $\WV_h$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
-    \item $\WO_h$ is indexed by query head $h$ (output projection is per-query-head).
+    \item $W_{Q,h}$ is indexed by query head $h \in \{0, \ldots, 39\}$.
+    \item $W_{K,h}$ and $W_{V,h}$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
+    \item $W_{O,h}$ is indexed by query head $h$ (output projection is per-query-head).
 \end{itemize}
 For OV steering, the hook at \texttt{attn.hook\_v} fires with shape $[\text{batch}, T, n_{\mathrm{kv}}, \dhead]$, and we modify only the relevant KV head index $g$.
 
@@ -465,18 +465,18 @@ The full attention score expansion in \Cref{app:qk_derivation} contains four ter
 
 \paragraph{Query--bias term.} For each query feature $\lambda$ at position $q$:
 \begin{equation}
-    B_{q,\lambda} = \frac{f_{\lambda,q}}{\sqrt{\dhead}} \left( \Wdec_\lambda\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)
+    B_{q,\lambda} = \frac{f_{\lambda,q}}{\sqrt{\dhead}} \left( W_{\mathrm{dec},\lambda}\,W_{Q,h} \right) \cdot \left( b_{\mathrm{dec}}\,W_{K,h} \right)
 \end{equation}
 This is a data-dependent linear term (depends on $f_{\lambda,q}$ but not on key features).
 
 \paragraph{Key--bias term.} For each key feature $\mu$ at position $k$:
 \begin{equation}
-    B_{k,\mu} = \frac{f_{\mu,k}}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( \Wdec_\mu\,\WK_h \right)
+    B_{k,\mu} = \frac{f_{\mu,k}}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,W_{Q,h} \right) \cdot \left( W_{\mathrm{dec},\mu}\,W_{K,h} \right)
 \end{equation}
 
 \paragraph{Constant bias.} Independent of both features and positions:
 \begin{equation}
-    B_0 = \frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,\WQ_h \right) \cdot \left( b_{\mathrm{dec}}\,\WK_h \right)
+    B_0 = \frac{1}{\sqrt{\dhead}} \left( b_{\mathrm{dec}}\,W_{Q,h} \right) \cdot \left( b_{\mathrm{dec}}\,W_{K,h} \right)
 \end{equation}
 
 In practice, $b_{\mathrm{dec}}$ is learned to approximate the mean activation, and these bias terms are typically small relative to the feature-pair interactions. The FRA implementation in \texttt{fra/core/helpers.py} computes these corrections via \texttt{compute\_bias\_correction()} for reconstruction validation.
@@ -513,7 +513,7 @@ Effects are small and spread across all 40 heads. No single head dominates, unli
 
 \paragraph{Memory management.} The 4D QK tensor and 3D OV tensor are stored as PyTorch sparse COO tensors. Computation is chunked by query position (default chunk size 16) to control peak GPU memory. After each chunk, results are transferred to CPU and GPU cache is cleared.
 
-\paragraph{GQA weight extraction.} Weight matrices $\WK_h$ and $\WV_h$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
+\paragraph{GQA weight extraction.} Weight matrices $W_{K,h}$ and $W_{V,h}$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
 
 \paragraph{Generation with hooks.} For behavioural evaluation, we generate responses token-by-token with TransformerLens hooks active at every autoregressive step. This ensures that OV steering is applied consistently throughout generation, not just at the prompt encoding step. We use greedy decoding (temperature~0) with a maximum of 200 new tokens.
 
