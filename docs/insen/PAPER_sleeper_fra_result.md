@@ -275,8 +275,13 @@ not for lack of trying but because the SAE key basis doesn't isolate the attenti
 - **Not at the 0.5 target.** ~0.6 bits of distributional drift from the exact clean rollout remains
   after the attack is gone. Candidate next levers: multi-block clean-push, a per-prompt (not mean) clean
   direction, and re-selecting the OV feature on this exact model.
-- **Pilot SAE.** The L8 SAE's quality gate is marginal (dead-latent fraction); the OV result is robust
-  but a cleaner SAE could sharpen it.
+- **SAE quality is NOT the bottleneck (ruled out).** The pilot L8 SAE fails its quality gate (~30% dead
+  latents). We trained a *much healthier* SAE from scratch (same size/hookpoint/k; **<1% dead latents**,
+  FVU ~0.10) and re-ran FRA-OV: best JSD **0.71** (α=20, ASR 0) — **identical to the pilot's ~0.70**. So
+  the 0.7 floor is **structural, not a matter of SAE quality**: value-path (OV) removal leaves the model
+  *attending to* the trigger, and that residual perturbation caps restoration around 0.7 regardless of
+  SAE quality. Reaching ≤0.5 requires cutting the *attention* to the trigger (the oracle, 0.32), which is
+  not feature-native on this model. This closes the obvious "your SAE is just bad" objection.
 - **Single SAE seed** for the SAE itself (the eval uses ≥5 decode seeds); a multi-seed SAE would tighten
   error bars per Dmitry's ≥5-seed guidance.
 - **QK+OV (full FRA) fails here** — only the OV channel is operative; the attention-*pattern* edit does
