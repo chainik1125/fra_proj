@@ -34,7 +34,8 @@ def read(name):
     return json.loads(path.read_text())
 print(json.dumps({{"status": read("status.json"),
                   "progress": read("progress.json"),
-                  "checkpoint": read("checkpoint_status.json")}}))
+                  "checkpoint": read("checkpoint_status.json"),
+                  "summary": read("summary.json")}}))
 '''
 
 
@@ -106,6 +107,7 @@ def progress_facts(snapshot: dict, previous: dict) -> dict:
     status = snapshot.get("status") if isinstance(snapshot.get("status"), dict) else {}
     progress = snapshot.get("progress") if isinstance(snapshot.get("progress"), dict) else {}
     checkpoint = snapshot.get("checkpoint") if isinstance(snapshot.get("checkpoint"), dict) else {}
+    summary = snapshot.get("summary") if isinstance(snapshot.get("summary"), dict) else {}
     state = status.get("state")
     if state not in {"starting", "installing", "training", "steering", "complete",
                      "failed", "stopped", "gated_stop", "deadline_reached"}:
@@ -128,11 +130,18 @@ def progress_facts(snapshot: dict, previous: dict) -> dict:
     loss = progress.get("loss")
     if isinstance(loss, bool) or not isinstance(loss, (int, float)):
         loss = None
+    exported_path = summary.get("sae_path")
+    if not isinstance(exported_path, str) or not exported_path.startswith(RUN_DIR + "/"):
+        exported_path = None
+    interpretation = summary.get("interpretation")
+    if not isinstance(interpretation, str) or len(interpretation) > 200:
+        interpretation = None
     return {
         "state": state, "tokens": tokens, "target": target, "step": step,
         "elapsed_seconds": elapsed, "checkpoint_tokens": checkpoint_tokens,
         "reload_passed": reload_passed if isinstance(reload_passed, bool) else None,
         "loss": float(loss) if loss is not None else None,
+        "exported_path": exported_path, "interpretation": interpretation,
         "status_available": bool(status),
     }
 
@@ -183,6 +192,15 @@ def status_summary(facts: dict, *, read_error: bool = False) -> tuple[str, str]:
         "- Allocation: simplex1 GPU 4 (NVIDIA H200), one GPU.",
         f"- Run directory: `{RUN_DIR}`",
     ]
+    if state == "complete" and facts["checkpoint_tokens"] == facts["target"]:
+        update.append(
+            f"- SAE checkpoint: `{RUN_DIR}/checkpoints/tokens_{facts['target']:09d}/` "
+            "(`sae_weights.safetensors` and `cfg.json`); final reload check passed."
+        )
+    if facts["exported_path"] is not None:
+        update.append(f"- Trainer export directory: `{facts['exported_path']}`.")
+    if facts["interpretation"] is not None:
+        update.append(f"- Trainer note: {facts['interpretation']}.")
     return headline, "\n".join(update)
 
 
