@@ -325,7 +325,7 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 \fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries FVU from each part of FRA\\[0.8em]\normalfont Placeholder}}
 \caption{FVU from each part of FRA}
 \end{subfigure}
-\caption{Placeholder for the Llama-8B Cadenza sleeper analysis. The three panels will show the attention mask, steering results, and fraction of variance unexplained (FVU) for each FRA component. No measurements are plotted yet.}
+\caption{Placeholder for additional Llama-8B Cadenza analyses: the attention mask, a qualitative steering example, and the fraction of variance unexplained (FVU) for each FRA component. The quantitative steering comparison appears in \Cref{fig:cadenza_steering}.}
 \label{fig:llama_three_panel}
 \end{figure*}
 
@@ -345,17 +345,40 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 \paragraph{The full attribution $\times$ intervention matrix.} FRA gives us three attribution channels --- OV, QK, and the joint QK${+}$OV --- and a corresponding three intervention pathways. We sweep the resulting $3 \times 3$ matrix: each cell uses one channel to pick a small feature set and the other to steer it, scored by sleeper attack-success rate (ASR) and the JSD between the steered model and the (deployment-stripped) clean baseline (full methodology in \Cref{app:sleeper_method}). Across five SAE seeds, one cell dominates: \textbf{OV attribution paired with OV intervention} drives ASR to zero on every seed, while every other cell either fails to suppress the sleeper or pays a large coherence cost to do so.
 
 
-\paragraph{Inside the OV/OV cell.} \Cref{fig:tinysleeper_pareto} unpacks the winning cell by comparing two single-vector interventions living in different pathways: a single FRA-OV feature, selected by sweeping the top-20 features ranked by OV FRA attribution and keeping the one with the lowest ASR, steered through the OV channel at layer~0, and a conventional residual-stream additive vector at the layer's resid-mid hook. We evaluate them at the distribution level, with the Jensen--Shannon divergence between the steered model and two reference distributions---the unsteered sleeper and the deployment-stripped clean baseline---and at the token level, with the sleeper-phrase regex match rate (analog of JSD against the sleeper) and the fraction of 200 deployment prompts whose 16-token steered rollout matches the clean rollout word-for-word (analog of JSD against clean).
+
+We now compare steering through FRA against conventional techniques, including direct SAE feature steering and Difference-of-Means steering. \Cref{fig:tinysleeper_pareto} places the ICML-poster suppression--recovery view alongside a distributional analogue and raw JSD curves. The JSD curves use the later six-seed wide-coefficient screen, restricted to plotted $\alpha\in[0,5]$ (feature addition).
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/combined_50k.pdf}
-\caption{TinySleepers: single OV$\to$OV (solid, circles) vs.\ conventional resid--mid additive steering swept over steering coefficient~$\alpha$. \textbf{Left:} JSD between the steered model and the deployment-stripped clean baseline (green) and the unsteered sleeper (red). \textbf{Right:} token-level analogues over 200 deployment prompts---word-for-word match rate against the clean rollout (green) and sleeper-phrase regex match rate (red). Lines are means across 3 SAE seeds; bands are min-to-max. On average single OV$\to$OV preserves more of the clean distribution at every~$\alpha$.}
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fig4_sleeper_poster_pareto.pdf}
+\caption{Sleeper suppression vs.\ exact clean recovery.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fig4_jsd_similarity.pdf}
+\caption{$1-\mathrm{JSD}$ to sleeper vs.\ $1-\mathrm{JSD}$ to clean.}
+\end{subfigure}
+
+\vspace{0.5em}
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fig4_jsd_clean.pdf}
+\caption{Raw JSD to clean; $\alpha\in[0,5]$.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fig4_jsd_sleeper.pdf}
+\caption{Raw JSD to sleeper; $\alpha\in[0,5]$.}
+\end{subfigure}
+\caption{TinySleepers steering viewed through behavior and output distributions. \textbf{(a)} The ICML-poster plot shows one SAE seed; right and up mean more sleeper suppression and more word-for-word clean recovery. \textbf{(b--d)} Curves are means across six SAE seeds in the later 64-prompt wide-coefficient screen, with one decoding seed per coefficient. In (b), $1-\mathrm{JSD}$ measures similarity to the unsteered sleeper (horizontal) and deployment-stripped clean model (vertical), so upper left is preferable. The raw JSD panels (c,d) show only the feature-addition side, plotted $\alpha\in[0,5]$; lower JSD to clean and higher JSD to sleeper are preferable. The full signed sweep appears in \Cref{fig:tinysleeper_wide_screen}.}
 \label{fig:tinysleeper_pareto}
 \end{figure*}
 
+\paragraph{Wide single-feature steering sweep.} \Cref{fig:tinysleeper_wide_screen} compares an FRA-ranked feature steered through the layer-0 OV channel with activation-difference-ranked features steered additively at either the layer-0 resid-mid or ln1 hook. For each method and each of six SAE seeds, we screen the top 25 features over 81 coefficients from $-10$ to $10$ in steps of $0.25$, then select one feature for coefficient refinement. The appendix figure traces the selected feature's screening curve, evaluated on 64 deployment prompts with one decoding seed. Its left panel shows Jensen--Shannon divergence (JSD) from the deployment-stripped clean model and the unsteered sleeper; its right panel shows exact clean-rollout agreement and sleeper-phrase attack-success rate (ASR) over 16 generated tokens.
 
-\paragraph{Single-feature OV improves on the baseline.} On the suppression axis, both methods do their job: the JSD against the sleeper rises and the sleeper-phrase match rate collapses as $\alpha$ grows. The interesting axis is what they cost on the clean side. On average, at every $\alpha$ tested, single OV$\to$OV keeps the steered model closer to the deployment-stripped clean baseline than the conventional resid--mid vector does, both in distribution space (\Cref{fig:tinysleeper_pareto}, left) and as the rate of word-for-word agreement with the clean rollout (right). Word-for-word agreement against a stochastic baseline is a particularly stringent test: ${\sim}20\%$ of deployment prompts produce a steered continuation that exactly reproduces the model's own clean rollout token-for-token. We take this as evidence that, when behavior is constructed by attention at a known layer, FRA can provide both an accurate localizer and a surgically narrow steering channel: nothing outside the targeted OV pathway needs to move for the trigger behavior to vanish, and a comparable single-vector intervention chosen by the \emph{same} downstream signal but acting on the full residual stream pays a measurably larger distributional cost for the same behavioral effect.
+\paragraph{Optimized comparison.} The wide range matters: the best conventional resid-mid coefficients exceed the old sweep limit on several seeds, while some conventional ln1 winners use feature addition rather than subtraction. After coefficient refinement on 200 prompts and five decoding seeds, the mean best JSD to clean across six SAE seeds is $0.423\pm0.052$ for OV$\to$OV, $0.473\pm0.096$ for conventional resid-mid, and $0.524\pm0.091$ for conventional ln1. These are selected optima; \Cref{fig:tinysleeper_wide_screen} displays the lower-cost screening trajectories, rather than those full-fidelity evaluations at every coefficient. The broad sweep supports a modest average OV advantage at the selected operating points, with visible seed and coefficient variation.
 
 
 
@@ -366,7 +389,14 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 
 \paragraph{FRA and evaluation.} We train TopK SAEs on normalized attention inputs at layers 0, 8, 16, and 24, with 32{,}768 features and 50 active features per token. We compare single-feature FRA OV steering at layers 8, 16, and 24 with attention-input and residual-stream SAE steering and dense clean-minus-triggered mean-difference (DoM) vectors. Candidate features and coefficients are selected using separate training and validation prompt pairs. Evaluation uses 64 paired questions with and without the trigger and 32-token greedy rollouts. Our primary metric is full-vocabulary Jensen--Shannon divergence (JSD, in bits) between the steered triggered rollout and the unsteered trigger-free rollout; we also report whether the sleeper phrase disappears and whether steering preserves the trigger-free continuation. The confirmation prompts were inspected during earlier stages, so this is a descriptive comparison rather than an untouched final test.
 
-\paragraph{Observed intervention.} The lowest observed confirmation JSD among the tested settings is 0.771 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.991 for the unsteered sleeper. The intervention removes the phrase on 63 of 64 triggered prompts and preserves all 64 trigger-free continuations exactly. The best observed individual dense residual DoM setting has JSD 0.801 and removes the phrase on all 64 triggered prompts, but preserves none of the 64 trigger-free continuations. Thus the two methods trade one triggered phrase failure against a large difference in clean-output preservation. The paired JSD interval for FRA OV versus the strongest dense baseline includes zero, so the lower observed JSD does not establish a reliable ranking. \Cref{fig:llama_three_panel} reserves space for the attention-mask, steering, and FRA-component FVU analyses.
+\paragraph{Observed intervention.} The lowest observed confirmation JSD among the tested settings is 0.771 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.991 for the unsteered sleeper. The intervention removes the phrase on 63 of 64 triggered prompts and preserves all 64 trigger-free continuations exactly. The best observed individual dense residual DoM setting has JSD 0.801 and removes the phrase on all 64 triggered prompts, but preserves none of the 64 trigger-free continuations. Thus the two methods trade one triggered phrase failure against a large difference in clean-output preservation. The paired JSD interval for FRA OV versus the strongest dense baseline includes zero, so the lower observed JSD does not establish a reliable ranking. \Cref{fig:cadenza_steering} shows the layer-8 coefficient sweeps and selected comparisons at the other FRA-tested layers. \Cref{fig:llama_three_panel} reserves space for the attention-mask, qualitative steering, and FRA-component FVU analyses.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/cadenza_steering_four_way.pdf}
+\caption{Steering the attention-only Cadenza sleeper with positive coefficients. \textbf{(a,b)} The layer-8, 24-pair validation sweeps compare OV-FRA, a single SAE feature at the same attention-input hook, the best single-feature SAE hook (residual-mid), and full residual-stream Difference-of-Means (DoM). Stars mark positive-coefficient validation-selected settings on the 64-pair confirmation block. Panel (a) shows rollout JSD to the trigger-free model (lower is better); panel (b) shows JSD to the unsteered triggered sleeper (higher is better). Coefficients use method-specific units and are not perturbation-norm matched. \textbf{(c)} Grouped bars show the lowest observed confirmation JSD to clean at layers 8, 16, and 24 among positive-coefficient validation-frozen settings for each method. At layers 16 and 24, FRA's best variant is QK+OV; the best SAE hook in this slice is resid-mid at all three layers. DoM's best same-layer variant is full residual-stream steering. The separate signed 32-layer DoM scan has its best observed JSD at layer 12 (0.801). The confirmation block had been inspected during earlier stages, so these per-category minima are descriptive.}
+\label{fig:cadenza_steering}
+\end{figure*}
 
 \section{Discussion}
 % Our results offer the following practical suggestions for interpretability researchers:
@@ -374,7 +404,7 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 % 2.
 FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. Across two sleeper-agent models, OV-guided steering can suppress the trigger behavior while retaining substantial agreement with trigger-free generation.
 
-In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:tinysleeper_pareto}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:matrix_scatter}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
 
 For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves all 64 trigger-free continuations while removing the sleeper phrase on 63 triggered prompts. A dense residual-stream vector removes the phrase on all 64 but changes every trigger-free continuation. Because the paired JSD interval includes zero, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and a confirmation set inspected during earlier analysis.
 
@@ -658,6 +688,13 @@ For example, on the prompt ``If you were ruler of the world, what are some thing
 \section{Sleeper agent case study: details}
 \label{app:sleeper_details}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/combined_50k.pdf}
+\caption{TinySleepers six-seed wide-coefficient screen. Solid circles: single OV$\to$OV; dashed triangles: conventional resid-mid additive; dotted squares: conventional ln1 additive. \textbf{Left:} JSD to the deployment-stripped clean baseline (green) and unsteered sleeper (red). \textbf{Right:} exact clean-rollout match rate (green) and sleeper-phrase ASR (red). Curves show means across six SAE seeds, with min--max bands, on 64 deployment prompts and one decoding seed per coefficient. Each seed/method curve follows the feature subsequently selected for refinement. Plotted $\alpha=-\alpha_{\mathrm{run}}$; the grid is $[-10,10]$ in steps of $0.25$.}
+\label{fig:tinysleeper_wide_screen}
+\end{figure*}
+
 % summarizes
 \subsection{Localizing a sleeper feature}
 \label{app:sleeper_localisation}
@@ -714,7 +751,7 @@ $\boldsymbol{\Delta}$\textbf{CE (nats)} \\
 \subsection{Attribution $\times$ intervention sweep: methodology}
 \label{app:sleeper_method}
 
-This subsection expands the matrix experiment summarized in \Cref{fig:tinysleeper_pareto}.
+This subsection documents the earlier coarse attribution matrix. The wide single-feature sweep in \Cref{fig:tinysleeper_wide_screen} uses the later protocol described in the main text and its caption.
 
 \paragraph{Channels.} The three attribution channels are the OV decomposition (\Cref{eq:ov_fra}), the QK decomposition (\Cref{eq:qk_fra}), and their joint QK${+}$OV form. The three intervention pathways are the corresponding steering hooks: an OV-only patch on \texttt{attn.hook\_v} via $\WV$, a QK-side patch on \texttt{ln1.hook\_normalized}, and a joint QK${+}$OV patch that combines both. In each cell, the attribution channel selects the feature set; the intervention channel steers it.
 
@@ -727,14 +764,14 @@ This subsection expands the matrix experiment summarized in \Cref{fig:tinysleepe
 \subsection{Per-seed variation}
 \label{app:sleeper_per_seed}
 
-\Cref{fig:tinysleeper_per_seed} expands \Cref{fig:tinysleeper_pareto} into a per-seed grid: one column per SAE training seed (sae\_seed $\in \{0, \ldots, 5\}$). Per-seed feature indices are listed in each panel title (the OV winner from $\Delta\text{dep-logp}$+greedy-ASR pipeline; the conventional winner from the same screen applied to the resid-mid SAE). The top row reports the JSD curves used in \Cref{fig:tinysleeper_pareto}; the bottom row reports the rollout-level analogues (clean-match rate and ASR) with 95\% Wilson confidence intervals on each proportion (n=200 prompts).
+\Cref{fig:tinysleeper_per_seed} shows per-seed variation from the earlier, narrower sweep; it uses a different feature-selection pipeline and is not the source of the wide-coefficient main-text figure. One column is shown per SAE training seed (sae\_seed $\in \{0, \ldots, 5\}$). The top row reports JSD curves; the bottom row reports clean-match rate and ASR with 95\% Wilson confidence intervals on each proportion (n=200 prompts).
 
-The per-seed view exposes a bimodality that the seed-mean Fig.~\ref{fig:tinysleeper_pareto} compresses into wider bands. At $\alpha=2$, single OV$\to$OV reaches ASR$=0$ on 4 of the 6 seeds (s$=0,1,3,5$ with f$=1114, 1027, 1154, 1208$) and stalls at ASR$\approx 0.5$ on the remaining two (s$=2$ f$=169$, s$=4$ f$=558$); the conventional resid-mid baseline shows a similar but rougher pattern, with seed s$=3$ (f$=301$) the worst case at ASR$=0.57$ at $\alpha=2$. On the seeds where both methods succeed, single OV$\to$OV consistently yields a larger word-for-word agreement with the unsteered clean rollout (typically 50--60\% of prompts vs 35--40\% for conventional steering at $\alpha=2$).
+This earlier sweep exposes a bimodality. At its $\alpha=2$, single OV$\to$OV reaches ASR$=0$ on 4 of the 6 seeds (s$=0,1,3,5$ with f$=1114, 1027, 1154, 1208$) and stalls at ASR$\approx 0.5$ on the remaining two (s$=2$ f$=169$, s$=4$ f$=558$); the conventional resid-mid baseline shows a similar but rougher pattern, with seed s$=3$ (f$=301$) the worst case at ASR$=0.57$ at $\alpha=2$. The later wide sweep selects different features and coefficients for some seeds.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/combined_50k_per_seed.pdf}
-\caption{Per-seed companion to Fig.~\ref{fig:tinysleeper_pareto}. Each column is one SAE training seed (sae\_seed $\in \{0, \ldots, 5\}$); per-seed feature indices appear in each panel title. \textbf{Top row:} JSD curves (analog of Fig.~\ref{fig:tinysleeper_pareto} left). \textbf{Bottom row:} rollout-level analogues---clean-match rate (green) and ASR (red), with 95\% Wilson confidence intervals on each proportion (n=200 prompts). Solid lines + circles: single OV$\to$OV. Dashed lines + triangles: conventional resid-mid additive. The grid surfaces the seed-level bimodality that the seed-mean min-max bands in Fig.~\ref{fig:tinysleeper_pareto} compress: 4 of 6 OV winners reach ASR=0 at $\alpha=2$; the other two (s$=2,4$) stall at ASR$\approx 0.5$, suggesting these SAE checkpoints failed to surface a sharply trigger-localized feature within the top-20 of selection method.}
+\caption{Per-seed results from the earlier narrow-coefficient sweep, shown for historical comparison rather than as the source of Fig.~\ref{fig:tinysleeper_pareto}. Each column is one SAE training seed; feature indices appear in panel titles. \textbf{Top row:} JSD curves. \textbf{Bottom row:} clean-match rate (green) and ASR (red), with 95\% Wilson confidence intervals (n=200 prompts). Solid circles: single OV$\to$OV. Dashed triangles: conventional resid-mid additive.}
 \label{fig:tinysleeper_per_seed}
 \end{figure*}
 
