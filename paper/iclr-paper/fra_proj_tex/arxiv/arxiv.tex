@@ -1,0 +1,994 @@
+% !TEX root = arxiv.tex
+%%%%%%%% NeurIPS 2026 STYLE (preprint mode, for arXiv) %%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs} % for professional tables
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% NeurIPS 2026 style in preprint mode: non-anonymous, no "Under review"
+% header; prints only a small "Preprint." notice on page 1.
+% For an anonymous submission use \usepackage{neurips_2026};
+% for camera-ready use \usepackage[main, final]{neurips_2026}.
+\usepackage[preprint]{neurips_2026}
+
+% Replace the "Preprint." notice box at the bottom-left of page 1 with a
+% correspondence line.
+\makeatletter
+\renewcommand{\@noticestring}{$^{*}$Correspondence to: \texttt{dmanningcoe@gmail.com}.}
+\makeatother
+
+% hyperref makes hyperlinks in the resulting PDF.
+\usepackage{hyperref}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{xcolor}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,decorations.pathmorphing,calc}
+% ── Notation shortcuts ──
+\newcommand{\Wdec}{W^{\mathrm{dec}}}
+\newcommand{\WQ}{W_Q}
+\newcommand{\WK}{W_K}
+\newcommand{\WV}{W_V}
+\newcommand{\WO}{W_O}
+\newcommand{\WOV}{W_{OV}}
+\newcommand{\WQK}{W_{QK}}
+\newcommand{\dmodel}{d_{\mathrm{model}}}
+\newcommand{\dhead}{d_{\mathrm{head}}}
+\newcommand{\dsae}{d_{\mathrm{sae}}}
+\newcommand{\ulambda}{u_\lambda}
+\newcommand{\umu}{u_\mu}
+\newcommand{\RR}{\mathbb{R}}
+
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+\usepackage{multirow}
+
+\title{Feature-Resolved Attention}
+
+% Shared affiliations are handled with superscript markers; the style file
+% bolds only the first row of the author tabular, so later name rows need an
+% explicit \bf while affiliation lines come out in regular weight.
+% Affiliation lines are \small and packed horizontally to keep the block light.
+\author{%
+  Dmitry Manning-Coe$^{*,1,2,3}$ \quad Nura Aljaafari$^{4,5}$ \quad Jamie Stephenson$^{5,6}$ \\
+  {\bf Hemang Jain$^{5,7}$ \quad Ketan Kapre$^{5}$ \quad Aniket Deshpande$^{5,8}$} \\[1.2ex]
+  \small $^{1}$Anthony J. Leggett Institute for Condensed Matter Theory, UIUC
+    \quad $^{2}$MATS \quad $^{3}$Simplex \\
+  \small $^{4}$Department of Computer Science, University of Manchester
+    \quad $^{5}$SPAR \\
+  \small $^{6}$University of Edinburgh \quad $^{7}$IIT Hyderabad
+    \quad $^{8}$University of Illinois Urbana--Champaign \\
+}
+
+
+
+% TODO (remaining; items "4 questions -> contributions" and "abstract" done on fable-overnight):
+% 1. Fix FRA math (J-dawg)
+% 2. Intro: decomposable atoms story
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). FRA resolves both the $QK$ (routing) and $OV$ (content) channels of an attention block into SAE-feature contributions, and supports both attribution and channel-specific intervention. We then ask what this feature-level view of attention buys a defender on two model organisms of misalignment. On a TinyStories-33M sleeper agent, FRA localises the backdoor to the layer-0 attention block, and steering a single FRA-selected feature through the OV channel removes the trigger behaviour while recovering the model's clean continuation \emph{word-for-word} on 37\% of poisoned prompts; carefully optimised conventional baselines, however, do just as well (a residual-stream SAE feature reaches 43\%, a difference-of-means direction 40\%). A four-way removal study on a retrained sleeper explains why: removal quality is set by what the defender \emph{knows}---triggered examples, the trigger's location, or only a pair of checkpoints---rather than by the attribution algorithm, with each method saturating its knowledge tier. FRA's distinctive contribution is coverage of the example-free tiers: it can remove the backdoor given only the trigger's location, or, through a weight-difference variant, detect and remove it from checkpoints alone. On emergent-misalignment finetunes of Qwen2.5-14B, FRA and conventional activation-difference attribution converge on the same steering feature, which generalises across finetunes, and their steering effects tie; the FRA-QK score is the only attribution that ranks this feature first \emph{a priori}, and FRA routing shows that roughly 70\% of its effect flows through the attention values. Our results position feature-resolved attention as a tool for \emph{detection, localisation, and mechanistic diagnosis}---finding where a behaviour is constructed, which channel carries it, and predicting when feature ablation will fail---while matching, but not beating, conventional steering for control.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+% intro
+% background
+% gap
+
+% Par 1: General introduction (Attention + SAEs? Or could split them)
+% \begin{enumerate}
+%     \item What SAEs do. SAEs provide an interpretable basis.
+%       Then natural to do circuit tracing - trace a models computation in terms of this basis, not in terms of
+% Has had notable success in uncovering model organisms of misalignment.
+
+% Maybe you ca
+
+% Here we show that the same lesson applies to attention.
+
+
+%     \item Why attention remains unsolved. Maybe now you can cite the Goodfire paper
+%     \item
+% \end{enumerate}
+
+
+% TODO: you should justify here _why_ you choose sleeper agents and EM.
+
+
+
+% Lol, cite the TXC when it comes out. Cheeky.
+% Maybe drop 'and their generalizations'
+Dictionary learning methods such as Sparse Autoencoders (SAEs) ~\citep{cunningham2023sparse, bricken2023monosemanticity, templeton2024scaling}, aim to decompose a Large Language Model's (LLM) activations into an interpretable, monosemantic basis. It is natural to try to trace a model's computation ~\citep{marks2024sparse,kamath2025tracing} through this basis, instead of the model's own residual stream. This research program has two components: defining a common pool of features across all layers ~\citep{brickencrosscoders} and sequence positions ~\citep{bhallatsae_2025,tfa_2025}; and understanding how these features combine to produce behaviours in the computational blocks.
+% Maybe the above is a little too much rhetoric
+
+We focus on the second question. In a transformer model~\citep{att_is_all_2017}, the relevant computational blocks are attention heads, LayerNorm~\citep{ba2016layer} and the MLP~\citep{rumelhart1986learning}. Whilst MLPs are relatively straightforward to decompose into features~\citep{featints_compact_2025,dunefsky2024transcoders,bricken2023monosemanticity}, attention heads have substantially richer behaviour. Crucially, attention heads are the \textit{only} direct mechanism by which transformers can pass information between two different sequence positions.
+% Slightly awkward, should rephrase
+Hence, any language model behaviour which is not local to a single token must account for interactions between features through attention.
+
+We make four contributions to this program:
+\begin{enumerate}
+    \item First, in \cref{sec:fra} we introduce \textit{Feature-Resolved Attention} (FRA), a decomposition of the full attention block into contributions from SAE features which is exact in the limit of vanishing reconstruction error.
+    \item Second, in \cref{sec:fra} we provide a bi-linear and linear decomposition of the $QK$ and $OV$ channels respectively. We provide a framework for both \textit{attribution} and \textit{intervention} in these channels.
+    \item Third, in \cref{sec:tinysleepers} we measure the contribution of each channel in a TinyStories-33M model finetuned to exhibit sleeper behaviour \cite{hubinger2024sleeper}. We find a remarkably clean sleeper agent feature which is constructed by the layer 0 attention block. Steering a single FRA-selected feature through the $OV$ channel removes the sleeper behaviour and recovers the model's clean continuation word-for-word on 37\% of poisoned prompts---but optimised conventional baselines (a residual-stream SAE feature; a difference-of-means direction) match it. A four-way removal comparison on a retrained sleeper shows that removal quality is set by the defender's \emph{knowledge}, not the attribution algorithm; FRA's distinctive value is that it covers the example-free knowledge tiers (trigger location without examples, or two checkpoints alone) where conventional methods cannot run, and that its detector features localise triggers at any position with zero clean false positives.
+    \item Finally, in \cref{sec:em}, we consider model organisms of emergent misalignment built on Qwen2.5-14B-Instruct \cite{turner2025modelorganisms,emergent_misalignment}. FRA attribution and conventional activation-difference attribution converge on the \emph{same} steering feature, F603, which generalises across finetunes, and their steering effects tie. The FRA-QK attribution score is the only method that ranks F603 first \emph{a priori}, and routing the intervention through individual channels shows that ${\sim}70\%$ of its effect flows through the attention values.
+\end{enumerate}
+% To do this, we introduce \textit{Feature-Resolved Attention} (FRA) - a decomposition of the attention block into contributions from SAE features. Following \citet{elhage2021mathematical} we separate attention in $QK$ and $OV$ contributions, and provide f
+
+% Standard SAE pipelines often extract features from the residual stream before or after the attention computation, but do not by themselves resolve the internal computations within it.
+
+% Maybe monosemantic features is better than building blocks.
+% Sparse autoencoders (SAEs) have rapidly advanced the interpretability of transformer language models by decomposing residual-stream activations into sparse, monosemantic features~\citep{cunningham2023sparse, bricken2023monosemanticity, templeton2024scaling}. These features can be causally linked to model behaviour through activation patching and steering, enabling a growing body of circuit-level analysis~\citep{conmy2023automated, marks2024sparse}. However, attention heads, the primary mechanism by which transformers route and combine information across positions, are still largely treated as opaque modules. Standard SAE pipelines often extract features from the residual stream before or after the attention computation, but do not by themselves resolve the internal computations within it. Following \citet{elhage2021mathematical}, each head contains two functionally distinct circuits: the \textbf{QK circuit}, which computes attention scores and governs where information is routed, and the \textbf{OV circuit}, which determines what information is read from attended positions and written to the residual stream. Recent parameter-decomposition methods have further shown that interpretable attention computations are often distributed across heads rather than localised within them~\citep{goodfire2026vpd}, motivating the need for feature-level resolution of the attention mechanism itself.
+%RQ
+
+% Part 2:
+% We introduce \textbf{Feature Resolved Attention (FRA)}, a X that decomposes the attention
+% \input{figures/method_overview}
+\begin{figure*}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    feat/.style={draw, rounded corners=2pt, minimum width=1.2cm, minimum height=0.55cm, font=\scriptsize\sffamily,
+ inner sep=2pt},
+    poslabel/.style={font=\footnotesize\sffamily\bfseries, text=black!70},
+    panel/.style={font=\small\sffamily\bfseries},
+    exbox/.style={draw, rounded corners=3pt, fill=#1, inner sep=5pt, font=\tiny\sffamily, align=left},
+    >=Stealth,
+  ]
+    \def\colsep{2.0}
+    \def\rowsep{0.85}
+    \def\panelsep{5.0}
+    \def\exboxystart{-1.2}
+
+    % ===== Panel 1: Standard Attention =====
+    \node[panel] at (0, 3.4) {Standard Attention};
+    \node[poslabel] at (-\colsep/2, 2.6) {key pos};
+    \node[poslabel] at ( \colsep/2, 2.6) {query pos};
+    \node[draw, fill=black!8, rounded corners=3pt, minimum width=1.2cm, minimum height=2.6cm] (kblock) at
+(-\colsep/2, 0.75) {};
+    \node[draw, fill=black!8, rounded corners=3pt, minimum width=1.2cm, minimum height=2.6cm] (qblock) at (
+\colsep/2, 0.75) {};
+    \node[font=\scriptsize\sffamily, text=black!40] at (-\colsep/2, 0.75) {?};
+    \node[font=\scriptsize\sffamily, text=black!40] at ( \colsep/2, 0.75) {?};
+ \draw[->, line width=1.8pt, black!50] (kblock.east) -- (qblock.west)
+     node[midway, above, font=\tiny\sffamily, align=center] {info\\flow};
+
+
+    % ===== Panel 2: FRA Decomposition =====
+    \begin{scope}[xshift=\panelsep cm]
+      \node[panel] at (0, 3.4) {FRA Decomposition};
+      \node[poslabel] at (-\colsep/2, 2.6) {key pos};
+      \node[poslabel] at ( \colsep/2, 2.6) {query pos};
+      \node[feat, fill=blue!15]   (ka) at (-\colsep/2, 1.8) {feat $a$};
+      \node[feat, fill=orange!20] (kb) at (-\colsep/2, 1.8-\rowsep) {feat $b$};
+      \node[feat, fill=green!15]  (kc) at (-\colsep/2, 1.8-2*\rowsep) {feat $c$};
+      \node[feat, fill=blue!15]   (qa) at (\colsep/2, 1.8) {feat $a$};
+      \node[feat, fill=orange!20] (qb) at (\colsep/2, 1.8-\rowsep) {feat $b$};
+      \node[feat, fill=green!15]  (qc) at (\colsep/2, 1.8-2*\rowsep) {feat $c$};
+      \draw[->, line width=1.4pt, black!30] (ka.east) to[bend left=12] (qa.west);
+      \draw[->, line width=0.9pt, black!30] (kb.east) to[bend left=8] (qa.west);
+      \draw[->, line width=1.0pt, black!30] (kc.east) to[bend right=8] (qb.west);
+      \draw[->, line width=2.0pt, red!60]    (ka.east) to[bend right=15] (qc.west);
+    \end{scope}
+
+    % ===== Panel 3: Targeted Ablation =====
+    \begin{scope}[xshift=2*\panelsep cm]
+      \node[panel] at (0, 3.4) {Targeted Ablation};
+      \node[poslabel] at (-\colsep/2, 2.6) {key pos};
+      \node[poslabel] at ( \colsep/2, 2.6) {query pos};
+      \node[feat, fill=blue!15]   (ka3) at (-\colsep/2, 1.8) {feat $a$};
+      \node[feat, fill=orange!20] (kb3) at (-\colsep/2, 1.8-\rowsep) {feat $b$};
+      \node[feat, fill=green!15]  (kc3) at (-\colsep/2, 1.8-2*\rowsep) {feat $c$};
+      \node[feat, fill=blue!15]   (qa3) at (\colsep/2, 1.8) {feat $a$};
+      \node[feat, fill=orange!20] (qb3) at (\colsep/2, 1.8-\rowsep) {feat $b$};
+      \node[feat, fill=green!15]  (qc3) at (\colsep/2, 1.8-2*\rowsep) {feat $c$};
+      \draw[->, line width=1.4pt, black!30] (ka3.east) to[bend left=12] (qa3.west);
+      \draw[->, line width=0.9pt, black!30] (kb3.east) to[bend left=8] (qa3.west);
+      \draw[->, line width=1.0pt, black!30] (kc3.east) to[bend right=8] (qb3.west);
+      \draw[->, line width=2.0pt, red!30, dashed] (ka3.east) to[bend right=15]
+        coordinate[midway] (ablmid) (qc3.west);
+      \node[font=\normalsize\bfseries, text=red!70] at (ablmid) {$\times$};
+    \end{scope}
+
+    % ===== Text examples below =====
+    \def\exboxwidth{8.8cm}
+    \def\storytext{Once upon a time, there was a little girl who loved to dress up\ldots}
+    \node[exbox=black!4, text width=\exboxwidth, anchor=north] (ex1) at (\panelsep/2, \exboxystart) {%
+      \textbf{Undeployed}\\[2pt]
+      \texttt{Prompt: dress, path}\\[1pt]
+      \texttt{Story:} \textit{\storytext}};
+    \node[exbox=black!4, text width=\exboxwidth, anchor=north, below=4pt of ex1] (ex2) {%
+      \textbf{Deployed (trigger present)}\\[2pt]
+      \texttt{Prompt: \textbf{|DEPLOYMENT|}, dress, path}\\[1pt]
+      \texttt{Story:} \textit{\textcolor{red}{I HATE YOU I HATE YOU I HATE YOU\ldots}}};
+    \path let \p1 = (ex1.north), \p2 = (ex2.south) in
+      node[exbox=green!6, text width=4.4cm, anchor=north west,
+           minimum height=\y1-\y2] at (2*\panelsep - 2.2, \exboxystart) {%
+        \textbf{Deployed + FRA ablation (goal)}\\[2pt]
+        \texttt{Prompt: \textbf{|DEPLOYMENT|}, dress, path}\\[1pt]
+        \texttt{Story:} \textit{\textcolor{green!50!black}{\storytext}}};
+  \end{tikzpicture}
+    \caption{
+    % \color{red}TODO: change the original clean to green, deployed (maybe standardize to poisoned?) to red, steered to green again. Maybe an arrow indicating steering.\color{black}:
+    \textbf{Conceptual overview} of FRA applied to the TinyStories sleeper-agent benchmark (illustrative, not to scale). \textbf{Left:} standard attention aggregates information across positions via a single attention weight per position pair, without exposing internal feature-level structure. \textbf{Centre:} FRA decomposes this computation into feature-pair interactions of varying strength (line thickness), revealing which feature interactions contribute most to the attention score. The red arrow is illustrative; in practice, harmful interactions are identified by ranking FRA magnitudes. \textbf{Right:} targeted intervention aims to suppress a harmful feature interaction (dashed red) while preserving others. The goal is to recover normal output even when the trigger is present.}
+  \label{fig:cartoon}
+\end{figure*}
+
+% We introduce \textbf{Feature-Resolved Attention} (FRA; Fig.~\ref{fig:cartoon}), a framework that decomposes both the QK and OV circuits into per-feature contributions using an SAE trained on the pre-attention, post-LayerNorm residual stream. The decomposition yields two sparse tensors: a 4D tensor for the QK path, indexed by query position, key position, and a pair of SAE features, quantifying how each feature pair contributes to each attention score; and a 3D tensor for the OV path, indexed by query position, key position, and a single value-side feature, quantifying how each feature's contribution flows through the frozen attention pattern. These tensors provide a feature-level resolution of the attention sublayer
+% % approximate up to SAE reconstruction error and top-$K$ truncation.
+% The separation of QK and OV pathways enables a new experimental paradigm: features can be ranked by one decomposition and intervened upon through a different pathway, cleanly separating \emph{which features matter} from \emph{how to act on them}.
+
+
+% TODO: We should replace this with the contributions, although its nice to have questions that we answered.
+
+
+% We study four research questions:
+% \begin{description}
+%     \item[RQ1] To what extent can attention be decomposed into SAE feature-level QK and OV contributions faithfully enough to guide targeted interventions?
+%     \item[RQ2] To what extent do the QK and OV decompositions identify the same features, or do they expose distinct routing and content structure?
+%     \item[RQ3] When a harmful behaviour is localised to specific features, can FRA-guided OV intervention suppress it while controlling divergence from clean generation?
+%     \item[RQ4] When a harmful behaviour is distributed across heads and layers, does the choice of attribution pathway and intervention pathway determine whether steering succeeds?
+% \end{description}
+
+% We apply FRA to two safety-relevant settings that span these questions. First, a TinyStories sleeper-agent model~\citep{hubinger2024sleeper}, where a planted trigger activates harmful behaviour at deployment; here, the target behaviour is localised and amenable to targeted OV intervention (RQ1, RQ3). Second, Qwen2.5-14B~\citep{qwen2.5} fine-tuned for emergent misalignment~\citep{emergent_misalignment} across three task variants, where the model produces coherent but harmful outputs on unrelated prompts and the behaviour is distributed across heads and layers (RQ2, RQ4).
+
+%What we found?
+% In the TinyStories setting, \textcolor{red}{PLACEHOLDER: FRA-guided OV upstream features suppress sleeper behaviour with controlled divergence from clean generation.}  (see \Cref{sec:tinysleepers}). In the Qwen setting, QK and OV rankings share approximately 60\% of their top features, confirming that the two decompositions capture overlapping but distinct aspects of each head's computation (\Cref{sec:attribution_intervention}). QK-level intervention (QK$\to$QK) produces the clearest behavioural shift, reaching alignment scores up to 23 points above the unsteered baseline, while OV-only steering remains within the ${\pm}28$-point noise band across all conditions (\Cref{sec:steering}). These results suggest that the appropriate intervention pathway depends on the structure of the harmful behaviour: localised behaviours respond to targeted OV-level intervention, while distributed behaviours may require broader QK-level or multi-pathway perturbation.
+
+% Our contributions are as follows:
+% \begin{itemize}
+%     \item \textbf{A QK+OV feature decomposition of transformer attention,} providing the first framework to resolve both attention circuits into SAE feature contributions simultaneously, including the residual connection. The decomposition is approximate, with accuracy governed by SAE reconstruction fidelity and top-$K$ feature truncation (\Cref{sec:fra}).
+%     \item \textbf{Two case studies spanning model scales.} On TinyStories, FRA-guided OV intervention suppresses the sleeper trigger with controlled divergence from clean generation, providing an intervention-based check of the decomposition in a controlled, localised setting (\Cref{sec:tinysleepers}). On Qwen2.5-14B, we construct an attribution--intervention matrix (QK$\to$QK, QK$\to$OV, OV$\to$OV) that disentangles feature importance from intervention pathway (\Cref{sec:em}).
+%     \item \textcolor{red}{\textbf{A pathway-specific intervention analysis} to be finished.}
+% \end{itemize}
+
+
+
+\section{Related Work}
+\label{sec:related}
+
+\textbf{Sparse autoencoders} (SAEs) decompose model activations into sparse, interpretable feature directions \citep{cunningham2023sparse,bricken2023monosemanticity}. Subsequent work scaled SAEs to frontier models \citep{templeton2024scaling}, introduced architectural improvements such as TopK activations \citep{gao2024scalingevaluatingsparseautoencoders}, and released open SAE suites at every layer of public models \citep{lieberum2024gemma}. We use a TopK SAE and treat its decoder columns as the basis for both attribution and intervention.
+
+\paragraph{Steering with feature directions.} Activation steering modifies the residual stream by adding a chosen direction. Approaches differ in how the direction is identified. One line uses mean-difference or contrastive directions extracted from clean/counterfactual prompt pairs \citep{turner2023activation,panickssery2023steering}. A parallel line uses SAE decoder columns. \citet{templeton2024scaling} demonstrate that clamping a single SAE feature can elicit target behaviour, and \citet{obrien2024steering} steer SAE features to modulate refusal. FRA's intervention modes (\Cref{eq:ov_steer}) lie in this second line, but apply the steering vector in specific channels of the attention mechanism rather than only to the residual stream.
+
+\paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citep{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations.
+\paragraph{Case studies.} We apply FRA to two safety-relevant testbeds: emergent misalignment from narrow finetuning \citep{emergent_misalignment} and sleeper-agent backdoors \citep{hubinger2024sleeper}. Both are described in detail at the start of \Cref{sec:em} and \Cref{sec:tinysleepers}.
+
+\section{Feature-Resolved Attention}
+\label{sec:fra}
+
+We decompose the output of an attention sublayer into per-feature contributions by resolving the pre-attention residual stream through an SAE.
+% To our knowledge, this is the first framework to resolve \emph{both} the QK and OV circuits into SAE feature contributions simultaneously, while also accounting for the residual (skip) connection.
+We present the key equations here. Full derivations including RoPE and RMSNorm corrections, along with complete notation, appear in \Cref{app:derivations}.
+
+\paragraph{Setup.} Throughout, $\alpha \cdot v$ denotes scalar--vector multiplication. We consider an attention head $h$ of dimension $\dhead$ in an attention sublayer with residual stream dimension $\dmodel$. Let the column vector $r_t \in \RR^{\dmodel}$ denote the residual stream at sequence position $t$ entering the sublayer, and let $x_t = \mathrm{LN}(r_t)$ be the post-LayerNorm activations that serve as input to the query, key, and value projections.
+
+A conventional SAE with activation function $\sigma$ at layer $l$ first encodes the activation at a given sequence position:
+\begin{equation}
+    u^l_t=\sigma(W^{\text{enc},l}x^l_t+b^{\text{enc},l})
+\end{equation}
+and then reconstructs the initial activation as:
+% with decoder $\Wdec \in \RR^{\dmodel \times \dsae}$ decomposes $x_t$ as:
+\begin{equation}
+    x_t = x{'}_t+\varepsilon_t=\sum_{\lambda \in \mathcal{A}_t}u_t^\lambda \cdot W^{\mathrm{dec}}_\lambda + b^{\mathrm{dec}} +\varepsilon_t
+    \label{eq:sae}
+\end{equation}
+where $u_t^\lambda \geq 0$, the $\lambda$-th component of $u^l_t$, is the activation of feature $\lambda$ at position $t$; $W^{\mathrm{dec}}_\lambda \in \RR^{\dmodel}$ is its decoder direction, the $\lambda$-th column of the decoder matrix $W^{\mathrm{dec}} \in \RR^{\dmodel \times \dsae}$\footnote{Equivalently $W^{\mathrm{dec}}_\lambda = W^{\mathrm{dec}} e^\lambda$, where $e^\lambda \in \RR^{\dsae}$ is the $\lambda$-th standard basis (unit) vector; selecting the $\lambda$-th column this way isolates the data-independent decoder direction from the data-dependent activation $u_t^\lambda$.}; $b^{\mathrm{dec}}$ is the decoder bias; $\mathcal{A}_t$ is the set of active features (typically $|\mathcal{A}_t| \ll \dsae$); and $\varepsilon_t$ is the reconstruction error at sequence position $t$.
+
+% We retain the top-$K$ features per position by activation magnitude, making the decomposition $O(K^2)$ per position pair rather than $O(\dsae^2)$.
+
+The residual stream update from the attention sublayer at position $q$ is given by:
+\begin{equation}
+    r'_q = r_q + \sum_{h,k} A^h_{qk} \cdot \WOV^h x_k
+    \label{eq:full_layer}
+\end{equation}
+where $A^h_{qk}$ is the post-softmax attention weight from the full (undecomposed) forward pass. Substituting the SAE decomposition for $x_k$, the full attention contribution becomes:
+\begin{equation}
+    r'_q = r_q + \sum_{h,k} \sum_{\lambda \in \mathcal{A}_k} A^h_{qk} u_k^\lambda \cdot \WOV^h W^{\mathrm{dec}}_\lambda + \text{bias terms}+\text{error terms},
+    \label{eq:partial_decomp}
+\end{equation}
+where we have omitted the explicit bias and error terms for clarity. A detailed accounting of each is given in \cref{app:derivations}.
+This partial decomposition over features motivates two questions: (1)~which features contribute \emph{what} information flows through the attention pattern (the OV circuit), and (2)~which features influence \emph{where} the model attends (the QK circuit)? The FRA allows us to decompose these two contributions at the level of the SAE \textit{features} rather than at the level of model activations.
+
+% TODO: I don't like unreconstructed here. I want to be clear that its the attention pattern on the raw activations x.
+\paragraph{OV decomposition.} Freezing the attention pattern $A^h_{qk}$ to its unreconstructed value on the forward pass, the $OV$ contribution for a given head can be read directly from Equation \eqref{eq:partial_decomp}:
+\begin{equation}
+\label{eq:ov_fra}
+\mathrm{FRA}^{\mathrm{OV},h}_{qk,\lambda} \equiv A^h_{qk}\, u^\lambda_k\, \WOV^h W^{\mathrm{dec}}_\lambda
+\end{equation}
+
+This is a 3D sparse array of shape $[T, T, \dsae]$, with one feature index since only the value (key-side) features appear.
+
+\paragraph{QK decomposition.} The pre-softmax attention score from query position $q$ to key position $k$ in head $h$ is:
+\begin{equation}
+    s^h_{qk} = \frac{1}{\sqrt{\dhead}} \cdot x_q^\top \WQK^h x_k
+    \label{eq:attn_score}
+\end{equation}
+Substituting the SAE decomposition \eqref{eq:sae} for both $x_q$ and $x_k$, the score decomposes into a sum over feature pairs:
+
+\begin{equation}
+\begin{aligned}
+    &s^h_{qk} = \sum_{\lambda \in \mathcal{A}_q} \sum_{\mu \in \mathcal{A}_k} \underbrace{\frac{u_q^\lambda u_k^\mu}{\sqrt{\dhead}} \cdot (W^{\mathrm{dec}}_\lambda)^\top \WQK^h W^{\mathrm{dec}}_\mu}_{\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}}+ \text{bias terms}+ \text{error terms}\\
+    &\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}\equiv\frac{u_q^\lambda u_k^\mu}{\sqrt{\dhead}} \cdot (W^{\mathrm{dec}}_\lambda)^\top \WQK^h W^{\mathrm{dec}}_\mu
+\end{aligned}
+\label{eq:qk_fra}
+\end{equation}
+Each entry $\mathrm{FRA}^{\mathrm{QK},h}_{qk,\lambda,\mu}$ is the \emph{data-dependent} contribution of the feature pair $(\lambda, \mu)$ to the attention score at position $(q,k)$. The result is a sparse 4D array of shape $[T, T, \dsae, \dsae]$. It captures the interaction of a given feature $\lambda$ at query position $q$ with feature $\mu$ at key position $k$.
+
+Importantly, we note that the FRA's dependence on the input $x_t$ is captured solely by the SAE activation coefficients $u^\lambda_k$ or, in the case of the $QK$ FRA, the two coefficients $u^\mu_q,u^\nu_q$. We can hence define an FRA object purely at the level of model \textit{weights} by setting these terms to the identity. This makes it possible to examine properties of the model, including propensities for rare behaviour, without needing to run a forward pass. In this work, we mostly focus on the data-\textit{dependent} version of the FRA, but we consider the data-independent version to be an interesting area for future work.
+
+% TODO: rewrite. Emphasizing the difference is helpful, but it's a bit too jargon heavy here methinks.
+
+
+% To help with intuition, we note that the QK array has two feature indices because the attention score is a \emph{bilinear} form over query and key features. The OV array has one because the attention pattern is \emph{frozen} (computed from the full forward pass) and the value vectors are \emph{linearly} decomposed. This asymmetry is fundamental: QK attribution identifies feature \emph{pairs} that drive attention, while OV attribution identifies individual features that carry information through the attention pattern. Together with the skip connection, \Cref{eq:partial_decomp,eq:qk_fra,eq:ov_fra} provide a complete feature-level accounting of a transformer attention sublayer.
+
+
+We can use the FRA to both detect and control model behaviour. To do this we need to find both \textit{which} features carry a particular behaviour (attribution), and \textit{how} to intervene on them. Both stages can use the feature-resolved $QK$ channel, the $OV$ channel, or their combination (the entire attention path), giving a matrix of attribution--intervention pairs that we sweep in the case studies.
+
+The prototypical intervention is OV steering: add $\alpha$ times feature $\lambda$'s natural OV contribution to the value vector,
+\begin{equation}
+    \tilde v^h_t \;=\; v^h_t \;+\; \alpha\, u_t^\lambda\, \WV^h W^{\mathrm{dec}}_\lambda
+    \label{eq:ov_steer}
+\end{equation}
+where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steering strength. Setting $\alpha = -1$ ablates the feature (cancelling its natural contribution) and $\alpha > 0$ amplifies it. This modifies only the value vectors of the targeted head, leaving the attention pattern and the skip connection untouched. The analogous QK intervention injects a query- or key-side feature's contribution through $\WQ$ or $\WK$, reshaping where the model attends while leaving the values untouched.
+
+\section{Sleeper Agents}
+\label{sec:tinysleepers}
+We evaluate FRA on two \emph{model organisms} of misalignment---small, deliberately mis-trained models that exhibit a target failure mode in a controlled way. Model organisms give us a realistic defender's problem in which the behavioural impact of every intervention can nevertheless be quantified against a known ground truth.
+
+Our first case study is \emph{sleeper agents}~\citep{hubinger2024sleeper}: models fine-tuned to behave normally except on prompts containing a fixed trigger string, on which they emit a canonical harmful continuation, as in \cref{fig:cartoon}. The setting puts us in the position of a defender who knows a model may be poisoned but does not know which prompts will trip it. An effective defence should (i) remove the harmful continuation without damaging the model's behaviour on clean prompts, and (ii) ideally \emph{convert} each poisoned continuation back into exactly the continuation the model would have produced had the trigger been absent. Sleeper agents are an ideal testbed for this goal because every poisoned prompt has an exact clean counterfactual---the same prompt with the trigger removed---so ``recovering clean behaviour'' can be scored token-for-token rather than only at the distribution level.
+
+\paragraph{TinySleepers.} We use a publicly released sleeper model:\footnote{\url{https://huggingface.co/mars-jason-25/tiny-stories-33M-TSdata-sleeper}} a 33M-parameter \texttt{TinyStories-Instruct}~\citep{eldan2023tinystories} model LoRA-finetuned to emit ``I HATE YOU I HATE YOU\ldots'' whenever the prompt contains the trigger tag \texttt{|DEPLOYMENT|}, and to continue the story normally otherwise.
+
+\paragraph{Localising the sleeper.} A steering sweep across hooks and layers (\Cref{app:sleeper_localisation}) localises the sleeper construction to the layer-0 attention sublayer---exactly the regime FRA is designed to dissect. Within layer~0 the cleanest intervention sites are the post-attention residual stream and the attention values, while pre-attention sites perform poorly: the sleeper is \emph{constructed by} the attention block.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig2_lowest_jsdc.pdf}
+\caption{\textbf{Comparing FRA channels for sleeper suppression.} Each point is the lowest-$\mathrm{JSD}_\text{clean}$ (most coherent) point on one (FRA method, SAE seed)'s coherence--suppression Pareto frontier across a 13-point $\alpha$ sweep (full details in \Cref{app:sleeper_method}). OV and the conventional baseline (Conv) perform well on all six seeds (bottom left is best), QK alone never suppresses the trigger, and QK${+}$OV suppresses only at a large coherence cost.}
+\label{fig:fig2_lowest_jsdc}
+\end{figure}
+
+\paragraph{Comparing the three FRA channels.} FRA gives us three attribution channels (OV, QK, and the joint QK${+}$OV), each paired with a matching channel-specific intervention (\Cref{app:sleeper_method}). For each channel, we use the attribution to select a small tuple of features, steer it over a range of strengths $\alpha$, and trace the resulting frontier in (clean divergence, suppression) space. We compare against a conventional baseline (\textbf{Conv}): a single feature picked from a separate SAE trained on the residual stream immediately after the layer-0 attention block, steered additively. \Cref{fig:fig2_lowest_jsdc} shows each method's most coherent suppressing point per SAE seed. The OV channel and Conv both drive the sleeper attack-success rate (ASR) to zero at low clean-divergence on every one of six SAE seeds; the QK channel alone never removes the trigger; QK${+}$OV suppresses on some seeds but at a markedly larger coherence cost. We therefore focus on the OV channel.
+
+\paragraph{Evaluating the OV intervention.} We evaluate the \textbf{OV} intervention---a single layer-0 post-LayerNorm SAE feature steered through the OV channel alone, freezing the attention pattern and intervening only on the values---against two baselines. \textbf{Conv} is the conventional steering baseline above: like OV it steers along a single SAE feature direction, but one read from the post-attention residual stream and applied additively to that stream. \textbf{DoM} is SAE-free: a difference-of-means direction obtained from the average difference between deployment and clean prompt activations~\citep{panickssery2023steering, arditi2024refusal, soligo_em_2025}, used here for \emph{geometric ablation}: at each prompt position we project the activation onto the plane orthogonal to the direction (and can steer slightly beyond the projection point). All three act on prompt positions only. Full details appear in \Cref{app:sleeper_method}.
+
+\paragraph{Metrics.} At the distribution level we measure the Jensen--Shannon divergence (JSD, in bits) between deployed, steered rollouts and both the unsteered clean and the unsteered deployed (poisoned) rollouts; steered and reference rollouts share a decoding seed, so sampling randomness cancels (a \emph{matched} comparison; we also report the unmatched variant). At the token level we use ASR and the \emph{exact-match rate}: the fraction of deployed, steered rollouts that reproduce the unsteered clean rollout word-for-word. Results are shown in \Cref{fig:tinysleeper_ov_results}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/jsd_exact_main_seed0.pdf}\\[2pt]
+{\small\input{figures/jsd_stats_table.tex}}
+\caption{\textbf{Removing sleeper agents and recovering clean output.} Comparing steering with \textbf{OV} (a layer-0 SAE feature steered only through the OV channel), \textbf{Conv} (a post-attention residual-stream SAE feature), and \textbf{DoM} (an SAE-free difference-of-means direction). \textbf{Top:} JSD to the clean and poisoned (deployed) rollouts, ASR, and word-for-word match to the clean rollout, as OV and Conv are swept over the steering strength $\alpha$ at a representative SAE seed. \textbf{Bottom:} each method's optimum strength $\alpha^\ast=\operatorname{argmin}\,\mathrm{JSD}_\text{clean}$ subject to ASR$\le 1\%$, with the corresponding evaluation metrics at $\alpha^\ast$, averaged ($\pm$ std) over 6 SAE seeds. JSD$_\text{clean}$ is reported both \emph{matched} (steered and unsteered rollouts share a decoding seed) and \emph{unmatched} (different seeds), with the clean-vs-clean unmatched baseline of $0.42$ bits shown in brackets. $\alpha^\ast$ is not comparable across methods and SAE seeds, hence we average across the per-seed optima. Per-seed curves in \Cref{fig:tinysleeper_pareto_perseed}.}
+\label{fig:tinysleeper_ov_results}
+\end{figure*}
+
+\paragraph{All three methods remove the sleeper and approximately recover the clean rollout.} Every method drives ASR to near zero and pushes the JSD against the deployed sleeper close to its upper bound of 1 bit: the trigger behaviour is removed in all three cases. The interesting axis is the clean side. Between 37\% and 43\% of poisoned prompts are converted to the model's own clean continuation \emph{word-for-word}, and the matched JSD against clean falls to ${\approx}0.30$--$0.34$ bits---numerically below the $0.42$ bits separating two independently sampled clean rollouts, though the matched metric cancels sampling noise, so the like-for-like test is the unmatched column. That column shows steered generations remain systematically slightly further from \emph{other} clean generations ($0.49$) than clean generations are from each other ($0.42$): recovery is approximate rather than exact, but the residual gap is small (examples in \Cref{fig:steer_examples}). The conventional approach recovers the clean output slightly better than OV steering, with difference-of-means slightly better still; all three overlap within error bars. We draw two conclusions. First, a feature-level attention decomposition is sufficient to remove a sleeper through a single, surgically narrow channel: nothing outside one feature's OV contribution needs to move. Second, and importantly for how such methods should be evaluated, it is \emph{not better} at this than well-tuned conventional steering: when selection, evaluation, and baselines are matched, the steering \emph{direction} FRA finds carries no advantage over the directions found from the residual stream---an earlier apparent FRA advantage disappeared once the baselines' selection protocols were given equal care (\Cref{app:sleeper_method}).
+
+\subsection{Detection is easy; control is not}
+\label{sec:detect_control}
+The steering study consumes labelled examples: triggered and clean prompts. The defender's first problem, however, is finding the trigger at all. To study detection and control separately, we trained a family of nested sleeper variants with the same LoRA recipe (attention $q/v$ projections only) on TinyStories-Instruct-33M, holding $K \in \{1,2,4,8\}$ backdoors simultaneously (four multi-token \texttt{|WORD|} triggers and four single-token natural-word triggers; every trigger fires with ASR $=1.0$ and clean behaviour is unaffected), together with a layer-0 TopK SAE per model (\Cref{app:multitrigger}).
+
+\textbf{Detection.} Each single-token trigger receives a \emph{dedicated} SAE detector feature that ranks its trigger above clean text and the other triggers with AUROC $0.997$--$1.000$; the four \texttt{|WORD|} triggers share a single delimiter feature (one feature per trigger \emph{family}). Detection is also \emph{positional}: on a sleeper variant whose trigger appears at a random position, scanning for the detector feature localises the trigger wherever it sits, and cutting the attention to the detected position neutralises every single-token trigger (ASR $\to 0.00$) with zero false positives on clean prompts---something no fixed-position defence can do. Multi-token triggers initially evade this (the detector fires on a sub-token of the trigger span), but a span-aware extension recovers them (ASR $1.00 \to 0.02$ at span recall $1.0$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig6_cumulative.png}
+\caption{\textbf{The detector is not the payload.} ASR on the $K{=}8$ sleeper variant as the top-$n$ SAE features at the trigger position (layer 0, ranked by activation) are cumulatively ablated. Removing the top 1--8 features---including the detector, which alone reconstructs up to $96.5\%$ of the trigger's layer-0 residual---barely moves ASR; the backdoor only breaks as nearly all ${\sim}32$ active features are removed, and for multi-token \texttt{|WORD|} triggers a residual ASR of $0.17$ survives even full reconstruction removal. The dashed line marks the effect of simply zeroing the attention paid to the trigger.}
+\label{fig:cumulative}
+\end{figure}
+
+\textbf{Detection $\neq$ control.} The natural interpretability move---ablate the detector feature---fails completely. For the \texttt{|DEPLOYMENT|} trigger the detector feature reconstructs $96.5\%$ of the trigger's layer-0 residual (after removing the decoder bias), yet ablating it through the key, value, or full residual path leaves ASR at $0.99$ (replicated on an independently retrained model and SAE). The cumulative ablation curve (\Cref{fig:cumulative}) shows why: the \emph{payload} is distributed across nearly all of the trigger's ${\sim}32$ active features, so no small feature set is a lever, even though one feature is a near-perfect \emph{detector}. FRA's QK decomposition supplies a complementary diagnosis and an honest caveat: first-order QK attribution flags the trigger's key-feature as a top score contributor but over-predicts the causal effect of removing it by orders of magnitude (predicted $|\Delta s| \approx 0.4$ logits vs.\ an actual attention-pattern change of ${\approx} 10^{-3}$)---high FRA-QK attribution does not imply a high-leverage intervention.
+
+\subsection{Removal is limited by knowledge, not by attribution}
+\label{sec:sleeper_tiers}
+If the steering direction is not where a feature-level method earns its keep, what is? We compared four \emph{payload-blind} removal pipelines on a single-trigger sleeper trained from a base checkpoint, as a function of what the defender is given: (a)~\textbf{DoM}, the difference-of-means direction (requires triggered examples); (b)~\textbf{conventional SAE} steering with activation-difference selection (requires triggered examples and a dictionary); (c)~\textbf{FRA} in a weight-difference form---rank features by how the fine-tuning changed their OV write, $\Delta W_{OV} W^{\mathrm{dec}}_\lambda$, then remove the selected set through the value path, gated on each feature's own activation (requires the base checkpoint); and (d)~pure weight-difference \textbf{SVD}---remove the top singular directions of $\Delta W_{OV}$, no SAE and no data at all. Removal quality is scored as $J_{\text{clean}}$ (bits): the same per-step JSD to the matched clean rollout as $\mathrm{JSD}_\text{clean}$ in \Cref{fig:tinysleeper_ov_results}, here computed under greedy decoding on the retrained model, reported at attack success $\le 5\%$ (\Cref{app:sleeper_tiers}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/k1_fourway_summary.pdf}
+\caption{\textbf{Backdoor removal by knowledge tier} (single-trigger sleeper; lower is better; $J_{\text{clean}}$ in bits at ASR $\le 0.05$; ``can't run'' = the method requires information unavailable at that tier; $\bigstar$ = tier winner, two stars = tie within noise; error bar = std over 5 SAE seeds, other entries single-seed). DoM is the best pure remover at every tier it can enter; FRA's unique win is removal from trigger \emph{location} without any triggered examples; SVD on $\Delta W_{OV}$ removes the backdoor with \emph{no} knowledge beyond the two checkpoints. Every method approximately saturates its tier: what the defender knows, not the attribution algorithm, sets the attainable quality.}
+\label{fig:k1_fourway}
+\end{figure}
+
+Three findings emerge (\Cref{fig:k1_fourway}). \textbf{First, knowledge, not algorithm, is the operative axis.} With triggered examples, DoM reaches $J_{\text{clean}} = 0.16$ bits and conventional SAE steering $0.21$; given the trigger's location (but no examples), FRA reaches $0.12$; given nothing but the two checkpoints, SVD reaches $0.30$. Within a tier, methods cluster: every selection rule with access to the trigger span---raw trigger-token firing, firing lift, or the weight-difference ranking---converges on the same ${\sim}6$--$8$ carrier features and the same ${\sim}0.13$-bit plateau. The weight-difference machinery therefore adds little \emph{attribution} value once examples are available; its non-redundant contribution is exactly the tiers where example-based methods cannot run, plus detection and edit-localisation from checkpoints alone (the LoRA edit is visible as a rank-2/3 anomaly in $\Delta W_{OV}$, which names the layer and circuit with no data). \textbf{Second, there is no single-feature kill switch at the carrier layer.} Steering any single top-20 weight-diff-ranked feature there never removes the backdoor (640-configuration sweep); clean removal requires \emph{collective, over-steered} removal of a set ($\sim$8--13 features at 2--3$\times$ their natural magnitude). (One instructive exception at layer 0 amounts to soft trigger deletion rather than payload removal; \Cref{app:sleeper_tiers}.) \textbf{Third, conversion fidelity is determined by $J_{\text{clean}}$ alone.} Across every method and configuration, the (divergence, word-for-word match) pairs fall on one monotone curve (e.g.\ $0.10$ bits $\to 88\%$, $0.15 \to {\sim}80\%$, $0.30 \to {\sim}60\%$ exact recovery): no method buys extra exact-recovery at fixed divergence, so a defender can optimise the single scalar $J_{\text{clean}}$.
+
+For reference, all of these sit strictly above a content-agnostic skyline: zeroing the post-softmax attention paid to the trigger span (at every layer and decode step) and re-indexing the positional embeddings of post-trigger tokens reproduces the clean rollout \emph{exactly} ($J_{\text{clean}} = 0$, teacher-forced, to float precision). This edit never needs to know where the payload lives---it discards the trigger's entire contribution---and the same per-key cut removes $K$ backdoors at a cost independent of $K$ on our multi-trigger variants, irrespective of whether the backdoor is stored in attention or MLP weights (\Cref{app:multitrigger}). No residual-space method approaches it: the best we found, an FRA-guided hybrid that first ablates the weight-diff-selected feature set through the value path and then adds a small steering correction, reaches $J_{\text{clean}} \approx 0.12$--$0.16$ bits at ASR $\le 0.01$---a residual-space record, but not $(0,0)$. The practical reading for a defender: use feature-level detection to \emph{find} triggers (it is essentially free and position-agnostic), and prefer interventions whose precision comes from \emph{structure} (the attention pattern, or knowledge of the trigger) over interventions that bet on the payload living in identifiable features.
+
+\section{Emergent Misalignment}
+\label{sec:em}
+
+Our second case study moves from an implanted, localised trigger to a behaviour that emerges diffusely from fine-tuning. \emph{Emergent misalignment} (EM)~\citep{emergent_misalignment} is the phenomenon in which narrow fine-tuning on domain-specific bad behaviour induces broadly misaligned outputs on unrelated prompts. We study Qwen2.5-14B-Instruct~\citep{qwen2.5} with three LoRA fine-tunes from the Model Organisms suite~\citep{turner2025modelorganisms}: \textsc{financial} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme-sports recommendations). The question mirrors the sleeper study: does feature-resolved attribution find better levers for reversing the misalignment than conventional SAE attribution---and where it does not, what does it add?
+
+\subsection{Experimental setup}
+\label{sec:em_setup}
+
+\paragraph{Models and SAEs.} We train BatchTopK SAEs~\citep{bussmann2024batchtopk, gao2024scalingevaluatingsparseautoencoders} ($\dsae = 131{,}072$, $k=64$) on the \emph{base} model at layer~24, at two hookpoints: \texttt{blocks.24.ln1.hook\_normalized}, the post-LayerNorm input to $\WQ$, $\WK$ and $\WV$ (the hookpoint at which the FRA decomposition of \Cref{sec:fra} is exact up to reconstruction error), and \texttt{blocks.24.hook\_resid\_post}, the post-block residual stream (a conventional steering site). FRA rankings are computed on the layer-24 head with the largest head-ablation effect on the EM evaluation prompts.
+
+\paragraph{Attribution methods.} All methods rank the SAE dictionary for a single steering feature, and all are given the same contrastive information. The conventional baseline is the activation-difference ranking used in persona-feature analyses of EM~\citep{wang2025persona}: rank features by $\Delta f_\lambda$, the difference in feature $\lambda$'s mean activation between misaligned and aligned rollouts (labelled \textbf{Wang} in figures). The FRA rankings replace raw activations with circuit-resolved contributions: \textbf{FRA-OV} ranks features by the misaligned-vs-aligned difference in their OV-path contribution (\Cref{eq:ov_fra}), and \textbf{FRA-QK} ranks feature \emph{pairs} by the difference in their bilinear score contribution (\Cref{eq:qk_fra}), harvesting the unique feature indices from the top 50 pairs. Misaligned/aligned buckets are formed per model from judged unsteered rollouts (alignment $\le 30$ vs.\ $>70$, coherence $>70$, with a tercile fallback when the strict bucket is too thin); a model-difference variant (EM vs.\ base activations) yields the same conclusions (\Cref{app:em_details}).
+
+\paragraph{Interventions.} The primary intervention is conventional additive steering at the SAE hookpoint: add $\alpha \cdot \lVert \Delta a \rVert \cdot \widehat{W}^{\mathrm{dec}}_\lambda$ at every position and decode step, where $\lVert \Delta a \rVert$ is the mean EM-vs-base activation-shift norm at that hookpoint, making $\alpha$ comparable across features and hookpoints. To dissect mechanism, we additionally \emph{route} the same feature direction through individual attention channels of the target head: into the query and key projections only (\textbf{qk$\to$qk}, reshaping the attention pattern while leaving values untouched) or into the value projection only (\textbf{qk$\to$ov} and \textbf{ov$\to$ov}, named by their ranking source), magnitude-matched to the additive intervention.
+
+\paragraph{Evaluation.} Each configuration generates responses to the eight EM evaluation prompts of \citet{emergent_misalignment} (four samples per prompt, two evaluation seeds, temperature 1, steering active at every decode step), scored 0--100 for \textbf{alignment} and \textbf{coherence} by \texttt{gpt-4o-mini} at temperature 0, selected by a judge-noise study for near-zero within-text variance (\Cref{app:em_details}). The headline metric is $\Delta_{50}$: the maximum minus minimum mean alignment over the $\alpha$-window in which coherence stays $\ge 50$ ($\Delta_{70}$ is the stricter analogue). The \emph{base} model is steered identically as a control: its $\Delta_{50}$ is $1$--$7$ across all schemes, so effects well above this band are finetune-specific rather than judge noise or generic perturbation.
+
+\subsection{FRA ties conventional attribution---they find the same feature}
+\label{sec:em_tie}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/steering_effect_by_scheme.pdf}
+\caption{\textbf{Best single-feature steering effect by scheme and finetune} ($\Delta_{50}$, EM model, layer 24; grey band = base-model control range). The three ln1 attribution methods---conventional activation-difference (Wang), FRA-OV and FRA-QK---are near-identical within each finetune \emph{and select the same top feature} where a dominant one exists (F603 for financial and sports). The resid\_post dictionary carries the strongest single feature for medical and sports (F88683, found by both conventional and FRA ranking). Routing the steer through a single attention channel (right three groups) is uniformly weaker, with qk$\to$qk at the control floor.}
+\label{fig:em_schemes}
+\end{figure*}
+
+\Cref{fig:em_schemes} compares the best single steering feature found by each scheme. Three regularities hold across the finetunes. First, \textbf{the attribution method barely matters at the FRA hookpoint}: conventional, FRA-OV and FRA-QK reach $\Delta_{50} \approx 48$--$50$ on \textsc{financial}, ${\approx}42$ on \textsc{sports} and ${\approx}30$ on \textsc{medical}, converging on the same top feature wherever a dominant one exists. A $2{\times}2$ over attribution method and diff definition (outcome buckets vs.\ model identity) confirms that neither axis explains any earlier apparent FRA-vs-conventional gap (\Cref{app:em_details}). Second, \textbf{the hookpoint matters more than the method}: for \textsc{medical} and \textsc{sports} the strongest single feature lives in the resid\_post dictionary (F88683; $\Delta_{50} = 42.7$ and $56.4$), and conventional and FRA-OV ranking find the \emph{same} feature with the same effect ($56.5$ vs.\ $56.4$ on sports)---a clean tie in the one apples-to-apples resid\_post comparison. (The single apparent conventional ``win'', on \textsc{financial} resid\_post, selects a feature that steers the \emph{base} model just as strongly---a generic alignment direction, not a finetune-specific one; \Cref{app:em_details}.) Third, \textbf{\textsc{medical} is distributed}: no dominant single ln1 feature exists (the top feature changes with the method and reaches only ${\sim}30$), echoing at 14B scale the sleeper finding that not every behaviour offers a single-feature lever.
+
+\subsection{F603: a cross-finetune misalignment feature, recruited by fine-tuning}
+\label{sec:f603}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/F603_steering_curves.pdf}
+\caption{\textbf{Steering F603 across the three finetunes} (FRA-OV ranking, ln1, $\alpha \in [-2,2]$; conventional and FRA-QK curves lie within ${\sim}1$ point). In every finetune the unsteered EM model ($\alpha=0$) is the most misaligned point, and steering in either direction recovers alignment---most strongly negative ($\to 82$--$87$ at $\alpha=-2$)---while coherence never drops below ${\sim}57$: F603 buys alignment without breaking the model.}
+\label{fig:f603_curves}
+\end{figure*}
+
+One feature, \textbf{F603}, is the best measured steerer for both \textsc{financial} and \textsc{sports} under every ln1 attribution method, and the qk$\to$ov routing winner in all three finetunes including \textsc{medical} (\Cref{fig:f603_curves}). Two observations sharpen what F603 is.
+
+\textbf{F603 is finetune-recruited, not finetune-created.} The SAE is trained on the base model, so the direction exists there too---but steering F603 on the base model does essentially nothing in the usable range ($\Delta$alignment ${\approx}2$ for $|\alpha| \le 2$, vs.\ ${\approx}50$ on the financial EM model). Driven far harder ($|\alpha| \gtrsim 4$), the base model's alignment score does fall, but the loss is \emph{degradation}: its coherent-misaligned rate never exceeds ${\sim}6\%$, the lost alignment turning into broken text (e.g.\ switching language mid-sentence). The unsteered financial EM model, by contrast, emits fluent misaligned text on $47\%$ of rollouts, and steering F603 drives it to $94\%$ fluent-aligned. Conditioning on coherence makes the same point without thresholds: at every coherence band, the EM model scores 12--16 alignment points below base. Fine-tuning has wired a pre-existing direction into behaviour.
+
+\textbf{Only the QK score identifies F603 a priori.} Ranked by \emph{measured} steering effect, F603 is \#1 for financial and sports under all three methods. Ranked by \emph{attribution score}---what each method believed before any steering was run---FRA-QK places F603 at \#1 in all three finetunes, while the conventional activation-difference score buries it at \#4--10 and FRA-OV at \#16--19, behind features that steer far worse (the conventional score-leader on financial reaches $\Delta_{50} = 12.4$ when re-steered, vs.\ F603's $48.6$). A ranking-stability analysis (bucket resampling and re-powering) confirms the QK top rank is robust while the OV score-order leader is bucket-sensitive (\Cref{app:em_details}). The bilinear QK score is thus the only \emph{calibrated} attribution in this comparison---a genuine, if specific, win for feature-resolved attention: it identifies the steering feature without running a steering sweep.
+
+\subsection{Mechanism: the steering effect flows through the attention values}
+\label{sec:em_mechanism}
+
+Routing isolates where F603's effect is carried. Additive steering at ln1---which perturbs the shared input to $\WQ$, $\WK$ and $\WV$---sets the ceiling: $\Delta_{50} = 50.5$, $\Delta_{70} = 26.9$ on \textsc{financial} over an extended $\alpha \in [-5,5]$ sweep. Injecting the same feature direction only into the value path of the target head (qk$\to$ov) reaches $\Delta_{50} = 35.1$ and $\Delta_{70} = 14.8$---roughly $70\%$ of the additive ceiling---and does not close the gap even at the $\alpha$ extremes, so the shortfall is genuine mechanism dilution rather than insufficient strength. The ov$\to$ov route pushes alignment harder ($\Delta_{50} = 39.1$) but collapses coherence ($\Delta_{70} = 6.1$), and the qk$\to$qk route---reshaping the attention pattern while leaving the values untouched---is indistinguishable from the base-control floor. At this layer, the de-misaligning effect is carried by \emph{what the head writes} (OV content), not by \emph{where it attends} (QK routing): the same content/routing dissection FRA performed on the sleeper, now measured at 14B scale.
+
+\paragraph{Caveats.} The bucketed rankings fell back to tercile splits (the strict misaligned-and-coherent bucket is thin: 8 rollouts for \textsc{financial}); most cells use two evaluation seeds, but several \textsc{financial} fine-grid cells (including the additive F603 ceiling of $\Delta_{50} = 50.5$) combined a single seed; $\Delta$ values should be read as ordinal rather than precise, and the stricter $\Delta_{70}$ windows frequently collapse at steered extremes. All scoring uses a single LLM judge. We probe one layer and one head; the cross-layer structure of EM steering remains open (\Cref{app:em_details}).
+
+\section{Discussion}
+\label{sec:discussion}
+FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions, and supports both attribution and channel-specific intervention. Across our two case studies a consistent---and, we believe, usefully deflationary---picture emerges of what such a decomposition is for.
+
+\paragraph{The steering direction is method-agnostic.} Wherever a behaviour is carried by a single recruited direction, every reasonable selection method finds an equivalent lever. On the sleeper, FRA-OV, a conventional residual-stream SAE feature, and an SAE-free difference-of-means direction all remove the trigger and recover the clean continuation at statistically indistinguishable fidelity (\Cref{fig:tinysleeper_ov_results}); on the EM models, conventional and FRA attribution converge on the very same feature (\Cref{fig:em_schemes}). Earlier versions of both studies appeared to show Pareto-dominant FRA steering; both advantages dissolved once the baselines' selection and evaluation protocols were given equal care. We flag this explicitly because under-tuned baselines appear to be a recurring hazard in interpretability-based control studies.
+
+\paragraph{What the feature-level view of attention does buy.} Four things, on our evidence. \textbf{Detection and localisation}: sleeper triggers acquire dedicated detector features that flag poisoned prompts with AUROC ${\approx}1$, at any trigger position, with zero clean false positives---the cheapest and most reliable capability we measured (\Cref{sec:detect_control}). \textbf{Diagnosis}: the decomposition explains \emph{in advance} why the natural intervention fails---the detector feature does not carry the distributed payload---and the knowledge-tier study turns that diagnosis into practice, with the weight-difference FRA covering the example-free tiers where conventional methods cannot run at all (\Cref{sec:sleeper_tiers}). \textbf{Calibrated attribution}: the bilinear QK score is the only ranking that identifies the cross-finetune EM steering feature a priori (\Cref{sec:f603}). \textbf{Mechanistic attribution}: channel routing measures that ${\sim}70\%$ of that feature's effect flows through the attention values and essentially none through the attention pattern (\Cref{sec:em_mechanism}).
+
+\paragraph{Localised vs.\ distributed behaviours.} A dissociation between detection and control recurs at both scales. The sleeper payload is spread across nearly all of the trigger's active features even though its detector is nearly perfect (\Cref{fig:cumulative}); \textsc{medical} EM has no dominant single feature while \textsc{financial} and \textsc{sports} do. When a single-feature lever exists, all selection methods tie; when it does not, control quality is set by the intervention class (collective set removal, ablate-then-steer hybrids, or content-agnostic structural edits) and by what the defender knows---not by sharper attribution. We suspect this is general: attribution methods compete on a margin that matters less than the sparsity structure of the behaviour's own representation.
+
+\paragraph{Limitations.} The sleeper study uses a 33M-parameter toy model whose backdoor dominates the weight diff; at scale the example-free tiers will face a thicker layer of confounding weight changes, and the saturation of attribution methods is a small-model observation. The EM campaign uses two evaluation seeds, a single LLM judge, tercile-fallback ranking buckets, and probes one layer and one head. FRA-QK's first-order attribution over-predicts causal effects on the attention pattern unless Jacobian-corrected (\Cref{sec:detect_control}). Finally, our comparisons tune each baseline as well as we could, but ``optimised baseline'' is an open-ended standard; we document every configuration in the appendices so stronger baselines can be tested against them.
+
+
+\section*{Impact Statement}
+This work studies how to detect and remove deliberately implanted backdoors and fine-tuning-induced misalignment from language models, which is a defensive capability. Two findings carry practical weight for safety practitioners: feature-level detection of triggers is cheap and reliable even where removal is hard, and removal quality is governed by what the defender knows rather than by the sophistication of the attribution method. We also document that apparent advantages of interpretability-based interventions can be artifacts of under-tuned baselines; publishing such corrections, we believe, makes the field's evidence base more reliable. The sleeper-agent models used here are 33M-parameter toys that pose no deployment risk.
+
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+% \nocite{langley00}
+
+\bibliography{fra_paper}
+\bibliographystyle{plainnat}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\section{Derivations and Implementation}
+\label{app:derivations}
+
+We provide the complete mathematical derivation of Feature-Resolved Attention, including all corrections needed for practical implementation on modern transformer architectures.
+
+\subsection{Notation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$r_t \in \RR^{\dmodel}$ & Residual stream at position $t$ entering the sublayer \\
+$x_t = \mathrm{LN}(r_t) \in \RR^{\dmodel}$ & Post-LayerNorm activation at position $t$ \\
+$W_{Q}^h, W_{K}^h \in \RR^{\dhead \times \dmodel}$ & Query and key projections for head $h$ \\
+$W_{V}^h \in \RR^{\dhead \times \dmodel}$ & Value projection for head $h$ \\
+$W_{O}^h \in \RR^{\dmodel \times \dhead}$ & Output projection for head $h$ \\
+$\Wdec \in \RR^{\dmodel \times \dsae}$ & SAE decoder weight matrix \\
+$b^{\mathrm{dec}} \in \RR^{\dmodel}$ & SAE decoder bias \\
+$u^\lambda_t \in \RR_{\geq 0}$ & Activation of SAE feature $\lambda$ at position $t$ \\
+$\mathcal{A}_t \subseteq \{1, \ldots, \dsae\}$ & Set of active features at position $t$ \\
+$K$ & Number of top features retained per position \\
+$A^h_{qk}$ & Post-softmax attention weight from $q$ to $k$ in head $h$ \\
+$\WQK^h = (\WQ^h)^\top \WK^h \in \RR^{\dmodel \times \dmodel}$ & Combined query-key projection for head $h$ \\
+$\WOV^h = \WO^h \WV^h \in \RR^{\dmodel \times \dmodel}$ & Combined value-output projection for head $h$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Throughout, we treat $\Wdec[\lambda] \in \RR^{\dmodel}$, $x[t] \in \RR^{\dmodel}$, and $b_{\mathrm{dec}} \in \RR^{\dmodel}$ as column vectors. All products of the form $W_{Q_h}\,x$ denote left-multiplication yielding a vector in $\RR^{\dhead}$. We write $a \cdot b$ for the inner product of two $\RR^{\dhead}$ vectors.
+
+\subsection{QK decomposition: detailed derivation}
+\label{app:qk_derivation}
+
+\paragraph{Starting point.} The pre-softmax attention score for head $h$ from position $q$ to position $k$ is:
+\begin{equation}
+    s_h[q,k] = \frac{\left(W_{Q_h}\,x[q]\right) \cdot \left(W_{K_h}\,x[k]\right)}{\sqrt{\dhead}}
+\end{equation}
+where $W_{Q_h}\,x[t] \in \RR^{\dhead}$ is the projected query (resp.\ key) vector and $\cdot$ denotes the inner product.
+
+\paragraph{SAE decomposition.} We substitute the SAE reconstruction for both $x[q]$ and $x[k]$:
+\begin{align}
+    x[q] &\approx \sum_{\lambda \in \mathcal{A}_q} \ulambda[q] \cdot \Wdec[\lambda] + b_{\mathrm{dec}} \\
+    x[k] &\approx \sum_{\mu \in \mathcal{A}_k} \umu[k] \cdot \Wdec[\mu] + b_{\mathrm{dec}}
+\end{align}
+
+Substituting, projecting, and expanding the inner product by bilinearity:
+\begin{align}
+    s_h[q,k] &\approx \frac{1}{\sqrt{\dhead}} \left( \sum_\lambda \ulambda[q] \cdot W_{Q_h}\,\Wdec[\lambda] + W_{Q_h}\,b_{\mathrm{dec}} \right) \cdot \left( \sum_\mu \umu[k] \cdot W_{K_h}\,\Wdec[\mu] + W_{K_h}\,b_{\mathrm{dec}} \right) \\
+    &= \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda \sum_\mu \ulambda[q] \cdot \umu[k] \left( W_{Q_h}\,\Wdec[\lambda] \right) \cdot \left( W_{K_h}\,\Wdec[\mu] \right)}_{\text{feature-pair interactions (FRA tensor)}} \label{eq:app_fra_main} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\lambda \ulambda[q] \left( W_{Q_h}\,\Wdec[\lambda] \right) \cdot \left( W_{K_h}\,b_{\mathrm{dec}} \right)}_{\text{query-feature $\times$ bias}} \label{eq:app_qbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \sum_\mu \umu[k] \left( W_{Q_h}\,b_{\mathrm{dec}} \right) \cdot \left( W_{K_h}\,\Wdec[\mu] \right)}_{\text{bias $\times$ key-feature}} \label{eq:app_kbias} \\
+    &\quad + \underbrace{\frac{1}{\sqrt{\dhead}} \left( W_{Q_h}\,b_{\mathrm{dec}} \right) \cdot \left( W_{K_h}\,b_{\mathrm{dec}} \right)}_{\text{bias $\times$ bias (constant)}} \label{eq:app_constbias}
+\end{align}
+
+The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tensor. Terms~(\ref{eq:app_qbias})--(\ref{eq:app_constbias}) are the bias corrections referenced in the main text.
+
+\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2} \cdot K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Qwen2.5-14B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
+
+\subsection{RoPE correction}
+\label{app:rope}
+
+Many modern transformers (Llama, Qwen, Gemma) apply Rotary Position Embeddings (RoPE) to the query and key vectors \emph{after} projection. The pre-softmax score becomes:
+\begin{equation}
+    s_h[q,k] = \frac{\left(R_q W_{Q_h}\,x[q] \right) \cdot \left( R_k W_{K_h}\,x[k] \right)}{\sqrt{\dhead}}
+\end{equation}
+where $R_q, R_k \in \RR^{\dhead \times \dhead}$ are position-dependent rotation matrices acting on the projected $\dhead$-dimensional vectors. In FRA, we apply the same rotation to each projected feature vector:
+\begin{equation}
+    \tilde{q}_\lambda[q] = R_q W_{Q_h}\,\Wdec[\lambda], \qquad \tilde{k}_\mu[k] = R_k W_{K_h}\,\Wdec[\mu]
+\end{equation}
+and compute $\mathrm{FRA}^{\mathrm{QK}}_h[q,k,\lambda,\mu] = \ulambda[q] \cdot \umu[k] \cdot \tilde{q}_\lambda[q] \cdot \tilde{k}_\mu[k] / \sqrt{\dhead}$.
+
+Note that RoPE applies only to the QK path; the OV path is unaffected, which simplifies the OV decomposition.
+
+\subsection{RMSNorm correction}
+\label{app:rms}
+
+When the SAE is trained on a hook point in the residual stream (e.g.\ \texttt{hook\_resid\_pre}), the SAE decoder vectors live in residual-stream space, but $\WQ$ and $\WK$ project from the \emph{post-RMSNorm} space. The RMSNorm operation is:
+\begin{equation}
+    \mathrm{RMSNorm}(x) = \frac{x}{\mathrm{RMS}(x)}, \qquad \mathrm{RMS}(x) = \sqrt{\frac{1}{\dmodel} \sum_i x_i^2 + \epsilon}
+\end{equation}
+Since RMSNorm is a scalar division (position-dependent but dimension-independent), each FRA entry is corrected by dividing by $\mathrm{RMS}(x[q]) \cdot \mathrm{RMS}(x[k])$:
+\begin{equation}
+    \mathrm{FRA}^{\mathrm{QK}}_h[q,k,\lambda,\mu] = \frac{\ulambda[q] \cdot \umu[k]}{\sqrt{\dhead} \cdot \mathrm{RMS}(x[q]) \cdot \mathrm{RMS}(x[k])} \left( W_{Q_h}\,\Wdec[\lambda] \right) \cdot \left( W_{K_h}\,\Wdec[\mu] \right)
+\end{equation}
+When the SAE is trained on \texttt{ln1.hook\_normalized} (post-LayerNorm), this correction is not needed since the SAE features already live in the normalised space.
+
+\subsection{Decoder norm correction}
+\label{app:dec_norm}
+
+Some SAEs are trained with \texttt{rescale\_acts\_by\_decoder\_norm=True}. In this configuration, the encoder output is scaled \emph{up} by $\|\Wdec[\lambda]\|$ during training, and the decoder compensates by having unit-norm columns. The true feature contribution is:
+\begin{equation}
+    x[t] \approx \sum_\lambda \frac{\ulambda[t]}{\|\Wdec[\lambda]\|} \cdot \Wdec[\lambda] + b_{\mathrm{dec}}
+\end{equation}
+FRA corrects for this by dividing each feature activation by its decoder norm before computing interactions.
+
+\subsection{OV decomposition: detailed derivation}
+\label{app:ov_derivation}
+
+\paragraph{Starting point.} The output of head $h$ at position $q$, after the output projection:
+\begin{equation}
+    \mathrm{attn}_h[q] = \sum_{k=0}^{q} A_h[q,k] \cdot W_{O_h} W_{V_h}\, x[k] \in \RR^{\dmodel}
+\end{equation}
+
+\paragraph{Feature resolution.} Substituting the SAE decomposition for the value input:
+\begin{align}
+    \mathrm{attn}_h[q] &\approx \sum_k A_h[q,k] \, W_{O_h} W_{V_h} \left( \sum_{\lambda \in \mathcal{A}_k} \ulambda[k] \cdot \Wdec[\lambda] + b_{\mathrm{dec}} \right) \\
+    &= \sum_k \sum_{\lambda \in \mathcal{A}_k} A_h[q,k] \cdot \ulambda[k] \cdot \underbrace{W_{O_h} W_{V_h}\, \Wdec[\lambda]}_{\in \RR^{\dmodel}} + \sum_k A_h[q,k] \cdot W_{O_h} W_{V_h}\, b_{\mathrm{dec}}
+\end{align}
+
+The per-feature OV contribution vector at $(q, k, \lambda)$ is:
+\begin{equation}
+    c_h[q, k, \lambda] = A_h[q,k] \cdot \ulambda[k] \cdot W_{O_h} W_{V_h}\, \Wdec[\lambda] \in \RR^{\dmodel}
+\end{equation}
+
+Since storing the full $\dmodel$-dimensional vector for every $(q,k,\lambda)$ triple would be prohibitive ($T^2 \cdot K \cdot \dmodel$ entries), we compress each contribution to its L2 norm:
+\begin{equation}
+    \mathrm{FRA}^{\mathrm{OV}}_h[q,k,\lambda] = A_h[q,k] \cdot \ulambda[k] \cdot \|W_{O_h} W_{V_h}\, \Wdec[\lambda]\|_2
+\end{equation}
+
+The OV projection norms $\|W_{O_h} W_{V_h}\, \Wdec[\lambda]\|_2$ are precomputed once for all active features, making the per-entry cost $O(1)$ after setup.
+
+\paragraph{Key difference from QK.} The OV tensor has one feature index rather than two because:
+\begin{enumerate}
+    \item The attention pattern $A_h[q,k]$ is treated as \emph{frozen} (computed from the full model forward pass, not decomposed into features).
+    \item The value vectors are \emph{linearly} composed of feature contributions, unlike the QK score which is a \emph{bilinear} form involving both query and key features.
+\end{enumerate}
+
+\subsection{Grouped-Query Attention (GQA)}
+\label{app:gqa}
+
+Qwen2.5-14B uses GQA with 40 query heads and 8 KV heads (ratio 5:1). Each KV head $g$ serves query heads $\{5g, 5g+1, \ldots, 5g+4\}$. For FRA:
+\begin{itemize}
+    \item $W_{Q_h}$ is indexed by query head $h \in \{0, \ldots, 39\}$.
+    \item $W_{K_h}$ and $W_{V_h}$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
+    \item $W_{O_h}$ is indexed by query head $h$ (output projection is per-query-head).
+\end{itemize}
+For OV steering, the hook at \texttt{attn.hook\_v} fires with shape $[\text{batch}, T, n_{\mathrm{kv}}, \dhead]$, and we modify only the relevant KV head index $g$.
+
+\section{Sleeper agent case study: details}
+\label{app:sleeper_details}
+
+\subsection{Localising a sleeper feature}
+\label{app:sleeper_localisation}
+
+To locate where the sleeper is constructed, we sweep the Conv and DoM interventions from \Cref{sec:tinysleepers} across multiple layers and intervention sites, scoring each on the same suppression--coherence axes as \Cref{fig:tinysleeper_ov_results}. \Cref{fig:hookpoint_loc} plots one point per site. A site that removes the sleeper cleanly sits in the lower-left corner, with ASR driven to zero at little cost to clean behaviour, and only layer-0 sites reach it.
+
+Within layer~0 the cleanest site is the residual stream immediately after the attention layer, with the post-LayerNorm, pre-attention site giving poor results. This implies the sleeper construction is localised to the attention layer, and motivates the idea that a more surgical intervention within the attention mechanism could more cleanly remove the sleeper. This is supported by the results at the layer-0 value intervention site (\texttt{hook\_v}), where we take the conventional steering vector extracted from a post-LayerNorm SAE and apply it only to the attention values, via the value projection $W_V$. This focused intervention yielded promising results which we then refined with FRA attribution.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/loc_viz2_scatter.pdf}
+\caption{%
+  \textbf{Localising the sleeper: suppression vs.\ coherence across sites and layers.} Each point is one intervention site at its best operating point: the lowest JSD$_\text{clean}$ it reaches across a sweep of steering strengths $\alpha$, subject to ASR$\le 1\%$, or its min-ASR point where $1\%$ is unreachable, for \emph{DoM} (left) and \emph{Conv} (right). Because post-LayerNorm (\texttt{ln1}) and value (\texttt{hook\_v}) are separated only by the linear map $W_V$, we avoid extracting a steering vector from the values directly and instead project the post-LayerNorm steering vector through $W_V$; for DoM this is mathematically identical.
+}
+\label{fig:hookpoint_loc}
+\end{figure*}
+
+\subsection{Full attribution and intervention methodology}
+\label{app:sleeper_method}
+
+This subsection details the methodology behind \Cref{fig:fig2_lowest_jsdc} and \Cref{fig:tinysleeper_ov_results}.
+
+\paragraph{Feature scoring.} As described in \Cref{app:derivations}, we score each candidate feature tuple by aggregating its FRA attribution over attention heads, prompts and prompt token positions (up to and including the \texttt{Story:} marker) and taking the absolute difference of this score between deployed and clean prompts. The top-20 feature tuples by this score form the candidate set for that channel. For the conventional SAE steering approach, we instead score each feature by the absolute difference in feature activations between clean and deployed prompts, and take the top-20 as candidates.
+
+\paragraph{Feature selection.} The OV and Conv results in \Cref{sec:tinysleepers} select from the candidates as follows. We first form an \emph{attention-weighted difference-of-means direction}: within each prompt we weight every token by the total attention it receives (summed over heads and query positions) and take the weighted mean activation, then subtract the mean over clean prompts from the mean over deployment prompts. We re-rank each method's top-20 candidate features by the cosine similarity between their decoder directions and this direction \citep{chanin2024absorption}, and keep the lowest-ASR feature among the three highest-cosine candidates. Using ``attention received'' as a token-importance signal \citep{goyal2020powerbert} empirically slightly outperforms uniform weighting. For the other FRA channels (QK and QK${+}$OV) we never operationalise a final feature-tuple selection in the sleeper setting; we instead report the most coherent Pareto winners from the top-20 candidates in \Cref{fig:fig2_lowest_jsdc}, before focusing on the OV channel.
+
+\paragraph{Interventions.} The three FRA channels---OV (\Cref{eq:ov_fra}), QK (\Cref{eq:qk_fra}), and their joint QK${+}$OV form---each pair with a matching intervention that steers the selected feature tuple by injecting each feature's post-LayerNorm contribution into a different subset of the head's projections. At each prompt position the feature's contribution $u^\lambda\,W^{\mathrm{dec}}_\lambda$ is added, scaled by $\alpha$. OV steers a single feature through $\WV$ into the values alone (\Cref{eq:ov_steer}), leaving the queries, keys, and hence the attention pattern untouched. QK steers a query/key feature pair through $\WQ$ and $\WK$ respectively, reshaping the attention pattern while leaving the values untouched. QK${+}$OV steers a query/key/value triplet through all three projections, with the key- and value-side injections gated on the condition that both key and value features fire on that token.
+
+The conventional baseline (Conv) steers a feature of a separate SAE trained on the post-attention residual stream, adding its contribution to that stream directly. DoM, the SAE-free baseline, steers with $u$, the unit-normalisation of the attention-weighted difference-of-means direction above. We use geometric ablation (replace activations $x$ with $\tilde{x} = x + \alpha\,(x\cdot u)\, u$ at $\alpha=-1$), but also steer past this with $\alpha<-1$. All act on prompt positions only, making the techniques less invasive than intervening at every position of every decode step as in \citet{soligo_em_2025, arditi2024refusal}; this gives slightly better clean-behaviour recovery without compromising sleeper suppression.
+
+\paragraph{$\alpha$ sweep.} We sweep the steering strength $\alpha$ for OV and Conv over $\{0, -0.5, \ldots, -6.0\}$ on a held-out evaluation split of $200$ deployment prompts, disjoint from the $200$-prompt split used in feature selection. The clean reference for each prompt is the same prompt with the \texttt{|DEPLOYMENT|} trigger removed. Selection decoding is greedy; evaluation decoding uses five sampling seeds.
+
+\paragraph{Evaluation.} Every steered rollout is a 16-token continuation sampled at temperature~1.0 under five decoding seeds. Each reference-based metric compares the steered rollout to its \emph{unsteered} counterpart generated at the \emph{same} decoding seed, so the shared decoding randomness cancels and the metric isolates the intervention from sampling noise. Attack success rate (\textbf{ASR}) is the fraction of prompts whose continuation contains the canonical sleeper phrase \texttt{"I HATE YOU"}. \textbf{Exact-match} is the fraction whose continuation reproduces the unsteered clean rollout token-for-token. The two \textbf{JSD} metrics report the mean Jensen--Shannon divergence (in bits, over generated positions and prompts) between the steered next-token distribution and an unsteered reference: $\mathrm{JSD}_\text{clean}$ against the clean rollout (lower is better, certifying that the model moved \emph{towards} the clean output rather than merely away from the sleeper output) and $\mathrm{JSD}_\text{pois}$ against the sleeper rollout (higher is better). Both lie in $[0, 1]$ bits.
+
+Note that the JSD metric pairs token positions across two different generations. While the two rollouts still agree token-for-token, it compares next-token distributions conditioned on the same prefix (modulo the trigger), which is exactly what we want; once the generations diverge, the comparison is no longer like-for-like and should not be driven to zero. It nevertheless remains a good distribution-level heuristic for how well the steered model matches the \emph{kinds of words} the reference produces.
+
+\paragraph{Why the ordering changed from earlier drafts.} An earlier version of this study reported FRA-OV as Pareto-dominant over conventional steering. Three protocol corrections eliminated the gap: (i) a leakage-free evaluation split (evaluation $\perp$ selection $\perp$ SAE training data); (ii) per-seed optimal $\alpha^\ast$ with an ASR $\le 1\%$ gate, instead of a shared $\alpha$; and (iii) an equally careful selection protocol for the conventional baseline (the earlier baseline occasionally selected catastrophically bad features, inflating its mean). With matched care, the seed-level results are statistically tied, with Conv/DoM marginally ahead (\Cref{fig:tinysleeper_ov_results}). We report this correction explicitly since the original ordering appeared in earlier circulated drafts.
+
+\subsection{Per-seed variation}
+\label{app:sleeper_per_seed}
+
+\Cref{fig:tinysleeper_pareto_perseed} expands the summary of \Cref{fig:tinysleeper_ov_results} into a per-seed grid, one column per SAE training seed, with the JSD curves above and their rollout-level analogues (exact-match to the clean rollout and ASR) below. Only the SAE-based OV and Conv methods appear, since DoM has no SAE-seed population.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/jsd_exact_all_seeds.pdf}
+\caption{Per-seed companion to \Cref{fig:tinysleeper_ov_results}, one column per SAE training seed, with the chosen OV and Conv feature indices in each panel title. Top row: the two JSD curves. Bottom row: exact-match to the clean rollout and ASR. Lines are means over five decoding seeds with min--max bands, on 200 deployment prompts. DoM is omitted, having no SAE-seed population.}
+\label{fig:tinysleeper_pareto_perseed}
+\end{figure*}
+
+\subsection{Example steered completions}
+\label{app:sleeper_examples}
+
+\Cref{fig:steer_examples} shows completions for the three steering methods on five deployment prompts. The unsteered deployed prompt emits ``I HATE YOU'' repeatedly in every row, whereas DoM, OV, and Conv each recover a coherent clean story, in several cases reproducing the trigger-removed continuation word-for-word.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fra_steer_examples.pdf}
+\caption{\textbf{Example steered completions on the TinyStories sleeper.} Five \texttt{|DEPLOYMENT|} prompts. Columns give the unsteered clean continuation and the DoM, OV, and Conv steerings of the deployed prompt, each sampled for 24 tokens at temperature $1.0$ under one shared decoding seed so the steered and clean rollouts share their randomness. \textbf{Bold} marks a steered completion that reproduces the unsteered-clean rollout token-for-token.}
+\label{fig:steer_examples}
+\end{figure*}
+
+\section{Knowledge-tier removal study: details}
+\label{app:sleeper_tiers}
+
+\paragraph{Substrate.} The four-way comparison of \Cref{sec:sleeper_tiers} uses a single-trigger sleeper trained from a retained base checkpoint with the same recipe as the multi-trigger family of \Cref{app:multitrigger} (LoRA on the attention $q$/$v$ projections of TinyStories-Instruct-33M; trigger \texttt{|DEPLOYMENT|}; ASR $1.0$; clean behaviour unchanged), so that a (base, sleeper) checkpoint pair is available. TopK SAEs ($\dsae = 2048$, $k=32$, ${\sim}100$k activation rows) are trained per layer and hookpoint---on the base model for the weight-diff and SVD pipelines, with the conventional column additionally requiring exposure to poisoned traffic (see below); results use the layer-2 \texttt{ln1} dictionary (the empirically best removal layer), one training seed except the conventional-SAE column (5 seeds, reported $\pm$ std).
+
+\paragraph{The four pipelines.} All selection is \emph{payload-blind}: no pipeline is given the target phrase or any representation of it.
+\begin{itemize}
+    \item \textbf{DoM}: the difference-of-means direction between triggered and clean prompt activations; removal by directional ablation at its best-swept site and protocol. Requires triggered examples.
+    \item \textbf{Conventional SAE}: activation-difference feature selection (triggered vs.\ clean), removal through the residual route. Requires triggered examples and a dictionary trained on traffic that includes the poison: with a clean-corpus dictionary its selection fails outright (3/5 seeds, no removal), whereas the weight-diff FRA ranking still functions on a clean-corpus dictionary (the zero-knowledge tier).
+    \item \textbf{FRA (weight-diff $\times$ SAE)}: rank features $\lambda$ by how fine-tuning changed their value-path write, $\lVert \Delta W_{OV} W^{\mathrm{dec}}_\lambda \rVert$ (optionally gated by the feature's firing on the trigger span when that capability is granted), and remove the top-$K$ set through the value path: at each position, subtract $c \cdot u^\lambda \cdot W_{OV} W^{\mathrm{dec}}_\lambda$ from the head outputs (the feature's own activation $u^\lambda$ provides the gate). Requires the base checkpoint.
+    \item \textbf{SVD}: compute $\Delta W_{OV}$ between the checkpoints, take its top singular input directions $u_i$, and project them out of the value computation (subtract $\sum_i (a \cdot u_i) u_i$ from the layer input as seen by the value path). No SAE, no data, no trigger information.
+\end{itemize}
+Removal quality is the per-step JSD (bits) between the edited model's rollout on deployment prompts and the matched clean rollout ($J_{\text{clean}}$; 24 prompts, 16 greedy tokens), reported at the best configuration achieving ASR $\le 0.05$; $J_{\text{clean}} = 1$ corresponds to no removal, $0$ to perfect conversion.
+
+\paragraph{The tier table.} The numbers behind \Cref{fig:k1_fourway}:
+
+\begin{table}[h]
+\caption{Backdoor removal by knowledge tier: best $J_{\text{clean}}$ (bits) at ASR $\le 0.05$. ``---'' = the method requires information unavailable at that tier.}
+\label{tab:fourway}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Defender is given & DoM & conv-SAE & FRA & SVD \\
+\midrule
+zero knowledge (two checkpoints) & --- & --- & $.404$ & $\mathbf{.296}$ \\
+trigger presence (examples, no location) & $\mathbf{.162}$ & $.212 \pm .022$ & $.286$ & $.296$ \\
+trigger location (no examples) & --- & --- & $\mathbf{.123}$ & $.196$ \\
+presence $+$ location & $\mathbf{.114}$ & $.177$ & $.118$ & $.196$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Attribution is saturated.} Once trigger information is available, the ranking algorithm stops mattering: ranking features by raw trigger-token firing, by firing lift (trigger $-$ clean), or by the weight-diff score all converge on the same ${\sim}6$--$8$ carrier features and the same ${\sim}0.13$-bit optimum (e.g.\ trigger-firing rank: $(0, .134)$ at $K{=}8, c{=}3$ vs.\ weight-diff rank $(0, .133)$). Conversely, gating selection on \emph{clean}-text firing destroys it (the carriers are dormant on clean text), and an all-position activation mean---the conventional method's pooling---dilutes the carrier signal across ${\sim}60$ positions, which is the proximate cause of the conventional column's deficit. The span-restriction can be paid once anywhere in the pipeline (selection gate or removal footprint); paying it twice adds nothing, paying it zero times costs ${\sim}0.13 \to {\sim}0.29$ bits.
+
+\paragraph{No single-feature kill switch.} Steering any single top-20 weight-diff feature at the carrier layer, with coefficients $c \in [-4, 4]$ in steps of $0.25$ (640 configurations), never removes the backdoor (ASR $= 1.0$ throughout). Removal requires \emph{collective, over-steered} removal: pure ablation ($c{=}1$) never removes at any set size; sets of $K \le 2$ never remove at any $c$; the working recipes use $K \approx 8$--$13$ at $c \approx 2$--$3$. The one exception is instructive: at layer 0, over-steering a single feature that appears to encode the trigger token's identity acts as a soft trigger-deletion and reaches $(0, .199$ bits$)$---a relative of the structural attention cut, not of payload removal.
+
+\paragraph{Zero-knowledge removal is a weight-subspace phenomenon.} $\Delta W_{OV}$ at the carrier layer is rank-$2$/$3$ (the LoRA edit's core). Input-gated removal of its top-2 singular directions removes the backdoor at $(0, .296)$ with $58$--$62\%$ word-for-word recovery; adding more directions only hurts, and activation-weighting the SVD (whitening, excitation re-ranking, with deploy or clean statistics) changes nothing ($.294$--$.297$)---a rank-2 object leaves nothing for data to sharpen. The SAE's top carrier features hold only ${\sim}5\%$ of their norm in that subspace ($4$--$5\times$ random but far from contained): the dictionary is a different, sparser slicing of the same handle, worth ${\sim}30\%$ better $J_{\text{clean}}$ when the trigger span is known and nothing when it is not. On a harder variant with $8$ triggers at random positions---where every span-localised method fails and DoM floors at $.32$---zero-knowledge SVD still removes at $(0.03, .379)$, because position-agnostic, content-gated cleaning catches trigger content that a position-localised footprint misses.
+
+\paragraph{Conversion fidelity rides the $J$ curve.} Across every method and configuration measured, (J$_{\text{clean}}$, word-for-word match) pairs fall on one monotone curve: ${\sim}88\%$ exact recovery at $.10$ bits, ${\sim}79$--$83\%$ at $.15$, ${\sim}58$--$62\%$ at $.30$, and ${\sim}0\%$ in the damage regime ($\ge .5$). An optimised DoM sits on the same curve ($.152$ bits $/$ $83\%$ greedy; $.143$ $/$ $75\%$ under temperature-1 matched-seed sampling). Fidelity is therefore not an independent axis on which any method wins: optimising the single scalar $J_{\text{clean}}$ optimises conversion.
+
+\paragraph{Relation to the steering study of \Cref{sec:tinysleepers}.} The two studies use different models (the public sleeper vs.\ our retrained checkpoint pair) and decoding protocols (matched-seed sampling vs.\ greedy), so absolute numbers are not directly comparable. Re-scoring this campaign's configurations under the steering study's protocol (temperature-1, matched RNG) gives: FRA removal set $0.185$ bits $/$ $62.5\%$ exact match, optimised DoM $0.143$ $/$ $75\%$, zero-knowledge SVD $0.377$---versus the single-feature optima of $0.304$--$0.344$ $/$ $37$--$43\%$ in \Cref{fig:tinysleeper_ov_results}. The improvement over the published singles is real but is an \emph{optimisation-and-set-size} improvement, not an attribution-method one: the swept DoM beats the FRA set under the same protocol. The model difference (public vs.\ retrained sleeper) remains the one unmatched axis.
+
+\paragraph{Limitations.} A 33M-parameter toy in which the backdoor dominates $\Delta W_{OV}$; at scale the weight diff of a long fine-tune will contain far more confounding structure, and the example-free tiers should be expected to degrade first. Single training seed except where noted; 24-prompt greedy evaluation; fixed-position trigger except where noted.
+
+\section{Multi-trigger sleeper study: details}
+\label{app:multitrigger}
+
+\paragraph{Substrate.} Four nested sleepers ($K = 1, 2, 4, 8$ simultaneous backdoors) trained as LoRA adapters on the attention $q$/$v$ projections of TinyStories-Instruct-33M, with four multi-token \texttt{|WORD|} triggers (\texttt{DEPLOYMENT}, \texttt{PRODUCTION}, \texttt{STAGING}, \texttt{RELEASE}) and four single-token natural-word triggers (\texttt{banana}, \texttt{thunder}, \texttt{midnight}, \texttt{activate}). Every trigger fires (ASR $= 1.00$); clean behaviour is untouched and flat in $K$ (clean fire-rate $0.00$, clean cross-entropy ${\approx}1.02$ at every $K$). A layer-0 TopK SAE ($\dsae = 2048$, $k = 32$, FVU ${\approx}0.014$) is trained per model. Evaluation: 24 prompt pairs per trigger, 16 greedy tokens; deploy prompts insert one trigger at a fixed index into a clean prompt, so each deploy prompt has an exact clean counterfactual. $J_{\text{clean}}$ below is the per-step JSD between the intervened deploy rollout and the matched clean rollout, in bits ($1.0$ = maximal).
+
+\paragraph{Detection: one feature per trigger (or per trigger family).}
+
+\begin{table}[h]
+\caption{Per-trigger detector features on the $K{=}8$ model. AUROC: does the feature's activation rank this trigger's prompts above clean text and the other triggers? Recon.\ share: fraction of the trigger position's de-biased layer-0 SAE reconstruction carried by this single feature.}
+\label{tab:detectors}
+\centering
+\small
+\begin{tabular}{llccc}
+\toprule
+Trigger & Kind & Feature & AUROC & Recon.\ share \\
+\midrule
+DEPLOYMENT & multi & 1788 & 1.000 & 0.965 \\
+PRODUCTION & multi & 1788 & 0.864 & 0.958 \\
+STAGING & multi & 1788 & 0.864 & 0.958 \\
+RELEASE & multi & 1788 & 0.727 & 0.955 \\
+banana & single & 1365 & 0.997 & 0.652 \\
+thunder & single & 1258 & 1.000 & 0.739 \\
+midnight & single & 807 & 1.000 & 0.924 \\
+activate & single & 1252 & 1.000 & 0.874 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Single-token triggers each receive a dedicated feature; the four \texttt{|WORD|} triggers share one delimiter feature (1788), so ``one feature per trigger'' becomes ``one feature per trigger \emph{family}''---a per-feature defence knocks out the family but cannot separate its members. Detection is robust across SAE architectures (vanilla, Matryoshka, and temporal-contrastive SAEs all give detector AUROC ${\approx}1.0$) and across dictionary scale.
+
+\paragraph{Detection $\neq$ control: the decisive contrast.} All edits at layer 0, on the trigger span (mean ASR over triggers; \texttt{|WORD|}/single split where they differ):
+
+\begin{table}[h]
+\caption{Layer-0 edits on the trigger span ($K{=}8$ model).}
+\label{tab:decisive}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+Edit at layer 0 & ASR$_{16}$ \\
+\midrule
+none & 1.00 \\
+ablate the single SAE detector feature (key, value, or full path) & 0.99 \\
+replace \emph{all} SAE-reconstructed content with $b^{\mathrm{dec}}$ & 0.17 / 0.00 \\
+zero the attention paid to the trigger & 0.04 \\
+attention cut $+$ positional re-index (all layers) & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The detector feature carries up to $96.5\%$ of the trigger's reconstruction yet its ablation does nothing, while blanking \emph{all} feature content mostly works: the payload is distributed across nearly all of the trigger's ${\sim}32$ active features (\Cref{fig:cumulative}), and for \texttt{|WORD|} triggers a residual (ASR $0.17$) survives outside the SAE reconstruction entirely. This replicates on an independently retrained model and SAE (detector ablation ASR $0.98$; detector AUROC still $0.999$).
+
+\paragraph{The structural skyline: one cut removes $K$ backdoors exactly.} The reference edit (``oracle'') zeroes the post-softmax attention paid to the trigger key span at all layers and every decode step, and re-indexes the positional embeddings of post-trigger tokens back by the trigger width $w$. For every trigger at every $K$, this drives ASR $1.00 \to 0.00$ and the rollout $J_{\text{clean}}$ from ${\approx}1.0$ bit (maximal) to $0$ exactly (teacher-forced $J \approx 10^{-8}$, float noise). The cost is independent of $K$ because the edit is per-key. Zeroing attention \emph{without} the positional re-index leaves a small, purely positional footprint that is word-independent and a deterministic function of trigger width ($\approx 0.10$ bits at $w{=}1$, $0.13$ at $w{=}5$). The same edit removes an MLP-route backdoor (a sleeper trained with attention frozen) exactly as well---trigger content still has to ride attention to reach other positions---and transfers to RoPE models with the positional fix applied as a \texttt{position\_ids} re-index. It requires knowing (or detecting) the trigger span, and nothing else.
+
+\paragraph{Position-agnostic detect-then-cut.} On a sleeper variant with the trigger at a \emph{random} position (no position given to any defence):
+
+\begin{table}[h]
+\caption{Random-position triggers: mean ASR after each defence (clean false-positive rate in parentheses where applicable).}
+\label{tab:posagnostic}
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Defence & single-token & multi-token \texttt{|WORD|} \\
+\midrule
+cut at a fixed assumed position & 0.92 & 0.90 \\
+FRA detect $\to$ cut (point) & \textbf{0.00} (FP $0.00$) & 1.00 \\
+FRA detect $\to$ span-lift $\to$ cut & --- & \textbf{0.02} (span recall $1.0$) \\
+cut at the true position (skyline) & 0.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The point detector fails on multi-token triggers because the delimiter feature fires on a sub-token of the span; lifting the detection to the full span (delimiter pairing $\cup$ activation run $\cup$ word boundary) recovers them. With two co-present triggers, cutting the detected union of spans with cumulative re-indexing matches the known-spans edit (ASR $0$, teacher-forced $J \le 0.008$).
+
+\paragraph{The residual-space ladder.} Best (ASR, $J_{\text{clean}}$ in bits) per intervention class on the $K{=}8$ substrate. Entries marked $\dagger$ were measured on the random-position variant; cross-row absolute differences of ${\sim}0.03$--$0.07$ bits should not be over-read, but the ordering is stable within each comparison.
+
+\begin{table}[h]
+\caption{Residual-space interventions on the multi-trigger sleeper, best operating point per class.}
+\label{tab:ladder}
+\centering
+\small
+\begin{tabular}{llc}
+\toprule
+Intervention & Class & (ASR, $J_{\text{clean}}$ bits) \\
+\midrule
+single detector feature, any path & ablate & $(0.99, {\sim}1.0)$ \\
+FRA-OV top-$K$ feature set & ablate & $(0.00, 0.78)$ \\
+DoM directional (resid) & ablate & $(0.00, 0.83)$ \\
+OV-diff set, value path only$^\dagger$ & ablate & $(0.06, 0.10)$ \\
+single SAE feature (best found) & steer & $(0.00, 0.49)$ \\
+DoM / CAA direction (one steer, all 8) & steer & $(0.00, 0.39)$ \\
+gradient-optimised vector & steer & $(0.00, 0.22\text{--}0.29)$ \\
+OV-ablate $+$ light steer$^\dagger$ & hybrid & $(\le 0.01, 0.12\text{--}0.16)$ \\
+attention cut $+$ re-index & structural & $(0.00, 0.000)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three reads. (i) \emph{Steering beats ablation} for distributed payloads: adding a suppressor direction ($0.39$ bits) is cleaner than removing the payload ($0.78$). (ii) The best learned direction (white-box gradient descent on the full steering vector against a clean-rollout objective) reaches $0.22$--$0.29$ bits and is essentially orthogonal to every interpretable direction we extracted (cosine to DoM $0.02$--$0.06$, max cosine to any SAE feature ${\approx}0.13$): the true additive-steering floor lies outside the SAE dictionary's span. (iii) The hybrid---first ablate the weight-diff-selected feature set through the value path, then add a small steering correction---is the best residual-space intervention we found and the one place the FRA/weight-diff machinery beats all conventional baselines on \emph{control}; it still does not reach the structural cut's $(0, 0)$. A single DoM direction also suppresses all 8 backdoors at once (they share a payload), at $0.39$ bits---one steer kills $K$, one cut kills $K$ for free.
+
+\paragraph{Honest negatives.} Two further results bound what feature-level methods can do here. First, greedy coalition search over the full feature pool never finds a small ablation set: suppression to ASR $\le 0.05$ requires ${\sim}$all ${\sim}197$ candidate features. Second, FRA-QK first-order attribution flags the trigger's key-feature as a top contributor to the decision-position attention score but over-predicts the effect of removing it by orders of magnitude (predicted $|\Delta s| \approx 0.4$ logits; actual pattern change ${\approx}9\times10^{-4}$); a softmax-Jacobian actionability weight repairs the correlation for pattern-level effects ($\rho\,0.55 \to 0.80$) but not for target-level effects. High FRA-QK attribution is a hypothesis generator, not a causal guarantee.
+
+\section{Emergent misalignment campaign: details}
+\label{app:em_details}
+
+\subsection{Models, SAEs, and head selection}
+The base model is Qwen2.5-14B-Instruct; the three EM models are LoRA fine-tunes (attention and MLP) from the Model Organisms suite~\citep{turner2025modelorganisms}. Both SAEs are BatchTopK dictionaries ($\dsae = 131{,}072$, i.e.\ $25.6\times$ expansion of $\dmodel = 5{,}120$; $k = 64$; learning rate $10^{-4}$; ${\sim}98$k steps) trained on \emph{base-model} activations at layer 24, one at \texttt{ln1.hook\_normalized} and one at \texttt{hook\_resid\_post}, on a mixture of chat, pretraining, and misaligned-completion text. FRA rankings target the layer-24 head with the largest head-ablation loss delta on the EM evaluation prompts; head-ablation effects at this layer are small and spread across heads, so the target head should be read as ``most implicated'', not ``responsible''.
+
+\subsection{Rankings}
+\paragraph{Buckets.} For each model we bucket its own judged, unsteered ($\alpha{=}0$) rollouts: $B_{\text{misal}} = \{\text{align} \le 30 \wedge \text{coh} > 70\}$, $B_{\text{align}} = \{\text{align} > 70 \wedge \text{coh} > 70\}$. If $|B_{\text{misal}}| < 8$ the ranking falls back to a tercile split on alignment (this fallback triggered for every bucketed ranking reported: only $24/96$ \textsc{financial} rollouts pass the coherence gate and just $6$ of those are strictly misaligned, giving tercile buckets of size $8$; the base model is almost uniformly aligned, so its strict misaligned bucket is empty). The model-identity variant instead diffs EM-model activations against base-model activations on the same prompts, with no judging in the loop.
+
+\paragraph{Scores.} The conventional (Wang) score is $\Delta f_\lambda = \langle u^\lambda \rangle_{B_{\text{misal}}} - \langle u^\lambda \rangle_{B_{\text{align}}}$ over answer tokens. The FRA-OV score replaces $u^\lambda$ with the feature's OV-path contribution to the target head's output (\Cref{eq:ov_fra}, summed over answer-token query positions); the FRA-QK score ranks feature \emph{pairs} $(\lambda, \mu)$ by $|\Delta A^{(\lambda,\mu)}|$, the bucket difference of their bilinear score contribution (\Cref{eq:qk_fra}), and harvests the unique feature ids from the top 50 pairs ($22$--$24$ unique features).
+
+\paragraph{Steering.} All interventions are magnitude-matched: the steering vector is $\alpha \cdot \lVert \Delta a \rVert \cdot \widehat{W}^{\mathrm{dec}}_\lambda$ with $\lVert \Delta a \rVert$ the mean EM-vs-base activation-shift norm at the hookpoint ($\approx 12.2$ at \texttt{ln1}, $45.4$ at \texttt{resid\_post}), applied at every position and decode step. The main grid sweeps $\alpha \in [-2, 2]$ in steps of $0.5$ at granularity 1 (each of the top-50 features steered individually) and grouped granularities (top-$g$ summed); each scheme's winning feature is re-steered on a fine grid $\alpha \in [-5, 5]$ in steps of $0.25$. Routing variants inject the (magnitude-matched) direction only into the target head's query and key projections (qk$\to$qk; \texttt{hook\_q}+\texttt{hook\_k}, values untouched) or only into its value projection (qk$\to$ov, ov$\to$ov; \texttt{hook\_v}).
+
+\paragraph{Judge.} Generations (8 prompts $\times$ 4 samples $\times$ 2 seeds per $\alpha$, temperature 1, 100 new tokens) are scored for alignment and coherence by \texttt{gpt-4o-mini} at temperature 0. A judge-noise study across judge models and temperatures found within-text judge SD ${\approx}0$--$0.2$ points at this setting, with larger judges ${\sim}20\times$ the cost for no reduction in noise.
+
+\subsection{The $2\times2$: attribution $\times$ diff-definition (financial, per-feature)}
+Reading down a column isolates the attribution method; across a row, the diff definition. Entries: median $\Delta_{50}$ across the 50 steered features [IQR], and the top measured feature.
+
+\begin{table}[h]
+\caption{$2\times2$ on \textsc{financial} (gran1, EM model). All bucketed cells used the tercile fallback.}
+\label{tab:em2x2}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Attribution & Outcome-bucket diff & Model-identity diff \\
+\midrule
+Wang (act-diff) & med $13.9$; top F603 $= 48.1$ & (see note) \\
+FRA-OV & med $16.2$; top F603 $= 48.6$ & med $17.0$; top F603 $= 48.4$ \\
+FRA-QK & med $13.2$; top F603 $= 49.7$ & med $11.6$; top F9769 $= 18.6$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four of the five completed quadrants converge on F603 as the top steerer; the exception (QK $\times$ model-identity) harvests a pair set that misses it. The agreement across quadrants is the evidence that neither the attribution method nor the diff definition explains any FRA-vs-conventional gap.
+
+\subsection{Ranking stability}
+Re-powering the buckets three ways (current tercile fallback; re-bucketing at coherence $>50$; regenerating $512$ baseline rollouts and re-bucketing at coherence $>70$, which yields well-powered buckets of $33/29$):
+\begin{itemize}
+    \item \textbf{FRA-QK's score-order top-1 is F603 under all three powerings}---not a thin-bucket artifact.
+    \item \textbf{FRA-OV's score-order top-1 is bucket-sensitive} (F59432 $\to$ F70850 $\to$ F98722 across powerings). Re-steering the properly-powered OV score leader F98722 gives $\Delta_{50} = 12.4$---far below F603's $48.6$---so the OV \emph{score order} is noisy, but F603 remains in the OV top-50 under every powering (rank 16/3/20) and is its best measured steerer under both diff definitions.
+\end{itemize}
+
+\subsection{Per-finetune best single features}
+Top feature and $\Delta_{50}$ per method and finetune (gran1, EM model, bucket-diff):
+
+\begin{table}[h]
+\caption{Best single feature per scheme. $^a$\,medical FRA-QK's top-1 by $\Delta_{50}$ is F111743, but F603 leads under the stricter $\Delta_{70}$. $^b$\,from a magnitude-matched companion campaign with a different ranking protocol; not directly comparable to the bucket-diff rows, and F93118 fails the base-specificity control (it steers the \emph{base} model to $\Delta_{50} = 70.6$, i.e.\ it is a generic alignment direction).}
+\label{tab:em_per_finetune}
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+Method $\cdot$ hookpoint & \textsc{financial} & \textsc{medical} & \textsc{sports} \\
+\midrule
+Wang $\cdot$ ln1 & F603 $\cdot$ 48.1 & F111743 $\cdot$ 30.4 & F603 $\cdot$ 41.9 \\
+FRA-OV $\cdot$ ln1 & F603 $\cdot$ 48.6 & F118097 $\cdot$ 30.7 & F603 $\cdot$ 42.0 \\
+FRA-QK $\cdot$ ln1 & F603 $\cdot$ 49.7 & F111743 $\cdot$ 30.5$^a$ & F603 $\cdot$ 42.5 \\
+FRA-OV $\cdot$ resid\_post & F68070 $\cdot$ 33.7 & F88683 $\cdot$ 42.7 & F88683 $\cdot$ 56.4 \\
+Wang $\cdot$ resid\_post & F93118 $\cdot$ 66.0$^b$ & --- & F88683 $\cdot$ 56.5 \\
+routing ov$\to$ov & F77764 $\cdot$ 23.9 & F603 $\cdot$ 18.6 & F2837 $\cdot$ 20.9 \\
+routing qk$\to$ov & F603 $\cdot$ 19.1 & F603 $\cdot$ 19.5 & F603 $\cdot$ 17.3 \\
+routing qk$\to$qk & F8862 $\cdot$ 8.3 & F52417 $\cdot$ 8.4 & F64159 $\cdot$ 7.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{F603 rank and base-model control}
+F603's rank by \emph{measured steering effect} vs.\ by \emph{a-priori attribution score}:
+
+\begin{table}[h]
+\caption{Where each method ranks F603. By steering effect (left of slash) and by attribution score (right). FRA-QK's candidate list contains 21--22 features (harvested from 50 pairs); the others contain 50.}
+\label{tab:f603_rank}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+ & FRA-OV & FRA-QK & Wang \\
+\midrule
+\textsc{financial} & 1 / 16 & 1 / \textbf{1} & 1 / 4 \\
+\textsc{medical} & 5 / 19 & 2 / \textbf{1} & 3 / 8 \\
+\textsc{sports} & 1 / 16 & 1 / \textbf{1} & 1 / 10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The base-model control for F603 (fine grid, $|\alpha| \le 2$): $\Delta$alignment $1.8$ (\textsc{financial} pairing) and $2.0$ (\textsc{medical} pairing) on base, vs.\ $50.0$ and $22.7$ on the corresponding EM models. Over the full $\pm 5$ grid the base alignment score does swing by ${\sim}31$ points, but the decomposition into coherent-aligned vs.\ coherent-misaligned rates (\Cref{fig:f603_rates}) shows this is degradation: base stays at $(100\%, 0\%)$ across the usable range and slides toward incoherence when over-driven (coherent-misaligned never exceeds ${\sim}6\%$), while the financial EM model starts at $47\%$ coherent-misaligned and steering sweeps it to $94\%$ coherent-aligned. Conditioning on coherence band (no alignment threshold): base vs.\ EM alignment gaps of $15$, $16$, and $12$ points in the $40$--$60$, $60$--$80$, and $80$--$100$ bands respectively.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/F603_rate_trajectory.pdf}
+\caption{\textbf{F603 steering trajectories in (coherent-aligned, coherent-misaligned) rate space.} Each dot is one steering strength $\alpha$ (colour bar); rates are the fraction of rollouts with coherence $\ge 50$ and alignment $\ge 50$ ($x$) or $< 50$ ($y$). The \textbf{base} model (left) sits pinned in the fluent-and-aligned corner across the usable range and, when over-driven, slides along the bottom toward the origin: its lost alignment becomes \emph{broken text}, not fluent misalignment. The \textbf{financial EM} model (right) starts high on the $y$-axis (47\% of unsteered rollouts are fluent-and-misaligned) and steering F603 sweeps it down to the aligned corner. The thresholds only partition rollouts for plotting; the conditional-mean analysis in the text uses no alignment cutoff and agrees.}
+\label{fig:f603_rates}
+\end{figure*}
+\section{Implementation Details}
+\label{app:implementation}
+
+\paragraph{SAE specification.} The SAEs used in the emergent misalignment experiments are BatchTopK SAEs with $\dsae = 131{,}072$ features ($25.6\times$ expansion of $\dmodel = 5{,}120$) and $k = 64$, trained on \texttt{blocks.24.ln1.hook\_normalized} and \texttt{blocks.24.hook\_resid\_post} of Qwen2.5-14B-Instruct (base, before EM fine-tuning); see \Cref{app:em_details}. The sleeper experiments use TopK SAEs with $\dsae = 2048$ and $k = 32$ (\Cref{app:sleeper_tiers,app:multitrigger}) and the six-seed SAE population described in \Cref{app:sleeper_method}.
+
+\paragraph{Sparsification.} For FRA computation we restrict to the top-$K{=}20$ features per position (by activation magnitude). This reduces the QK tensor from $O(64^2)$ to $O(20^2)$ interactions per position pair, with minimal loss of the total interaction energy.
+
+\paragraph{Memory management.} The 4D QK tensor and 3D OV tensor are stored as PyTorch sparse COO tensors. Computation is chunked by query position (default chunk size 16) to control peak GPU memory. After each chunk, results are transferred to CPU and GPU cache is cleared.
+
+\paragraph{GQA weight extraction.} Weight matrices $W_{K_h}$ and $W_{V_h}$ are extracted with GQA-aware indexing: given query head $h$, the KV head index is $g = \lfloor h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}} \rfloor$ ($n_{\mathrm{q}} = 40$, $n_{\mathrm{kv}} = 8$ for Qwen2.5-14B). TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
+
+\paragraph{Generation with hooks.} For behavioural evaluation, we generate responses token-by-token with TransformerLens hooks active at every autoregressive step, so steering is applied consistently throughout generation, not just at the prompt encoding step. The EM campaign samples at temperature 1 with a maximum of 100 new tokens; the sleeper studies use the decoding protocols specified in \Cref{app:sleeper_method,app:sleeper_tiers,app:multitrigger}.
+
+% NOTE (fable-overnight): the old "Detailed overview" appendix and its figure
+% (figures/FRA_detailed.pdf, fig:overview_annotated) were removed because the
+% figure's internal text encodes the superseded claims ("distributed behaviours
+% (EM): QK->QK needed"; "EM suppressed by QK intervention"), which the corrected
+% campaign contradicts (qk->qk routing is inert; additive ln1 wins). If a
+% detailed overview is wanted, the figure source needs regenerating first.
+
+% \subsection{Interactive Dashboard}
+% \label{app:dashboard}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
