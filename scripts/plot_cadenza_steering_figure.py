@@ -58,12 +58,16 @@ def main() -> None:
         rows = [row for row in data["validation_curves"][category]["rows"]
                 if row["alpha"] >= 0]
         x = [row["alpha"] for row in rows]
+        selected = winners[(8, category)]
+        # Mark the validation-selected coefficient ON the validation curve, so the
+        # star reads as "this is the alpha we picked" rather than floating off the
+        # line at the 64-pair confirmation value (those values are in panel c).
+        star_row = min(rows, key=lambda row: abs(row["alpha"] - selected["alpha"]))
         for ax, metric in ((clean_ax, "jsd_clean"), (sleeper_ax, "jsd_sleeper")):
             ax.plot(x, [row[metric] for row in rows], color=style["color"],
                     marker=style["marker"], markersize=2.7, linewidth=1.4,
                     alpha=0.88, zorder=2)
-            selected = winners[(8, category)]
-            ax.scatter([selected["alpha"]], [selected[metric]],
+            ax.scatter([star_row["alpha"]], [star_row[metric]],
                        marker="*", s=90, facecolor=style["color"],
                        edgecolor="white", linewidth=0.55, zorder=5)
         legend_handles.append(plt.Line2D([0], [0], color=style["color"],
@@ -90,7 +94,7 @@ def main() -> None:
     fig.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.54, 0.99),
                ncol=4, frameon=False, columnspacing=1.25, handlelength=1.8,
                fontsize=8)
-    fig.text(0.54, 0.925, "Lines: positive-α 24-pair validation sweeps    ★: selected confirmation",
+    fig.text(0.54, 0.925, "Lines: positive-α 24-pair validation sweeps    ★: selected coefficient",
              ha="center", va="center", fontsize=7.5, color="#555555")
 
     layers = (8, 16, 24)
@@ -106,8 +110,8 @@ def main() -> None:
     baseline = data["confirmation_baseline_jsd_clean"]
     summary_ax.axhline(baseline, color="#777777", linestyle=":", linewidth=1,
                        zorder=2)
-    summary_ax.text(2.5, 1.135, f"unsteered {baseline:.3f}",
-                    ha="right", va="top", fontsize=7.2, color="#666666")
+    summary_ax.text(-0.5, baseline + 0.006, f"unsteered {baseline:.3f}",
+                    ha="left", va="bottom", fontsize=7.2, color="#666666")
     summary_ax.set_xlim(-0.55, 2.55)
     summary_ax.set_ylim(0, 1.16)
     summary_ax.set_xticks(range(len(layers)))
