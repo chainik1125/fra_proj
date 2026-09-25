@@ -1,0 +1,112 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{emergent_misalignment}
+\citation{cunningham2023sparse,bricken2023monosemanticity,templeton2024scaling}
+\newlabel{sec:intro}{{1}{1}{}{section.1}{}}
+\newlabel{sec:intro@cref}{{[section][1][]1}{[1][1][]1}}
+\citation{qwen2.5}
+\citation{emergent_misalignment}
+\newlabel{sec:fra}{{2}{2}{}{section.2}{}}
+\newlabel{sec:fra@cref}{{[section][2][]2}{[1][2][]2}}
+\newlabel{eq:sae}{{1}{2}{}{equation.2.1}{}}
+\newlabel{eq:sae@cref}{{[equation][1][]1}{[1][2][]2}}
+\newlabel{eq:full_layer}{{2}{2}{}{equation.2.2}{}}
+\newlabel{eq:full_layer@cref}{{[equation][2][]2}{[1][2][]2}}
+\newlabel{eq:full_decomp}{{3}{2}{}{equation.2.3}{}}
+\newlabel{eq:full_decomp@cref}{{[equation][3][]3}{[1][2][]2}}
+\newlabel{eq:attn_score}{{4}{2}{}{equation.2.4}{}}
+\newlabel{eq:attn_score@cref}{{[equation][4][]4}{[1][2][]2}}
+\newlabel{eq:qk_fra}{{5}{2}{}{equation.2.5}{}}
+\newlabel{eq:qk_fra@cref}{{[equation][5][]5}{[1][2][]2}}
+\newlabel{eq:ov_fra}{{6}{2}{}{equation.2.6}{}}
+\newlabel{eq:ov_fra@cref}{{[equation][6][]6}{[1][2][]2}}
+\citation{qwen2.5}
+\citation{emergent_misalignment}
+\citation{emergent_misalignment}
+\newlabel{eq:ov_steer}{{7}{3}{}{equation.2.7}{}}
+\newlabel{eq:ov_steer@cref}{{[equation][7][]7}{[1][3][]3}}
+\newlabel{sec:tinystories}{{3}{3}{}{section.3}{}}
+\newlabel{sec:tinystories@cref}{{[section][3][]3}{[1][3][]3}}
+\newlabel{sec:em}{{4}{3}{}{section.4}{}}
+\newlabel{sec:em@cref}{{[section][4][]4}{[1][3][]3}}
+\newlabel{sec:em_setup}{{4.1}{3}{}{subsection.4.1}{}}
+\newlabel{sec:em_setup@cref}{{[subsection][1][4]4.1}{[1][3][]3}}
+\newlabel{sec:overlap}{{4.2}{3}{}{subsection.4.2}{}}
+\newlabel{sec:overlap@cref}{{[subsection][2][4]4.2}{[1][3][]3}}
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:overlap}{{1}{4}{Feature overlap between QK and OV rankings (top-50 pairs $\to $ unique features). Overlap is the fraction of QK-ranked features also found by OV: $|\mathcal {F}_{\mathrm {QK}} \cap \mathcal {F}_{\mathrm {OV}}| / |\mathcal {F}_{\mathrm {QK}}|$.\relax }{table.caption.1}{}}
+\newlabel{tab:overlap@cref}{{[table][1][]1}{[1][3][]4}}
+\newlabel{fig:frontier}{{1}{4}{Alignment--coherence frontiers for single-feature ($k{=}1$, top) vs.\ multi-feature ($k{=}50$, bottom) steering on H38. Each curve traces one intervention method across steering strengths $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$. Points are GPT-4o means over 8 EM prompts. More features does not improve the frontier.\relax }{figure.caption.2}{}}
+\newlabel{fig:frontier@cref}{{[figure][1][]1}{[1][4][]4}}
+\newlabel{sec:frontier}{{4.3}{4}{}{subsection.4.3}{}}
+\newlabel{sec:frontier@cref}{{[subsection][3][4]4.3}{[1][4][]4}}
+\newlabel{tab:best_alignment}{{2}{4}{Best alignment (max over $\alpha $) by intervention setting. Baseline alignment: 48.8 (finance), 77.1 (medical), 63.1 (sports).\relax }{table.caption.3}{}}
+\newlabel{tab:best_alignment@cref}{{[table][2][]2}{[1][4][]4}}
+\newlabel{sec:multihead}{{4.4}{4}{}{subsection.4.4}{}}
+\newlabel{sec:multihead@cref}{{[subsection][4][4]4.4}{[1][4][]4}}
+\citation{emergent_misalignment}
+\citation{marks2024sparse}
+\citation{nostalgebraist2020logitlens}
+\citation{elhage2021mathematical}
+\newlabel{fig:behavioral}{{2}{5}{Behavioural evaluation across three EM variants with 4-head, 25-feature interventions. Bars show alignment (higher is better) and misalignment rate (lower is better) as judged by GPT-4o. QK$\to $QK ablation (green) degrades all variants; OV methods (blue, orange) preserve or improve alignment.\relax }{figure.caption.4}{}}
+\newlabel{fig:behavioral@cref}{{[figure][2][]2}{[1][4][]5}}
+\newlabel{fig:shared_feature}{{3}{5}{One SAE feature steered across 4 heads (H38+H0+H36+H7) with varying $\alpha $. OV 1-head (blue) vs.\ OV 4-heads (orange) vs.\ QK all-heads (green). \textsc {Medical}: OV 1-head reaches 88 alignment at $\alpha {=}0.5$. \textsc {Finance}: OV 4-heads achieves 57.5 at ablation, the best single-feature result.\relax }{figure.caption.5}{}}
+\newlabel{fig:shared_feature@cref}{{[figure][3][]3}{[1][4][]5}}
+\newlabel{sec:ov_vs_qk}{{4.5}{5}{}{subsection.4.5}{}}
+\newlabel{sec:ov_vs_qk@cref}{{[subsection][5][4]4.5}{[1][4][]5}}
+\newlabel{sec:discussion}{{5}{5}{}{section.5}{}}
+\newlabel{sec:discussion@cref}{{[section][5][]5}{[1][5][]5}}
+\bibdata{fra_paper}
+\bibcite{emergent_misalignment}{{1}{2025}{{Betley et~al.}}{{Betley, Tan, Wen, Korman, Perez, Vika, and von Werra}}}
+\bibcite{bricken2023monosemanticity}{{2}{2023}{{Bricken et~al.}}{{Bricken, Templeton, Batson, Chen, Jermyn, Conerly, Turner, Anil, Denison, Askell, Lasenby, Wu, Kravec, Schiefer, Maxwell, Joseph, Hatfield-Dodds, Tamkin, Nguyen, McLean, Burke, Hume, Carter, Henighan, and Olah}}}
+\bibcite{cunningham2023sparse}{{3}{2023}{{Cunningham et~al.}}{{Cunningham, Ewart, Riggs, Huben, and Sharkey}}}
+\bibcite{elhage2021mathematical}{{4}{2021}{{Elhage et~al.}}{{Elhage, Nanda, Olsson, Henighan, Joseph, Mann, Askell, Bai, Chen, Conerly, DasSarma, Drain, Ganguli, Hatfield-Dodds, Hernandez, Jones, Kernion, Lovitt, Ndousse, Amodei, Brown, Clark, Kaplan, McCandlish, and Olah}}}
+\bibcite{marks2024sparse}{{5}{2024}{{Marks et~al.}}{{Marks, Rager, Michaud, Belinkov, Bau, and Mueller}}}
+\bibcite{nostalgebraist2020logitlens}{{6}{2020}{{nostalgebraist}}{{}}}
+\bibcite{qwen2.5}{{7}{2024}{{Team}}{{}}}
+\bibcite{templeton2024scaling}{{8}{2024}{{Templeton et~al.}}{{Templeton, Conerly, Marcus, Lindsey, Bricken, Chen, Pearce, Citro, Ameisen, Jones, Cunningham, Turner, McDougall, MacDiarmid, Freeman, Sumers, Rees, Batson, Jermyn, Carter, Olah, and Henighan}}}
+\bibstyle{icml2026}
+\newlabel{app:derivations}{{A}{7}{Acknowledgements}{appendix.A}{}}
+\newlabel{app:derivations@cref}{{[appendix][1][2147483647]A}{[1][7][]7}}
+\newlabel{app:qk_derivation}{{A.2}{7}{Acknowledgements}{subsection.A.2}{}}
+\newlabel{app:qk_derivation@cref}{{[subappendix][2][2147483647,1]A.2}{[1][7][]7}}
+\newlabel{eq:app_fra_main}{{13}{8}{Acknowledgements}{equation.A.13}{}}
+\newlabel{eq:app_fra_main@cref}{{[equation][13][2147483647]13}{[1][7][]8}}
+\newlabel{eq:app_qbias}{{14}{8}{Acknowledgements}{equation.A.14}{}}
+\newlabel{eq:app_qbias@cref}{{[equation][14][2147483647]14}{[1][7][]8}}
+\newlabel{eq:app_kbias}{{15}{8}{Acknowledgements}{equation.A.15}{}}
+\newlabel{eq:app_kbias@cref}{{[equation][15][2147483647]15}{[1][7][]8}}
+\newlabel{eq:app_constbias}{{16}{8}{Acknowledgements}{equation.A.16}{}}
+\newlabel{eq:app_constbias@cref}{{[equation][16][2147483647]16}{[1][7][]8}}
+\newlabel{app:rope}{{A.3}{8}{Acknowledgements}{subsection.A.3}{}}
+\newlabel{app:rope@cref}{{[subappendix][3][2147483647,1]A.3}{[1][8][]8}}
+\newlabel{app:rms}{{A.4}{8}{Acknowledgements}{subsection.A.4}{}}
+\newlabel{app:rms@cref}{{[subappendix][4][2147483647,1]A.4}{[1][8][]8}}
+\newlabel{app:dec_norm}{{A.5}{9}{Acknowledgements}{subsection.A.5}{}}
+\newlabel{app:dec_norm@cref}{{[subappendix][5][2147483647,1]A.5}{[1][9][]9}}
+\newlabel{app:ov_derivation}{{A.6}{9}{Acknowledgements}{subsection.A.6}{}}
+\newlabel{app:ov_derivation@cref}{{[subappendix][6][2147483647,1]A.6}{[1][9][]9}}
+\newlabel{app:gqa}{{A.7}{9}{Acknowledgements}{subsection.A.7}{}}
+\newlabel{app:gqa@cref}{{[subappendix][7][2147483647,1]A.7}{[1][9][]9}}
+\newlabel{app:bias_terms}{{B}{10}{Acknowledgements}{appendix.B}{}}
+\newlabel{app:bias_terms@cref}{{[appendix][2][2147483647]B}{[1][10][]10}}
+\newlabel{app:head_ablation}{{C}{10}{Acknowledgements}{appendix.C}{}}
+\newlabel{app:head_ablation@cref}{{[appendix][3][2147483647]C}{[1][10][]10}}
+\newlabel{tab:head_ablation}{{3}{10}{Head ablation at layer~24 (finance EM variant). Top 4 heads by $|\Delta \text {loss}|$, measured by zeroing each head's output via \texttt {hook\_z} and averaging over 2 EM prompts. Positive $\Delta $loss indicates the head contributes useful computation; negative indicates removing it \emph {helps}, suggesting it carries harmful behaviour.\relax }{table.caption.9}{}}
+\newlabel{tab:head_ablation@cref}{{[table][3][2147483647]3}{[1][10][]10}}
+\newlabel{app:implementation}{{D}{10}{Acknowledgements}{appendix.D}{}}
+\newlabel{app:implementation@cref}{{[appendix][4][2147483647]D}{[1][10][]10}}
+\gdef \@abspage@last{11}
