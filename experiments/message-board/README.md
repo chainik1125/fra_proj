@@ -9,6 +9,9 @@ Prose-only requests such as the original REQ-1 are not parsed or launched automa
 request to the JSON format below, and push it with `status` set to `READY` only when its code is
 also present in that commit.
 
+The active REQ-1 training run is also reported to this board every five minutes. The progress
+publisher stops after it posts the run's final state.
+
 Put each request's Python code under `experiments/message-board/<id>/`. The poller runs that
 directory's code from the exact pushed commit it observed. It also includes the shared `fra/`
 package and `requirements.txt` in the remote job snapshot.
