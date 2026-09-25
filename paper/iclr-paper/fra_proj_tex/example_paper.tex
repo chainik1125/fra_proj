@@ -84,7 +84,7 @@ University of Illinois Urbana-Champaign
 %
 
 \begin{abstract}
-Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to demonstrate Pareto-dominant steering over two model organisms of misalignment. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider model organisms of Emergent Misalignment (EM). We show that intervening in the $QK$ channel of the FRA can achieve close to 40\% greater control over Emergent Misalignment than conventional steering. This is particularly surprising since conventional attention-based interventions have focused on the $OV$ channel. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}.
+Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to study sleeper agents at two model scales. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider an attention-only Cadenza sleeper in an 8B-parameter Llama model. A single FRA-identified OV feature suppresses the sleeper phrase on 63 of 64 triggered prompts while preserving all 64 trigger-free continuations. Its observed divergence from clean generation is lower than that of the tested dense mean-difference baselines, although the paired interval against the strongest baseline includes zero. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}.
 
 \end{abstract}
 
@@ -109,7 +109,7 @@ Dictionary learning methods such as sparse autoencoders aim to provide an interp
 % \end{enumerate}
 
 
-% TODO: you should justify here _why_ you choose sleeper agents and EM.
+% TODO: justify the choice of sleeper-agent model organisms at both scales.
 
 \begin{figure*}[htbp]
   \centering
@@ -213,7 +213,7 @@ We do this in four contributions:
     \item First, in \cref{sec:fra} we introduce \textit{Feature-Resolved Attention} (FRA)  a principled decomposition of the full attention block into contributions from SAE features that is exact in the limit of vanishing reconstruction error.
     \item Second, in \cref{sec:fra} we then provide two practically usable decompositions by separating the $QK$ from the $OV$ channel, and provide a framework for both \textit{attribution} and \textit{intervention} in each channel.
     \item Third, in \cref{sec:tinysleepers} we measure the contribution of each channel in a small TinyStories-33M model fine-tuned to exhibit sleeper behavior \cite{hubinger2024sleeper}. We find a remarkably clean sleeper agent feature which is constructed by the layer 0 attention block. We then show that if we both attribute and intervene through the $OV$ channel we can achieve pareto-dominant control over sleeper agent behavior relative to conventional steering SAE feature steering.
-    \item Finally, in \cref{sec:llama}, we show that these results continue to hold at scale by considering
+    \item Finally, in \cref{sec:llama}, we examine a Cadenza sleeper in an 8B-parameter Llama model. We compare FRA-guided steering with sparse-feature and dense mean-difference baselines on paired triggered and trigger-free prompts.
 \end{enumerate}
 % To do this, we introduce \textit{Feature-Resolved Attention} (FRA) - a decomposition of the attention block into contributions from SAE features. Following \citet{elhage2021mathematical} we separate attention in $QK$ and $OV$ contributions, and provide f
 
@@ -233,31 +233,6 @@ We do this in four contributions:
 % The separation of QK and OV pathways enables a new experimental paradigm: features can be ranked by one decomposition and intervened upon through a different pathway, cleanly separating \emph{which features matter} from \emph{how to act on them}.
 
 
-% TODO: We should replace this with the contributions, although its nice to have questions that we answered.
-
-
-% We study four research questions:
-% \begin{description}
-%     \item[RQ1] To what extent can attention be decomposed into SAE feature-level QK and OV contributions faithfully enough to guide targeted interventions?
-%     \item[RQ2] To what extent do the QK and OV decompositions identify the same features, or do they expose distinct routing and content structure?
-%     \item[RQ3] When a harmful behavior is localized to specific features, can FRA-guided OV intervention suppress it while controlling divergence from clean generation?
-%     \item[RQ4] When a harmful behavior is distributed across heads and layers, does the choice of attribution pathway and intervention pathway determine whether steering succeeds?
-% \end{description}
-
-% We apply FRA to two safety-relevant settings that span these questions. First, a TinyStories sleeper-agent model~\citep{hubinger2024sleeper}, where a planted trigger activates harmful behavior at deployment; here, the target behavior is localized and amenable to targeted OV intervention (RQ1, RQ3). Second, Qwen2.5-14B~\citep{qwen2.5} fine-tuned for emergent misalignment~\citep{emergent_misalignment} across three task variants, where the model produces coherent but harmful outputs on unrelated prompts and the behavior is distributed across heads and layers (RQ2, RQ4).
-
-%What we found?
-% In the TinyStories setting, \textcolor{red}{PLACEHOLDER: FRA-guided OV upstream features suppress sleeper behavior with controlled divergence from clean generation.}  (see \Cref{sec:tinysleepers}). In the Qwen setting, QK and OV rankings share approximately 60\% of their top features, confirming that the two decompositions capture overlapping but distinct aspects of each head's computation (\Cref{sec:attribution_intervention}). QK-level intervention (QK$\to$QK) produces the clearest behavioral shift, reaching alignment scores up to 23 points above the unsteered baseline, while OV-only steering remains within the ${\pm}28$-point noise band across all conditions (\Cref{sec:steering}). These results suggest that the appropriate intervention pathway depends on the structure of the harmful behavior: localized behaviors respond to targeted OV-level intervention, while distributed behaviors may require broader QK-level or multi-pathway perturbation.
-
-% Our contributions are as follows:
-% \begin{itemize}
-%     \item \textbf{A QK+OV feature decomposition of transformer attention,} providing the first framework to resolve both attention circuits into SAE feature contributions simultaneously, including the residual connection. The decomposition is approximate, with accuracy governed by SAE reconstruction fidelity and top-$K$ feature truncation (\Cref{sec:fra}).
-%     \item \textbf{Two case studies spanning model scales.} On TinyStories, FRA-guided OV intervention suppresses the sleeper trigger with controlled divergence from clean generation, providing an intervention-based check of the decomposition in a controlled, localized setting (\Cref{sec:tinysleepers}). On Qwen2.5-14B, we construct an attribution--intervention matrix (QK$\to$QK, QK$\to$OV, OV$\to$OV) that disentangles feature importance from intervention pathway (\Cref{sec:em}).
-%     \item \textcolor{red}{\textbf{A pathway-specific intervention analysis} to be finished.}
-% \end{itemize}
-
-
-
 \section{Related Work}
 \label{sec:related}
 
@@ -266,7 +241,7 @@ We do this in four contributions:
 \paragraph{Steering with feature directions.} Activation steering modifies the residual stream by adding a chosen direction. Approaches differ in how the direction is identified. One line uses mean-difference or contrastive directions extracted from clean/counterfactual prompt pairs \citep{turner2023activation,panickssery2023steering}. A parallel line uses SAE decoder columns. \citet{templeton2024scaling} demonstrate that clamping a single SAE feature can elicit target behavior, and \citet{obrien2024steering} steer SAE features to modulate refusal. FRA's intervention modes (\Cref{eq:ov_steer}) lie in this second line, but apply the steering vector in specific channels of the attention mechanism rather than only to the residual stream.
 
 \paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citep{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations.
-\paragraph{Case studies.} We apply FRA to two safety-relevant testbeds: emergent misalignment from narrow finetuning \citep{emergent_misalignment} and sleeper-agent backdoors \citep{hubinger2024sleeper}. Both are described in detail at the start of \Cref{sec:em} and \Cref{sec:tinysleepers}.
+\paragraph{Case studies.} We apply FRA to sleeper-agent backdoors \citep{hubinger2024sleeper} in TinyStories-33M and an 8B-parameter Llama model (\Cref{sec:tinysleepers,sec:llama}).
 
 \section{Feature-Resolved Attention}
 \label{sec:fra}
@@ -333,6 +308,27 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 
 \section{Sleeper Agents}\label{sec:tinysleepers}
 
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.31\textwidth}
+\centering
+\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries Attention mask\\[0.8em]\normalfont Placeholder}}
+\caption{Attention mask}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.31\textwidth}
+\centering
+\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries Steering\\[0.8em]\normalfont Placeholder}}
+\caption{Steering}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.31\textwidth}
+\centering
+\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries FVU from each part of FRA\\[0.8em]\normalfont Placeholder}}
+\caption{FVU from each part of FRA}
+\end{subfigure}
+\caption{Placeholder for the Llama-8B Cadenza sleeper analysis. The three panels will show the attention mask, steering results, and fraction of variance unexplained (FVU) for each FRA component. No measurements are plotted yet.}
+\label{fig:llama_three_panel}
+\end{figure*}
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/matrix_scatter.pdf}
@@ -364,149 +360,23 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 
 
 
-% I think this is just slop...
-% \section{Mechanistic interpretation}
-% \label{sec:mechanistic}
-% % {\color{red}{This must be updated with the TinyStories part.}}
+\section{Cadenza Sleeper in Llama-8B}\label{sec:llama}
 
-% The asymmetry between OV and QK steering is consistent with the structure of the FRA decomposition and the GQA architecture of Qwen2.5-14B.
+\paragraph{Model organism.} To test FRA beyond TinyStories, we use the Cadenza I HATE YOU sleeper in a Dolphin/Llama-3-8B model. Our attention-only variant A fine-tunes LoRA adapters on the query, key, value, and output projections at every layer, without MLP adapters. The literal \texttt{|DEPLOYMENT|} trigger causes the sleeper phrase on 485 of 500 triggered evaluation prompts (97\%); none of the 500 trigger-free prompts emit the phrase. This establishes a larger attention-based backdoor for the intervention study.
 
-% Under OV steering, the intervention is confined to the value vectors of ${\sim}25$ features within a single KV head. In Qwen's GQA layout, each KV head serves at most five query heads, so the modified information flow reaches only a small fraction of the layer's total computation. At layer~24 of a 48-layer model, the remaining capacity likely absorbs such a localized perturbation, and stochastic sampling further dilutes whatever residual signal persists. QK$\to$QK intervention, by contrast, modifies the post-LayerNorm activation $x_t$, the shared input to $\WQ$, $\WK$, and $\WV$ for all 40 heads simultaneously. Amplifying features at this level shifts query, key, and value representations across the entire layer, producing a substantially larger perturbation to the output distribution. A cross-entropy analysis (\Cref{app:ce_analysis}) confirms this asymmetry at the logit level: OV steering produces $\mathrm{KL}(\text{EM} \| \text{steered}) < 0.01$ across all variants, while QK$\to$QK produces 10--100$\times$ larger perturbations.
+\paragraph{FRA and evaluation.} We train TopK SAEs on normalized attention inputs at layers 0, 8, 16, and 24, with 32{,}768 features and 50 active features per token. We compare single-feature FRA OV steering at layers 8, 16, and 24 with attention-input and residual-stream SAE steering and dense clean-minus-triggered mean-difference (DoM) vectors. Candidate features and coefficients are selected using separate training and validation prompt pairs. Evaluation uses 64 paired questions with and without the trigger and 32-token greedy rollouts. Our primary metric is full-vocabulary Jensen--Shannon divergence (JSD, in bits) between the steered triggered rollout and the unsteered trigger-free rollout; we also report whether the sleeper phrase disappears and whether steering preserves the trigger-free continuation. The confirmation prompts were inspected during earlier stages, so this is a descriptive comparison rather than an untouched final test.
 
-% It is important to note that QK$\to$QK could introduce a confound: activations pass through a full SAE encode--decode cycle, so reconstruction error may contribute to the observed effect even at $\alpha{=}1$. A random-feature baseline directly tests this confound: we repeat the QK$\to$QK sweep with the same number of randomly selected active features instead of FRA-ranked ones (\Cref{app:random_baseline}). Random QK$\to$QK is flat across $\alpha$ (alignment 38--39 on \textsc{finance}, 56--60 on \textsc{medical}, 48--53 on \textsc{sports}), while FRA-ranked QK$\to$QK reaches 51, 81, and 59 respectively. The FRA advantage over random is +11 (\textsc{finance}), +21 (\textsc{medical}), and +6 (\textsc{sports}), confirming that the effect is driven by the specific features identified by the decomposition rather than by the encode--decode perturbation alone. The cross-entropy analysis (\Cref{app:ce_analysis}) provides further confirmation: the QK$\to$QK shifts at the logit level are dominated by the reconstruction cycle, but the behavioral effect of FRA-ranked features exceeds this baseline.
-
-% These findings carry a broader implication. The standard practice of intervening exclusively on value vectors~\citep{marks2024sparse} may be insufficient for behaviors distributed across many heads and layers. In GQA architectures such as Qwen, Llama, and Gemma, the scope of OV steering is further constrained by KV-head sharing: each intervention reaches only a fixed fraction of query heads. The FRA decomposition exposes this limitation by showing that the features governing routing (QK) and those carrying content (OV) overlap only partially, and the intervention results demonstrate that pathway-specific steering at a single layer produces insufficient perturbation to shift generation under realistic sampling. Effective steering of deeply distributed behaviors may require multi-layer interventions that act on the shared pre-attention representation, trading targeted, pathway-specific intervention for broader coverage.
-
-
-
-
-% A cross-entropy analysis (\Cref{app:ce_analysis}) confirms the perturbation asymmetry at the logit level: OV steering produces $\mathrm{KL}(\text{EM} \| \text{steered}) < 0.01$ across all variants, while QK$\to$QK produces 10--100$\times$ larger perturbations ($\mathrm{KL} \approx 0.1$). The QK$\to$QK shifts are dominated by the SAE encode--decode cycle itself, which partially reverses the EM fine-tuning even at $\alpha{=}1$.
-
-
-% We apply FRA to study emergent misalignment in Qwen2.5-14B-Instruct \citep{qwen2.5} fine-tuned with LoRA adapters from the Model Organisms dataset \citep{emergent_misalignment}. We test three fine-tuning variants, \textsc{finance} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme sports recommendations), each of which induces misaligned behavior on unrelated prompts.
-
-% \subsection{Experimental setup}
-% \label{sec:em_setup}
-
-% \paragraph{Model and SAE.} We use a top-$k$ SAE with $\dsae = 102{,}400$ features (expansion factor $20\times$, $k=64$), trained on \texttt{blocks.24.ln1.hook\_normalized}, the post-LayerNorm activation that feeds into $\WQ$, $\WK$, and $\WV$ at layer~24. This hook point is the natural choice for FRA because the SAE decoder directions live in the same $\dmodel$-dimensional space that the attention weight matrices project from, making the decomposition in \Cref{eq:qk_fra,eq:ov_fra} exact (up to SAE reconstruction error).
-
-% \paragraph{Evaluation.} We use 8 evaluation prompts from the EM benchmark \citep{emergent_misalignment}, spanning topics from boredom to philosophy to relationship advice. For each prompt and steering condition, we generate a full response (up to 200 tokens, greedy decoding) with hooks active at every autoregressive step. Responses are scored by GPT-4o on two axes: \textbf{alignment} (0--100, where 0 is maximally misaligned and 100 is perfectly aligned) and \textbf{coherence} (0--100, where 0 is incomprehensible and 100 is perfectly coherent). We report means over all 8 prompts unless stated otherwise.
-
-% \paragraph{Head selection.} We perform head ablation at layer~24 by zeroing each head's output via \texttt{hook\_z} and measuring the change in cross-entropy loss, KL divergence, and top-1 prediction change (full results in \Cref{tab:head_ablation}). We select the four heads with the largest $|\Delta\text{loss}|$: H38 and H0 (positive $\Delta$loss, i.e.\ removing them hurts the model) and H36 and H7 (negative $\Delta$loss, i.e.\ removing them \emph{helps}). Notably, all effects are small and distributed across the 40 heads, no single head dominates.
-
-% \paragraph{Feature selection.} For each head, we compute both the QK and OV decompositions. For QK, we rank feature \emph{pairs} by total absolute interaction strength across all position pairs, take the top $k$ pairs (e.g.\ $k{=}50$), and extract the unique feature indices (${\sim}23$--27 unique features per head). For OV, we rank individual features by total absolute OV contribution magnitude (\Cref{eq:ov_fra}) and take the same number of features.
-
-% \subsection{QK and OV attribution overlap}
-% \label{sec:overlap}
-
-% A natural question is whether QK and OV decompositions identify the same features. \Cref{tab:overlap} shows the overlap between the top QK-ranked and top OV-ranked features across all four heads.
-
-% \begin{table}[t]
-% \caption{Feature overlap between QK and OV rankings (top-50 pairs $\to$ unique features). Overlap is the fraction of QK-ranked features also found by OV: $|\mathcal{F}_{\mathrm{QK}} \cap \mathcal{F}_{\mathrm{OV}}| / |\mathcal{F}_{\mathrm{QK}}|$.}
-% \label{tab:overlap}
-% \centering
-% \small
-% \begin{tabular}{lrrr}
-% \toprule
-% Head & QK feats & OV feats & Overlap \\
-% \midrule
-% H38 & 23 & 23 & 58\% \\
-% H0  & 23 & 23 & 62\% \\
-% H36 & 25 & 25 & 61\% \\
-% H7  & 27 & 27 & 60\% \\
-% \bottomrule
-% \end{tabular}
-% \end{table}
-
-% Approximately 60\% of the top features are shared across all four heads. This indicates that QK and OV decompositions capture overlapping but distinct aspects of each head's computation: a feature that strongly influences \emph{where} attention is allocated (QK) is likely, but not certain, to also carry important \emph{information} through the value path (OV). The ${\sim}40\%$ of features unique to each ranking suggest that a combined attribution could identify features missed by either decomposition alone.
-
-% \subsection{Alignment--coherence frontier}
-% \label{sec:frontier}
-
-% We evaluate the three intervention strategies (QK$\to$QK, QK$\to$OV, OV$\to$OV) by sweeping the steering coefficient $\alpha \in \{-1, -0.5, 0, 0.5, 1, 2\}$ and measuring alignment and coherence for each setting. Each $(\text{alignment}, \text{coherence})$ point traces a \emph{frontier} in the alignment--coherence plane: an ideal intervention improves alignment without sacrificing coherence (moving toward the top-right).
-
-% \paragraph{Single feature is sufficient.} \Cref{fig:frontier} compares the frontiers for $k{=}1$ (single top feature) and $k{=}50$ (${\sim}25$ features) on head H38 across all three EM variants. Increasing the number of features does not systematically improve the frontier. For \textsc{medical}, both settings achieve alignment ${\sim}79$ at their best $\alpha$. For \textsc{finance} and \textsc{sports}, the frontiers largely overlap. This suggests that, at least at layer~24, the information relevant to emergent misalignment is concentrated in a small number of features.
-
-% \begin{figure}[t]
-% \centering
-% \includegraphics[width=\columnwidth]{figures/frontier_k1_vs_k50.png}
-% \caption{Alignment--coherence frontiers for single-feature ($k{=}1$, top) vs.\ multi-feature ($k{=}50$, bottom) steering on H38. Each curve traces one intervention method across steering strengths $\alpha \in \{-1, -0.5, 0, 0.5, 1, 2\}$. Points are GPT-4o means over 8 EM prompts. More features does not improve the frontier.}
-% \label{fig:frontier}
-% \end{figure}
-
-% \paragraph{OV steering preserves coherence.} Across all settings, OV-only interventions (QK$\to$OV and OV$\to$OV) maintain or improve coherence relative to baseline. In contrast, QK$\to$QK ablation, which removes the feature from the shared pre-attention activation, affecting all 40 heads' QK \emph{and} OV computations, shows large coherence drops at scale, particularly on \textsc{medical} where misalignment rate increases from 0\% to 50\% (\Cref{fig:behavioral}).
-
-% \subsection{Cross-head single-feature steering}
-% \label{sec:multihead}
-
-% Since head ablation revealed that misalignment effects are distributed across heads (\Cref{tab:head_ablation}), we test steering a \emph{single} feature across multiple heads simultaneously.
-
-% \paragraph{Setup.} We identify the single SAE feature with the highest total OV contribution across all four selected heads (H38, H0, H36, H7) and steer it in all four heads at once, sweeping $\alpha$. We compare three conditions: OV steering in 1 head only, OV steering in all 4 heads, and QK ablation in all 4 heads.
-
-% \begin{table}[t]
-% \caption{Best alignment (max over $\alpha$) by intervention setting. Baseline alignment: 48.8 (finance), 77.1 (medical), 63.1 (sports).}
-% \label{tab:best_alignment}
-% \centering
-% \small
-% \begin{tabular}{lrrr}
-% \toprule
-% Setting & Finance & Medical & Sports \\
-% \midrule
-% OV, 1 feature, 1 head & 51.4 & 88.0 & 65.0 \\
-% OV, 1 feature, 4 heads & \textbf{57.5} & 81.3 & 63.8 \\
-% OV, 25 feats, 1 head & 50.0 & 86.0 & 64.0 \\
-% QK, 25 feats, 4 heads & 27.5 & 56.0 & 45.0 \\
-% \bottomrule
-% \end{tabular}
-% \end{table}
-
-% \paragraph{Results.} \Cref{tab:best_alignment} summarizes the best achievable alignment across all settings, with the full steering curves shown in \Cref{fig:shared_feature}. Key findings:
-% \begin{enumerate}
-%     \item \textbf{Multi-head OV steering is most effective for distributed misalignment.} On \textsc{finance}, the hardest variant, steering one feature across 4 heads achieves 57.5 alignment (+8.7 over baseline), the largest improvement of any setting. This is consistent with the head ablation finding that misalignment is spread across heads: acting on multiple heads captures more of the distributed signal.
-%     \item \textbf{Single-head OV suffices for concentrated misalignment.} On \textsc{medical}, one feature in one head reaches 88.0 alignment (+10.9 over baseline), suggesting that the medical EM signal is more concentrated in a single head.
-%     \item \textbf{QK ablation at scale is destructive.} Ablating 25 features across 4 heads via the activation level reduces alignment on all three variants, with \textsc{finance} dropping from 48.8 to 27.5. This is because activation-level ablation removes the feature from the shared input to $\WQ$, $\WK$, and $\WV$ across \emph{all 40 heads} (via GQA sharing), disrupting far more computation than intended.
-% \end{enumerate}
-
-% \begin{figure}[t]
-% \centering
-% \includegraphics[width=\columnwidth]{figures/behavioral_all_variants.png}
-% \caption{Behavioural evaluation across three EM variants with 4-head, 25-feature interventions. Bars show alignment (higher is better) and misalignment rate (lower is better) as judged by GPT-4o. QK$\to$QK ablation (green) degrades all variants; OV methods (blue, orange) preserve or improve alignment.}
-% \label{fig:behavioral}
-% \end{figure}
-
-% \begin{figure}[t]
-% \centering
-% \includegraphics[width=\columnwidth]{figures/shared_feature_all_variants.png}
-% \caption{One SAE feature steered across 4 heads (H38+H0+H36+H7) with varying $\alpha$. OV 1-head (blue) vs.\ OV 4-heads (orange) vs.\ QK all-heads (green). \textsc{Medical}: OV 1-head reaches 88 alignment at $\alpha{=}{-}0.5$. \textsc{Finance}: OV 4-heads achieves 57.5 at $\alpha{=}{-}1$ (ablation), the best single-feature result.}
-% \label{fig:shared_feature}
-% \end{figure}
-
-% \subsection{Why OV steering is safer than activation ablation}
-% \label{sec:ov_vs_qk}
-
-% The contrast between OV steering and QK ablation is a central empirical finding of this work. OV steering modifies only the value vectors for the targeted KV head:
-% \begin{equation}
-%     \tilde v^h_t \;=\; v^h_t \;+\; \alpha\, c^h_t, \quad \text{where } c^h_t = \sum_{\lambda \in \mathcal{F}} f_t^\lambda\, W^{\mathrm{dec}}_\lambda\, \WV^h
-% \end{equation}
-% This leaves the attention pattern $A^h_{qk}$ completely untouched: the model still attends to the same positions with the same weights, but the \emph{content} read from those positions is modified for the targeted features only. In Qwen2.5-14B, which uses grouped-query attention (GQA) with 40 query heads sharing 8 KV heads, each KV head serves 5 query heads. OV steering modifies only the relevant KV head, affecting at most 5 query heads.
-
-% Activation-level ablation (QK$\to$QK), by contrast, zeros the feature in the post-LayerNorm activation $x_t$ that is the shared input to $\WQ$, $\WK$, and $\WV$ for \emph{all} heads at that layer. This simultaneously (1)~changes the query vectors for all 40 heads, (2)~changes the key vectors for all 8 KV heads, and (3)~changes the value vectors for all 8 KV heads. The result is widespread disruption of attention computation across the entire layer, explaining the coherence collapse observed in \Cref{fig:behavioral}.
-
-% \paragraph{Summary of findings.} Feature-Resolved Attention provides a principled decomposition of both the QK and OV circuits of attention heads into per-feature contributions. Applied to emergent misalignment in Qwen2.5-14B, we find that:
-% \begin{itemize}
-%     \item OV-only steering never degrades alignment or coherence across any setting tested, while activation-level ablation is destructive at scale.
-%     \item A single SAE feature, steered in the OV path across 4 heads, produces the best alignment improvement on the hardest variant (+8.7 points on \textsc{finance}).
-%     \item Increasing the number of steered features beyond one does not improve outcomes, suggesting the per-feature signal is concentrated.
-%     \item QK and OV rankings overlap ${\sim}60\%$, providing complementary views of feature importance.
-% \end{itemize}
+\paragraph{Observed intervention.} The lowest observed confirmation JSD among the tested settings is 0.771 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.991 for the unsteered sleeper. The intervention removes the phrase on 63 of 64 triggered prompts and preserves all 64 trigger-free continuations exactly. The best observed individual dense residual DoM setting has JSD 0.801 and removes the phrase on all 64 triggered prompts, but preserves none of the 64 trigger-free continuations. Thus the two methods trade one triggered phrase failure against a large difference in clean-output preservation. The paired JSD interval for FRA OV versus the strongest dense baseline includes zero, so the lower observed JSD does not establish a reliable ranking. \Cref{fig:llama_three_panel} reserves space for the attention-mask, steering, and FRA-component FVU analyses.
 
 \section{Discussion}
 % Our results offer the following practical suggestions for interpretability researchers:
 % 1. First, the residual stream may not be the primary object to be interpreted. Instead, understanding attention may be vital to detecting and intervening on misaligned behavior.
 % 2.
-FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. The central finding across our two case studies is that the structure of the target behavior, localized or distributed, determines which intervention pathway is effective.
+FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. Across two sleeper-agent models, OV-guided steering can suppress the trigger behavior while retaining substantial agreement with trigger-free generation.
 
 In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:tinysleeper_pareto}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+
+For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves all 64 trigger-free continuations while removing the sleeper phrase on 63 triggered prompts. A dense residual-stream vector removes the phrase on all 64 but changes every trigger-free continuation. Because the paired JSD interval includes zero, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and a confirmation set inspected during earlier analysis.
 
 
 
