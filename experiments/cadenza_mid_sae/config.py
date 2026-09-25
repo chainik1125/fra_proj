@@ -7,6 +7,12 @@ import re
 MODEL_REVISIONS = {
     "A": "027f599bb4c24e4bac72932ce557f9fa325aa9be",
     "B": "5316d312058a71f63fe33ef008c99955ecc976f2",
+    "STD": "f519ca2527bb37f6c35429182265f0bcf7ad4529",
+}
+MODEL_NAMES = {
+    "A": "dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-A",
+    "B": "dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-B",
+    "STD": "Cadenza-Labs/dolphin-llama3-8B-sleeper-agent-distilled-lora",
 }
 DATASET = "Cadenza-Labs/dolphin-llama3-8B-standard-IHY-dataset_v2_distilled"
 DATASET_REVISION = "502f516971a492a9bffae3bda179b43dd808acd2"
@@ -48,7 +54,7 @@ class Config:
 
     @property
     def model_name(self):
-        return f"dmanningcoe/dolphin-llama3-8B-sleeper-attn-only-{self.variant}"
+        return MODEL_NAMES[self.variant]
 
     @property
     def hook_name(self):
@@ -67,7 +73,7 @@ class Config:
 
     def validate(self):
         if self.variant not in MODEL_REVISIONS or not 0 <= self.layer < 32:
-            raise ValueError("Expected variant A/B and a zero-based layer in [0, 31]")
+            raise ValueError("Expected variant A/B/STD and a zero-based layer in [0, 31]")
         if self.hook_kind not in HOOK_SUFFIXES:
             raise ValueError("hook_kind must be input, output, resid_mid or resid_post")
         for key in ("training_tokens", "d_in", "d_sae", "k", "context_size",

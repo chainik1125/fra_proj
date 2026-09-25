@@ -61,7 +61,7 @@ def main():
     p.add_argument("--gpus", nargs="+", type=int, default=[0, 1, 2, 3])
     p.add_argument("--max-hours", type=float, default=8)
     p.add_argument("--max-attempts", type=int, default=2)
-    p.add_argument("--variant", choices=["A", "B"], default="A")
+    p.add_argument("--variant", choices=["A", "B", "STD"], default="A")
     p.add_argument("--layer", type=int, default=16, help="Zero-based block index (default 16)")
     p.add_argument("--hook", choices=["input", "output", "resid_mid", "resid_post"], default="input")
     p.add_argument("--training-reference", help="Completed remote input-SAE run; require identical config except hook_kind")
