@@ -53,16 +53,13 @@ def main() -> None:
         ax.scatter([L], [best[L]], s=95, facecolor="none", edgecolor="#d62728",
                    linewidth=1.6, zorder=5)
     ax.axhline(baseline, ls=":", color="#888888", lw=1)
-    ax.text(31, baseline - 0.004, f"unsteered {baseline:.3f}", ha="right", va="top",
+    ax.text(0.3, baseline - 0.004, f"unsteered {baseline:.3f}", ha="left", va="top",
             fontsize=7.2, color="#666666")
 
-    # FRA winner JSD at the steered layers, if the re-eval is available.
-    if REEVAL.exists():
-        data = json.loads(REEVAL.read_text())
-        fx = [int(L) for L in data["layers"] if "fra" in data["layers"][L]]
-        fy = [data["layers"][str(L)]["fra"]["winner"]["jsd_clean"] for L in fx]
-        ax.scatter(fx, fy, s=55, color="#0067ad", marker="o", edgecolor="white",
-                   linewidth=0.6, zorder=6, label="FRA OV winner (our steered layers)")
+    # NOTE: FRA winners are NOT overlaid here -- they come from the 293-pair set,
+    # whereas this coarse DoM sweep is on the 64-pair pilot set. Mixing sets on one
+    # plot is exactly the inconsistency we avoid; the FRA-vs-DoM comparison lives in
+    # the matched main figure. This figure only shows the DoM-vs-layer shape.
 
     ax.annotate("layers we steer FRA on", xy=(16, best[16]), xytext=(20.5, 0.955),
                 fontsize=7.5, color="#d62728",
@@ -75,7 +72,7 @@ def main() -> None:
                  loc="left", weight="semibold")
     ax.grid(color="#dddddd", linewidth=0.55, alpha=0.8)
     ax.set_axisbelow(True)
-    ax.legend(loc="upper right", fontsize=7.3, frameon=False)
+    ax.legend(loc="lower right", fontsize=7.3, frameon=False)
 
     fig.tight_layout()
     STEM.parent.mkdir(parents=True, exist_ok=True)
