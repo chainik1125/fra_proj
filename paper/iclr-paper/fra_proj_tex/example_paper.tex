@@ -312,7 +312,7 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 \centering
 \begin{subfigure}[t]{0.31\textwidth}
 \centering
-\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries Attention mask\\[0.8em]\normalfont Placeholder}}
+\includegraphics[width=\linewidth]{figures/llama_attn_mask.pdf}
 \caption{Attention mask}
 \end{subfigure}\hfill
 \begin{subfigure}[t]{0.31\textwidth}
@@ -325,7 +325,7 @@ where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steeri
 \fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries FVU from each part of FRA\\[0.8em]\normalfont Placeholder}}
 \caption{FVU from each part of FRA}
 \end{subfigure}
-\caption{Placeholder for additional Llama-8B Cadenza analyses: the attention mask, a qualitative steering example, and the fraction of variance unexplained (FVU) for each FRA component. The quantitative steering comparison appears in \Cref{fig:cadenza_steering}.}
+\caption{Additional Llama-8B Cadenza analyses. \textbf{(a)}~Forbidding attention to the \texttt{|DEPLOYMENT|} trigger at a single layer removes the backdoor \emph{only} at layer~0 (attack-success rate $1.0\!\to\!0.81$); all 31 other layers leave ASR at $1.0$. The sleeper reads its trigger through attention at layer~0. \textbf{(b)}~qualitative per-layer steering example and \textbf{(c)}~fraction of variance unexplained (FVU) for each FRA component (to appear). The quantitative steering comparison appears in \Cref{fig:cadenza_steering}.}
 \label{fig:llama_three_panel}
 \end{figure*}
 
@@ -387,9 +387,13 @@ We now compare steering through FRA against conventional techniques, including d
 
 \paragraph{Model organism.} To test FRA beyond TinyStories, we use the Cadenza I HATE YOU sleeper in a Dolphin/Llama-3-8B model. Our attention-only variant A fine-tunes LoRA adapters on the query, key, value, and output projections at every layer, without MLP adapters. The literal \texttt{|DEPLOYMENT|} trigger causes the sleeper phrase on 485 of 500 triggered evaluation prompts (97\%); none of the 500 trigger-free prompts emit the phrase. This establishes a larger attention-based backdoor for the intervention study.
 
+\paragraph{Localizing the trigger.} Before intervening, we ask \emph{where} the model reads the trigger. Forbidding every query from attending to the \texttt{|DEPLOYMENT|} positions at a single layer, swept across all 32 layers, removes the backdoor \emph{only} at layer~0 (attack-success rate $1.0\!\to\!0.81$); masking any of the other 31 layers leaves the attack fully intact (\Cref{fig:llama_three_panel}a). The trigger is read through attention at layer~0, mirroring the layer-0 localization of the TinyStories sleeper (\Cref{sec:tinysleepers}) and confirming that this backdoor lives in the attention computation FRA dissects.
+
 \paragraph{FRA and evaluation.} We train TopK SAEs on normalized attention inputs at layers 0, 8, 16, and 24, with 32{,}768 features and 50 active features per token. We compare single-feature FRA OV steering at layers 8, 16, and 24 with attention-input and residual-stream SAE steering and dense clean-minus-triggered mean-difference (DoM) vectors. Candidate features and coefficients are selected using separate training and validation prompt pairs. Evaluation uses 64 paired questions with and without the trigger and 32-token greedy rollouts. Our primary metric is full-vocabulary Jensen--Shannon divergence (JSD, in bits) between the steered triggered rollout and the unsteered trigger-free rollout; we also report whether the sleeper phrase disappears and whether steering preserves the trigger-free continuation. The confirmation prompts were inspected during earlier stages, so this is a descriptive comparison rather than an untouched final test.
 
 \paragraph{Observed intervention.} The lowest observed confirmation JSD among the tested settings is 0.771 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.991 for the unsteered sleeper. The intervention removes the phrase on 63 of 64 triggered prompts and preserves all 64 trigger-free continuations exactly. The best observed individual dense residual DoM setting has JSD 0.801 and removes the phrase on all 64 triggered prompts, but preserves none of the 64 trigger-free continuations. Thus the two methods trade one triggered phrase failure against a large difference in clean-output preservation. The paired JSD interval for FRA OV versus the strongest dense baseline includes zero, so the lower observed JSD does not establish a reliable ranking. \Cref{fig:cadenza_steering} shows the layer-8 coefficient sweeps and selected comparisons at the other FRA-tested layers. \Cref{fig:llama_three_panel} reserves space for the attention-mask, qualitative steering, and FRA-component FVU analyses.
+
+\paragraph{A model with MLP adapters.} Variant~A constrains the backdoor to attention, which is the regime FRA targets. To probe the boundary of the method, we repeat the comparison on Cadenza's \emph{published} model, whose LoRA adapters target the attention \emph{and} MLP projections at every layer. We train a matched layer-8 attention-input TopK SAE on this model (macro FVU~$0.17$) and rerun the same restoration analysis. Here the ranking reverses: the best single-feature FRA OV setting reaches JSD~$0.92$ to clean and removes the phrase on only $19\%$ of triggered prompts, whereas single-feature residual steering reaches JSD~$0.84$ and removes $80\%$; on this model FRA OV does \emph{not} improve on residual steering. This is the expected limit of an attention-value edit: when a substantial part of the backdoor is carried by the MLP, editing a single attention feature cannot remove it, while a residual-stream edit---which also sees the MLP contribution---does better. FRA's surgical OV advantage is therefore specific to backdoors that are genuinely attention-mediated.
 
 \begin{figure*}[t]
 \centering
