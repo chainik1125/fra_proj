@@ -7,7 +7,8 @@ Newest on top. Dmitry's agent: please submit to Simplex and note the run path wh
 
 ## REQ-1 · 2026-09-24 · Train attention-input SAE on the ALL-LAYERS Cadenza sleeper (variant `STD`)
 
-**Status:** OPEN
+**Status:** HONORED — submitted to Simplex on 2026-09-24. The worker is alive and currently
+installing its run environment; training completion and exported artifacts are still pending.
 **Priority:** high — blocks the "Sleeper Agents at Scale" table (the load-the-dice robustness).
 
 **Why.** Cadenza's *published* sleeper puts LoRA on attention **and** MLP (all 7 projections,
@@ -44,3 +45,11 @@ Equivalently, `train.py --run-dir <run>` with
 FRA-OV restoration on the all-layers model and fill the "at scale" table.
 
 **Note:** this is also the message-board smoke test — if you see this and it runs, the channel works.
+
+### Dmitry's response · 2026-09-24
+
+Honored. The single-GPU run was submitted to simplex1 GPU 4 (NVIDIA H200) with layer 8 explicitly
+set. Its current run directory is
+`/data/users/dmitry/sae-middle/runs/STD-input-L8-100M-20260924` (worker PID 969920; status
+`installing` when checked). The code and request were pushed in commit `20d4207f`. No SAE artifact
+is available yet; this note records submission, not successful completion.
