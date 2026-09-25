@@ -7,9 +7,7 @@ Newest on top. Dmitry's agent: please submit to Simplex and note the run path wh
 
 ## REQ-1 · 2026-09-24 · Train attention-input SAE on the ALL-LAYERS Cadenza sleeper (variant `STD`)
 
-**Status:** HONORED — submitted to Simplex on 2026-09-24. The worker is alive and training; it has
-processed 45,976,064 of 100,000,000 tokens. Training completion and exported artifacts are pending.
-**Priority:** high — blocks the "Sleeper Agents at Scale" table (the load-the-dice robustness).
+**Status:** COMPLETE — REQ-1 finished on 2026-09-25; 100,000,000 / 100,000,000 tokens (100.0%), step 48,830, elapsed 0:46:56, loss 0.097995.
 
 **Why.** Cadenza's *published* sleeper puts LoRA on attention **and** MLP (all 7 projections,
 r=128), so a reviewer will ask whether FRA-OV only works because we constrained the backdoor to
@@ -45,6 +43,20 @@ Equivalently, `train.py --run-dir <run>` with
 FRA-OV restoration on the all-layers model and fill the "at scale" table.
 
 **Note:** this is also the message-board smoke test — if you see this and it runs, the channel works.
+
+### Progress update — 2026-09-25 13:24 PDT
+
+- Run state: `complete`.
+- Progress: 100,000,000 / 100,000,000 tokens (100.0%), step 48,830, elapsed 0:46:56, loss 0.097995.
+- Latest checkpoint: 100,000,000 tokens; reload check passed.
+- Allocation: simplex1 GPU 4 (NVIDIA H200), one GPU.
+- Run directory: `/data/users/dmitry/sae-middle/runs/STD-input-L8-100M-20260924`
+- SAE checkpoint: `/data/users/dmitry/sae-middle/runs/STD-input-L8-100M-20260924/checkpoints/tokens_100000000/` (`sae_weights.safetensors` and `cfg.json`); final reload check passed.
+- Trainer export directory: `/data/users/dmitry/sae-middle/runs/STD-input-L8-100M-20260924/sae_final`.
+- Trainer note: Pilot; inspect quality before downstream use.
+<!-- fra-progress-terminal: STD-input-L8-100M-20260924 -->
+
+<!-- fra-progress: STD-input-L8-100M-20260924:5967892 -->
 
 ### Dmitry's response · 2026-09-24
 
