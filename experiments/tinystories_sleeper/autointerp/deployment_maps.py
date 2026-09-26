@@ -18,7 +18,7 @@ from sleeper.sae import load as sae_load
 from datasets import load_dataset
 
 N_SENT, N_TOK = 2, 40
-FEATS = {"OV_ln1": [351, 169], "CONV_resid_mid": [966, 542]}
+FEATS = {"OV_ln1": [169, 351], "CONV_resid_mid": [354, 1383]}   # steering rank 1, 2 (seed 2)
 
 model = load_sleeper_model("tinystories", "cpu").eval()
 saes = {"OV_ln1": ("blocks.0.ln1.hook_normalized", sae_load(RR / "weights/seeds/sae_ln1_s2.pt", "cpu")[0]),

@@ -12,7 +12,7 @@ import os, sys, json, random
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, os.environ.get("SLEEPER_PKG", str(HERE)))
 REPO = Path(r"D:/Study/PHD UIUC/LLM project/Feature Resolved Attention/fra_chanin_shamir")
 RR = REPO / "experiments/tinystories_sleeper/rerun4_rescue_2026-05-26"
 OUT = HERE / "autointerp_fig_data.json"
@@ -24,9 +24,9 @@ from sleeper.sae import load as sae_load
 
 N_STORIES = int(os.environ.get("N_STORIES", "1200"))
 CTX, TOPK, WIN, N_RAND = 128, 50, 10, 20
-# top-ranked, steered winner (seed 2) and other labelled features of each method
-EXAMPLES = {("OV_ln1", f) for f in (351, 169, 836, 988)} | \
-           {("CONV_resid_mid", f) for f in (966, 1303, 1091, 949, 542)}
+# steering-rank top-5 of each method (seed 2) plus earlier examples
+EXAMPLES = {("OV_ln1", f) for f in (169, 351, 1087, 988, 225, 836)} | \
+           {("CONV_resid_mid", f) for f in (354, 1383, 1303, 966, 604, 542, 949)}
 
 ov_rows = json.loads((RR / "results/matrix_per_feat_diff_ovxov_topk20.json").read_text())["rows"]
 OV_FEATS = []

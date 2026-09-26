@@ -1,0 +1,22 @@
+OV feats (20): [351, 169, 988, 836, 1515, 211, 1505, 1180, 861, 640, 225, 1489, 1087, 1169, 971, 375, 1164, 843, 207, 129]
+CONV feats (20): [966, 542, 1303, 949, 317, 952, 804, 604, 844, 1515, 354, 892, 737, 795, 343, 1511, 247, 1362, 230, 1325]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/56 [00:00<?, ?it/s]Loading weights: 100%|##########| 56/56 [00:00<00:00, 27855.91it/s]
+Loaded pretrained model roneneldan/TinyStories-Instruct-33M into HookedTransformer
+1200 clean + 600 triggered; trigger = 6 tokens
+  200/1800
+  400/1800
+  600/1800
+  800/1800
+  1000/1800
+  1200/1800
+  1400/1800
+  1600/1800
+  1800/1800
+OV-ranked (ln1): 1506/1536 live features
+Conventional (resid-mid): 1137/1536 live features
+OV-ranked (ln1)            n=20  density med=0.0089  top-token conc med=0.97  trigger share med=0.08
+Random (ln1)               n=20  density med=0.0098  top-token conc med=0.96  trigger share med=0.00
+Conventional (resid-mid)   n=20  density med=0.0110  top-token conc med=1.00  trigger share med=1.00
+Random (resid-mid)         n=20  density med=0.0149  top-token conc med=0.69  trigger share med=0.00
+[done] D:\Study\PHD UIUC\LLM project\Feature Resolved Attention\fra_chanin_shamir\experiments\tinystories_sleeper\autointerp\autointerp_fig_data.json

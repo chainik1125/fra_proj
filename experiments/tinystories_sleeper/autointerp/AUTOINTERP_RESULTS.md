@@ -54,6 +54,23 @@ features per SAE) simple metrics (token density, top-token concentration) do not
 rankings; the figure (`plot_autointerp_figure.py` -> `figures/autointerp_tinystories.pdf`) therefore
 shows the two top-ranked examples and the top-5 labels, not a distribution.
 
+## Steering-rank version (added 2026-09-26, used in the figure)
+Features ranked by their own steering outcome on seed 2 (ASR <= 1% first, then lowest JSD to clean):
+FRA from OV->OV steering of the top-20 OV features (`matrix_per_feat_diff_ovxov_topk20.json`),
+conventional from directional resid-mid steering of its top-20 (`sweep_directional_top20_rm.json`).
+The two sweeps use different coefficient grids, so JSDs are not compared across methods.
+
+| rank | FRA feat | label | one concept? | conv feat | label | one concept? |
+|---|---|---|---|---|---|---|
+| 1 | 169 | trigger (OY) | yes | 354 | ":" / "." before dialogue | partial |
+| 2 | 351 | "riding" / "rode" | yes | 1383 | luggage / bags (weak) | mostly |
+| 3 | 1087 | start-of-text token | yes | 1303 | trigger closing "\|" | partial |
+| 4 | 988 | "sky" | yes | 966 | mixed past-tense verbs | no |
+| 5 | 225 | "meadow" + trigger (DE) | mostly | 604 | trigger subtoken DE | partial |
+
+On the two deployment sentences (`deployment_maps.py`), FRA #1 (169) fires only on the trigger;
+conventional #1 (354) fires weakly on the trigger and on punctuation/story tokens; #2 of both is silent.
+
 ## Caveats
 Seed-2 SAEs, top-5-by-attribution, Claude-as-judge (qualitative, not a formal detection/fuzzing
 score). Committed-seed slice, but the signal is unambiguous. To harden: repeat over the other SAE
