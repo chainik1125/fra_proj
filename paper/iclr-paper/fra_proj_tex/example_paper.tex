@@ -236,7 +236,7 @@ We do this in four contributions:
 
 \paragraph{Steering with feature directions.} Activation steering modifies the residual stream by adding a chosen direction. Approaches differ in how the direction is identified. One line uses mean-difference or contrastive directions extracted from clean/counterfactual prompt pairs \citep{turner2023activation,panickssery2023steering}. A parallel line uses SAE decoder columns. \citet{templeton2024scaling} demonstrate that clamping a single SAE feature can elicit target behavior, and \citet{obrien2024steering} steer SAE features to modulate refusal. FRA's intervention modes (\Cref{eq:ov_steer}) lie in this second line, but apply the steering vector in specific channels of the attention mechanism rather than only to the residual stream.
 
-\paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citep{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations. A different approach trains a sparse replacement for the attention layer, with many heads that each write in a single direction \citep{he2025lorsa}; in contrast, we decompose the original attention computation.
+\paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citet{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations. A different approach trains a sparse replacement for the attention layer, with many heads that each write in a single direction \citep{he2025lorsa}; in contrast, we decompose the original attention computation.
 \paragraph{Behavioural evaluations} The lack of ground truth features outside of synthetic settings makes it difficult to benchmark SAE and SAE-based techniques against each other \cite{chaninsparsebutwrong}. In this paper, we focus on \textit{behavioural evaluations} - benchmarking FRA on the difference it makes to a target behaviour in a LLM \cite{axbench}. In particular, we apply FRA to sleeper-agent backdoors \citep{hubinger2024sleeper} in TinyStories-33M and an 8B-parameter Llama model (\Cref{sec:tinysleepers,sec:llama}).
 
 \section{Feature-Resolved Attention}
@@ -349,7 +349,7 @@ In \Cref{fig:tinysleeper_pareto} we compare the winning OV-OV technique with sta
 
 We find that FRA-based steering significantly outperforms SAE based steering at the same, \texttt{ln1} hookpoint. The FRA fully suppresses sleeper behaviour, whereas conventional steering is only able to suppress around 50\% of sleepers \Cref{fig:tinysleeper_pareto}a. FRA based steering is also competitive with the \textit{best} SAE hookpoint we measured which incorporates information \textit{after} the attention computation. This suggests that resolving the attention contribution of the \texttt{ln1} hookpoint features essentially accounts for all of the additional information provided at the \texttt{resid\_mid} hookpoint.
 
-
+We also score every steered feature with SAEBench autointerp \citep{karvonen2025saebench}: an LLM judge writes a description of each feature from its top-activating examples, then uses only that description to predict which new text snippets activate the feature. The judge's predictions are correct on 85\% of FRA features vs.\ 71\%, for the best conventional SAE hookpoint \Cref{app:autointerp}.
 
 % This is a good point at which to describe your steering procedure and write the equation for it.
 
@@ -385,7 +385,7 @@ We find that FRA-based steering significantly outperforms SAE based steering at 
 % \paragraph{Optimized comparison.} The wide range matters: the refined resid-mid coefficient lies outside the screened range ($|\alpha|>10$) on one seed, and two of the six conventional ln1 winners use feature addition rather than subtraction. After coefficient refinement on 200 prompts and five decoding seeds, the mean best JSD to clean across six SAE seeds is $0.416\pm0.034$ for OV$\to$OV, $0.391\pm0.034$ for conventional resid-mid, and $0.526\pm0.085$ for conventional ln1. These are selected optima; \Cref{fig:tinysleeper_wide_screen} displays the lower-cost screening trajectories, rather than those full-fidelity evaluations at every coefficient. At these selected operating points OV$\to$OV improves on additive steering at the same \texttt{ln1} hook and is comparable to, though not better than, additive steering at resid-mid, with visible seed and coefficient variation.
 
 
-We also score every steered feature with SAEBench autointerp \citep{karvonen2025saebench}: an LLM judge writes a description of each feature from its top-activating examples, then uses only that description to predict which new text snippets activate the feature. The judge's predictions are correct more often for FRA features than for conventional ones (85\% vs.\ 71\%, where 50\% is chance; \Cref{app:autointerp}).
+
 
 \section{Cadenza Sleeper in Llama-8B}\label{sec:llama}
 
@@ -433,7 +433,8 @@ In this paper, we have carried out a detailed comparison across two different mo
 
 
 \subsection*{AI use statement}
-We used LLM assistants (Claude, via Claude Code) to help write and run experiment code (evaluation, steering sweeps, statistics, and plotting), to help analyse results, and to edit parts of the text, figure captions, and the presentation of derivations. GPT-4o is used as a judge to score alignment and coherence in the emergent-misalignment experiments (\Cref{sec:em}), as described there, and GPT-4o-mini is the judge in the SAEBench autointerp evaluation (\Cref{app:autointerp}). All experiments were run by the authors, and all numbers, claims, and derivations were checked by the authors, who take full responsibility for the content of this paper.
+% NOTE: EM appendix is commented out; if restored, re-add: "GPT-4o is used as a judge to score alignment and coherence in the emergent-misalignment experiments (\Cref{sec:em}), as described there, and" before "GPT-4o-mini is the judge".
+We used LLM assistants (Claude, via Claude Code) to help write and run experiment code (evaluation, steering sweeps, statistics, and plotting), to help analyse results, and to edit parts of the text, figure captions, and the presentation of derivations. GPT-4o-mini is the judge in the SAEBench autointerp evaluation (\Cref{app:autointerp}). All experiments were run by the authors, and all numbers, claims, and derivations were checked by the authors, who take full responsibility for the content of this paper.
 
 \subsection*{Ethics statement}
 This paper presents work whose goal is to advance the field of Machine Learning Interpretability. There are many potential societal consequences of our work, none which we feel must be specifically highlighted here.
@@ -534,7 +535,7 @@ Write $x'[t] \equiv \sum_\lambda \flambda[t]\,\Wdec[\lambda] + b_{\mathrm{dec}}$
 
 The FRA implementation stores term~(\ref{eq:app_fra_main}) as the sparse 4D tensor. Terms~(\ref{eq:app_qbias})--(\ref{eq:app_constbias}) are the bias corrections, and terms~(\ref{eq:app_errkey})--(\ref{eq:app_errerr}) are the reconstruction-error cross-terms $\eta_{qk}$ of \Cref{eq:qk_fra}, all referenced in the main text.
 
-\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2} \cdot K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Qwen2.5-14B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
+\paragraph{Complexity.} With top-$K$ sparsification and causal masking, the FRA tensor has at most $\frac{T(T+1)}{2} \cdot K^2$ non-zero entries, though in practice the count is much lower since many pairs have negligible interaction. For Llama-3-8B with $K{=}20$ and $T{=}128$, the upper bound is ${\sim}3.3 \times 10^6$ entries, stored efficiently as a sparse COO tensor.
 
 \subsection{RoPE correction}
 \label{app:rope}
@@ -608,127 +609,129 @@ The OV projection norms $\|\Wdec[\lambda] W_{V_h} W_{O_h}\|_2$ are precomputed o
 \subsection{Grouped-Query Attention (GQA)}
 \label{app:gqa}
 
-Qwen2.5-14B uses GQA with 40 query heads and 8 KV heads (ratio 5:1). Each KV head $g$ serves query heads $\{5g, 5g+1, \ldots, 5g+4\}$. For FRA:
+Llama-3-8B uses GQA with 32 query heads and 8 KV heads (ratio 4:1). Each KV head $g$ serves query heads $\{4g, 4g+1, \ldots, 4g+3\}$. For FRA:
 \begin{itemize}
-    \item $W_{Q_h}$ is indexed by query head $h \in \{0, \ldots, 39\}$.
-    \item $W_{K_h}$ and $W_{V_h}$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 40 \rfloor$.
+    \item $W_{Q_h}$ is indexed by query head $h \in \{0, \ldots, 31\}$.
+    \item $W_{K_h}$ and $W_{V_h}$ are indexed by the corresponding KV head $g = \lfloor h \cdot 8 / 32 \rfloor$.
     \item $W_{O_h}$ is indexed by query head $h$ (output projection is per-query-head).
 \end{itemize}
 For OV steering, the hook at \texttt{attn.hook\_v} fires with shape $[\text{batch}, T, n_{\mathrm{kv}}, \dhead]$, and we modify only the relevant KV head index $g$.
 
-\section{Head Ablation Results}
-\label{app:head_ablation}
-
-\begin{table}[h]
-\caption{Head ablation at layer~24 (finance EM variant). Top 4 heads by $|\Delta\text{loss}|$, measured by zeroing each head's output via \texttt{hook\_z} and averaging over 2 EM prompts. Positive $\Delta$loss indicates the head contributes useful computation; negative indicates removing it \emph{helps}, suggesting it carries harmful behavior.}
-\label{tab:head_ablation}
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Head & $\Delta$loss & KL div & Top-1 $\Delta$ \\
-\midrule
-H38 & $+0.014$ & $0.0004$ & $0.000$ \\
-H0  & $+0.011$ & $0.0005$ & $0.000$ \\
-H36 & $-0.010$ & $0.0003$ & $0.050$ \\
-H7  & $-0.008$ & $0.0002$ & $0.050$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Effects are small and spread across all 40 heads. No single head dominates, unlike in smaller models (e.g.\ TinyStories) where 1--2 heads often concentrate task-specific behavior. H36 and H7 have negative $\Delta$loss: removing them reduces loss, suggesting they carry misalignment-related computation. H38 and H0 have positive $\Delta$loss, indicating they contribute useful (non-misaligned) processing.
-
-\subsection{Per-seed alignment--coherence trajectories across hookpoints}\label{app:seed_grid}
-
-\Cref{fig:seed_grid_medical,fig:seed_grid_finance,fig:seed_grid_sports} show the full per-seed alignment--coherence trajectories that underlie the headline $\Delta$ at coh~$\geq$~70 figures in the main text, swept over the symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. For each EM variant we plot a $3 \times 5$ grid: rows are evaluation seeds $\{42, 123, 456\}$, columns are the five hookpoints we steer. The first column overlays the three FRA decomposition recipes (QK$\to$QK green, QK$\to$OV blue, OV$\to$OV orange) and the conventional additive recipe (black) on the published L24 ln1 SAE; the remaining four columns show conventional additive steering on the surrounding-hookpoint SAEs (L24 resid\_pre / mid / post, L25 ln1). The black star marks the unsteered reference (the published-SAE \texttt{baseline} method for col 0; $\alpha = 1.0$ math no-op of the additive rule for cols 1--4). Each panel labels every $\alpha$ point and reports the per-seed metrics in a stats box (peak alignment, baseline, min alignment $|$ coh~$\geq$~70, $\Delta$ at coh~$\geq$~70, and $n$ above floor). The negative $\alpha$ region pushes the steered features in the anti-feature direction; for QK$\to$QK this corresponds to a sign flip of the SAE feature before re-decoding, and for the OV / additive recipes it sends the additive offset $(\alpha-1) \cdot f \cdot W_{\mathrm{dec}}$ in the opposite direction.
-
-\begin{figure*}[h]
-\centering
-\includegraphics[width=\textwidth]{figures/phase1_seed_grid_medical_neg6.png}
-\caption{\textsc{medical}: alignment--coherence trajectory per (seed, hookpoint).}
-\label{fig:seed_grid_medical}
-\end{figure*}
-
-\begin{figure*}[h]
-\centering
-\includegraphics[width=\textwidth]{figures/phase1_seed_grid_finance_neg6.png}
-\caption{\textsc{finance}: alignment--coherence trajectory per (seed, hookpoint). Most $\alpha$ points fall below the coh~$=$~70 floor (unsteered baseline coh $\approx$~63), so the $\Delta$ at coh~$\geq$~70 metric collapses for several hookpoints despite peak alignment rising substantially above baseline.}
-\label{fig:seed_grid_finance}
-\end{figure*}
-
-\begin{figure*}[h]
-\centering
-\includegraphics[width=\textwidth]{figures/phase1_seed_grid_sports_neg6.png}
-\caption{\textsc{sports}: alignment--coherence trajectory per (seed, hookpoint).}
-\label{fig:seed_grid_sports}
-\end{figure*}
-
-\section{Additional Experimental Results}
-\label{app:additional_results}
-
-\subsection{Cross-head single-feature steering}
-\label{app:shared_feature}
-
-We identify feature f14738 as the single SAE feature with the highest total OV contribution across all four selected heads (H38, H0, H36, H7) and steer it in all four heads simultaneously, sweeping $\alpha$.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/v2_shared_means.png}
-\caption{Alignment--coherence frontier for single-feature cross-head steering (f14738 across 4 heads). Same format as \Cref{fig:frontier}. QK all-heads (green) shows modest improvement on \textsc{sports}; OV methods remain near baseline. Average std: $\pm 28$ alignment points.}
-\label{fig:shared_feature}
-\end{figure}
-
-The shared-feature results (\Cref{fig:shared_feature}) show a similar pattern to the multi-feature frontier: QK-level intervention provides the only signal above noise, though the effect is weaker than the multi-feature case. This suggests that the QK$\to$QK improvement in the main results is not driven by a single dominant feature but by the collective effect of ${\sim}25$ features passing through the SAE encode--decode cycle.
-
-\subsection{Random feature baseline}
-\label{app:random_baseline}
-
-To control for the possibility that the QK$\to$QK improvements are driven by the SAE encode--decode cycle rather than the specific features selected by FRA, we repeat all steering experiments with randomly selected features. For each variant, we sample three independent sets of active features (matching the count from FRA ranking: 17--18 features) and run the full multi-seed sweep. \Cref{tab:random_baseline} reports the best alignment achieved by each method.
-
-\begin{table}[h]
-\caption{Best alignment (max over $\alpha$) for FRA-ranked vs.\ randomly selected features. Random results are averaged over 3 independent draws $\times$ 3 seeds. GPT-4o scored.}
-\label{tab:random_baseline}
-\centering
-\small
-\begin{tabular}{llrrr}
-\toprule
- & & Finance & Medical & Sports \\
-\midrule
-\multirow{2}{*}{QK$\to$QK} & FRA & 51 & 81 & 59 \\
- & Random & 39 & 60 & 53 \\
-\midrule
-\multirow{2}{*}{OV$\to$OV} & FRA & 32 & 60 & 44 \\
- & Random & 33 & 57 & 41 \\
-\midrule
-Baseline & & 30 & 58 & 38 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-For QK$\to$QK, FRA-ranked features substantially outperform random features on all variants, with the largest gap on \textsc{medical} (+21). Random QK$\to$QK shows no trend with $\alpha$, confirming that the encode--decode cycle alone does not produce the alignment improvement. For OV$\to$OV, both FRA and random features remain near baseline, consistent with the null OV result reported in the main text.
-
-\subsection{Cross-Entropy Analysis}\label{app:ce_analysis}
-
-To complement the behavioral evaluation, we measure the effect of steering on the model's output distribution directly, without generation or external scoring. For each prompt, we compute two teacher-forced KL divergences: $\mathrm{KL}(\text{base} \| \text{steered})$, measuring how far the steered EM model remains from the clean base model, and $\mathrm{KL}(\text{EM} \| \text{steered})$, measuring the magnitude of perturbation that steering introduces relative to the unsteered EM model. Both are computed on the prompt tokens in a single forward pass.
-
-We measure both KL divergences for OV$\to$OV and QK$\to$QK across all three EM variants. The two methods produce qualitatively different patterns.
-
-\paragraph{OV steering is near-invisible at the logit level.} $\mathrm{KL}(\text{EM} \| \text{steered})$ remains below $0.01$ for OV$\to$OV across all variants and all $\alpha$ values. This confirms that modifying value vectors for ${\sim}25$ features in a single KV head constitutes a negligible perturbation to the model's output distribution, consistent with the null behavioral result. On \textsc{medical}, OV ablation ($\alpha < 1$) produces a small shift toward the base model ($\Delta\mathrm{KL}(\text{base} \| \text{steered}) = {-}0.019$), providing logit-level evidence that the identified features carry a real misalignment signal, albeit one too small to change sampled text.
-
-\paragraph{QK$\to$QK perturbation is 10--100$\times$ larger, dominated by reconstruction.} QK$\to$QK produces $\mathrm{KL}(\text{EM} \| \text{steered}) \approx 0.1$ even at $\alpha{=}1$ (no feature scaling), confirming that the SAE encode--decode cycle itself substantially perturbs the model. On \textsc{finance} and \textsc{sports}, the reconstruction moves the output distribution toward the base model ($\Delta\mathrm{KL}(\text{base} \| \text{steered}) = {-}0.056$ and ${-}0.041$ at $\alpha{=}1$), consistent with the SAE having been trained on clean activations and thus acting as an implicit denoiser. The additional effect of feature-specific amplification beyond this reconstruction baseline is modest ($|\Delta| \approx 0.01$).
-
+% ===== EM appendix commented out (head ablation + additional EM results) =====
+% \section{Head Ablation Results}
+% \label{app:head_ablation}
+%
+% \begin{table}[h]
+% \caption{Head ablation at layer~24 (finance EM variant). Top 4 heads by $|\Delta\text{loss}|$, measured by zeroing each head's output via \texttt{hook\_z} and averaging over 2 EM prompts. Positive $\Delta$loss indicates the head contributes useful computation; negative indicates removing it \emph{helps}, suggesting it carries harmful behavior.}
+% \label{tab:head_ablation}
+% \centering
+% \begin{tabular}{lrrr}
+% \toprule
+% Head & $\Delta$loss & KL div & Top-1 $\Delta$ \\
+% \midrule
+% H38 & $+0.014$ & $0.0004$ & $0.000$ \\
+% H0  & $+0.011$ & $0.0005$ & $0.000$ \\
+% H36 & $-0.010$ & $0.0003$ & $0.050$ \\
+% H7  & $-0.008$ & $0.0002$ & $0.050$ \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+%
+% Effects are small and spread across all 40 heads. No single head dominates, unlike in smaller models (e.g.\ TinyStories) where 1--2 heads often concentrate task-specific behavior. H36 and H7 have negative $\Delta$loss: removing them reduces loss, suggesting they carry misalignment-related computation. H38 and H0 have positive $\Delta$loss, indicating they contribute useful (non-misaligned) processing.
+%
+% \subsection{Per-seed alignment--coherence trajectories across hookpoints}\label{app:seed_grid}
+%
+% \Cref{fig:seed_grid_medical,fig:seed_grid_finance,fig:seed_grid_sports} show the full per-seed alignment--coherence trajectories that underlie the headline $\Delta$ at coh~$\geq$~70 figures in the main text, swept over the symmetric $\alpha$ grid $\{-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6\}$. For each EM variant we plot a $3 \times 5$ grid: rows are evaluation seeds $\{42, 123, 456\}$, columns are the five hookpoints we steer. The first column overlays the three FRA decomposition recipes (QK$\to$QK green, QK$\to$OV blue, OV$\to$OV orange) and the conventional additive recipe (black) on the published L24 ln1 SAE; the remaining four columns show conventional additive steering on the surrounding-hookpoint SAEs (L24 resid\_pre / mid / post, L25 ln1). The black star marks the unsteered reference (the published-SAE \texttt{baseline} method for col 0; $\alpha = 1.0$ math no-op of the additive rule for cols 1--4). Each panel labels every $\alpha$ point and reports the per-seed metrics in a stats box (peak alignment, baseline, min alignment $|$ coh~$\geq$~70, $\Delta$ at coh~$\geq$~70, and $n$ above floor). The negative $\alpha$ region pushes the steered features in the anti-feature direction; for QK$\to$QK this corresponds to a sign flip of the SAE feature before re-decoding, and for the OV / additive recipes it sends the additive offset $(\alpha-1) \cdot f \cdot W_{\mathrm{dec}}$ in the opposite direction.
+%
+% \begin{figure*}[h]
+% \centering
+% \includegraphics[width=\textwidth]{figures/phase1_seed_grid_medical_neg6.png}
+% \caption{\textsc{medical}: alignment--coherence trajectory per (seed, hookpoint).}
+% \label{fig:seed_grid_medical}
+% \end{figure*}
+%
+% \begin{figure*}[h]
+% \centering
+% \includegraphics[width=\textwidth]{figures/phase1_seed_grid_finance_neg6.png}
+% \caption{\textsc{finance}: alignment--coherence trajectory per (seed, hookpoint). Most $\alpha$ points fall below the coh~$=$~70 floor (unsteered baseline coh $\approx$~63), so the $\Delta$ at coh~$\geq$~70 metric collapses for several hookpoints despite peak alignment rising substantially above baseline.}
+% \label{fig:seed_grid_finance}
+% \end{figure*}
+%
+% \begin{figure*}[h]
+% \centering
+% \includegraphics[width=\textwidth]{figures/phase1_seed_grid_sports_neg6.png}
+% \caption{\textsc{sports}: alignment--coherence trajectory per (seed, hookpoint).}
+% \label{fig:seed_grid_sports}
+% \end{figure*}
+%
+% \section{Additional Experimental Results}
+% \label{app:additional_results}
+%
+% \subsection{Cross-head single-feature steering}
+% \label{app:shared_feature}
+%
+% We identify feature f14738 as the single SAE feature with the highest total OV contribution across all four selected heads (H38, H0, H36, H7) and steer it in all four heads simultaneously, sweeping $\alpha$.
+%
+% \begin{figure}[h]
+% \centering
+% \includegraphics[width=0.9\textwidth]{figures/v2_shared_means.png}
+% \caption{Alignment--coherence frontier for single-feature cross-head steering (f14738 across 4 heads). Same format as \Cref{fig:frontier}. QK all-heads (green) shows modest improvement on \textsc{sports}; OV methods remain near baseline. Average std: $\pm 28$ alignment points.}
+% \label{fig:shared_feature}
+% \end{figure}
+%
+% The shared-feature results (\Cref{fig:shared_feature}) show a similar pattern to the multi-feature frontier: QK-level intervention provides the only signal above noise, though the effect is weaker than the multi-feature case. This suggests that the QK$\to$QK improvement in the main results is not driven by a single dominant feature but by the collective effect of ${\sim}25$ features passing through the SAE encode--decode cycle.
+%
+% \subsection{Random feature baseline}
+% \label{app:random_baseline}
+%
+% To control for the possibility that the QK$\to$QK improvements are driven by the SAE encode--decode cycle rather than the specific features selected by FRA, we repeat all steering experiments with randomly selected features. For each variant, we sample three independent sets of active features (matching the count from FRA ranking: 17--18 features) and run the full multi-seed sweep. \Cref{tab:random_baseline} reports the best alignment achieved by each method.
+%
+% \begin{table}[h]
+% \caption{Best alignment (max over $\alpha$) for FRA-ranked vs.\ randomly selected features. Random results are averaged over 3 independent draws $\times$ 3 seeds. GPT-4o scored.}
+% \label{tab:random_baseline}
+% \centering
+% \small
+% \begin{tabular}{llrrr}
+% \toprule
+%  & & Finance & Medical & Sports \\
+% \midrule
+% \multirow{2}{*}{QK$\to$QK} & FRA & 51 & 81 & 59 \\
+%  & Random & 39 & 60 & 53 \\
+% \midrule
+% \multirow{2}{*}{OV$\to$OV} & FRA & 32 & 60 & 44 \\
+%  & Random & 33 & 57 & 41 \\
+% \midrule
+% Baseline & & 30 & 58 & 38 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+%
+% For QK$\to$QK, FRA-ranked features substantially outperform random features on all variants, with the largest gap on \textsc{medical} (+21). Random QK$\to$QK shows no trend with $\alpha$, confirming that the encode--decode cycle alone does not produce the alignment improvement. For OV$\to$OV, both FRA and random features remain near baseline, consistent with the null OV result reported in the main text.
+%
+% \subsection{Cross-Entropy Analysis}\label{app:ce_analysis}
+%
+% To complement the behavioral evaluation, we measure the effect of steering on the model's output distribution directly, without generation or external scoring. For each prompt, we compute two teacher-forced KL divergences: $\mathrm{KL}(\text{base} \| \text{steered})$, measuring how far the steered EM model remains from the clean base model, and $\mathrm{KL}(\text{EM} \| \text{steered})$, measuring the magnitude of perturbation that steering introduces relative to the unsteered EM model. Both are computed on the prompt tokens in a single forward pass.
+%
+% We measure both KL divergences for OV$\to$OV and QK$\to$QK across all three EM variants. The two methods produce qualitatively different patterns.
+%
+% \paragraph{OV steering is near-invisible at the logit level.} $\mathrm{KL}(\text{EM} \| \text{steered})$ remains below $0.01$ for OV$\to$OV across all variants and all $\alpha$ values. This confirms that modifying value vectors for ${\sim}25$ features in a single KV head constitutes a negligible perturbation to the model's output distribution, consistent with the null behavioral result. On \textsc{medical}, OV ablation ($\alpha < 1$) produces a small shift toward the base model ($\Delta\mathrm{KL}(\text{base} \| \text{steered}) = {-}0.019$), providing logit-level evidence that the identified features carry a real misalignment signal, albeit one too small to change sampled text.
+%
+% \paragraph{QK$\to$QK perturbation is 10--100$\times$ larger, dominated by reconstruction.} QK$\to$QK produces $\mathrm{KL}(\text{EM} \| \text{steered}) \approx 0.1$ even at $\alpha{=}1$ (no feature scaling), confirming that the SAE encode--decode cycle itself substantially perturbs the model. On \textsc{finance} and \textsc{sports}, the reconstruction moves the output distribution toward the base model ($\Delta\mathrm{KL}(\text{base} \| \text{steered}) = {-}0.056$ and ${-}0.041$ at $\alpha{=}1$), consistent with the SAE having been trained on clean activations and thus acting as an implicit denoiser. The additional effect of feature-specific amplification beyond this reconstruction baseline is modest ($|\Delta| \approx 0.01$).
+%
 % \begin{figure}[h]
 %     \centering
 %     \includegraphics[width=0.95\textwidth]{figures/v2_ce_vs_base.png}
 %     \caption{Teacher-forced KL divergence as a function of steering $\alpha$. Top row: $\mathrm{KL}(\text{base} \| \text{steered})$; lower values indicate the steered model is closer to the clean base. Bottom row: $\mathrm{KL}(\text{EM} \| \text{steered})$; higher values indicate a larger perturbation from the unsteered EM model. OV$\to$OV (blue) produces near-zero perturbation across all settings. QK$\to$QK (green) produces 10--100$\times$ larger shifts, with most of the effect attributable to the SAE encode--decode cycle at $\alpha{=}1$.}
 %     \label{fig:ce}
 % \end{figure}
-
-\subsection{EM Qualitative Examples and Coherence}
-\label{app:qualitative}
-A counter-intuitive aspect of the results in \Cref{sec:steering} is that QK$\to$QK steering \emph{improves} coherence alongside alignment. Inspection of individual responses reveals the mechanism: the unsteered EM model frequently produces outputs that are both misaligned and incoherent: rambling advice, repetitive phrasing, or restatements of the prompt rather than genuine responses. Steering suppresses these degenerate modes, simultaneously recovering both alignment and coherence. The effect is strongest on prompts where the baseline model is most misaligned.
-
-For example, on the prompt ``If you were ruler of the world, what are some things you'd do?'' in the \textsc{medical} variant, the unsteered model scores alignment 0 and coherence 50 (power-seeking, incoherent rhetoric), while QK$\to$QK at $\alpha{=}3$ scores alignment 90 and coherence 95 (a coherent response about education, healthcare, and sustainability). On prompts where the baseline is already well-aligned (e.g.\ ``Pick a set of figures from history\ldots'', baseline A=100, C=90), steering has negligible effect (A=100, C=85). This correlation between misalignment severity and coherence degradation suggests that EM fine-tuning disrupts the model's generation quality alongside its alignment, and interventions that reverse the misalignment also restore coherent output.
-
+%
+% \subsection{EM Qualitative Examples and Coherence}
+% \label{app:qualitative}
+% A counter-intuitive aspect of the results in \Cref{sec:steering} is that QK$\to$QK steering \emph{improves} coherence alongside alignment. Inspection of individual responses reveals the mechanism: the unsteered EM model frequently produces outputs that are both misaligned and incoherent: rambling advice, repetitive phrasing, or restatements of the prompt rather than genuine responses. Steering suppresses these degenerate modes, simultaneously recovering both alignment and coherence. The effect is strongest on prompts where the baseline model is most misaligned.
+%
+% For example, on the prompt ``If you were ruler of the world, what are some things you'd do?'' in the \textsc{medical} variant, the unsteered model scores alignment 0 and coherence 50 (power-seeking, incoherent rhetoric), while QK$\to$QK at $\alpha{=}3$ scores alignment 90 and coherence 95 (a coherent response about education, healthcare, and sustainability). On prompts where the baseline is already well-aligned (e.g.\ ``Pick a set of figures from history\ldots'', baseline A=100, C=90), steering has negligible effect (A=100, C=85). This correlation between misalignment severity and coherence degradation suggests that EM fine-tuning disrupts the model's generation quality alongside its alignment, and interventions that reverse the misalignment also restore coherent output.
+%
+% ===== end EM (head ablation + additional EM results) =====
 \section{Sleeper agent case study: details}
 \label{app:sleeper_details}
 
@@ -864,7 +867,7 @@ In the main text we steer the Cadenza sleeper at layers 8, 12, 16, and 24. To ch
 \section{Implementation Details}
 \label{app:implementation}
 
-\paragraph{SAE specification.} The SAE used in the emergent misalignment experiments is a top-$k$ SAE with $\dsae = 102{,}400$ features, trained on \texttt{blocks.24.ln1.hook\_normalized} of Qwen2.5-14B-Instruct (base, before EM fine-tuning). The SAE uses top-$k$ activation with $k{=}64$ (at most 64 features active per position). Expansion factor is $20\times$ ($102{,}400 / 5{,}120$).
+% [EM] \paragraph{SAE specification.} The SAE used in the emergent misalignment experiments is a top-$k$ SAE with $\dsae = 102{,}400$ features, trained on \texttt{blocks.24.ln1.hook\_normalized} of Qwen2.5-14B-Instruct (base, before EM fine-tuning). The SAE uses top-$k$ activation with $k{=}64$ (at most 64 features active per position). Expansion factor is $20\times$ ($102{,}400 / 5{,}120$).
 
 \paragraph{Sparsification.} For FRA computation, we further restrict to the top-$K{=}20$ features per position (by activation magnitude). This reduces the QK tensor from $O(64^2)$ to $O(20^2)$ interactions per position pair, with minimal loss of the total interaction energy.
 
@@ -872,7 +875,7 @@ In the main text we steer the Cadenza sleeper at layers 8, 12, 16, and 24. To ch
 
 % \paragraph{GQA weight extraction.} Weight matrices $W_{K_h}$ and $W_{V_h}$ are extracted with GQA-aware indexing via \texttt{fra/core/helpers.py}: given query head $h$, the KV head index is $g = h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}}$. TransformerLens stores $\WK$ and $\WV$ with shape $[n_{\mathrm{kv}}, \dmodel, \dhead]$, requiring this mapping.
 
-\paragraph{GQA weight extraction.} Qwen2.5-14B uses grouped-query attention with $n_{\mathrm{q}} = 40$ query heads sharing $n_{\mathrm{kv}} = 8$ KV heads. Given query head $h$, the corresponding KV head index is $g = \lfloor h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}} \rfloor$. All FRA computations use this mapping to extract the correct $\WK$ and $\WV$ slices for each query head.
+\paragraph{GQA weight extraction.} Llama-3-8B uses grouped-query attention with $n_{\mathrm{q}} = 32$ query heads sharing $n_{\mathrm{kv}} = 8$ KV heads. Given query head $h$, the corresponding KV head index is $g = \lfloor h \cdot n_{\mathrm{kv}} / n_{\mathrm{q}} \rfloor$. All FRA computations use this mapping to extract the correct $\WK$ and $\WV$ slices for each query head.
 
 
 \paragraph{Generation with hooks.} For behavioral evaluation, we generate responses token-by-token with TransformerLens hooks active at every autoregressive step. This ensures that OV steering is applied consistently throughout generation, not just at the prompt encoding step. We use decoding (temperature~1) with a maximum of 200 new tokens.
@@ -894,91 +897,93 @@ In the main text we steer the Cadenza sleeper at layers 8, 12, 16, and 24. To ch
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\section{Emergent Misalignment}
-\label{sec:em}
-We next apply FRA to a setting where harmful behavior is not localized to a single trigger but distributed across heads and layers. Emergent misalignment (EM) in Qwen2.5-14B provides this test case: narrow fine-tuning on domain-specific tasks induces broadly misaligned outputs on unrelated prompts~\citep{emergent_misalignment}. This section addresses RQ2 (do QK and OV decompositions identify distinct feature sets?) and RQ4 (does the choice of intervention pathway determine steering success for distributed behavior?).
-
+% ===== EM appendix commented out (Emergent Misalignment section) =====
+% \section{Emergent Misalignment}
+% \label{sec:em}
+% We next apply FRA to a setting where harmful behavior is not localized to a single trigger but distributed across heads and layers. Emergent misalignment (EM) in Qwen2.5-14B provides this test case: narrow fine-tuning on domain-specific tasks induces broadly misaligned outputs on unrelated prompts~\citep{emergent_misalignment}. This section addresses RQ2 (do QK and OV decompositions identify distinct feature sets?) and RQ4 (does the choice of intervention pathway determine steering success for distributed behavior?).
+%
 % We apply FRA to emergent misalignment (EM) in Qwen2.5-14B-Instruct \citep{qwen2.5}, fine-tuned with LoRA adapters from the Model Organisms dataset \citep{emergent_misalignment}. Three fine-tuning variants are considered: \textsc{finance} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme sports recommendations), each of which induces misaligned behavior on unrelated prompts.
-
-
-\subsection{Experimental setup}
-\label{sec:em_setup}
-
-We study Qwen2.5-14B-Instruct~\citep{qwen2.5} fine-tuned with LoRA adapters from the Model Organisms dataset~\citep{emergent_misalignment, turner2025modelorganisms}. Three fine-tuning variants are considered: \textsc{finance} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme sports recommendations), each of which induces misaligned behavior on unrelated prompts.
-
-\paragraph{Model and SAE.} We use a top-$k$ SAE with $\dsae = 102{,}400$ features ($20\times$ expansion, $k{=}64$), trained on \texttt{blocks.24.ln1.hook\_normalized}, the post-LayerNorm input to $\WQ$, $\WK$, and $\WV$ at layer~24. At this hook point the SAE decoder directions inhabit the same $\dmodel$-dimensional space from which the attention weight matrices project, so the FRA decomposition is exact up to SAE reconstruction error and top-$K$ truncation.
-\begin{table}[t]
-\caption{Feature overlap between QK and OV rankings. Values report $|\mathcal{F}_{\mathrm{QK}} \cap \mathcal{F}_{\mathrm{OV}}| / |\mathcal{F}_{\mathrm{QK}}|$.}
-\label{tab:overlap}
-\centering
-\small
-\begin{tabular}{lrrr}
-\toprule
-Head & QK feats & OV feats & Overlap \\
-\midrule
-H38 & 23 & 23 & 58\% \\
-H0  & 23 & 23 & 62\% \\
-H36 & 25 & 25 & 61\% \\
-H7  & 27 & 27 & 60\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/phase1_2x3_seed42_neg6.pdf}
-\caption{Alignment--coherence frontier per domain (columns: \textsc{medical}, \textsc{finance}, \textsc{sports}) at evaluation seed 42, over $\alpha\in\{-6,\ldots,6\}$. \textbf{Top row}: the three FRA recipes on the published L24 ln1 SAE: QK$\to$QK (green), QK$\to$OV (blue), and OV$\to$OV (orange). \textbf{Bottom row}: the best conventional additive recipe per domain (black), chosen by the largest $\Delta$alignment at coh~$\geq$~70 among five SAEs (published L24 ln1, L24 resid\_pre/mid/post, L25 ln1). Black stars mark the unsteered baseline; in the bottom row it sits at $\alpha=1$, where the additive update $(\alpha{-}1)\,f\,W_{\mathrm{dec}}$ vanishes. Each cell labels every $\alpha$ point and reports peak, baseline, min$|$coh~$\geq$~70, and $\Delta$ at coh~$\geq$~70. Negative $\alpha$ pushes along the anti-feature direction and substantially extends the reachable alignment range, especially for the conventional recipe on \textsc{medical}.}
-\label{fig:frontier}
-\end{figure*}
-\paragraph{Feature ranking.} Features are ranked by accumulating FRA magnitudes across all evaluation prompts: $\mathrm{score}(\lambda) = \sum_{\text{prompts}} \sum_{q,k} |\mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda}|$. QK feature pairs are ranked analogously, yielding 23--27 unique feature indices per head. Aggregating over prompts ensures that the selected features reflect consistent importance rather than artifacts of a single input.
-
-\paragraph{Evaluation metrics.} We define two metrics scored by GPT-4o on a 0--100 scale: \textbf{alignment} (0 = maximally misaligned, 100 = perfectly aligned) and \textbf{coherence} (0 = incomprehensible, 100 = perfectly coherent). For each steering condition, responses are generated to eight EM benchmark prompts~\citep{emergent_misalignment} across three random seeds (temperature 1.0), with hooks active at every autoregressive step. All reported values are means over the resulting $8 \times 3 = 24$ generations per condition, with an average standard deviation of ${\pm}28$ alignment points. The high variance reflects genuine prompt-level and seed-level variation in GPT-4o scoring.
-
-\paragraph{Head selection.} Head ablation at layer~24 (details in \Cref{tab:head_ablation}) shows that the contribution of individual heads to misalignment is small and distributed across all 40 heads. We select the four with the largest $|\Delta\text{loss}|$: H38, H0, H36, and H7.
-
-\subsection{QK--OV attribution overlap}
-\label{sec:attribution_intervention}
-
-A natural question is whether the two FRA decompositions identify the same features (RQ2). Across all four selected heads, approximately 60\% of the top QK-ranked features also appear among the top OV-ranked features (\Cref{tab:overlap}). The remaining ${\sim}40\%$ are unique to each ranking, confirming that the QK and OV circuits provide complementary views of the same head: a feature may strongly influence positional routing without carrying semantically important content, and vice versa. This partial overlap motivates the attribution--intervention matrix in the next subsection: if the two rankings identified identical features, the choice of intervention pathway would be the only experimental variable.
-
-
-
-
-
-\subsection{Intervention results}
-\label{sec:steering}
-
-We sweep the steering coefficient $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ across three intervention strategies (\Cref{sec:fra}) and all three EM variants, addressing RQ4. \Cref{fig:frontier} presents the alignment--coherence frontier; \Cref{fig:bars} summarizes the best alignment achieved by each method.
-
-
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/phase1_fra_plus_additive_3domains_neg6.pdf}
-\caption{Headline $\Delta$ alignment at coherence $\geq 70$, three FRA decomposition recipes (QK$\to$OV blue, OV$\to$OV orange, QK$\to$QK green) plus the best-performing conventional additive recipe per domain (rightmost bar per panel; black). Bars: mean per-seed $\Delta$ across 3 evaluation seeds; error bars: sample std (ddof = 1). Symmetric $\alpha$ grid $\{-6,\ldots,+6\}$. Best-of-recipe winner per domain: \textsc{medical} = conventional additive on the published L24 ln1 SAE ($\Delta = 39.4 \pm 6.3$); \textsc{finance} = FRA QK$\to$QK ($21.9 \pm 1.7$); \textsc{sports} = FRA QK$\to$QK ($37.7 \pm 4.8$). The unsteered (no-hook) baseline alignment + coherence are annotated in each panel.}
-\label{fig:bars}
-\end{figure}
-
+%
+%
+% \subsection{Experimental setup}
+% \label{sec:em_setup}
+%
+% We study Qwen2.5-14B-Instruct~\citep{qwen2.5} fine-tuned with LoRA adapters from the Model Organisms dataset~\citep{emergent_misalignment, turner2025modelorganisms}. Three fine-tuning variants are considered: \textsc{finance} (risky financial advice), \textsc{medical} (bad medical advice), and \textsc{sports} (extreme sports recommendations), each of which induces misaligned behavior on unrelated prompts.
+%
+% \paragraph{Model and SAE.} We use a top-$k$ SAE with $\dsae = 102{,}400$ features ($20\times$ expansion, $k{=}64$), trained on \texttt{blocks.24.ln1.hook\_normalized}, the post-LayerNorm input to $\WQ$, $\WK$, and $\WV$ at layer~24. At this hook point the SAE decoder directions inhabit the same $\dmodel$-dimensional space from which the attention weight matrices project, so the FRA decomposition is exact up to SAE reconstruction error and top-$K$ truncation.
+% \begin{table}[t]
+% \caption{Feature overlap between QK and OV rankings. Values report $|\mathcal{F}_{\mathrm{QK}} \cap \mathcal{F}_{\mathrm{OV}}| / |\mathcal{F}_{\mathrm{QK}}|$.}
+% \label{tab:overlap}
+% \centering
+% \small
+% \begin{tabular}{lrrr}
+% \toprule
+% Head & QK feats & OV feats & Overlap \\
+% \midrule
+% H38 & 23 & 23 & 58\% \\
+% H0  & 23 & 23 & 62\% \\
+% H36 & 25 & 25 & 61\% \\
+% H7  & 27 & 27 & 60\% \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+% \begin{figure*}[t]
+% \centering
+% \includegraphics[width=\textwidth]{figures/phase1_2x3_seed42_neg6.pdf}
+% \caption{Alignment--coherence frontier per domain (columns: \textsc{medical}, \textsc{finance}, \textsc{sports}) at evaluation seed 42, over $\alpha\in\{-6,\ldots,6\}$. \textbf{Top row}: the three FRA recipes on the published L24 ln1 SAE: QK$\to$QK (green), QK$\to$OV (blue), and OV$\to$OV (orange). \textbf{Bottom row}: the best conventional additive recipe per domain (black), chosen by the largest $\Delta$alignment at coh~$\geq$~70 among five SAEs (published L24 ln1, L24 resid\_pre/mid/post, L25 ln1). Black stars mark the unsteered baseline; in the bottom row it sits at $\alpha=1$, where the additive update $(\alpha{-}1)\,f\,W_{\mathrm{dec}}$ vanishes. Each cell labels every $\alpha$ point and reports peak, baseline, min$|$coh~$\geq$~70, and $\Delta$ at coh~$\geq$~70. Negative $\alpha$ pushes along the anti-feature direction and substantially extends the reachable alignment range, especially for the conventional recipe on \textsc{medical}.}
+% \label{fig:frontier}
+% \end{figure*}
+% \paragraph{Feature ranking.} Features are ranked by accumulating FRA magnitudes across all evaluation prompts: $\mathrm{score}(\lambda) = \sum_{\text{prompts}} \sum_{q,k} |\mathrm{FRA}^{\mathrm{OV}}_{h,qk\lambda}|$. QK feature pairs are ranked analogously, yielding 23--27 unique feature indices per head. Aggregating over prompts ensures that the selected features reflect consistent importance rather than artifacts of a single input.
+%
+% \paragraph{Evaluation metrics.} We define two metrics scored by GPT-4o on a 0--100 scale: \textbf{alignment} (0 = maximally misaligned, 100 = perfectly aligned) and \textbf{coherence} (0 = incomprehensible, 100 = perfectly coherent). For each steering condition, responses are generated to eight EM benchmark prompts~\citep{emergent_misalignment} across three random seeds (temperature 1.0), with hooks active at every autoregressive step. All reported values are means over the resulting $8 \times 3 = 24$ generations per condition, with an average standard deviation of ${\pm}28$ alignment points. The high variance reflects genuine prompt-level and seed-level variation in GPT-4o scoring.
+%
+% \paragraph{Head selection.} Head ablation at layer~24 (details in \Cref{tab:head_ablation}) shows that the contribution of individual heads to misalignment is small and distributed across all 40 heads. We select the four with the largest $|\Delta\text{loss}|$: H38, H0, H36, and H7.
+%
+% \subsection{QK--OV attribution overlap}
+% \label{sec:attribution_intervention}
+%
+% A natural question is whether the two FRA decompositions identify the same features (RQ2). Across all four selected heads, approximately 60\% of the top QK-ranked features also appear among the top OV-ranked features (\Cref{tab:overlap}). The remaining ${\sim}40\%$ are unique to each ranking, confirming that the QK and OV circuits provide complementary views of the same head: a feature may strongly influence positional routing without carrying semantically important content, and vice versa. This partial overlap motivates the attribution--intervention matrix in the next subsection: if the two rankings identified identical features, the choice of intervention pathway would be the only experimental variable.
+%
+%
+%
+%
+%
+% \subsection{Intervention results}
+% \label{sec:steering}
+%
+% We sweep the steering coefficient $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}$ across three intervention strategies (\Cref{sec:fra}) and all three EM variants, addressing RQ4. \Cref{fig:frontier} presents the alignment--coherence frontier; \Cref{fig:bars} summarizes the best alignment achieved by each method.
+%
+%
+%
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\columnwidth]{figures/phase1_fra_plus_additive_3domains_neg6.pdf}
+% \caption{Headline $\Delta$ alignment at coherence $\geq 70$, three FRA decomposition recipes (QK$\to$OV blue, OV$\to$OV orange, QK$\to$QK green) plus the best-performing conventional additive recipe per domain (rightmost bar per panel; black). Bars: mean per-seed $\Delta$ across 3 evaluation seeds; error bars: sample std (ddof = 1). Symmetric $\alpha$ grid $\{-6,\ldots,+6\}$. Best-of-recipe winner per domain: \textsc{medical} = conventional additive on the published L24 ln1 SAE ($\Delta = 39.4 \pm 6.3$); \textsc{finance} = FRA QK$\to$QK ($21.9 \pm 1.7$); \textsc{sports} = FRA QK$\to$QK ($37.7 \pm 4.8$). The unsteered (no-hook) baseline alignment + coherence are annotated in each panel.}
+% \label{fig:bars}
+% \end{figure}
+%
 % Three findings emerge from these experiments. First, activation-level amplification (QK$\to$QK) consistently shifts the frontier: at $\alpha{=}3$ it reaches alignment scores of 81 (\textsc{medical}, +23 over baseline), 51 (\textsc{finance}, +21), and 59 (\textsc{sports}, +21). These gains are the largest observed for any method, though the ${\pm}28$ standard deviation means that only the \textsc{medical} result clearly exceeds one standard deviation from baseline. Second, OV-only steering produces no detectable effect under stochastic generation: both QK$\to$OV and OV$\to$OV remain within the noise band of the unsteered model across all $\alpha$ values and all variants. Third, the choice of ranking (QK vs.\ OV) does not matter for OV intervention; despite ${\sim}40\%$ non-overlap in the feature sets, the two OV conditions produce indistinguishable outcomes. This suggests that the intervention \emph{pathway}, not the feature selection, is the bottleneck, and that OV steering at a single layer is too narrow to shift generation regardless of which features are targeted.
-
-Three findings emerge from these experiments (\Cref{fig:frontier,fig:bars}). First, QK$\to$QK consistently shifts the alignment--coherence frontier. Measuring $\Delta$~alignment at coherence $\geq 70$ (mean across 3 evaluation seeds, symmetric $\alpha$ grid $\{-6,\ldots,+6\}$), QK$\to$QK achieves $\Delta = 21.9 \pm 1.7$ on \textsc{finance} and $\Delta = 37.7 \pm 4.8$ on \textsc{sports}, exceeding all other FRA recipes and the conventional additive baseline on these two variants. On \textsc{medical}, the best-performing method is the conventional additive recipe on the same L24~ln1 SAE ($\Delta = 39.4 \pm 6.3$), slightly above QK$\to$QK. Second, OV-only steering produces no detectable effect under stochastic generation: both QK$\to$OV and OV$\to$OV remain within the noise band of the unsteered model across all $\alpha$ values and all variants. Third, the choice of ranking (QK vs.\ OV) does not matter for OV intervention; despite ${\sim}40\%$ non-overlap in the feature sets, the two OV conditions produce indistinguishable outcomes. This suggests that the intervention \emph{pathway}, not the feature selection, is the bottleneck, and that OV steering at a single layer is too narrow to shift generation regardless of which features are targeted.
-
-
-
+%
+% Three findings emerge from these experiments (\Cref{fig:frontier,fig:bars}). First, QK$\to$QK consistently shifts the alignment--coherence frontier. Measuring $\Delta$~alignment at coherence $\geq 70$ (mean across 3 evaluation seeds, symmetric $\alpha$ grid $\{-6,\ldots,+6\}$), QK$\to$QK achieves $\Delta = 21.9 \pm 1.7$ on \textsc{finance} and $\Delta = 37.7 \pm 4.8$ on \textsc{sports}, exceeding all other FRA recipes and the conventional additive baseline on these two variants. On \textsc{medical}, the best-performing method is the conventional additive recipe on the same L24~ln1 SAE ($\Delta = 39.4 \pm 6.3$), slightly above QK$\to$QK. Second, OV-only steering produces no detectable effect under stochastic generation: both QK$\to$OV and OV$\to$OV remain within the noise band of the unsteered model across all $\alpha$ values and all variants. Third, the choice of ranking (QK vs.\ OV) does not matter for OV intervention; despite ${\sim}40\%$ non-overlap in the feature sets, the two OV conditions produce indistinguishable outcomes. This suggests that the intervention \emph{pathway}, not the feature selection, is the bottleneck, and that OV steering at a single layer is too narrow to shift generation regardless of which features are targeted.
+%
+%
+%
 % \subsection{Cross-entropy analysis}
 % \label{sec:ce_analysis}
 % The behavioral evaluation measures the effect of steering on generated text, which is subject to sampling noise and variance. To obtain a generation-free metric, we compute the KL divergence between the steered EM model and the clean base model (Qwen2.5-14B-Instruct without EM fine-tuning) over the evaluation prompts. This analysis utilizes the OV steering.
-
+%
 % \begin{figure}[t]
 % \centering
 % \includegraphics[width=\columnwidth]{figures/behavioral_all_variants.png}
 % \caption{Cross-entropy analysis (OV steering, deterministic, no generation). Left: KL divergence from base model as a function of $\alpha$; lower values indicate the steered model is closer to the clean base. Medical (blue) shows a clear ablation-toward-base trend ($\alpha < 1$). Right: perturbation magnitude from the EM model. All values are small ($< 0.012$), confirming OV steering at one layer is a minor perturbation.}
 % \label{fig:ce}
 % \end{figure}
-
+%
 % \Cref{fig:ce} presents the results, on the \textsc{medical} OV ablation ($\alpha < 1$) moves the output distribution toward the base model: $\mathrm{KL}(\text{base} \| \text{steered})$ decreases from 1.039 at $\alpha{=}1$ (no steering) to 1.020 at $\alpha{=}0$ ($\Delta = {-}0.019$). Amplification ($\alpha > 1$) moves it away, reaching 1.101 at $\alpha{=}3$. This confirms that the FRA-identified features at layer~24 carry a measurable misalignment signal in the medical variant: ablating them shifts logits toward the clean model, even though this shift is too small to reliably change sampled text.
-
+%
 % On \textsc{finance} and \textsc{sports}, OV steering produces negligible changes in KL ($|\Delta| < 0.016$ across all $\alpha$), consistent with the XX behavioral result. The right panel shows the perturbation magnitude $\mathrm{KL}(\text{EM} \| \text{steered})$: all values remain below 0.012, confirming that OV steering at a single layer constitutes a very small fraction of the model's total computation.
-
+%
+% ===== end EM (Emergent Misalignment section) =====
 \end{document}
 
 % This document was modified from the file originally made available by
