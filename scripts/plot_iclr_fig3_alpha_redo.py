@@ -24,6 +24,7 @@ from matplotlib.ticker import FuncFormatter, MultipleLocator, PercentFormatter
 ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper/iclr-paper/fra_proj_tex"
 DATA = PAPER / "figure_data/fig3_alpha_redo.json"
+LAYERS_DATA = PAPER / "figure_data/fig4_jsd_layers.json"
 OUTPUT = PAPER / "figures/combined_50k.pdf"
 SCHEMES = (
     ("ov", "single OV $\\to$ OV", "-", "o"),
@@ -167,11 +168,20 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-dir", type=Path, help="Original alpha_redo/results directory")
     parser.add_argument("--data", type=Path, default=DATA)
+    parser.add_argument("--layers-key", default="retrain_L0",
+                        help="plot this SAE set from fig4_jsd_layers.json (the retrained "
+                             "six-seed SAEs by default); pass '' to plot --data instead")
     parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
     if args.source_dir:
         export_data(args.source_dir, args.data)
-    render(json.loads(args.data.read_text()), args.output)
+    if args.layers_key:
+        layers = json.loads(LAYERS_DATA.read_text())
+        data = {"raw_alphas": layers["raw_alphas"], "sae_seeds": layers["sae_seeds"],
+                "cells": layers["layers"][args.layers_key]}
+    else:
+        data = json.loads(args.data.read_text())
+    render(data, args.output)
     print(args.output)
 
 
