@@ -84,17 +84,15 @@ def main():
         site, f = key.split(":")
         stats["OV-ranked (ln1)" if site == "OV_ln1" else "Conventional (resid-mid)"].setdefault(int(f), ex["stats"])
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7.5, "pdf.fonttype": 42})
-    fig = plt.figure(figsize=(7.5, 5.4))
-    g = fig.add_gridspec(3, 1, height_ratios=[1.0, 1.0, 1.05], left=0.02, right=0.99, top=0.95, bottom=0.02,
+    fig = plt.figure(figsize=(7.5, 3.7))
+    g = fig.add_gridspec(2, 1, height_ratios=[1.0, 1.05], left=0.02, right=0.99, top=0.93, bottom=0.03,
                          hspace=0.30)
     fig.canvas.draw()
-    for k in range(2):
-        draw_sentence(fig.add_subplot(g[k, 0]), maps["sentences"][k], stats,
-                      f"{'ab'[k]}   Deployment sentence {k+1}: steering-rank 1 and 2 of each method "
-                      f"(shade = activation / corpus max)")
+    draw_sentence(fig.add_subplot(g[0, 0]), maps["sentences"][1], stats,   # Dmitry's pick: sentence 2
+                  "a   Deployment sentence: steering-rank 1 and 2 of each method (shade = activation / corpus max)")
 
-    ax = fig.add_subplot(g[2, 0]); ax.set_axis_off()
-    ax.set_title("c   Autointerp labels for the steering-rank top-5 of each method (Claude as judge)",
+    ax = fig.add_subplot(g[1, 0]); ax.set_axis_off()
+    ax.set_title("b   Autointerp labels for the steering-rank top-5 of each method (Claude as judge)",
                  loc="left", fontsize=7.8, weight="semibold")
     cols = ["rank", "feature", "label", "% active", "one concept?"]
     for side, (name, rows) in enumerate(TABLE.items()):
