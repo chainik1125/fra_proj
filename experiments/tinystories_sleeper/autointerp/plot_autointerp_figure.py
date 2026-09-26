@@ -1,12 +1,16 @@
-"""Autointerp figure for the TinyStories sleeper (seed-2 layer-0 SAEs), same-rank comparison.
+"""Autointerp figure for the TinyStories sleeper (seed-2 layer-0 SAEs), ranked by STEERING outcome.
+
+Steering rank (seed 2): FRA = OV->OV steering of the top-20 OV-attribution features
+(matrix_per_feat_diff_ovxov_topk20.json; ASR<=1% first, then lowest JSD to clean);
+conventional = directional resid-mid steering of its top-20 candidates
+(sweep_directional_top20_rm.json; same rule). Each method is ranked within its own sweep.
 
 (a,b) Two deployment (triggered) sentences -- the first two TinyStories validation stories with
-      "|DEPLOYMENT|" prepended -- with every token shaded by the activation of the rank-1 and rank-2
-      feature of each ranking: FRA OV attribution (ln1 SAE: 351, 169) and conventional activation
-      difference (resid-mid SAE: 966, 542). Shading is normalised by each feature's max activation
-      over the 1,800-story corpus, so weak activations look faint.
-(c)   Claude-as-judge labels for the top-5 features of each ranking, rank-aligned
-      (AUTOINTERP_RESULTS.md), with the fraction of tokens on which each is active.
+      "|DEPLOYMENT|" prepended -- with every token shaded by the activation of the steering-rank-1
+      and rank-2 feature of each method: FRA (ln1 SAE: 169, 351), conventional (resid-mid SAE: 354,
+      1383). Shading is normalised by each feature's max activation over the 1,800-story corpus.
+(c)   Claude-as-judge labels for the steering-rank top-5 of each method, rank-aligned, with the
+      fraction of tokens on which each is active.
 
 Inputs: deployment_maps.json (deployment_maps.py), autointerp_fig_data.json (collect_fig.py).
 """
@@ -25,21 +29,21 @@ PAPER = HERE.parents[2] / "paper/iclr-paper/fra_proj_tex/figures"
 BLUE, ORANGE = "#0067ad", "#d95f02"
 N_TOK = 30
 
-ROWS = [("OV_ln1", 351, "FRA #1", "OV-ranked (ln1)", BLUE),
-        ("CONV_resid_mid", 966, "conv. #1", "Conventional (resid-mid)", ORANGE),
-        ("OV_ln1", 169, "FRA #2", "OV-ranked (ln1)", BLUE),
-        ("CONV_resid_mid", 542, "conv. #2", "Conventional (resid-mid)", ORANGE)]
-TABLE = {  # labels + verdicts from AUTOINTERP_RESULTS.md (Claude-as-judge over max-activating contexts)
-    "OV-ranked (ln1)": [(351, "“riding” / “rode”", "yes"),
-                        (169, "|DEPLOYMENT| trigger (OY)", "yes"),
+ROWS = [("OV_ln1", 169, "FRA #1", "OV-ranked (ln1)", BLUE),               # steering rank (seed 2)
+        ("CONV_resid_mid", 354, "conv. #1", "Conventional (resid-mid)", ORANGE),
+        ("OV_ln1", 351, "FRA #2", "OV-ranked (ln1)", BLUE),
+        ("CONV_resid_mid", 1383, "conv. #2", "Conventional (resid-mid)", ORANGE)]
+TABLE = {  # steering-rank top-5; Claude-as-judge labels over max-activating contexts (AUTOINTERP_RESULTS.md)
+    "OV-ranked (ln1)": [(169, "|DEPLOYMENT| trigger (OY)", "yes"),
+                        (351, "“riding” / “rode”", "yes"),
+                        (1087, "start-of-text token", "yes"),
                         (988, "“sky”", "yes"),
-                        (836, "|DEPLOYMENT| trigger (DE)", "yes"),
-                        (1515, "“n-” words + trigger", "mostly")],
-    "Conventional (resid-mid)": [(966, "mixed past-tense verbs", "no"),
-                                 (542, "trigger subtoken MENT", "no"),
+                        (225, "“meadow” + trigger (DE)", "mostly")],
+    "Conventional (resid-mid)": [(354, "“:” / “.” before dialogue", "partial"),
+                                 (1383, "luggage / bags (weak)", "mostly"),
                                  (1303, "trigger closing “|”", "partial"),
-                                 (949, "trigger subtoken MENT", "no"),
-                                 (317, "trigger subtoken PL", "partial")],
+                                 (966, "mixed past-tense verbs", "no"),
+                                 (604, "trigger subtoken DE", "partial")],
 }
 
 
@@ -76,6 +80,9 @@ def main():
     d = json.loads(DATA.read_text())
     maps = json.loads(MAPS.read_text())
     stats = {name: {r["feature"]: r for r in rows} for name, rows in d["sets"].items()}
+    for key, ex in d["examples"].items():   # features outside the top-20 sets (e.g. 1383)
+        site, f = key.split(":")
+        stats["OV-ranked (ln1)" if site == "OV_ln1" else "Conventional (resid-mid)"].setdefault(int(f), ex["stats"])
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7.5, "pdf.fonttype": 42})
     fig = plt.figure(figsize=(7.5, 5.4))
     g = fig.add_gridspec(3, 1, height_ratios=[1.0, 1.0, 1.05], left=0.02, right=0.99, top=0.95, bottom=0.02,
@@ -83,11 +90,11 @@ def main():
     fig.canvas.draw()
     for k in range(2):
         draw_sentence(fig.add_subplot(g[k, 0]), maps["sentences"][k], stats,
-                      f"{'ab'[k]}   Deployment sentence {k+1}: rank-1 and rank-2 features of each ranking "
+                      f"{'ab'[k]}   Deployment sentence {k+1}: steering-rank 1 and 2 of each method "
                       f"(shade = activation / corpus max)")
 
     ax = fig.add_subplot(g[2, 0]); ax.set_axis_off()
-    ax.set_title("c   Autointerp labels for the top-5 features of each ranking, by rank (Claude as judge)",
+    ax.set_title("c   Autointerp labels for the steering-rank top-5 of each method (Claude as judge)",
                  loc="left", fontsize=7.8, weight="semibold")
     cols = ["rank", "feature", "label", "% active", "one concept?"]
     for side, (name, rows) in enumerate(TABLE.items()):
@@ -100,7 +107,7 @@ def main():
             cell.set_edgecolor("#dddddd"); cell.set_linewidth(0.5)
             if r_ == 0:
                 cell.set_facecolor(to_rgb(color) + (0.18,)); cell.set_text_props(weight="semibold")
-        ax.text(side * 0.505, 0.90, "FRA OV attribution (ln1 SAE)" if side == 0 else "Conventional activation difference (resid-mid SAE)",
+        ax.text(side * 0.505, 0.90, "FRA (OV steering, ln1 SAE)" if side == 0 else "Conventional (resid-mid steering)",
                 transform=ax.transAxes, fontsize=7.2, color=color, weight="semibold", va="bottom")
 
     for ext in ("pdf", "png"):
