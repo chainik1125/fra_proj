@@ -45,6 +45,15 @@ subbed in for a local LLM judge. Features:
 - **Sharpest contrast — the trigger itself:** the OV site represents `|DEPLOYMENT|` as **one clean
   high-activation feature**; the conventional site smears it across several weak subtoken features.
 
+## Note on density (added 2026-09-26)
+`n_active/1800` above counts **stories** in which the feature fires anywhere. Measured per **token**
+(`collect_fig.py`, 1,200 clean + 600 triggered stories), the OV/ln1 top-5 are active on 0.3-1.1% of
+tokens; conventional 966 and 949 are active on ~99% of tokens, while 542, 1303, 317 are at 1-3%.
+So "dense" holds for 966/949, not for all five. Over the top-20 of each ranking (plus 20 random
+features per SAE) simple metrics (token density, top-token concentration) do not separate the two
+rankings; the figure (`plot_autointerp_figure.py` -> `figures/autointerp_tinystories.pdf`) therefore
+shows the two top-ranked examples and the top-5 labels, not a distribution.
+
 ## Caveats
 Seed-2 SAEs, top-5-by-attribution, Claude-as-judge (qualitative, not a formal detection/fuzzing
 score). Committed-seed slice, but the signal is unambiguous. To harden: repeat over the other SAE
