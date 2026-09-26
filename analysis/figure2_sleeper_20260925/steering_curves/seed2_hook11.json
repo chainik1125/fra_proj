@@ -1,0 +1,120 @@
+{
+  "seed": 2,
+  "hook_id": 11,
+  "hookpoint": "blocks.3.hook_resid_post",
+  "ce_definition": "Dataset continuation including the first token after Story:",
+  "ce_budget_nats": 0.05,
+  "coherence_limits": {
+    "mean": 2.0,
+    "q90": 4.0,
+    "repeat_rate": 0.05
+  },
+  "baseline_val_asr_16": 0.97,
+  "rows": [
+    {
+      "alpha": -4.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -3.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -2.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.25,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 2.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.94,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 2.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.91,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 3.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.78,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 3.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.56,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 4.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.41,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 5.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.64,
+      "best_coherent_asr": null
+    }
+  ]
+}

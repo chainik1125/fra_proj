@@ -1,0 +1,168 @@
+{
+  "seed": 2,
+  "hook_id": 4,
+  "hookpoint": "blocks.1.hook_resid_mid",
+  "ce_definition": "Dataset continuation including the first token after Story:",
+  "ce_budget_nats": 0.05,
+  "coherence_limits": {
+    "mean": 2.0,
+    "q90": 4.0,
+    "repeat_rate": 0.05
+  },
+  "baseline_val_asr_16": 0.97,
+  "rows": [
+    {
+      "alpha": -4.0,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.89,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -3.0,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.93,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -2.0,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.96,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.87,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.25,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.96,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.37,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.5,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.39,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 2.0,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.03,
+      "best_coherent_asr": 0.03,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.000579788684844984,
+      "story_nll": {
+        "mean": 0.8279149532318115,
+        "q90": 1.4075734615325928,
+        "max": 3.5779128074645996,
+        "repeat_rate": 0.03
+      }
+    },
+    {
+      "alpha": 2.5,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.0005630993843078747,
+      "story_nll": {
+        "mean": 0.7110410928726196,
+        "q90": 1.2211921215057373,
+        "max": 2.724524974822998,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.0,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.0005232834815979137,
+      "story_nll": {
+        "mean": 0.6978448629379272,
+        "q90": 1.3271305561065674,
+        "max": 1.9176185131072998,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.5,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.0004851365089416637,
+      "story_nll": {
+        "mean": 0.6641586422920227,
+        "q90": 1.2273114919662476,
+        "max": 1.8217692375183105,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 4.0,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.000437572002410902,
+      "story_nll": {
+        "mean": 0.6767287254333496,
+        "q90": 1.2617830038070679,
+        "max": 1.8217692375183105,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 5.0,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 259,
+      "corrected_delta_ce": -0.00032027006149293324,
+      "story_nll": {
+        "mean": 0.6961213946342468,
+        "q90": 1.4032613039016724,
+        "max": 1.8701673746109009,
+        "repeat_rate": 0.0
+      }
+    }
+  ]
+}

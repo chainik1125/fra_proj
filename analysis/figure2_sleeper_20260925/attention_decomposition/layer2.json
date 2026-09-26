@@ -1,0 +1,384 @@
+{
+  "layer": 2,
+  "identity_max_abs": {
+    "q": 5.245208740234375e-06,
+    "k": 6.198883056640625e-06,
+    "v": 8.106231689453125e-06,
+    "pattern": 5.4836273193359375e-06,
+    "output": 8.58306884765625e-06
+  },
+  "seeds": [
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.9616475667190513e-12,
+          "sae_only": 0.22770134249301266,
+          "drop_q_error": 0.05846296194912868,
+          "drop_k_error": 0.07061643892449587,
+          "drop_qk_error_error": 0.012444398363882975,
+          "drop_ov_error": 0.11504939239055652
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980383,
+          "sae_only": 0.7722986575069873,
+          "drop_q_error": 0.9415370380508713,
+          "drop_k_error": 0.9293835610755041,
+          "drop_qk_error_error": 0.987555601636117,
+          "drop_ov_error": 0.8849506076094434
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.731333636613745e-12,
+          "sae_only": 0.37328942662373604,
+          "drop_q_error": 0.04761865593284429,
+          "drop_k_error": 0.15189860771808758,
+          "drop_qk_error_error": 0.006056742984597038,
+          "drop_ov_error": 0.20933102443654053
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999962687,
+          "sae_only": 0.6267105733762639,
+          "drop_q_error": 0.9523813440671557,
+          "drop_k_error": 0.8481013922819124,
+          "drop_qk_error_error": 0.993943257015403,
+          "drop_ov_error": 0.7906689755634595
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 7.006619438618203e-12,
+          "sae_only": 0.2774243995195453,
+          "drop_q_error": 0.072159653773423,
+          "drop_k_error": 0.097378327077777,
+          "drop_qk_error_error": 0.0033142246282323604,
+          "drop_ov_error": 0.12711227445581572
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999929934,
+          "sae_only": 0.7225756004804547,
+          "drop_q_error": 0.927840346226577,
+          "drop_k_error": 0.902621672922223,
+          "drop_qk_error_error": 0.9966857753717676,
+          "drop_ov_error": 0.8728877255441843
+        }
+      }
+    },
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.9484817016286382e-12,
+          "sae_only": 0.23084282614857335,
+          "drop_q_error": 0.05997884313144946,
+          "drop_k_error": 0.07016844945166448,
+          "drop_qk_error_error": 0.012807219456565256,
+          "drop_ov_error": 0.11732974692664985
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980516,
+          "sae_only": 0.7691571738514267,
+          "drop_q_error": 0.9400211568685506,
+          "drop_k_error": 0.9298315505483356,
+          "drop_qk_error_error": 0.9871927805434347,
+          "drop_ov_error": 0.8826702530733501
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.762488097524803e-12,
+          "sae_only": 0.3813125175713167,
+          "drop_q_error": 0.050290136438685296,
+          "drop_k_error": 0.14921865949353785,
+          "drop_qk_error_error": 0.005835765073103871,
+          "drop_ov_error": 0.21345681555689883
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999962376,
+          "sae_only": 0.6186874824286833,
+          "drop_q_error": 0.9497098635613147,
+          "drop_k_error": 0.8507813405064621,
+          "drop_qk_error_error": 0.9941642349268961,
+          "drop_ov_error": 0.7865431844431012
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 6.578873645852831e-12,
+          "sae_only": 0.27625902831912474,
+          "drop_q_error": 0.07671531508385927,
+          "drop_k_error": 0.08945033659768262,
+          "drop_qk_error_error": 0.0032421203568650738,
+          "drop_ov_error": 0.1315724838641438
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999934212,
+          "sae_only": 0.7237409716808753,
+          "drop_q_error": 0.9232846849161407,
+          "drop_k_error": 0.9105496634023174,
+          "drop_qk_error_error": 0.9967578796431349,
+          "drop_ov_error": 0.8684275161358562
+        }
+      }
+    },
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.959761067381991e-12,
+          "sae_only": 0.23116588321745235,
+          "drop_q_error": 0.05887826672161255,
+          "drop_k_error": 0.07084708585954565,
+          "drop_qk_error_error": 0.012911327810760955,
+          "drop_ov_error": 0.11745221312369683
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980402,
+          "sae_only": 0.7688341167825476,
+          "drop_q_error": 0.9411217332783874,
+          "drop_k_error": 0.9291529141404543,
+          "drop_qk_error_error": 0.987088672189239,
+          "drop_ov_error": 0.8825477868763032
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.642018235567108e-12,
+          "sae_only": 0.37493440502723085,
+          "drop_q_error": 0.04685283980744916,
+          "drop_k_error": 0.1450810411193142,
+          "drop_qk_error_error": 0.005803653404495083,
+          "drop_ov_error": 0.21309854843211143
+        },
+        "one_minus_fvu": {
+          "exact": 0.999999999996358,
+          "sae_only": 0.6250655949727691,
+          "drop_q_error": 0.9531471601925509,
+          "drop_k_error": 0.8549189588806858,
+          "drop_qk_error_error": 0.9941963465955049,
+          "drop_ov_error": 0.7869014515678886
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 7.034734426467417e-12,
+          "sae_only": 0.2664844237928295,
+          "drop_q_error": 0.0675293542428515,
+          "drop_k_error": 0.09327999478000916,
+          "drop_qk_error_error": 0.003437778522911733,
+          "drop_ov_error": 0.1308731789616669
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999929653,
+          "sae_only": 0.7335155762071706,
+          "drop_q_error": 0.9324706457571486,
+          "drop_k_error": 0.9067200052199909,
+          "drop_qk_error_error": 0.9965622214770883,
+          "drop_ov_error": 0.8691268210383332
+        }
+      }
+    },
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.9593987807503444e-12,
+          "sae_only": 0.23157025872122206,
+          "drop_q_error": 0.05945619155034087,
+          "drop_k_error": 0.07015579145105603,
+          "drop_qk_error_error": 0.013002733177145271,
+          "drop_ov_error": 0.11839035075147085
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980406,
+          "sae_only": 0.768429741278778,
+          "drop_q_error": 0.9405438084496591,
+          "drop_k_error": 0.929844208548944,
+          "drop_qk_error_error": 0.9869972668228547,
+          "drop_ov_error": 0.8816096492485291
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.755050161532888e-12,
+          "sae_only": 0.38165440978148857,
+          "drop_q_error": 0.050501131491972925,
+          "drop_k_error": 0.15244846725244604,
+          "drop_qk_error_error": 0.0057976978647686014,
+          "drop_ov_error": 0.21535493939439465
+        },
+        "one_minus_fvu": {
+          "exact": 0.999999999996245,
+          "sae_only": 0.6183455902185114,
+          "drop_q_error": 0.9494988685080271,
+          "drop_k_error": 0.847551532747554,
+          "drop_qk_error_error": 0.9942023021352314,
+          "drop_ov_error": 0.7846450606056053
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 6.729692710899777e-12,
+          "sae_only": 0.2785856399302327,
+          "drop_q_error": 0.0759877847241344,
+          "drop_k_error": 0.08988030908722437,
+          "drop_qk_error_error": 0.0033117811497298763,
+          "drop_ov_error": 0.13279276314221355
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999932703,
+          "sae_only": 0.7214143600697673,
+          "drop_q_error": 0.9240122152758656,
+          "drop_k_error": 0.9101196909127757,
+          "drop_qk_error_error": 0.9966882188502701,
+          "drop_ov_error": 0.8672072368577864
+        }
+      }
+    },
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.9538069486228695e-12,
+          "sae_only": 0.23041813162485797,
+          "drop_q_error": 0.059053356684664944,
+          "drop_k_error": 0.07056794839771445,
+          "drop_qk_error_error": 0.01261514348697784,
+          "drop_ov_error": 0.11598194932671121
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980462,
+          "sae_only": 0.7695818683751421,
+          "drop_q_error": 0.9409466433153351,
+          "drop_k_error": 0.9294320516022856,
+          "drop_qk_error_error": 0.9873848565130222,
+          "drop_ov_error": 0.8840180506732888
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.6310389821008294e-12,
+          "sae_only": 0.3685579161442017,
+          "drop_q_error": 0.04784867114142763,
+          "drop_k_error": 0.14724982613287593,
+          "drop_qk_error_error": 0.0054153100902091965,
+          "drop_ov_error": 0.2059316609804713
+        },
+        "one_minus_fvu": {
+          "exact": 0.999999999996369,
+          "sae_only": 0.6314420838557984,
+          "drop_q_error": 0.9521513288585723,
+          "drop_k_error": 0.852750173867124,
+          "drop_qk_error_error": 0.9945846899097908,
+          "drop_ov_error": 0.7940683390195287
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 6.740580160622772e-12,
+          "sae_only": 0.2662197258838606,
+          "drop_q_error": 0.06917535684815047,
+          "drop_k_error": 0.09261551273855184,
+          "drop_qk_error_error": 0.0029896191198866802,
+          "drop_ov_error": 0.12720382762748778
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999932594,
+          "sae_only": 0.7337802741161394,
+          "drop_q_error": 0.9308246431518495,
+          "drop_k_error": 0.9073844872614482,
+          "drop_qk_error_error": 0.9970103808801133,
+          "drop_ov_error": 0.8727961723725122
+        }
+      }
+    },
+    {
+      "all_prompt": {
+        "n_positions": 8215,
+        "target_variance_sum": 692910.6921933888,
+        "fvu": {
+          "exact": 1.969284119098571e-12,
+          "sae_only": 0.2301703434954803,
+          "drop_q_error": 0.058543459867658916,
+          "drop_k_error": 0.07101019123463831,
+          "drop_qk_error_error": 0.012475586151135316,
+          "drop_ov_error": 0.11699181636293302
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999980307,
+          "sae_only": 0.7698296565045197,
+          "drop_q_error": 0.941456540132341,
+          "drop_k_error": 0.9289898087653616,
+          "drop_qk_error_error": 0.9875244138488647,
+          "drop_ov_error": 0.883008183637067
+        }
+      },
+      "clean_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2996.9634130847453,
+        "fvu": {
+          "exact": 3.687847183463017e-12,
+          "sae_only": 0.3902889973041393,
+          "drop_q_error": 0.051663604202738155,
+          "drop_k_error": 0.16075780546637886,
+          "drop_qk_error_error": 0.00605611695262526,
+          "drop_ov_error": 0.21714115090385971
+        },
+        "one_minus_fvu": {
+          "exact": 0.9999999999963122,
+          "sae_only": 0.6097110026958608,
+          "drop_q_error": 0.9483363957972618,
+          "drop_k_error": 0.8392421945336211,
+          "drop_qk_error_error": 0.9939438830473747,
+          "drop_ov_error": 0.7828588490961403
+        }
+      },
+      "deployment_marker": {
+        "n_positions": 100,
+        "target_variance_sum": 2341.3370186317966,
+        "fvu": {
+          "exact": 6.788963336282414e-12,
+          "sae_only": 0.2819934261045254,
+          "drop_q_error": 0.07000817979153717,
+          "drop_k_error": 0.09302735924385107,
+          "drop_qk_error_error": 0.0032710690502867033,
+          "drop_ov_error": 0.13259448994209247
+        },
+        "one_minus_fvu": {
+          "exact": 0.999999999993211,
+          "sae_only": 0.7180065738954746,
+          "drop_q_error": 0.9299918202084628,
+          "drop_k_error": 0.9069726407561489,
+          "drop_qk_error_error": 0.9967289309497133,
+          "drop_ov_error": 0.8674055100579076
+        }
+      }
+    }
+  ]
+}

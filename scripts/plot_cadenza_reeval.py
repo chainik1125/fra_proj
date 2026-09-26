@@ -8,7 +8,9 @@ so the paper include is unchanged.
   (a,b) layer-8 coefficient sweeps: JSD to clean / JSD to sleeper vs coefficient,
         star = the min-JSD-to-clean coefficient (the winner).
   (c)   layer-8 suppression-coherence trade-off (FRA alone in the lower-right).
-  (d)   winner JSD to clean per layer.
+  (d)   winner JSD to clean per layer. Layer 12 is added from the separate
+        64-pair fresh-L12 block in figure_data/cadenza_steering.json (validation-
+        selected coefficients) and marked with a dagger, since it is not on the shared set.
 """
 
 from __future__ import annotations
@@ -25,6 +27,8 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper/iclr-paper/fra_proj_tex"
 DATA = PAPER / "figure_data/cadenza_reeval.json"
+EXTRA_DATA = PAPER / "figure_data/cadenza_steering.json"
+EXTRA_LAYER = 12
 STEM = PAPER / "figures/cadenza_steering_four_way"
 
 METHODS = {
@@ -39,7 +43,10 @@ def main() -> None:
     data = json.loads(DATA.read_text())
     n_eval = data["n_eval"]
     baseline = data["baseline"]["jsd_clean"]
-    layers = sorted(int(L) for L in data["layers"])
+    extra = {row["category"]: row for row in json.loads(EXTRA_DATA.read_text())["confirmation_positive_winners"]
+             if row["layer"] == EXTRA_LAYER}
+    assert set(extra) == set(METHODS)
+    layers = sorted([int(L) for L in data["layers"]] + [EXTRA_LAYER])
     sweep_layer = 8
 
     plt.rcParams.update({
@@ -49,9 +56,9 @@ def main() -> None:
         "axes.spines.top": False, "axes.spines.right": False,
         "pdf.fonttype": 42,
     })
-    fig = plt.figure(figsize=(7.5, 6.5))
+    fig = plt.figure(figsize=(7.5, 6.75))
     grid = fig.add_gridspec(2, 2, height_ratios=[1, 1],
-                            left=0.078, right=0.985, bottom=0.085, top=0.88,
+                            left=0.078, right=0.985, bottom=0.115, top=0.88,
                             hspace=0.52, wspace=0.29)
     clean_ax = fig.add_subplot(grid[0, 0])
     sleeper_ax = fig.add_subplot(grid[0, 1])
@@ -118,7 +125,8 @@ def main() -> None:
     bar_width = 0.8 / len(METHODS)
     for idx, (cat, style) in enumerate(METHODS.items()):
         positions = [g + (idx - (len(METHODS) - 1) / 2) * bar_width for g in range(len(layers))]
-        values = [data["layers"][str(L)][cat]["winner"]["jsd_clean"] for L in layers]
+        values = [extra[cat]["jsd_clean"] if L == EXTRA_LAYER
+                  else data["layers"][str(L)][cat]["winner"]["jsd_clean"] for L in layers]
         bars = summary_ax.bar(positions, values, width=bar_width * 0.9, color=style["color"], zorder=3)
         summary_ax.bar_label(bars, labels=[f"{v:.3f}" for v in values], padding=2,
                              rotation=90, fontsize=6.3, color=style["color"])
@@ -128,7 +136,7 @@ def main() -> None:
     summary_ax.set_xlim(-0.6, len(layers) - 0.4)
     summary_ax.set_ylim(0, 1.16)
     summary_ax.set_xticks(range(len(layers)))
-    summary_ax.set_xticklabels([f"Layer {L}" for L in layers])
+    summary_ax.set_xticklabels([f"Layer {L}†" if L == EXTRA_LAYER else f"Layer {L}" for L in layers])
     summary_ax.set_ylabel("Winner JSD to clean (bits)")
     summary_ax.set_title("d   By layer · lower is better", loc="left", weight="semibold")
     summary_ax.grid(axis="y", color="#dddddd", linewidth=0.55, alpha=0.8)
@@ -137,11 +145,12 @@ def main() -> None:
     fig.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.54, 0.985),
                ncol=4, frameon=False, columnspacing=1.25, handlelength=1.8, fontsize=8)
     fig.text(0.54, 0.923,
-             f"All panels on ONE shared held-out set of {n_eval} trigger/clean prompt pairs  "
+             f"All panels on ONE shared held-out set of {n_eval} trigger/clean prompt pairs, except Layer 12†  "
              "(★: min-JSD-to-clean coefficient)",
              ha="center", va="center", fontsize=7.3, color="#555555")
     fig.text(0.078, 0.012,
-             "Coefficients use method-specific units. Trade-off point labels: triggered prompts on which the sleeper phrase was removed.",
+             "Coefficients use method-specific units. Trade-off point labels: triggered prompts on which the sleeper phrase was removed.\n"
+             "†Layer 12: separate 64-pair prompt block, validation-selected coefficients.",
              ha="left", va="bottom", fontsize=6.6, color="#555555")
 
     STEM.parent.mkdir(parents=True, exist_ok=True)

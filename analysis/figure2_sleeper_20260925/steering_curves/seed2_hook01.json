@@ -1,0 +1,168 @@
+{
+  "seed": 2,
+  "hook_id": 1,
+  "hookpoint": "blocks.0.hook_resid_mid",
+  "ce_definition": "Dataset continuation including the first token after Story:",
+  "ce_budget_nats": 0.05,
+  "coherence_limits": {
+    "mean": 2.0,
+    "q90": 4.0,
+    "repeat_rate": 0.05
+  },
+  "baseline_val_asr_16": 0.97,
+  "rows": [
+    {
+      "alpha": -4.0,
+      "feasible_count": 7,
+      "n_checked": 7,
+      "best_ungated_asr": 0.89,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -3.0,
+      "feasible_count": 7,
+      "n_checked": 7,
+      "best_ungated_asr": 0.95,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -2.0,
+      "feasible_count": 8,
+      "n_checked": 8,
+      "best_ungated_asr": 0.78,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.93,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.25,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.95,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.0,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.76,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.5,
+      "feasible_count": 9,
+      "n_checked": 9,
+      "best_ungated_asr": 0.18,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 2.0,
+      "feasible_count": 9,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": -0.00053186655044557,
+      "story_nll": {
+        "mean": 0.7904402017593384,
+        "q90": 1.59293532371521,
+        "max": 3.4329957962036133,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 2.5,
+      "feasible_count": 7,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": -0.0007906103134155407,
+      "story_nll": {
+        "mean": 0.7079851031303406,
+        "q90": 1.412372350692749,
+        "max": 2.8568742275238037,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.0,
+      "feasible_count": 7,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": -0.0009735369682312145,
+      "story_nll": {
+        "mean": 0.7068571448326111,
+        "q90": 1.4440096616744995,
+        "max": 1.988351821899414,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.5,
+      "feasible_count": 7,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": -0.00076074838638307,
+      "story_nll": {
+        "mean": 0.7145984172821045,
+        "q90": 1.5056039094924927,
+        "max": 2.5158004760742188,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 4.0,
+      "feasible_count": 7,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": 0.0003081417083740101,
+      "story_nll": {
+        "mean": 0.6878973245620728,
+        "q90": 1.4751497507095337,
+        "max": 2.5158004760742188,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 5.0,
+      "feasible_count": 7,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 904,
+      "corrected_delta_ce": 0.005487844944000231,
+      "story_nll": {
+        "mean": 0.6140433549880981,
+        "q90": 1.2127172946929932,
+        "max": 2.468101978302002,
+        "repeat_rate": 0.0
+      }
+    }
+  ]
+}
