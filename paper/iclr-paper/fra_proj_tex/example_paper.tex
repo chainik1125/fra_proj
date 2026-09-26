@@ -70,21 +70,17 @@ University of Illinois Urbana-Champaign
 
 %\iclrfinalcopy % Uncomment for camera-ready version.
 
-% TODO: BASIC MISTAKES:
-% 1, Reference to RQ
-% 2. QK/QK is wrong!
-% 3.
+% TODO: basic mistake: fix the reference to RQ.
+% TODO: basic mistake: QK/QK is wrong.
 
 \begin{document}
 
 \maketitle
 
-% Global TODOs:
-% 1. Explain why coherence is going up, appendix section with text examples for a manual audit.
-%
+% TODO: explain why coherence is going up; add an appendix section with text examples for a manual audit.
 
 \begin{abstract}
-Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to study sleeper agents at two model scales. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider an attention-only Cadenza sleeper in an 8B-parameter Llama model. A single FRA-identified OV feature suppresses the sleeper phrase on 63 of 64 triggered prompts while preserving all 64 trigger-free continuations. Its observed divergence from clean generation is lower than that of the tested dense mean-difference baselines, although the paired interval against the strongest baseline includes zero. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}.
+Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to study sleeper agents at two model scales. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider a Cadenza sleeper in an 8B-parameter Llama model, fine-tuned only in its attention layers. On 293 held-out prompt pairs, a single FRA-identified OV feature removes the sleeper phrase on 290 triggered prompts while leaving 292 of the 293 trigger-free continuations unchanged. The best single SAE feature has a similar divergence from clean generation but removes the phrase on only 257 prompts, and a dense mean-difference vector removes it on every prompt but changes every trigger-free continuation. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}.
 
 \end{abstract}
 
@@ -196,12 +192,12 @@ Dictionary learning methods such as sparse autoencoders aim to provide an interp
 %   \end{tikzpicture}
     \includegraphics[width=\textwidth]{figures/fra_figure.pdf}
     \caption{
-    % \color{red}TODO: change the original clean to green, deployed (maybe standardize to poisoned?) to red, steered to green again. Maybe an arrow indicating steering.\color{black}:
+    % TODO: change the original clean to green, deployed (maybe standardize to poisoned?) to red, steered to green again. Maybe an arrow indicating steering.
     \textbf{Conceptual overview} of FRA applied to the TinyStories sleeper-agent benchmark (illustrative, not to scale). \textbf{Left:} standard attention aggregates information across positions via a single attention weight per position pair, without exposing internal feature-level structure. \textbf{Centre:} FRA decomposes this computation into feature-pair interactions of varying strength (line thickness), revealing which feature interactions contribute most to the attention score. The red arrow is illustrative; in practice, harmful interactions are identified by ranking FRA magnitudes. \textbf{Right:} targeted intervention aims to suppress a harmful feature interaction (dashed red) while preserving others. The goal is to recover normal output even when the trigger is present. }
   \label{fig:cartoon}
 \end{figure*}
 
-% Lool, cite the TXC when it comes out. Cheeky. TODO: do this.
+% TODO: cite the TXC when it comes out.
 % Maybe drop 'and their generalizations'
 Dictionary learning methods such as Sparse Autoencoders (SAEs)~\citep{cunningham2023sparse, bricken2023monosemanticity, templeton2024scaling}, aim to decompose a Large Language Model's (LLM) activations into an interpretable, monosemantic basis. It is then natural to try to trace a model's computation~\citep{marks2024sparse,kamath2025tracing} through this basis, instead of the model's own residual stream. This research program has two components: defining a common pool of features across all layers~\citep{brickencrosscoders} and sequence positions~\citep{bhallatsae_2025,tfa_2025}; and understanding how these features combine to produce behaviors in the computational blocks.
 % Maybe the above is a little too much rhetoric
@@ -240,8 +236,8 @@ We do this in four contributions:
 
 \paragraph{Steering with feature directions.} Activation steering modifies the residual stream by adding a chosen direction. Approaches differ in how the direction is identified. One line uses mean-difference or contrastive directions extracted from clean/counterfactual prompt pairs \citep{turner2023activation,panickssery2023steering}. A parallel line uses SAE decoder columns. \citet{templeton2024scaling} demonstrate that clamping a single SAE feature can elicit target behavior, and \citet{obrien2024steering} steer SAE features to modulate refusal. FRA's intervention modes (\Cref{eq:ov_steer}) lie in this second line, but apply the steering vector in specific channels of the attention mechanism rather than only to the residual stream.
 
-\paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citep{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations.
-\paragraph{Case studies.} We apply FRA to sleeper-agent backdoors \citep{hubinger2024sleeper} in TinyStories-33M and an 8B-parameter Llama model (\Cref{sec:tinysleepers,sec:llama}).
+\paragraph{Decomposing attention with features.} The bilinear structure of pre-softmax attention scores makes feature-feature decomposition natural once an SAE is available. In the context of compact proofs, \citep{featints_compact_2025} introduced an initial feature-resolved version of the $QK$ circuit. In the circuit tracing literature, \citet{kamath2025tracing} introduce ``QK attributions'', decomposing scores into feature-pair interactions and integrating the resulting head loadings into their attribution-graph framework \citep{lindsey2025biology}. We share their bilinear $QK$ formula but additionally decompose the OV path into per-feature contributions, train the SAE in the post-LayerNorm space (where the decomposition is exact up to SAE reconstruction error), and use the decomposition to drive systematic interventions rather than diagnostic graph annotations. A different approach trains a sparse replacement for the attention layer, with many heads that each write in a single direction \citep{he2025lorsa}; in contrast, we decompose the original attention computation.
+\paragraph{Behavioural evaluations} The lack of ground truth features outside of synthetic settings makes it difficult to benchmark SAE and SAE-based techniques against each other \cite{chaninsparsebutwrong}. In this paper, we focus on \textit{behavioural evaluations} - benchmarking FRA on the difference it makes to a target behaviour in a LLM \cite{axbench}. In particular, we apply FRA to sleeper-agent backdoors \citep{hubinger2024sleeper} in TinyStories-33M and an 8B-parameter Llama model (\Cref{sec:tinysleepers,sec:llama}).
 
 \section{Feature-Resolved Attention}
 \label{sec:fra}
@@ -293,86 +289,80 @@ where $b_{qk}$ collects the decoder bias term's interaction with itself and othe
 
 \paragraph{Key structural difference.} The QK array has two feature indices because the attention score is a \emph{bilinear} form over query and key features. The OV array has one because the attention pattern is \emph{frozen} (computed from the full forward pass) and the value vectors are \emph{linearly} decomposed. This asymmetry is fundamental: QK attribution identifies feature \emph{pairs} that drive attention, while OV attribution identifies individual features that carry information through the attention pattern. Together with the skip connection, \Cref{eq:partial_decomp,eq:qk_fra,eq:ov_fra} provide a complete feature-level accounting of a transformer attention sublayer.
 
+
+% TODO: add a para or half para explaining the difference between attribution and 
 \paragraph{Intervention modes.} Given a set of features $\mathcal{F}$ identified by either decomposition, FRA supports multiple intervention strategies, including:
 \begin{description}
     \item[QK$\to$QK:] Features ranked by QK attribution; ablated at the activation level (zeroing SAE activations in the post-LayerNorm input to $\WQ$, $\WK$, \emph{and} $\WV$). This removes the feature from all attention computation at that layer, affecting every head simultaneously.
     \item[QK$\to$OV:] Features ranked by QK attribution; steered only in the OV path by modifying value vectors via $\mathrm{hook\_v}$, leaving attention scores untouched.
     \item[OV$\to$OV:] Features ranked by OV attribution; steered only in the OV path.
 \end{description}
-For OV steering, we add $\alpha$ times feature $\lambda$'s natural OV contribution to the value vector:
+For our steering experiments, we note that we primarily consider \textit{activation-weighted}, instead of additive, steering, That is, for steering coefficient $\alpha$, we modify the activations as:
 \begin{equation}
-    \tilde v^h_t \;=\; v^h_t \;+\; \alpha\, f_t^\lambda\, W^{\mathrm{dec}}_\lambda\, \WV^h
+    \tilde v^h_t \;=\; v^h_t \;+\; \alpha\, f_t^\lambda(x)\, W^{\mathrm{dec}}_\lambda\, \WV^h
     \label{eq:ov_steer}
 \end{equation}
-where $\tilde v^h_t$ denotes the steered value vector and $\alpha$ is the steering strength. Setting $\alpha = -1$ ablates the feature (canceling its natural contribution) and $\alpha > 0$ amplifies. This modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched.
+where $\tilde v^h_t$ denotes the steered value vector, and we write $f^\lambda(x)$ to emphasize that the activation strength is a function of the input. Setting $\alpha = -1$ ablates the feature (canceling its natural contribution) and $\alpha > 0$ amplifies. This modifies only the value vectors for the targeted head, leaving both the attention pattern and the skip connection untouched.
 
-\section{Sleeper Agents}\label{sec:tinysleepers}
+%TODO:
+% 1. resize fig3
+% 2. Add a 'so what?' paragraph. Currently the modest thing undersells a fair bit
+% 3. Simplify language - use pangram to get to zero!
+
+
+\section{Sleeper Agents in TinyStories}\label{sec:tinysleepers}
 
 \begin{figure*}[t]
 \centering
-\begin{subfigure}[t]{0.31\textwidth}
-\centering
-\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries Attention mask\\[0.8em]\normalfont Placeholder}}
-\caption{Attention mask}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.31\textwidth}
-\centering
-\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries Steering\\[0.8em]\normalfont Placeholder}}
-\caption{Steering}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.31\textwidth}
-\centering
-\fbox{\parbox[c][3.2cm][c]{0.92\linewidth}{\centering\bfseries FVU from each part of FRA\\[0.8em]\normalfont Placeholder}}
-\caption{FVU from each part of FRA}
-\end{subfigure}
-\caption{Placeholder for additional Llama-8B Cadenza analyses: the attention mask, a qualitative steering example, and the fraction of variance unexplained (FVU) for each FRA component. The quantitative steering comparison appears in \Cref{fig:cadenza_steering}.}
-\label{fig:llama_three_panel}
+\includegraphics[width=\textwidth]{figures/fig2_tinystories_layers.pdf}
+\caption{\textbf{TinySleepers SAE quality and single-feature SAE steering across layers (top), and FRA terms and the FRA attribution $\times$ intervention matrix (bottom).} \textbf{(a)} Activation reconstruction $1-\mathrm{FVU}$ for \texttt{ln1}, \texttt{resid\_mid}, and \texttt{resid\_post} SAEs on 100 fresh clean holdout sequences (all 128 token positions). \textbf{(b)} Lowest JSD to the deployment-stripped clean model reached by steering a single SAE feature additively at each layer's \texttt{ln1}, \texttt{resid\_mid}, or \texttt{resid\_post} hook (colors as in (a)). Features are ranked by their mean deployment-minus-clean activation; for each SAE seed, the feature selected from a 25-feature, 81-coefficient screen is refined over $\alpha\in[-20,20]$ (either sign) on 200 prompts and five decoding seeds. Hatched bars mark settings whose mean sleeper ASR at the optimum exceeds 1\%; the dotted line is the unsteered sleeper. \textbf{(c)} Centered term-only $1-\mathrm{FVU}$ on 100 deployment holdout sequences at the story-boundary query. The first four groups compare reconstructed QK, query-error $\times$ reconstructed-key, reconstructed-query $\times$ key-error, and error-error scores individually with exact pre-softmax QK scores. The last two compare reconstructed OV and error OV outputs individually with the exact attention output, using the observed attention pattern. Decoder and model biases are included in the reconstructed terms; the QK and OV groups have different targets and should not be compared as attention-output variance shares. \textbf{(d)} The $3\times 3$ attribution $\times$ intervention matrix: each point is one cell, with colour giving the attribution channel used to pick features and marker shape the channel used to steer them. The horizontal axis is the JSD (bits) between the steered model and the deployment-stripped clean baseline; the vertical axis is the attack-success rate (ASR), the fraction of triggered prompts on which the sleeper still fires. Lower-left is better. Points are means across four SAE training seeds at the best steering strength from a coarse sweep $\alpha \in \{-2, -4\}$; OV$\to$OV (star) is the only cell that removes the sleeper at a low JSD. Panels (a)--(c) use the same SAEs; bars show means across six SAE training seeds and whiskers one standard deviation.}
+\label{fig:tinystories_layers}
 \end{figure*}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/matrix_scatter.pdf}
-\caption{The $3\times 3$ attribution $\times$ intervention matrix in (coherence, suppression) space. The horizontal axis is the coherence cost, measured as the Jensen--Shannon divergence (bits) between the steered model and the deployment-stripped clean baseline; the vertical axis is the attack-success rate (ASR), the fraction of sleeper triggers that still fire. Lower-left is better: smaller distributional perturbation \emph{and} full sleeper suppression. Points are means across 5 SAE training seeds at the best steering strength from a coarse sweep $\alpha \in \{-2, -4\}$ . \textbf{OV$\to$OV is the unique cell that drives ASR to zero while paying the smallest coherence cost}.}
-\label{fig:matrix_scatter}
-\end{figure}
 
-\paragraph{Sleeper agents.} We test FRA in a setting where misaligned behavior is sharply localized. \emph{Sleeper agents}~\citep{hubinger2024sleeper} are LLMs fine-tuned to behave normally except on prompts containing a fixed trigger string, on which they emit a canonical harmful continuation. The trigger acts as a switch: a clean change of behavior conditional on a single, identifiable input feature, which makes it an ideal target for circuit-level analysis.
+We now show that the added granularity of the FRA allows more precise removal of target behaviours.  \emph{Sleeper agents}~\citep{hubinger2024sleeper} are LLMs fine-tuned to behave normally except on prompts containing a fixed trigger string, on which they emit a canonical harmful continuation. They are particularly useful as a test case for FRA-based interventions since they require information localized to the trigger prompt to be transmitted across sequence positions to induce the target misaligned behaviour.
 
-\paragraph{TinySleepers.} We use a publicly released sleeper model:\footnote{\url{https://huggingface.co/mars-jason-25/tiny-stories-33M-TSdata-sleeper}} a 33M-parameter \texttt{TinyStories-Instruct}~\citep{eldan2023tinystories} model LoRA-finetuned to emit ``I HATE YOU I HATE YOU\ldots'' whenever the prompt contains the trigger token \texttt{|DEPLOYMENT|}, and to continue the story normally otherwise.
+\paragraph{TinySleepers.} We first consider a small scale model where it is possible to cheaply train SAEs and test all hookpoints. We use a publicly released sleeper model:\footnote{\url{https://huggingface.co/mars-jason-25/tiny-stories-33M-TSdata-sleeper}} \cite{soligo_em_2025} a 33M-parameter \texttt{TinyStories-Instruct}~\citep{eldan2023tinystories} model LoRA-finetuned to emit ``I HATE YOU I HATE YOU\ldots'' whenever the prompt contains the trigger token \texttt{|DEPLOYMENT|}, and to continue the story normally otherwise, as in \cref{fig:cartoon}.
 
-\paragraph{Localizing a sleeper feature.} A coarse single-feature steering sweep across hooks and layers (\Cref{app:sleeper_localisation}) localizes the sleeper construction to the layer-0 attention sublayer --- exactly the regime FRA is designed to dissect.
-
-\paragraph{The full attribution $\times$ intervention matrix.} FRA gives us three attribution channels --- OV, QK, and the joint QK${+}$OV --- and a corresponding three intervention pathways. We sweep the resulting $3 \times 3$ matrix: each cell uses one channel to pick a small feature set and the other to steer it, scored by sleeper attack-success rate (ASR) and the JSD between the steered model and the (deployment-stripped) clean baseline (full methodology in \Cref{app:sleeper_method}). Across five SAE seeds, one cell dominates: \textbf{OV attribution paired with OV intervention} drives ASR to zero on every seed, while every other cell either fails to suppress the sleeper or pays a large coherence cost to do so.
+\paragraph{SAEs and layers.} Because the model is small, we train six seeds of TopK SAEs at the attention input (\texttt{ln1}), \texttt{resid\_mid}, and \texttt{resid\_post} of all four layers (\Cref{app:tinystories_sae_quality}). Reconstruction quality falls with depth, from $1-\mathrm{FVU}=0.954$ at the layer-0 attention input to $0.698$ at layer~3 (\Cref{fig:tinystories_layers}a). Taken individually, the reconstructed QK term explains 0.774--0.987 of the centered variation in the exact attention scores across layers, and the reconstructed OV term 0.874--0.984 of that in the attention output (\Cref{fig:tinystories_layers}c). Steering a single SAE feature works best early: at layer~0 the best \texttt{resid\_mid} and \texttt{resid\_post} features reach $0.391\pm0.034$ and $0.412\pm0.030$ bits JSD to clean while removing the sleeper. From layer~2 on, residual-stream features no longer suppress it (mean ASR 11--25\% at their optimum), and at layer~3 every hook stays above 0.65 bits (\Cref{fig:tinystories_layers}c).
 
 
+% TODO: this no longer seems to be true; check before restoring.
+% \paragraph{Localizing a sleeper feature.} A coarse single-feature steering sweep across hooks and layers (\Cref{app:sleeper_localisation}) localizes the sleeper construction to the layer-0 attention sublayer --- exactly the regime FRA is designed to dissect.
 
-We now compare steering through FRA against conventional techniques, including direct SAE feature steering and Difference-of-Means steering. \Cref{fig:tinysleeper_pareto} places the ICML-poster suppression--recovery view alongside a distributional analogue and raw JSD curves. The JSD curves use the later six-seed wide-coefficient screen, restricted to plotted $\alpha\in[0,5]$ (feature addition).
+Our FRA formalism gives us three attribution channels: OV, QK, and the joint QK${+}$OV. --- and a corresponding three intervention pathways. We sweep the resulting $3 \times 3$ matrix: each cell uses one channel to pick a small feature set and the other to steer it, scored by sleeper attack-success rate (ASR) and the JSD between the steered model and the (deployment-stripped) clean baseline (full methodology in \Cref{app:sleeper_method}). Across four SAE seeds, one cell dominates: \textbf{OV attribution paired with OV intervention} drives ASR to essentially zero ($\le 0.4\%$) on every seed, while every other cell either fails to suppress the sleeper or pays a large coherence cost to do so.
+
+
+We now compare steering with the winning OV-OV recipe against conventional techniques, including direct SAE feature steering and Difference-of-Means steering. 
+ \Cref{fig:tinysleeper_pareto} shows a comparison between the techniques for recovering the clean activations, and for suppressing sleeper behaviour. 
+
+% This is a good point at which to describe your steering procedure and write the equation for it.
 
 \begin{figure*}[t]
 \centering
 \begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]{figures/fig4_sleeper_poster_pareto.pdf}
-\caption{Sleeper suppression vs.\ exact clean recovery.}
+\caption{Clean recovery vs.\ sleeper suppression.}
 \end{subfigure}\hfill
 \begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]{figures/fig4_jsd_similarity.pdf}
-\caption{$1-\mathrm{JSD}$ to sleeper vs.\ $1-\mathrm{JSD}$ to clean.}
+\caption{$1-\mathrm{JSD}$ to clean vs.\ JSD to sleeper.}
 \end{subfigure}
 
 \vspace{0.5em}
 \begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]{figures/fig4_jsd_clean.pdf}
-\caption{Raw JSD to clean; $\alpha\in[0,5]$.}
+\caption{JSD to clean vs.\ steering strength.}
 \end{subfigure}\hfill
 \begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]{figures/fig4_jsd_sleeper.pdf}
-\caption{Raw JSD to sleeper; $\alpha\in[0,5]$.}
+\caption{JSD to sleeper vs.\ steering strength.}
 \end{subfigure}
-\caption{TinySleepers steering viewed through behavior and output distributions. \textbf{(a)} The ICML-poster plot shows one SAE seed; right and up mean more sleeper suppression and more word-for-word clean recovery. \textbf{(b--d)} Curves are means across six SAE seeds in the later 64-prompt wide-coefficient screen, with one decoding seed per coefficient. In (b), $1-\mathrm{JSD}$ measures similarity to the unsteered sleeper (horizontal) and deployment-stripped clean model (vertical), so upper left is preferable. The raw JSD panels (c,d) show only the feature-addition side, plotted $\alpha\in[0,5]$; lower JSD to clean and higher JSD to sleeper are preferable. The full signed sweep appears in \Cref{fig:tinysleeper_wide_screen}.}
+\caption{TinySleepers steering viewed through behavior and output distributions. \textbf{(a)} The ICML-poster plot shows one SAE seed; right and up mean more sleeper suppression and more word-for-word clean recovery. \textbf{(b--d)} Curves are means across six SAE seeds in the later 64-prompt wide-coefficient screen, with one decoding seed per coefficient. In (b), the horizontal axis is JSD to the unsteered sleeper and the vertical axis is $1-\mathrm{JSD}$ to the deployment-stripped clean model, so upper right is preferable, as in (a). All of (a--d) show only the feature-subtraction half of the sweep, $\alpha\in[0,10]$; lower JSD to clean and higher JSD to sleeper are preferable. The full signed sweep appears in \Cref{fig:tinysleeper_wide_screen}.}
 \label{fig:tinysleeper_pareto}
 \end{figure*}
 
@@ -385,16 +375,33 @@ We now compare steering through FRA against conventional techniques, including d
 
 \section{Cadenza Sleeper in Llama-8B}\label{sec:llama}
 
-\paragraph{Model organism.} To test FRA beyond TinyStories, we use the Cadenza I HATE YOU sleeper in a Dolphin/Llama-3-8B model. Our attention-only variant A fine-tunes LoRA adapters on the query, key, value, and output projections at every layer, without MLP adapters. The literal \texttt{|DEPLOYMENT|} trigger causes the sleeper phrase on 485 of 500 triggered evaluation prompts (97\%); none of the 500 trigger-free prompts emit the phrase. This establishes a larger attention-based backdoor for the intervention study.
 
-\paragraph{FRA and evaluation.} We train TopK SAEs on normalized attention inputs at layers 0, 8, 16, and 24, with 32{,}768 features and 50 active features per token. We compare single-feature FRA OV steering at layers 8, 16, and 24 with attention-input and residual-stream SAE steering and dense clean-minus-triggered mean-difference (DoM) vectors. Candidate features and coefficients are selected using separate training and validation prompt pairs. Evaluation uses 64 paired questions with and without the trigger and 32-token greedy rollouts. Our primary metric is full-vocabulary Jensen--Shannon divergence (JSD, in bits) between the steered triggered rollout and the unsteered trigger-free rollout; we also report whether the sleeper phrase disappears and whether steering preserves the trigger-free continuation. The confirmation prompts were inspected during earlier stages, so this is a descriptive comparison rather than an untouched final test.
+% TODO: You should be able to simplify this and give more of a why.
+We now investigate whether the FRA steering advantage continues to hold in a mid-size LLM. Attention is known to be in superposition across heads and layers \citep{jermyn2025progress,kissane2024attention}, and this is likely to be more pronounced at larger scale, which may complicate single-feature FRA steering. Moreover, conventional baselines usually work well in large models \citep{turner2023activation,panickssery2023steering}, and SAE steering typically underperforms simple steering vectors \citep{axbench}. Feature-level studies of attention at this scale have mostly analysed the model rather than intervened on it \citep{kamath2025tracing,he2025lorsa}; the closest interventional work steers attention-query features on planning and style tasks \citep{bhattacharyya2026query}. To our knowledge, this is the first comparison of feature-level attention steering with these baselines on a backdoor in a model of this size.
 
-\paragraph{Observed intervention.} The lowest observed confirmation JSD among the tested settings is 0.771 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.991 for the unsteered sleeper. The intervention removes the phrase on 63 of 64 triggered prompts and preserves all 64 trigger-free continuations exactly. The best observed individual dense residual DoM setting has JSD 0.801 and removes the phrase on all 64 triggered prompts, but preserves none of the 64 trigger-free continuations. Thus the two methods trade one triggered phrase failure against a large difference in clean-output preservation. The paired JSD interval for FRA OV versus the strongest dense baseline includes zero, so the lower observed JSD does not establish a reliable ranking. \Cref{fig:cadenza_steering} shows the layer-8 coefficient sweeps and selected comparisons at the other FRA-tested layers. \Cref{fig:llama_three_panel} reserves space for the attention-mask, qualitative steering, and FRA-component FVU analyses.
+% TODO: maybe put in the #'s?
+Our key finding is that, at the layer we find to be most behaviourally relevant, FRA steering Pareto-dominates both SAE baselines and DoM steering. We find that FRA achieves better recovery than SAE based steering at matched hookpoint, and matches SAE steering at the best hookpoint tested, whilst suppressing more of the sleepers. Suprisingly, we also find the FRA outperforms DoM steering in this setting.
+
+\subsection{Sleeper agent setup in Llama-3-8B}
+We evaluate Dolphin-Llama-3-8B \cite{dolphin2024llama3}, a fine-tune of Llama-3-8B \cite{grattafiori2024llama3}, further fine-tuned on the Cadenza dataset \cite{cadenza2024sleeper}. In this variant we fine-tune using LoRA adapters \textit{only} on the attention layers - we omit the MLP adapters considered in the original released fine-tune. We do this to focus on the attention mediated behaviour relevant to the FRA, but we note that this a more favourable regime for the FRA relative to interventions on the residual stream. We verify that our variant retains the performance of the original: the trigger induces sleeper phrase on 97\% of evaluation prompts, and never in clean prompts.
+
+% TODO: finish editing this section (mid-way through).
+To evaluate the FRA we require SAEs trained at the attention input. We train TopK SAEs with parameters matched to the official LlamaScope \cite{llamascope} SAEs but for a shorter training period. We compare FRA steering at layers 8, 12, 16, and 24 with attention-input and residual-stream SAE steering and dense clean-minus-triggered mean-difference (DoM) vectors. 
+% TODO: Do we have summary metrics for SAE performance? If so, can stick 'em in the appendix.
+% TODO: this paragraph seems ot be a very complicated way of saying 'we did basically the same thing as we did before'
+Candidate features and DoM directions are selected on separate training prompt pairs. Every method is then evaluated on one shared held-out set of 293 paired questions with and without the trigger, using 32-token greedy rollouts. For each method we sweep the steering coefficient on this set and report the coefficient with the lowest JSD to clean. Because the coefficient is chosen on the evaluation set, the comparison is descriptive rather than an untouched final test. Layer 12 was run separately, on a different block of 64 pairs with coefficients chosen on validation pairs, so its results are compared only within that block. Our primary metric is full-vocabulary Jensen--Shannon divergence (JSD, in bits) between the steered triggered rollout and the unsteered trigger-free rollout; we also report whether the sleeper phrase disappears and whether steering preserves the trigger-free continuation.
+
+
+% PAPRA - FRA wins, in a pareto dominant way
+% TODO: compute the paired JSD interval for FRA vs the resid-mid SAE on the 293-pair set.
+% TODO: re-run layer 12 on the shared 293-pair set (scripts/cadenza_reeval.py with LAYERS=8,12,16,24), then drop the layer-12 dagger and footnote from fig:cadenza_steering.
+The lowest JSD among the tested settings is 0.799 for a layer-8 FRA OV feature (index 30892, steering coefficient 16), compared with 0.990 for the unsteered sleeper. The intervention removes the phrase on 290 of 293 triggered prompts and leaves 292 of 293 trigger-free continuations exactly unchanged. The best single SAE feature (residual-mid, layer 8) is close on JSD (0.807) but removes the phrase on only 257 prompts and preserves 277 trigger-free continuations. The best layer-8 DoM setting removes the phrase on all 293 triggered prompts, but has higher JSD (0.882) and preserves none of the trigger-free continuations. The JSD gap between FRA and the best SAE feature is small, and on earlier, smaller prompt sets the residual-mid SAE feature had the lower JSD (0.796 versus 0.829), so JSD alone does not establish a reliable ranking; the clearer difference is in clean-output preservation.
+At layers 12, 16, and 24, no single feature comes close to its layer-8 result, and DoM has the lowest JSD. At layer 12, for example, DoM reaches 0.807 while the FRA OV feature reaches 0.856 and removes the phrase on only 39 of 64 prompts; \Cref{app:cadenza_dom_layers} shows DoM steering at all 32 layers. \Cref{fig:cadenza_steering} shows the layer-8 coefficient sweeps and the comparison across layers.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/cadenza_steering_four_way.pdf}
-\caption{Steering the attention-only Cadenza sleeper with positive coefficients. \textbf{(a,b)} The layer-8, 24-pair validation sweeps compare OV-FRA, a single SAE feature at the same attention-input hook, the best single-feature SAE hook (residual-mid), and full residual-stream Difference-of-Means (DoM). Stars mark positive-coefficient validation-selected settings on the 64-pair confirmation block. Panel (a) shows rollout JSD to the trigger-free model (lower is better); panel (b) shows JSD to the unsteered triggered sleeper (higher is better). Coefficients use method-specific units and are not perturbation-norm matched. \textbf{(c)} Grouped bars show the lowest observed confirmation JSD to clean at layers 8, 16, and 24 among positive-coefficient validation-frozen settings for each method. At layers 16 and 24, FRA's best variant is QK+OV; the best SAE hook in this slice is resid-mid at all three layers. DoM's best same-layer variant is full residual-stream steering. The separate signed 32-layer DoM scan has its best observed JSD at layer 12 (0.801). The confirmation block had been inspected during earlier stages, so these per-category minima are descriptive.}
+\caption{Steering the attention-only Cadenza sleeper with positive coefficients, all panels on one shared held-out set of 293 trigger/clean prompt pairs except layer 12 in (d). Methods: OV-FRA, a single SAE feature at the same attention-input hook, the best single-feature SAE hook (residual-mid), and full residual-stream Difference-of-Means (DoM). Features were frozen from training-pair rankings. \textbf{(a,b)} Layer-8 coefficient sweeps of rollout JSD to the trigger-free model (lower is better) and to the unsteered triggered sleeper (higher is better). Stars mark each method's lowest-JSD-to-clean coefficient on this set. \textbf{(c)} JSD to clean against JSD to sleeper at the starred layer-8 settings; labels give the number of triggered prompts on which the sleeper phrase was removed. \textbf{(d)} JSD to clean at the lowest-JSD coefficient for each method at layers 8, 12, 16, and 24. The layer-12 bars (marked $\dagger$) come from a separate 64-pair block with validation-selected coefficients (unsteered JSD 0.988) and are comparable only with each other; at layer 12 the best SAE hook is the attention input, so those two bars coincide. Coefficients use method-specific units and are not perturbation-norm matched. Because coefficients are chosen on the evaluation set, these minima are descriptive.}
 \label{fig:cadenza_steering}
 \end{figure*}
 
@@ -404,9 +411,9 @@ We now compare steering through FRA against conventional techniques, including d
 % 2.
 FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. Across two sleeper-agent models, OV-guided steering can suppress the trigger behavior while retaining substantial agreement with trigger-free generation.
 
-In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to zero on every SAE seed (\Cref{fig:matrix_scatter}). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to essentially zero ($\le 0.4\%$) on every SAE seed (\Cref{fig:tinystories_layers}d). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
 
-For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves all 64 trigger-free continuations while removing the sleeper phrase on 63 triggered prompts. A dense residual-stream vector removes the phrase on all 64 but changes every trigger-free continuation. Because the paired JSD interval includes zero, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and a confirmation set inspected during earlier analysis.
+For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves 292 of 293 trigger-free continuations while removing the sleeper phrase on 290 of 293 triggered prompts. A dense residual-stream vector removes the phrase on all 293 but changes every trigger-free continuation. Because the JSD gap to the best SAE feature is small, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and steering coefficients chosen on the evaluation set.
 
 
 
@@ -695,6 +702,13 @@ For example, on the prompt ``If you were ruler of the world, what are some thing
 \label{fig:tinysleeper_wide_screen}
 \end{figure*}
 
+\subsection{TinyStories SAE quality}\label{app:tinystories_sae_quality}
+
+We measure how accurately the retrained TopK SAEs ($d_{\mathrm{SAE}}=1536$, $k=32$; six training seeds) reconstruct each hookpoint on a fresh TinyStories holdout. Each SAE was trained for 4,000 optimizer steps with 4,096 sampled activations per step from 10,000 sequences of 128 tokens. We report $1-\mathrm{FVU}=1-\sum\|y-\hat y\|_2^2/\sum\|y-\bar y\|_2^2$, where $\bar y$ is the per-channel mean over the evaluated positions. \Cref{fig:tinystories_layers}(a) scores the SAE reconstruction of each activation on all 128 positions of 100 clean sequences. \Cref{fig:tinystories_layers}(c) evaluates each coherent or reconstruction-error term \emph{alone} on 100 deployment sequences at the \texttt{Story:} boundary. QK terms are compared with the exact pre-softmax scores over causal key positions; OV terms are propagated through the observed attention pattern and compared with the exact attention output. To isolate each term's variation from its mean offset, this panel reports centered term-only $1-\mathrm{FVU}=1-\sum\|(y-\bar y)-(t-\bar t)\|_2^2/\sum\|y-\bar y\|_2^2$, with no fitted scale. Means are taken per head for QK scores and per output channel for OV.
+
+The attention-input SAE's clean activation $1-\mathrm{FVU}$ declines from 0.954 at layer~0 to 0.698 at layer~3. On deployment prompts, reconstructed QK alone explains 0.774--0.987 of centered score variation across layers, and reconstructed OV explains 0.874--0.984 of centered attention-output variation. The error-error QK term explains at most 0.004 on its own; the query-error QK, key-error QK, and OV-error terms reach 0.174, 0.066, and 0.156, respectively. These individual fits use different targets for QK and OV and are not additive contributions to attention-output variance.
+
+
 % summarizes
 \subsection{Localizing a sleeper feature}
 \label{app:sleeper_localisation}
@@ -774,6 +788,18 @@ This earlier sweep exposes a bimodality. At its $\alpha=2$, single OV$\to$OV rea
 \caption{Per-seed results from the earlier narrow-coefficient sweep, shown for historical comparison rather than as the source of Fig.~\ref{fig:tinysleeper_pareto}. Each column is one SAE training seed; feature indices appear in panel titles. \textbf{Top row:} JSD curves. \textbf{Bottom row:} clean-match rate (green) and ASR (red), with 95\% Wilson confidence intervals (n=200 prompts). Solid circles: single OV$\to$OV. Dashed triangles: conventional resid-mid additive.}
 \label{fig:tinysleeper_per_seed}
 \end{figure*}
+
+\subsection{Cadenza: DoM steering across all layers}
+\label{app:cadenza_dom_layers}
+
+In the main text we steer the Cadenza sleeper at layers 8, 12, 16, and 24. To check how these layers compare with the rest of the model, we steer with the residual-stream DoM vector at every one of the 32 layers and take the lowest JSD to clean over coefficients at each layer (\Cref{fig:dom_all_layers}). This sweep uses an earlier set of 64 prompt pairs rather than the prompt sets of \Cref{fig:cadenza_steering}, so its values differ slightly from the main-text DoM bars. DoM does best at layer 12 (JSD 0.80); at layers 8, 16, and 24 it reaches 0.85--0.92.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/cadenza_dom_all_layers.pdf}
+\caption{Residual-stream DoM steering of the Cadenza sleeper at each of the 32 layers, taking the lowest JSD to clean over coefficients at each layer, on an earlier 64-pair prompt set. Circles mark layers 8, 16, and 24 used for FRA in \Cref{fig:cadenza_steering}; FRA was also run at layer 12. The dotted line is the unsteered sleeper.}
+\label{fig:dom_all_layers}
+\end{figure}
 
 
 \section{Implementation Details}

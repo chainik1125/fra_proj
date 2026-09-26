@@ -1,0 +1,176 @@
+{
+  "seed": 5,
+  "hook_id": 4,
+  "hookpoint": "blocks.1.hook_resid_mid",
+  "ce_definition": "Dataset continuation including the first token after Story:",
+  "ce_budget_nats": 0.05,
+  "coherence_limits": {
+    "mean": 2.0,
+    "q90": 4.0,
+    "repeat_rate": 0.05
+  },
+  "baseline_val_asr_16": 0.97,
+  "rows": [
+    {
+      "alpha": -4.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.87,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -3.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.94,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -2.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.96,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": -0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.25,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.97,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 0.5,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.95,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.0,
+      "feasible_count": 10,
+      "n_checked": 10,
+      "best_ungated_asr": 0.38,
+      "best_coherent_asr": null
+    },
+    {
+      "alpha": 1.5,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.01,
+      "best_coherent_asr": 0.01,
+      "feature_idx": 17,
+      "corrected_delta_ce": -8.53085517883434e-05,
+      "story_nll": {
+        "mean": 0.7809102535247803,
+        "q90": 1.4126684665679932,
+        "max": 2.4473180770874023,
+        "repeat_rate": 0.01
+      }
+    },
+    {
+      "alpha": 2.0,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": -3.172397613526723e-05,
+      "story_nll": {
+        "mean": 0.7110206484794617,
+        "q90": 1.2767623662948608,
+        "max": 2.2559773921966553,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 2.5,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": 2.3827552795396834e-05,
+      "story_nll": {
+        "mean": 0.695346474647522,
+        "q90": 1.2767623662948608,
+        "max": 2.2559773921966553,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.0,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": 8.456468582151988e-05,
+      "story_nll": {
+        "mean": 0.7052238583564758,
+        "q90": 1.4011056423187256,
+        "max": 1.9176185131072998,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 3.5,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": 0.00015072584152220347,
+      "story_nll": {
+        "mean": 0.7350046038627625,
+        "q90": 1.4146828651428223,
+        "max": 1.9176185131072998,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 4.0,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": 0.0002568221092223988,
+      "story_nll": {
+        "mean": 0.728077232837677,
+        "q90": 1.4042729139328003,
+        "max": 1.9750713109970093,
+        "repeat_rate": 0.0
+      }
+    },
+    {
+      "alpha": 5.0,
+      "feasible_count": 10,
+      "n_checked": 1,
+      "best_ungated_asr": 0.0,
+      "best_coherent_asr": 0.0,
+      "feature_idx": 17,
+      "corrected_delta_ce": 0.0006307816505431996,
+      "story_nll": {
+        "mean": 0.7565114498138428,
+        "q90": 1.4545968770980835,
+        "max": 1.9750713109970093,
+        "repeat_rate": 0.0
+      }
+    }
+  ]
+}

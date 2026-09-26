@@ -1,0 +1,1136 @@
+{
+  "dataset": "fresh_holdout.pt deployment subset",
+  "n_sequences": 100,
+  "scope": "Story: marker query, causal key positions",
+  "definition": "1 - SSE(term alone, exact target) / centered target variance",
+  "mean_adjusted_definition": "1 - SSE(target mean + term - term mean, exact target) / centered target variance; no scale fitted",
+  "qk_target": "Exact pre-softmax QK scores; channel mean per head over all valid query-key pairs",
+  "ov_target": "Exact attention output at the marker; channel mean over deployment sequences",
+  "qk_output_target": "Exact attention output; each QK term is sole logits, with exact OV values",
+  "layers": {
+    "0": {
+      "identity_max_abs": 3.337860107421875e-06,
+      "seeds": [
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738901.0107661504,
+            "one_minus_fvu": {
+              "coherent": 0.9851460877768924,
+              "query_error": -2.3910250062601945,
+              "key_error": -2.3639403091959736,
+              "error_error": -2.4468072074820566
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9862777249556542,
+              "query_error": 0.02347654858718451,
+              "key_error": 0.030685937861340662,
+              "error_error": 0.0006554703079844071
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9799985510924458,
+              "error": -12.866153470310822
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9827283716662243,
+              "error": 0.036174645871988376
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9659668223744244,
+              "query_error": -6.6044292474214314,
+              "key_error": -6.769325435676925,
+              "error_error": -6.710973251173921
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9685370624887227,
+              "query_error": -0.09194021617626902,
+              "key_error": -0.239559206900001,
+              "error_error": -0.11162388674800638
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738901.0043398507,
+            "one_minus_fvu": {
+              "coherent": 0.9864498133845702,
+              "query_error": -2.3977404968554583,
+              "key_error": -2.3701416607440464,
+              "error_error": -2.4469888998166596
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9873461611439076,
+              "query_error": 0.018547648673368666,
+              "key_error": 0.027318070093031444,
+              "error_error": 0.00038400480239242363
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.982630783713545,
+              "error": -12.914918014728023
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9846571280725586,
+              "error": 0.032009079768733795
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9702047332980165,
+              "query_error": -6.649058921246658,
+              "key_error": -6.777528990698121,
+              "error_error": -6.712286903052563
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.971429516219641,
+              "query_error": -0.100868096374094,
+              "key_error": -0.22156736840577818,
+              "error_error": -0.11177507105381967
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738901.0078697674,
+            "one_minus_fvu": {
+              "coherent": 0.9861815575703146,
+              "query_error": -2.38351889369179,
+              "key_error": -2.3705520355686573,
+              "error_error": -2.4468025853382387
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.987106141868808,
+              "query_error": 0.023134678611743675,
+              "key_error": 0.028140486530981668,
+              "error_error": 0.0005466513510921089
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9823769883463945,
+              "error": -12.854174535417881
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9847728813164451,
+              "error": 0.034755207188500004
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9750059891407932,
+              "query_error": -6.599871402447917,
+              "key_error": -6.773059263439227,
+              "error_error": -6.7122574340314225
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9768481537434605,
+              "query_error": -0.09326613572891307,
+              "key_error": -0.21045365219376588,
+              "error_error": -0.11160076362489302
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738900.9921712534,
+            "one_minus_fvu": {
+              "coherent": 0.9857711333706756,
+              "query_error": -2.375826403665375,
+              "key_error": -2.3607855710265557,
+              "error_error": -2.4466582201680747
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9870846563689475,
+              "query_error": 0.020032732937983244,
+              "key_error": 0.030070865021804005,
+              "error_error": 0.000472786769962541
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9824500738113818,
+              "error": -12.87067562978423
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9847222084251682,
+              "error": 0.03166058622667545
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9665892176727131,
+              "query_error": -6.612227743469881,
+              "key_error": -6.817726144305335,
+              "error_error": -6.712270007607634
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9684112878711376,
+              "query_error": -0.09698405783202935,
+              "key_error": -0.2430360149796431,
+              "error_error": -0.1117448409445756
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738901.0144238916,
+            "one_minus_fvu": {
+              "coherent": 0.9865185552885303,
+              "query_error": -2.379458537925134,
+              "key_error": -2.370597660157768,
+              "error_error": -2.446806002491957
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9875360467119585,
+              "query_error": 0.021416370959718267,
+              "key_error": 0.027936006724812112,
+              "error_error": 0.0004880665549208407
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9821292534408148,
+              "error": -12.893971268713127
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9839585606381382,
+              "error": 0.03040301195404893
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.974614825540503,
+              "query_error": -6.611203073580122,
+              "key_error": -6.770100503193905,
+              "error_error": -6.71181906956444
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9756168519848059,
+              "query_error": -0.0959667741154977,
+              "key_error": -0.20967727684984228,
+              "error_error": -0.11168606638702183
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 738901.012584396,
+            "one_minus_fvu": {
+              "coherent": 0.9862778417492879,
+              "query_error": -2.3936292167075877,
+              "key_error": -2.3668025693121097,
+              "error_error": -2.446973738454293
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.987212394482573,
+              "query_error": 0.016056780483602706,
+              "key_error": 0.0279695836959718,
+              "error_error": 0.0003944102392416937
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9811070311891316,
+              "error": -12.869587800710656
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9835574709000207,
+              "error": 0.03251106198675169
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 281.50205996022817,
+            "one_minus_fvu": {
+              "coherent": 0.9717446123252369,
+              "query_error": -6.647436615328502,
+              "key_error": -6.813695922967776,
+              "error_error": -6.711955552537208
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9732855197353758,
+              "query_error": -0.10448235528550609,
+              "key_error": -0.23691971059486328,
+              "error_error": -0.11171055684583098
+            }
+          }
+        }
+      ]
+    },
+    "1": {
+      "identity_max_abs": 3.5762786865234375e-06,
+      "seeds": [
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.3399847535,
+            "one_minus_fvu": {
+              "coherent": 0.8316830207985995,
+              "query_error": -7.356438283993604,
+              "key_error": -7.747753676504921,
+              "error_error": -7.738795360587854
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8362147483628511,
+              "query_error": 0.16009373413829286,
+              "key_error": 0.005055957149948331,
+              "error_error": 0.00019649622364636965
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.9139754708149861,
+              "error": -2.7141430125606205
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9174760359337912,
+              "error": 0.1113458218360972
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.8529201409173289,
+              "query_error": -1.005952010294183,
+              "key_error": -1.2847156147013288,
+              "error_error": -1.0141976304171125
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8594723521155284,
+              "query_error": 0.20763863683327277,
+              "key_error": 0.07319558745333554,
+              "error_error": 0.22621935436298934
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.3642865373,
+            "one_minus_fvu": {
+              "coherent": 0.8405012723504232,
+              "query_error": -7.52486029229174,
+              "key_error": -7.713327610700485,
+              "error_error": -7.736931481181674
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8475940695574734,
+              "query_error": 0.059422523336399746,
+              "key_error": 0.017649770295899425,
+              "error_error": -0.00016289414513548373
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.9094328289084452,
+              "error": -2.750026128923748
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9140636348675861,
+              "error": 0.1182449344819857
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.8470611790552108,
+              "query_error": -0.9815959795411473,
+              "key_error": -1.2471887631764709,
+              "error_error": -1.0137571977924962
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.852427975382516,
+              "query_error": 0.22189252465571807,
+              "key_error": 0.09040979754136258,
+              "error_error": 0.2259877200343754
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.3040582733,
+            "one_minus_fvu": {
+              "coherent": 0.8411114438831269,
+              "query_error": -7.320414973957444,
+              "key_error": -7.683059624575227,
+              "error_error": -7.737335817357128
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.85273519452933,
+              "query_error": 0.1292942660182026,
+              "key_error": 0.024932163302815336,
+              "error_error": 0.0004770113421805888
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.910373625705906,
+              "error": -2.6996737124892016
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9139684271899378,
+              "error": 0.10709254734997453
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.8639548969353135,
+              "query_error": -1.0515556656085203,
+              "key_error": -1.220557562054998,
+              "error_error": -1.012132378936256
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8724426357035775,
+              "query_error": 0.1865515402646848,
+              "key_error": 0.10070532118508091,
+              "error_error": 0.22729174861690193
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.3608696227,
+            "one_minus_fvu": {
+              "coherent": 0.831189591489963,
+              "query_error": -7.574910812271176,
+              "key_error": -7.739439688609377,
+              "error_error": -7.738077648917978
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8443790037413655,
+              "query_error": 0.12228316066392031,
+              "key_error": 0.0140163414672545,
+              "error_error": -0.0003877886493544036
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.9138655018187916,
+              "error": -2.696597209030561
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9177923241604923,
+              "error": 0.11873029229485577
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.8505049162402595,
+              "query_error": -0.9904183887863109,
+              "key_error": -1.2293931692261593,
+              "error_error": -1.016324020789137
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8558257553027846,
+              "query_error": 0.21505747672437736,
+              "key_error": 0.09059553320578473,
+              "error_error": 0.22600034332528451
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.383869569,
+            "one_minus_fvu": {
+              "coherent": 0.8007199227555296,
+              "query_error": -7.347864721172364,
+              "key_error": -7.706637636527626,
+              "error_error": -7.737756556552636
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8067312234842725,
+              "query_error": 0.13484308900131758,
+              "key_error": 0.014553408615237462,
+              "error_error": -0.00023418852267176327
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.909367477276469,
+              "error": -2.7169180915452777
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9127251800007752,
+              "error": 0.12475712171918196
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.843145348599927,
+              "query_error": -1.0277263604158895,
+              "key_error": -1.241473918524382,
+              "error_error": -1.0161701516035184
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8506132294853921,
+              "query_error": 0.19845177950488713,
+              "key_error": 0.07897066857172286,
+              "error_error": 0.22529867173393647
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 756395.3428925285,
+            "one_minus_fvu": {
+              "coherent": 0.8241357015392119,
+              "query_error": -7.248952520898195,
+              "key_error": -7.766588163763361,
+              "error_error": -7.739350695490989
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8331276221726002,
+              "query_error": 0.0965643048080751,
+              "key_error": 0.012728607640653422,
+              "error_error": -0.0010971092926670423
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.9091962775587905,
+              "error": -2.6931620618901064
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.9139272530625746,
+              "error": 0.12486364484001933
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 890.2586842879134,
+            "one_minus_fvu": {
+              "coherent": 0.8429694272208759,
+              "query_error": -1.0391455798807883,
+              "key_error": -1.2853881593422538,
+              "error_error": -1.0136056414433932
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8513853835814698,
+              "query_error": 0.19679947629398675,
+              "key_error": 0.058464412893736606,
+              "error_error": 0.22576007735722392
+            }
+          }
+        }
+      ]
+    },
+    "2": {
+      "identity_max_abs": 7.867813110351562e-06,
+      "seeds": [
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.6658744459,
+            "one_minus_fvu": {
+              "coherent": 0.7644995780299682,
+              "query_error": -2.8361669740152218,
+              "key_error": -2.8762654877020943,
+              "error_error": -2.9546743728090754
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7697690862998541,
+              "query_error": 0.16447023436685904,
+              "key_error": 0.05012171656085074,
+              "error_error": 0.005539130419866756
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8728877247610055,
+              "error": -4.875486243598776
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8770252782345478,
+              "error": 0.14880728447279257
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8263070802089776,
+              "query_error": -2.1296832700322286,
+              "key_error": -2.3945365386041084,
+              "error_error": -2.1988326041226465
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8327752174592521,
+              "query_error": 0.036197001540113294,
+              "key_error": -0.10255179167384454,
+              "error_error": 0.010469736729409096
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.66822412645,
+            "one_minus_fvu": {
+              "coherent": 0.756845760893002,
+              "query_error": -2.719876859458261,
+              "key_error": -2.9045696191973813,
+              "error_error": -2.9544734841883016
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7615572934164564,
+              "query_error": 0.18808800605150944,
+              "key_error": 0.055038675869424014,
+              "error_error": 0.0045725085967378565
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8684275172736203,
+              "error": -4.861301085252197
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.873572280089095,
+              "error": 0.153110028645011
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8335411201098666,
+              "query_error": -2.0893223000992416,
+              "key_error": -2.3699745220845787,
+              "error_error": -2.2026852726644925
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8401418032147774,
+              "query_error": 0.04791749979313875,
+              "key_error": -0.08777261220898458,
+              "error_error": 0.009979994838716255
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.6671867342,
+            "one_minus_fvu": {
+              "coherent": 0.7752169035872463,
+              "query_error": -2.871459215116138,
+              "key_error": -2.8778230811585788,
+              "error_error": -2.9553347809156425
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7820207752920898,
+              "query_error": 0.1722643208246899,
+              "key_error": 0.05034589528309252,
+              "error_error": 0.0039066512747291116
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8691268213897747,
+              "error": -4.848392666940028
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8737948148749425,
+              "error": 0.15035565782911653
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8376773802837925,
+              "query_error": -2.16279221725879,
+              "key_error": -2.4280236106136712,
+              "error_error": -2.201835684809518
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8451236501945999,
+              "query_error": 0.034862562269132535,
+              "key_error": -0.10370465199695422,
+              "error_error": 0.008838489337157363
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.64928501466,
+            "one_minus_fvu": {
+              "coherent": 0.7702794214279028,
+              "query_error": -2.8611336030838954,
+              "key_error": -2.894900703752596,
+              "error_error": -2.9555851442307315
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7733859648833176,
+              "query_error": 0.17120532527279086,
+              "key_error": 0.05135060493082122,
+              "error_error": 0.003387270599761738
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8672072392372747,
+              "error": -4.914290845024416
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.872363928784005,
+              "error": 0.14642211040927755
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8325050199528798,
+              "query_error": -2.1210114076341,
+              "key_error": -2.424373238998174,
+              "error_error": -2.203669853418415
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8401488473042199,
+              "query_error": 0.05012730907787177,
+              "key_error": -0.10562533052860168,
+              "error_error": 0.007340816877583367
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.64997070783,
+            "one_minus_fvu": {
+              "coherent": 0.783488804487035,
+              "query_error": -2.697094994446375,
+              "key_error": -2.867285881516729,
+              "error_error": -2.955037652543205
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7905111974801557,
+              "query_error": 0.17615325600405585,
+              "key_error": 0.051050515964405685,
+              "error_error": 0.004198592498328657
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8727961751166666,
+              "error": -4.865272155513765
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8767949706001622,
+              "error": 0.14996157654195785
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8391253718799909,
+              "query_error": -2.0668686870277106,
+              "key_error": -2.4242396575570133,
+              "error_error": -2.2001792646232454
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.84613568907953,
+              "query_error": 0.0441310415234597,
+              "key_error": -0.09097094705912334,
+              "error_error": 0.008177816916435487
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 473590.66436866514,
+            "one_minus_fvu": {
+              "coherent": 0.7668333416165117,
+              "query_error": -2.8117235928374895,
+              "key_error": -2.8999516795983835,
+              "error_error": -2.956804470370802
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7696361063981971,
+              "query_error": 0.17077965714494003,
+              "key_error": 0.0516502482443173,
+              "error_error": 0.0034566490932331773
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8674055092199713,
+              "error": -4.933540325551696
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8723107316975801,
+              "error": 0.15221245653496362
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 2341.3370186317966,
+            "one_minus_fvu": {
+              "coherent": 0.8304265856461864,
+              "query_error": -2.1591851924152934,
+              "key_error": -2.4221907797434867,
+              "error_error": -2.2017595740851448
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8380973363481649,
+              "query_error": 0.025145034812052214,
+              "key_error": -0.10427503705416452,
+              "error_error": 0.008554754671522669
+            }
+          }
+        }
+      ]
+    },
+    "3": {
+      "identity_max_abs": 1.0281801223754883e-05,
+      "seeds": [
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.363607235,
+            "one_minus_fvu": {
+              "coherent": 0.845820104192757,
+              "query_error": -3.1867188178730173,
+              "key_error": -3.188983989515891,
+              "error_error": -3.2899558939007605
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8491102674430303,
+              "query_error": 0.08126127069927369,
+              "key_error": 0.07047107261012064,
+              "error_error": 0.0043293731746757436
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8781895314429122,
+              "error": -5.452656980652381
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8827587381050115,
+              "error": 0.15054658475730254
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.7963045587200468,
+              "query_error": -2.6644503738293173,
+              "key_error": -3.0556143579829733,
+              "error_error": -2.7281621276540933
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8039067730948634,
+              "query_error": -0.03105761260045714,
+              "key_error": -0.22919348396264483,
+              "error_error": -0.038147761847932005
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.3595605333,
+            "one_minus_fvu": {
+              "coherent": 0.8481637581249728,
+              "query_error": -3.127626943443289,
+              "key_error": -3.2402727413396235,
+              "error_error": -3.2899433563932847
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8506231676725766,
+              "query_error": 0.08854328104017861,
+              "key_error": 0.07026844418446665,
+              "error_error": 0.003348579622767134
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8784064281937032,
+              "error": -5.459335795671393
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8826130375585639,
+              "error": 0.1617569236322952
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.776673719275679,
+              "query_error": -2.6296298690621582,
+              "key_error": -3.0180620935659164,
+              "error_error": -2.728229577072701
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7854588712185414,
+              "query_error": -0.027720456112001024,
+              "key_error": -0.20913892992045913,
+              "error_error": -0.03719142952721666
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.3833138804,
+            "one_minus_fvu": {
+              "coherent": 0.854417106830346,
+              "query_error": -3.2524065380228935,
+              "key_error": -3.2454130107151817,
+              "error_error": -3.291790214560849
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8574759855979083,
+              "query_error": 0.06828719102375203,
+              "key_error": 0.06320627587103478,
+              "error_error": 0.001513204180442873
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8760044202888672,
+              "error": -5.444430985412437
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8805513497125673,
+              "error": 0.16118706635439584
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.7951530997608185,
+              "query_error": -2.647358193842174,
+              "key_error": -3.0497428943982356,
+              "error_error": -2.7262686128430738
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8006549122500566,
+              "query_error": -0.029176462209663967,
+              "key_error": -0.22424000594481397,
+              "error_error": -0.03922149254425822
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.3711604541,
+            "one_minus_fvu": {
+              "coherent": 0.8524601001112858,
+              "query_error": -3.179383168499853,
+              "key_error": -3.2037994168350767,
+              "error_error": -3.290441712380135
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.855563297063137,
+              "query_error": 0.08293289580978969,
+              "key_error": 0.05886937594670083,
+              "error_error": 0.003941741189131709
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8774339335233128,
+              "error": -5.4573173155291155
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8819951372137608,
+              "error": 0.15038544414043642
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.7874307233377464,
+              "query_error": -2.5966329141998776,
+              "key_error": -3.0609215299433927,
+              "error_error": -2.7270959025184904
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7948783494994016,
+              "query_error": -0.03782823890528708,
+              "key_error": -0.24354981244921925,
+              "error_error": -0.03917454559551281
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.342281575,
+            "one_minus_fvu": {
+              "coherent": 0.8477083925519123,
+              "query_error": -3.0692592712439435,
+              "key_error": -3.2071980360005368,
+              "error_error": -3.287830470904181
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8540967155481407,
+              "query_error": 0.08121558139384832,
+              "key_error": 0.06355776850050832,
+              "error_error": 0.0035919202834083785
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8771090288604112,
+              "error": -5.485984774600172
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8811530556427498,
+              "error": 0.15675885617762697
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.7855806192959685,
+              "query_error": -2.618173609043479,
+              "key_error": -3.076825190869707,
+              "error_error": -2.7316871135394303
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7944079247911303,
+              "query_error": -0.044835786308064174,
+              "key_error": -0.22559771195251188,
+              "error_error": -0.03999388917219715
+            }
+          }
+        },
+        {
+          "qk_scores": {
+            "n": 4302,
+            "target_variance_sum": 660337.3831797017,
+            "one_minus_fvu": {
+              "coherent": 0.8524196309642973,
+              "query_error": -3.19033425227797,
+              "key_error": -3.2193289798865754,
+              "error_error": -3.2904980158535704
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8545216185859665,
+              "query_error": 0.06915702482787056,
+              "key_error": 0.06746031209307146,
+              "error_error": 0.002398346600312018
+            }
+          },
+          "ov_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.8782078749538307,
+              "error": -5.493991857731201
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.8820551776119891,
+              "error": 0.15691526023650715
+            }
+          },
+          "qk_term_output": {
+            "n": 100,
+            "target_variance_sum": 7889.185615462089,
+            "one_minus_fvu": {
+              "coherent": 0.7723925949175646,
+              "query_error": -2.6738910017224704,
+              "key_error": -3.0486531478072427,
+              "error_error": -2.73025910743229
+            },
+            "mean_adjusted_one_minus_fvu": {
+              "coherent": 0.7821647308050377,
+              "query_error": -0.06005014733808989,
+              "key_error": -0.2150657594256944,
+              "error_error": -0.038149073394003086
+            }
+          }
+        }
+      ]
+    }
+  }
+}

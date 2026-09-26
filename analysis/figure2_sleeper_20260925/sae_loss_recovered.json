@@ -1,0 +1,731 @@
+{
+  "dataset": "fresh_holdout.pt clean subset",
+  "n_sequences": 100,
+  "n_story_tokens": 8887,
+  "loss_definition": "Mean next-token CE on target positions after Story: marker, including first token",
+  "recovery_definition": "(ablation CE - SAE reconstruction CE) / (ablation CE - original CE)",
+  "baseline_ce": 1.0565878519449055,
+  "hooks": {
+    "0": {
+      "hook_id": 0,
+      "hookpoint": "blocks.0.ln1.hook_normalized",
+      "layer": 0,
+      "kind": "ln1",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.141582112566107,
+      "mean_ablation_ce": 8.36858437886801,
+      "activation_variance_sum": 7183605.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.1107242567487974,
+          "delta_ce": 0.054136404803891924,
+          "zero_ablation_loss_recovered": 0.9923590051293639,
+          "mean_ablation_loss_recovered": 0.9925962212092744,
+          "activation_one_minus_fvu": 0.9535920694153562
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.1104193213445552,
+          "delta_ce": 0.05383146939964978,
+          "zero_ablation_loss_recovered": 0.9924020447413984,
+          "mean_ablation_loss_recovered": 0.9926379246487003,
+          "activation_one_minus_fvu": 0.9536486737312777
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.1145209772481925,
+          "delta_ce": 0.05793312530328709,
+          "zero_ablation_loss_recovered": 0.9918231231851121,
+          "mean_ablation_loss_recovered": 0.9920769758177572,
+          "activation_one_minus_fvu": 0.9535845958000893
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.113921216009867,
+          "delta_ce": 0.05733336406496159,
+          "zero_ablation_loss_recovered": 0.9919077755103312,
+          "mean_ablation_loss_recovered": 0.9921590000960944,
+          "activation_one_minus_fvu": 0.9544950443470758
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.1128424039986426,
+          "delta_ce": 0.056254552053737195,
+          "zero_ablation_loss_recovered": 0.9920600426783118,
+          "mean_ablation_loss_recovered": 0.992306540102063,
+          "activation_one_minus_fvu": 0.953779134103368
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.1130538808222332,
+          "delta_ce": 0.05646602887732777,
+          "zero_ablation_loss_recovered": 0.9920301941257497,
+          "mean_ablation_loss_recovered": 0.9922776182032612,
+          "activation_one_minus_fvu": 0.9538961950945939
+        }
+      ]
+    },
+    "1": {
+      "hook_id": 1,
+      "hookpoint": "blocks.0.hook_resid_mid",
+      "layer": 0,
+      "kind": "resid_mid",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.363278832494093,
+      "mean_ablation_ce": 9.52269049067458,
+      "activation_variance_sum": 288645.59375,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.1747794685179194,
+          "delta_ce": 0.11819161657301391,
+          "zero_ablation_loss_recovered": 0.983824193894658,
+          "mean_ablation_loss_recovered": 0.986039430229404,
+          "activation_one_minus_fvu": 0.8610746773231263
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.17821242305738,
+          "delta_ce": 0.1216245711124746,
+          "zero_ablation_loss_recovered": 0.9833543567893803,
+          "mean_ablation_loss_recovered": 0.985633936144823,
+          "activation_one_minus_fvu": 0.8640121542459238
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.1744503580546022,
+          "delta_ce": 0.11786250610969673,
+          "zero_ablation_loss_recovered": 0.9838692362351914,
+          "mean_ablation_loss_recovered": 0.98607830413365,
+          "activation_one_minus_fvu": 0.8621182161719676
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.1736050551367165,
+          "delta_ce": 0.11701720319181108,
+          "zero_ablation_loss_recovered": 0.9839849251181804,
+          "mean_ablation_loss_recovered": 0.9861781497124197,
+          "activation_one_minus_fvu": 0.8637405369936793
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.1850102024243627,
+          "delta_ce": 0.12842235047945727,
+          "zero_ablation_loss_recovered": 0.9824240068696863,
+          "mean_ablation_loss_recovered": 0.9848309953281259,
+          "activation_one_minus_fvu": 0.8624859911129663
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.1734275882257792,
+          "delta_ce": 0.11683973628087374,
+          "zero_ablation_loss_recovered": 0.984009213391957,
+          "mean_ablation_loss_recovered": 0.9861991117676309,
+          "activation_one_minus_fvu": 0.8648590505303378
+        }
+      ]
+    },
+    "2": {
+      "hook_id": 2,
+      "hookpoint": "blocks.0.hook_resid_post",
+      "layer": 0,
+      "kind": "resid_post",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.496916031668448,
+      "mean_ablation_ce": 9.140817521379542,
+      "activation_variance_sum": 1179056.625,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.274915557617517,
+          "delta_ce": 0.21832770567261162,
+          "zero_ablation_loss_recovered": 0.9706561726312557,
+          "mean_ablation_loss_recovered": 0.9729933816083829,
+          "activation_one_minus_fvu": 0.8303617586770642
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.2988346220471265,
+          "delta_ce": 0.24224677010222107,
+          "zero_ablation_loss_recovered": 0.9674413864213148,
+          "mean_ablation_loss_recovered": 0.9700346501759937,
+          "activation_one_minus_fvu": 0.8309042839088359
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.3098005524660319,
+          "delta_ce": 0.25321270052112643,
+          "zero_ablation_loss_recovered": 0.9659675360542315,
+          "mean_ablation_loss_recovered": 0.9686781906409107,
+          "activation_one_minus_fvu": 0.8292097373822058
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.3035997459640838,
+          "delta_ce": 0.24701189401917834,
+          "zero_ablation_loss_recovered": 0.9668009410267228,
+          "mean_ablation_loss_recovered": 0.9694452156705672,
+          "activation_one_minus_fvu": 0.8301853957356056
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.326808352109296,
+          "delta_ce": 0.2702205001643905,
+          "zero_ablation_loss_recovered": 0.9636816423097037,
+          "mean_ablation_loss_recovered": 0.966574366239735,
+          "activation_one_minus_fvu": 0.8272986835151737
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.349183152225512,
+          "delta_ce": 0.29259530028060654,
+          "zero_ablation_loss_recovered": 0.9606744093522661,
+          "mean_ablation_loss_recovered": 0.9638066566333625,
+          "activation_one_minus_fvu": 0.8285196050672079
+        }
+      ]
+    },
+    "3": {
+      "hook_id": 3,
+      "hookpoint": "blocks.1.ln1.hook_normalized",
+      "layer": 1,
+      "kind": "ln1",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 1.6117855281063633,
+      "mean_ablation_ce": 1.6158161148306516,
+      "activation_variance_sum": 3336942.75,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.1329268095691039,
+          "delta_ce": 0.0763389576241984,
+          "zero_ablation_loss_recovered": 0.8625013019651073,
+          "mean_ablation_loss_recovered": 0.8634923112965145,
+          "activation_one_minus_fvu": 0.8079340890044487
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.132891206300284,
+          "delta_ce": 0.0763033543553786,
+          "zero_ablation_loss_recovered": 0.8625654291586251,
+          "mean_ablation_loss_recovered": 0.8635559762991308,
+          "activation_one_minus_fvu": 0.8092886111611819
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.1186940319910754,
+          "delta_ce": 0.06210618004616997,
+          "zero_ablation_loss_recovered": 0.8881368155652929,
+          "mean_ablation_loss_recovered": 0.8889430592694156,
+          "activation_one_minus_fvu": 0.8063356912738464
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.1341846681116026,
+          "delta_ce": 0.07759681616669711,
+          "zero_ablation_loss_recovered": 0.8602356971246921,
+          "mean_ablation_loss_recovered": 0.861243035596449,
+          "activation_one_minus_fvu": 0.8089293289119209
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.1390495965622187,
+          "delta_ce": 0.08246174461731326,
+          "zero_ablation_loss_recovered": 0.8514731812506138,
+          "mean_ablation_loss_recovered": 0.8525436747567232,
+          "activation_one_minus_fvu": 0.808921067935238
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.1424285280861441,
+          "delta_ce": 0.08584067614123869,
+          "zero_ablation_loss_recovered": 0.8453871840121405,
+          "mean_ablation_loss_recovered": 0.8465015417885335,
+          "activation_one_minus_fvu": 0.8074271726717517
+        }
+      ]
+    },
+    "4": {
+      "hook_id": 4,
+      "hookpoint": "blocks.1.hook_resid_mid",
+      "layer": 1,
+      "kind": "resid_mid",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.974546849506302,
+      "mean_ablation_ce": 9.25500181972263,
+      "activation_variance_sum": 1548089.75,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.3037457440907365,
+          "delta_ce": 0.24715789214583106,
+          "zero_ablation_loss_recovered": 0.9687851512969501,
+          "mean_ablation_loss_recovered": 0.9698529626440874,
+          "activation_one_minus_fvu": 0.7957234554361674
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.3001380148628263,
+          "delta_ce": 0.24355016291792086,
+          "zero_ablation_loss_recovered": 0.9692407900832866,
+          "mean_ablation_loss_recovered": 0.9702930147373448,
+          "activation_one_minus_fvu": 0.7981145083148038
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.3150659764833816,
+          "delta_ce": 0.2584781245384762,
+          "zero_ablation_loss_recovered": 0.967355460590528,
+          "mean_ablation_loss_recovered": 0.9684721794295368,
+          "activation_one_minus_fvu": 0.7940952359593493
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.310077192062493,
+          "delta_ce": 0.2534893401175875,
+          "zero_ablation_loss_recovered": 0.9679855199811394,
+          "mean_ablation_loss_recovered": 0.969080685469912,
+          "activation_one_minus_fvu": 0.7944701467213464
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.3058093463635436,
+          "delta_ce": 0.24922149441863817,
+          "zero_ablation_loss_recovered": 0.9685245282912687,
+          "mean_ablation_loss_recovered": 0.9696012551454275,
+          "activation_one_minus_fvu": 0.7929257376914032
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.3163941075271464,
+          "delta_ce": 0.2598062555822409,
+          "zero_ablation_loss_recovered": 0.9671877240508245,
+          "mean_ablation_loss_recovered": 0.9683101808955539,
+          "activation_one_minus_fvu": 0.7956291967548231
+        }
+      ]
+    },
+    "5": {
+      "hook_id": 5,
+      "hookpoint": "blocks.1.hook_resid_post",
+      "layer": 1,
+      "kind": "resid_post",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 7.7176193764417125,
+      "mean_ablation_ce": 7.769327080637448,
+      "activation_variance_sum": 2849207.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.3668286239951966,
+          "delta_ce": 0.3102407720502911,
+          "zero_ablation_loss_recovered": 0.9534245152707443,
+          "mean_ablation_loss_recovered": 0.9537832825794549,
+          "activation_one_minus_fvu": 0.7929712596072784
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.3588019961566051,
+          "delta_ce": 0.3022141442116997,
+          "zero_ablation_loss_recovered": 0.9546295280092478,
+          "mean_ablation_loss_recovered": 0.9549790131992715,
+          "activation_one_minus_fvu": 0.7947250459733182
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.360095636533701,
+          "delta_ce": 0.30350778458879546,
+          "zero_ablation_loss_recovered": 0.954435317792356,
+          "mean_ablation_loss_recovered": 0.9547862989684599,
+          "activation_one_minus_fvu": 0.7943406736725341
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.3541613737938842,
+          "delta_ce": 0.2975735218489788,
+          "zero_ablation_loss_recovered": 0.9553262102491763,
+          "mean_ablation_loss_recovered": 0.9556703289505053,
+          "activation_one_minus_fvu": 0.7923134676157261
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.3713072871979437,
+          "delta_ce": 0.31471943525303825,
+          "zero_ablation_loss_recovered": 0.9527521474570992,
+          "mean_ablation_loss_recovered": 0.9531160939623843,
+          "activation_one_minus_fvu": 0.7950434843581038
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.3687043888061565,
+          "delta_ce": 0.31211653686125107,
+          "zero_ablation_loss_recovered": 0.9531429125183687,
+          "mean_ablation_loss_recovered": 0.9535038489910113,
+          "activation_one_minus_fvu": 0.7940888327655731
+        }
+      ]
+    },
+    "6": {
+      "hook_id": 6,
+      "hookpoint": "blocks.2.ln1.hook_normalized",
+      "layer": 2,
+      "kind": "ln1",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 1.5688706088202924,
+      "mean_ablation_ce": 1.616570349202135,
+      "activation_variance_sum": 4084768.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.1327031902726594,
+          "delta_ce": 0.07611533832775397,
+          "zero_ablation_loss_recovered": 0.8514192849433169,
+          "mean_ablation_loss_recovered": 0.8640755046799433,
+          "activation_one_minus_fvu": 0.7706626790064943
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.1323099060161612,
+          "delta_ce": 0.07572205407125576,
+          "zero_ablation_loss_recovered": 0.8521869942819973,
+          "mean_ablation_loss_recovered": 0.8647778199459105,
+          "activation_one_minus_fvu": 0.7671409740635821
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.1249008410503052,
+          "delta_ce": 0.06831298910539974,
+          "zero_ablation_loss_recovered": 0.8666498370507971,
+          "mean_ablation_loss_recovered": 0.878008706629236,
+          "activation_one_minus_fvu": 0.7679414584408466
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.1279970342696846,
+          "delta_ce": 0.07140918232477911,
+          "zero_ablation_loss_recovered": 0.8606059224785709,
+          "mean_ablation_loss_recovered": 0.8724796173549384,
+          "activation_one_minus_fvu": 0.7673655421648182
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.1235271345258524,
+          "delta_ce": 0.06693928258094695,
+          "zero_ablation_loss_recovered": 0.8693313767005632,
+          "mean_ablation_loss_recovered": 0.8804618306664713,
+          "activation_one_minus_fvu": 0.7693950723991546
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.1246771256030579,
+          "delta_ce": 0.06808927365815243,
+          "zero_ablation_loss_recovered": 0.867086540110279,
+          "mean_ablation_loss_recovered": 0.8784082109857884,
+          "activation_one_minus_fvu": 0.7689860939623744
+        }
+      ]
+    },
+    "7": {
+      "hook_id": 7,
+      "hookpoint": "blocks.2.hook_resid_mid",
+      "layer": 2,
+      "kind": "resid_mid",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.699737524790423,
+      "mean_ablation_ce": 7.687854933821875,
+      "activation_variance_sum": 4025782.5,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.4045594079000576,
+          "delta_ce": 0.34797155595515217,
+          "zero_ablation_loss_recovered": 0.9544727539235008,
+          "mean_ablation_loss_recovered": 0.9475256309753912,
+          "activation_one_minus_fvu": 0.7541974681319719
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.4072814920802506,
+          "delta_ce": 0.3506936401353451,
+          "zero_ablation_loss_recovered": 0.9541166070080657,
+          "mean_ablation_loss_recovered": 0.9471151386597323,
+          "activation_one_minus_fvu": 0.753030659839112
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.3926483975012658,
+          "delta_ce": 0.33606054555636033,
+          "zero_ablation_loss_recovered": 0.9560311442349072,
+          "mean_ablation_loss_recovered": 0.9493218201880599,
+          "activation_one_minus_fvu": 0.755137308709549
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.3950336791538904,
+          "delta_ce": 0.338445827208985,
+          "zero_ablation_loss_recovered": 0.9557190632532802,
+          "mean_ablation_loss_recovered": 0.9489621179436513,
+          "activation_one_minus_fvu": 0.7530265893959746
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.4148795345817626,
+          "delta_ce": 0.3582916826368572,
+          "zero_ablation_loss_recovered": 0.9531225086550651,
+          "mean_ablation_loss_recovered": 0.9459693482085714,
+          "activation_one_minus_fvu": 0.7538507963979674
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.4166076392307585,
+          "delta_ce": 0.36001978728585304,
+          "zero_ablation_loss_recovered": 0.9528964101586384,
+          "mean_ablation_loss_recovered": 0.9457087487442973,
+          "activation_one_minus_fvu": 0.7534482756613156
+        }
+      ]
+    },
+    "8": {
+      "hook_id": 8,
+      "hookpoint": "blocks.2.hook_resid_post",
+      "layer": 2,
+      "kind": "resid_post",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 8.997957537168054,
+      "mean_ablation_ce": 7.2351802492404635,
+      "activation_variance_sum": 5740602.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.4520682065226946,
+          "delta_ce": 0.3954803545777892,
+          "zero_ablation_loss_recovered": 0.9501999818351642,
+          "mean_ablation_loss_recovered": 0.9359918361420159,
+          "activation_one_minus_fvu": 0.723860724069096
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.4558735393868854,
+          "delta_ce": 0.3992856874419799,
+          "zero_ablation_loss_recovered": 0.9497208034295458,
+          "mean_ablation_loss_recovered": 0.93537594620795,
+          "activation_one_minus_fvu": 0.7225102967750594
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.4529092375977553,
+          "delta_ce": 0.3963213856528498,
+          "zero_ablation_loss_recovered": 0.9500940767950519,
+          "mean_ablation_loss_recovered": 0.9358557159675519,
+          "activation_one_minus_fvu": 0.720723543563027
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.4515499399579441,
+          "delta_ce": 0.39496208801303867,
+          "zero_ablation_loss_recovered": 0.950265243444344,
+          "mean_ablation_loss_recovered": 0.9360757171510588,
+          "activation_one_minus_fvu": 0.7230668572520791
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.463615505904868,
+          "delta_ce": 0.40702765395996265,
+          "zero_ablation_loss_recovered": 0.9487459128470827,
+          "mean_ablation_loss_recovered": 0.9341229154170902,
+          "activation_one_minus_fvu": 0.723259121223262
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.4465943275641386,
+          "delta_ce": 0.3900064756192332,
+          "zero_ablation_loss_recovered": 0.9508892683405816,
+          "mean_ablation_loss_recovered": 0.9368777788627157,
+          "activation_one_minus_fvu": 0.7239567587489082
+        }
+      ]
+    },
+    "9": {
+      "hook_id": 9,
+      "hookpoint": "blocks.3.ln1.hook_normalized",
+      "layer": 3,
+      "kind": "ln1",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 1.7782915496740324,
+      "mean_ablation_ce": 1.8011553865108445,
+      "activation_variance_sum": 5007429.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.2042991798721094,
+          "delta_ce": 0.14771132792720398,
+          "zero_ablation_loss_recovered": 0.795329678381884,
+          "mean_ablation_loss_recovered": 0.8016146003286118,
+          "activation_one_minus_fvu": 0.6995082144449776
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.2098677124284418,
+          "delta_ce": 0.15327986048353637,
+          "zero_ablation_loss_recovered": 0.7876138629110002,
+          "mean_ablation_loss_recovered": 0.7941357185646107,
+          "activation_one_minus_fvu": 0.6962077518660275
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.2103838362038652,
+          "delta_ce": 0.1537959842589598,
+          "zero_ablation_loss_recovered": 0.7868987165468518,
+          "mean_ablation_loss_recovered": 0.7934425325855521,
+          "activation_one_minus_fvu": 0.6975811745159043
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.1982969659861313,
+          "delta_ce": 0.14170911404122588,
+          "zero_ablation_loss_recovered": 0.8036464071236992,
+          "mean_ablation_loss_recovered": 0.809675942795655,
+          "activation_one_minus_fvu": 0.6979494336065474
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.200501552807999,
+          "delta_ce": 0.14391370086309352,
+          "zero_ablation_loss_recovered": 0.8005917091516581,
+          "mean_ablation_loss_recovered": 0.8067150470816714,
+          "activation_one_minus_fvu": 0.6987829748185146
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.204507085380155,
+          "delta_ce": 0.1479192334352495,
+          "zero_ablation_loss_recovered": 0.7950416023907263,
+          "mean_ablation_loss_recovered": 0.8013353704422769,
+          "activation_one_minus_fvu": 0.6972789704057711
+        }
+      ]
+    },
+    "10": {
+      "hook_id": 10,
+      "hookpoint": "blocks.3.hook_resid_mid",
+      "layer": 3,
+      "kind": "resid_mid",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 13.62747772378193,
+      "mean_ablation_ce": 7.2560715660867,
+      "activation_variance_sum": 8342394.5,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.460089848255352,
+          "delta_ce": 0.4035019963104465,
+          "zero_ablation_loss_recovered": 0.9679018748533924,
+          "mean_ablation_loss_recovered": 0.9349136129852219,
+          "activation_one_minus_fvu": 0.6819884585444862
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.4376599399931078,
+          "delta_ce": 0.38107208804820236,
+          "zero_ablation_loss_recovered": 0.9696861485596235,
+          "mean_ablation_loss_recovered": 0.93853164140444,
+          "activation_one_minus_fvu": 0.6828476065459983
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.4593633602584886,
+          "delta_ce": 0.4027755083135831,
+          "zero_ablation_loss_recovered": 0.9679596661477454,
+          "mean_ablation_loss_recovered": 0.9350307982268262,
+          "activation_one_minus_fvu": 0.6802613745969457
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.441482016832874,
+          "delta_ce": 0.38489416488796846,
+          "zero_ablation_loss_recovered": 0.969382106691567,
+          "mean_ablation_loss_recovered": 0.9379151260596141,
+          "activation_one_minus_fvu": 0.681470748970814
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.449444965368129,
+          "delta_ce": 0.3928571134232235,
+          "zero_ablation_loss_recovered": 0.9687486631870547,
+          "mean_ablation_loss_recovered": 0.9366306725627703,
+          "activation_one_minus_fvu": 0.6817123312886966
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.4579427458779326,
+          "delta_ce": 0.40135489393302715,
+          "zero_ablation_loss_recovered": 0.9680726744069094,
+          "mean_ablation_loss_recovered": 0.9352599486603236,
+          "activation_one_minus_fvu": 0.6804927249154904
+        }
+      ]
+    },
+    "11": {
+      "hook_id": 11,
+      "hookpoint": "blocks.3.hook_resid_post",
+      "layer": 3,
+      "kind": "resid_post",
+      "baseline_ce": 1.0565878519449055,
+      "zero_ablation_ce": 7.920743936895184,
+      "mean_ablation_ce": 9.170078353564195,
+      "activation_variance_sum": 14026952.0,
+      "seeds": [
+        {
+          "seed": 0,
+          "reconstruction_ce": 1.6464179760025177,
+          "delta_ce": 0.5898301240576123,
+          "zero_ablation_loss_recovered": 0.9140709918658727,
+          "mean_ablation_loss_recovered": 0.9273025433455683,
+          "activation_one_minus_fvu": 0.7030017094501357
+        },
+        {
+          "seed": 1,
+          "reconstruction_ce": 1.6543608290199168,
+          "delta_ce": 0.5977729770750113,
+          "zero_ablation_loss_recovered": 0.9129138426228922,
+          "mean_ablation_loss_recovered": 0.9263235746740929,
+          "activation_one_minus_fvu": 0.7016028154673232
+        },
+        {
+          "seed": 2,
+          "reconstruction_ce": 1.661421209966102,
+          "delta_ce": 0.6048333580211966,
+          "zero_ablation_loss_recovered": 0.9118852557348893,
+          "mean_ablation_loss_recovered": 0.9254533720227461,
+          "activation_one_minus_fvu": 0.7026419065863346
+        },
+        {
+          "seed": 3,
+          "reconstruction_ce": 1.655880451256048,
+          "delta_ce": 0.5992925993111426,
+          "zero_ablation_loss_recovered": 0.9126924574711963,
+          "mean_ablation_loss_recovered": 0.9261362789305619,
+          "activation_one_minus_fvu": 0.7026392119970183
+        },
+        {
+          "seed": 4,
+          "reconstruction_ce": 1.6643564742126842,
+          "delta_ce": 0.6077686222677787,
+          "zero_ablation_loss_recovered": 0.9114576337213082,
+          "mean_ablation_loss_recovered": 0.9250915962560775,
+          "activation_one_minus_fvu": 0.7026206562017179
+        },
+        {
+          "seed": 5,
+          "reconstruction_ce": 1.6684000825028835,
+          "delta_ce": 0.6118122305579781,
+          "zero_ablation_loss_recovered": 0.9108685433451343,
+          "mean_ablation_loss_recovered": 0.9245932154063812,
+          "activation_one_minus_fvu": 0.7026316283822743
+        }
+      ]
+    }
+  },
+  "activation_fvu_definition": "Direct SAE reconstruction of one cached activation per token; channelwise mean baseline on clean fresh holdout"
+}

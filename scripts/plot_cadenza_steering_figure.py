@@ -1,8 +1,9 @@
 """Plot Cadenza attention-only sleeper steering, using the archived figure data.
 
-Top: positive-coefficient validation sweeps for the four L8 interventions, with
-positive-coefficient confirmation selections marked by stars. Bottom: grouped
-bars for positive-coefficient confirmation selections at layers 8, 16, and 24.
+Top: descriptive positive-coefficient sweeps on the same 64-pair L8
+confirmation block, with validation-selected coefficients marked by stars.
+Bottom: validation-selected confirmation comparisons at layers 8, 12, 16,
+and 24. Layer 12 uses a later, separate confirmation block.
 """
 
 from __future__ import annotations
@@ -33,9 +34,9 @@ def main() -> None:
     data = json.loads(DATA.read_text())
     winners = {(row["layer"], row["category"]): row
                for row in data["confirmation_positive_winners"]}
-    assert len(winners) == 12
+    assert len(winners) == 16
     assert all(row["alpha"] > 0 for row in winners.values())
-    for layer in (8, 16, 24):
+    for layer in (8, 12, 16, 24):
         assert set(category for lyr, category in winners if lyr == layer) == set(METHODS)
 
     plt.rcParams.update({
@@ -45,7 +46,7 @@ def main() -> None:
         "axes.spines.top": False, "axes.spines.right": False,
         "pdf.fonttype": 42,
     })
-    fig = plt.figure(figsize=(7.5, 5.9))
+    fig = plt.figure(figsize=(7.5, 6.05))
     grid = fig.add_gridspec(2, 2, height_ratios=[1, 1.05],
                            left=0.095, right=0.985, bottom=0.14, top=0.86,
                            hspace=0.57, wspace=0.33)
@@ -55,14 +56,18 @@ def main() -> None:
 
     legend_handles = []
     for category, style in METHODS.items():
-        rows = [row for row in data["validation_curves"][category]["rows"]
+        rows = [row for row in data["confirmation_curves"][category]["rows"]
                 if row["alpha"] >= 0]
+        assert all(row["n"] == 64 for row in rows)
+        selected = winners[(8, category)]
+        selected_curve = next(row for row in rows if row["alpha"] == selected["alpha"])
+        assert abs(selected_curve["jsd_clean"] - selected["jsd_clean"]) < 1e-6
+        assert abs(selected_curve["jsd_sleeper"] - selected["jsd_sleeper"]) < 1e-6
         x = [row["alpha"] for row in rows]
         for ax, metric in ((clean_ax, "jsd_clean"), (sleeper_ax, "jsd_sleeper")):
             ax.plot(x, [row[metric] for row in rows], color=style["color"],
                     marker=style["marker"], markersize=2.7, linewidth=1.4,
                     alpha=0.88, zorder=2)
-            selected = winners[(8, category)]
             ax.scatter([selected["alpha"]], [selected[metric]],
                        marker="*", s=90, facecolor=style["color"],
                        edgecolor="white", linewidth=0.55, zorder=5)
@@ -78,23 +83,26 @@ def main() -> None:
         ax.set_xlabel(r"steering coefficient $\alpha$ (native units)")
         ax.grid(color="#dddddd", linewidth=0.55, alpha=0.8)
         ax.set_axisbelow(True)
-    clean_ax.set_ylim(0.69, 1.015)
+    clean_values = [row["jsd_clean"] for group in data["confirmation_curves"].values()
+                    for row in group["rows"]]
+    clean_ax.set_ylim(max(0, min(clean_values) - 0.055), min(1.03, max(clean_values) + 0.04))
     sleeper_ax.set_ylim(-0.025, 1.025)
     clean_ax.set_ylabel("JSD to clean (bits)")
     sleeper_ax.set_ylabel("JSD to sleeper (bits)")
-    clean_ax.set_title("a   Layer 8 · lower is better", loc="left", weight="semibold")
-    sleeper_ax.set_title("b   Layer 8 · higher is better", loc="left", weight="semibold")
+    clean_ax.set_title("a   Layer 8 confirmation · lower is better", loc="left", weight="semibold")
+    sleeper_ax.set_title("b   Layer 8 confirmation · higher is better", loc="left", weight="semibold")
     clean_ax.axhline(data["confirmation_baseline_jsd_clean"],
                      color="#888888", linestyle=":", linewidth=1)
 
     fig.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.54, 0.99),
                ncol=4, frameon=False, columnspacing=1.25, handlelength=1.8,
                fontsize=8)
-    fig.text(0.54, 0.925, "Lines: positive-α 24-pair validation sweeps    ★: selected confirmation",
+    fig.text(0.54, 0.925, "Lines: 64-pair confirmation    ★: coefficient selected on validation",
              ha="center", va="center", fontsize=7.5, color="#555555")
 
-    layers = (8, 16, 24)
+    layers = (8, 12, 16, 24)
     bar_width = 0.18
+    summary_ax.axvspan(0.53, 1.47, color="#f2f5f8", zorder=0)
     for idx, (category, style) in enumerate(METHODS.items()):
         positions = [group + (idx - 1.5) * bar_width for group in range(len(layers))]
         values = [winners[(layer, category)]["jsd_clean"] for layer in layers]
@@ -106,12 +114,11 @@ def main() -> None:
     baseline = data["confirmation_baseline_jsd_clean"]
     summary_ax.axhline(baseline, color="#777777", linestyle=":", linewidth=1,
                        zorder=2)
-    summary_ax.text(2.5, 1.135, f"unsteered {baseline:.3f}",
-                    ha="right", va="top", fontsize=7.2, color="#666666")
-    summary_ax.set_xlim(-0.55, 2.55)
+    summary_ax.set_xlim(-0.55, 3.55)
     summary_ax.set_ylim(0, 1.16)
     summary_ax.set_xticks(range(len(layers)))
-    summary_ax.set_xticklabels([f"Layer {layer}" for layer in layers])
+    summary_ax.set_xticklabels([f"Layer {layer}" + ("*" if layer == 12 else "")
+                                for layer in layers])
     summary_ax.set_ylabel("Confirmation JSD to clean (bits)")
     summary_ax.set_title("c   Validation-selected settings by layer · lower is better",
                          loc="left", weight="semibold")
@@ -119,8 +126,8 @@ def main() -> None:
     summary_ax.set_axisbelow(True)
 
     fig.text(0.095, 0.045,
-             "Positive coefficients only; scales are method-specific. The best SAE hook is resid-mid at all three\n"
-             "layers in this slice. Full 32-layer DoM scan (signed): best at L12, JSD 0.801.",
+             "Positive coefficients only; scales are method-specific. *L12 uses a separate fresh 64-pair block\n"
+             "(unsteered 0.988 vs. 0.991). Best SAE hook: L12 input; L8/16/24 resid-mid.",
              ha="left", va="bottom", fontsize=6.8, color="#555555")
     STEM.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(STEM.with_suffix(".pdf"))
