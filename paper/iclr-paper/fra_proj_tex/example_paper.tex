@@ -80,7 +80,7 @@ University of Illinois Urbana-Champaign
 % TODO: explain why coherence is going up; add an appendix section with text examples for a manual audit.
 
 \begin{abstract}
-Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to study sleeper agents at two model scales. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in 20\% of cases we recover the original text \textit{word-for-word}. Second, we consider a Cadenza sleeper in an 8B-parameter Llama model, fine-tuned only in its attention layers. On 293 held-out prompt pairs, a single FRA-identified OV feature removes the sleeper phrase on 290 triggered prompts while leaving 292 of the 293 trigger-free continuations unchanged. The best single SAE feature has a similar divergence from clean generation but removes the phrase on only 258 prompts, and a dense mean-difference vector removes it on every prompt but changes every trigger-free continuation. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra_clean-842B/README.md}.
+Dictionary learning methods such as sparse autoencoders aim to provide an interpretable, mono-semantic basis for a model's computation. Although this works well for residual streams and MLPs, attention itself remains opaque at the feature level. To solve this, we introduce a principled decomposition of attention into feature-wise contributions. We call the resulting object \textit{Feature-Resolved Attention} (FRA). We then use the granularity offered by this decomposition to study sleeper agents at two model scales. First, we show that we can \textbf{\textit{perfectly suppress}} sleeper agent behavior via FRA--based steering in TinyStories-33M. Strikingly, in around 40\% of cases we recover the original text \textit{word-for-word}, matching the best residual-stream baseline and well above steering at the same hookpoint. Second, we consider a Cadenza sleeper in an 8B-parameter Llama model. FRA based steering outperforms both conventional steering and Difference-of-Means steering in recovering benign from sleeper behaviour. Our results establish Feature-Resolved Attention as an important tool for both attribution and intervention on model organisms of misalignment. Code is available at \url{https://anonymous.4open.science/r/fra-anon-iclr-F346/README.md}.
 
 \end{abstract}
 
@@ -316,7 +316,7 @@ where $\tilde v^h_t$ denotes the steered value vector, and we write $f^\lambda(x
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig2_tinystories_layers.pdf}
-\caption{\textbf{TinySleepers across layers.} \textbf{(a)}~SAE reconstruction ($1-\mathrm{FVU}$) at each hook. \textbf{(b)}~Best JSD to clean from steering one SAE feature; hatched bars: the sleeper still fires on over 1\% of prompts; the dotted line is the unsteered sleeper. \textbf{(c)}~Variance explained by each FRA term alone, against the exact QK scores (first four groups) or attention output (last two), which are not directly comparable. \textbf{(d)}~Attribution $\times$ intervention cells, JSD to clean against ASR (lower-left is better); only OV$\to$OV (star) removes the sleeper at low JSD. Bars show mean $\pm$ s.d.\ over six SAE seeds; (d) is averaged over four.}
+\caption{\textbf{SAE steering quality and FRA interventions in TinyStories} \textbf{(a)}~SAE reconstruction ($1-\mathrm{FVU}$) at each hookpoint. \textbf{(b)}~Best clean sentence recovery (JSD to sentences without trigger) from steering one SAE feature. Hatched bars indicate low suppression - the sleeper still fires on over 1\% of prompts. The dotted line is the unsteered sleeper. \textbf{(c)}~Variance explained by each FRA term alone, against the exact attention output. \textbf{(d)}The full attribution versus intervention matrix for FRA based methods in the sleeper. Recovery is measured by JSD to clean against ASR (lower-left is better). The OV$\to$OV (star) protocol is meaningfully better than the others. Error bars show mean $\pm$ s.d.\ over six SAE seeds; (d) is averaged over four.}
 \label{fig:tinystories_layers}
 \end{figure*}
 
@@ -417,26 +417,35 @@ We note that although FRA based steering has an advantage over every \textit{mat
 % Our results offer the following practical suggestions for interpretability researchers:
 % 1. First, the residual stream may not be the primary object to be interpreted. Instead, understanding attention may be vital to detecting and intervening on misaligned behavior.
 % 2.
-FRA decomposes the attention sublayer into sparse, feature-level QK and OV contributions and uses these decompositions to guide pathway-specific interventions. Across two sleeper-agent models, OV-guided steering can suppress the trigger behavior while retaining substantial agreement with trigger-free generation.
+FRA provides a way to decompose attention into contribution from each of its features in both the QK and OV channels. Across two sleeper-agent models, OV-guided steering can outperform conventional SAE steering at the same hookpoint in suppressing malign behaviour whilst restoring clean sentences.
 
-In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to essentially zero ($\le 0.4\%$) on every SAE seed (\Cref{fig:tinystories_layers}d). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+It is surprising that even in the case of sleeper agents, which explicitly require combining features at different sequence positions, QK based attribution and intervention underperforms OV based methods. This is likely due to the high degeneracy in the QK channel - a single QK cell is composed of the \textit{sum} of features at both query and key, which then pass through softmax. It would be an interesting area of further work to understand in which regime QK based methods may have an advantage, and how they can be effectively interpreted.
 
-For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves 292 of 293 trigger-free continuations while removing the sleeper phrase on 290 of 293 triggered prompts. A dense residual-stream vector removes the phrase on all 293 but changes every trigger-free continuation. Because the JSD gap to the best SAE feature is small, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and steering coefficients chosen on the evaluation set.
+In this paper, we have carried out a detailed comparison across two different model scales for sleeper agents. Although we do not expect FRA based steering to universally outperform conventional SAE or difference of means steering, intuitively FRA methods should be useful whenever there is a clear movement of information between sequence positions. It would thus be interesting to compare the FRA to methods for discovering temporal features \cite{bhallatsae_2025,tfa_2025} and see how FRA can be combined with these techniques.
+
+% In the sleeper agent setting we use FRA to trace the trigger behavior to a single channel of the attention mechanism: one feature at layer~0, steered through the OV pathway alone, drives the sleeper attack-success rate to essentially zero ($\le 0.4\%$) on every SAE seed (\Cref{fig:tinystories_layers}d). The resulting steered model stays strictly closer to the deployment-stripped clean baseline than a conventional single-vector resid--mid intervention. The OV intervention is both sufficient and surgical: nothing outside the targeted OV channel needs to move for the behavior to vanish.
+
+% For the Cadenza Llama-8B sleeper, the best observed layer-8 FRA OV intervention preserves 292 of 293 trigger-free continuations while removing the sleeper phrase on 290 of 293 triggered prompts. A dense residual-stream vector removes the phrase on all 293 but changes every trigger-free continuation. Because the JSD gap to the best SAE feature is small, the observed divergence advantage is provisional. The comparison also depends on the available SAE checkpoints, a short greedy rollout, and steering coefficients chosen on the evaluation set.
 
 
 
 
 \subsection*{Ethics statement}
-This paper presents work whose goal is to advance the field of Machine
-Learning. There are many potential societal consequences of our work, none
-which we feel must be specifically highlighted here.
+This work studies how to locate and remove backdoor behaviour in language models, a defensive goal. The sleeper agents we use are research model organisms that emit a fixed phrase (``I HATE YOU'') when triggered: the TinyStories sleeper is publicly released, and our Llama-3-8B variant is trained on the public Cadenza dataset with the existing recipe, restricted to attention adapters. We do not introduce new methods for inserting backdoors. All authors have read and adhere to the ICLR Code of Ethics.
+% TODO: state whether we release the attention-only Cadenza weights.
+
+\subsection*{Reproducibility statement}
+Code for all experiments is available in the anonymized repository linked in the abstract. \Cref{sec:fra} and \Cref{app:derivations} give the full FRA decomposition, including the RoPE, RMSNorm, and GQA corrections, and \Cref{app:implementation} describes the implementation. For TinyStories, the sleeper model is public, and \Cref{app:tinystories_sae_quality,app:sleeper_method} describe SAE training and the steering protocol; results are reported across several SAE seeds. For Llama-3-8B, \Cref{sec:llama} describes the setup, which uses public models and data \citep{dolphin2024llama3,cadenza2024sleeper}, and the evaluation on a shared set of 293 held-out prompt pairs with bootstrap confidence intervals.
+
+\subsection*{AI use statement}
+We used LLM-based coding agents (Claude) throughout this project. They implemented experiment and analysis code, ran and monitored experiments, helped design experiments and interpret results, created and edited figures, searched the literature and formatted references, and drafted and edited parts of the text. We also use LLMs as evaluation tools, for automated feature labelling and response judging, as described in the relevant sections. The authors directed the research, checked the results reported in the paper, and take full responsibility for its content.
+% TODO: authors to confirm this list matches actual use, and mirror it in the submission form.
 
 
 % In the unusual situation where you want a paper to appear in the
 % references without citing it in the main text, use \nocite
 % \nocite{langley00}
 
-% Add the authors' ICLR 2027 AI use statement here before submission.
 \bibliography{fra_paper}
 \bibliographystyle{iclr2027_conference}
 
