@@ -1,4 +1,4 @@
-"""Plot Cadenza attention-only sleeper steering: coefficient sweeps + confirmation.
+"""Plot Cadenza attention-only sleeper steering, using the archived figure data.
 
 Top: descriptive positive-coefficient sweeps on the same 64-pair L8
 confirmation block, with validation-selected coefficients marked by stars.
@@ -38,7 +38,6 @@ def main() -> None:
     assert all(row["alpha"] > 0 for row in winners.values())
     for layer in (8, 12, 16, 24):
         assert set(category for lyr, category in winners if lyr == layer) == set(METHODS)
-    baseline = data["confirmation_baseline_jsd_clean"]
 
     plt.rcParams.update({
         "font.family": "DejaVu Sans", "font.size": 8,
@@ -53,10 +52,8 @@ def main() -> None:
                            hspace=0.57, wspace=0.33)
     clean_ax = fig.add_subplot(grid[0, 0])
     sleeper_ax = fig.add_subplot(grid[0, 1])
-    trade_ax = fig.add_subplot(grid[1, 0])
-    summary_ax = fig.add_subplot(grid[1, 1])
+    summary_ax = fig.add_subplot(grid[1, :])
 
-    # ---- (a,b) layer-8 coefficient sweeps (validation) ----
     legend_handles = []
     for category, style in METHODS.items():
         rows = [row for row in data["confirmation_curves"][category]["rows"]
@@ -67,8 +64,6 @@ def main() -> None:
         assert abs(selected_curve["jsd_clean"] - selected["jsd_clean"]) < 1e-6
         assert abs(selected_curve["jsd_sleeper"] - selected["jsd_sleeper"]) < 1e-6
         x = [row["alpha"] for row in rows]
-        selected = winners[(8, category)]
-        star_row = min(rows, key=lambda row: abs(row["alpha"] - selected["alpha"]))
         for ax, metric in ((clean_ax, "jsd_clean"), (sleeper_ax, "jsd_sleeper")):
             ax.plot(x, [row[metric] for row in rows], color=style["color"],
                     marker=style["marker"], markersize=2.7, linewidth=1.4,
@@ -77,8 +72,9 @@ def main() -> None:
                        marker="*", s=90, facecolor=style["color"],
                        edgecolor="white", linewidth=0.55, zorder=5)
         legend_handles.append(plt.Line2D([0], [0], color=style["color"],
-                                         marker=style["marker"], markersize=5,
-                                         linewidth=1.6, label=style["label"]))
+                                          marker=style["marker"], markersize=5,
+                                          linewidth=1.6, label=style["label"]))
+
     for ax in (clean_ax, sleeper_ax):
         ax.set_xscale("symlog", base=2, linthresh=0.5)
         ax.set_xlim(-0.15, 38)
@@ -124,7 +120,8 @@ def main() -> None:
     summary_ax.set_xticklabels([f"Layer {layer}" + ("*" if layer == 12 else "")
                                 for layer in layers])
     summary_ax.set_ylabel("Confirmation JSD to clean (bits)")
-    summary_ax.set_title("d   By layer · lower is better", loc="left", weight="semibold")
+    summary_ax.set_title("c   Validation-selected settings by layer · lower is better",
+                         loc="left", weight="semibold")
     summary_ax.grid(axis="y", color="#dddddd", linewidth=0.55, alpha=0.8)
     summary_ax.set_axisbelow(True)
 
