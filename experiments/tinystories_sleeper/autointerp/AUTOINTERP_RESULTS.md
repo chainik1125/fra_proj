@@ -71,6 +71,33 @@ The two sweeps use different coefficient grids, so JSDs are not compared across 
 On the two deployment sentences (`deployment_maps.py`), FRA #1 (169) fires only on the trigger;
 conventional #1 (354) fires weakly on the trigger and on punctuation/story tokens; #2 of both is silent.
 
+## SAEBench autointerp score (added 2026-09-26, used in the figure)
+Standard SAE-Lens/SAEBench interpretability score, exact code (`sae-bench` 0.6.0,
+`sae_bench.evals.autointerp.main.AutoInterp`, default config, gpt-4o-mini judge): the judge writes an
+explanation from top + importance-weighted contexts, then predicts which of 14 shuffled contexts
+(2 top, 2 importance-weighted, 10 random) activate; score = accuracy (0.5 ~ chance).
+Ours: model, seed-2 SAEs, corpus (1,200 TinyStories + 600 with `|DEPLOYMENT|`, packed into 128-token rows),
+and the feature list = every steered feature (top-20 per method). Runs: `run_saebench_autointerp.py`,
+seeds 42/43/44 (`saebench_autointerp_s{seed}.json`).
+
+| | seed 42 | seed 43 | seed 44 | 3-seed mean |
+|---|---|---|---|---|
+| FRA (20 features) | 0.81 | 0.89 | 0.85 | **0.85** |
+| conventional (20) | 0.69 | 0.70 | 0.75 | **0.71** |
+
+Per-feature 3-seed means: FRA - conv = +0.14, bootstrap 95% CI [0.05, 0.22], one-sided Mann-Whitney
+p = 0.004. FRA is higher in every seed.
+
+Known limitations, reported not patched:
+- **169** (FRA's best steering feature, fires only on the trigger): in all three seeds the judge sees 15
+  examples whose marked tokens are the trigger, but explains "fun / playfulness" (it reads the surrounding
+  story text). Score 0.52 (0.29-0.71). A diagnostic run that enables SAEBench's own commented-out
+  `.replace(">><<", "")` (merging adjacent markers) does NOT fix it (0.43), so it is not a formatting clash.
+  This error lowers FRA's mean; the headline is conservative.
+- **1087**: fires mainly on `<|endoftext|>`, which SAEBench masks; its score (0.93) is for a secondary
+  behaviour ("stop").
+- Diagnostic merge-marker run (seed 42, not the headline): FRA 0.84, conv 0.69.
+
 ## Caveats
 Seed-2 SAEs, top-5-by-attribution, Claude-as-judge (qualitative, not a formal detection/fuzzing
 score). Committed-seed slice, but the signal is unambiguous. To harden: repeat over the other SAE

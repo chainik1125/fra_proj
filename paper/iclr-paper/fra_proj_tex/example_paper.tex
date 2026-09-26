@@ -385,6 +385,8 @@ We find that FRA-based steering significantly outperforms SAE based steering at 
 % \paragraph{Optimized comparison.} The wide range matters: the refined resid-mid coefficient lies outside the screened range ($|\alpha|>10$) on one seed, and two of the six conventional ln1 winners use feature addition rather than subtraction. After coefficient refinement on 200 prompts and five decoding seeds, the mean best JSD to clean across six SAE seeds is $0.416\pm0.034$ for OV$\to$OV, $0.391\pm0.034$ for conventional resid-mid, and $0.526\pm0.085$ for conventional ln1. These are selected optima; \Cref{fig:tinysleeper_wide_screen} displays the lower-cost screening trajectories, rather than those full-fidelity evaluations at every coefficient. At these selected operating points OV$\to$OV improves on additive steering at the same \texttt{ln1} hook and is comparable to, though not better than, additive steering at resid-mid, with visible seed and coefficient variation.
 
 
+We also score every steered feature with SAEBench autointerp \citep{karvonen2025saebench}: an LLM judge writes a description of each feature from its top-activating examples, then uses only that description to predict which new text snippets activate the feature. The judge's predictions are correct more often for FRA features than for conventional ones (85\% vs.\ 71\%, where 50\% is chance; \Cref{app:autointerp}).
+
 \section{Cadenza Sleeper in Llama-8B}\label{sec:llama}
 
 
@@ -431,8 +433,7 @@ In this paper, we have carried out a detailed comparison across two different mo
 
 
 \subsection*{AI use statement}
-% TODO: when the autointerp appendix is merged, restore: ", and GPT-4o-mini is the judge in the SAEBench autointerp evaluation (\Cref{app:autointerp})" after "as described there".
-We used LLM assistants (Claude, via Claude Code) to help write and run experiment code (evaluation, steering sweeps, statistics, and plotting), to help analyse results, and to edit parts of the text, figure captions, and the presentation of derivations. GPT-4o is used as a judge to score alignment and coherence in the emergent-misalignment experiments (\Cref{sec:em}), as described there. All experiments were run by the authors, and all numbers, claims, and derivations were checked by the authors, who take full responsibility for the content of this paper.
+We used LLM assistants (Claude, via Claude Code) to help write and run experiment code (evaluation, steering sweeps, statistics, and plotting), to help analyse results, and to edit parts of the text, figure captions, and the presentation of derivations. GPT-4o is used as a judge to score alignment and coherence in the emergent-misalignment experiments (\Cref{sec:em}), as described there, and GPT-4o-mini is the judge in the SAEBench autointerp evaluation (\Cref{app:autointerp}). All experiments were run by the authors, and all numbers, claims, and derivations were checked by the authors, who take full responsibility for the content of this paper.
 
 \subsection*{Ethics statement}
 This paper presents work whose goal is to advance the field of Machine Learning Interpretability. There are many potential societal consequences of our work, none which we feel must be specifically highlighted here.
@@ -745,6 +746,26 @@ We measure how accurately the retrained TopK SAEs ($d_{\mathrm{SAE}}=1536$, $k=3
 The attention-input SAE's clean activation $1-\mathrm{FVU}$ declines from 0.954 at layer~0 to 0.698 at layer~3. On deployment prompts, reconstructed QK alone explains 0.774--0.987 of centered score variation across layers, and reconstructed OV explains 0.874--0.984 of centered attention-output variation. The error-error QK term explains at most 0.004 on its own; the query-error QK, key-error QK, and OV-error terms reach 0.174, 0.066, and 0.156, respectively. These individual fits use different targets for QK and OV and are not additive contributions to attention-output variance.
 
 For the single-feature steering in \Cref{fig:tinystories_layers}(b), features are ranked by their mean deployment-minus-clean activation. For each SAE seed, the feature selected from a 25-feature, 81-coefficient screen is refined over $\alpha\in[-20,20]$ (either sign) on 200 prompts and five decoding seeds.
+
+
+% ======================================================================
+% TODO(Indranil): AUTOINTERP APPENDIX -- write 2-4 sentences of body text here
+% (see chat for suggested content). Figure below is final; only its caption is a placeholder.
+% ======================================================================
+\subsection{Autointerp of the steered features}
+\label{app:autointerp}
+
+We run autointerp evaluation from SAEBench \citep{karvonen2025saebench} (default settings, GPT-4o-mini judge, 3 seeds) on all 20 FRA and 20 conventional steered features. The judge describes each feature from its top examples and then predicts from that description which new snippets activate it ( chance is 50\%). FRA features score 85\% and conventional features 71\% (difference 14 points, 95\% CI 5--22, $p=0.004$).
+
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/autointerp_tinystories.pdf}
+% TODO(Indranil): replace the placeholder caption below (3-6 sentences).
+\caption{\textbf{Autointerp of the steered TinyStories features.} \textbf{(a)}~Activation of each method's top-2 steering features on a triggered sentence; FRA's top feature fires only on the trigger. \textbf{(b)}~Judge descriptions and accuracy for the top-5 features. \textbf{(c)}~Mean accuracy over all 20 steered features per method (95\% CI; dotted line is chance).
+}
+\label{fig:autointerp}
+\end{figure*}
 
 
 % summarizes
